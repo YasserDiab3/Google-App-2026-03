@@ -13,6 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     
     <style>
         :root {
@@ -779,6 +780,123 @@
             color: #64748b;
             line-height: 1.6;
         }
+    
+        /* زر مسح QR المدمج داخل النموذج */
+        .btn-scan-qr-inline {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 0.82rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 3px 10px rgba(220, 38, 38, 0.28);
+            transition: all 0.2s ease;
+        }
+        .btn-scan-qr-inline:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 14px rgba(220, 38, 38, 0.38);
+            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        }
+        .btn-scan-qr-inline:active {
+            transform: scale(0.97);
+        }
+
+        /* نافذة كاميرا مسح الـ QR */
+        .qr-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        .qr-modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .qr-modal-box {
+            background: #ffffff;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 480px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+            border: 1.5px solid #cbd5e1;
+            transform: translateY(20px) scale(0.98);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .qr-modal-overlay.active .qr-modal-box {
+            transform: translateY(0) scale(1);
+        }
+        .qr-modal-header {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: #ffffff;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .qr-modal-body {
+            padding: 18px 16px;
+        }
+        .qr-scanner-viewport {
+            width: 100%;
+            height: 270px;
+            background: #0f172a;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+            border: 2px solid #334155;
+        }
+        #qr-reader {
+            width: 100% !important;
+            height: 100% !important;
+            border: none !important;
+        }
+        #qr-reader video {
+            object-fit: cover !important;
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 10px !important;
+        }
+        .qr-scan-laser {
+            position: absolute;
+            left: 10%;
+            right: 10%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #ef4444, #dc2626, #ef4444, transparent);
+            box-shadow: 0 0 14px #ef4444, 0 0 4px #fff;
+            animation: scanLaser 2.2s infinite linear;
+            z-index: 10;
+            pointer-events: none;
+        }
+        @keyframes scanLaser {
+            0% { top: 15%; opacity: 0.3; }
+            50% { top: 85%; opacity: 1; }
+            100% { top: 15%; opacity: 0.3; }
+        }
+        .qr-viewfinder-guide {
+            position: absolute;
+            inset: 20px;
+            border: 2px dashed rgba(255, 255, 255, 0.4);
+            border-radius: 12px;
+            pointer-events: none;
+            z-index: 9;
+        }
+
     </style>
 </head>
 <body>
@@ -848,10 +966,16 @@
                 </div>
 
                 <div class="form-group" id="deviceSelectGroup">
-                    <label class="form-label">
-                        <i class="fas fa-barcode text-red-600"></i>
-                        جهاز الإطفاء المراد فحصه: <span class="req-star">*</span>
-                    </label>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                        <label class="form-label" style="margin-bottom: 0;">
+                            <i class="fas fa-barcode text-red-600"></i>
+                            جهاز الإطفاء المراد فحصه: <span class="req-star">*</span>
+                        </label>
+                        <button type="button" id="scanQrInFormBtn" class="btn-scan-qr-inline" onclick="openQrScannerModal()">
+                            <i class="fas fa-qrcode"></i>
+                            <span>مسح كود الجهاز (QR)</span>
+                        </button>
+                    </div>
                     <select id="deviceSelect" class="form-select" required>
                         <option value="">— جاري تحميل قائمة الأجهزة... —</option>
                     </select>
@@ -1113,6 +1237,173 @@
             } catch(e) {}
             return DEFAULT_API_URL;
         }
+
+        
+        // ═══ منطق ماسح الـ QR المدمج ═══
+        let html5QrScannerInstance = null;
+        let currentFacingMode = 'environment';
+        let isTorchOn = false;
+
+        function playSuccessChime() {
+            try {
+                if (navigator.vibrate) navigator.vibrate([70, 40, 70]);
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+                osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08); // A5
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.25);
+            } catch(e) {}
+        }
+
+        async function openQrScannerModal() {
+            const modal = document.getElementById('qrScannerModal');
+            if (!modal) return;
+
+            document.getElementById('manualQrInput').value = '';
+            document.getElementById('qr-camera-error').style.display = 'none';
+            modal.classList.add('active');
+
+            if (typeof Html5Qrcode === 'undefined') {
+                showToast('جاري تحميل مكتبة قراءة الكود...', 'info', 2000);
+                return;
+            }
+
+            try {
+                if (html5QrScannerInstance) {
+                    try { await html5QrScannerInstance.stop(); } catch(e) {}
+                    html5QrScannerInstance.clear();
+                }
+
+                html5QrScannerInstance = new Html5Qrcode('qr-reader');
+                const config = {
+                    fps: 15,
+                    qrbox: { width: 220, height: 220 },
+                    aspectRatio: 1.0
+                };
+
+                await html5QrScannerInstance.start(
+                    { facingMode: currentFacingMode },
+                    config,
+                    (decodedText) => {
+                        handleScannedCode(decodedText);
+                    },
+                    (errorMessage) => {
+                        // Scan frame miss - ignore normal polling
+                    }
+                );
+            } catch(err) {
+                console.error('Camera start error:', err);
+                document.getElementById('qr-camera-error').style.display = 'flex';
+            }
+        }
+
+        async function closeQrScannerModal() {
+            const modal = document.getElementById('qrScannerModal');
+            if (modal) modal.classList.remove('active');
+
+            if (html5QrScannerInstance) {
+                try {
+                    await html5QrScannerInstance.stop();
+                    html5QrScannerInstance.clear();
+                } catch(e) {}
+                html5QrScannerInstance = null;
+            }
+            isTorchOn = false;
+        }
+
+        async function switchScannerCamera() {
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            if (html5QrScannerInstance) {
+                try {
+                    await html5QrScannerInstance.stop();
+                    html5QrScannerInstance.clear();
+                } catch(e) {}
+                html5QrScannerInstance = null;
+            }
+            openQrScannerModal();
+        }
+
+        async function toggleScannerTorch() {
+            if (!html5QrScannerInstance) return;
+            try {
+                isTorchOn = !isTorchOn;
+                await html5QrScannerInstance.applyVideoConstraints({
+                    advanced: [{ torch: isTorchOn }]
+                });
+                showToast(isTorchOn ? 'تم تشغيل الفلاش' : 'تم إيقاف الفلاش', 'info', 1500);
+            } catch(e) {
+                showToast('الفلاش غير مدعوم على هذه الكاميرا', 'warning', 2000);
+            }
+        }
+
+        function handleScannedCode(rawText) {
+            if (!rawText) return;
+            const text = String(rawText).trim();
+
+            let targetId = '';
+
+            // 1. فحص إذا كان رابط يحتوي على id= أو assetId= أو deviceId=
+            try {
+                if (text.includes('?') || text.startsWith('http')) {
+                    const url = new URL(text.startsWith('http') ? text : 'https://dummy.local/' + text);
+                    targetId = url.searchParams.get('id') || url.searchParams.get('assetId') || url.searchParams.get('deviceId') || '';
+                }
+            } catch(e) {}
+
+            // 2. فحص إذا كان JSON
+            if (!targetId && text.startsWith('{') && text.endsWith('}')) {
+                try {
+                    const parsed = JSON.parse(text);
+                    targetId = parsed.id || parsed.assetId || parsed.deviceId || '';
+                } catch(e) {}
+            }
+
+            // 3. استخدام النص ككود مباشر
+            if (!targetId) {
+                targetId = text;
+            }
+
+            const cleanTarget = targetId.toLowerCase().trim();
+
+            // البحث في قائمة الأجهزة المحملة
+            const match = allAssets.find(a => {
+                const id = String(a.id || '').toLowerCase().trim();
+                const num = String(a.number || '').toLowerCase().trim();
+                return id === cleanTarget || num === cleanTarget || cleanTarget.includes(id) || cleanTarget.includes(num);
+            });
+
+            if (match) {
+                playSuccessChime();
+                const select = document.getElementById('deviceSelect');
+                if (select) {
+                    select.value = match.id;
+                    updateDeviceCard(match);
+                }
+                showToast(`✅ تم التعرف على الجهاز: ${match.id} (${match.location || ''})`, 'success', 3500);
+                closeQrScannerModal();
+            } else {
+                showToast(`⚠️ تم قراءة الكود (${targetId}) ولكن لم يُعثر على جهاز مطابق في النظام`, 'warning', 4000);
+            }
+        }
+
+        function submitManualDeviceSearch() {
+            const val = document.getElementById('manualQrInput')?.value?.trim();
+            if (!val) {
+                showToast('يرجى كتابة كود أو رقم الجهاز', 'warning', 2000);
+                return;
+            }
+            handleScannedCode(val);
+        }
+
 
         function showToast(msg, type = 'info', duration = 3000) {
             const toast = document.getElementById('toast');
@@ -1535,5 +1826,63 @@
             document.getElementById('fireInspectionForm').style.display = 'block';
         }
     </script>
+
+    <!-- ═══ نافذة ماسح الـ QR المدمجة داخل النموذج ═══ -->
+    <div id="qrScannerModal" class="qr-modal-overlay">
+        <div class="qr-modal-box">
+            <div class="qr-modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.95rem; line-height: 1.2;">مسح كود الجهاز (QR Code)</div>
+                        <div style="font-size: 0.68rem; opacity: 0.85;">وجّه الكاميرا نحو ملصق الطفاية</div>
+                    </div>
+                </div>
+                <button type="button" onclick="closeQrScannerModal()" style="background: rgba(255,255,255,0.15); border: none; color: #fff; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; cursor: pointer; transition: all .2s;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="qr-modal-body">
+                <div class="qr-scanner-viewport">
+                    <div id="qr-reader"></div>
+                    <div class="qr-scan-laser"></div>
+                    <div class="qr-viewfinder-guide"></div>
+                    <div id="qr-camera-error" style="display: none; position: absolute; inset: 0; background: #0f172a; color: #fca5a5; padding: 20px; text-align: center; flex-direction: column; align-items: center; justify-content: center; font-size: 0.82rem; z-index: 15;">
+                        <i class="fas fa-video-slash" style="font-size: 2.2rem; color: #ef4444; margin-bottom: 8px;"></i>
+                        <span style="font-weight: 700;">تعذر فتح الكاميرا</span>
+                        <span style="font-size: 0.72rem; color: #94a3b8; margin-top: 4px;">يرجى السماح بصلاحية الكاميرا أو استخدام البحث اليدوي أدناه.</span>
+                    </div>
+                </div>
+
+                <!-- أدوات تبديل الكاميرا والفلاش -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 8px;">
+                    <button type="button" id="btnSwitchCamera" onclick="switchScannerCamera()" style="flex: 1; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 0.78rem; font-weight: 700; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fas fa-sync-alt text-blue-600"></i>
+                        <span>تبديل الكاميرا</span>
+                    </button>
+                    <button type="button" id="btnToggleTorch" onclick="toggleScannerTorch()" style="flex: 1; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 0.78rem; font-weight: 700; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fas fa-bolt text-amber-500"></i>
+                        <span>الفلاش / الإضاءة</span>
+                    </button>
+                </div>
+
+                <!-- بحث يدوي سريع بالرقم أو الكود -->
+                <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #cbd5e1;">
+                    <label style="font-size: 0.75rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 5px;">
+                        أو اكتب كود الجهاز / الرقم يدويًا:
+                    </label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="text" id="manualQrInput" placeholder="مثال: EFA-0001 أو رقم الجهاز" style="flex: 1; padding: 8px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; font-weight: 600;" onkeypress="if(event.key==='Enter'){event.preventDefault();submitManualDeviceSearch();}">
+                        <button type="button" onclick="submitManualDeviceSearch()" style="background: #dc2626; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all .2s;">
+                            اختيار
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
