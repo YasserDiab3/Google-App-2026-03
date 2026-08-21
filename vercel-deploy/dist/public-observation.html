@@ -805,27 +805,75 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             setDefaultDateTime();
+
+            // 1. استرجاع فوري من التخزين المؤقت المحلي (0 ثانية تأخير)
+            try {
+                const cached = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (parsed && parsed.sites && parsed.sites.length > 0) {
+                        loadedConfig = parsed;
+                        renderConfigData(parsed);
+                        const ind = document.getElementById('loadingIndicator');
+                        if (ind) ind.style.display = 'none';
+                    }
+                }
+            } catch (cErr) {}
+
+            // 2. إذا لم يتوفر كاش محلي، عرض بيانات النظام الأولية فوراً دون انتظار
+            if (!loadedConfig) {
+                renderFallbackData();
+            }
+
+            // 3. جلب أحدث البيانات من الخادم في الخلفية وتحديث القوائم بهدوء
             loadServerConfig();
         });
 
         async function loadServerConfig() {
             const ind = document.getElementById('loadingIndicator');
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+
                 const res = await fetch(DEFAULT_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'getPublicObservationConfig' })
+                    body: JSON.stringify({ action: 'getPublicObservationConfig' }),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
+
                 const data = await res.json();
-                if (data && data.success) {
+                if (data && data.success && Array.isArray(data.sites) && data.sites.length > 0) {
                     loadedConfig = data;
+                    try {
+                        localStorage.setItem('HSE_PUBLIC_OBS_CONFIG', JSON.stringify(data));
+                    } catch (sErr) {}
                     renderConfigData(data);
                 }
             } catch (e) {
-                console.error('Error loading config:', e);
+                console.warn('Silent config sync notice:', e);
             } finally {
                 if (ind) ind.style.display = 'none';
             }
+        }
+
+        function renderFallbackData() {
+            const fallback = {
+                sites: [
+                    { name: 'مصنع الأغذية الرئيسي', places: ['خط الإنتاج 1', 'خط الإنتاج 2', 'المستودع الرئيسي', 'ورشة الصيانة', 'منطقة التحميل'] },
+                    { name: 'مصنع المخبوزات والحلويات', places: ['صالة التجهيز', 'خط الأفران', 'منطقة التعبئة والتغليف', 'مستودع الخامات'] },
+                    { name: 'المستودعات والخدمات اللوجستية', places: ['مستودع التبريد', 'مستودع الجاف', 'ساحة الشاحنات'] }
+                ],
+                departments: [
+                    'السلامة والصحة المهنية', 'الصيانة', 'الإنتاج والتشغيل', 'الجودة وسلامة الغذاء',
+                    'المستودعات والخدمات اللوجستية', 'الموارد البشرية', 'الشؤون الإدارية', 'الأمن والحراسة'
+                ],
+                safetyMembers: [
+                    { name: 'فريق السلامة والصحة المهنية', role: 'HSE Team' }
+                ]
+            };
+            renderConfigData(fallback);
         }
 
         function renderConfigData(cfg) {

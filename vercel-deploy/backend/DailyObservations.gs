@@ -2837,11 +2837,22 @@ function notifyObservationWorkflowEvent(payload) {
 /**
  * ============================================
  * الحصول على تكوين نموذج الملاحظات العامة (المواقع، الأماكن، الإدارات، مسؤولي السلامة)
- * قراءة البيانات الفعلية الحقيقية من جداول النظام
+ * قراءة سريعة مع تخزين مؤقت CacheService لتفادي أي تأخير
  * ============================================
  */
 function getPublicObservationConfig() {
     try {
+        var cache = null;
+        try {
+            cache = CacheService.getScriptCache();
+            if (cache) {
+                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V3');
+                if (cachedStr) {
+                    return JSON.parse(cachedStr);
+                }
+            }
+        } catch (cGetErr) {}
+
         var spreadsheetId = getSpreadsheetId();
         
         // 1. المواقع والأماكن الفعلية من النظام
@@ -3008,7 +3019,7 @@ function getPublicObservationConfig() {
 
         departments.sort(function(a, b) { return a.localeCompare(b, 'ar'); });
 
-        return {
+        var configResult = {
             success: true,
             sites: sites,
             safetyMembers: safetyMembers,
@@ -3029,6 +3040,14 @@ function getPublicObservationConfig() {
                 { value: 'حرج', label: 'حرج (Critical)', color: '#991b1b' }
             ]
         };
+
+        try {
+            if (cache) {
+                cache.put('PUBLIC_OBS_CONFIG_CACHE_V3', JSON.stringify(configResult), 1800);
+            }
+        } catch (cPutErr) {}
+
+        return configResult;
     } catch (err) {
         Logger.log('Error in getPublicObservationConfig: ' + err.toString());
         return { success: false, message: err.toString() };
