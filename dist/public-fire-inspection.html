@@ -905,10 +905,9 @@
         <div class="iso-header-table">
             <div class="iso-col-brand">
                 <div class="iso-logo-wrap" id="isoLogoWrap">
-                    <img id="isoLogoImg" src="" alt="Logo" class="iso-logo-img" style="display: none;">
-                    <i id="isoLogoFallback" class="fas fa-shield-halved" style="font-size: 26px; color: #dc2626;"></i>
+                    <img id="isoLogoImg" src="icons/icapp-logo.png" alt="شعار الشركة" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
                 </div>
-                <div class="iso-dept-name">إدارة السلامة والصحة المهنية والبيئة (HSE)</div>
+                <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية والبيئة</div>
             </div>
 
             <div class="iso-col-title">
@@ -1467,12 +1466,28 @@
         }
 
         function applyConfigData(config, targetId, presetInspector) {
-            if (config.logo) {
-                const logoImg = document.getElementById('isoLogoImg');
-                const fallback = document.getElementById('isoLogoFallback');
-                logoImg.src = config.logo;
-                logoImg.style.display = 'block';
-                fallback.style.display = 'none';
+            const logoImg = document.getElementById('isoLogoImg');
+            if (logoImg) {
+                let finalLogo = config.logo;
+                if (!finalLogo) {
+                    try {
+                        const localData = localStorage.getItem('appData');
+                        if (localData) {
+                            const p = JSON.parse(localData);
+                            finalLogo = p.companyLogo || (p.companySettings && p.companySettings.logo) || (p.settings && p.settings.logo);
+                        }
+                        if (!finalLogo) {
+                            const cData = localStorage.getItem('companySettings');
+                            if (cData) {
+                                const p2 = JSON.parse(cData);
+                                finalLogo = p2.logo || p2.companyLogo;
+                            }
+                        }
+                    } catch(e) {}
+                }
+                if (finalLogo) {
+                    logoImg.src = finalLogo;
+                }
             }
 
             if (config.assets && Array.isArray(config.assets)) {
