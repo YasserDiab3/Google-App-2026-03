@@ -70,6 +70,7 @@ await esbuild.build({
     outbase: distRoot,
     allowOverwrite: true,
     minify: true,
+    target: ['es2020', 'safari14', 'chrome87', 'firefox78', 'edge88'],
     legalComments: 'none',
     platform: 'browser',
     drop: ['console', 'debugger'],
