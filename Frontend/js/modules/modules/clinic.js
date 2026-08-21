@@ -15965,36 +15965,80 @@ const Clinic = {
         const icon = isCheckIn ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
 
         const html = `
-            <div class="modal-overlay active" id="clinic-attendance-punch-modal">
-                <div class="modal-content" style="max-width:480px;">
-                    <div class="modal-header">
-                        <h3><i class="fas ${icon} ml-2"></i>${title}</h3>
-                        <button type="button" class="modal-close" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()"><i class="fas fa-times"></i></button>
+            <div class="modal-overlay active" id="clinic-attendance-punch-modal" style="background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+                <div class="modal-content" style="max-width: 500px; width: 92%; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: none; background: #ffffff;">
+                    <!-- Header -->
+                    <div style="background: linear-gradient(135deg, #0b2a55 0%, #1e40af 100%); color: #ffffff; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(255, 255, 255, 0.18); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                                <i class="fas ${icon}"></i>
+                            </div>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #ffffff;">${title}</h3>
+                                <p style="margin: 2px 0 0; font-size: 0.72rem; opacity: 0.85;">تسجيل وقت ${isCheckIn ? 'الدخول' : 'الخروج'} يدوياً للمسئول</p>
+                            </div>
+                        </div>
+                        <button type="button" style="background: none; border: none; color: #ffffff; opacity: 0.75; font-size: 1.25rem; cursor: pointer; padding: 4px; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
-                    <div class="modal-body space-y-4">
-                        <div class="text-sm text-gray-600">
-                            <div><strong>المسئول:</strong> ${Utils.escapeHTML(record.userName || record.userEmail || '—')}</div>
-                            <div><strong>التاريخ:</strong> ${Utils.escapeHTML(dayKey || '—')}</div>
+
+                    <!-- Body -->
+                    <div style="padding: 1.5rem; background: #f8fafc; display: flex; flex-direction: column; gap: 1.25rem;">
+                        <!-- Staff Info Card -->
+                        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.9rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="width: 36px; height: 36px; border-radius: 50%; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1rem;">
+                                    <i class="fas fa-user-md"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">${Utils.escapeHTML(record.userName || record.userEmail || '—')}</div>
+                                    <div style="font-size: 0.74rem; color: #64748b;">${Utils.escapeHTML(this.getStaffRoleLabel(record.staffRole))}</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.4rem; background: #f1f5f9; padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 0.76rem; font-weight: 600; color: #475569;">
+                                <i class="far fa-calendar-alt text-blue-500"></i>
+                                <span>${Utils.escapeHTML(dayKey || '—')}</span>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">${isCheckIn ? 'وقت الدخول' : 'وقت الخروج'} *</label>
-                            <input type="datetime-local" id="clinic-attendance-punch-time" class="form-input" value="${Utils.escapeAttr(adjustedDefault)}" required>
+
+                        <!-- DateTime Input Field -->
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            <label style="font-size: 0.85rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 0.4rem;">
+                                <i class="fas ${isCheckIn ? 'fa-sign-in-alt text-emerald-600' : 'fa-sign-out-alt text-amber-600'}"></i>
+                                <span>${isCheckIn ? 'وقت الدخول المطلوب' : 'وقت الخروج المطلوب'}</span>
+                                <span style="color: #ef4444;">*</span>
+                            </label>
+                            <input type="datetime-local" id="clinic-attendance-punch-time" class="form-input" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 0.7rem 0.9rem; font-size: 0.95rem; font-weight: 600; color: #0f172a; background: #ffffff;" value="${Utils.escapeAttr(adjustedDefault)}" required>
+                            <span style="font-size: 0.72rem; color: #64748b;"><i class="fas fa-info-circle ml-1"></i> تم تحديد الوقت المقترح تلقائياً بناءً على مواعيد الوردية، ويمكنك تعديله.</span>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">ملاحظة (اختياري)</label>
-                            <textarea id="clinic-attendance-punch-notes" class="form-textarea" rows="2" placeholder="سبب إضافة البصمة يدوياً..."></textarea>
+
+                        <!-- Notes Field -->
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            <label style="font-size: 0.85rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 0.4rem;">
+                                <i class="far fa-comment-dots text-gray-500"></i>
+                                <span>ملاحظة أو سبب الإضافة</span>
+                                <span style="font-size: 0.72rem; font-weight: 400; color: #94a3b8;">(اختياري)</span>
+                            </label>
+                            <textarea id="clinic-attendance-punch-notes" class="form-textarea" rows="2" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.85rem; resize: none; background: #ffffff;" placeholder="أدخل سبب تسجيل البصمة يدوياً..."></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()">إلغاء</button>
-                        <button type="button" class="btn-primary" id="clinic-attendance-punch-save"><i class="fas fa-save ml-2"></i>حفظ</button>
+
+                    <!-- Footer -->
+                    <div style="padding: 1rem 1.5rem; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
+                        <button type="button" style="padding: 0.6rem 1.25rem; border-radius: 10px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#ffffff'" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()">
+                            إلغاء
+                        </button>
+                        <button type="button" id="clinic-attendance-punch-save" style="padding: 0.6rem 1.5rem; border-radius: 10px; border: none; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); transition: all 0.2s;">
+                            <i class="fas fa-check"></i>
+                            <span>حفظ البصمة</span>
+                        </button>
                     </div>
                 </div>
             </div>`;
         document.getElementById('clinic-attendance-punch-modal')?.remove();
         document.body.insertAdjacentHTML('beforeend', html);
-        document.getElementById('clinic-attendance-punch-save')?.addEventListener('click', async (e) => {
-            const saveBtn = e.currentTarget || document.getElementById('clinic-attendance-punch-save');
+        document.getElementById('clinic-attendance-punch-save')?.addEventListener('click', () => {
             const timeValRaw = document.getElementById('clinic-attendance-punch-time')?.value || '';
             const notes = document.getElementById('clinic-attendance-punch-notes')?.value?.trim() || '';
             if (!timeValRaw) {
@@ -16003,65 +16047,53 @@ const Clinic = {
             }
             const timeVal = this._formatLocalDatetimeToIso(timeValRaw);
             
-            // رد فعل بصري فوري على الزر
-            if (saveBtn) {
-                saveBtn.disabled = true;
-                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري الحفظ...';
+            // 1. إغلاق النافذة فوراً في 0 ثانية
+            document.getElementById('clinic-attendance-punch-modal')?.remove();
+
+            // 2. تحديث السجل محلياً فورياً
+            if (record) {
+                if (isCheckIn) record.checkIn = timeVal;
+                if (isCheckOut) record.checkOut = timeVal;
+                if (record.checkIn && record.checkOut) {
+                    try {
+                        const inMs = new Date(record.checkIn).getTime();
+                        const outMs = new Date(record.checkOut).getTime();
+                        if (!isNaN(inMs) && !isNaN(outMs) && outMs > inMs) {
+                            record.workDuration = (Math.round(((outMs - inMs) / (1000 * 60 * 60)) * 100) / 100) + ' ساعة';
+                        }
+                    } catch (_) {}
+                    record.status = 'present';
+                }
             }
 
-            try {
-                // تحديث متفائل محلي فوري قبل انتظار الشبكة
-                if (record) {
-                    if (isCheckIn) record.checkIn = timeVal;
-                    if (isCheckOut) record.checkOut = timeVal;
-                    if (record.checkIn && record.checkOut) {
-                        try {
-                            const inMs = new Date(record.checkIn).getTime();
-                            const outMs = new Date(record.checkOut).getTime();
-                            if (!isNaN(inMs) && !isNaN(outMs) && outMs > inMs) {
-                                record.workDuration = (Math.round(((outMs - inMs) / (1000 * 60 * 60)) * 100) / 100) + ' ساعة';
-                            }
-                        } catch (_) {}
-                        record.status = 'present';
-                    }
+            // 3. إعادة رسم الجدول فورياً
+            this.renderAttendanceTab({ force: true });
+            Notification?.success?.('تم تسجيل البصمة بنجاح وجاري المزامنة...');
+
+            // 4. مزامنة مع السيرفر في الخلفية
+            GoogleIntegration.sendRequest({
+                action: 'updateClinicStaffAttendance',
+                data: {
+                    recordId: record.id,
+                    staffId: record.staffId || '',
+                    userId: record.userId || '',
+                    userEmail: record.userEmail || '',
+                    date: record.date || dayKey || '',
+                    punchType: type,
+                    [isCheckIn ? 'checkIn' : 'checkOut']: timeVal,
+                    notes
                 }
-
-                const resp = await GoogleIntegration.sendRequest({
-                    action: 'updateClinicStaffAttendance',
-                    data: {
-                        recordId: record.id,
-                        staffId: record.staffId || '',
-                        userId: record.userId || '',
-                        userEmail: record.userEmail || '',
-                        date: record.date || dayKey || '',
-                        punchType: type,
-                        [isCheckIn ? 'checkIn' : 'checkOut']: timeVal,
-                        notes
-                    }
-                });
-
-                if (resp?.success) {
-                    Notification?.success?.(resp.message || 'تم حفظ البصمة بنجاح');
-                    document.getElementById('clinic-attendance-punch-modal')?.remove();
-                    this.renderAttendanceTab({ force: true });
-                    // مزامنة غير معطلة في الخلفية
+            }).then((resp) => {
+                if (resp && resp.success) {
                     this.loadClinicAttendanceData(true).then(() => {
                         this.renderAttendanceTab({ force: true });
                     }).catch(() => {});
                 } else {
-                    Notification?.error?.(resp?.message || 'فشل الحفظ');
-                    if (saveBtn) {
-                        saveBtn.disabled = false;
-                        saveBtn.innerHTML = '<i class="fas fa-save ml-2"></i>حفظ';
-                    }
+                    Notification?.error?.(resp?.message || 'فشل المزامنة مع السيرفر');
                 }
-            } catch (err) {
-                Notification?.error?.(err?.message || 'فشل الحفظ');
-                if (saveBtn) {
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = '<i class="fas fa-save ml-2"></i>حفظ';
-                }
-            }
+            }).catch((err) => {
+                Notification?.error?.(err?.message || 'فشل المزامنة مع السيرفر');
+            });
         });
     },
 
