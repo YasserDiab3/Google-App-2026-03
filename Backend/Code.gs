@@ -338,7 +338,7 @@ function doPost(e) {
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -405,7 +405,8 @@ function doPost(e) {
             'login', 'verifyMfaLogin', 'initializeSheets',
             'testConnection', 'warmup', 'getPublicIP', 'invalidateServerSession',
             'getAuthBootstrapPolicy', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke',
-            'submitPublicObservation', 'getPublicObservationConfig'
+            'submitPublicObservation', 'getPublicObservationConfig',
+            'submitPublicFireInspection', 'getPublicFireInspectionConfig'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
         var needsSessionForWrite = !isReadOnlyAction;
@@ -519,6 +520,10 @@ function doPost(e) {
                 result = submitPublicObservation(payload || postData.data || postData || {});
             } else if (action === 'getPublicObservationConfig' && typeof getPublicObservationConfig === 'function') {
                 result = getPublicObservationConfig();
+            } else if (action === 'submitPublicFireInspection' && typeof submitPublicFireInspection === 'function') {
+                result = submitPublicFireInspection(payload || postData.data || postData || {});
+            } else if (action === 'getPublicFireInspectionConfig' && typeof getPublicFireInspectionConfig === 'function') {
+                result = getPublicFireInspectionConfig(payload || postData.data || postData || {});
             } else if (typeof ActionHandlers[action] === 'function') {
                 const spreadsheetId = getSpreadsheetId() || postData.spreadsheetId || '';
                 result = ActionHandlers[action](payload, postData, action, actorUserData, spreadsheetId);
@@ -762,7 +767,8 @@ function doGet(e) {
             publicEmergencyMap: true,
             getPublicEmergencyMapData: true,
             publicEmergencyMapImage: true,
-            getPublicObservationConfig: true
+            getPublicObservationConfig: true,
+            getPublicFireInspectionConfig: true
         };
         if (action && !allowedGetActions[action]) {
             if (typeof logSecurityEvent === 'function') {
@@ -774,6 +780,14 @@ function doGet(e) {
                 errorCode: 'GET_ACTION_NOT_ALLOWED',
                 action: action
             })));
+        }
+
+        // تكوين نموذج فحص أجهزة الإطفاء العامة
+        if (action === 'getPublicFireInspectionConfig') {
+            const configResult = (typeof getPublicFireInspectionConfig === 'function')
+                ? getPublicFireInspectionConfig(e.parameter || {})
+                : { success: false, message: 'getPublicFireInspectionConfig not defined' };
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify(configResult)).setMimeType(ContentService.MimeType.JSON));
         }
 
         // تكوين نموذج الملاحظات العامة

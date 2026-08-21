@@ -3721,6 +3721,22 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'getPublicFireInspectionConfig': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = getPublicFireInspectionConfig(payload);
+            return;
+        })();
+        return result;
+    },
+    'submitPublicFireInspection': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = submitPublicFireInspection(payload);
+            return;
+        })();
+        return result;
+    },
     'addFireEquipmentInspection': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

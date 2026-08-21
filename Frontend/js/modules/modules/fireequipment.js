@@ -312,6 +312,14 @@ FireEquipment = {
                             إضافة جهاز جديد
                         </button>
                         ` : ''}
+                        <button id="public-fire-link-btn" class="btn-secondary" title="رابط وبوستر الفحص الشهري العام">
+                            <i class="fas fa-link ml-2"></i>
+                            رابط الفحص العام
+                        </button>
+                        <button id="batch-print-qr-btn" class="btn-secondary" title="طباعة كروت ورموز QR لجميع الأجهزة دفعة واحدة">
+                            <i class="fas fa-print ml-2"></i>
+                            طباعة كروت QR شاملة
+                        </button>
                         <button id="scan-qr-inspection-btn" class="btn-primary">
                             <i class="fas fa-qrcode ml-2"></i>
                             مسح QR Code للفحص الشهري
@@ -1373,6 +1381,10 @@ FireEquipment = {
                             <i class="fas fa-file-pdf ml-2"></i>
                             تصدير إلى PDF
                         </button>
+                        <button id="register-batch-print-qr-btn" class="btn-secondary" title="طباعة ملصقات QR لجميع الأجهزة دفعة واحدة">
+                            <i class="fas fa-print ml-2"></i>
+                            طباعة كروت QR
+                        </button>
                         <button id="register-add-device-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
                             إضافة جهاز جديد
@@ -1727,7 +1739,7 @@ FireEquipment = {
                                 <p class="text-gray-800">${Utils.escapeHTML(inspection.gaugeReading || '-')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">ختم الأمان:</label>
+                                <label class="text-sm font-semibold text-gray-600">صمام وتيلة الأمان:</label>
                                 <p class="text-gray-800">${inspection.sealIntact === true ? 'سليم' :
                 inspection.sealIntact === false ? 'مكسور' :
                     'غير محدد'
@@ -2296,6 +2308,16 @@ FireEquipment = {
             addAssetBtn.addEventListener('click', async () => await this.showAssetForm());
         }
 
+        const publicLinkBtn = document.getElementById('public-fire-link-btn');
+        if (publicLinkBtn) {
+            publicLinkBtn.addEventListener('click', () => this.showPublicLinkModal());
+        }
+
+        const batchPrintBtn = document.getElementById('batch-print-qr-btn');
+        if (batchPrintBtn) {
+            batchPrintBtn.addEventListener('click', () => this.showBatchPrintQrModal());
+        }
+
         const scanQrBtn = document.getElementById('scan-qr-inspection-btn');
         if (scanQrBtn) {
             scanQrBtn.addEventListener('click', () => this.startQRScan());
@@ -2488,6 +2510,15 @@ FireEquipment = {
                 addDeviceBtn.parentNode.replaceChild(newAddBtn, addDeviceBtn);
                 newAddBtn.addEventListener('click', async () => {
                     await this.showAssetForm();
+                });
+            }
+
+            const batchPrintBtn = document.getElementById('register-batch-print-qr-btn');
+            if (batchPrintBtn) {
+                const newBatchBtn = batchPrintBtn.cloneNode(true);
+                batchPrintBtn.parentNode.replaceChild(newBatchBtn, batchPrintBtn);
+                newBatchBtn.addEventListener('click', () => {
+                    this.showBatchPrintQrModal();
                 });
             }
 
@@ -3611,11 +3642,11 @@ FireEquipment = {
                                 <input type="text" id="inspection-gauge" class="form-input" value="${Utils.escapeHTML(inspection?.gaugeReading || '')}" placeholder="مثال: 150 PSI">
                             </div>
                             <div>
-                                <label class="form-label">ختم الأمان</label>
+                                <label class="form-label">صمام وتيلة الأمان</label>
                                 <select id="inspection-seal" class="form-input">
                                     <option value="unknown">غير محدد</option>
                                     <option value="true" ${inspection?.sealIntact === true ? 'selected' : ''}>سليم</option>
-                                    <option value="false" ${inspection?.sealIntact === false ? 'selected' : ''}>مكسور</option>
+                                    <option value="false" ${inspection?.sealIntact === false ? 'selected' : ''}>مكسور / مفقود</option>
                                 </select>
                             </div>
                             <div class="md:col-span-2">
@@ -4077,13 +4108,13 @@ FireEquipment = {
 
                         <div class="mobile-inspection-form-group">
                             <label class="mobile-inspection-label">
-                                <i class="fas fa-shield-alt ml-2"></i>
-                                ختم الأمان
+                                <i class="fas fa-lock ml-2"></i>
+                                صمام وتيلة الأمان
                             </label>
                             <select id="mobile-inspection-seal" class="mobile-inspection-select">
                                 <option value="unknown">غير محدد</option>
                                 <option value="true" ${inspection?.sealIntact === true ? 'selected' : ''}>سليم</option>
-                                <option value="false" ${inspection?.sealIntact === false ? 'selected' : ''}>مكسور</option>
+                                <option value="false" ${inspection?.sealIntact === false ? 'selected' : ''}>مكسور / مفقود</option>
                             </select>
                         </div>
 
@@ -4554,6 +4585,617 @@ FireEquipment = {
         }
     },
 
+    /**
+     * الحصول على الرابط العام المباشر لفحص أجهزة الإطفاء
+     */
+    getPublicInspectionUrl(assetId = '', inspector = '') {
+        try {
+            const loc = window.location;
+            const pathParts = loc.pathname.split('/');
+            pathParts.pop(); // remove index.html or current file
+            const basePath = pathParts.join('/');
+            const origin = loc.origin || (loc.protocol + '//' + loc.host);
+            let targetUrl = `${origin}${basePath}/public-fire-inspection.html`.replace(/([^:]\/)\/+/g, '$1');
+
+            let query = [];
+            if (assetId) query.push(`id=${encodeURIComponent(assetId)}`);
+            if (inspector) query.push(`inspector=${encodeURIComponent(inspector)}`);
+            if (query.length > 0) targetUrl += `?${query.join('&')}`;
+
+            return targetUrl;
+        } catch(e) {
+            return `public-fire-inspection.html${assetId ? `?id=${encodeURIComponent(assetId)}` : ''}`;
+        }
+    },
+
+    /**
+     * نافذة رابط وبوستر الفحص الشهري العام لمعدات الإطفاء
+     */
+    showPublicLinkModal() {
+        const baseUrl = this.getPublicInspectionUrl();
+        const assets = this.getAssets() || [];
+        const safetyMembers = (AppState.appData?.users || []).filter(u => {
+            const r = String(u.role || '').toLowerCase();
+            const d = String(u.department || '').toLowerCase();
+            return r.includes('admin') || r.includes('سلامة') || r.includes('safety') || d.includes('سلامة') || d.includes('hse');
+        });
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay fire-modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 620px; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                <div class="modal-header" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(220, 38, 38, 0.2); border: 1px solid rgba(220, 38, 38, 0.4); display: flex; align-items: center; justify-content: center; color: #f87171; font-size: 1.25rem;">
+                            <i class="fas fa-fire-extinguisher"></i>
+                        </div>
+                        <div>
+                            <h2 class="modal-title" style="color: #ffffff; font-size: 1.15rem; font-weight: 700; margin: 0 0 2px 0;">رابط وبوابة الفحص الشهري الميداني</h2>
+                            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">بوابة فحص أجهزة الإطفاء بدون تسجيل دخول لمسؤولي السلامة</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" style="color: #94a3b8; font-size: 1.25rem;" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" style="padding: 24px; background: #f8fafc;">
+                    <!-- أدوات التخصيص: الجهاز + المفتش -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-fire-extinguisher ml-1 text-red-500"></i> جهاز مخصص (اختياري):
+                            </label>
+                            <select id="qr-fire-asset-select" class="form-select" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">
+                                <option value="">— بوابة عامة لجميع الأجهزة —</option>
+                                ${assets.map(a => `<option value="${Utils.escapeHTML(a.id)}">${Utils.escapeHTML(a.id)} — ${Utils.escapeHTML(a.number || a.id)} (${Utils.escapeHTML(a.location || '-')})</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-user-shield ml-1 text-emerald-600"></i> مسؤول السلامة المخصص:
+                            </label>
+                            <select id="qr-fire-inspector-select" class="form-select" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">
+                                <option value="">— تحديد المفتش بالنموذج —</option>
+                                ${safetyMembers.map(m => `<option value="${Utils.escapeHTML(m.name)}">${Utils.escapeHTML(m.name)}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- عرض الـ QR Code -->
+                    <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; text-align: center; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div id="fire-qr-container" style="display: inline-block; padding: 12px; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 12px;">
+                            <img id="fire-qr-img" src="" alt="QR Code" style="width: 180px; height: 180px; display: block;">
+                        </div>
+                        <div style="font-size: 0.85rem; color: #1e293b; font-weight: 700;" id="fire-qr-target-text">
+                            امسح الرمز بكاميرا الهاتف لفتح نموذج فحص الطفاية فوراً
+                        </div>
+                    </div>
+
+                    <!-- حقل الرابط المباشر -->
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                            <i class="fas fa-link ml-1 text-indigo-500"></i> الرابط المباشر:
+                        </label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="fire-public-link-input" readonly value="${baseUrl}" style="flex: 1; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; font-size: 0.85rem; direction: ltr; text-align: left;">
+                            <button type="button" id="fire-copy-link-btn" class="btn-secondary" style="padding: 10px 16px; border-radius: 8px; font-weight: 700; white-space: nowrap;">
+                                <i class="fas fa-copy ml-1"></i> نسخ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 16px 24px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                    <button type="button" id="fire-print-poster-btn" class="btn-primary" style="padding: 9px 20px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; background: #b91c1c;">
+                        <i class="fas fa-print"></i> طباعة بوستر فحص الإطفاء (A4)
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const assetSelect = modal.querySelector('#qr-fire-asset-select');
+        const inspectorSelect = modal.querySelector('#qr-fire-inspector-select');
+        const linkInput = modal.querySelector('#fire-public-link-input');
+        const qrImg = modal.querySelector('#fire-qr-img');
+        const qrText = modal.querySelector('#fire-qr-target-text');
+        const copyBtn = modal.querySelector('#fire-copy-link-btn');
+        const printBtn = modal.querySelector('#fire-print-poster-btn');
+
+        const updateUrl = () => {
+            const assetId = assetSelect.value;
+            const inspector = inspectorSelect.value;
+            const cleanUrl = this.getPublicInspectionUrl(assetId, inspector);
+
+            let encHash = '';
+            try {
+                const companyLogoUrl = (typeof AppState !== 'undefined' && (AppState.companyLogo || AppState.companySettings?.logo)) || '';
+                const compactPayload = {
+                    assets: assets.map(a => ({
+                        id: a.id,
+                        number: a.number || a.id,
+                        type: a.type || 'طفاية حريق',
+                        location: a.location || '',
+                        subLocation: a.subLocation || '',
+                        capacity: a.capacity || '',
+                        status: a.status || 'صالح',
+                        lastInspection: a.lastInspection || a.lastServiceDate || ''
+                    })),
+                    safetyMembers: safetyMembers.map(m => m.name),
+                    logo: companyLogoUrl
+                };
+                encHash = '#cfg=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(compactPayload)))));
+            } catch(e) {}
+
+            const fullUrl = `${cleanUrl}${encHash}`;
+            linkInput.value = fullUrl;
+
+            // توليد QR كود محلي
+            let localQrData = '';
+            const targetUrlForQr = (fullUrl.length < 900) ? fullUrl : cleanUrl;
+            if (typeof qrcode === 'function') {
+                try {
+                    const qr = qrcode(0, 'M');
+                    qr.addData(targetUrlForQr);
+                    qr.make();
+                    localQrData = qr.createDataURL(5, 4);
+                } catch(e) {}
+            }
+            if (!localQrData && window.QRCode && typeof window.QRCode.generate === 'function') {
+                try {
+                    localQrData = window.QRCode.generate(cleanUrl, 240);
+                } catch(e) {}
+            }
+
+            if (localQrData && localQrData.startsWith('data:')) {
+                qrImg.src = localQrData;
+            } else {
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(cleanUrl)}`;
+            }
+
+            if (assetId) {
+                qrText.textContent = `فحص مخصص للجهاز: ${assetId}`;
+            } else {
+                qrText.textContent = `بوابة الفحص الشهري الشامل لجميع أجهزة الإطفاء`;
+            }
+        };
+
+        assetSelect?.addEventListener('change', updateUrl);
+        inspectorSelect?.addEventListener('change', updateUrl);
+        updateUrl();
+
+        copyBtn?.addEventListener('click', () => {
+            navigator.clipboard.writeText(linkInput.value).then(() => {
+                copyBtn.innerHTML = '<i class="fas fa-check ml-1 text-green-600"></i> تم النسخ!';
+                setTimeout(() => { copyBtn.innerHTML = '<i class="fas fa-copy ml-1"></i> نسخ'; }, 2500);
+            });
+        });
+
+        printBtn?.addEventListener('click', () => {
+            const rawUrl = linkInput.value;
+            const printWin = window.open('', '_blank');
+            if (!printWin) {
+                Notification.warning('يرجى السماح بالنوافذ المنبثقة للطباعة');
+                return;
+            }
+
+            printWin.document.write(`
+                <!DOCTYPE html>
+                <html lang="ar" dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>بوستر فحص معدات الإطفاء - HSE</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"><\/script>
+                    <style>
+                        @page { size: A4 portrait; margin: 10mm; }
+                        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+                        body { font-family: 'Cairo', system-ui, sans-serif; text-align: center; color: #0f172a; margin: 0; padding: 10px; background: #ffffff; }
+                        .no-print-bar { margin-bottom: 15px; text-align: left; }
+                        .print-now-btn { background: #dc2626; color: #ffffff; border: none; padding: 10px 22px; border-radius: 8px; font-weight: 800; font-family: inherit; font-size: 15px; cursor: pointer; }
+                        @media print { .no-print-bar { display: none !important; } }
+                        .poster-card { border: 3.5px solid #dc2626; border-radius: 16px; padding: 24px 20px; background: #ffffff; }
+                        .doc-badge-row { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px; font-size: 12px; font-weight: 800; color: #475569; }
+                        .header-banner { background: #991b1b !important; color: #ffffff !important; padding: 18px 14px; border-radius: 10px; margin-bottom: 18px; }
+                        .title { font-size: 25px; font-weight: 900; margin: 0 0 4px 0; color: #ffffff !important; }
+                        .sub { font-size: 14px; color: #fecaca !important; margin: 0; font-weight: 700; }
+                        .qr-box { background: #ffffff; border: 3px solid #dc2626; border-radius: 16px; padding: 14px; display: inline-block; margin-bottom: 18px; }
+                        .qr-img { width: 250px; height: 250px; display: block; margin: 0 auto; object-fit: contain; }
+                        .instruction-card { background: #fef2f2 !important; border-right: 5px solid #dc2626; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; text-align: right; }
+                        .instruction-title { font-size: 17px; font-weight: 900; color: #991b1b; margin-bottom: 6px; }
+                        .steps-list { font-size: 13.5px; color: #334155; line-height: 1.8; margin: 0; padding-right: 20px; font-weight: 600; }
+                        .footer-meta { font-size: 11.5px; color: #64748b; border-top: 1.5px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; font-weight: 700; }
+                    </style>
+                </head>
+                <body>
+                    <div class="no-print-bar">
+                        <button class="print-now-btn" onclick="window.print()"><i class="fas fa-print"></i> أمر طباعة البوستر الآن (A4)</button>
+                    </div>
+                    <div class="poster-card">
+                        <div class="doc-badge-row">
+                            <div><i class="fas fa-shield-halved"></i> إدارة السلامة والصحة المهنية ومكافحة الحريق (HSE)</div>
+                            <div>كود النموذج: DOC-HSE-FEI-01 | الإصدار 02</div>
+                        </div>
+                        <div class="header-banner">
+                            <h1 class="title">بوابة الفحص الشهري الميداني لمعدات الإطفاء</h1>
+                            <p class="sub">منظومة فحص ومراقبة صلاحية طفايات الحريق — HSE 360 Platform</p>
+                        </div>
+                        <div class="qr-box">
+                            <img id="printQrImg" src="${qrImg.src}" alt="QR Code" class="qr-img">
+                        </div>
+                        <div class="instruction-card">
+                            <div class="instruction-title"><i class="fas fa-mobile-screen-button"></i> خطوات الفحص الدوري السريع عبر الهاتف المحمول:</div>
+                            <ol class="steps-list">
+                                <li>افتح تطبيق الكاميرا على هاتفك المحمول ووجّه العدسة نحو رمز الاستجابة السريعة (QR Code) أعلاه.</li>
+                                <li>اضغط على الرابط المنبثق لفتح نموذج الفحص الشهري مباشرة دون الحاجة لتسجيل دخول.</li>
+                                <li>اختر أو امسح كود الطفاية، ثم تحقق من قراءة الضغط وصمام وتيلة الأمان واضغط حفظ.</li>
+                            </ol>
+                        </div>
+                        <div class="footer-meta">
+                            <div>معاً نحو بيئة عمل آمنة ومعدات طوارئ جاهزة دائماً</div>
+                            <div>HSE Fire Protection © 2026</div>
+                        </div>
+                    </div>
+                    <script>
+                        window.addEventListener('load', function() {
+                            setTimeout(function() { window.print(); }, 400);
+                        });
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWin.document.close();
+        });
+    },
+
+    /**
+     * نافذة طباعة كروت ورموز QR دفعة واحدة لجميع الأجهزة في قاعدة البيانات
+     */
+    showBatchPrintQrModal() {
+        const assets = this.getAssets() || [];
+        if (!assets || assets.length === 0) {
+            Notification.warning('لا توجد أجهزة إطفاء مسجلة في قاعدة البيانات للطباعة.');
+            return;
+        }
+
+        // استخراج قائمة المواقع والأنواع الفريدة
+        const locations = [...new Set(assets.map(a => a.location).filter(Boolean))].sort();
+        const types = [...new Set(assets.map(a => a.type || a.equipmentType).filter(Boolean))].sort();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay fire-modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 640px; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                <div class="modal-header" style="background: linear-gradient(135deg, #0b2a55 0%, #1e40af 100%); color: #ffffff; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); display: flex; align-items: center; justify-content: center; color: #fde68a; font-size: 1.25rem;">
+                            <i class="fas fa-print"></i>
+                        </div>
+                        <div>
+                            <h2 class="modal-title" style="color: #ffffff; font-size: 1.15rem; font-weight: 700; margin: 0 0 2px 0;">طباعة كروت QR الشاملة لمعدات الإطفاء</h2>
+                            <p style="font-size: 0.8rem; color: #bfdbfe; margin: 0;">طباعة ملصقات QR لجميع الأجهزة دفعة واحدة بدلاً من جهاز تلو الآخر</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" style="color: #bfdbfe; font-size: 1.25rem;" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" style="padding: 24px; background: #f8fafc;">
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-info-circle text-blue-600" style="font-size: 20px;"></i>
+                        <div style="font-size: 0.85rem; color: #1e3a8a; font-weight: 700;">
+                            إجمالي الأجهزة المسجلة بقاعدة البيانات: <span style="font-size: 1rem; color: #dc2626;" id="batch-total-count">${assets.length}</span> جهاز إطفاء
+                        </div>
+                    </div>
+
+                    <!-- فلاتر التخصيص -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-map-marker-alt text-blue-600 ml-1"></i> تصفية حسب الموقع:
+                            </label>
+                            <select id="batch-location-filter" class="form-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">
+                                <option value="all">— جميع المواقع والأقسام —</option>
+                                ${locations.map(loc => `<option value="${Utils.escapeHTML(loc)}">${Utils.escapeHTML(loc)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-fire-extinguisher text-red-600 ml-1"></i> تصفية حسب نوع الجهاز:
+                            </label>
+                            <select id="batch-type-filter" class="form-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">
+                                <option value="all">— جميع أنواع الطفايات والمعدات —</option>
+                                ${types.map(t => `<option value="${Utils.escapeHTML(t)}">${Utils.escapeHTML(t)}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-border-all text-indigo-600 ml-1"></i> مقاس وتخطيط الملصقات:
+                            </label>
+                            <select id="batch-layout-select" class="form-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">
+                                <option value="2x4">ملصقات قياسية (صفين × 4 = 8 كروت في صفحة A4)</option>
+                                <option value="3x4">ملصقات مدمجة (3 أعمدة × 4 = 12 كارت في صفحة A4)</option>
+                                <option value="2x3">كروت كبيرة واضحة (صفين × 3 = 6 كروت في صفحة A4)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-calculator text-emerald-600 ml-1"></i> الأجهزة المحددة للطباعة:
+                            </label>
+                            <div style="padding: 10px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; font-weight: 800; font-size: 0.95rem; color: #047857;" id="batch-selected-preview">
+                                ${assets.length} جهاز جاهز للطباعة
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 16px 24px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                    <button type="button" id="start-batch-print-btn" class="btn-primary" style="padding: 10px 24px; border-radius: 8px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; background: #1e40af;">
+                        <i class="fas fa-print"></i> بدء طباعة مصفوفة الكروت الآن (A4)
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const locFilter = modal.querySelector('#batch-location-filter');
+        const typeFilter = modal.querySelector('#batch-type-filter');
+        const layoutSelect = modal.querySelector('#batch-layout-select');
+        const previewEl = modal.querySelector('#batch-selected-preview');
+        const printBtn = modal.querySelector('#start-batch-print-btn');
+
+        const getSelectedAssets = () => {
+            const locVal = locFilter.value;
+            const typeVal = typeFilter.value;
+            return assets.filter(a => {
+                if (locVal !== 'all' && a.location !== locVal) return false;
+                if (typeVal !== 'all' && (a.type || a.equipmentType) !== typeVal) return false;
+                return true;
+            });
+        };
+
+        const updatePreview = () => {
+            const filtered = getSelectedAssets();
+            previewEl.textContent = `${filtered.length} جهاز جاهز للطباعة`;
+            printBtn.disabled = filtered.length === 0;
+        };
+
+        locFilter.addEventListener('change', updatePreview);
+        typeFilter.addEventListener('change', updatePreview);
+
+        printBtn.addEventListener('click', () => {
+            const filtered = getSelectedAssets();
+            if (filtered.length === 0) {
+                Notification.warning('لا توجد أجهزة مطابقة للتصفية.');
+                return;
+            }
+            modal.remove();
+            this.batchPrintQrCards(filtered, layoutSelect.value);
+        });
+    },
+
+    /**
+     * تنفيذ الطباعة الجماعية لكروت QR
+     */
+    batchPrintQrCards(assetsToPrint, layoutType = '2x4') {
+        if (!assetsToPrint || assetsToPrint.length === 0) return;
+
+        let gridCols = 2;
+        let cardMinHeight = '120px';
+        let qrSize = 100;
+        let fontSizeTitle = '13px';
+        let fontSizeSub = '10.5px';
+
+        if (layoutType === '3x4') {
+            gridCols = 3;
+            cardMinHeight = '110px';
+            qrSize = 85;
+            fontSizeTitle = '11.5px';
+            fontSizeSub = '9.5px';
+        } else if (layoutType === '2x3') {
+            gridCols = 2;
+            cardMinHeight = '150px';
+            qrSize = 125;
+            fontSizeTitle = '14px';
+            fontSizeSub = '11.5px';
+        }
+
+        const printWin = window.open('', '_blank');
+        if (!printWin) {
+            Notification.error('يرجى السماح بالنوافذ المنبثقة لطباعة كروت QR');
+            return;
+        }
+
+        // توليد HTML للكروت
+        const cardsHtml = assetsToPrint.map(asset => {
+            const cleanId = String(asset.id || '').trim();
+            const directUrl = this.getPublicInspectionUrl(cleanId);
+            
+            let qrDataUri = '';
+            if (typeof qrcode === 'function') {
+                try {
+                    const qr = qrcode(0, 'M');
+                    qr.addData(directUrl);
+                    qr.make();
+                    qrDataUri = qr.createDataURL(4, 2);
+                } catch(e) {}
+            }
+            if (!qrDataUri && window.QRCode && typeof window.QRCode.generate === 'function') {
+                try {
+                    qrDataUri = window.QRCode.generate(directUrl, 140);
+                } catch(e) {}
+            }
+            if (!qrDataUri) {
+                qrDataUri = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(directUrl)}`;
+            }
+
+            return `
+                <div class="qr-card">
+                    <div class="qr-card-header">
+                        <span class="qr-card-tag"><i class="fas fa-fire-extinguisher"></i> HSE FIRE</span>
+                        <span class="qr-card-num">${Utils.escapeHTML(asset.number || asset.id)}</span>
+                    </div>
+                    <div class="qr-card-body">
+                        <div class="qr-card-info">
+                            <div class="qr-card-id">${Utils.escapeHTML(cleanId)}</div>
+                            <div class="qr-card-type">${Utils.escapeHTML(asset.type || 'طفاية حريق')}${asset.capacity ? ` - ${Utils.escapeHTML(asset.capacity)}` : ''}</div>
+                            <div class="qr-card-loc"><i class="fas fa-map-pin"></i> ${Utils.escapeHTML(asset.location || '-')}${asset.subLocation ? ` (${Utils.escapeHTML(asset.subLocation)})` : ''}</div>
+                            <div class="qr-card-inst">امسح للفحص الشهري</div>
+                        </div>
+                        <div class="qr-card-img-wrap">
+                            <img src="${qrDataUri}" alt="QR ${cleanId}" class="qr-code-img">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        printWin.document.write(`
+            <!DOCTYPE html>
+            <html lang="ar" dir="rtl">
+            <head>
+                <meta charset="UTF-8">
+                <title>ملصقات وكروت QR معدات الإطفاء (${assetsToPrint.length} جهاز)</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                <style>
+                    @page { size: A4 portrait; margin: 6mm; }
+                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+                    body { font-family: 'Cairo', system-ui, sans-serif; color: #0f172a; margin: 0; padding: 6px; background: #ffffff; }
+                    .no-print-bar { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; }
+                    .print-btn { background: #1e40af; color: #fff; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 800; font-family: inherit; font-size: 14px; cursor: pointer; }
+                    @media print { .no-print-bar { display: none !important; } }
+                    
+                    .cards-grid {
+                        display: grid;
+                        grid-template-columns: repeat(${gridCols}, 1fr);
+                        gap: 7mm;
+                    }
+                    
+                    .qr-card {
+                        border: 2px dashed #94a3b8;
+                        border-radius: 10px;
+                        padding: 8px 10px;
+                        background: #ffffff;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        min-height: ${cardMinHeight};
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                        position: relative;
+                    }
+                    
+                    .qr-card-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        border-bottom: 1.5px solid #e2e8f0;
+                        padding-bottom: 4px;
+                        margin-bottom: 6px;
+                    }
+                    
+                    .qr-card-tag {
+                        font-size: 9px;
+                        font-weight: 800;
+                        color: #dc2626;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 3px;
+                    }
+                    
+                    .qr-card-num {
+                        font-size: 9.5px;
+                        font-weight: 800;
+                        color: #475569;
+                    }
+                    
+                    .qr-card-body {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 8px;
+                    }
+                    
+                    .qr-card-info {
+                        flex: 1;
+                        text-align: right;
+                    }
+                    
+                    .qr-card-id {
+                        font-size: ${fontSizeTitle};
+                        font-weight: 900;
+                        color: #0b2a55;
+                        letter-spacing: 0.5px;
+                        margin-bottom: 2px;
+                    }
+                    
+                    .qr-card-type {
+                        font-size: ${fontSizeSub};
+                        font-weight: 800;
+                        color: #dc2626;
+                        margin-bottom: 2px;
+                    }
+                    
+                    .qr-card-loc {
+                        font-size: ${fontSizeSub};
+                        font-weight: 700;
+                        color: #334155;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 145px;
+                        margin-bottom: 4px;
+                    }
+                    
+                    .qr-card-inst {
+                        font-size: 8.5px;
+                        font-weight: 700;
+                        color: #64748b;
+                        background: #f1f5f9;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        display: inline-block;
+                    }
+                    
+                    .qr-card-img-wrap {
+                        flex: 0 0 auto;
+                    }
+                    
+                    .qr-code-img {
+                        width: ${qrSize}px;
+                        height: ${qrSize}px;
+                        display: block;
+                        border: 1px solid #cbd5e1;
+                        border-radius: 6px;
+                        padding: 2px;
+                        background: #fff;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="no-print-bar">
+                    <div style="font-weight: 800; color: #1e3a8a;">
+                        جاهز لطباعة ملصقات ${assetsToPrint.length} جهاز إطفاء (A4 Sheet)
+                    </div>
+                    <button class="print-btn" onclick="window.print()"><i class="fas fa-print"></i> أمر الطباعة الآن</button>
+                </div>
+
+                <div class="cards-grid">
+                    ${cardsHtml}
+                </div>
+
+                <script>
+                    window.addEventListener('load', function() {
+                        setTimeout(function() { window.print(); }, 400);
+                    });
+                <\/script>
+            </body>
+            </html>
+        `);
+        printWin.document.close();
+    },
+
     printQr(assetId) {
         const asset = this.getAssets().find(item => item.id === assetId);
         if (!asset) {
@@ -4561,12 +5203,21 @@ FireEquipment = {
             return;
         }
 
-        const qrData = asset.qrCodeData || this.generateQrData(asset.id);
-        const qrImage = typeof QRCode !== 'undefined' ? QRCode.generate(qrData, 240) : null;
-
+        const directUrl = this.getPublicInspectionUrl(asset.id);
+        let qrImage = '';
+        if (typeof qrcode === 'function') {
+            try {
+                const qr = qrcode(0, 'M');
+                qr.addData(directUrl);
+                qr.make();
+                qrImage = qr.createDataURL(6, 4);
+            } catch(e) {}
+        }
+        if (!qrImage && typeof QRCode !== 'undefined') {
+            qrImage = QRCode.generate(directUrl, 260);
+        }
         if (!qrImage) {
-            Notification.error('تعذر توليد QR Code.');
-            return;
+            qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(directUrl)}`;
         }
 
         const printWindow = window.open('', '_blank');
@@ -4581,19 +5232,27 @@ FireEquipment = {
             <head>
                 <meta charset="UTF-8">
                 <title>QR Code - ${Utils.escapeHTML(asset.number || asset.id)}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800;900&display=swap" rel="stylesheet">
                 <style>
-                    body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
-                    img { max-width: 320px; margin: 20px auto; display: block; }
-                    .info { margin-top: 10px; font-size: 14px; }
+                    body { font-family: 'Cairo', Arial, sans-serif; text-align: center; padding: 24px; color: #0f172a; }
+                    .card-box { border: 3px solid #dc2626; border-radius: 16px; padding: 20px; max-width: 380px; margin: 0 auto; }
+                    .tag { color: #dc2626; font-weight: 800; font-size: 13px; margin-bottom: 6px; }
+                    .id-title { font-size: 22px; font-weight: 900; color: #0b2a55; margin: 0 0 6px 0; }
+                    img { width: 220px; height: 220px; margin: 12px auto; display: block; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 6px; }
+                    .info { margin: 4px 0; font-size: 13px; color: #334155; font-weight: 700; }
+                    .hint { font-size: 11px; color: #64748b; margin-top: 10px; border-top: 1px dashed #cbd5e1; padding-top: 8px; }
                 </style>
             </head>
             <body>
-                <h2>QR Code لجهاز الإطفاء</h2>
-                <p class="info"><strong>رقم الجهاز:</strong> ${Utils.escapeHTML(asset.number || asset.id)}</p>
-                <p class="info"><strong>الموقع:</strong> ${Utils.escapeHTML(asset.location || '-')}</p>
-                <img src="${qrImage}" alt="QR Code">
-                <p class="info">${qrData}</p>
-                <script>window.onload = () => window.print();</script>
+                <div class="card-box">
+                    <div class="tag">منظومة فحص معدات الإطفاء — HSE</div>
+                    <div class="id-title">${Utils.escapeHTML(asset.id)}</div>
+                    <p class="info"><strong>النوع:</strong> ${Utils.escapeHTML(asset.type || 'طفاية حريق')}${asset.capacity ? ` - ${Utils.escapeHTML(asset.capacity)}` : ''}</p>
+                    <p class="info"><strong>الموقع:</strong> ${Utils.escapeHTML(asset.location || '-')}</p>
+                    <img src="${qrImage}" alt="QR Code">
+                    <div class="hint">امسح الرمز بكاميرا الهاتف للفحص الشهري المباشر</div>
+                </div>
+                <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>
             </body>
             </html>
         `);

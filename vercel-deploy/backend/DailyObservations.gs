@@ -2846,7 +2846,7 @@ function getPublicObservationConfig() {
         try {
             cache = CacheService.getScriptCache();
             if (cache) {
-                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V7');
+                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V8');
                 if (cachedStr) {
                     return JSON.parse(cachedStr);
                 }
@@ -2967,53 +2967,53 @@ function getPublicObservationConfig() {
             });
         }
 
-        // أ) من إعدادات فريق السلامة في CompanySettings
+        // أ) من شيت Employees (مسؤولو وفنيو إدارة السلامة والصحة المهنية فقط - غير المستقيلين)
+        try {
+            employees.forEach(function(emp) {
+                if (isEmployeeResigned(emp)) return;
+                var name = String(emp.name || emp.employeeName || '').trim();
+                var dept = String(emp.department || '').trim().toLowerCase();
+                var job = String(emp.job || emp.jobTitle || emp.position || '').trim().toLowerCase();
+
+                // استبعاد سلامة الغذاء والجودة والتصنيع والمطاعم
+                if (job.indexOf('غذاء') !== -1 || job.indexOf('food') !== -1 || dept.indexOf('جودة') !== -1 || dept.indexOf('تصنيع') !== -1) {
+                    return;
+                }
+
+                // إدارة السلامة والصحة المهنية حصراً
+                var isHseDept = (dept.indexOf('سلامة') !== -1 || dept.indexOf('hse') !== -1 || dept.indexOf('صحة مهنية') !== -1);
+                var isHseJob = (
+                    job.indexOf('سلامة وصحة') !== -1 || job.indexOf('سلامه وصحة') !== -1 || job.indexOf('السلامة والصحة') !== -1 ||
+                    job.indexOf('سلامة مهنية') !== -1 || job.indexOf('أخصائي سلامة') !== -1 || job.indexOf('اخصائى سلامه') !== -1 ||
+                    job.indexOf('فني سلامة') !== -1 || job.indexOf('فنى سلامة') !== -1 || job.indexOf('مشرف سلامة') !== -1 ||
+                    job.indexOf('مدير السلامة') !== -1 || job.indexOf('مفتش سلامة') !== -1 || job.indexOf('مسؤول سلامة') !== -1 ||
+                    job.indexOf('hse officer') !== -1 || job.indexOf('hse specialist') !== -1 || job.indexOf('hse manager') !== -1
+                );
+
+                if (name && isHseDept && isHseJob) {
+                    registerSafetyMember(name, emp.job || emp.jobTitle || 'أخصائي سلامة وصحة مهنية', emp.department || 'إدارة السلامة والصحة المهنية');
+                }
+            });
+        } catch (empErr) {}
+
+        // ب) من إعدادات فريق السلامة في CompanySettings (إن وُجدت أسماء إضافية معتمدة)
         try {
             var compSettings = readFromSheet('CompanySettings', spreadsheetId) || [];
             compSettings.forEach(function(cs) {
                 if (cs.key === 'safetyTeam' || cs.key === 'safetyTeamMembers' || cs.key === 'hseTeam') {
                     var rawList = cs.value || cs.safetyTeam || '';
                     if (typeof rawList === 'string') {
-                        rawList.split(/[\n,]/).forEach(function(item) { registerSafetyMember(item, 'مسؤول سلامة'); });
+                        rawList.split(/[\n,]/).forEach(function(item) {
+                            var clean = item.trim();
+                            // تجنب الحسابات البرمجية أو الأسماء الإنجليزية الوهمية
+                            if (clean && !clean.toLowerCase().includes('support') && !clean.toLowerCase().includes('admin') && !clean.toLowerCase().includes('tool')) {
+                                registerSafetyMember(clean, 'مسؤول سلامة وصحة مهنية');
+                            }
+                        });
                     }
                 }
             });
         } catch (csTeamErr) {}
-
-        // ب) من شيت Employees (مسؤولو السلامة وفريق HSE فقط - غير المستقيلين)
-        try {
-            employees.forEach(function(emp) {
-                if (isEmployeeResigned(emp)) return;
-                var name = String(emp.name || emp.employeeName || '').trim();
-                var dept = String(emp.department || '').trim();
-                var job = String(emp.job || emp.jobTitle || emp.position || '').trim();
-
-                var isSafety = (
-                    dept.indexOf('سلامة') !== -1 || dept.toLowerCase().indexOf('hse') !== -1 || dept.indexOf('بيئة') !== -1 || dept.indexOf('صحة مهنية') !== -1 ||
-                    job.indexOf('سلامة') !== -1 || job.toLowerCase().indexOf('safety') !== -1 || job.toLowerCase().indexOf('hse') !== -1 ||
-                    job.indexOf('حريق') !== -1 || job.indexOf('مفتش') !== -1 || job.indexOf('أخصائي سلامة') !== -1
-                );
-                if (name && isSafety) {
-                    registerSafetyMember(name, job || 'أخصائي سلامة وصحة مهنية', dept || 'السلامة والصحة المهنية');
-                }
-            });
-        } catch (empErr) {}
-
-        // ج) من شيت Users (المستخدمون ذوو أدوار السلامة أو إدارة السلامة فقط وغير المعطلين)
-        var users = [];
-        try {
-            users = readFromSheet('Users', spreadsheetId) || [];
-            users.forEach(function(u) {
-                if (u.isActive === false || u.active === false || u.status === 'inactive') return;
-                var name = String(u.name || u.fullName || '').trim();
-                var role = String(u.role || '').trim();
-                var dept = String(u.department || '').trim();
-                var isSafetyUser = (dept.indexOf('سلامة') !== -1 || dept.toLowerCase().indexOf('hse') !== -1 || role.indexOf('سلامة') !== -1 || role.toLowerCase().indexOf('safety') !== -1);
-                if (name && isSafetyUser) {
-                    registerSafetyMember(name, role || 'مسؤول سلامة', dept || 'السلامة والصحة المهنية');
-                }
-            });
-        } catch (uErr) {}
 
         safetyMembers.sort(function(a, b) {
             return a.name.localeCompare(b.name, 'ar');
@@ -3086,7 +3086,7 @@ function getPublicObservationConfig() {
 
         try {
             if (cache) {
-                cache.put('PUBLIC_OBS_CONFIG_CACHE_V7', JSON.stringify(configResult), 1800);
+                cache.put('PUBLIC_OBS_CONFIG_CACHE_V8', JSON.stringify(configResult), 1800);
             }
         } catch (cPutErr) {}
 

@@ -749,3 +749,214 @@ function deleteFireEquipmentApprovalRequest(requestId) {
     }
 }
 
+/**
+ * ============================================
+ * بوابة الفحص الشهري العام لمعدات الإطفاء (بدون تسجيل دخول)
+ * ============================================
+ */
+
+/**
+ * جلب بيانات التكوين والأجهزة ومفتشي السلامة لنموذج الفحص العام
+ */
+function getPublicFireInspectionConfig(params) {
+    try {
+        const spreadsheetId = getSpreadsheetId();
+        const sheetName = 'FireEquipmentAssets';
+        const rawAssets = readFromSheet(sheetName, spreadsheetId) || [];
+
+        // تنقية وتجهيز قائمة الأجهزة
+        const assets = rawAssets.map(function(a) {
+            return {
+                id: String(a.id || '').trim(),
+                number: String(a.number || a.id || '').trim(),
+                type: String(a.type || a.equipmentType || 'طفاية حريق').trim(),
+                location: String(a.location || '').trim(),
+                subLocation: String(a.subLocation || '').trim(),
+                capacity: String(a.capacity || '').trim(),
+                status: String(a.status || 'صالح').trim(),
+                lastInspection: String(a.lastInspection || a.lastServiceDate || '').trim(),
+                nextInspection: String(a.nextInspection || '').trim(),
+                manufacturer: String(a.manufacturer || '').trim(),
+                model: String(a.model || '').trim(),
+                installationDate: String(a.installationDate || '').trim()
+            };
+        }).filter(function(a) { return a.id; });
+
+        // جلب مسؤولي السلامة
+        const safetyMembers = [];
+        const seenMembers = {};
+        function addSafetyMember(name, role) {
+            const clean = String(name || '').trim();
+            if (!clean || clean.length < 3 || seenMembers[clean.toLowerCase()]) return;
+            seenMembers[clean.toLowerCase()] = true;
+            safetyMembers.push({ name: clean, role: role || 'مسؤول سلامة' });
+        }
+
+        try {
+            const users = readFromSheet('Users', spreadsheetId) || [];
+            users.forEach(function(u) {
+                const name = String(u.name || u.fullName || '').trim();
+                const role = String(u.role || '').trim();
+                const dept = String(u.department || '').trim();
+                const isSafety = (role.toLowerCase() === 'admin' || role.includes('مدير') || dept.includes('سلامة') || dept.toLowerCase().includes('hse') || role.includes('سلامة'));
+                if (isSafety && name) addSafetyMember(name, role);
+            });
+        } catch (uErr) {}
+
+        try {
+            const employees = readFromSheet('Employees', spreadsheetId) || [];
+            employees.forEach(function(emp) {
+                const name = String(emp.name || emp.employeeName || '').trim();
+                const dept = String(emp.department || '').trim();
+                const job = String(emp.job || emp.jobTitle || '').trim();
+                const isSafety = (dept.includes('سلامة') || dept.toLowerCase().includes('hse') || job.includes('سلامة') || job.includes('إطفاء') || job.includes('حريق') || job.includes('مفتش'));
+                if (isSafety && name) addSafetyMember(name, job);
+            });
+        } catch (eErr) {}
+
+        safetyMembers.sort(function(a, b) { return a.name.localeCompare(b.name, 'ar'); });
+
+        // جلب شعار الشركة إن وجد
+        let logo = '';
+        try {
+            const settings = readFromSheet('CompanySettings', spreadsheetId) || [];
+            settings.forEach(function(s) {
+                if (s.key === 'logo' || s.key === 'companyLogo' || s.key === 'appLogo') {
+                    logo = s.value || s.logo || '';
+                }
+            });
+        } catch (sErr) {}
+
+        return {
+            success: true,
+            assets: assets,
+            safetyMembers: safetyMembers,
+            logo: logo,
+            totalAssets: assets.length
+        };
+    } catch (error) {
+        Logger.log('Error in getPublicFireInspectionConfig: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء جلب تكوين فحص أجهزة الإطفاء: ' + error.toString() };
+    }
+}
+
+/**
+ * تسجيل وتوثيق الفحص الشهري العام لجهاز الإطفاء وتحديث حالة وسجل الجهاز تلقائياً
+ */
+function submitPublicFireInspection(payload) {
+    try {
+        if (!payload || typeof payload !== 'object') {
+            return { success: false, message: 'بيانات الفحص غير صالحة' };
+        }
+
+        // حماية السبام (Honeypot)
+        if (payload._hp_field || payload.website || payload.hp) {
+            return { success: true, message: 'تم إرسال الفحص بنجاح' };
+        }
+
+        const assetId = String(payload.assetId || payload.id || '').trim();
+        if (!assetId) {
+            return { success: false, message: 'يرجى تحديد أو مسح معرف جهاز الإطفاء (DeviceID)' };
+        }
+
+        const inspectorName = String(payload.inspector || payload.inspectorName || '').trim();
+        if (!inspectorName) {
+            return { success: false, message: 'يرجى اختيار أو إدخال اسم مسؤول الفحص' };
+        }
+
+        const spreadsheetId = getSpreadsheetId();
+        const inspectionsSheet = 'FireEquipmentInspections';
+        const assetsSheet = 'FireEquipmentAssets';
+
+        // التحقق من وجود الجهاز في جدول الأصول
+        const assets = readFromSheet(assetsSheet, spreadsheetId) || [];
+        const targetAsset = assets.find(function(a) { return String(a.id || '').trim() === assetId; });
+
+        // توليد معرف الفحص
+        const inspectionId = generateSequentialId('FEI', inspectionsSheet, spreadsheetId);
+        const checkDate = payload.checkDate ? String(payload.checkDate).trim() : Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd');
+        const statusVal = String(payload.status || 'صالح').trim();
+
+        // رفع الصورة المرفقة إلى Google Drive إن وُجدت
+        const attachments = [];
+        if (payload.photoBase64 && String(payload.photoBase64).length > 50) {
+            try {
+                if (typeof uploadFileToDrive === 'function') {
+                    const uploadRes = uploadFileToDrive(payload.photoBase64, 'Fire_Insp_' + assetId + '_' + Date.now() + '.jpg', 'image/jpeg', 'FireEquipment');
+                    if (uploadRes && uploadRes.success && uploadRes.file && uploadRes.file.url) {
+                        attachments.push({
+                            name: 'صورة فحص طفاية الحريق ' + assetId,
+                            url: uploadRes.file.url,
+                            type: 'image/jpeg'
+                        });
+                    }
+                }
+            } catch (imgErr) {
+                Logger.log('⚠️ تعذر رفع صورة فحص الطفاية: ' + imgErr.toString());
+            }
+        }
+
+        // بناء سجل الفحص
+        const inspectionRecord = {
+            id: inspectionId,
+            assetId: assetId,
+            checkDate: checkDate,
+            inspector: inspectorName,
+            status: statusVal,
+            gaugeReading: String(payload.gaugeReading || '').trim(),
+            sealIntact: String(payload.sealIntact || '').trim(), // صمام وتيلة الأمان (سليم / مفقود / مكسور)
+            hoseCondition: String(payload.hoseCondition || '').trim(),
+            bodyCondition: String(payload.bodyCondition || '').trim(),
+            weightOrLevel: String(payload.weightOrLevel || '').trim(),
+            remarks: String(payload.remarks || '').trim(),
+            actions: String(payload.actions || payload.correctiveAction || '').trim(),
+            attachments: (typeof stringifyAttachments === 'function') ? stringifyAttachments(attachments) : JSON.stringify(attachments),
+            submittedBy: 'بوابة الفحص العام (Public Fire Inspection Portal)',
+            submittedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        // إضافة الفحص لجدول الفحوصات
+        const addResult = appendToSheet(inspectionsSheet, inspectionRecord, spreadsheetId);
+        if (!addResult || !addResult.success) {
+            return addResult || { success: false, message: 'فشل حفظ سجل الفحص في جدول الفحوصات' };
+        }
+
+        // تحديث الأصل في جدول FireEquipmentAssets
+        try {
+            // حساب تاريخ الفحص القادم (بعد شهر واحد للفحص الدوري الشهري)
+            const inspDateObj = new Date(checkDate);
+            const nextInspDateObj = new Date(inspDateObj);
+            nextInspDateObj.setMonth(nextInspDateObj.getMonth() + 1);
+            const nextInspectionStr = Utilities.formatDate(nextInspDateObj, 'GMT+2', 'yyyy-MM-dd');
+
+            const assetUpdateData = {
+                status: statusVal,
+                lastInspection: checkDate,
+                lastServiceDate: checkDate,
+                nextInspection: nextInspectionStr,
+                updatedAt: new Date()
+            };
+
+            if (targetAsset) {
+                updateFireEquipmentAsset(assetId, assetUpdateData);
+            }
+        } catch (assetUpdateErr) {
+            Logger.log('Warning: Could not update asset status on public inspection: ' + assetUpdateErr.toString());
+        }
+
+        return {
+            success: true,
+            id: inspectionId,
+            assetId: assetId,
+            message: 'تم تسجيل وتوثيق الفحص الشهري لجهاز الإطفاء بنجاح.',
+            record: inspectionRecord
+        };
+    } catch (error) {
+        Logger.log('Error in submitPublicFireInspection: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تسجيل الفحص: ' + error.toString() };
+    }
+}
+
+
