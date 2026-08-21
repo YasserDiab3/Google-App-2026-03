@@ -13495,42 +13495,18 @@ const DailyObservations = {
             if (inspector) queryParts.push(`inspector=${encodeURIComponent(inspector)}`);
             const qStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
             
-            let encHash = '';
-            try {
-                const companyLogoUrl = (typeof AppState !== 'undefined' && (AppState.companyLogo || AppState.companySettings?.logo)) || '';
-                const compactPayload = {
-                    s: (factories || []).map(f => [
-                        String(f.name || f.siteName || f || '').trim(),
-                        this.extractCleanPlacesList(f.places)
-                    ]).filter(x => x[0]),
-                    d: (typeof this.getDepartmentOptions === 'function') ? this.getDepartmentOptions() : [],
-                    m: (safetyMembers || []).map(m => (typeof m === 'string' ? m : m.name)).filter(Boolean),
-                    l: companyLogoUrl
-                };
-                encHash = '#cfg=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(compactPayload)))));
-            } catch(e) {}
-
-            const fullUrl = `${baseUrl}${qStr}${encHash}`;
             const cleanUrl = `${baseUrl}${qStr}`;
-            linkInput.value = fullUrl;
+            linkInput.value = cleanUrl;
             
-            // توليد الرمز محلياً بالكامل بدقة وجودة فائقة وفورية
+            // توليد الرمز محلياً بدقة وجودة فائقة وفورية
             let localQrData = '';
-            const targetUrlForQr = (fullUrl.length < 900) ? fullUrl : cleanUrl;
             if (typeof qrcode === 'function') {
                 try {
-                    const qr = qrcode(0, 'L');
-                    qr.addData(targetUrlForQr);
+                    const qr = qrcode(0, 'M');
+                    qr.addData(cleanUrl);
                     qr.make();
-                    localQrData = qr.createDataURL(5, 4);
-                } catch(e) {
-                    try {
-                        const qrFallback = qrcode(0, 'M');
-                        qrFallback.addData(cleanUrl);
-                        qrFallback.make();
-                        localQrData = qrFallback.createDataURL(5, 4);
-                    } catch(e2) {}
-                }
+                    localQrData = qr.createDataURL(6, 4);
+                } catch(e) {}
             }
             if (!localQrData && window.QRCode && typeof window.QRCode.generate === 'function') {
                 try {

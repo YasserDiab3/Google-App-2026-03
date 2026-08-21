@@ -5137,38 +5137,16 @@ FireEquipment = {
             const inspector = inspectorSelect.value;
             const cleanUrl = this.getPublicInspectionUrl(assetId, inspector);
 
-            let encHash = '';
-            try {
-                const companyLogoUrl = (typeof AppState !== 'undefined' && (AppState.companyLogo || AppState.companySettings?.logo)) || '';
-                const compactPayload = {
-                    assets: assets.map(a => ({
-                        id: a.id,
-                        number: a.number || a.id,
-                        type: a.type || 'طفاية حريق',
-                        location: a.location || '',
-                        subLocation: a.subLocation || '',
-                        capacity: a.capacity || '',
-                        status: a.status || 'صالح',
-                        lastInspection: a.lastInspection || a.lastServiceDate || ''
-                    })),
-                    safetyMembers: safetyMembers.map(m => m.name),
-                    logo: companyLogoUrl
-                };
-                encHash = '#cfg=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(compactPayload)))));
-            } catch(e) {}
-
-            const fullUrl = `${cleanUrl}${encHash}`;
-            linkInput.value = fullUrl;
+            linkInput.value = cleanUrl;
 
             // توليد QR كود محلي
             let localQrData = '';
-            const targetUrlForQr = (fullUrl.length < 900) ? fullUrl : cleanUrl;
             if (typeof qrcode === 'function') {
                 try {
                     const qr = qrcode(0, 'M');
-                    qr.addData(targetUrlForQr);
+                    qr.addData(cleanUrl);
                     qr.make();
-                    localQrData = qr.createDataURL(5, 4);
+                    localQrData = qr.createDataURL(6, 4);
                 } catch(e) {}
             }
             if (!localQrData && window.QRCode && typeof window.QRCode.generate === 'function') {
