@@ -5432,80 +5432,113 @@ const Training = {
             ? storedContractorName
             : (contractorMap.get(normalizedContractorId) || storedContractorName || 'غير محدد');
 
+        const totalHoursDisplay = training.totalHours ? parseFloat(training.totalHours).toFixed(2) : '—';
+        const formattedDate = training.date ? Utils.formatDate(training.date) : '—';
+        const startTime = this.cleanTime(training.startTime || training.fromTime || training.timeFrom) || '—';
+        const endTime = this.cleanTime(training.endTime || training.toTime || training.timeTo) || '—';
+        const duration = training.durationMinutes ? `${training.durationMinutes} دقيقة` : '—';
+        const traineesCount = training.traineesCount ? `${training.traineesCount} متدرب` : '—';
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 700px;">
-                <div class="modal-header">
-                    <h2 class="modal-title">
-                        <i class="fas fa-eye ml-2"></i>
-                        عرض تفاصيل تدريب المقاول
-                    </h2>
-                    <button class="modal-close" title="إغلاق">
+            <div class="modal-content" style="max-width: 760px; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+                <div class="modal-header" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; padding: 20px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); display: flex; align-items: center; justify-content: center; color: #60a5fa; font-size: 1.25rem;">
+                            <i class="fas fa-hard-hat"></i>
+                        </div>
+                        <div>
+                            <h2 class="modal-title" style="color: #ffffff; font-size: 1.25rem; font-weight: 700; margin: 0 0 4px 0; display: flex; align-items: center; gap: 8px;">
+                                تفاصيل تدريب المقاول
+                            </h2>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #94a3b8;">
+                                <span style="display: inline-flex; align-items: center; gap: 5px;"><i class="fas fa-building" style="color: #38bdf8;"></i> ${Utils.escapeHTML(contractorName)}</span>
+                                <span>•</span>
+                                <span style="display: inline-flex; align-items: center; gap: 5px;"><i class="fas fa-calendar-alt" style="color: #a78bfa;"></i> ${formattedDate}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="modal-close" title="إغلاق" style="color: #94a3b8; font-size: 1.25rem; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#94a3b8'">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">التاريخ</label>
-                                <p class="text-gray-900">${training.date ? Utils.formatDate(training.date) : '—'}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">الموضوع التدريبي</label>
-                                <p class="text-gray-900">${Utils.escapeHTML(training.topic || '—')}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">القائم بالتدريب</label>
-                                <p class="text-gray-900">${Utils.escapeHTML(training.trainer || '—')}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">المقاول / الشركة</label>
-                                <p class="text-gray-900">${Utils.escapeHTML(contractorName)}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">عدد المتدربين</label>
-                                <p class="text-gray-900">${training.traineesCount || '—'}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">من الساعة</label>
-                                <p class="text-gray-900">${this.cleanTime(training.startTime || training.fromTime || training.timeFrom) || '—'}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">إلى الساعة</label>
-                                <p class="text-gray-900">${this.cleanTime(training.endTime || training.toTime || training.timeTo) || '—'}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">المدة (دقائق)</label>
-                                <p class="text-gray-900">${training.durationMinutes || '—'}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">ساعات التدريب الإجمالي</label>
-                                <p class="text-gray-900">${training.totalHours ? parseFloat(training.totalHours).toFixed(2) : '—'}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">مكان التدريب</label>
-                                <p class="text-gray-900">${Utils.escapeHTML(training.location || '—')}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">المكان الفرعي</label>
-                                <p class="text-gray-900">${Utils.escapeHTML(training.subLocation || '—')}</p>
+                
+                <div class="modal-body" style="padding: 24px; max-height: calc(85vh - 140px); overflow-y: auto; background: #f8fafc;">
+                    <!-- كروت المؤشرات السريعة -->
+                    <div style="display: grid; grid-cols-2; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                        <div style="background: #ffffff; border-radius: 12px; padding: 14px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-users ml-1 text-blue-500"></i> عدد المتدربين</div>
+                            <div style="color: #0f172a; font-size: 1.15rem; font-weight: 700;">${traineesCount}</div>
+                        </div>
+                        <div style="background: #ffffff; border-radius: 12px; padding: 14px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-stopwatch ml-1 text-amber-500"></i> مدة الجلسة</div>
+                            <div style="color: #0f172a; font-size: 1.15rem; font-weight: 700;">${duration}</div>
+                        </div>
+                        <div style="background: #ffffff; border-radius: 12px; padding: 14px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-business-time ml-1 text-emerald-500"></i> إجمالي الساعات</div>
+                            <div style="color: #0f172a; font-size: 1.15rem; font-weight: 700;">${totalHoursDisplay} <span style="font-size: 0.75rem; font-weight: normal; color: #64748b;">ساعة</span></div>
+                        </div>
+                        <div style="background: #ffffff; border-radius: 12px; padding: 14px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-clock ml-1 text-indigo-500"></i> التوقيت</div>
+                            <div style="color: #0f172a; font-size: 0.95rem; font-weight: 700; direction: ltr;">${startTime} - ${endTime}</div>
+                        </div>
+                    </div>
+
+                    <!-- بطاقات المعلومات الرئيسية -->
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
+                        <!-- بطاقة الدورة والمقاول -->
+                        <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <h3 style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin: 0 0 14px 0; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                                <i class="fas fa-info-circle text-blue-600"></i>
+                                بيانات التدريب والموقع
+                            </h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+                                <div>
+                                    <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 2px;">الموضوع التدريبي</div>
+                                    <div style="font-size: 0.95rem; font-weight: 600; color: #0f172a;">${Utils.escapeHTML(training.topic || '—')}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 2px;">المقاول / الشركة</div>
+                                    <div style="font-size: 0.95rem; font-weight: 600; color: #0f172a;"><span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 600; padding: 3px 8px; border-radius: 6px;">${Utils.escapeHTML(contractorName)}</span></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 2px;">القائم بالتدريب (المدرب)</div>
+                                    <div style="font-size: 0.95rem; font-weight: 600; color: #0f172a;">${Utils.escapeHTML(training.trainer || '—')}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 2px;">مكان التدريب</div>
+                                    <div style="font-size: 0.95rem; font-weight: 600; color: #0f172a;">${Utils.escapeHTML(training.location || '—')}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 2px;">المكان الفرعي</div>
+                                    <div style="font-size: 0.95rem; font-weight: 600; color: #0f172a;">${Utils.escapeHTML(training.subLocation || '—')}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 2px;">تاريخ الإجراء</div>
+                                    <div style="font-size: 0.95rem; font-weight: 600; color: #0f172a;">${formattedDate}</div>
+                                </div>
                             </div>
                         </div>
+
                         ${training.notes ? `
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">ملاحظات</label>
-                                <p class="text-gray-900 whitespace-pre-wrap">${Utils.escapeHTML(training.notes)}</p>
-                            </div>
+                        <!-- بطاقة الملاحظات -->
+                        <div style="background: #fffbeb; border-radius: 12px; border: 1px solid #fef3c7; padding: 16px;">
+                            <h4 style="font-size: 0.85rem; font-weight: 700; color: #92400e; margin: 0 0 6px 0; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-sticky-note"></i>
+                                ملاحظات إضافية
+                            </h4>
+                            <p style="font-size: 0.9rem; color: #78350f; margin: 0; white-space: pre-wrap; line-height: 1.5;">${Utils.escapeHTML(training.notes)}</p>
+                        </div>
                         ` : ''}
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" data-action="close">إغلاق</button>
-                    <button type="button" class="btn-primary" onclick="Training.editContractorTraining('${trainingId}'); this.closest('.modal-overlay').remove();">
-                        <i class="fas fa-edit ml-2"></i>
-                        تعديل
+
+                <div class="modal-footer" style="padding: 16px 24px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn-secondary" data-action="close" style="padding: 8px 18px; border-radius: 8px;">إغلاق</button>
+                    <button type="button" class="btn-primary" onclick="Training.editContractorTraining('${trainingId}'); this.closest('.modal-overlay').remove();" style="padding: 8px 20px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-edit"></i>
+                        تعديل التدريب
                     </button>
                 </div>
             </div>
@@ -13719,70 +13752,117 @@ const Training = {
         }
 
         const employeeCode = record.employeeCode || '';
-        const employeeName = record.employeeName || '-';
+        const employeeName = record.employeeName || 'غير محدد';
         const allForEmployee = registry
             .filter(r => (r.employeeCode || '') === employeeCode)
             .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
+        const totalEmpHours = allForEmployee.reduce((sum, r) => sum + (parseFloat(r.totalHours || r.hours || 0) || 0), 0).toFixed(2);
+
         const formatTime = (t) => {
             const cleaned = this.cleanTime(t);
-            if (!cleaned || cleaned === 'NaN:NaN' || String(cleaned).includes('NaN')) return '-';
+            if (!cleaned || cleaned === 'NaN:NaN' || String(cleaned).includes('NaN')) return '—';
             return cleaned;
         };
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 1100px; max-height: 90vh; display: flex; flex-direction: column;">
-                <div class="modal-header">
-                    <h2 class="modal-title">
-                        <i class="fas fa-eye ml-2"></i>
-                        تفاصيل السجل — ${Utils.escapeHTML(employeeName)}
-                    </h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+            <div class="modal-content" style="max-width: 1150px; max-height: 90vh; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                <!-- رأس النموذج الفاخر -->
+                <div class="modal-header" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; padding: 20px 28px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div style="width: 48px; height: 48px; border-radius: 14px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); display: flex; align-items: center; justify-content: center; color: #60a5fa; font-size: 1.4rem;">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <div>
+                            <h2 class="modal-title" style="color: #ffffff; font-size: 1.3rem; font-weight: 700; margin: 0 0 6px 0; display: flex; align-items: center; gap: 10px;">
+                                تفاصيل سجل التدريب — ${Utils.escapeHTML(employeeName)}
+                            </h2>
+                            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.85rem;">
+                                <span class="badge" style="background: rgba(59, 130, 246, 0.25); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); font-weight: 600; padding: 2px 10px; border-radius: 6px;">كود: ${Utils.escapeHTML(employeeCode || '—')}</span>
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.25); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 600; padding: 2px 10px; border-radius: 6px;">الوظيفة: ${Utils.escapeHTML(record.position || '—')}</span>
+                                <span class="badge" style="background: rgba(245, 158, 11, 0.25); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 600; padding: 2px 10px; border-radius: 6px;">الإدارة: ${Utils.escapeHTML(record.department || '—')}</span>
+                                ${record.factoryName || record.factory ? `<span class="badge" style="background: rgba(168, 85, 247, 0.25); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.3); font-weight: 600; padding: 2px 10px; border-radius: 6px;">المصنع: ${Utils.escapeHTML(record.factoryName || record.factory)}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" title="إغلاق" style="color: #94a3b8; font-size: 1.3rem; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#94a3b8'">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body" style="overflow-y: auto; flex: 1;">
-                    <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-3">
-                            <i class="fas fa-file-alt ml-2 text-blue-600"></i>
-                            تفاصيل هذا السجل
-                        </h3>
-                        <div class="grid grid-cols-2 gap-3 text-sm">
-                            <div><span class="font-semibold text-gray-600">التاريخ:</span> ${record.date ? Utils.formatDate(record.date) : '-'}</div>
-                            <div><span class="font-semibold text-gray-600">نوع التدريب:</span> ${Utils.escapeHTML(record.trainingType || 'داخلي')}</div>
-                            <div><span class="font-semibold text-gray-600">المصنع:</span> ${Utils.escapeHTML(record.factoryName || record.factory || '-')}</div>
-                            <div><span class="font-semibold text-gray-600">الكود:</span> ${Utils.escapeHTML(record.employeeCode || '-')}</div>
-                            <div><span class="font-semibold text-gray-600">الاسم:</span> ${Utils.escapeHTML(record.employeeName || '-')}</div>
-                            <div><span class="font-semibold text-gray-600">الوظيفة:</span> ${Utils.escapeHTML(record.position || '-')}</div>
-                            <div><span class="font-semibold text-gray-600">الإدارة:</span> ${Utils.escapeHTML(record.department || '-')}</div>
-                            <div><span class="font-semibold text-gray-600">موضوع المحاضرة:</span> ${Utils.escapeHTML(record.topic || '-')}</div>
-                            <div><span class="font-semibold text-gray-600">اسم المحاضر:</span> ${Utils.escapeHTML(record.trainer || '-')}</div>
-                            <div><span class="font-semibold text-gray-600">وقت البدء:</span> ${formatTime(record.startTime)}</div>
-                            <div><span class="font-semibold text-gray-600">وقت الانتهاء:</span> ${formatTime(record.endTime)}</div>
-                            <div><span class="font-semibold text-gray-600">إجمالي ساعات التدريب:</span> ${record.totalHours || record.hours || '0'} ساعة</div>
+
+                <div class="modal-body" style="padding: 24px; overflow-y: auto; flex: 1; background: #f8fafc;">
+                    <!-- كروت ملخص السجل الحالي -->
+                    <div style="background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
+                            <h3 style="font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-certificate text-blue-600"></i>
+                                تفاصيل الجلسة التدريبية المحددة
+                            </h3>
+                            <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-weight: 700; border: 1px solid #bfdbfe; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem;">
+                                ${Utils.escapeHTML(record.trainingType || 'تدريب داخلي')}
+                            </span>
+                        </div>
+
+                        <!-- 4 مؤشرات سريعة للجلسة -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 18px;">
+                            <div style="background: #f8fafc; border-radius: 10px; padding: 12px 14px; border: 1px solid #e2e8f0;">
+                                <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-calendar-alt text-blue-500 ml-1"></i> تاريخ التدريب</div>
+                                <div style="font-size: 1rem; font-weight: 700; color: #0f172a;">${record.date ? Utils.formatDate(record.date) : '—'}</div>
+                            </div>
+                            <div style="background: #f8fafc; border-radius: 10px; padding: 12px 14px; border: 1px solid #e2e8f0;">
+                                <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-chalkboard-teacher text-indigo-500 ml-1"></i> اسم المحاضر</div>
+                                <div style="font-size: 1rem; font-weight: 700; color: #0f172a;">${Utils.escapeHTML(record.trainer || '—')}</div>
+                            </div>
+                            <div style="background: #f8fafc; border-radius: 10px; padding: 12px 14px; border: 1px solid #e2e8f0;">
+                                <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-clock text-amber-500 ml-1"></i> التوقيت</div>
+                                <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a; direction: ltr;">${formatTime(record.startTime)} - ${formatTime(record.endTime)}</div>
+                            </div>
+                            <div style="background: #f8fafc; border-radius: 10px; padding: 12px 14px; border: 1px solid #e2e8f0;">
+                                <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-hourglass-half text-emerald-500 ml-1"></i> ساعات التدريب</div>
+                                <div style="font-size: 1.05rem; font-weight: 700; color: #15803d;">${record.totalHours || record.hours || '0'} <span style="font-size: 0.8rem; font-weight: normal; color: #64748b;">ساعة</span></div>
+                            </div>
+                        </div>
+
+                        <!-- موضوع المحاضرة وملاحظات -->
+                        <div style="background: #f1f5f9; border-radius: 10px; padding: 14px 16px; border: 1px solid #cbd5e1;">
+                            <div style="font-size: 0.8rem; color: #475569; font-weight: 600; margin-bottom: 4px;">موضوع المحاضرة / الدورة التدريبية:</div>
+                            <div style="font-size: 1.05rem; font-weight: 700; color: #0f172a; line-height: 1.5;">${Utils.escapeHTML(record.topic || '—')}</div>
                         </div>
                     </div>
-                    <div class="mt-4">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-3">
-                            <i class="fas fa-list-alt ml-2 text-green-600"></i>
-                            جميع تدريبات الموظف (${allForEmployee.length})
-                        </h3>
+
+                    <!-- سجل تدريبات الموظف السابقة -->
+                    <div style="background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                            <h3 style="font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-history text-emerald-600"></i>
+                                السجل التراكمي لتدريبات الموظف
+                            </h3>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-weight: 600; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem;">
+                                    <i class="fas fa-list ml-1"></i> إجمالي الدورات: ${allForEmployee.length}
+                                </span>
+                                <span class="badge" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-weight: 700; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem;">
+                                    <i class="fas fa-clock ml-1"></i> إجمالي الساعات: ${totalEmpHours} ساعة
+                                </span>
+                            </div>
+                        </div>
+
                         ${allForEmployee.length > 0 ? `
-                        <div class="table-wrapper" style="overflow: auto; max-height: 400px; border: 1px solid #e5e7eb; border-radius: 8px;">
-                            <table class="data-table" style="margin: 0;">
-                                <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
+                        <div class="table-wrapper" style="overflow: auto; max-height: 360px; border: 1px solid #e2e8f0; border-radius: 10px;">
+                            <table class="data-table" style="margin: 0; width: 100%; border-collapse: separate; border-spacing: 0;">
+                                <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 2; border-bottom: 2px solid #e2e8f0;">
                                     <tr>
-                                        <th>م</th>
-                                        <th>التاريخ</th>
-                                        <th>نوع التدريب</th>
-                                        <th>المصنع</th>
-                                        <th>موضوع المحاضرة</th>
-                                        <th>اسم المحاضر</th>
-                                        <th>وقت البدء</th>
-                                        <th>وقت الانتهاء</th>
-                                        <th>إجمالي الساعات</th>
+                                        <th style="padding: 12px 14px; font-weight: 700; font-size: 0.85rem; color: #475569; text-align: center; width: 45px;">م</th>
+                                        <th style="padding: 12px 14px; font-weight: 700; font-size: 0.85rem; color: #475569;">التاريخ</th>
+                                        <th style="padding: 12px 14px; font-weight: 700; font-size: 0.85rem; color: #475569;">نوع التدريب</th>
+                                        <th style="padding: 12px 14px; font-weight: 700; font-size: 0.85rem; color: #475569;">المصنع</th>
+                                        <th style="padding: 12px 14px; font-weight: 700; font-size: 0.85rem; color: #475569;">موضوع المحاضرة</th>
+                                        <th style="padding: 12px 14px; font-weight: 700; font-size: 0.85rem; color: #475569;">اسم المحاضر</th>
+                                        <th style="padding: 12px 14px; font-weight: 700; font-size: 0.85rem; color: #475569; text-align: center;">التوقيت</th>
+                                        <th style="padding: 12px 14px; font-weight: 700; font-size: 0.85rem; color: #475569; text-align: center;">الساعات</th>
+                                        <th style="padding: 12px 14px; font-weight: 700; font-size: 0.85rem; color: #475569; text-align: center;">الحالة</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -13792,28 +13872,36 @@ const Training = {
                                         const endT = formatTime(r.endTime);
                                         const hours = r.totalHours || r.hours || '0';
                                         return `
-                                        <tr class="${isCurrent ? 'bg-blue-50' : ''}">
-                                            <td>${i + 1}</td>
-                                            <td>${r.date ? Utils.formatDate(r.date) : '-'}</td>
-                                            <td>${Utils.escapeHTML(r.trainingType || 'داخلي')}</td>
-                                            <td>${Utils.escapeHTML(r.factoryName || r.factory || '-')}</td>
-                                            <td>${Utils.escapeHTML(r.topic || '-')}</td>
-                                            <td>${Utils.escapeHTML(r.trainer || '-')}</td>
-                                            <td>${startT}</td>
-                                            <td>${endT}</td>
-                                            <td>${hours} ساعة</td>
+                                        <tr style="background: ${isCurrent ? '#eff6ff' : (i % 2 === 0 ? '#ffffff' : '#f8fafc')}; border-bottom: 1px solid #f1f5f9; transition: background 0.15s;">
+                                            <td style="padding: 10px 14px; text-align: center; font-weight: 600; color: #64748b;">${i + 1}</td>
+                                            <td style="padding: 10px 14px; font-weight: 600; color: #0f172a; white-space: nowrap;">${r.date ? Utils.formatDate(r.date) : '—'}</td>
+                                            <td style="padding: 10px 14px;"><span class="badge" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; background: #e0f2fe; color: #0369a1; font-weight: 600;">${Utils.escapeHTML(r.trainingType || 'داخلي')}</span></td>
+                                            <td style="padding: 10px 14px; color: #475569;">${Utils.escapeHTML(r.factoryName || r.factory || '—')}</td>
+                                            <td style="padding: 10px 14px; font-weight: 600; color: #1e293b; max-width: 260px;">${Utils.escapeHTML(r.topic || '—')}</td>
+                                            <td style="padding: 10px 14px; color: #475569;">${Utils.escapeHTML(r.trainer || '—')}</td>
+                                            <td style="padding: 10px 14px; text-align: center; font-size: 0.85rem; color: #475569; direction: ltr; white-space: nowrap;">${startT} - ${endT}</td>
+                                            <td style="padding: 10px 14px; text-align: center; font-weight: 700; color: #059669;">${hours} س</td>
+                                            <td style="padding: 10px 14px; text-align: center;">
+                                                ${isCurrent
+                                                    ? `<span class="badge" style="background: #3b82f6; color: #ffffff; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; box-shadow: 0 1px 2px rgba(59,130,246,0.3);">السجل الحالي</span>`
+                                                    : `<span style="color: #94a3b8; font-size: 0.8rem;">—</span>`}
+                                            </td>
                                         </tr>`;
                                     }).join('')}
                                 </tbody>
                             </table>
                         </div>
                         ` : `
-                        <p class="text-gray-500 py-4">لا توجد سجلات أخرى لهذا الموظف.</p>
+                        <div style="text-align: center; padding: 30px; color: #94a3b8;">
+                            <i class="fas fa-folder-open text-4xl mb-2"></i>
+                            <p style="margin: 0;">لا توجد سجلات تدريبية سابقة مسجلة لهذا الموظف.</p>
+                        </div>
                         `}
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+
+                <div class="modal-footer" style="padding: 16px 28px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 8px 24px; border-radius: 8px; font-weight: 600;">إغلاق</button>
                 </div>
             </div>
         `;
