@@ -825,8 +825,15 @@ FireEquipment = {
                 });
             }
         } else if (tabName === 'analytics') {
-            // عرض الواجهة فوراً بالبيانات المتوفرة
-            this.renderAnalyticsData();
+            const tabElement = document.getElementById('fire-tab-analytics');
+            if (tabElement) {
+                const content = await this.renderAnalyticsTab();
+                tabElement.innerHTML = content;
+                this._fireBindAnalyticsEvents();
+                requestAnimationFrame(() => {
+                    this.updateFireAnalyticsDashboard();
+                });
+            }
         } else if (tabName === 'approval-requests') {
             // عرض الواجهة فوراً بالبيانات المتوفرة
             const tabElement = document.getElementById('fire-tab-approval-requests');
@@ -6483,671 +6490,951 @@ FireEquipment = {
         }
     },
 
+    // ذاكرة الرسوم البيانية للتحليل
+    _fireAnalyticsCharts: {},
+    _fireAnalyticsPeriod: '0',
+    _fireAnalyticsFilters: {},
+
+    /** تحميل Chart.js عند الحاجة */
+    async _fireEnsureChartJS() {
+        if (typeof Chart !== 'undefined') return true;
+        const existing = document.querySelector('script[src*="chart.js"],script[src*="chartjs"]');
+        if (existing) {
+            return new Promise(resolve => {
+                let tries = 0;
+                const t = setInterval(() => {
+                    if (typeof Chart !== 'undefined') { clearInterval(t); resolve(true); }
+                    else if (++tries > 50) { clearInterval(t); resolve(false); }
+                }, 100);
+            });
+        }
+        return new Promise(resolve => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+            s.onload = () => resolve(true);
+            s.onerror = () => {
+                const s2 = document.createElement('script');
+                s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+                s2.onload = () => resolve(true);
+                s2.onerror = () => resolve(false);
+                document.head.appendChild(s2);
+            };
+            document.head.appendChild(s);
+        });
+    },
+
     /**
-     * عرض تبويب تحليل البيانات (للمدير فقط)
+     * عرض تبويب تحليل البيانات الشامل المنمق على نمط مهمات الوقاية
      */
     async renderAnalyticsTab() {
         if (!this.isAdmin()) {
-            return '<div class="empty-state"><p class="text-gray-500">ليس لديك صلاحية للوصول إلى هذا القسم</p></div>';
+            return '<div class="empty-state"><p class="text-gray-500">ليس لديك صلاحية للوصول إلى هذا القسم. يجب أن تكون مدير النظام.</p></div>';
         }
 
+        // تحميل Chart.js مبكراً
+        this._fireEnsureChartJS().catch(() => {});
+
         return `
-            <div class="space-y-6">
-                <!-- فلترة الفترة الزمنية -->
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <i class="fas fa-filter ml-2"></i>
-                            فلترة البيانات
-                        </h2>
+        <div id="fire-analytics-root" style="font-family:inherit;">
+
+            <!-- ═══ شريط الأدوات والبانر الرئيسي ═══ -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#DC2626 0%,#B91C1C 50%,#7F1D1D 100%);border-radius:14px;color:#fff;box-shadow:0 8px 28px rgba(220, 38, 38, 0.32);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:46px;height:46px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;backdrop-filter: blur(8px);font-size:22px;">
+                        <i class="fas fa-fire-extinguisher"></i>
                     </div>
-                    <div class="card-body">
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div>
-                                <label class="form-label">من تاريخ</label>
-                                <input type="date" id="analytics-date-from" class="form-input">
-                            </div>
-                            <div>
-                                <label class="form-label">إلى تاريخ</label>
-                                <input type="date" id="analytics-date-to" class="form-input">
-                            </div>
-                            <div>
-                                <label class="form-label">نوع الجهاز</label>
-                                <select id="analytics-type-filter" class="form-input">
-                                    <option value="all">جميع الأنواع</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="form-label">الموقع</label>
-                                <select id="analytics-location-filter" class="form-input">
-                                    <option value="all">جميع المواقع</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mt-4 flex gap-2">
-                            <button id="analytics-apply-filters" class="btn-primary">
-                                <i class="fas fa-search ml-2"></i>
-                                تطبيق الفلترة
-                            </button>
-                            <button id="analytics-reset-filters" class="btn-secondary">
-                                <i class="fas fa-redo ml-2"></i>
-                                إعادة تعيين
-                            </button>
-                            <button id="analytics-export-data" class="btn-secondary">
-                                <i class="fas fa-download ml-2"></i>
-                                تصدير البيانات
-                            </button>
-                        </div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">لوحة تحليل معدات وأجهزة الإطفاء</h2>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.9;">تحليل شامل • الجاهزية التشغيلية • الفحوصات الشهرية • المواقع والمباني • الصيانة • تصدير PDF</p>
                     </div>
                 </div>
-
-                <!-- إحصائيات عامة -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="content-card">
-                        <div class="text-center">
-                            <i class="fas fa-fire-extinguisher text-4xl text-blue-600 mb-2"></i>
-                            <p class="text-sm text-gray-500">إجمالي الأجهزة</p>
-                            <p class="text-3xl font-bold" id="analytics-total-assets">0</p>
-                        </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <span style="font-size:0.72rem;opacity:0.85;margin-inline-end:2px;">الفترة:</span>
+                    <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                        ${['30','90','180','365','0'].map((v,i) => {
+                            const labels=['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
+                            const active=(this._fireAnalyticsPeriod||'0')===v;
+                            return `<button class="fire-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#DC2626':'#fff'};">${labels[i]}</button>`;
+                        }).join('')}
                     </div>
-                    <div class="content-card">
-                        <div class="text-center">
-                            <i class="fas fa-check-circle text-4xl text-green-600 mb-2"></i>
-                            <p class="text-sm text-gray-500">أجهزة صالحة</p>
-                            <p class="text-3xl font-bold text-green-600" id="analytics-active-assets">0</p>
-                        </div>
-                    </div>
-                    <div class="content-card">
-                        <div class="text-center">
-                            <i class="fas fa-tools text-4xl text-yellow-600 mb-2"></i>
-                            <p class="text-sm text-gray-500">بحاجة صيانة</p>
-                            <p class="text-3xl font-bold text-yellow-600" id="analytics-maintenance-assets">0</p>
-                        </div>
-                    </div>
-                    <div class="content-card">
-                        <div class="text-center">
-                            <i class="fas fa-times-circle text-4xl text-red-600 mb-2"></i>
-                            <p class="text-sm text-gray-500">خارج الخدمة</p>
-                            <p class="text-3xl font-bold text-red-600" id="analytics-out-service-assets">0</p>
-                        </div>
-                    </div>
+                    <button id="fire-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;">
+                        <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="fire-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-inline-start:2px;">●</span>
+                    </button>
+                    <button id="fire-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.25);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;">
+                        <i class="fas fa-file-pdf"></i><span>PDF</span>
+                    </button>
+                    <button id="fire-export-csv-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;">
+                        <i class="fas fa-file-excel"></i><span>Excel</span>
+                    </button>
+                    <button id="fire-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" title="تحديث التحليل">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
                 </div>
+            </div>
 
-                <!-- إحصائيات الفحوصات -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="content-card">
-                        <div class="text-center">
-                            <i class="fas fa-clipboard-check text-4xl text-blue-600 mb-2"></i>
-                            <p class="text-sm text-gray-500">إجمالي الفحوصات</p>
-                            <p class="text-3xl font-bold" id="analytics-total-inspections">0</p>
-                        </div>
+            <!-- ═══ لوحة الفلاتر التفاعلية ═══ -->
+            <div id="fire-filter-panel" style="display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sliders-h" style="color:#DC2626;font-size:14px;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;color:#991B1B;">الفلاتر التفاعلية لمعدات الحريق</span>
+                        <span id="fire-filter-count" style="background:#fee2e2;color:#991B1B;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
                     </div>
-                    <div class="content-card">
-                        <div class="text-center">
-                            <i class="fas fa-check-double text-4xl text-green-600 mb-2"></i>
-                            <p class="text-sm text-gray-500">فحوصات مكتملة</p>
-                            <p class="text-3xl font-bold text-green-600" id="analytics-completed-inspections">0</p>
-                        </div>
-                    </div>
-                    <div class="content-card">
-                        <div class="text-center">
-                            <i class="fas fa-exclamation-triangle text-4xl text-yellow-600 mb-2"></i>
-                            <p class="text-sm text-gray-500">فحوصات تحتاج صيانة</p>
-                            <p class="text-3xl font-bold text-yellow-600" id="analytics-maintenance-inspections">0</p>
-                        </div>
-                    </div>
-                    <div class="content-card">
-                        <div class="text-center">
-                            <i class="fas fa-percentage text-4xl text-purple-600 mb-2"></i>
-                            <p class="text-sm text-gray-500">نسبة الاكتمال</p>
-                            <p class="text-3xl font-bold text-purple-600" id="analytics-completion-rate">0%</p>
-                        </div>
-                    </div>
+                    <button id="fire-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #fecaca;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;">
+                        <i class="fas fa-times ml-1"></i>مسح الكل
+                    </button>
                 </div>
-
-                <!-- تحليل حسب النوع -->
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <i class="fas fa-chart-pie ml-2"></i>
-                            تحليل حسب نوع الجهاز
-                        </h2>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-flag text-red-500 ml-1"></i>الحالة الفنية
+                        </label>
+                        <select id="fire-af-status" style="width:100%;padding:7px 10px;border:1.5px solid #fecaca;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;">
+                            <option value="">الكل</option>
+                            <option value="صالح">صالح للعمل</option>
+                            <option value="يحتاج صيانة">يحتاج صيانة</option>
+                            <option value="خارج الخدمة">خارج الخدمة</option>
+                        </select>
                     </div>
-                    <div class="card-body">
-                        <div id="analytics-by-type-table"></div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-fire-extinguisher text-blue-500 ml-1"></i>نوع الطفاية
+                        </label>
+                        <select id="fire-af-type" style="width:100%;padding:7px 10px;border:1.5px solid #fecaca;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;">
+                            <option value="">الكل</option>
+                        </select>
                     </div>
-                </div>
-
-                <!-- تحليل حسب الموقع -->
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <i class="fas fa-map-marker-alt ml-2"></i>
-                            تحليل حسب الموقع
-                        </h2>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-building text-amber-500 ml-1"></i>الموقع / المبنى
+                        </label>
+                        <select id="fire-af-location" style="width:100%;padding:7px 10px;border:1.5px solid #fecaca;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;">
+                            <option value="">الكل</option>
+                        </select>
                     </div>
-                    <div class="card-body">
-                        <div id="analytics-by-location-table"></div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-weight-hanging text-emerald-500 ml-1"></i>السعة والوزن
+                        </label>
+                        <select id="fire-af-capacity" style="width:100%;padding:7px 10px;border:1.5px solid #fecaca;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;">
+                            <option value="">الكل</option>
+                        </select>
                     </div>
-                </div>
-
-                <!-- تحليل زمني للفحوصات -->
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <i class="fas fa-chart-line ml-2"></i>
-                            تحليل زمني للفحوصات
-                        </h2>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-clipboard-check text-purple-500 ml-1"></i>فحص هذا الشهر
+                        </label>
+                        <select id="fire-af-inspection" style="width:100%;padding:7px 10px;border:1.5px solid #fecaca;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;">
+                            <option value="">الكل</option>
+                            <option value="inspected">مفحوصة هذا الشهر</option>
+                            <option value="due">مستحقة / متأخرة</option>
+                        </select>
                     </div>
-                    <div class="card-body">
-                        <div id="analytics-timeline-table"></div>
-                    </div>
-                </div>
-
-                <!-- تحليل المفتشين -->
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <i class="fas fa-user-check ml-2"></i>
-                            تحليل حسب المفتش
-                        </h2>
-                    </div>
-                    <div class="card-body">
-                        <div id="analytics-by-inspector-table"></div>
-                    </div>
-                </div>
-
-                <!-- تحليل الحالة -->
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <i class="fas fa-chart-bar ml-2"></i>
-                            تحليل حسب الحالة
-                        </h2>
-                    </div>
-                    <div class="card-body">
-                        <div id="analytics-by-status-table"></div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-certificate text-teal-500 ml-1"></i>حالة الاعتماد
+                        </label>
+                        <select id="fire-af-approval" style="width:100%;padding:7px 10px;border:1.5px solid #fecaca;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;">
+                            <option value="">الكل</option>
+                            <option value="approved">معتمد رسمياً</option>
+                            <option value="pending">⏳ قيد المراجعة</option>
+                            <option value="rejected">مرفوض</option>
+                        </select>
                     </div>
                 </div>
             </div>
+
+            <!-- ═══ كروت مؤشرات الأداء الرئيسية (KPI Strip) ═══ -->
+            <div id="fire-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px;">
+                <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> جاري إعداد المؤشرات...</div>
+            </div>
+
+            <!-- ═══ توزيع الأجهزة حسب المباني والمواقع الرئيسية ═══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;border-radius:14px;border:1px solid #e2e8f0;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-building text-red-600"></i>
+                        <span style="font-weight:700;font-size:0.88rem;color:#1e293b;">توزيع ونسب الجاهزية حسب المباني والمواقع</span>
+                    </div>
+                    <span style="font-size:0.72rem;color:#64748b;">انقر على أي موقع للتصفية الفورية</span>
+                </div>
+                <div id="fire-factories-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;padding:16px;background:#f8fafc;">
+                    <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:30px 0;grid-column:1/-1;">جاري التحميل...</div>
+                </div>
+            </div>
+
+            <!-- ═══ Row 1: الرسوم البيانية الرئيسية (الحالة + الاتجاه الزمني) ═══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;border-radius:14px;border:1px solid #e2e8f0;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-chart-pie text-emerald-600"></i>
+                            <span style="font-weight:700;font-size:0.88rem;">الحالة التشغيلية والجاهزية</span>
+                        </div>
+                    </div>
+                    <div style="padding:16px;position:relative;height:270px;">
+                        <canvas id="fire-chart-status"></canvas>
+                        <div id="fire-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;border-radius:14px;border:1px solid #e2e8f0;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-chart-line text-red-600"></i>
+                            <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للفحوصات الشهرية (آخر 12 شهر)</span>
+                        </div>
+                    </div>
+                    <div style="padding:16px;position:relative;height:270px;">
+                        <canvas id="fire-chart-trend"></canvas>
+                        <div id="fire-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ Row 2: الرسوم البيانية الثانوية (الأنواع + المقارنة الشهرية) ═══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;border-radius:14px;border:1px solid #e2e8f0;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:gap:8px;">
+                        <i class="fas fa-tags text-blue-600"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">توزيع أنواع طفايات الحريق</span>
+                    </div>
+                    <div style="padding:16px;position:relative;height:270px;">
+                        <canvas id="fire-chart-types"></canvas>
+                        <div id="fire-chart-types-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;border-radius:14px;border:1px solid #e2e8f0;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-calendar-alt text-purple-600"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">معدل الامتثال بالفحص الدوري</span>
+                    </div>
+                    <div style="padding:16px;position:relative;height:270px;">
+                        <canvas id="fire-chart-yearly"></canvas>
+                        <div id="fire-chart-yearly-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ Row 3: القوائم التحليلية المتقدمة مع أشرطة التقدم ═══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:16px;">
+                <!-- أعلى الأنواع -->
+                <div class="content-card" style="padding:0;overflow:hidden;border-radius:14px;border:1px solid #e2e8f0;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-fire-extinguisher text-red-600"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">أكثر أنواع الطفايات كثافة</span>
+                    </div>
+                    <div id="fire-types-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:30px 0;">جاري التحميل...</div>
+                    </div>
+                </div>
+                <!-- أعلى المواقع -->
+                <div class="content-card" style="padding:0;overflow:hidden;border-radius:14px;border:1px solid #e2e8f0;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-map-marker-alt text-amber-600"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">أعلى المواقع كثافة للأجهزة</span>
+                    </div>
+                    <div id="fire-locations-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:30px 0;">جاري التحميل...</div>
+                    </div>
+                </div>
+                <!-- نشاط المفتشين -->
+                <div class="content-card" style="padding:0;overflow:hidden;border-radius:14px;border:1px solid #e2e8f0;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-user-shield text-teal-600"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">إنجاز مسؤولي السلامة الميداني</span>
+                    </div>
+                    <div id="fire-inspectors-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:30px 0;">جاري التحميل...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ Row 4: جدول سجل أحدث الفحوصات الميدانية ═══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;border-radius:14px;border:1px solid #e2e8f0;">
+                <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-history text-red-600"></i>
+                        <span style="font-weight:700;font-size:0.92rem;color:#1e293b;">سجل الفحوصات الميدانية المعتمدة والمعلقة</span>
+                        <span id="fire-recent-count" style="background:#fee2e2;color:#991B1B;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;">0</span>
+                    </div>
+                </div>
+                <div class="table-wrapper" style="overflow-x:auto;">
+                    <table class="data-table" style="width:100%;margin:0;font-size:0.84rem;">
+                        <thead>
+                            <tr style="background:#f8fafc;">
+                                <th style="padding:10px 14px;">كود الفحص</th>
+                                <th style="padding:10px 14px;">الجهاز والموقع</th>
+                                <th style="padding:10px 14px;">المفتش</th>
+                                <th style="padding:10px 14px;">التاريخ</th>
+                                <th style="padding:10px 14px;">الحالة الفنية</th>
+                                <th style="padding:10px 14px;">الاعتماد</th>
+                                <th style="padding:10px 14px;">الملاحظات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fire-recent-tbody">
+                            <tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">جاري تحميل السجلات...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
         `;
     },
 
     /**
-     * جمع وتحليل البيانات
+     * ربط أحداث لوحة التحليل
      */
-    getAnalyticsData(filters = {}) {
-        const assets = this.getAssets();
-        const inspections = this.getInspections();
+    _fireBindAnalyticsEvents() {
+        const root = document.getElementById('fire-analytics-root');
+        if (!root) return;
 
-        // تطبيق الفلترة على الفحوصات
-        let filteredInspections = inspections;
-        if (filters.dateFrom || filters.dateTo) {
-            filteredInspections = inspections.filter(inspection => {
-                const inspectionDate = new Date(inspection.checkDate || inspection.createdAt);
-                if (filters.dateFrom && inspectionDate < new Date(filters.dateFrom)) return false;
-                if (filters.dateTo) {
-                    const toDate = new Date(filters.dateTo);
-                    toDate.setHours(23, 59, 59, 999);
-                    if (inspectionDate > toDate) return false;
-                }
-                return true;
+        // أزرار الفترات
+        root.querySelectorAll('.fire-period-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const p = e.currentTarget.dataset.period;
+                this._fireAnalyticsPeriod = p;
+                root.querySelectorAll('.fire-period-btn').forEach(b => {
+                    const active = b.dataset.period === p;
+                    b.style.background = active ? '#fff' : 'rgba(255,255,255,0.15)';
+                    b.style.color = active ? '#DC2626' : '#fff';
+                });
+                this.updateFireAnalyticsDashboard();
+            });
+        });
+
+        // زر فتح / إغلاق الفلاتر
+        const toggleBtn = document.getElementById('fire-toggle-filters-btn');
+        const filterPanel = document.getElementById('fire-filter-panel');
+        if (toggleBtn && filterPanel) {
+            toggleBtn.addEventListener('click', () => {
+                const isHidden = filterPanel.style.display === 'none';
+                filterPanel.style.display = isHidden ? 'block' : 'none';
             });
         }
 
-        // تطبيق الفلترة على الأجهزة
-        let filteredAssets = assets;
-        if (filters.type && filters.type !== 'all') {
-            filteredAssets = filteredAssets.filter(asset => asset.type === filters.type);
+        // مسح الفلاتر
+        const resetBtn = document.getElementById('fire-filter-reset-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                ['fire-af-status', 'fire-af-type', 'fire-af-location', 'fire-af-capacity', 'fire-af-inspection', 'fire-af-approval'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+                const badge = document.getElementById('fire-filter-badge');
+                if (badge) badge.style.display = 'none';
+                this.updateFireAnalyticsDashboard();
+            });
         }
-        if (filters.location && filters.location !== 'all') {
-            filteredAssets = filteredAssets.filter(asset => asset.location === filters.location);
-        }
 
-        // إحصائيات الأجهزة
-        const assetStats = {
-            total: filteredAssets.length,
-            active: filteredAssets.filter(a => a.status === 'صالح').length,
-            needsMaintenance: filteredAssets.filter(a => a.status === 'يحتاج صيانة').length,
-            outOfService: filteredAssets.filter(a => a.status === 'خارج الخدمة').length
-        };
-
-        // إحصائيات الفحوصات
-        const inspectionStats = {
-            total: filteredInspections.length,
-            completed: filteredInspections.filter(i => i.status === 'صالح').length,
-            needsMaintenance: filteredInspections.filter(i => i.status === 'يحتاج صيانة').length,
-            outOfService: filteredInspections.filter(i => i.status === 'خارج الخدمة').length,
-            completionRate: filteredInspections.length > 0
-                ? ((filteredInspections.filter(i => i.status === 'صالح').length / filteredInspections.length) * 100).toFixed(1)
-                : 0
-        };
-
-        // تحليل حسب النوع
-        const byType = {};
-        filteredAssets.forEach(asset => {
-            const type = asset.type || 'غير محدد';
-            if (!byType[type]) {
-                byType[type] = { total: 0, active: 0, needsMaintenance: 0, outOfService: 0 };
+        // تغيير أي فلتر
+        ['fire-af-status', 'fire-af-type', 'fire-af-location', 'fire-af-capacity', 'fire-af-inspection', 'fire-af-approval'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', () => {
+                    const hasActive = ['fire-af-status', 'fire-af-type', 'fire-af-location', 'fire-af-capacity', 'fire-af-inspection', 'fire-af-approval'].some(fId => {
+                        const sel = document.getElementById(fId);
+                        return sel && sel.value !== '';
+                    });
+                    const badge = document.getElementById('fire-filter-badge');
+                    if (badge) badge.style.display = hasActive ? 'inline-block' : 'none';
+                    this.updateFireAnalyticsDashboard();
+                });
             }
-            byType[type].total++;
-            if (asset.status === 'صالح') byType[type].active++;
-            else if (asset.status === 'يحتاج صيانة') byType[type].needsMaintenance++;
-            else if (asset.status === 'خارج الخدمة') byType[type].outOfService++;
         });
 
-        // تحليل حسب الموقع
-        const byLocation = {};
-        filteredAssets.forEach(asset => {
-            const location = asset.location || 'غير محدد';
-            if (!byLocation[location]) {
-                byLocation[location] = { total: 0, active: 0, needsMaintenance: 0, outOfService: 0 };
-            }
-            byLocation[location].total++;
-            if (asset.status === 'صالح') byLocation[location].active++;
-            else if (asset.status === 'يحتاج صيانة') byLocation[location].needsMaintenance++;
-            else if (asset.status === 'خارج الخدمة') byLocation[location].outOfService++;
-        });
-
-        // تحليل زمني للفحوصات (حسب الشهر)
-        const byMonth = {};
-        filteredInspections.forEach(inspection => {
-            const date = new Date(inspection.checkDate || inspection.createdAt);
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            const monthLabel = date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' });
-            if (!byMonth[monthKey]) {
-                byMonth[monthKey] = { label: monthLabel, total: 0, completed: 0, needsMaintenance: 0, outOfService: 0 };
-            }
-            byMonth[monthKey].total++;
-            if (inspection.status === 'صالح') byMonth[monthKey].completed++;
-            else if (inspection.status === 'يحتاج صيانة') byMonth[monthKey].needsMaintenance++;
-            else if (inspection.status === 'خارج الخدمة') byMonth[monthKey].outOfService++;
-        });
-
-        // تحليل حسب المفتش
-        const byInspector = {};
-        filteredInspections.forEach(inspection => {
-            const inspector = inspection.inspector || 'غير محدد';
-            if (!byInspector[inspector]) {
-                byInspector[inspector] = { total: 0, completed: 0, needsMaintenance: 0, outOfService: 0 };
-            }
-            byInspector[inspector].total++;
-            if (inspection.status === 'صالح') byInspector[inspector].completed++;
-            else if (inspection.status === 'يحتاج صيانة') byInspector[inspector].needsMaintenance++;
-            else if (inspection.status === 'خارج الخدمة') byInspector[inspector].outOfService++;
-        });
-
-        // تحليل حسب الحالة
-        const byStatus = {
-            'صالح': filteredInspections.filter(i => i.status === 'صالح').length,
-            'يحتاج صيانة': filteredInspections.filter(i => i.status === 'يحتاج صيانة').length,
-            'خارج الخدمة': filteredInspections.filter(i => i.status === 'خارج الخدمة').length
-        };
-
-        return {
-            assetStats,
-            inspectionStats,
-            byType,
-            byLocation,
-            byMonth,
-            byInspector,
-            byStatus
-        };
-    },
-
-    /**
-     * عرض بيانات التحليل
-     */
-    renderAnalyticsData() {
-        if (!this.isAdmin()) return;
-
-        // التحقق من وجود تبويب التحليل في DOM
-        const analyticsTab = document.getElementById('fire-tab-content');
-        if (!analyticsTab || this.state.currentTab !== 'analytics') {
-            return; // التبويب غير موجود أو غير نشط
+        // زر التحديث
+        const refreshBtn = document.getElementById('fire-analytics-refresh');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', async () => {
+                refreshBtn.querySelector('i')?.classList.add('fa-spin');
+                await this.loadFireEquipmentDataAsync();
+                await this.updateFireAnalyticsDashboard();
+                refreshBtn.querySelector('i')?.classList.remove('fa-spin');
+                if (typeof Notification !== 'undefined') Notification.success('تم تحديث بيانات التحليل بنجاح');
+            });
         }
 
-        // جمع الفلاتر
-        const dateFrom = document.getElementById('analytics-date-from')?.value || '';
-        const dateTo = document.getElementById('analytics-date-to')?.value || '';
-        const typeFilter = document.getElementById('analytics-type-filter')?.value || 'all';
-        const locationFilter = document.getElementById('analytics-location-filter')?.value || 'all';
-
-        const filters = {
-            dateFrom,
-            dateTo,
-            type: typeFilter,
-            location: locationFilter
-        };
-
-        const analytics = this.getAnalyticsData(filters);
-
-        // تحديث الإحصائيات العامة - مع فحص وجود العناصر
-        const totalAssetsEl = document.getElementById('analytics-total-assets');
-        if (totalAssetsEl) totalAssetsEl.textContent = analytics.assetStats.total;
-
-        const activeAssetsEl = document.getElementById('analytics-active-assets');
-        if (activeAssetsEl) activeAssetsEl.textContent = analytics.assetStats.active;
-
-        const maintenanceAssetsEl = document.getElementById('analytics-maintenance-assets');
-        if (maintenanceAssetsEl) maintenanceAssetsEl.textContent = analytics.assetStats.needsMaintenance;
-
-        const outServiceAssetsEl = document.getElementById('analytics-out-service-assets');
-        if (outServiceAssetsEl) outServiceAssetsEl.textContent = analytics.assetStats.outOfService;
-
-        const totalInspectionsEl = document.getElementById('analytics-total-inspections');
-        if (totalInspectionsEl) totalInspectionsEl.textContent = analytics.inspectionStats.total;
-
-        const completedInspectionsEl = document.getElementById('analytics-completed-inspections');
-        if (completedInspectionsEl) completedInspectionsEl.textContent = analytics.inspectionStats.completed;
-
-        const maintenanceInspectionsEl = document.getElementById('analytics-maintenance-inspections');
-        if (maintenanceInspectionsEl) maintenanceInspectionsEl.textContent = analytics.inspectionStats.needsMaintenance;
-
-        const completionRateEl = document.getElementById('analytics-completion-rate');
-        if (completionRateEl) completionRateEl.textContent = analytics.inspectionStats.completionRate + '%';
-
-        // عرض تحليل حسب النوع
-        const byTypeTableEl = document.getElementById('analytics-by-type-table');
-        if (byTypeTableEl) {
-            const byTypeTable = this.renderAnalyticsTable(analytics.byType, ['النوع', 'الإجمالي', 'صالح', 'يحتاج صيانة', 'خارج الخدمة']);
-            byTypeTableEl.innerHTML = byTypeTable;
+        // زر تصدير PDF
+        const pdfBtn = document.getElementById('fire-export-pdf-btn');
+        if (pdfBtn) {
+            pdfBtn.addEventListener('click', () => this.exportFireAnalyticsPDF());
         }
 
-        // عرض تحليل حسب الموقع
-        const byLocationTableEl = document.getElementById('analytics-by-location-table');
-        if (byLocationTableEl) {
-            const byLocationTable = this.renderAnalyticsTable(analytics.byLocation, ['الموقع', 'الإجمالي', 'صالح', 'يحتاج صيانة', 'خارج الخدمة']);
-            byLocationTableEl.innerHTML = byLocationTable;
-        }
-
-        // عرض التحليل الزمني
-        const timelineTableEl = document.getElementById('analytics-timeline-table');
-        if (timelineTableEl) {
-            const timelineTable = this.renderTimelineTable(analytics.byMonth);
-            timelineTableEl.innerHTML = timelineTable;
-        }
-
-        // عرض تحليل حسب المفتش
-        const byInspectorTableEl = document.getElementById('analytics-by-inspector-table');
-        if (byInspectorTableEl) {
-            const byInspectorTable = this.renderAnalyticsTable(analytics.byInspector, ['المفتش', 'الإجمالي', 'مكتمل', 'يحتاج صيانة', 'خارج الخدمة'], ['total', 'completed', 'needsMaintenance', 'outOfService']);
-            byInspectorTableEl.innerHTML = byInspectorTable;
-        }
-
-        // عرض تحليل حسب الحالة
-        const byStatusTableEl = document.getElementById('analytics-by-status-table');
-        if (byStatusTableEl) {
-            const byStatusTable = this.renderStatusTable(analytics.byStatus);
-            byStatusTableEl.innerHTML = byStatusTable;
+        // زر تصدير Excel
+        const csvBtn = document.getElementById('fire-export-csv-btn');
+        if (csvBtn) {
+            csvBtn.addEventListener('click', () => this.exportAnalyticsData());
         }
     },
 
     /**
-     * عرض جدول تحليلي
-     */
-    renderAnalyticsTable(data, headers, keys = ['total', 'active', 'needsMaintenance', 'outOfService']) {
-        if (!data || Object.keys(data).length === 0) {
-            return '<div class="empty-state"><p class="text-gray-500">لا توجد بيانات للعرض</p></div>';
-        }
-
-        const rows = Object.entries(data)
-            .sort((a, b) => b[1].total - a[1].total)
-            .map(([key, stats]) => {
-                return `
-                    <tr>
-                        <td class="font-semibold">${Utils.escapeHTML(key)}</td>
-                        <td>${stats.total || 0}</td>
-                        <td>${stats[keys[1]] || 0}</td>
-                        <td>${stats[keys[2]] || 0}</td>
-                        <td>${stats[keys[3]] || 0}</td>
-                    </tr>
-                `;
-            }).join('');
-
-        return `
-            <div class="table-wrapper" style="width: 100%; max-width: 100%; overflow-x: auto;">
-                <table class="data-table table-header-red" style="width: 100%; min-width: 100%; table-layout: auto;">
-                    <thead>
-                        <tr>
-                            ${headers.map(h => `<th style="min-width: 100px; word-wrap: break-word;">${h}</th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rows}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    },
-
-    /**
-     * عرض جدول زمني
-     */
-    renderTimelineTable(data) {
-        if (!data || Object.keys(data).length === 0) {
-            return '<div class="empty-state"><p class="text-gray-500">لا توجد بيانات زمنية للعرض</p></div>';
-        }
-
-        const rows = Object.entries(data)
-            .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([key, stats]) => {
-                return `
-                    <tr>
-                        <td class="font-semibold">${Utils.escapeHTML(stats.label)}</td>
-                        <td>${stats.total || 0}</td>
-                        <td>${stats.completed || 0}</td>
-                        <td>${stats.needsMaintenance || 0}</td>
-                        <td>${stats.outOfService || 0}</td>
-                    </tr>
-                `;
-            }).join('');
-
-        return `
-            <div class="table-wrapper" style="width: 100%; max-width: 100%; overflow-x: auto;">
-                <table class="data-table table-header-red" style="width: 100%; min-width: 100%; table-layout: auto;">
-                    <thead>
-                        <tr>
-                            <th style="min-width: 120px;">الشهر</th>
-                            <th style="min-width: 100px;">الإجمالي</th>
-                            <th style="min-width: 100px;">مكتمل</th>
-                            <th style="min-width: 120px;">يحتاج صيانة</th>
-                            <th style="min-width: 120px;">خارج الخدمة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rows}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    },
-
-    /**
-     * عرض جدول الحالة
-     */
-    renderStatusTable(data) {
-        if (!data || Object.keys(data).length === 0) {
-            return '<div class="empty-state"><p class="text-gray-500">لا توجد بيانات للعرض</p></div>';
-        }
-
-        const total = Object.values(data).reduce((sum, val) => sum + val, 0);
-        const rows = Object.entries(data)
-            .map(([status, count]) => {
-                const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
-                let badgeClass = 'badge-info';
-                if (status === 'صالح') badgeClass = 'badge-success';
-                else if (status === 'يحتاج صيانة') badgeClass = 'badge-warning';
-                else if (status === 'خارج الخدمة') badgeClass = 'badge-danger';
-
-                return `
-                    <tr>
-                        <td><span class="badge ${badgeClass}">${Utils.escapeHTML(status)}</span></td>
-                        <td class="font-semibold">${count}</td>
-                        <td>${percentage}%</td>
-                        <td>
-                            <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${percentage}%"></div>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-
-        return `
-            <div class="table-wrapper" style="width: 100%; max-width: 100%; overflow-x: auto;">
-                <table class="data-table table-header-red" style="width: 100%; min-width: 100%; table-layout: auto;">
-                    <thead>
-                        <tr>
-                            <th style="min-width: 120px;">الحالة</th>
-                            <th style="min-width: 100px;">العدد</th>
-                            <th style="min-width: 100px;">النسبة</th>
-                            <th style="min-width: 150px;">التمثيل</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rows}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    },
-
-    /**
-     * إعداد أحداث تبويب التحليل
+     * إعداد أحداث تبويب التحليل (للتوافق مع النداءات القديمة)
      */
     setupAnalyticsEventListeners() {
-        // تحديث قوائم الفلترة
-        const assets = this.getAssets();
-        const typeSelect = document.getElementById('analytics-type-filter');
-        const locationSelect = document.getElementById('analytics-location-filter');
-
-        if (typeSelect) {
-            const types = Array.from(new Set(assets.map(a => a.type).filter(Boolean)));
-            typeSelect.innerHTML = '<option value="all">جميع الأنواع</option>' +
-                types.map(type => `<option value="${Utils.escapeHTML(type)}">${Utils.escapeHTML(type)}</option>`).join('');
-        }
-
-        if (locationSelect) {
-            const locations = Array.from(new Set(assets.map(a => a.location).filter(Boolean)));
-            locationSelect.innerHTML = '<option value="all">جميع المواقع</option>' +
-                locations.map(loc => `<option value="${Utils.escapeHTML(loc)}">${Utils.escapeHTML(loc)}</option>`).join('');
-        }
-
-        // زر تطبيق الفلترة
-        const applyBtn = document.getElementById('analytics-apply-filters');
-        if (applyBtn) {
-            const newApplyBtn = applyBtn.cloneNode(true);
-            applyBtn.parentNode.replaceChild(newApplyBtn, applyBtn);
-            newApplyBtn.addEventListener('click', () => {
-                this.renderAnalyticsData();
-            });
-        }
-
-        // زر إعادة التعيين
-        const resetBtn = document.getElementById('analytics-reset-filters');
-        if (resetBtn) {
-            const newResetBtn = resetBtn.cloneNode(true);
-            resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
-            newResetBtn.addEventListener('click', () => {
-                document.getElementById('analytics-date-from').value = '';
-                document.getElementById('analytics-date-to').value = '';
-                document.getElementById('analytics-type-filter').value = 'all';
-                document.getElementById('analytics-location-filter').value = 'all';
-                this.renderAnalyticsData();
-            });
-        }
-
-        // زر تصدير البيانات
-        const exportBtn = document.getElementById('analytics-export-data');
-        if (exportBtn) {
-            const newExportBtn = exportBtn.cloneNode(true);
-            exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
-            newExportBtn.addEventListener('click', () => {
-                this.exportAnalyticsData();
-            });
-        }
-
-        // تحميل البيانات الأولية
-        this.renderAnalyticsData();
+        this._fireBindAnalyticsEvents();
+        this.updateFireAnalyticsDashboard();
     },
 
     /**
-     * تصدير بيانات التحليل
+     * تحديث وحساب بيانات لوحة التحليل ورسم المخططات
+     */
+    async updateFireAnalyticsDashboard() {
+        const root = document.getElementById('fire-analytics-root');
+        if (!root) return;
+
+        this.ensureData();
+        const allAssets = this.getAssets() || [];
+        const allInspections = this.getInspections() || [];
+        const period = parseInt(this._fireAnalyticsPeriod || '0', 10);
+
+        // 1. تصفية الفحوصات حسب الفترة
+        const cutoff = period > 0 ? (() => { const d = new Date(); d.setDate(d.getDate() - period); return d; })() : null;
+        const inPeriodInspections = cutoff
+            ? allInspections.filter(i => {
+                const d = new Date(i.checkDate || i.createdAt || 0);
+                return d >= cutoff;
+            })
+            : allInspections.slice();
+
+        // 2. ملء خيارات الفلاتر التفاعلية
+        this._firePopulateFilterSelects(allAssets);
+
+        // 3. تطبيق الفلاتر
+        const statusFilter = document.getElementById('fire-af-status')?.value || '';
+        const typeFilter = document.getElementById('fire-af-type')?.value || '';
+        const locationFilter = document.getElementById('fire-af-location')?.value || '';
+        const capacityFilter = document.getElementById('fire-af-capacity')?.value || '';
+        const inspectionFilter = document.getElementById('fire-af-inspection')?.value || '';
+        const approvalFilter = document.getElementById('fire-af-approval')?.value || '';
+
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        const filteredAssets = allAssets.filter(asset => {
+            if (statusFilter && asset.status !== statusFilter) return false;
+            if (typeFilter && asset.type !== typeFilter) return false;
+            if (locationFilter && String(asset.location || '').indexOf(locationFilter) === -1) return false;
+            if (capacityFilter && String(asset.capacity || '').indexOf(capacityFilter) === -1) return false;
+
+            if (inspectionFilter === 'inspected') {
+                const isInspected = inPeriodInspections.some(i => i.assetId === asset.id);
+                if (!isInspected) return false;
+            } else if (inspectionFilter === 'due') {
+                const isInspected = inPeriodInspections.some(i => i.assetId === asset.id);
+                if (isInspected) return false;
+            }
+            return true;
+        });
+
+        const filteredInspections = inPeriodInspections.filter(insp => {
+            if (statusFilter && insp.status !== statusFilter) return false;
+            if (approvalFilter && String(insp.approvalStatus || 'pending').toLowerCase() !== approvalFilter) return false;
+            return true;
+        });
+
+        const countEl = document.getElementById('fire-filter-count');
+        if (countEl) countEl.textContent = `${filteredAssets.length} جهاز • ${filteredInspections.length} فحص`;
+
+        // 4. حساب المؤشرات الرئيسية (KPIs)
+        const totalAssetsCount = filteredAssets.length;
+        const validAssetsCount = filteredAssets.filter(a => a.status === 'صالح').length;
+        const maintenanceCount = filteredAssets.filter(a => a.status === 'يحتاج صيانة').length;
+        const outOfServiceCount = filteredAssets.filter(a => a.status === 'خارج الخدمة').length;
+
+        // فحوصات الشهر الحالي
+        const inspectedThisMonth = allInspections.filter(i => {
+            if (!i.checkDate) return false;
+            const d = new Date(i.checkDate);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        });
+        const pendingApprovalsCount = allInspections.filter(i => String(i.approvalStatus || '').toLowerCase() === 'pending' || (!i.approvalStatus && i.submittedBy && String(i.submittedBy).includes('Public'))).length;
+
+        const readinessRate = totalAssetsCount > 0 ? ((validAssetsCount / totalAssetsCount) * 100).toFixed(0) : 0;
+        const complianceRate = totalAssetsCount > 0 ? Math.min(100, ((inspectedThisMonth.length / totalAssetsCount) * 100)).toFixed(0) : 0;
+
+        // رسم كروت الـ KPI Strip
+        const kpiStripEl = document.getElementById('fire-kpi-strip');
+        if (kpiStripEl) {
+            const kpis = [
+                { label: 'إجمالي الأجهزة', value: totalAssetsCount, icon: 'fas fa-fire-extinguisher', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+                { label: 'صالحة وجاهزة', value: validAssetsCount, icon: 'fas fa-check-circle', color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
+                { label: 'تحتاج صيانة', value: maintenanceCount, icon: 'fas fa-tools', color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+                { label: 'خارج الخدمة', value: outOfServiceCount, icon: 'fas fa-ban', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+                { label: 'فحوصات هذا الشهر', value: inspectedThisMonth.length, icon: 'fas fa-calendar-check', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+                { label: '⏳ بانتظار الاعتماد', value: pendingApprovalsCount, icon: 'fas fa-clock', color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+                { label: 'نسبة الجاهزية', value: `${readinessRate}%`, icon: 'fas fa-shield-alt', color: '#0d9488', bg: '#f0fdfa', border: '#99f6e4' },
+                { label: 'نسبة الامتثال', value: `${complianceRate}%`, icon: 'fas fa-percentage', color: '#db2777', bg: '#fdf2f8', border: '#fbcfe8' }
+            ];
+
+            kpiStripEl.innerHTML = kpis.map(k => `
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-size:15px;">
+                        <i class="${k.icon}"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:800;color:${k.color};line-height:1;" dir="ltr">${k.value}</div>
+                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 5. كروت توزيع المباني والمواقع الرئيسية
+        this._firePopulateLocationCards(filteredAssets);
+
+        // 6. الرسوم البيانية التفاعلية عبر Chart.js
+        const loadedChart = await this._fireEnsureChartJS();
+        if (loadedChart && typeof Chart !== 'undefined') {
+            // دونات الحالة
+            this._fireRenderDoughnut('fire-chart-status', ['صالح للعمل', 'يحتاج صيانة', 'خارج الخدمة'], [validAssetsCount, maintenanceCount, outOfServiceCount], ['#10b981', '#f59e0b', '#ef4444']);
+
+            // الاتجاه الزمني للفحوصات
+            this._fireRenderTrend('fire-chart-trend', allInspections);
+
+            // توزيع الأنواع
+            const typeCounts = {};
+            filteredAssets.forEach(a => {
+                const t = a.type || 'أخرى';
+                typeCounts[t] = (typeCounts[t] || 0) + 1;
+            });
+            const typeLabels = Object.keys(typeCounts).slice(0, 6);
+            const typeValues = typeLabels.map(l => typeCounts[l]);
+            const typePalette = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'];
+            this._fireRenderDoughnut('fire-chart-types', typeLabels, typeValues, typePalette);
+
+            // بار الامتثال الشهري
+            this._fireRenderYearly('fire-chart-yearly', allInspections, allAssets.length);
+        }
+
+        // 7. القوائم التحليلية بأشرطة التقدم
+        this._firePopulateRankedLists(filteredAssets, filteredInspections);
+
+        // 8. جدول أحدث الفحوصات
+        this._firePopulateRecentTable(filteredInspections, allAssets);
+    },
+
+    /**
+     * ملء خيارات الفلاتر
+     */
+    _firePopulateFilterSelects(assets) {
+        const typeSelect = document.getElementById('fire-af-type');
+        const locationSelect = document.getElementById('fire-af-location');
+        const capacitySelect = document.getElementById('fire-af-capacity');
+
+        if (typeSelect && typeSelect.options.length <= 1) {
+            const types = Array.from(new Set(assets.map(a => a.type).filter(Boolean))).sort();
+            types.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                typeSelect.appendChild(opt);
+            });
+        }
+
+        if (locationSelect && locationSelect.options.length <= 1) {
+            const locations = Array.from(new Set(assets.map(a => a.location).filter(Boolean))).sort();
+            locations.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l;
+                opt.textContent = l;
+                locationSelect.appendChild(opt);
+            });
+        }
+
+        if (capacitySelect && capacitySelect.options.length <= 1) {
+            const capacities = Array.from(new Set(assets.map(a => a.capacity).filter(Boolean))).sort();
+            capacities.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                capacitySelect.appendChild(opt);
+            });
+        }
+    },
+
+    /**
+     * كروت توزيع المباني والمواقع
+     */
+    _firePopulateLocationCards(assets) {
+        const container = document.getElementById('fire-factories-cards');
+        if (!container) return;
+
+        const locMap = {};
+        assets.forEach(a => {
+            const loc = String(a.location || 'غير محدد').trim();
+            if (!locMap[loc]) locMap[loc] = { total: 0, valid: 0, maintenance: 0, outOfService: 0 };
+            locMap[loc].total++;
+            if (a.status === 'صالح') locMap[loc].valid++;
+            else if (a.status === 'يحتاج صيانة') locMap[loc].maintenance++;
+            else if (a.status === 'خارج الخدمة') locMap[loc].outOfService++;
+        });
+
+        const sortedLocs = Object.entries(locMap).sort((a, b) => b[1].total - a[1].total).slice(0, 8);
+        if (sortedLocs.length === 0) {
+            container.innerHTML = '<div style="text-align:center;color:#94a3b8;grid-column:1/-1;padding:20px;">لا توجد مواقع مسجلة</div>';
+            return;
+        }
+
+        container.innerHTML = sortedLocs.map(([locName, s]) => {
+            const pct = s.total > 0 ? ((s.valid / s.total) * 100).toFixed(0) : 0;
+            return `
+                <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;cursor:pointer;transition:all 0.2s ease;box-shadow:0 2px 6px rgba(0,0,0,0.02);" onmouseover="this.style.transform='translateY(-2px)';this.style.borderColor='#ef4444';this.style.boxShadow='0 8px 18px rgba(239,68,68,0.1)';" onmouseout="this.style.transform='none';this.style.borderColor='#e2e8f0';this.style.boxShadow='0 2px 6px rgba(0,0,0,0.02)';" onclick="const sel=document.getElementById('fire-af-location');if(sel){sel.value='${Utils.escapeHTML(locName)}';sel.dispatchEvent(new Event('change'));}">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <h4 style="margin:0;font-size:0.86rem;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">${Utils.escapeHTML(locName)}</h4>
+                        <span style="background:#fee2e2;color:#991b1b;font-weight:800;font-size:0.75rem;padding:2px 7px;border-radius:8px;">${s.total} جهاز</span>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;font-size:0.75rem;color:#64748b;margin-bottom:6px;">
+                        <span>نسبة الجاهزية:</span>
+                        <span style="font-weight:700;color:${pct>=90?'#16a34a':pct>=70?'#d97706':'#dc2626'}">${pct}%</span>
+                    </div>
+                    <div style="width:100%;height:6px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:${pct>=90?'#10b981':pct>=70?'#f59e0b':'#ef4444'};border-radius:4px;"></div>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:8px;font-size:0.7rem;color:#64748b;">
+                        <span style="color:#16a34a;"><i class="fas fa-check-circle ml-1"></i>${s.valid}</span>
+                        <span style="color:#d97706;"><i class="fas fa-tools ml-1"></i>${s.maintenance}</span>
+                        <span style="color:#dc2626;"><i class="fas fa-ban ml-1"></i>${s.outOfService}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    /**
+     * القوائم التحليلية المتقدمة بأشرطة التقدم
+     */
+    _firePopulateRankedLists(assets, inspections) {
+        // 1. أعلى الأنواع
+        const typesEl = document.getElementById('fire-types-list');
+        if (typesEl) {
+            const map = {};
+            assets.forEach(a => { const t = a.type || 'غير محدد'; map[t] = (map[t] || 0) + 1; });
+            const list = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 6);
+            const total = assets.length || 1;
+            typesEl.innerHTML = list.map(([name, count]) => {
+                const pct = ((count / total) * 100).toFixed(1);
+                return `
+                    <div>
+                        <div style="display:flex;justify-content:space-between;font-size:0.8rem;font-weight:600;color:#334155;margin-bottom:4px;">
+                            <span>${Utils.escapeHTML(name)}</span>
+                            <span style="color:#dc2626;font-weight:700;">${count} (${pct}%)</span>
+                        </div>
+                        <div style="width:100%;height:7px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #ef4444 0%, #dc2626 100%);border-radius:4px;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 2. أعلى المواقع
+        const locsEl = document.getElementById('fire-locations-list');
+        if (locsEl) {
+            const map = {};
+            assets.forEach(a => { const l = a.location || 'غير محدد'; map[l] = (map[l] || 0) + 1; });
+            const list = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 6);
+            const total = assets.length || 1;
+            locsEl.innerHTML = list.map(([name, count]) => {
+                const pct = ((count / total) * 100).toFixed(1);
+                return `
+                    <div>
+                        <div style="display:flex;justify-content:space-between;font-size:0.8rem;font-weight:600;color:#334155;margin-bottom:4px;">
+                            <span>${Utils.escapeHTML(name)}</span>
+                            <span style="color:#d97706;font-weight:700;">${count} جهاز</span>
+                        </div>
+                        <div style="width:100%;height:7px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #f59e0b 0%, #d97706 100%);border-radius:4px;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 3. نشاط المفتشين
+        const inspEl = document.getElementById('fire-inspectors-list');
+        if (inspEl) {
+            const map = {};
+            inspections.forEach(i => { const name = i.inspector || 'غير محدد'; map[name] = (map[name] || 0) + 1; });
+            const list = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 6);
+            const total = inspections.length || 1;
+            inspEl.innerHTML = list.map(([name, count]) => {
+                const pct = ((count / total) * 100).toFixed(1);
+                return `
+                    <div>
+                        <div style="display:flex;justify-content:space-between;font-size:0.8rem;font-weight:600;color:#334155;margin-bottom:4px;">
+                            <span><i class="fas fa-user-check text-teal-600 ml-1"></i>${Utils.escapeHTML(name)}</span>
+                            <span style="color:#0d9488;font-weight:700;">${count} فحص</span>
+                        </div>
+                        <div style="width:100%;height:7px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #14b8a6 0%, #0d9488 100%);border-radius:4px;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    },
+
+    /**
+     * جدول أحدث الفحوصات
+     */
+    _firePopulateRecentTable(inspections, assets) {
+        const tbody = document.getElementById('fire-recent-tbody');
+        const countEl = document.getElementById('fire-recent-count');
+        if (!tbody) return;
+
+        const recent = inspections.slice().sort((a, b) => {
+            const da = new Date(a.checkDate || a.createdAt || 0);
+            const db = new Date(b.checkDate || b.createdAt || 0);
+            return db - da;
+        }).slice(0, 15);
+
+        if (countEl) countEl.textContent = `${recent.length} فحص`;
+
+        if (recent.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">لا توجد فحوصات مسجلة تطابق التحديد</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = recent.map(r => {
+            const asset = assets.find(a => a.id === r.assetId);
+            const assetName = asset ? `${asset.number || asset.id} - ${asset.location || ''}` : r.assetId;
+            const dateStr = r.checkDate ? Utils.formatDate(r.checkDate) : '-';
+            const statusBadge = this.getStatusBadge(r.status);
+            const approvalBadge = this.getApprovalBadge(r.approvalStatus, r.submittedBy);
+
+            return `
+                <tr>
+                    <td style="font-weight:700;color:#1e293b;">${Utils.escapeHTML(r.id || '-')}</td>
+                    <td>
+                        <div style="font-weight:600;color:#1e293b;">${Utils.escapeHTML(assetName)}</div>
+                        <div style="font-size:0.75rem;color:#94a3b8;">ID: ${Utils.escapeHTML(r.assetId || '-')}</div>
+                    </td>
+                    <td>${Utils.escapeHTML(r.inspector || '-')}</td>
+                    <td>${dateStr}</td>
+                    <td>${statusBadge}</td>
+                    <td>${approvalBadge}</td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.8rem;color:#475569;">
+                        ${Utils.escapeHTML(r.remarks || '-')}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    },
+
+    /**
+     * رسم مخطط Doughnut
+     */
+    _fireRenderDoughnut(canvasId, labels, data, colors) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+
+        try { if (this._fireAnalyticsCharts[canvasId]) this._fireAnalyticsCharts[canvasId].destroy(); } catch (e) {}
+
+        const total = data.reduce((a, b) => a + b, 0);
+        const emptyEl = document.getElementById(`${canvasId}-empty`);
+        if (total === 0) {
+            if (emptyEl) emptyEl.style.display = 'flex';
+            return;
+        }
+        if (emptyEl) emptyEl.style.display = 'none';
+
+        this._fireAnalyticsCharts[canvasId] = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { family: 'inherit', size: 11 }, padding: 12 }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    },
+
+    /**
+     * رسم مخطط الاتجاه الزمني (12 شهر)
+     */
+    _fireRenderTrend(canvasId, inspections) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+
+        try { if (this._fireAnalyticsCharts[canvasId]) this._fireAnalyticsCharts[canvasId].destroy(); } catch (e) {}
+
+        const monthLabels = [];
+        const monthCounts = [];
+        const now = new Date();
+
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const m = d.getMonth();
+            const y = d.getFullYear();
+            monthLabels.push(d.toLocaleDateString('ar-SA', { month: 'short' }));
+
+            const cnt = inspections.filter(insp => {
+                if (!insp.checkDate) return false;
+                const idate = new Date(insp.checkDate);
+                return idate.getMonth() === m && idate.getFullYear() === y;
+            }).length;
+            monthCounts.push(cnt);
+        }
+
+        this._fireAnalyticsCharts[canvasId] = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: monthLabels,
+                datasets: [{
+                    label: 'عدد الفحوصات الشهرية',
+                    data: monthCounts,
+                    borderColor: '#dc2626',
+                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                    fill: true,
+                    tension: 0.35,
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#dc2626'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' } },
+                    x: { grid: { display: false } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    },
+
+    /**
+     * رسم مخطط الامتثال السنوي
+     */
+    _fireRenderYearly(canvasId, inspections, totalAssets) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+
+        try { if (this._fireAnalyticsCharts[canvasId]) this._fireAnalyticsCharts[canvasId].destroy(); } catch (e) {}
+
+        const labels = [];
+        const rates = [];
+        const now = new Date();
+        const baseTotal = totalAssets || 1;
+
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const m = d.getMonth();
+            const y = d.getFullYear();
+            labels.push(d.toLocaleDateString('ar-SA', { month: 'short', year: '2-digit' }));
+
+            const cnt = inspections.filter(insp => {
+                if (!insp.checkDate) return false;
+                const idate = new Date(insp.checkDate);
+                return idate.getMonth() === m && idate.getFullYear() === y;
+            }).length;
+
+            const rate = Math.min(100, Math.round((cnt / baseTotal) * 100));
+            rates.push(rate);
+        }
+
+        this._fireAnalyticsCharts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'نسبة الامتثال %',
+                    data: rates,
+                    backgroundColor: 'rgba(124, 58, 237, 0.85)',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,0.04)' } },
+                    x: { grid: { display: false } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    },
+
+    /**
+     * تصدير تقرير التحليل إلى PDF
+     */
+    exportFireAnalyticsPDF() {
+        if (typeof window.print === 'function') {
+            window.print();
+        } else {
+            Notification.info('يرجى استخدام أمر طباعة المتصفح (Ctrl+P) لحفظ التقرير كـ PDF');
+        }
+    },
+
+    /**
+     * تصدير بيانات التحليل كملف CSV / Excel
      */
     exportAnalyticsData() {
         try {
-            const dateFrom = document.getElementById('analytics-date-from')?.value || '';
-            const dateTo = document.getElementById('analytics-date-to')?.value || '';
-            const typeFilter = document.getElementById('analytics-type-filter')?.value || 'all';
-            const locationFilter = document.getElementById('analytics-location-filter')?.value || 'all';
+            const assets = this.getAssets() || [];
+            const inspections = this.getInspections() || [];
 
-            const filters = {
-                dateFrom,
-                dateTo,
-                type: typeFilter,
-                location: locationFilter
-            };
+            let csv = '\ufeff';
+            csv += 'تقرير تحليل معدات الإطفاء والسلامة\n';
+            csv += `تاريخ التقرير,${new Date().toLocaleDateString('ar-SA')}\n\n`;
 
-            const analytics = this.getAnalyticsData(filters);
-            const assets = this.getAssets();
-            const inspections = this.getInspections();
+            csv += 'سجل أجهزة ومعدات الإطفاء\n';
+            csv += 'DeviceID,رقم الجهاز,النوع,السعة,الموقع,الحالة,تاريخ آخر فحص,تاريخ الفحص القادم\n';
+            assets.forEach(a => {
+                csv += `"${a.id || ''}","${a.number || ''}","${a.type || ''}","${a.capacity || ''}","${a.location || ''}","${a.status || ''}","${a.lastInspection || ''}","${a.nextInspection || ''}"\n`;
+            });
 
-            // إنشاء CSV
-            let csv = 'تحليل بيانات معدات الحريق\n';
-            csv += `تاريخ التصدير: ${new Date().toLocaleDateString('ar-SA')}\n\n`;
+            csv += '\nسجل الفحوصات الشهرية الميدانية\n';
+            csv += 'كود الفحص,DeviceID,تاريخ الفحص,المفتش,الحالة الفنية,حالة الاعتماد,الملاحظات\n';
+            inspections.forEach(i => {
+                csv += `"${i.id || ''}","${i.assetId || ''}","${i.checkDate || ''}","${i.inspector || ''}","${i.status || ''}","${i.approvalStatus || 'pending'}","${(i.remarks || '').replace(/"/g, '""')}"\n`;
+            });
 
-            // إحصائيات الأجهزة
-            csv += 'إحصائيات الأجهزة\n';
-            csv += 'الإجمالي,صالح,يحتاج صيانة,خارج الخدمة\n';
-            csv += `${analytics.assetStats.total},${analytics.assetStats.active},${analytics.assetStats.needsMaintenance},${analytics.assetStats.outOfService}\n\n`;
-
-            // إحصائيات الفحوصات
-            csv += 'إحصائيات الفحوصات\n';
-            csv += 'الإجمالي,مكتمل,يحتاج صيانة,خارج الخدمة,نسبة الاكتمال\n';
-            csv += `${analytics.inspectionStats.total},${analytics.inspectionStats.completed},${analytics.inspectionStats.needsMaintenance},${analytics.inspectionStats.outOfService},${analytics.inspectionStats.completionRate}%\n\n`;
-
-            // تحليل حسب النوع
-            csv += 'تحليل حسب النوع\n';
-            csv += 'النوع,الإجمالي,صالح,يحتاج صيانة,خارج الخدمة\n';
-            Object.entries(analytics.byType)
-                .sort((a, b) => b[1].total - a[1].total)
-                .forEach(([type, stats]) => {
-                    csv += `${type},${stats.total},${stats.active},${stats.needsMaintenance},${stats.outOfService}\n`;
-                });
-            csv += '\n';
-
-            // تحليل حسب الموقع
-            csv += 'تحليل حسب الموقع\n';
-            csv += 'الموقع,الإجمالي,صالح,يحتاج صيانة,خارج الخدمة\n';
-            Object.entries(analytics.byLocation)
-                .sort((a, b) => b[1].total - a[1].total)
-                .forEach(([location, stats]) => {
-                    csv += `${location},${stats.total},${stats.active},${stats.needsMaintenance},${stats.outOfService}\n`;
-                });
-
-            // تحميل الملف
-            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `تحليل_معدات_الحريق_${new Date().toISOString().slice(0, 10)}.csv`);
-            link.style.visibility = 'hidden';
+            link.href = URL.createObjectURL(blob);
+            link.download = `Fire_Equipment_Analytics_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.style.display = 'none';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
 
-            Notification.success('تم تصدير البيانات بنجاح');
+            if (typeof Notification !== 'undefined') {
+                Notification.success('تم تصدير تقرير التحليل بنجاح');
+            }
         } catch (error) {
-            Notification.error('حدث خطأ أثناء تصدير البيانات: ' + error.message);
-            console.error(error);
+            if (typeof Notification !== 'undefined') {
+                Notification.error('حدث خطأ أثناء تصدير البيانات: ' + error.message);
+            }
         }
     },
 
     /**
      * عرض تبويب طلبات الموافقة (للمدير فقط)
      */
-    async renderApprovalRequestsTab() {
+   async renderApprovalRequestsTab() {
         if (!this.isAdmin()) {
             return '<div class="empty-state"><p class="text-gray-500">ليس لديك صلاحية للوصول إلى هذا القسم. يجب أن تكون مدير النظام.</p></div>';
         }
