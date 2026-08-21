@@ -56,122 +56,143 @@
         }
 
         /* رأس الصفحة والشعار */
-        .header-card {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-            border-radius: var(--radius-lg);
-            padding: 22px 20px;
-            color: #ffffff;
-            text-align: center;
-            margin-bottom: 20px;
-            box-shadow: var(--shadow-lg);
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-        }
-
-        .header-card::before {
-            content: '';
-            position: absolute;
-            top: -60%;
-            right: -20%;
-            width: 250px;
-            height: 250px;
-            background: radial-gradient(circle, rgba(59,130,246,0.25) 0%, rgba(255,255,255,0) 70%);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        .header-meta-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 14px;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .header-badge-code {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(15, 23, 42, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: #cbd5e1;
-            letter-spacing: 0.5px;
-        }
-
-        .header-dept-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(37, 99, 235, 0.25);
-            border: 1px solid rgba(96, 165, 250, 0.4);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: #93c5fd;
-        }
-
-        .brand-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 14px;
-        }
-
-        .logo-badge-container {
+        /* ترويسة ISO المعتمدة ثلاثية الأعمدة */
+        .iso-header-table {
+            display: grid;
+            grid-template-columns: 240px 1fr 220px;
             background: #ffffff;
-            border-radius: 14px;
-            padding: 6px 14px;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-            display: inline-flex;
+            border: 2px solid #0f172a;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+            margin-bottom: 20px;
+        }
+
+        .iso-col-brand {
+            padding: 14px 16px;
+            display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            border-left: 2px solid #0f172a;
+            background: #f8fafc;
         }
 
-        .logo-img {
-            max-height: 48px;
-            max-width: 130px;
+        .iso-logo-img {
+            max-height: 52px;
+            max-width: 70px;
             object-fit: contain;
-            display: block;
         }
 
-        .logo-brand-text {
+        .iso-brand-meta {
             text-align: right;
-            border-right: 2px solid #e2e8f0;
-            padding-right: 10px;
         }
 
-        .logo-brand-title {
-            font-size: 0.92rem;
+        .iso-company-name {
+            font-size: 0.95rem;
             font-weight: 900;
             color: #0f172a;
             line-height: 1.2;
+            margin-bottom: 2px;
         }
 
-        .logo-brand-sub {
+        .iso-dept-name {
             font-size: 0.72rem;
-            color: #64748b;
             font-weight: 700;
-        }
-
-        .header-title {
-            font-size: 1.35rem;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            margin-bottom: 5px;
+            color: #2563eb;
             line-height: 1.3;
         }
 
-        .header-subtitle {
-            font-size: 0.84rem;
-            color: #94a3b8;
-            line-height: 1.5;
+        .iso-col-title {
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: #ffffff;
+        }
+
+        .iso-doc-title {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: #0f172a;
+            margin-bottom: 4px;
+            line-height: 1.25;
+        }
+
+        .iso-doc-subtitle {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #64748b;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .iso-platform-tag {
+            display: inline-block;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 800;
+        }
+
+        .iso-col-meta {
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+            border-right: 2px solid #0f172a;
+            background: #f8fafc;
+            font-size: 0.74rem;
+        }
+
+        .iso-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px dashed #cbd5e1;
+            padding-bottom: 3px;
+        }
+
+        .iso-meta-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .iso-meta-key {
+            color: #64748b;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .iso-meta-val {
+            color: #0f172a;
+            font-weight: 800;
+            font-family: monospace, inherit;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 768px) {
+            .iso-header-table {
+                grid-template-columns: 1fr;
+                border-width: 1.5px;
+            }
+            .iso-col-brand {
+                border-left: none;
+                border-bottom: 1.5px solid #0f172a;
+                justify-content: center;
+            }
+            .iso-col-title {
+                border-bottom: 1.5px solid #0f172a;
+            }
+            .iso-col-meta {
+                border-right: none;
+            }
         }
 
         /* حالة التحميل الأولية */
@@ -724,31 +745,43 @@
     </div>
 
     <div class="container">
-        <!-- رأس الصفحة مع الشعار الرسمي المعتمد والبيانات المنظمة -->
-        <div class="header-card">
-            <div class="header-meta-row">
-                <div class="header-badge-code">
-                    <i class="fas fa-certificate text-emerald-400"></i>
-                    <span>DOC-HSE-OBS-01 | Rev. 02</span>
-                </div>
-                <div class="header-dept-tag">
-                    <i class="fas fa-shield-halved"></i>
-                    <span>إدارة السلامة والصحة المهنية والبيئة</span>
+        <!-- ترويسة ISO المعتمدة ثلاثية الأعمدة للشركات -->
+        <div class="iso-header-table">
+            <!-- العمود الأيمن: الشعار واسم الإدارة والشركة -->
+            <div class="iso-col-brand">
+                <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار النظام" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
+                <div class="iso-brand-meta">
+                    <div class="iso-company-name">مجموعة مصانع الشركة</div>
+                    <div class="iso-dept-name"><i class="fas fa-shield-halved ml-1 text-blue-600"></i> إدارة السلامة والصحة المهنية والبيئة</div>
                 </div>
             </div>
 
-            <div class="brand-wrapper">
-                <div class="logo-badge-container">
-                    <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار النظام" class="logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
-                    <div class="logo-brand-text">
-                        <div class="logo-brand-title">منظومة السلامة والصحة المهنية</div>
-                        <div class="logo-brand-sub">HSE 360 Enterprise Platform</div>
-                    </div>
-                </div>
+            <!-- العمود الأوسط: عنوان النموذج المعتمد -->
+            <div class="iso-col-title">
+                <h1 class="iso-doc-title">نموذج تسجيل الملاحظات اليومية الميدانية</h1>
+                <div class="iso-doc-subtitle">Daily HSE Observation & Risk Record</div>
+                <div class="iso-platform-tag"><i class="fas fa-check-circle ml-1 text-emerald-600"></i> منظومة HSE 360 Platform المعتمدة</div>
             </div>
 
-            <h1 class="header-title">نموذج تسجيل الملاحظات اليومية الميدانية</h1>
-            <p class="header-subtitle">منظومة إدارة السلامة والصحة المهنية والبيئة (HSE 360 Platform) — رصد وتوثيق المخاطر والملاحظات الفورية</p>
+            <!-- العمود الأيسر: بيانات ضبط وتوثيق المستند (Document Control) -->
+            <div class="iso-col-meta">
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">كود الوثيقة:</span>
+                    <span class="iso-meta-val">DOC-HSE-OBS-01</span>
+                </div>
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">رقم الإصدار:</span>
+                    <span class="iso-meta-val">Rev. 02</span>
+                </div>
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">تاريخ الاعتماد:</span>
+                    <span class="iso-meta-val">2026-08</span>
+                </div>
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">المعيار الدولي:</span>
+                    <span class="iso-meta-val text-emerald-700">ISO 45001 / HSE</span>
+                </div>
+            </div>
         </div>
 
         <!-- شريط حالة التحميل -->
