@@ -4609,16 +4609,91 @@ FireEquipment = {
     },
 
     /**
+     * استخراج قائمة أعضاء فريق السلامة والصحة المهنية حصراً
+     */
+    getSafetyMembersList() {
+        const isResigned = (emp) => {
+            if (!emp) return false;
+            if (emp.isActive === false || emp.active === false || emp.isActive === 'false' || emp.active === 'false') return true;
+            const s = String(emp.status || emp.employeeStatus || emp.workStatus || emp.employmentStatus || '').trim().toLowerCase();
+            if (!s) return false;
+            return s.includes('مستقيل') || s.includes('استقال') || s.includes('منتهي') || s.includes('فصل') || s.includes('ترك') || s.includes('resign') || s.includes('terminated') || s.includes('inactive') || s.includes('left');
+        };
+
+        const isArabicPersonName = (name) => {
+            if (!name || name.length < 3) return false;
+            if (/[a-zA-Z]/.test(name)) return false;
+            return /[\u0600-\u06FF]/.test(name);
+        };
+
+        const normalizeKey = (name) => {
+            return String(name || '')
+                .trim()
+                .toLowerCase()
+                .replace(/^(م\/|أ\/|د\/|مهندس\/|أستاذ\/|دكتور\/|mr\.|eng\.)\s*/i, '')
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
+                .replace(/\s+/g, ' ');
+        };
+
+        const seen = new Set();
+        const members = [];
+
+        const addMember = (rawName) => {
+            const clean = String(rawName || '').trim();
+            if (!isArabicPersonName(clean)) return;
+            const lower = clean.toLowerCase();
+            if (lower.includes('admin') || lower.includes('support') || lower.includes('system') || lower.includes('tool') || lower.includes('مجهول') || lower.includes('عامة')) return;
+            const key = normalizeKey(clean);
+            if (!key || seen.has(key)) return;
+            seen.add(key);
+            members.push({ name: clean });
+        };
+
+        // 1. من قائمة الموظفين Employees
+        const employees = AppState.appData?.employees || [];
+        employees.forEach(emp => {
+            if (isResigned(emp)) return;
+            const name = emp.name || emp.employeeName || '';
+            const dept = String(emp.department || '').toLowerCase();
+            const job = String(emp.job || emp.jobTitle || emp.position || '').toLowerCase();
+
+            if (job.includes('غذاء') || job.includes('food') || dept.includes('جودة') || dept.includes('تصنيع')) return;
+
+            const isHseDept = dept.includes('سلامة') || dept.includes('hse') || dept.includes('صحة مهنية');
+            const isHseJob = job.includes('سلامة وصحة') || job.includes('سلامه وصحة') || job.includes('السلامة والصحة') ||
+                             job.includes('سلامة مهنية') || job.includes('أخصائي سلامة') || job.includes('اخصائى سلامه') ||
+                             job.includes('فني سلامة') || job.includes('فنى سلامة') || job.includes('مشرف سلامة') ||
+                             job.includes('مدير السلامة') || job.includes('مفتش سلامة') || job.includes('مسؤول سلامة') ||
+                             job.includes('إطفاء') || job.includes('حريق') ||
+                             job.includes('hse officer') || job.includes('hse specialist') || job.includes('hse manager');
+
+            if (name && isHseDept && isHseJob) {
+                addMember(name);
+            }
+        });
+
+        // 2. من إعدادات فريق السلامة في CompanySettings
+        const settings = AppState.companySettings || {};
+        const rawTeam = settings.safetyTeam || settings.safetyTeamMembers || settings.hseTeam;
+        if (Array.isArray(rawTeam)) {
+            rawTeam.forEach(m => addMember(typeof m === 'string' ? m : m.name));
+        } else if (typeof rawTeam === 'string') {
+            rawTeam.split(/[\n,]/).forEach(item => addMember(item));
+        }
+
+        members.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+        return members;
+    },
+
+    /**
      * نافذة رابط وبوستر الفحص الشهري العام لمعدات الإطفاء
      */
     showPublicLinkModal() {
         const baseUrl = this.getPublicInspectionUrl();
         const assets = this.getAssets() || [];
-        const safetyMembers = (AppState.appData?.users || []).filter(u => {
-            const r = String(u.role || '').toLowerCase();
-            const d = String(u.department || '').toLowerCase();
-            return r.includes('admin') || r.includes('سلامة') || r.includes('safety') || d.includes('سلامة') || d.includes('hse');
-        });
+        const safetyMembers = this.getSafetyMembersList();
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay fire-modal';
