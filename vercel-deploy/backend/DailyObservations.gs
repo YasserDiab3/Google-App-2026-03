@@ -2846,7 +2846,7 @@ function getPublicObservationConfig() {
         try {
             cache = CacheService.getScriptCache();
             if (cache) {
-                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V9');
+                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V10');
                 if (cachedStr) {
                     return JSON.parse(cachedStr);
                 }
@@ -3071,6 +3071,10 @@ function getPublicObservationConfig() {
             });
         } catch (csErr) {}
 
+        if (!companyLogo) {
+            companyLogo = 'icons/icapp-logo.png';
+        }
+
         departments.sort(function(a, b) { return a.localeCompare(b, 'ar'); });
 
         var configResult = {
@@ -3098,7 +3102,7 @@ function getPublicObservationConfig() {
 
         try {
             if (cache) {
-                cache.put('PUBLIC_OBS_CONFIG_CACHE_V9', JSON.stringify(configResult), 1800);
+                cache.put('PUBLIC_OBS_CONFIG_CACHE_V10', JSON.stringify(configResult), 1800);
             }
         } catch (cPutErr) {}
 
