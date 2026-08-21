@@ -3,28 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#1e293b">
+    <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SafetyHub | تسجيل ملاحظة سلامة ميدانية</title>
+    <title>SafetyHub | نموذج تسجيل الملاحظات اليومية</title>
     
     <!-- الخطوط والأيقونات -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
-            --primary: #3b82f6;
+            --primary: #2563eb;
             --primary-dark: #1d4ed8;
-            --bg-page: #f1f5f9;
+            --primary-light: #eff6ff;
+            --bg-page: #f8fafc;
             --bg-card: #ffffff;
             --text-main: #0f172a;
             --text-muted: #64748b;
             --border-color: #cbd5e1;
+            --radius-sm: 8px;
             --radius-md: 12px;
-            --radius-lg: 16px;
+            --radius-lg: 18px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.12);
         }
 
         * {
@@ -47,51 +52,71 @@
 
         .container {
             width: 100%;
-            max-width: 540px;
+            max-width: 680px;
         }
 
-        /* رأس الصفحة */
+        /* رأس الصفحة والشعار */
         .header-card {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
             border-radius: var(--radius-lg);
             padding: 24px 20px;
             color: #ffffff;
             text-align: center;
-            margin-bottom: 16px;
-            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-lg);
             position: relative;
             overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .header-card::before {
             content: '';
             position: absolute;
-            top: -50%;
+            top: -60%;
             right: -20%;
-            width: 200px;
-            height: 200px;
-            background: radial-gradient(circle, rgba(59,130,246,0.3) 0%, rgba(255,255,255,0) 70%);
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(59,130,246,0.25) 0%, rgba(255,255,255,0) 70%);
             border-radius: 50%;
+            pointer-events: none;
         }
 
-        .logo-badge {
-            width: 52px;
-            height: 52px;
+        .brand-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+
+        .logo-img {
+            max-height: 56px;
+            max-width: 160px;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            background: #ffffff;
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+
+        .logo-icon-fallback {
+            width: 48px;
+            height: 48px;
             background: rgba(59, 130, 246, 0.2);
-            border: 1px solid rgba(59, 130, 246, 0.4);
-            border-radius: 14px;
+            border: 1.5px solid rgba(59, 130, 246, 0.5);
+            border-radius: 12px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             color: #60a5fa;
-            margin-bottom: 12px;
         }
 
         .header-title {
             font-size: 1.35rem;
             font-weight: 800;
-            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
         }
 
         .header-subtitle {
@@ -104,48 +129,141 @@
         .form-card {
             background: var(--bg-card);
             border-radius: var(--radius-lg);
-            padding: 22px 18px;
+            padding: 24px 20px;
             border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--shadow-sm);
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            gap: 22px;
         }
 
-        .section-label {
-            font-size: 0.9rem;
+        /* خطوات وأقسام النموذج */
+        .form-section {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 10px;
+            margin-bottom: 2px;
+        }
+
+        .section-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #bfdbfe;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .section-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: -8px;
+            margin-bottom: 4px;
+        }
+
+        /* شبكات الحقول */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 540px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 0.85rem;
             font-weight: 700;
             color: #334155;
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 6px;
+            gap: 6px;
         }
 
-        .section-label .required {
+        .form-label .required {
             color: #ef4444;
         }
 
-        /* اختيار نوع الملاحظة */
+        .form-control {
+            width: 100%;
+            padding: 11px 14px;
+            font-size: 15px; /* تجنب zoom تلقائي في iOS */
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: #ffffff;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        textarea.form-control {
+            min-height: 90px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        /* كروت اختيار نوع الملاحظة */
         .types-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        @media (max-width: 500px) {
+            .types-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         .type-card {
-            border: 2px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            padding: 12px 10px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: var(--radius-sm);
+            padding: 10px 8px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s ease;
-            background: #ffffff;
+            transition: all 0.15s ease;
+            background: #f8fafc;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 6px;
-            position: relative;
+            gap: 5px;
             touch-action: manipulation;
         }
 
@@ -154,51 +272,51 @@
         }
 
         .type-card .icon {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
+            color: #64748b;
         }
 
         .type-card .title {
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             font-weight: 700;
+            color: #334155;
+            line-height: 1.2;
         }
-
-        /* تخصيص ألوان البطاقات عند التحديد */
-        .type-card[data-type="unsafe_act"] { --color: #ef4444; }
-        .type-card[data-type="unsafe_condition"] { --color: #f59e0b; }
-        .type-card[data-type="safe_behavior"] { --color: #10b981; }
-        .type-card[data-type="environmental"] { --color: #06b6d4; }
-
-        .type-card .icon { color: var(--color); }
 
         .type-card.selected {
-            border-color: var(--color);
-            background-color: color-mix(in srgb, var(--color) 8%, white);
-            box-shadow: 0 0 0 1px var(--color);
-        }
-
-        /* حقول الإدخال */
-        .form-control {
-            width: 100%;
-            padding: 12px 14px;
-            font-size: 16px; /* منع auto-zoom في iOS */
-            border: 1.5px solid var(--border-color);
-            border-radius: var(--radius-md);
-            background: #ffffff;
-            color: var(--text-main);
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .form-control:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            background-color: var(--primary-light);
+            box-shadow: 0 0 0 1px var(--primary);
         }
 
-        textarea.form-control {
-            min-height: 95px;
-            resize: vertical;
-            line-height: 1.5;
+        .type-card.selected .icon,
+        .type-card.selected .title {
+            color: var(--primary);
         }
+
+        /* اختيار مستوى الخطورة */
+        .risk-chips {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+
+        .risk-chip {
+            border: 1.5px solid #e2e8f0;
+            border-radius: var(--radius-sm);
+            padding: 8px 4px;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            background: #ffffff;
+            transition: all 0.15s ease;
+        }
+
+        .risk-chip[data-risk="منخفض"].selected { background: #dcfce7; border-color: #16a34a; color: #15803d; }
+        .risk-chip[data-risk="متوسط"].selected { background: #fef3c7; border-color: #d97706; color: #b45309; }
+        .risk-chip[data-risk="عالي"].selected { background: #fee2e2; border-color: #dc2626; color: #b91c1c; }
+        .risk-chip[data-risk="حرج"].selected { background: #7f1d1d; border-color: #450a0a; color: #ffffff; }
 
         /* منطقة رفع وتصوير الكاميرا */
         .photo-upload-area {
@@ -209,11 +327,11 @@
             background: #f8fafc;
             cursor: pointer;
             transition: all 0.2s ease;
-            position: relative;
         }
 
-        .photo-upload-area:active {
-            background: #f1f5f9;
+        .photo-upload-area:hover, .photo-upload-area:active {
+            background: #eff6ff;
+            border-color: var(--primary);
         }
 
         .photo-preview-wrap {
@@ -222,14 +340,14 @@
             display: none;
             border-radius: var(--radius-md);
             overflow: hidden;
-            border: 1px solid #e2e8f0;
-            max-height: 240px;
+            border: 1px solid #cbd5e1;
+            max-height: 250px;
         }
 
         .photo-preview-wrap img {
             width: 100%;
             height: 100%;
-            max-height: 240px;
+            max-height: 250px;
             object-fit: cover;
             display: block;
         }
@@ -251,14 +369,14 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
 
-        /* المفاتيح والخيارات */
+        /* خيار الإبلاغ كمجهول */
         .toggle-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
             background: #f8fafc;
             padding: 10px 14px;
-            border-radius: var(--radius-md);
+            border-radius: var(--radius-sm);
             border: 1px solid #e2e8f0;
         }
 
@@ -269,40 +387,11 @@
             height: 24px;
         }
 
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #cbd5e1;
-            transition: .3s;
-            border-radius: 24px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .3s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--primary);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(20px);
-        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(20px); }
 
         /* زر الإرسال */
         .btn-submit {
@@ -310,28 +399,22 @@
             color: #ffffff;
             border: none;
             border-radius: var(--radius-md);
-            padding: 14px 20px;
+            padding: 15px 20px;
             font-size: 1.05rem;
-            font-weight: 700;
+            font-weight: 800;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
             transition: all 0.2s ease;
             touch-action: manipulation;
             margin-top: 6px;
         }
 
-        .btn-submit:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .btn-submit:active:not(:disabled) {
-            transform: scale(0.98);
-        }
+        .btn-submit:disabled { opacity: 0.65; cursor: not-allowed; }
+        .btn-submit:active:not(:disabled) { transform: scale(0.98); }
 
         /* شاشة النجاح */
         .success-screen {
@@ -341,12 +424,12 @@
             padding: 36px 20px;
             text-align: center;
             border: 1px solid #e2e8f0;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--shadow-md);
         }
 
         .success-icon {
-            width: 70px;
-            height: 70px;
+            width: 72px;
+            height: 72px;
             border-radius: 50%;
             background: #dcfce7;
             color: #16a34a;
@@ -366,13 +449,14 @@
         .ref-badge {
             background: #eff6ff;
             color: #1d4ed8;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 0.95rem;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 1.1rem;
             display: inline-block;
-            margin: 12px 0 20px;
-            border: 1px solid #bfdbfe;
+            margin: 14px 0 22px;
+            border: 1.5px solid #bfdbfe;
+            direction: ltr;
         }
 
         .btn-new {
@@ -389,36 +473,37 @@
             gap: 8px;
         }
 
-        /* تذييل الصفحة */
         .footer-note {
             text-align: center;
-            font-size: 0.75rem;
+            font-size: 0.78rem;
             color: #94a3b8;
-            margin-top: 20px;
+            margin-top: 24px;
         }
 
-        /* رسائل الخطأ */
         .alert-error {
             background: #fef2f2;
             color: #dc2626;
-            padding: 10px 14px;
-            border-radius: 8px;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
             border: 1px solid #fecaca;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.88rem;
+            font-weight: 700;
             display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- رأس الصفحة -->
+        <!-- رأس الصفحة مع الشعار الرسمي -->
         <div class="header-card">
-            <div class="logo-badge">
-                <i class="fas fa-shield-halved"></i>
+            <div class="brand-wrapper">
+                <img src="icons/icapp-logo.png" alt="Company Logo" class="logo-img" onerror="this.style.display='none'; document.getElementById('fallbackIcon').style.display='inline-flex';">
+                <div id="fallbackIcon" class="logo-icon-fallback" style="display:none;">
+                    <i class="fas fa-shield-halved"></i>
+                </div>
             </div>
-            <h1 class="header-title">SafetyHub | تسجيل ملاحظة سلامة</h1>
-            <p class="header-subtitle">شارك في الحفاظ على بيئة عمل آمنة بالإبلاغ الفوري عن أي ملاحظة أو سلوك ميداني.</p>
+            <h1 class="header-title">منظومة الملاحظات اليومية الميدانية</h1>
+            <p class="header-subtitle">تسجيل الملاحظات الميدانية ومتابعة السلامة والصحة المهنية — HSE 360 Platform</p>
         </div>
 
         <!-- شاشة النجاح -->
@@ -426,17 +511,17 @@
             <div class="success-icon">
                 <i class="fas fa-check"></i>
             </div>
-            <h2 style="font-size: 1.3rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">تم إرسال الملاحظة بنجاح!</h2>
-            <p style="color: #64748b; font-size: 0.9rem;">شكراً لتعاونكم. تم تحويل الملاحظة إلى فريق السلامة للمتابعة الفورية.</p>
-            <div class="ref-badge" id="refBadge">رقم الملاحظة: OBS-PUB-0000</div>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">تم تسجيل الملاحظة بنجاح!</h2>
+            <p style="color: #64748b; font-size: 0.9rem; line-height: 1.5;">تم توثيق الملاحظة في سجل الملاحظات اليومية وإحالتها لفريق السلامة للمتابعة الفورية.</p>
+            <div class="ref-badge" id="refBadge">OBS-202608-0000</div>
             <div>
                 <button type="button" class="btn-new" onclick="resetForm()">
-                    <i class="fas fa-plus"></i> إرسال ملاحظة أخرى
+                    <i class="fas fa-plus"></i> تسجيل ملاحظة أخرى
                 </button>
             </div>
         </div>
 
-        <!-- نموذج الإرسال -->
+        <!-- نموذج الملاحظات اليومية الشامل -->
         <form id="observationForm" class="form-card">
             <!-- رسالة الخطأ -->
             <div id="errorMessage" class="alert-error"></div>
@@ -444,121 +529,221 @@
             <!-- Honeypot ضد السبام -->
             <input type="text" name="_hp_field" id="hpField" style="display:none;" tabindex="-1" autocomplete="off">
 
-            <!-- 1. نوع الملاحظة -->
-            <div>
-                <label class="section-label">
-                    <i class="fas fa-list-check text-blue-500"></i>
-                    نوع الملاحظة <span class="required">*</span>
-                </label>
-                <div class="types-grid">
-                    <div class="type-card selected" data-type="unsafe_act" onclick="selectType(this)">
-                        <i class="fas fa-user-times icon"></i>
-                        <span class="title">سلوك غير آمن</span>
+            <!-- 1. الموقع والمكان -->
+            <div class="form-section">
+                <div class="section-header">
+                    <span class="section-badge">1</span>
+                    <span class="section-title">الموقع والمكان في المنشأة</span>
+                </div>
+                <p class="section-desc">حدد الموقع ثم المكان المرتبط به داخل المنشأة.</p>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="siteSelect">
+                            <i class="fas fa-industry text-blue-600"></i>
+                            اسم الموقع / المصنع <span class="required">*</span>
+                        </label>
+                        <select id="siteSelect" class="form-control" required onchange="handleSiteChange(this.value)">
+                            <option value="">— اختر الموقع / المصنع —</option>
+                        </select>
                     </div>
-                    <div class="type-card" data-type="unsafe_condition" onclick="selectType(this)">
-                        <i class="fas fa-triangle-exclamation icon"></i>
-                        <span class="title">حالة غير آمنة</span>
+
+                    <div class="form-group">
+                        <label class="form-label" for="placeSelect">
+                            <i class="fas fa-map-pin text-blue-600"></i>
+                            المكان داخل الموقع <span class="required">*</span>
+                        </label>
+                        <select id="placeSelect" class="form-control" required onchange="handlePlaceChange(this.value)">
+                            <option value="">— اختر الموقع أولاً —</option>
+                        </select>
                     </div>
-                    <div class="type-card" data-type="safe_behavior" onclick="selectType(this)">
-                        <i class="fas fa-circle-check icon"></i>
-                        <span class="title">سلوك آمن وإيجابي</span>
+                </div>
+
+                <!-- إدخال يدوي للمكان -->
+                <div id="customPlaceGroup" class="form-group" style="display: none;">
+                    <label class="form-label" for="customPlaceInput">مكان آخر (إدخال يدوي):</label>
+                    <input type="text" id="customPlaceInput" class="form-control" placeholder="مثال: خط التعبئة 4، غرفة المولدات...">
+                </div>
+            </div>
+
+            <!-- 2. نوع الملاحظة والخطورة -->
+            <div class="form-section">
+                <div class="section-header">
+                    <span class="section-badge">2</span>
+                    <span class="section-title">تصنيف الملاحظة ومستوى الخطورة</span>
+                </div>
+
+                <!-- كروت نوع الملاحظة -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-tags text-blue-600"></i>
+                        نوع الملاحظة <span class="required">*</span>
+                    </label>
+                    <div class="types-grid" id="typesGrid">
+                        <div class="type-card selected" data-type="سلوك غير آمن" onclick="selectType(this)">
+                            <i class="fas fa-user-times icon"></i>
+                            <span class="title">سلوك غير آمن</span>
+                        </div>
+                        <div class="type-card" data-type="حالة غير آمنة" onclick="selectType(this)">
+                            <i class="fas fa-triangle-exclamation icon"></i>
+                            <span class="title">حالة غير آمنة</span>
+                        </div>
+                        <div class="type-card" data-type="سلوك آمن وإيجابي" onclick="selectType(this)">
+                            <i class="fas fa-circle-check icon"></i>
+                            <span class="title">سلوك آمن وإيجابي</span>
+                        </div>
+                        <div class="type-card" data-type="ملاحظة بيئية" onclick="selectType(this)">
+                            <i class="fas fa-leaf icon"></i>
+                            <span class="title">ملاحظة بيئية</span>
+                        </div>
+                        <div class="type-card" data-type="خطر حريق" onclick="selectType(this)">
+                            <i class="fas fa-fire-flame-curved icon"></i>
+                            <span class="title">خطر حريق</span>
+                        </div>
+                        <div class="type-card" data-type="أخرى" onclick="selectType(this)">
+                            <i class="fas fa-ellipsis icon"></i>
+                            <span class="title">أخرى</span>
+                        </div>
                     </div>
-                    <div class="type-card" data-type="environmental" onclick="selectType(this)">
-                        <i class="fas fa-leaf icon"></i>
-                        <span class="title">ملاحظة بيئية</span>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="dateInput">
+                            <i class="fas fa-calendar-alt text-slate-600"></i>
+                            تاريخ ووقت الملاحظة <span class="required">*</span>
+                        </label>
+                        <input type="datetime-local" id="dateInput" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="shiftSelect">
+                            <i class="fas fa-clock text-slate-600"></i>
+                            الوردية
+                        </label>
+                        <select id="shiftSelect" class="form-control">
+                            <option value="وردية صباحية">وردية صباحية (Morning)</option>
+                            <option value="وردية مسائية">وردية مسائية (Evening)</option>
+                            <option value="وردية ليلية">وردية ليلية (Night)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- مستوى الخطورة -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-gauge-high text-slate-600"></i>
+                        معدل الخطورة <span class="required">*</span>
+                    </label>
+                    <div class="risk-chips">
+                        <div class="risk-chip" data-risk="منخفض" onclick="selectRisk(this)">منخفض</div>
+                        <div class="risk-chip selected" data-risk="متوسط" onclick="selectRisk(this)">متوسط</div>
+                        <div class="risk-chip" data-risk="عالي" onclick="selectRisk(this)">عالي</div>
+                        <div class="risk-chip" data-risk="حرج" onclick="selectRisk(this)">حرج</div>
                     </div>
                 </div>
             </div>
 
-            <!-- 2. المصنع والموقع -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div>
-                    <label class="section-label" for="factorySelect">
-                        <i class="fas fa-industry text-slate-500"></i>
-                        المصنع <span class="required">*</span>
+            <!-- 3. تفاصيل الملاحظة والإدارة المسؤولة -->
+            <div class="form-section">
+                <div class="section-header">
+                    <span class="section-badge">3</span>
+                    <span class="section-title">تفاصيل الملاحظة والإجراء المطلوب</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="responsibleDeptSelect">
+                        <i class="fas fa-building-user text-blue-600"></i>
+                        المسؤول عن التنفيذ / الإدارة المعنية <span class="required">*</span>
                     </label>
-                    <select id="factorySelect" class="form-control" required>
-                        <option value="">— اختر المصنع —</option>
-                        <option value="مصنع الأغذية الرئيسي" selected>مصنع الأغذية الرئيسي</option>
-                        <option value="مصنع المخبوزات والحلويات">مصنع المخبوزات والحلويات</option>
+                    <select id="responsibleDeptSelect" class="form-control" required>
+                        <option value="السلامة والصحة المهنية">السلامة والصحة المهنية</option>
+                        <option value="الصيانة">الصيانة</option>
+                        <option value="الإنتاج والتشغيل">الإنتاج والتشغيل</option>
+                        <option value="الجودة وسلامة الغذاء">الجودة وسلامة الغذاء</option>
                         <option value="المستودعات والخدمات اللوجستية">المستودعات والخدمات اللوجستية</option>
+                        <option value="الموارد البشرية">الموارد البشرية</option>
+                        <option value="الشؤون الإدارية">الشؤون الإدارية</option>
+                        <option value="الأمن والحراسة">الأمن والحراسة</option>
                     </select>
                 </div>
-                <div>
-                    <label class="section-label" for="subLocationInput">
-                        <i class="fas fa-map-pin text-slate-500"></i>
-                        الموقع / القسم
+
+                <div class="form-group">
+                    <label class="form-label" for="detailsInput">
+                        <i class="fas fa-file-lines text-blue-600"></i>
+                        تفاصيل الملاحظة / التصرف غير الآمن <span class="required">*</span>
                     </label>
-                    <input type="text" id="subLocationInput" class="form-control" placeholder="مثال: خط الإنتاج 1">
+                    <textarea id="detailsInput" class="form-control" placeholder="أدخل تفاصيل ما شاهدته بدقة (مثال: عدم ارتداء مهمات الوقاية، تسريب زيوت، عائق أمام مخرج الطوارئ...)" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="correctiveInput">
+                        <i class="fas fa-wrench text-slate-600"></i>
+                        الإجراء التصحيحي / الوقائي الفوري
+                    </label>
+                    <textarea id="correctiveInput" class="form-control" style="min-height:70px;" placeholder="الإجراء الفوري المتخذ أو المقترح (مثال: تم تنبيه العامل، إيقاف العمل مؤقتاً، رفع العائق)..."></textarea>
                 </div>
             </div>
 
-            <!-- 3. وصف الملاحظة -->
-            <div>
-                <label class="section-label" for="descriptionInput">
-                    <i class="fas fa-comment-dots text-blue-500"></i>
-                    تفاصيل الملاحظة <span class="required">*</span>
-                </label>
-                <textarea id="descriptionInput" class="form-control" placeholder="صف ما شاهدته بدقة (مثال: عدم ارتداء مهمات الوقاية، انسكاب زيوت على الأرضية، استخدام سلم تالف...)" required></textarea>
-            </div>
-
-            <!-- 4. الإجراء التصحيحي الفوري -->
-            <div>
-                <label class="section-label" for="correctiveActionInput">
-                    <i class="fas fa-wrench text-slate-500"></i>
-                    الإجراء الفوري المتخذ (إن وجد)
-                </label>
-                <input type="text" id="correctiveActionInput" class="form-control" placeholder="مثال: تم تنبيه العامل / تم إيقاف المعدة مؤقتاً">
-            </div>
-
-            <!-- 5. التقاط أو إرفاق صورة -->
-            <div>
-                <label class="section-label">
-                    <i class="fas fa-camera text-blue-500"></i>
-                    صورة الملاحظة (اختياري)
-                </label>
-                <div class="photo-upload-area" onclick="document.getElementById('photoInput').click()">
-                    <i class="fas fa-cloud-arrow-up" style="font-size: 1.8rem; color: #3b82f6; margin-bottom: 6px;"></i>
-                    <div style="font-weight: 700; font-size: 0.9rem;">التقاط صورة أو اختيار من المعرض</div>
-                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">يتم ضغط الصورة تلقائياً لسرعة الإرسال</div>
+            <!-- 4. الصورة وصاحب الملاحظة -->
+            <div class="form-section">
+                <div class="section-header">
+                    <span class="section-badge">4</span>
+                    <span class="section-title">الصورة وبيانات المُبلّغ</span>
                 </div>
-                <input type="file" id="photoInput" accept="image/*" capture="environment" style="display: none;" onchange="handlePhotoSelect(event)">
-                
-                <div id="photoPreviewWrap" class="photo-preview-wrap">
-                    <img id="photoPreview" src="" alt="معاينة الصورة">
-                    <button type="button" class="remove-photo-btn" onclick="removePhoto()" title="إزالة الصورة">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
 
-            <!-- 6. خيار الإبلاغ كمجهول -->
-            <div class="toggle-row">
-                <span style="font-size: 0.9rem; font-weight: 600; color: #334155;">
-                    <i class="fas fa-user-secret ml-1 text-slate-600"></i> إرسال كمجهول الهوية
-                </span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="anonymousToggle" checked onchange="toggleAnonymous(this.checked)">
-                    <span class="slider"></span>
-                </label>
-            </div>
-
-            <!-- بيانات المبلغ (تظهر فقط إذا تم إيقاف مجهول) -->
-            <div id="reporterInfoFields" style="display: none; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div>
-                    <label class="section-label" for="reporterName">الاسم / الكود</label>
-                    <input type="text" id="reporterName" class="form-control" placeholder="اسمك أو كودك">
+                <!-- رفع الصورة -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-camera text-blue-600"></i>
+                        الصورة التوضيحية للملاحظة (اختياري)
+                    </label>
+                    <div class="photo-upload-area" onclick="document.getElementById('photoInput').click()">
+                        <i class="fas fa-cloud-arrow-up" style="font-size: 1.8rem; color: #3b82f6; margin-bottom: 6px;"></i>
+                        <div style="font-weight: 700; font-size: 0.9rem;">التقاط صورة بالكاميرا أو اختيار من المعرض</div>
+                        <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">يتم ضغط الصورة تلقائياً لتسريع الإرسال</div>
+                    </div>
+                    <input type="file" id="photoInput" accept="image/*" capture="environment" style="display: none;" onchange="handlePhotoSelect(event)">
+                    
+                    <div id="photoPreviewWrap" class="photo-preview-wrap">
+                        <img id="photoPreview" src="" alt="معاينة الصورة">
+                        <button type="button" class="remove-photo-btn" onclick="removePhoto()" title="إزالة الصورة">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <label class="section-label" for="reporterPhone">رقم الهاتف</label>
-                    <input type="tel" id="reporterPhone" class="form-control" placeholder="01xxxxxxxxx" dir="ltr">
+
+                <!-- خيار مجهول الهوية -->
+                <div class="toggle-row">
+                    <span style="font-size: 0.9rem; font-weight: 700; color: #334155;">
+                        <i class="fas fa-user-secret ml-1 text-slate-600"></i> إرسال كمجهول الهوية
+                    </span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="anonymousToggle" checked onchange="toggleAnonymous(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- حقول صاحب الملاحظة (إذا تم إيقاف مجهول) -->
+                <div id="reporterInfoFields" style="display: none; flex-direction: column; gap: 10px;">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="ownerSelect">اسم صاحب الملاحظة / الموظف</label>
+                            <input type="text" id="ownerInput" class="form-control" list="employeesDatalist" placeholder="اكتب أو اختر اسمك">
+                            <datalist id="employeesDatalist"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="reporterPhone">رقم الهاتف للتواصل</label>
+                            <input type="tel" id="reporterPhone" class="form-control" placeholder="01xxxxxxxxx" dir="ltr">
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- زر الإرسال -->
             <button type="submit" id="submitBtn" class="btn-submit">
                 <i class="fas fa-paper-plane"></i>
-                <span>إرسال الملاحظة الآن</span>
+                <span>تسجيل الملاحظة اليومية الآن</span>
             </button>
         </form>
 
@@ -568,36 +753,30 @@
     </div>
 
     <script>
-        // إعدادات الخادم
         const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+        
+        let loadedConfig = null;
+        let selectedObservationType = 'سلوك غير آمن';
+        let selectedRiskLevel = 'متوسط';
         let currentPhotoBase64 = '';
-        let selectedBehaviorType = 'سلوك غير آمن';
 
-        // قراءة معاملات الرابط عند التحميل (مثال: ?factory=ICAPP)
+        // ضبط التاريخ والوقت الافتراضي (الآن)
+        function setDefaultDateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('dateInput').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const factoryParam = urlParams.get('factory') || urlParams.get('factoryName') || urlParams.get('site');
-            if (factoryParam) {
-                const select = document.getElementById('factorySelect');
-                let found = false;
-                for (let i = 0; i < select.options.length; i++) {
-                    if (select.options[i].value.toLowerCase().includes(factoryParam.toLowerCase())) {
-                        select.selectedIndex = i;
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    const opt = new Option(factoryParam, factoryParam, true, true);
-                    select.add(opt);
-                }
-            }
-
-            // محاولة جلب قائمة المصانع الأحدث من الخادم بهدوء
-            fetchFactoriesList();
+            setDefaultDateTime();
+            loadServerConfig();
         });
 
-        async function fetchFactoriesList() {
+        async function loadServerConfig() {
             try {
                 const res = await fetch(DEFAULT_API_URL, {
                     method: 'POST',
@@ -605,42 +784,148 @@
                     body: JSON.stringify({ action: 'getPublicObservationConfig' })
                 });
                 const data = await res.json();
-                if (data && data.success && Array.isArray(data.factories) && data.factories.length > 0) {
-                    const select = document.getElementById('factorySelect');
-                    const currentVal = select.value;
-                    select.innerHTML = '<option value="">— اختر المصنع —</option>';
-                    data.factories.forEach(f => {
-                        const opt = document.createElement('option');
-                        opt.value = f.name;
-                        opt.textContent = f.name;
-                        if (f.name === currentVal) opt.selected = true;
-                        select.appendChild(opt);
-                    });
+                if (data && data.success) {
+                    loadedConfig = data;
+                    renderConfigData(data);
+                } else {
+                    renderFallbackData();
                 }
             } catch (e) {
-                // استخدام القوائم الافتراضية
+                renderFallbackData();
+            }
+        }
+
+        function renderFallbackData() {
+            const fallback = {
+                sites: [
+                    { name: 'مصنع الأغذية الرئيسي', places: ['خط الإنتاج 1', 'خط الإنتاج 2', 'المستودع الرئيسي', 'ورشة الصيانة', 'منطقة التحميل'] },
+                    { name: 'مصنع المخبوزات والحلويات', places: ['صالة التجهيز', 'خط الأفران', 'منطقة التعبئة والتغليف', 'مستودع الخامات'] },
+                    { name: 'المستودعات والخدمات اللوجستية', places: ['مستودع التبريد', 'مستودع الجاف', 'ساحة الشاحنات'] }
+                ],
+                departments: [
+                    'السلامة والصحة المهنية', 'الصيانة', 'الإنتاج والتشغيل', 'الجودة وسلامة الغذاء',
+                    'المستودعات والخدمات اللوجستية', 'الموارد البشرية', 'الشؤون الإدارية', 'الأمن والحراسة'
+                ],
+                employees: []
+            };
+            renderConfigData(fallback);
+        }
+
+        function renderConfigData(cfg) {
+            // 1. المواقع
+            const siteSelect = document.getElementById('siteSelect');
+            const currentSiteVal = siteSelect.value;
+            siteSelect.innerHTML = '<option value="">— اختر الموقع / المصنع —</option>';
+            
+            (cfg.sites || []).forEach(site => {
+                const opt = document.createElement('option');
+                opt.value = site.name;
+                opt.textContent = site.name;
+                siteSelect.appendChild(opt);
+            });
+
+            // قراءة query param لو موجود
+            const urlParams = new URLSearchParams(window.location.search);
+            const factoryParam = urlParams.get('factory') || urlParams.get('factoryName') || urlParams.get('site');
+            if (factoryParam) {
+                for (let i = 0; i < siteSelect.options.length; i++) {
+                    if (siteSelect.options[i].value.toLowerCase().includes(factoryParam.toLowerCase())) {
+                        siteSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (siteSelect.selectedIndex > 0) {
+                handleSiteChange(siteSelect.value);
+            }
+
+            // 2. الإدارات
+            if (Array.isArray(cfg.departments) && cfg.departments.length > 0) {
+                const deptSelect = document.getElementById('responsibleDeptSelect');
+                const currDept = deptSelect.value;
+                deptSelect.innerHTML = '';
+                cfg.departments.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d;
+                    opt.textContent = d;
+                    if (d === currDept) opt.selected = true;
+                    deptSelect.appendChild(opt);
+                });
+            }
+
+            // 3. الموظفون
+            if (Array.isArray(cfg.employees) && cfg.employees.length > 0) {
+                const datalist = document.getElementById('employeesDatalist');
+                datalist.innerHTML = '';
+                cfg.employees.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp.name;
+                    if (emp.code) opt.label = `كود: ${emp.code}`;
+                    datalist.appendChild(opt);
+                });
+            }
+        }
+
+        function handleSiteChange(siteName) {
+            const placeSelect = document.getElementById('placeSelect');
+            const customGroup = document.getElementById('customPlaceGroup');
+            customGroup.style.display = 'none';
+
+            if (!siteName) {
+                placeSelect.innerHTML = '<option value="">— اختر الموقع أولاً —</option>';
+                placeSelect.disabled = true;
+                return;
+            }
+
+            const sites = (loadedConfig && loadedConfig.sites) ? loadedConfig.sites : [];
+            const foundSite = sites.find(s => s.name === siteName);
+
+            placeSelect.innerHTML = '<option value="">— اختر المكان داخل الموقع —</option>';
+            if (foundSite && Array.isArray(foundSite.places) && foundSite.places.length > 0) {
+                foundSite.places.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p;
+                    opt.textContent = p;
+                    placeSelect.appendChild(opt);
+                });
+            }
+            // إضافة خيار إدخال يدوي
+            const otherOpt = document.createElement('option');
+            otherOpt.value = '__OTHER__';
+            otherOpt.textContent = '➕ مكان آخر (إدخال يدوي)...';
+            placeSelect.appendChild(otherOpt);
+
+            placeSelect.disabled = false;
+        }
+
+        function handlePlaceChange(val) {
+            const customGroup = document.getElementById('customPlaceGroup');
+            if (val === '__OTHER__') {
+                customGroup.style.display = 'block';
+                document.getElementById('customPlaceInput').focus();
+            } else {
+                customGroup.style.display = 'none';
             }
         }
 
         function selectType(el) {
             document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
             el.classList.add('selected');
-            const type = el.dataset.type;
-            const mapping = {
-                'unsafe_act': 'سلوك غير آمن',
-                'unsafe_condition': 'حالة غير آمنة',
-                'safe_behavior': 'سلوك آمن وإيجابي',
-                'environmental': 'ملاحظة بيئية'
-            };
-            selectedBehaviorType = mapping[type] || 'سلوك غير آمن';
+            selectedObservationType = el.dataset.type || 'سلوك غير آمن';
+        }
+
+        function selectRisk(el) {
+            document.querySelectorAll('.risk-chip').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedRiskLevel = el.dataset.risk || 'متوسط';
         }
 
         function toggleAnonymous(isAnon) {
             const fields = document.getElementById('reporterInfoFields');
-            fields.style.display = isAnon ? 'none' : 'grid';
+            fields.style.display = isAnon ? 'none' : 'flex';
         }
 
-        // ضغط الصورة محلياً عبر Canvas
+        // ضغط الصورة محلياً عبر Canvas لسرعة فائقة
         function handlePhotoSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -688,28 +973,35 @@
             document.getElementById('photoPreviewWrap').style.display = 'none';
         }
 
-        // إرسال النموذج
+        // إرسال الملاحظة
         document.getElementById('observationForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            // فحص Honeypot
+            // فحص Honeypot ضد السبام
             if (document.getElementById('hpField').value) {
-                showSuccess('OBS-PUB-' + Math.floor(1000 + Math.random() * 9000));
+                showSuccess('OBS-' + new Date().toISOString().slice(0,7).replace('-','') + '-0000');
                 return;
             }
 
             const errorBox = document.getElementById('errorMessage');
             errorBox.style.display = 'none';
 
-            const description = document.getElementById('descriptionInput').value.trim();
-            const factory = document.getElementById('factorySelect').value;
-            const subLocation = document.getElementById('subLocationInput').value.trim();
-            const correctiveAction = document.getElementById('correctiveActionInput').value.trim();
+            const site = document.getElementById('siteSelect').value;
+            let place = document.getElementById('placeSelect').value;
+            if (place === '__OTHER__') {
+                place = document.getElementById('customPlaceInput').value.trim() || 'مكان آخر';
+            }
+
+            const details = document.getElementById('detailsInput').value.trim();
+            const corrective = document.getElementById('correctiveInput').value.trim();
+            const dateVal = document.getElementById('dateInput').value;
+            const shift = document.getElementById('shiftSelect').value;
+            const dept = document.getElementById('responsibleDeptSelect').value;
             const isAnon = document.getElementById('anonymousToggle').checked;
-            const reporterName = isAnon ? 'ملاحظة عامة (مجهول)' : (document.getElementById('reporterName').value.trim() || 'ملاحظة عامة');
+            const observerName = isAnon ? 'ملاحظة عامة (مجهول)' : (document.getElementById('ownerInput').value.trim() || 'ملاحظة عامة');
             const reporterPhone = isAnon ? '' : document.getElementById('reporterPhone').value.trim();
 
-            if (!description || !factory) {
+            if (!site || !place || !details) {
                 errorBox.textContent = 'يرجى ملء جميع الحقول الإلزامية (*).';
                 errorBox.style.display = 'block';
                 return;
@@ -717,20 +1009,22 @@
 
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>جاري الإرسال بأمان...</span>';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>جاري حفظ الملاحظة بالجدول...</span>';
 
             const payload = {
                 action: 'submitPublicObservation',
-                behaviorType: selectedBehaviorType,
-                factory: factory,
-                factoryName: factory,
-                subLocation: subLocation,
-                description: description,
-                correctiveAction: correctiveAction,
-                reporterName: reporterName,
+                siteName: site,
+                locationName: place,
+                observationType: selectedObservationType,
+                riskLevel: selectedRiskLevel,
+                date: dateVal,
+                shift: shift,
+                responsibleDepartment: dept,
+                details: details,
+                correctiveAction: corrective,
+                observerName: observerName,
                 reporterPhone: reporterPhone,
-                photoBase64: currentPhotoBase64,
-                date: new Date().toISOString().split('T')[0]
+                photoBase64: currentPhotoBase64
             };
 
             try {
@@ -742,16 +1036,16 @@
 
                 const result = await response.json();
                 if (result && result.success) {
-                    showSuccess(result.id || ('OBS-PUB-' + Math.floor(1000 + Math.random() * 9000)));
+                    showSuccess(result.id || ('OBS-' + new Date().toISOString().slice(0,7).replace('-','') + '-0000'));
                 } else {
                     throw new Error(result.message || 'فشل إرسال الملاحظة');
                 }
             } catch (err) {
                 console.error(err);
-                errorBox.textContent = 'تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
+                errorBox.textContent = 'تعذر الاتصال بالخادم، يرجى التأكد من اتصال الإنترنت والمحاولة مرة أخرى.';
                 errorBox.style.display = 'block';
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span>إرسال الملاحظة الآن</span>';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span>تسجيل الملاحظة اليومية الآن</span>';
             }
         });
 
@@ -764,10 +1058,14 @@
 
         function resetForm() {
             document.getElementById('observationForm').reset();
+            setDefaultDateTime();
             removePhoto();
+            selectType(document.querySelector('.type-card[data-type="سلوك غير آمن"]'));
+            selectRisk(document.querySelector('.risk-chip[data-risk="متوسط"]'));
+            document.getElementById('customPlaceGroup').style.display = 'none';
             document.getElementById('errorMessage').style.display = 'none';
             document.getElementById('submitBtn').disabled = false;
-            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-paper-plane"></i> <span>إرسال الملاحظة الآن</span>';
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-paper-plane"></i> <span>تسجيل الملاحظة اليومية الآن</span>';
             document.getElementById('successScreen').style.display = 'none';
             document.getElementById('observationForm').style.display = 'flex';
         }

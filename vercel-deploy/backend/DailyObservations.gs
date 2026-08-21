@@ -2836,6 +2836,131 @@ function notifyObservationWorkflowEvent(payload) {
 
 /**
  * ============================================
+ * الحصول على تكوين نموذج الملاحظات العامة (المواقع، الأماكن، الإدارات، الأشخاص)
+ * ============================================
+ */
+function getPublicObservationConfig() {
+    try {
+        var spreadsheetId = getSpreadsheetId();
+        var sites = [];
+        var employees = [];
+        var departments = [
+            'السلامة والصحة المهنية',
+            'الصيانة',
+            'الإنتاج والتشغيل',
+            'الجودة وسلامة الغذاء',
+            'المستودعات والخدمات اللوجستية',
+            'الموارد البشرية',
+            'الشؤون الإدارية',
+            'الأمن والحراسة',
+            'المشتريات والمخازن'
+        ];
+
+        // 1. جلب المواقع والأماكن من ObservationSites
+        try {
+            if (typeof readFromSheet === 'function') {
+                var sitesData = readFromSheet('ObservationSites', spreadsheetId) || [];
+                if (sitesData && sitesData.length > 0) {
+                    var sitesMap = {};
+                    sitesData.forEach(function(item) {
+                        var siteName = String(item.name || item.siteName || item.site || '').trim();
+                        var placeName = String(item.placeName || item.locationName || item.place || '').trim();
+                        if (siteName) {
+                            if (!sitesMap[siteName]) {
+                                sitesMap[siteName] = { id: item.id || item.siteId || siteName, name: siteName, places: [] };
+                            }
+                            if (placeName && sitesMap[siteName].places.indexOf(placeName) === -1) {
+                                sitesMap[siteName].places.push(placeName);
+                            }
+                        }
+                    });
+                    sites = Object.values(sitesMap);
+                }
+            }
+        } catch (sErr) {}
+
+        // إذا لم تتوفر مواقع، جلب من Factories أو قائمة افتراضية
+        if (!sites.length) {
+            try {
+                if (typeof readFromSheet === 'function') {
+                    var facData = readFromSheet('Factories', spreadsheetId) || [];
+                    sites = facData.map(function(f) {
+                        return {
+                            id: f.id || '',
+                            name: f.name || f.factoryName || '',
+                            places: ['خط الإنتاج الرئيسي', 'المستودع', 'ورشة الصيانة', 'منطقة التحميل والتفريغ', 'المكاتب الإدارية']
+                        };
+                    }).filter(function(f) { return f.name; });
+                }
+            } catch (fErr) {}
+        }
+
+        if (!sites.length) {
+            sites = [
+                { id: 'FAC-1', name: 'مصنع الأغذية الرئيسي', places: ['خط الإنتاج 1', 'خط الإنتاج 2', 'المستودع الرئيسي', 'ورشة الصيانة', 'منطقة الاستلام والتسليم'] },
+                { id: 'FAC-2', name: 'مصنع المخبوزات والحلويات', places: ['صالة التجهيز', 'خط الأفران', 'منطقة التعبئة والتغليف', 'مستودع الخامات'] },
+                { id: 'FAC-3', name: 'المستودعات والخدمات اللوجستية', places: ['مستودع التبريد والتجميد', 'مستودع الجاف', 'ساحة الشاحنات', 'منطقة الشحن'] }
+            ];
+        }
+
+        // 2. جلب قائمة الموظفين / الأشخاص
+        try {
+            if (typeof readFromSheet === 'function') {
+                var empData = readFromSheet('Employees', spreadsheetId) || [];
+                if (empData && empData.length > 0) {
+                    employees = empData.map(function(e) {
+                        var name = String(e.name || e.employeeName || '').trim();
+                        var code = String(e.code || e.employeeCode || e.employeeNumber || '').trim();
+                        var dept = String(e.department || '').trim();
+                        return { name: name, code: code, department: dept };
+                    }).filter(function(e) { return e.name && e.name.length > 1; });
+                }
+                
+                if (!employees.length) {
+                    var usrData = readFromSheet('Users', spreadsheetId) || [];
+                    employees = usrData.map(function(u) {
+                        var name = String(u.name || u.fullName || '').trim();
+                        var dept = String(u.department || '').trim();
+                        return { name: name, code: '', department: dept };
+                    }).filter(function(u) { return u.name && u.name.length > 1; });
+                }
+            }
+        } catch (eErr) {}
+
+        // تقليص حجم الموظفين للسرعة إذا كانت القائمة ضخمة
+        if (employees.length > 300) {
+            employees = employees.slice(0, 300);
+        }
+
+        return {
+            success: true,
+            sites: sites,
+            employees: employees,
+            departments: departments,
+            observationTypes: [
+                { value: 'سلوك غير آمن', label: 'سلوك غير آمن (Unsafe Act)', icon: 'fa-user-times', color: '#ef4444' },
+                { value: 'حالة غير آمنة', label: 'حالة غير آمنة (Unsafe Condition)', icon: 'fa-triangle-exclamation', color: '#f59e0b' },
+                { value: 'سلوك آمن وإيجابي', label: 'سلوك آمن وإيجابي (Safe Behavior)', icon: 'fa-circle-check', color: '#10b981' },
+                { value: 'ملاحظة بيئية', label: 'ملاحظة بيئية (Environmental)', icon: 'fa-leaf', color: '#06b6d4' },
+                { value: 'خطر حريق', label: 'خطر حريق (Fire Hazard)', icon: 'fa-fire-flame-curved', color: '#f97316' },
+                { value: 'أخرى', label: 'أخرى (Other)', icon: 'fa-ellipsis', color: '#64748b' }
+            ],
+            shifts: ['وردية صباحية (Morning)', 'وردية مسائية (Evening)', 'وردية ليلية (Night)'],
+            riskLevels: [
+                { value: 'منخفض', label: 'منخفض (Low)', color: '#10b981' },
+                { value: 'متوسط', label: 'متوسط (Medium)', color: '#f59e0b' },
+                { value: 'عالي', label: 'عالي (High)', color: '#ef4444' },
+                { value: 'حرج', label: 'حرج (Critical)', color: '#991b1b' }
+            ]
+        };
+    } catch (err) {
+        Logger.log('Error in getPublicObservationConfig: ' + err.toString());
+        return { success: false, message: err.toString() };
+    }
+}
+
+/**
+ * ============================================
  * إرسال ملاحظة من النموذج العام مباشرة إلى جدول الملاحظات اليومية DailyObservations
  * ============================================
  */
@@ -2853,7 +2978,7 @@ function submitPublicObservation(payload) {
         var sheetName = 'DailyObservations';
         var obsId = generateDailyObservationId(sheetName);
         var isoCode = getObservationIsoCodeFromId(obsId);
-        var dateStr = payload.date ? String(payload.date).trim() : Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd');
+        var dateVal = payload.date ? String(payload.date).trim() : Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd HH:mm:ss');
         
         var attachments = [];
         if (payload.photoBase64 && String(payload.photoBase64).length > 50) {
@@ -2873,11 +2998,11 @@ function submitPublicObservation(payload) {
             }
         }
 
-        var siteName = payload.factory || payload.factoryName || payload.siteName || '';
-        var locationName = payload.subLocation || payload.subLocationName || payload.locationName || '';
-        var reporterName = payload.reporterName || 'ملاحظة عامة (مجهول)';
+        var siteName = payload.siteName || payload.site || payload.factory || payload.factoryName || '';
+        var locationName = payload.locationName || payload.place || payload.subLocation || payload.subLocationName || '';
+        var observerName = payload.observerName || payload.reporterName || 'ملاحظة عامة (مجهول)';
         if (payload.reporterPhone) {
-            reporterName += ' (' + payload.reporterPhone + ')';
+            observerName += ' (' + payload.reporterPhone + ')';
         }
 
         var obsRecord = {
@@ -2887,21 +3012,21 @@ function submitPublicObservation(payload) {
             siteName: siteName,
             placeId: locationName,
             locationName: locationName,
-            observationType: payload.behaviorType || payload.observationType || 'سلوك غير آمن',
-            date: dateStr,
-            shift: payload.shift || 'صباحي',
-            details: (payload.description || payload.details || '').trim(),
+            observationType: payload.observationType || payload.behaviorType || 'سلوك غير آمن',
+            date: dateVal,
+            shift: payload.shift || 'وردية صباحية',
+            details: (payload.details || payload.description || '').trim(),
             correctiveAction: (payload.correctiveAction || '').trim(),
-            responsibleDepartment: payload.department || 'السلامة والصحة المهنية',
-            riskLevel: payload.riskLevel || (payload.behaviorType === 'سلوك آمن وإيجابي' ? 'منخفض' : 'متوسط'),
-            observerName: reporterName,
-            expectedCompletionDate: '',
+            responsibleDepartment: payload.responsibleDepartment || payload.department || 'السلامة والصحة المهنية',
+            riskLevel: payload.riskLevel || 'متوسط',
+            observerName: observerName,
+            expectedCompletionDate: payload.expectedCompletionDate || '',
             status: 'مفتوح',
             workflowStage: 'pending_specialist',
             submittedBy: 'نموذج عام (Public Form)',
             submittedByEmail: '',
             submittedAt: new Date().toISOString(),
-            remarks: 'المصدر: نموذج عام بدون تسجيل دخول',
+            remarks: 'المصدر: نموذج عام ميداني بدون تسجيل دخول',
             attachments: stringifyAttachments(attachments),
             createdAt: new Date(),
             updatedAt: new Date()
@@ -2912,7 +3037,7 @@ function submitPublicObservation(payload) {
             return {
                 success: true,
                 id: obsRecord.isoCode || obsRecord.id,
-                message: 'تم إرسال الملاحظة بنجاح، شكراً لمشاركتكم في تعزيز السلامة.'
+                message: 'تم تسجيل الملاحظة اليومية بنجاح، شكراً لمشاركتكم في حماية بيئة العمل.'
             };
         }
         return result || { success: false, message: 'فشل حفظ الملاحظة' };
