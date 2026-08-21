@@ -2846,7 +2846,7 @@ function getPublicObservationConfig() {
         try {
             cache = CacheService.getScriptCache();
             if (cache) {
-                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V8');
+                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V9');
                 if (cachedStr) {
                     return JSON.parse(cachedStr);
                 }
@@ -3050,12 +3050,20 @@ function getPublicObservationConfig() {
         var companyLogo = '';
         try {
             var compSettings = readFromSheet('CompanySettings', spreadsheetId) || [];
-            compSettings.forEach(function(cs) {
-                if (cs.key === 'logo' || cs.key === 'companyLogo' || cs.logo) {
-                    companyLogo = cs.value || cs.logo || '';
+            if (compSettings && compSettings.length > 0) {
+                var first = compSettings[0];
+                companyLogo = String(first.logo || first.companyLogo || '').trim();
+                if (first.departments || first.formDepartments) {
+                    var dList = String(first.departments || first.formDepartments || '');
+                    dList.split(/[\n,]/).forEach(function(item) { registerDept(item); });
                 }
-                if (cs.key === 'formDepartments' || cs.key === 'departments' || cs.departments) {
-                    var list = cs.value || cs.departments || '';
+            }
+            compSettings.forEach(function(cs) {
+                if (cs.key === 'logo' || cs.key === 'companyLogo') {
+                    companyLogo = cs.value || companyLogo;
+                }
+                if (cs.key === 'formDepartments' || cs.key === 'departments') {
+                    var list = cs.value || '';
                     if (typeof list === 'string') {
                         list.split(/[\n,]/).forEach(function(item) { registerDept(item); });
                     }
@@ -3090,7 +3098,7 @@ function getPublicObservationConfig() {
 
         try {
             if (cache) {
-                cache.put('PUBLIC_OBS_CONFIG_CACHE_V8', JSON.stringify(configResult), 1800);
+                cache.put('PUBLIC_OBS_CONFIG_CACHE_V9', JSON.stringify(configResult), 1800);
             }
         } catch (cPutErr) {}
 
