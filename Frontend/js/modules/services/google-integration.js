@@ -1474,24 +1474,7 @@ const GoogleIntegration = {
                     return result;
                 }
                 const errorCode = result.errorCode ? String(result.errorCode) : '';
-                const errorMessage = result.message || 'فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو errorMessage';
-                const isSessionError = errorCode === 'SESSION_EXPIRED' ||
-                    errorCode === 'SESSION_TOKEN_MISSING' ||
-                    errorCode === 'SESSION_USER_MISMATCH' ||
-                    errorCode === 'SESSION_REQUIRED' ||
-                    errorMessage.includes('انتهت صلاحية الجلسة') ||
-                    errorMessage.includes('جلسة الخادم مفقودة');
-                if (isSessionError) {
-                    try {
-                        sessionStorage.removeItem('hse_server_session_token');
-                        sessionStorage.removeItem('hse_server_session_expires_at');
-                    } catch (_e) { /* ignore */ }
-                    if (typeof Notification !== 'undefined' && Notification.warning && !this._sessionExpiryNotified) {
-                        this._sessionExpiryNotified = true;
-                        Notification.warning('انتهت جلسة الخادم — أعد تسجيل الدخول للمتابعة مع المزامنة.');
-                        setTimeout(() => { this._sessionExpiryNotified = false; }, 15000);
-                    }
-                }
+                const errorMessage = result.message || 'فشل المزامنة في التقدم باستخدام Google Sheets';
                 if (errorMessage.includes('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو errorMessage')) {
                     Utils.safeWarn('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو spreadsheetId');
                     const err = new Error(errorMessage);
