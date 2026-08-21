@@ -602,20 +602,97 @@
             border: 1px solid #e2e8f0;
         }
 
-        .alert-error {
-            background: #fef2f2;
-            color: #dc2626;
-            padding: 12px 16px;
-            border-radius: var(--radius-sm);
-            border: 1px solid #fecaca;
-            font-size: 0.88rem;
+        /* إشعار عائم Toast لحالة الإرسال */
+        .toast-notification {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: #0f172a;
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 30px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+            font-size: 0.92rem;
             font-weight: 700;
-            display: none;
-            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 9999;
+            transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            pointer-events: none;
+            border: 1px solid rgba(255,255,255,0.15);
+            backdrop-filter: blur(8px);
+        }
+
+        .toast-notification.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .toast-notification.success {
+            background: #064e3b;
+            border-color: #059669;
+        }
+
+        .toast-notification.info {
+            background: #1e3a8a;
+            border-color: #3b82f6;
+        }
+
+        .toast-notification.error {
+            background: #7f1d1d;
+            border-color: #dc2626;
+        }
+
+        /* كارت ملخص الإرسال الفوري */
+        .receipt-card {
+            text-align: right;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius-md);
+            padding: 16px 18px;
+            margin-bottom: 24px;
+            font-size: 0.88rem;
+            line-height: 1.8;
+            color: #334155;
+        }
+
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed #cbd5e1;
+            padding: 6px 0;
+        }
+
+        .receipt-row:last-child {
+            border-bottom: none;
+        }
+
+        .receipt-label {
+            font-weight: 700;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .receipt-val {
+            font-weight: 800;
+            color: #0f172a;
         }
     </style>
 </head>
 <body>
+    <!-- إشعار Toast عائم -->
+    <div id="toastNotification" class="toast-notification">
+        <i class="fas fa-circle-notch fa-spin"></i>
+        <span id="toastMsg">جاري المعالجة...</span>
+    </div>
+
     <div class="container">
         <!-- رأس الصفحة مع الشعار الرسمي المعتمد والبيانات المنظمة -->
         <div class="header-card">
@@ -644,14 +721,19 @@
         <!-- شريط حالة التحميل -->
         <div id="loadingIndicator" class="loading-bar"></div>
 
-        <!-- شاشة النجاح -->
+        <!-- شاشة النجاح المحسنة مع ملخص الملاحظة -->
         <div id="successScreen" class="success-screen">
             <div class="success-icon">
                 <i class="fas fa-check"></i>
             </div>
-            <h2 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">تم تسجيل الملاحظة بنجاح!</h2>
+            <h2 style="font-size: 1.4rem; font-weight: 900; color: #0f172a; margin-bottom: 6px;">تم تسجيل الملاحظة بنجاح!</h2>
             <p style="color: #64748b; font-size: 0.9rem; line-height: 1.5;">تم توثيق الملاحظة في سجل الملاحظات اليومية وإحالتها لفريق السلامة للمتابعة الفورية.</p>
             <div class="ref-badge" id="refBadge">OBS-202608-0000</div>
+            
+            <div id="receiptContainer" class="receipt-card">
+                <!-- سيتم ملؤه تلقائياً ببيانات الملاحظة المسجلة -->
+            </div>
+
             <div>
                 <button type="button" class="btn-new" onclick="resetForm()">
                     <i class="fas fa-plus"></i> تسجيل ملاحظة أخرى
@@ -1308,13 +1390,39 @@
             document.getElementById('photoPreviewWrap').style.display = 'none';
         }
 
+        function showToast(msg, type = 'info', duration = 4000) {
+            const toast = document.getElementById('toastNotification');
+            if (!toast) return;
+
+            toast.className = 'toast-notification ' + type;
+            let iconHtml = '<i class="fas fa-info-circle"></i>';
+            if (type === 'success') iconHtml = '<i class="fas fa-check-circle text-emerald-400"></i>';
+            else if (type === 'error') iconHtml = '<i class="fas fa-triangle-exclamation text-rose-400"></i>';
+            else if (type === 'loading') iconHtml = '<i class="fas fa-circle-notch fa-spin text-blue-400"></i>';
+
+            toast.innerHTML = `${iconHtml}<span>${msg}</span>`;
+            toast.classList.add('show');
+
+            if (window._toastTimer) clearTimeout(window._toastTimer);
+            if (type !== 'loading') {
+                window._toastTimer = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, duration);
+            }
+        }
+
+        function hideToast() {
+            const toast = document.getElementById('toastNotification');
+            if (toast) toast.classList.remove('show');
+        }
+
         // إرسال الملاحظة
         document.getElementById('observationForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             // فحص Honeypot ضد السبام
             if (document.getElementById('hpField').value) {
-                showSuccess('OBS-' + new Date().toISOString().slice(0,7).replace('-','') + '-0000');
+                showSuccess('OBS-' + new Date().toISOString().slice(0,7).replace('-','') + '-0000', {});
                 return;
             }
 
@@ -1355,12 +1463,14 @@
             if (!site || !place || !details || !dept) {
                 errorBox.textContent = 'يرجى ملء جميع الحقول الإلزامية (*).';
                 errorBox.style.display = 'block';
+                showToast('يرجى ملء جميع الحقول الإلزامية (*)', 'error', 3500);
                 return;
             }
 
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>جاري حفظ الملاحظة بالجدول...</span>';
+            showToast('جاري إرسال وتوثيق الملاحظة في قاعدة البيانات...', 'loading');
 
             const payload = {
                 action: 'submitPublicObservation',
@@ -1388,7 +1498,8 @@
 
                 const result = await response.json();
                 if (result && result.success) {
-                    showSuccess(result.id || ('OBS-' + new Date().toISOString().slice(0,7).replace('-','') + '-0000'));
+                    const refCode = result.id || ('OBS-' + new Date().toISOString().slice(0,7).replace('-','') + '-0000');
+                    showSuccess(refCode, payload);
                 } else {
                     throw new Error(result.message || 'فشل إرسال الملاحظة');
                 }
@@ -1396,14 +1507,51 @@
                 console.error(err);
                 errorBox.textContent = 'تعذر الاتصال بالخادم، يرجى التأكد من اتصال الإنترنت والمحاولة مرة أخرى.';
                 errorBox.style.display = 'block';
+                showToast('تعذر إرسال الملاحظة، يرجى التحقق من اتصال الإنترنت', 'error', 5000);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span>تسجيل الملاحظة اليومية الآن</span>';
             }
         });
 
-        function showSuccess(refId) {
+        function showSuccess(refId, p) {
+            showToast('تم تسجيل الملاحظة بنجاح وتوثيقها بالنظام!', 'success', 5000);
             document.getElementById('observationForm').style.display = 'none';
             document.getElementById('refBadge').textContent = 'رقم الملاحظة: ' + refId;
+
+            const rec = document.getElementById('receiptContainer');
+            if (rec && p && p.siteName) {
+                rec.innerHTML = `
+                    <div class="receipt-row">
+                        <span class="receipt-label"><i class="fas fa-industry text-blue-600"></i> المصنع / الموقع:</span>
+                        <span class="receipt-val">${p.siteName}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span class="receipt-label"><i class="fas fa-map-pin text-blue-600"></i> المكان الفرعي:</span>
+                        <span class="receipt-val">${p.locationName}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span class="receipt-label"><i class="fas fa-tags text-blue-600"></i> نوع الملاحظة:</span>
+                        <span class="receipt-val">${p.observationType} (${p.riskLevel})</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span class="receipt-label"><i class="fas fa-building-user text-blue-600"></i> الإدارة المعنية:</span>
+                        <span class="receipt-val">${p.responsibleDepartment}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span class="receipt-label"><i class="fas fa-circle-notch text-blue-600"></i> حالة الملاحظة:</span>
+                        <span class="receipt-val">${p.status || 'Open'}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span class="receipt-label"><i class="fas fa-calendar-check text-emerald-600"></i> التاريخ المتوقع للتنفيذ:</span>
+                        <span class="receipt-val">${p.expectedCompletionDate || 'نهاية الشهر الحالي'}</span>
+                    </div>
+                    <div class="receipt-row">
+                        <span class="receipt-label"><i class="fas fa-user-shield text-blue-600"></i> صاحب الملاحظة:</span>
+                        <span class="receipt-val">${p.observerName || 'ملاحظة عامة'}</span>
+                    </div>
+                `;
+            }
+
             document.getElementById('successScreen').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -1423,6 +1571,7 @@
             document.getElementById('submitBtn').innerHTML = '<i class="fas fa-paper-plane"></i> <span>تسجيل الملاحظة اليومية الآن</span>';
             document.getElementById('successScreen').style.display = 'none';
             document.getElementById('observationForm').style.display = 'block';
+            hideToast();
         }
     </script>
 </body>

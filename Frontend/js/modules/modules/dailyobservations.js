@@ -13535,58 +13535,114 @@ const DailyObservations = {
             });
         });
 
-        printBtn?.addEventListener('click', () => {
+        printBtn?.addEventListener('click', async () => {
             const facName = factorySelect.value || 'جميع مصانع ومواقع الشركة';
             const inspName = inspectorSelect.value || '';
-            const qrSrc = qrImg.src;
+            const rawUrl = linkInput.value;
+            
+            // تحويل رمز الـ QR إلى Data URL Base64 محلي لضمان ظهوره فوراً وبدون اتصال إنترنت
+            let qrDataUrl = qrImg.src;
+            try {
+                const tempImg = new Image();
+                tempImg.crossOrigin = 'Anonymous';
+                tempImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(rawUrl)}`;
+                await new Promise((resolve) => {
+                    tempImg.onload = resolve;
+                    tempImg.onerror = resolve;
+                    setTimeout(resolve, 1000);
+                });
+                const cvs = document.createElement('canvas');
+                cvs.width = 300;
+                cvs.height = 300;
+                const ctx = cvs.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, 300, 300);
+                ctx.drawImage(tempImg, 0, 0, 300, 300);
+                qrDataUrl = cvs.toDataURL('image/png');
+            } catch (e) {
+                qrDataUrl = qrImg.src;
+            }
+
             const printWin = window.open('', '_blank');
+            if (!printWin) {
+                if (typeof Notification !== 'undefined') Notification.warning('يرجى السماح بالنوافذ المنبثقة للطباعة');
+                return;
+            }
+
             printWin.document.write(`
                 <!DOCTYPE html>
                 <html lang="ar" dir="rtl">
                 <head>
-                    <title>بوستر الإبلاغ عن الملاحظات - ${facName}</title>
+                    <meta charset="UTF-8">
+                    <title>بوستر الإبلاغ عن الملاحظات الميدانية - ${facName}</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
                     <style>
-                        @page { size: A4 portrait; margin: 15mm; }
-                        body { font-family: 'Cairo', system-ui, sans-serif; text-align: center; color: #0f172a; margin: 0; padding: 20px; }
-                        .poster-card { border: 4px solid #1e293b; border-radius: 20px; padding: 40px 30px; }
-                        .header { background: #1e293b; color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 25px; }
-                        .title { font-size: 28px; font-weight: 800; margin: 0 0 8px 0; }
-                        .sub { font-size: 16px; color: #94a3b8; margin: 0; }
-                        .badges-wrap { display: flex; justify-content: center; gap: 12px; margin-bottom: 25px; flex-wrap: wrap; }
-                        .factory-badge { background: #e0f2fe; color: #0369a1; font-size: 20px; font-weight: 700; padding: 8px 20px; border-radius: 30px; }
-                        .inspector-badge { background: #dcfce7; color: #15803d; font-size: 20px; font-weight: 700; padding: 8px 20px; border-radius: 30px; }
-                        .qr-wrap { padding: 20px; border: 3px dashed #cbd5e1; border-radius: 20px; display: inline-block; margin-bottom: 25px; }
-                        .qr-img { width: 260px; height: 260px; }
-                        .instruction { font-size: 22px; font-weight: 700; color: #1e40af; margin-bottom: 15px; }
-                        .steps { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 25px; }
-                        .footer { font-size: 14px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+                        @page { size: A4 portrait; margin: 10mm; }
+                        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; box-sizing: border-box; }
+                        body { font-family: 'Cairo', system-ui, -apple-system, sans-serif; text-align: center; color: #0f172a; margin: 0; padding: 10px; background: #ffffff; }
+                        .poster-card { border: 3.5px solid #0f172a; border-radius: 16px; padding: 24px 20px; position: relative; background: #ffffff; }
+                        .doc-badge-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px; font-size: 12px; font-weight: 800; color: #475569; }
+                        .header-banner { background: #0f172a !important; color: #ffffff !important; padding: 18px 14px; border-radius: 10px; margin-bottom: 18px; border: 1px solid #1e293b; }
+                        .title { font-size: 25px; font-weight: 900; margin: 0 0 4px 0; color: #ffffff !important; }
+                        .sub { font-size: 14px; color: #93c5fd !important; margin: 0; font-weight: 700; }
+                        .badges-wrap { display: flex; justify-content: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+                        .factory-badge { background: #eff6ff !important; border: 1.5px solid #3b82f6; color: #1d4ed8 !important; font-size: 17px; font-weight: 800; padding: 6px 18px; border-radius: 25px; display: inline-flex; align-items: center; gap: 6px; }
+                        .inspector-badge { background: #f0fdf4 !important; border: 1.5px solid #16a34a; color: #15803d !important; font-size: 17px; font-weight: 800; padding: 6px 18px; border-radius: 25px; display: inline-flex; align-items: center; gap: 6px; }
+                        .qr-box { background: #ffffff; border: 3px solid #0f172a; border-radius: 16px; padding: 12px; display: inline-block; margin-bottom: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
+                        .qr-img { width: 230px; height: 230px; display: block; margin: 0 auto; }
+                        .instruction-card { background: #f8fafc !important; border-right: 5px solid #2563eb; border: 1px solid #e2e8f0; border-right-width: 5px; border-radius: 8px; padding: 12px 18px; margin-bottom: 18px; text-align: right; }
+                        .instruction-title { font-size: 17px; font-weight: 900; color: #1e3a8a; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+                        .steps-list { font-size: 13.5px; color: #334155; line-height: 1.8; margin: 0; padding-right: 20px; font-weight: 600; }
+                        .footer-meta { font-size: 11.5px; color: #64748b; border-top: 1.5px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
                     </style>
                 </head>
                 <body>
                     <div class="poster-card">
-                        <div class="header">
-                            <h1 class="title">منظومة الملاحظات الميدانية اليومية</h1>
-                            <p class="sub">نظام إدارة السلامة والصحة المهنية والبيئة (HSE 360)</p>
+                        <div class="doc-badge-row">
+                            <div><i class="fas fa-shield-halved"></i> إدارة السلامة والصحة المهنية والبيئة (HSE)</div>
+                            <div>كود النموذج: DOC-HSE-OBS-01 | الإصدار 02</div>
                         </div>
+
+                        <div class="header-banner">
+                            <h1 class="title">بوابة الإبلاغ عن الملاحظات الميدانية اليومية</h1>
+                            <p class="sub">منظومة إدارة السلامة والصحة المهنية والبيئة — HSE 360 Platform</p>
+                        </div>
+
                         <div class="badges-wrap">
-                            <div class="factory-badge"><i class="fas fa-industry"></i> ${facName}</div>
+                            <div class="factory-badge"><i class="fas fa-industry"></i> الموقع: ${facName}</div>
                             ${inspName ? `<div class="inspector-badge"><i class="fas fa-user-shield"></i> مفتش السلامة: ${inspName}</div>` : ''}
                         </div>
-                        <div class="qr-wrap">
-                            <img src="${qrSrc}" alt="QR Code" class="qr-img">
+
+                        <div>
+                            <div class="qr-box">
+                                <img src="${qrDataUrl}" alt="QR Code" class="qr-img">
+                            </div>
                         </div>
-                        <div class="instruction">امسح الرمز بكاميرا جوالك وسجّل الملاحظة فوراً</div>
-                        <div class="steps">
-                            1. وجّه كاميرا الهاتف نحو رمز الاستجابة السريعة (QR Code)<br>
-                            2. اضغط على الرابط الظاهر لفتح نموذج الملاحظة بدون الحاجة لتسجيل دخول<br>
-                            3. حدد نوع الملاحظة والمكان والتقط صورة ثم اضغط إرسال
+
+                        <div class="instruction-card">
+                            <div class="instruction-title">
+                                <i class="fas fa-mobile-screen-button"></i>
+                                خطوات الإبلاغ المباشر عبر الهاتف المحمول:
+                            </div>
+                            <ol class="steps-list">
+                                <li>افتح تطبيق الكاميرا على هاتفك المحمول ووجّه العدسة نحو رمز الاستجابة السريعة (QR Code) أعلاه.</li>
+                                <li>اضغط على الرابط المنبثق لفتح نموذج تسجيل الملاحظة اليومية (دون الحاجة لتسجيل دخول).</li>
+                                <li>حدد مكان وخطورة الملاحظة، ويمكنك التقاط صورة توضيحية مباشرة ثم اضغط إرسال.</li>
+                            </ol>
                         </div>
-                        <div class="footer">
-                            مشاركتكم تدعم بيئة عمل آمنة وخالية من الحوادث — إدارة السلامة والصحة المهنية
+
+                        <div class="footer-meta">
+                            <div>معاً نحو بيئة عمل آمنة خالية من الحوادث والمخاطر المهنية</div>
+                            <div>HSE Department © 2026</div>
                         </div>
                     </div>
                     <script>
-                        window.onload = () => { window.print(); };
+                        window.onload = function() {
+                            setTimeout(function() {
+                                window.print();
+                            }, 400);
+                        };
                     </script>
                 </body>
                 </html>
