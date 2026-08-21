@@ -52,14 +52,14 @@
 
         .container {
             width: 100%;
-            max-width: 760px;
+            max-width: 800px;
         }
 
         /* رأس الصفحة والشعار */
         /* ترويسة ISO المعتمدة ثلاثية الأعمدة */
         .iso-header-table {
             display: grid;
-            grid-template-columns: 170px 1fr 200px;
+            grid-template-columns: minmax(130px, 1fr) 2.2fr minmax(140px, 1fr);
             background: #ffffff;
             border: 1px solid #cbd5e1;
             border-top: 4px solid #1e40af;
@@ -151,21 +151,22 @@
         }
 
         .iso-col-meta {
-            padding: 10px 14px;
+            padding: 8px 10px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 5px;
+            gap: 4px;
             border-right: 1px solid #e2e8f0;
             background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-            font-size: 0.73rem;
+            font-size: 0.68rem;
+            overflow: hidden;
         }
 
         .iso-meta-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
             border-bottom: 1px dashed #e2e8f0;
             padding-bottom: 3px;
         }
@@ -178,7 +179,7 @@
         .iso-meta-key {
             color: #64748b;
             font-weight: 700;
-            white-space: nowrap;
+            font-size: 0.62rem;
         }
 
         .iso-meta-val {
@@ -187,9 +188,10 @@
             font-family: monospace, inherit;
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            padding: 0 5px;
+            padding: 0 4px;
             border-radius: 4px;
             white-space: nowrap;
+            font-size: 0.65rem;
         }
 
         @media (max-width: 768px) {
