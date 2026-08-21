@@ -3119,7 +3119,7 @@ ${o}${s.length>5?`
                         </label>
                         <select id="qr-factory-select" class="form-select" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.95rem;">
                             <option value="">\u2014 \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0639\u0627\u0645 \u0644\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u0648\u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u2014</option>
-                            ${(i||[]).map(p=>`<option value="${Utils.escapeHTML(p.name||p.siteName||p)}">${Utils.escapeHTML(p.name||p.siteName||p)}</option>`).join("")}
+                            ${(i||[]).map(d=>`<option value="${Utils.escapeHTML(d.name||d.siteName||d)}">${Utils.escapeHTML(d.name||d.siteName||d)}</option>`).join("")}
                         </select>
                     </div>
 
@@ -3153,11 +3153,11 @@ ${o}${s.length>5?`
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u063A\u0644\u0627\u0642</button>
                 </div>
             </div>
-        `,document.body.appendChild(a);const s=a.querySelector("#qr-factory-select"),o=a.querySelector("#public-link-input"),n=a.querySelector("#qr-code-img"),r=a.querySelector("#qr-target-text"),c=a.querySelector("#copy-public-link-btn"),d=a.querySelector("#print-poster-btn"),l=()=>{const p=s.value,f=p?`${t}?factory=${encodeURIComponent(p)}`:t;o.value=f,n.src=`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(f)}`,r.textContent=p?`\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0625\u0628\u0644\u0627\u063A \u0627\u0644\u0645\u0628\u0627\u0634\u0631 \u0644\u0645\u0648\u0642\u0639: ${p}`:"\u0627\u0645\u0633\u062D \u0627\u0644\u0631\u0645\u0632 \u0628\u0643\u0627\u0645\u064A\u0631\u0627 \u0627\u0644\u0647\u0627\u062A\u0641 \u0644\u0641\u062A\u062D \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0641\u0648\u0631\u0627\u064B"};s?.addEventListener("change",l),c?.addEventListener("click",()=>{navigator.clipboard.writeText(o.value).then(()=>{c.innerHTML='<i class="fas fa-check ml-1 text-green-600"></i> \u062A\u0645 \u0627\u0644\u0646\u0633\u062E!',setTimeout(()=>{c.innerHTML='<i class="fas fa-copy ml-1"></i> \u0646\u0633\u062E'},2500)})}),d?.addEventListener("click",()=>{const p=s.value||"\u062C\u0645\u064A\u0639 \u0645\u0635\u0627\u0646\u0639 \u0648\u0645\u0648\u0627\u0642\u0639 \u0627\u0644\u0634\u0631\u0643\u0629",f=n.src,b=window.open("","_blank");b.document.write(`
+        `,document.body.appendChild(a);const s=a.querySelector("#qr-factory-select"),o=a.querySelector("#public-link-input"),n=a.querySelector("#qr-code-img"),r=a.querySelector("#qr-target-text"),c=()=>{const d=s.value;let l=t;try{const p={s:(i||[]).map(b=>[String(b.name||b.siteName||b||"").trim(),Array.isArray(b.places)?b.places:b.places?String(b.places).split(/[\n,]/).map(u=>u.trim()).filter(Boolean):[]]).filter(b=>b[0]),d:typeof this.getDepartmentOptions=="function"?this.getDepartmentOptions():[],m:typeof this.getSafetyTeamMembers=="function"?this.getSafetyTeamMembers().map(b=>b.name).filter(Boolean):[]},f=encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(p)))));l=`${t}${d?`?factory=${encodeURIComponent(d)}`:""}#cfg=${f}`}catch{l=d?`${t}?factory=${encodeURIComponent(d)}`:t}o.value=l,n.src=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(l)}`,r.textContent=d?`\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0625\u0628\u0644\u0627\u063A \u0627\u0644\u0645\u0628\u0627\u0634\u0631 \u0644\u0645\u0648\u0642\u0639: ${d}`:"\u0627\u0645\u0633\u062D \u0627\u0644\u0631\u0645\u0632 \u0628\u0643\u0627\u0645\u064A\u0631\u0627 \u0627\u0644\u0647\u0627\u062A\u0641 \u0644\u0641\u062A\u062D \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0641\u0648\u0631\u0627\u064B"};s?.addEventListener("change",c),copyBtn?.addEventListener("click",()=>{navigator.clipboard.writeText(o.value).then(()=>{copyBtn.innerHTML='<i class="fas fa-check ml-1 text-green-600"></i> \u062A\u0645 \u0627\u0644\u0646\u0633\u062E!',setTimeout(()=>{copyBtn.innerHTML='<i class="fas fa-copy ml-1"></i> \u0646\u0633\u062E'},2500)})}),printBtn?.addEventListener("click",()=>{const d=s.value||"\u062C\u0645\u064A\u0639 \u0645\u0635\u0627\u0646\u0639 \u0648\u0645\u0648\u0627\u0642\u0639 \u0627\u0644\u0634\u0631\u0643\u0629",l=n.src,p=window.open("","_blank");p.document.write(`
                 <!DOCTYPE html>
                 <html lang="ar" dir="rtl">
                 <head>
-                    <title>\u0628\u0648\u0633\u062A\u0631 \u0627\u0644\u0625\u0628\u0644\u0627\u063A \u0639\u0646 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A - ${p}</title>
+                    <title>\u0628\u0648\u0633\u062A\u0631 \u0627\u0644\u0625\u0628\u0644\u0627\u063A \u0639\u0646 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A - ${d}</title>
                     <style>
                         @page { size: A4 portrait; margin: 15mm; }
                         body { font-family: 'Cairo', system-ui, sans-serif; text-align: center; color: #0f172a; margin: 0; padding: 20px; }
@@ -3179,10 +3179,10 @@ ${o}${s.length>5?`
                             <h1 class="title">SafetyHub | \u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0625\u0628\u0644\u0627\u063A \u0639\u0646 \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u064A\u0648\u0645\u064A\u0629</h1>
                             <p class="sub">\u0645\u0639\u0627\u064B \u0644\u0628\u064A\u0626\u0629 \u0639\u0645\u0644 \u0622\u0645\u0646\u0629 \u062E\u0627\u0644\u064A\u0629 \u0645\u0646 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0648\u0627\u0644\u0645\u062E\u0627\u0637\u0631</p>
                         </div>
-                        <div class="factory-badge">\u0627\u0644\u0645\u0648\u0642\u0639: ${p}</div>
+                        <div class="factory-badge">\u0627\u0644\u0645\u0648\u0642\u0639: ${d}</div>
                         <div>
                             <div class="qr-wrap">
-                                <img src="${f}" class="qr-img" alt="QR Code">
+                                <img src="${l}" class="qr-img" alt="QR Code">
                             </div>
                         </div>
                         <div class="instruction">\u{1F4F1} \u0627\u0641\u062A\u062D \u0643\u0627\u0645\u064A\u0631\u0627 \u0647\u0627\u062A\u0641\u0643 \u0648\u0627\u0645\u0633\u062D \u0627\u0644\u0631\u0645\u0632 \u0644\u0644\u0625\u0628\u0644\u0627\u063A \u0641\u0648\u0631\u0627\u064B</div>
@@ -3199,4 +3199,4 @@ ${o}${s.length>5?`
                     <\/script>
                 </body>
                 </html>
-            `),b.document.close()})}};try{typeof window<"u"&&(window.DailyObservations=DailyObservations,AppState?.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 DailyObservations module loaded and available on window.DailyObservations"))}catch(e){Utils?.safeError?.("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 DailyObservations:",e),typeof window<"u"&&typeof DailyObservations<"u"&&(window.DailyObservations=DailyObservations)}
+            `),p.document.close()})}};try{typeof window<"u"&&(window.DailyObservations=DailyObservations,AppState?.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 DailyObservations module loaded and available on window.DailyObservations"))}catch(e){Utils?.safeError?.("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 DailyObservations:",e),typeof window<"u"&&typeof DailyObservations<"u"&&(window.DailyObservations=DailyObservations)}

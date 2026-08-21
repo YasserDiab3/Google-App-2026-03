@@ -573,7 +573,7 @@
                             اسم المصنع / الموقع <span class="required">*</span>
                         </label>
                         <select id="siteSelect" class="form-control" required onchange="handleSiteChange(this.value)">
-                            <option value="">— جاري تحميل المواقع من النظام... —</option>
+                            <option value="">— اختر المصنع / الموقع —</option>
                         </select>
                     </div>
 
@@ -586,6 +586,12 @@
                             <option value="">— اختر المصنع أولاً —</option>
                         </select>
                     </div>
+                </div>
+
+                <!-- إدخال يدوي للمصنع إذا لم يكن بالقائمة -->
+                <div id="customSiteGroup" class="form-group" style="display: none;">
+                    <label class="form-label" for="customSiteInput">اسم المصنع / الموقع (إدخال يدوي):</label>
+                    <input type="text" id="customSiteInput" class="form-control" placeholder="اكتب اسم المصنع أو الموقع بدقة...">
                 </div>
 
                 <!-- إدخال يدوي للمكان -->
@@ -806,26 +812,57 @@
         window.addEventListener('DOMContentLoaded', () => {
             setDefaultDateTime();
 
-            // 1. استرجاع فوري من التخزين المؤقت المحلي (0 ثانية تأخير)
+            // 1. قراءة التكوين المشفر الممرر بالرابط أو رمز الـ QR
+            let configLoadedFromUrl = false;
             try {
-                const cached = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
-                if (cached) {
-                    const parsed = JSON.parse(cached);
-                    if (parsed && parsed.sites && parsed.sites.length > 0) {
-                        loadedConfig = parsed;
-                        renderConfigData(parsed);
+                const hash = window.location.hash || '';
+                const search = window.location.search || '';
+                const match = hash.match(/#cfg=([^&]+)/) || search.match(/[?&]cfg=([^&]+)/);
+                if (match && match[1]) {
+                    const decodedJson = decodeURIComponent(escape(atob(decodeURIComponent(match[1]))));
+                    const payload = JSON.parse(decodedJson);
+                    if (payload && Array.isArray(payload.s) && payload.s.length > 0) {
+                        loadedConfig = {
+                            success: true,
+                            sites: payload.s.map(item => ({ name: item[0], places: item[1] || [] })),
+                            departments: payload.d || [],
+                            safetyMembers: (payload.m || []).map(name => ({ name, role: 'فريق السلامة والصحة المهنية' }))
+                        };
+                        configLoadedFromUrl = true;
+                        try {
+                            localStorage.setItem('HSE_PUBLIC_OBS_CONFIG', JSON.stringify(loadedConfig));
+                        } catch (sErr) {}
+                        renderConfigData(loadedConfig);
                         const ind = document.getElementById('loadingIndicator');
                         if (ind) ind.style.display = 'none';
                     }
                 }
-            } catch (cErr) {}
-
-            // 2. إذا لم يتوفر كاش محلي، عرض بيانات النظام الأولية فوراً دون انتظار
-            if (!loadedConfig) {
-                renderFallbackData();
+            } catch (uErr) {
+                console.warn('URL config decode error:', uErr);
             }
 
-            // 3. جلب أحدث البيانات من الخادم في الخلفية وتحديث القوائم بهدوء
+            // 2. إذا لم يكن بالرابط، استرجاع من الكاش المحلي للمتصفح
+            if (!configLoadedFromUrl) {
+                try {
+                    const cached = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
+                    if (cached) {
+                        const parsed = JSON.parse(cached);
+                        if (parsed && Array.isArray(parsed.sites) && parsed.sites.length > 0) {
+                            loadedConfig = parsed;
+                            renderConfigData(parsed);
+                            const ind = document.getElementById('loadingIndicator');
+                            if (ind) ind.style.display = 'none';
+                        }
+                    }
+                } catch (cErr) {}
+            }
+
+            // 3. إذا لم يتوفر أي كاش، تهيئة القوائم بحقول جاهزة للاختيار أو الإدخال
+            if (!loadedConfig) {
+                renderDefaultFields();
+            }
+
+            // 4. طلب أحدث التحديثات من الخادم بالخلفية
             loadServerConfig();
         });
 
@@ -852,28 +889,22 @@
                     renderConfigData(data);
                 }
             } catch (e) {
-                console.warn('Silent config sync notice:', e);
+                // استمرار العمل بالبيانات المعروضة
             } finally {
                 if (ind) ind.style.display = 'none';
             }
         }
 
-        function renderFallbackData() {
-            const fallback = {
-                sites: [
-                    { name: 'مصنع الأغذية الرئيسي', places: ['خط الإنتاج 1', 'خط الإنتاج 2', 'المستودع الرئيسي', 'ورشة الصيانة', 'منطقة التحميل'] },
-                    { name: 'مصنع المخبوزات والحلويات', places: ['صالة التجهيز', 'خط الأفران', 'منطقة التعبئة والتغليف', 'مستودع الخامات'] },
-                    { name: 'المستودعات والخدمات اللوجستية', places: ['مستودع التبريد', 'مستودع الجاف', 'ساحة الشاحنات'] }
-                ],
-                departments: [
-                    'السلامة والصحة المهنية', 'الصيانة', 'الإنتاج والتشغيل', 'الجودة وسلامة الغذاء',
-                    'المستودعات والخدمات اللوجستية', 'الموارد البشرية', 'الشؤون الإدارية', 'الأمن والحراسة'
-                ],
-                safetyMembers: [
-                    { name: 'فريق السلامة والصحة المهنية', role: 'HSE Team' }
-                ]
-            };
-            renderConfigData(fallback);
+        function renderDefaultFields() {
+            const defaultDepts = [
+                'السلامة والصحة المهنية', 'الصيانة', 'الإنتاج والتشغيل', 'الجودة وسلامة الغذاء',
+                'المستودعات والخدمات اللوجستية', 'الموارد البشرية', 'الشؤون الإدارية', 'الأمن والحراسة'
+            ];
+            renderConfigData({
+                sites: [],
+                departments: defaultDepts,
+                safetyMembers: []
+            });
         }
 
         function renderConfigData(cfg) {
@@ -889,6 +920,11 @@
                     siteSelect.appendChild(opt);
                 });
             }
+
+            const otherSiteOpt = document.createElement('option');
+            otherSiteOpt.value = '__OTHER_SITE__';
+            otherSiteOpt.textContent = '➕ مصنع / موقع آخر (إدخال يدوي)...';
+            siteSelect.appendChild(otherSiteOpt);
 
             // قراءة query param لو وُجد
             const urlParams = new URLSearchParams(window.location.search);
@@ -938,7 +974,19 @@
         function handleSiteChange(siteName) {
             const placeSelect = document.getElementById('placeSelect');
             const customGroup = document.getElementById('customPlaceGroup');
+            const customSiteGroup = document.getElementById('customSiteGroup');
             customGroup.style.display = 'none';
+
+            if (siteName === '__OTHER_SITE__') {
+                customSiteGroup.style.display = 'block';
+                document.getElementById('customSiteInput').focus();
+                placeSelect.innerHTML = '<option value="__OTHER__">➕ مكان فرعي آخر (إدخال يدوي)...</option>';
+                placeSelect.disabled = false;
+                customGroup.style.display = 'block';
+                return;
+            } else {
+                customSiteGroup.style.display = 'none';
+            }
 
             if (!siteName) {
                 placeSelect.innerHTML = '<option value="">— اختر المصنع أولاً —</option>';
@@ -1065,7 +1113,11 @@
             const errorBox = document.getElementById('errorMessage');
             errorBox.style.display = 'none';
 
-            const site = document.getElementById('siteSelect').value;
+            let site = document.getElementById('siteSelect').value;
+            if (site === '__OTHER_SITE__') {
+                site = document.getElementById('customSiteInput').value.trim();
+            }
+
             let place = document.getElementById('placeSelect').value;
             if (place === '__OTHER__') {
                 place = document.getElementById('customPlaceInput').value.trim() || 'مكان فرعي آخر';

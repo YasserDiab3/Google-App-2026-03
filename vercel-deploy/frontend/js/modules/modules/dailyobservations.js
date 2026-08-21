@@ -13437,14 +13437,26 @@ const DailyObservations = {
         const linkInput = modal.querySelector('#public-link-input');
         const qrImg = modal.querySelector('#qr-code-img');
         const qrText = modal.querySelector('#qr-target-text');
-        const copyBtn = modal.querySelector('#copy-public-link-btn');
-        const printBtn = modal.querySelector('#print-poster-btn');
-
         const updateUrl = () => {
             const fac = select.value;
-            const fullUrl = fac ? `${baseUrl}?factory=${encodeURIComponent(fac)}` : baseUrl;
+            let fullUrl = baseUrl;
+            try {
+                const compactPayload = {
+                    s: (factories || []).map(f => [
+                        String(f.name || f.siteName || f || '').trim(),
+                        Array.isArray(f.places) ? f.places : (f.places ? String(f.places).split(/[\n,]/).map(p => p.trim()).filter(Boolean) : [])
+                    ]).filter(x => x[0]),
+                    d: (typeof this.getDepartmentOptions === 'function') ? this.getDepartmentOptions() : [],
+                    m: (typeof this.getSafetyTeamMembers === 'function') ? this.getSafetyTeamMembers().map(m => m.name).filter(Boolean) : []
+                };
+                const enc = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(compactPayload)))));
+                fullUrl = `${baseUrl}${fac ? `?factory=${encodeURIComponent(fac)}` : ''}#cfg=${enc}`;
+            } catch (e) {
+                fullUrl = fac ? `${baseUrl}?factory=${encodeURIComponent(fac)}` : baseUrl;
+            }
+
             linkInput.value = fullUrl;
-            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(fullUrl)}`;
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(fullUrl)}`;
             qrText.textContent = fac ? `نموذج الإبلاغ المباشر لموقع: ${fac}` : 'امسح الرمز بكاميرا الهاتف لفتح نموذج الملاحظات فوراً';
         };
 
