@@ -1042,15 +1042,15 @@
                     <span class="section-title">الصورة وصاحب الملاحظة</span>
                 </div>
 
-                <!-- رفع الصورة -->
+                <!-- رفع الصورة (إلزامي *) -->
                 <div class="form-group">
-                    <label class="form-label">
+                    <label class="form-label" for="photoInput">
                         <i class="fas fa-camera text-blue-600"></i>
-                        الصورة التوضيحية للملاحظة (اختياري)
+                        الصورة التوضيحية للملاحظة <span class="required">*</span>
                     </label>
-                    <div class="photo-upload-area" onclick="document.getElementById('photoInput').click()">
+                    <div id="photoUploadArea" class="photo-upload-area" onclick="document.getElementById('photoInput').click()">
                         <i class="fas fa-cloud-arrow-up" style="font-size: 1.8rem; color: #3b82f6; margin-bottom: 6px;"></i>
-                        <div style="font-weight: 700; font-size: 0.9rem;">التقاط صورة بالكاميرا أو اختيار من المعرض</div>
+                        <div style="font-weight: 700; font-size: 0.9rem;">التقاط صورة بالكاميرا أو اختيار من المعرض <span style="color: #ef4444;">*</span></div>
                         <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">يتم ضغط الصورة تلقائياً لتسريع الإرسال</div>
                     </div>
                     <input type="file" id="photoInput" accept="image/*" capture="environment" style="display: none;" onchange="handlePhotoSelect(event)">
@@ -1063,23 +1063,12 @@
                     </div>
                 </div>
 
-                <!-- خيار مجهول الهوية (مغلق افتراضياً لإظهار اسم المفتش/صاحب الملاحظة) -->
-                <div class="toggle-row">
-                    <span style="font-size: 0.9rem; font-weight: 700; color: #334155;">
-                        <i class="fas fa-user-secret ml-1 text-slate-600"></i> إرسال كمجهول الهوية
-                    </span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="anonymousToggle" onchange="toggleAnonymous(this.checked)">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <!-- حقول صاحب الملاحظة / مسؤول السلامة الفعلي (ظاهر ومفتوح افتراضياً) -->
+                <!-- حقول صاحب الملاحظة / مسؤول السلامة الفعلي (إلزامي *) -->
                 <div id="reporterInfoFields" style="display: flex; flex-direction: column; gap: 10px;">
                     <div class="form-group">
                         <label class="form-label" for="ownerSelect">
                             <i class="fas fa-user-shield text-blue-600"></i>
-                            اسم صاحب الملاحظة / مسؤول السلامة
+                            اسم صاحب الملاحظة / مسؤول السلامة <span class="required">*</span>
                         </label>
                         <select id="ownerSelect" class="form-control" onchange="handleOwnerChange(this.value)">
                             <option value="">— اختر اسمك من قائمة النظام —</option>
@@ -1088,7 +1077,7 @@
 
                     <!-- إدخال يدوي للاسم إذا لم يكن في القائمة -->
                     <div id="customOwnerGroup" class="form-group" style="display: none;">
-                        <label class="form-label" for="customOwnerInput">اسمك الكامل (إدخال يدوي):</label>
+                        <label class="form-label" for="customOwnerInput">اسمك الكامل (إدخال يدوي) <span class="required">*</span>:</label>
                         <input type="text" id="customOwnerInput" class="form-control" placeholder="اكتب اسمك كاملاً...">
                     </div>
                 </div>
@@ -1771,24 +1760,37 @@
             const dept = document.getElementById('responsibleDeptSelect').value;
             const statusVal = document.getElementById('statusSelect').value || 'Open';
             const expectedDateVal = document.getElementById('expectedDateInput').value || '';
-            const isAnon = document.getElementById('anonymousToggle').checked;
             
-            let observerName = 'ملاحظة عامة (مجهول)';
-            if (!isAnon) {
-                const selOwner = document.getElementById('ownerSelect').value;
-                if (selOwner === '__OTHER_OWNER__') {
-                    observerName = document.getElementById('customOwnerInput').value.trim() || 'ملاحظة عامة';
-                } else if (selOwner) {
-                    observerName = selOwner;
-                } else {
-                    observerName = 'ملاحظة عامة';
-                }
+            // التحقق من اسم صاحب الملاحظة (إلزامي *)
+            let observerName = '';
+            const selOwner = document.getElementById('ownerSelect').value;
+            if (selOwner === '__OTHER_OWNER__') {
+                observerName = document.getElementById('customOwnerInput').value.trim();
+            } else if (selOwner) {
+                observerName = selOwner.trim();
             }
 
             if (!site || !place || !details || !dept) {
                 errorBox.textContent = 'يرجى ملء جميع الحقول الإلزامية (*).';
                 errorBox.style.display = 'block';
                 showToast('يرجى ملء جميع الحقول الإلزامية (*)', 'error', 3500);
+                return;
+            }
+
+            if (!observerName) {
+                errorBox.textContent = 'يرجى اختيار أو كتابة اسم صاحب الملاحظة (*).';
+                errorBox.style.display = 'block';
+                showToast('يرجى اختيار اسم صاحب الملاحظة (*)', 'error', 3500);
+                document.getElementById('ownerSelect')?.focus();
+                return;
+            }
+
+            // التحقق من إرفاق الصورة التوضيحية (إلزامي *)
+            if (!currentPhotoBase64 || currentPhotoBase64.length < 50) {
+                errorBox.textContent = 'يرجى التقاط أو إرفاق صورة توضيحية للملاحظة (*).';
+                errorBox.style.display = 'block';
+                showToast('يرجى إرفاق صورة توضيحية للملاحظة (*)', 'error', 3500);
+                document.getElementById('photoUploadArea')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
 
