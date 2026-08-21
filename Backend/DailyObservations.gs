@@ -1,4 +1,4 @@
-﻿/**
+/**
  * إنشاء وتطبيق قالب PPT افتراضي تلقائياً — تظهر بأعلى قائمة Apps Script (a_...)
  */
 function a_createDefaultPptTemplate() {
@@ -2833,3 +2833,92 @@ function notifyObservationWorkflowEvent(payload) {
         return { success: false, message: e.toString() };
     }
 }
+
+/**
+ * ============================================
+ * إرسال ملاحظة من النموذج العام مباشرة إلى جدول الملاحظات اليومية DailyObservations
+ * ============================================
+ */
+function submitPublicObservation(payload) {
+    try {
+        if (!payload || typeof payload !== 'object') {
+            return { success: false, message: 'بيانات الملاحظة غير صالحة' };
+        }
+
+        // مكافحة السبام (Honeypot)
+        if (payload._hp_field || payload.website || payload.hp) {
+            return { success: true, message: 'تم إرسال الملاحظة بنجاح' };
+        }
+
+        var sheetName = 'DailyObservations';
+        var obsId = generateDailyObservationId(sheetName);
+        var isoCode = getObservationIsoCodeFromId(obsId);
+        var dateStr = payload.date ? String(payload.date).trim() : Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd');
+        
+        var attachments = [];
+        if (payload.photoBase64 && String(payload.photoBase64).length > 50) {
+            try {
+                if (typeof uploadFileToDrive === 'function') {
+                    var uploadRes = uploadFileToDrive(payload.photoBase64, 'Obs_' + obsId + '_' + Date.now() + '.jpg', 'image/jpeg', 'DailyObservations');
+                    if (uploadRes && uploadRes.success && uploadRes.file && uploadRes.file.url) {
+                        attachments.push({
+                            name: 'صورة الملاحظة الميدانية',
+                            url: uploadRes.file.url,
+                            type: 'image/jpeg'
+                        });
+                    }
+                }
+            } catch (imgErr) {
+                Logger.log('⚠️ تعذر رفع صورة الملاحظة العامة: ' + imgErr.toString());
+            }
+        }
+
+        var siteName = payload.factory || payload.factoryName || payload.siteName || '';
+        var locationName = payload.subLocation || payload.subLocationName || payload.locationName || '';
+        var reporterName = payload.reporterName || 'ملاحظة عامة (مجهول)';
+        if (payload.reporterPhone) {
+            reporterName += ' (' + payload.reporterPhone + ')';
+        }
+
+        var obsRecord = {
+            id: obsId,
+            isoCode: isoCode,
+            siteId: siteName,
+            siteName: siteName,
+            placeId: locationName,
+            locationName: locationName,
+            observationType: payload.behaviorType || payload.observationType || 'سلوك غير آمن',
+            date: dateStr,
+            shift: payload.shift || 'صباحي',
+            details: (payload.description || payload.details || '').trim(),
+            correctiveAction: (payload.correctiveAction || '').trim(),
+            responsibleDepartment: payload.department || 'السلامة والصحة المهنية',
+            riskLevel: payload.riskLevel || (payload.behaviorType === 'سلوك آمن وإيجابي' ? 'منخفض' : 'متوسط'),
+            observerName: reporterName,
+            expectedCompletionDate: '',
+            status: 'مفتوح',
+            workflowStage: 'pending_specialist',
+            submittedBy: 'نموذج عام (Public Form)',
+            submittedByEmail: '',
+            submittedAt: new Date().toISOString(),
+            remarks: 'المصدر: نموذج عام بدون تسجيل دخول',
+            attachments: stringifyAttachments(attachments),
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        var result = appendToSheet(sheetName, obsRecord);
+        if (result && result.success) {
+            return {
+                success: true,
+                id: obsRecord.isoCode || obsRecord.id,
+                message: 'تم إرسال الملاحظة بنجاح، شكراً لمشاركتكم في تعزيز السلامة.'
+            };
+        }
+        return result || { success: false, message: 'فشل حفظ الملاحظة' };
+    } catch (e) {
+        Logger.log('Error in submitPublicObservation: ' + e.toString());
+        return { success: false, message: 'حدث خطأ أثناء إرسال الملاحظة: ' + e.toString() };
+    }
+}
+

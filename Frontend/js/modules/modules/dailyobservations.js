@@ -2024,6 +2024,10 @@ const DailyObservations = {
                                 <i class="fas fa-file-powerpoint ml-2"></i>
                                 <span data-i18n="module.dailyobs.btn.exportPpt">تصدير PPT</span>
                             </button>
+                            <button id="public-qr-observations-btn" class="btn-secondary" onclick="DailyObservations.openPublicQrModal()" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); color: #2563eb; font-weight: 700;">
+                                <i class="fas fa-qrcode ml-2"></i>
+                                <span>النموذج العام ورمز QR</span>
+                            </button>
                             <button id="add-observation-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
                                 <span data-i18n="module.dailyobs.btn.addObservation">إضافة ملاحظة جديدة</span>
@@ -7583,9 +7587,9 @@ const DailyObservations = {
                         <span class="badge badge-${this.getRiskBadgeClass(obs.riskLevel)}">${Utils.escapeHTML(obs.riskLevel || '-')}</span>
                     </td>
                     <td>
-                        <span class="badge badge-${this.getStatusBadgeClass(obs.status)}">${Utils.escapeHTML(obs.status || '-')}</span>
+                        <div>${Utils.escapeHTML(obs.observerName || '-')}</div>
+                        ${(obs.submittedBy === 'نموذج عام (Public Form)' || String(obs.remarks || '').includes('نموذج عام')) ? `<span class="badge" style="background:#f3e8ff;color:#7e22ce;font-size:0.7rem;padding:2px 6px;border-radius:4px;font-weight:700;">نموذج عام</span>` : ''}
                     </td>
-                    <td>${Utils.escapeHTML(obs.observerName || '-')}</td>
                     <td>${this.formatResponsibleTableCell(obs)}</td>
                     <td>${obs.attachments && obs.attachments.length > 0 ? `<i class="fas fa-paperclip text-blue-500" title="${Utils.escapeHTML(this._tf('module.dailyobs.registry.attachments.count', { n: obs.attachments.length }, `${obs.attachments.length} ملف`))}"></i>` : '-'}</td>
                     <td>
@@ -13297,6 +13301,152 @@ const DailyObservations = {
 
     async convertImageToBase64(file) {
         return this.convertFileToBase64(file);
+    },
+
+    openPublicQrModal() {
+        const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
+        let baseUrl = origin + window.location.pathname.replace(/\/index\.html$/i, '').replace(/\/$/, '') + '/public-observation.html';
+        
+        const factories = this.state && this.state.sites ? this.state.sites : (AppState.appData.observationSites || []);
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 600px; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                <div class="modal-header" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); display: flex; align-items: center; justify-content: center; color: #60a5fa; font-size: 1.25rem;">
+                            <i class="fas fa-qrcode"></i>
+                        </div>
+                        <div>
+                            <h2 class="modal-title" style="color: #ffffff; font-size: 1.15rem; font-weight: 700; margin: 0 0 2px 0;">رابط ورمز QR للملاحظات الميدانية العامة</h2>
+                            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">تسجيل الملاحظات اليومية بدون تسجيل دخول وتوثيقها بجدول الملاحظات</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" style="color: #94a3b8; font-size: 1.25rem;" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" style="padding: 24px; background: #f8fafc;">
+                    <!-- اختيار المصنع -->
+                    <div style="margin-bottom: 18px;">
+                        <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                            <i class="fas fa-industry ml-1 text-blue-500"></i> تخصيص الرابط لمصنع / موقع محدد (اختياري):
+                        </label>
+                        <select id="qr-factory-select" class="form-select" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.95rem;">
+                            <option value="">— الرابط العام لجميع المواقع والمصانع —</option>
+                            ${(factories || []).map(f => `<option value="${Utils.escapeHTML(f.name || f.siteName || f)}">${Utils.escapeHTML(f.name || f.siteName || f)}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <!-- عرض الـ QR Code -->
+                    <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; text-align: center; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div id="qr-code-container" style="display: inline-block; padding: 12px; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 12px;">
+                            <img id="qr-code-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(baseUrl)}" alt="QR Code" style="width: 180px; height: 180px; display: block;">
+                        </div>
+                        <div style="font-size: 0.85rem; color: #475569; font-weight: 600;" id="qr-target-text">
+                            امسح الرمز بكاميرا الهاتف لفتح نموذج الملاحظات فوراً
+                        </div>
+                    </div>
+
+                    <!-- حقل الرابط المباشر -->
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                            <i class="fas fa-link ml-1 text-indigo-500"></i> الرابط المباشر:
+                        </label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="public-link-input" readonly value="${baseUrl}" style="flex: 1; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; font-size: 0.85rem; direction: ltr; text-align: left;">
+                            <button type="button" id="copy-public-link-btn" class="btn-secondary" style="padding: 10px 16px; border-radius: 8px; font-weight: 700; white-space: nowrap;">
+                                <i class="fas fa-copy ml-1"></i> نسخ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 16px 24px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                    <button type="button" id="print-poster-btn" class="btn-primary" style="padding: 9px 20px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; background: #15803d;">
+                        <i class="fas fa-print"></i> طباعة بوستر الملاحظات (A4)
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const select = modal.querySelector('#qr-factory-select');
+        const linkInput = modal.querySelector('#public-link-input');
+        const qrImg = modal.querySelector('#qr-code-img');
+        const qrText = modal.querySelector('#qr-target-text');
+        const copyBtn = modal.querySelector('#copy-public-link-btn');
+        const printBtn = modal.querySelector('#print-poster-btn');
+
+        const updateUrl = () => {
+            const fac = select.value;
+            const fullUrl = fac ? `${baseUrl}?factory=${encodeURIComponent(fac)}` : baseUrl;
+            linkInput.value = fullUrl;
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(fullUrl)}`;
+            qrText.textContent = fac ? `نموذج الإبلاغ المباشر لموقع: ${fac}` : 'امسح الرمز بكاميرا الهاتف لفتح نموذج الملاحظات فوراً';
+        };
+
+        select?.addEventListener('change', updateUrl);
+
+        copyBtn?.addEventListener('click', () => {
+            navigator.clipboard.writeText(linkInput.value).then(() => {
+                copyBtn.innerHTML = '<i class="fas fa-check ml-1 text-green-600"></i> تم النسخ!';
+                setTimeout(() => { copyBtn.innerHTML = '<i class="fas fa-copy ml-1"></i> نسخ'; }, 2500);
+            });
+        });
+
+        printBtn?.addEventListener('click', () => {
+            const facName = select.value || 'جميع مصانع ومواقع الشركة';
+            const qrSrc = qrImg.src;
+            const printWin = window.open('', '_blank');
+            printWin.document.write(`
+                <!DOCTYPE html>
+                <html lang="ar" dir="rtl">
+                <head>
+                    <title>بوستر الإبلاغ عن الملاحظات - ${facName}</title>
+                    <style>
+                        @page { size: A4 portrait; margin: 15mm; }
+                        body { font-family: 'Cairo', system-ui, sans-serif; text-align: center; color: #0f172a; margin: 0; padding: 20px; }
+                        .poster-card { border: 4px solid #1e293b; border-radius: 20px; padding: 40px 30px; }
+                        .header { background: #1e293b; color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 30px; }
+                        .title { font-size: 28px; font-weight: 800; margin: 0 0 10px 0; }
+                        .sub { font-size: 18px; color: #94a3b8; margin: 0; }
+                        .factory-badge { display: inline-block; background: #e0f2fe; color: #0369a1; font-size: 22px; font-weight: 700; padding: 10px 24px; border-radius: 30px; margin-bottom: 30px; }
+                        .qr-wrap { padding: 20px; border: 3px dashed #cbd5e1; border-radius: 20px; display: inline-block; margin-bottom: 30px; }
+                        .qr-img { width: 260px; height: 260px; }
+                        .instruction { font-size: 22px; font-weight: 700; color: #1e40af; margin-bottom: 15px; }
+                        .steps { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 30px; }
+                        .footer { font-size: 14px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="poster-card">
+                        <div class="header">
+                            <h1 class="title">SafetyHub | بوابة الإبلاغ عن ملاحظات السلامة اليومية</h1>
+                            <p class="sub">معاً لبيئة عمل آمنة خالية من الحوادث والمخاطر</p>
+                        </div>
+                        <div class="factory-badge">الموقع: ${facName}</div>
+                        <div>
+                            <div class="qr-wrap">
+                                <img src="${qrSrc}" class="qr-img" alt="QR Code">
+                            </div>
+                        </div>
+                        <div class="instruction">📱 افتح كاميرا هاتفك وامسح الرمز للإبلاغ فوراً</div>
+                        <div class="steps">
+                            1. وجّه كاميرا الهاتف نحو الرمز أعلاه.<br>
+                            2. اضغط على الرابط المنبثق لفتح نموذج الملاحظات اليومية.<br>
+                            3. حدد نوع الملاحظة والتفاصيل ويمكنك التقاط صورة بالكاميرا.<br>
+                            4. اضغط «إرسال الملاحظة» لتسجيلها فوراً في جدول الملاحظات ومتابعتها.
+                        </div>
+                        <div class="footer">منظومة إدارة السلامة والصحة المهنية والبيئة — HSE Department</div>
+                    </div>
+                    <script>
+                        window.onload = function() { window.print(); };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWin.document.close();
+        });
     }
 };
 
