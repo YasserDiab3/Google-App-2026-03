@@ -7624,59 +7624,6 @@ FireEquipment = {
 
         alert(`تفاصيل الطلب: ${request.id}\nالنوع: ${request.type}\nمقدم الطلب: ${request.requestedBy}\nالحالة: ${request.status}\nالملاحظات: ${request.comments || '-'}`);
     },
-                localStorage.setItem('fire_equipment_approval_requests', JSON.stringify(requests));
-            }
-
-            // حفظ في Google Sheets إذا كان متاحاً
-            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                try {
-                    const updateResult = await GoogleIntegration.sendRequest({
-                        action: 'updateFireEquipmentApprovalRequest',
-                        data: { 
-                            requestId, 
-                            status: 'rejected', 
-                            rejectedBy: request.rejectedBy,
-                            rejectedAt: request.rejectedAt,
-                            rejectionReason: request.rejectionReason 
-                        }
-                    });
-
-                    if (updateResult && !updateResult.success) {
-                        Utils.safeWarn('⚠️ فشل حفظ التغييرات في Backend:', updateResult.message);
-                    } else {
-                        Utils.safeLog('✅ تم حفظ الرفض في Backend بنجاح');
-                    }
-                } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في حفظ الرفض في Backend:', error);
-                }
-            }
-
-            Notification.success('تم رفض الطلب بنجاح');
-            
-            // إرسال إشعار للمستخدم الذي طلب الموافقة (في الخلفية)
-            this.notifyUserAboutRequestStatus(request, 'rejected', reason).catch(error => {
-                Utils.safeWarn('⚠️ خطأ في إرسال إشعار للمستخدم:', error);
-            });
-            
-            // تحديث الإشعارات
-            if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) {
-                AppUI.updateNotificationsBadge();
-            }
-
-            // إرسال إشعار Real-time
-            if (typeof RealtimeSyncManager !== 'undefined' && RealtimeSyncManager.notifyChange) {
-                RealtimeSyncManager.notifyChange('fireEquipmentApprovalRequests', 'update', requestId);
-            }
-
-            // تحديث التبويب بعد التغيير
-            await this.switchTab('approval-requests');
-        } catch (error) {
-            Utils.safeError('❌ خطأ في رفض الطلب:', error);
-            Notification.error('حدث خطأ أثناء رفض الطلب');
-        } finally {
-            Loading.hide();
-        }
-    },
 
     /**
      * إرسال إشعار للمستخدم عند تغيير حالة طلبه
