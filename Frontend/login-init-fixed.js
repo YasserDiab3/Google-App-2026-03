@@ -624,6 +624,7 @@ Yasser.diab@icapp.com.eg`;
         log('✅ تم تفعيل زر تبديل اللغة');
         return true;
     }
+    window.setupLanguageToggle = setupLanguageToggle;
     
     // تحديث نصوص تسجيل الدخول حسب اللغة
     function updateLoginTexts(lang) {
