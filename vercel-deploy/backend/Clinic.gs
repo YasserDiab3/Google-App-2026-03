@@ -3410,6 +3410,7 @@ function _clinicStaffPickLatestIso_(values) {
 
 function _clinicStaffAttendanceMatchesUser_(r, staff, userId, email) {
     if (!r) return false;
+    staff = staff || {};
     var uid = String(staff.userId || userId || '').trim();
     var rid = String(r.userId || '').trim();
     var rem = String(staff.userEmail || email || '').trim().toLowerCase();
@@ -3470,6 +3471,7 @@ function _clinicStaffMergeAllAttendanceRecords_(data) {
 
 function _clinicStaffConsolidateAttendanceForUserDay_(all, staff, userId, email, today) {
     all = all || [];
+    staff = staff || {};
     var matching = [];
     var rest = [];
     for (var i = 0; i < all.length; i++) {

@@ -16007,14 +16007,32 @@ const Clinic = {
                     action: 'updateClinicStaffAttendance',
                     data: {
                         recordId: record.id,
+                        staffId: record.staffId || '',
+                        userId: record.userId || '',
+                        userEmail: record.userEmail || '',
+                        date: record.date || dayKey || '',
                         punchType: type,
                         [isCheckIn ? 'checkIn' : 'checkOut']: timeVal,
                         notes
                     }
                 });
                 if (resp?.success) {
-                    Notification?.success?.(resp.message || 'تم حفظ البصمة');
+                    Notification?.success?.(resp.message || 'تم حفظ البصمة بنجاح');
                     document.getElementById('clinic-attendance-punch-modal')?.remove();
+                    if (record) {
+                        if (isCheckIn) record.checkIn = timeVal;
+                        if (isCheckOut) record.checkOut = timeVal;
+                        if (record.checkIn && record.checkOut) {
+                            try {
+                                const inMs = new Date(record.checkIn).getTime();
+                                const outMs = new Date(record.checkOut).getTime();
+                                if (!isNaN(inMs) && !isNaN(outMs) && outMs > inMs) {
+                                    record.workDuration = (Math.round(((outMs - inMs) / (1000 * 60 * 60)) * 100) / 100) + ' ساعة';
+                                }
+                            } catch (_) {}
+                            record.status = 'present';
+                        }
+                    }
                     await this.loadClinicAttendanceData(true);
                     this.renderAttendanceTab({ force: true });
                 } else {
