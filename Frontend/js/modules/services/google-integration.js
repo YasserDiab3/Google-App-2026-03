@@ -945,7 +945,10 @@ const GoogleIntegration = {
             };
 
             try {
-                const st = sessionStorage.getItem('hse_server_session_token') || snapshotSessionToken;
+                const st = sessionStorage.getItem('hse_server_session_token') ||
+                    localStorage.getItem('hse_server_session_token') ||
+                    (typeof AppState !== 'undefined' && AppState.currentUser && AppState.currentUser.serverSessionToken) ||
+                    snapshotSessionToken;
                 if (st) payload.sessionToken = st;
             } catch (_stErr) {
                 if (snapshotSessionToken) payload.sessionToken = snapshotSessionToken;

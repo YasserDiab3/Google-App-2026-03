@@ -357,8 +357,31 @@ function buildRequestSessionKey(action, token, sessionId, userHint) {
 }
 
 /**
- * SEC-04: إصدار sessionToken موقّع في CacheService بعد login ناجح
- * CacheService TTL الأقصى 21600 ثانية (6 ساعات) — نستخدمه كحد أقصى.
+ * SEC-04: سر الجلسة وتوقيع HMAC
+ */
+function _getSessionSecretKey_() {
+    var secret = '';
+    try {
+        secret = PropertiesService.getScriptProperties().getProperty('HSE_SESSION_SECRET');
+        if (!secret) {
+            secret = Utilities.getUuid() + '-' + (getSpreadsheetId() || 'hse-salt-2026');
+            PropertiesService.getScriptProperties().setProperty('HSE_SESSION_SECRET', secret);
+        }
+    } catch (_e) {
+        secret = getSpreadsheetId() || 'hse-static-salt-key-2026';
+    }
+    return secret;
+}
+
+function _signSessionPayload_(payloadStr) {
+    var secret = _getSessionSecretKey_();
+    var sigBytes = Utilities.computeHmacSha256Signature(payloadStr, secret);
+    return Utilities.base64EncodeWebSafe(sigBytes);
+}
+
+/**
+ * SEC-04: إصدار sessionToken موقّع مشفّر (Stateless HMAC Token)
+ * لا يعتمد على ذاكرة CacheService المؤقتة التي تُمسح عند تدوير سيرفرات جوجل
  */
 function issueServerSessionToken_(userLike) {
     try {
@@ -370,18 +393,29 @@ function issueServerSessionToken_(userLike) {
         }
         if (!email && !userId) return null;
 
-        var bytes = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
-        var token = String(bytes).toLowerCase();
-        var ttlSec = 21600; // 6h max CacheService
-        var payload = JSON.stringify({
+        var ttlSec = 86400 * 7; // 7 أيام
+        var now = Date.now();
+        var expiresAt = now + (ttlSec * 1000);
+        var payloadObj = {
             email: email,
             userId: userId,
-            issuedAt: Date.now()
-        });
-        CacheService.getScriptCache().put('sess_v1:' + token, payload, ttlSec);
+            issuedAt: now,
+            expiresAt: expiresAt,
+            nonce: Utilities.getUuid().replace(/-/g, '')
+        };
+        var payloadJson = JSON.stringify(payloadObj);
+        var payloadBase64 = Utilities.base64EncodeWebSafe(payloadJson);
+        var signature = _signSessionPayload_(payloadBase64);
+        var token = 'hst_v2_' + payloadBase64 + '.' + signature;
+
+        // وضع نسخة في الكاش كـ fallback
+        try {
+            CacheService.getScriptCache().put('sess_v1:' + token.toLowerCase(), payloadJson, 21600);
+        } catch (_cErr) {}
+
         return {
             sessionToken: token,
-            expiresAt: Date.now() + (ttlSec * 1000),
+            expiresAt: expiresAt,
             ttlSec: ttlSec
         };
     } catch (e) {
@@ -391,19 +425,53 @@ function issueServerSessionToken_(userLike) {
 }
 
 /**
- * التحقق من sessionToken وربطه بهوية المُنفِّذ إن وُجدت
+ * التحقق من sessionToken وربطه بهوية المُنفِّذ
  */
 function validateServerSessionToken_(sessionToken, actorUserData) {
-    var token = String(sessionToken || '').trim().toLowerCase();
-    if (!token || token.length < 32) {
+    var rawToken = String(sessionToken || '').trim();
+    if (!rawToken || rawToken.length < 16) {
         return { ok: false, errorCode: 'SESSION_TOKEN_MISSING', message: 'مطلوب تسجيل دخول جديد (جلسة الخادم مفقودة).' };
     }
+
     try {
-        var raw = CacheService.getScriptCache().get('sess_v1:' + token);
-        if (!raw) {
+        var data = null;
+
+        // 1. توكن HMAC v2 الموقّع رقمياً (مستقل عن ذاكرة الخادم ولا يفقد صلاحيته عند إعادة تشغيل الحاوية)
+        if (rawToken.indexOf('hst_v2_') === 0) {
+            var body = rawToken.slice(7);
+            var parts = body.split('.');
+            if (parts.length === 2) {
+                var payloadBase64 = parts[0];
+                var signature = parts[1];
+                var expectedSig = _signSessionPayload_(payloadBase64);
+                if (signature === expectedSig) {
+                    var payloadJson = Utilities.newBlob(Utilities.base64DecodeWebSafe(payloadBase64)).getDataAsString();
+                    var parsed = JSON.parse(payloadJson);
+                    if (parsed && (!parsed.expiresAt || parsed.expiresAt > Date.now())) {
+                        data = parsed;
+                    } else {
+                        return { ok: false, errorCode: 'SESSION_EXPIRED', message: 'انتهت صلاحية الجلسة. أعد تسجيل الدخول.' };
+                    }
+                }
+            }
+        }
+
+        // 2. كاش السكربت كـ Fallback للتوكنات القديمة
+        if (!data) {
+            var tokenLower = rawToken.toLowerCase();
+            var raw = CacheService.getScriptCache().get('sess_v1:' + tokenLower);
+            if (raw) {
+                data = JSON.parse(raw);
+                try {
+                    CacheService.getScriptCache().put('sess_v1:' + tokenLower, raw, 21600);
+                } catch (_cErr) {}
+            }
+        }
+
+        if (!data) {
             return { ok: false, errorCode: 'SESSION_EXPIRED', message: 'انتهت صلاحية الجلسة. أعد تسجيل الدخول.' };
         }
-        var data = JSON.parse(raw);
+
         var actorEmail = '';
         if (actorUserData && actorUserData.email) {
             actorEmail = (typeof normalizeSheetScalarField_ === 'function')
@@ -416,8 +484,7 @@ function validateServerSessionToken_(sessionToken, actorUserData) {
             }
             return { ok: false, errorCode: 'SESSION_USER_MISMATCH', message: 'رفض أمني: الجلسة لا تطابق المستخدم.' };
         }
-        // تمديد انزلاقي
-        CacheService.getScriptCache().put('sess_v1:' + token, raw, 21600);
+
         return { ok: true, session: data };
     } catch (e) {
         Logger.log('validateServerSessionToken_ error: ' + e.toString());

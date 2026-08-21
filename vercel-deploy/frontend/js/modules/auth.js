@@ -1046,8 +1046,10 @@ window.Auth = {
             const token = authResult && authResult.sessionToken ? String(authResult.sessionToken).trim() : '';
             if (!token) return;
             sessionStorage.setItem('hse_server_session_token', token);
+            localStorage.setItem('hse_server_session_token', token);
             if (authResult.sessionExpiresAt) {
                 sessionStorage.setItem('hse_server_session_expires_at', String(authResult.sessionExpiresAt));
+                localStorage.setItem('hse_server_session_expires_at', String(authResult.sessionExpiresAt));
             }
             if (typeof AppState !== 'undefined' && AppState.currentUser) {
                 AppState.currentUser.serverSessionToken = token;
@@ -1059,6 +1061,8 @@ window.Auth = {
         try {
             sessionStorage.removeItem('hse_server_session_token');
             sessionStorage.removeItem('hse_server_session_expires_at');
+            localStorage.removeItem('hse_server_session_token');
+            localStorage.removeItem('hse_server_session_expires_at');
         } catch (_e) { /* ignore */ }
     },
 
