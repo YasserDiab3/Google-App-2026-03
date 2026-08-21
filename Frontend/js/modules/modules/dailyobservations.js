@@ -13515,7 +13515,28 @@ const DailyObservations = {
             }
 
             linkInput.value = fullUrl;
-            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(fullUrl)}`;
+            
+            // توليد الرمز محلياً بالكامل عبر مكتبة qrcode-generator
+            let localQrData = '';
+            if (typeof qrcode === 'function') {
+                try {
+                    const qr = qrcode(0, 'M');
+                    qr.addData(fullUrl);
+                    qr.make();
+                    localQrData = qr.createDataURL(6, 4);
+                } catch(e) {}
+            }
+            if (!localQrData && window.QRCode && typeof window.QRCode.generate === 'function') {
+                try {
+                    localQrData = window.QRCode.generate(fullUrl, 260);
+                } catch(e) {}
+            }
+            
+            if (localQrData && localQrData.startsWith('data:')) {
+                qrImg.src = localQrData;
+            } else {
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(fullUrl)}`;
+            }
             
             let desc = 'امسح الرمز بكاميرا الهاتف لفتح نموذج الملاحظات فوراً';
             if (fac && inspector) desc = `الموقع: ${fac} | مفتش السلامة: ${inspector}`;
@@ -13535,32 +13556,23 @@ const DailyObservations = {
             });
         });
 
-        printBtn?.addEventListener('click', async () => {
+        printBtn?.addEventListener('click', () => {
             const facName = factorySelect.value || 'جميع مصانع ومواقع الشركة';
             const inspName = inspectorSelect.value || '';
             const rawUrl = linkInput.value;
             
-            // تحويل رمز الـ QR إلى Data URL Base64 محلي لضمان ظهوره فوراً وبدون اتصال إنترنت
-            let qrDataUrl = qrImg.src;
-            try {
-                const tempImg = new Image();
-                tempImg.crossOrigin = 'Anonymous';
-                tempImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(rawUrl)}`;
-                await new Promise((resolve) => {
-                    tempImg.onload = resolve;
-                    tempImg.onerror = resolve;
-                    setTimeout(resolve, 1000);
-                });
-                const cvs = document.createElement('canvas');
-                cvs.width = 300;
-                cvs.height = 300;
-                const ctx = cvs.getContext('2d');
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, 300, 300);
-                ctx.drawImage(tempImg, 0, 0, 300, 300);
-                qrDataUrl = cvs.toDataURL('image/png');
-            } catch (e) {
-                qrDataUrl = qrImg.src;
+            // توليد رمز QR بدقة عالية للطباعة
+            let printQrDataUrl = '';
+            if (typeof qrcode === 'function') {
+                try {
+                    const qr = qrcode(0, 'M');
+                    qr.addData(rawUrl);
+                    qr.make();
+                    printQrDataUrl = qr.createDataURL(8, 4);
+                } catch(e) {}
+            }
+            if (!printQrDataUrl && qrImg.src && qrImg.src.startsWith('data:')) {
+                printQrDataUrl = qrImg.src;
             }
 
             const printWin = window.open('', '_blank');
@@ -13577,10 +13589,14 @@ const DailyObservations = {
                     <title>بوستر الإبلاغ عن الملاحظات الميدانية - ${facName}</title>
                     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"><\/script>
                     <style>
                         @page { size: A4 portrait; margin: 10mm; }
                         * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; box-sizing: border-box; }
                         body { font-family: 'Cairo', system-ui, -apple-system, sans-serif; text-align: center; color: #0f172a; margin: 0; padding: 10px; background: #ffffff; }
+                        .no-print-bar { margin-bottom: 15px; text-align: left; }
+                        .print-now-btn { background: #2563eb; color: #ffffff; border: none; padding: 10px 22px; border-radius: 8px; font-weight: 800; font-family: inherit; font-size: 15px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(37,99,235,0.3); }
+                        @media print { .no-print-bar { display: none !important; } }
                         .poster-card { border: 3.5px solid #0f172a; border-radius: 16px; padding: 24px 20px; position: relative; background: #ffffff; }
                         .doc-badge-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px; font-size: 12px; font-weight: 800; color: #475569; }
                         .header-banner { background: #0f172a !important; color: #ffffff !important; padding: 18px 14px; border-radius: 10px; margin-bottom: 18px; border: 1px solid #1e293b; }
@@ -13589,8 +13605,8 @@ const DailyObservations = {
                         .badges-wrap { display: flex; justify-content: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
                         .factory-badge { background: #eff6ff !important; border: 1.5px solid #3b82f6; color: #1d4ed8 !important; font-size: 17px; font-weight: 800; padding: 6px 18px; border-radius: 25px; display: inline-flex; align-items: center; gap: 6px; }
                         .inspector-badge { background: #f0fdf4 !important; border: 1.5px solid #16a34a; color: #15803d !important; font-size: 17px; font-weight: 800; padding: 6px 18px; border-radius: 25px; display: inline-flex; align-items: center; gap: 6px; }
-                        .qr-box { background: #ffffff; border: 3px solid #0f172a; border-radius: 16px; padding: 12px; display: inline-block; margin-bottom: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
-                        .qr-img { width: 230px; height: 230px; display: block; margin: 0 auto; }
+                        .qr-box { background: #ffffff; border: 3px solid #0f172a; border-radius: 16px; padding: 14px; display: inline-block; margin-bottom: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
+                        .qr-img { width: 250px; height: 250px; display: block; margin: 0 auto; }
                         .instruction-card { background: #f8fafc !important; border-right: 5px solid #2563eb; border: 1px solid #e2e8f0; border-right-width: 5px; border-radius: 8px; padding: 12px 18px; margin-bottom: 18px; text-align: right; }
                         .instruction-title { font-size: 17px; font-weight: 900; color: #1e3a8a; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
                         .steps-list { font-size: 13.5px; color: #334155; line-height: 1.8; margin: 0; padding-right: 20px; font-weight: 600; }
@@ -13598,6 +13614,12 @@ const DailyObservations = {
                     </style>
                 </head>
                 <body>
+                    <div class="no-print-bar">
+                        <button class="print-now-btn" onclick="window.print()">
+                            <i class="fas fa-print"></i> أمر طباعة البوستر الآن (A4)
+                        </button>
+                    </div>
+
                     <div class="poster-card">
                         <div class="doc-badge-row">
                             <div><i class="fas fa-shield-halved"></i> إدارة السلامة والصحة المهنية والبيئة (HSE)</div>
@@ -13615,8 +13637,8 @@ const DailyObservations = {
                         </div>
 
                         <div>
-                            <div class="qr-box">
-                                <img src="${qrDataUrl}" alt="QR Code" class="qr-img">
+                            <div class="qr-box" id="qrContainer">
+                                <img id="printQrImg" src="${printQrDataUrl || ''}" alt="QR Code" class="qr-img">
                             </div>
                         </div>
 
@@ -13638,12 +13660,33 @@ const DailyObservations = {
                         </div>
                     </div>
                     <script>
-                        window.onload = function() {
-                            setTimeout(function() {
-                                window.print();
-                            }, 400);
-                        };
-                    </script>
+                        (function() {
+                            const rawUrl = ${JSON.stringify(rawUrl)};
+                            const img = document.getElementById('printQrImg');
+                            
+                            function ensureQrRendered() {
+                                if (!img.src || img.src === '' || img.src === window.location.href || img.src.includes('api.qrserver.com')) {
+                                    try {
+                                        if (typeof qrcode === 'function') {
+                                            const qr = qrcode(0, 'M');
+                                            qr.addData(rawUrl);
+                                            qr.make();
+                                            img.src = qr.createDataURL(8, 4);
+                                        }
+                                    } catch(e) {}
+                                }
+                            }
+
+                            ensureQrRendered();
+                            
+                            window.addEventListener('load', function() {
+                                ensureQrRendered();
+                                setTimeout(function() {
+                                    window.print();
+                                }, 400);
+                            });
+                        })();
+                    <\/script>
                 </body>
                 </html>
             `);
