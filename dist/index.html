@@ -7502,11 +7502,13 @@
                             // تحديث manifest ديناميكياً للـ PWA وشريط العنوان
                             var pwaManifestLink = document.getElementById("pwa-manifest-link") || document.querySelector('link[rel="manifest"]');
                             if (pwaManifestLink) {
+                                var baseUrl = (typeof window !== "undefined" && window.location && window.location.href) ? window.location.href.split('#')[0].split('?')[0] : "./";
                                 var manifestData = {
                                     "name": document.title || "SafetyHub | ICAPP",
                                     "short_name": "SafetyHub | ICAPP",
                                     "description": "نظام إدارة السلامة المهنية",
-                                    "start_url": "./",
+                                    "start_url": baseUrl,
+                                    "scope": baseUrl,
                                     "display": "standalone",
                                     "background_color": "#ffffff",
                                     "theme_color": "#3B82F6",
@@ -7858,30 +7860,35 @@
                 true,
             );
 
-            // معالجة أخطاء Promise غير المعالجة من إضافات المتصفح
+            // معالجة أخطاء Promise غير المعالجة من إضافات المتصفح أو انقطاع مساحة القرص
             window.addEventListener("unhandledrejection", function (e) {
-                var reasonStr = e.reason ? String(e.reason).toLowerCase() : "";
+                var reasonStr = e.reason ? (String(e.reason) + " " + (e.reason.message || "") + " " + (e.reason.stack || "")).toLowerCase() : "";
                 if (
-                    e.reason &&
-                    (String(e.reason).includes("translator") ||
-                        String(e.reason).includes("translate") ||
-                        String(e.reason).includes("extension") ||
-                        String(e.reason).includes("uploadmanager") ||
-                        String(e.reason).includes("can't access property") ||
-                        String(e.reason).includes("Cannot read property") ||
-                        reasonStr.includes("runtime.lasterror") ||
-                        reasonStr.includes("receiving end does not exist") ||
-                        reasonStr.includes("message port closed") ||
-                        (e.reason &&
-                            typeof e.reason === "object" &&
-                            e.reason.message &&
-                            (e.reason.message.includes("uploadmanager") ||
-                                (e.reason.message.includes(
-                                    "Cannot read properties of undefined",
-                                ) &&
-                                    e.reason.message.includes("document")))))
+                    reasonStr.includes("translator") ||
+                    reasonStr.includes("translate") ||
+                    reasonStr.includes("extension") ||
+                    reasonStr.includes("uploadmanager") ||
+                    reasonStr.includes("can't access property") ||
+                    reasonStr.includes("cannot read property") ||
+                    reasonStr.includes("runtime.lasterror") ||
+                    reasonStr.includes("receiving end does not exist") ||
+                    reasonStr.includes("message port closed") ||
+                    reasonStr.includes("could not establish connection") ||
+                    reasonStr.includes("file_error_no_space") ||
+                    reasonStr.includes("writablefileappend") ||
+                    reasonStr.includes("quotaexceedederror") ||
+                    reasonStr.includes("io error") ||
+                    (e.reason &&
+                        typeof e.reason === "object" &&
+                        e.reason.message &&
+                        (e.reason.message.includes("uploadmanager") ||
+                            (e.reason.message.includes(
+                                "Cannot read properties of undefined",
+                            ) &&
+                                e.reason.message.includes("document"))))
                 ) {
-                    e.preventDefault();
+                    if (e && e.preventDefault) e.preventDefault();
+                    return false;
                 }
             });
         </script>
@@ -12941,7 +12948,7 @@
         <!-- CRITICAL: DataManager is defined here and must be loaded before login-init-fixed.js -->
         <!-- Load individual service modules first (they expose themselves to window) -->
         <script src="js/modules/services/local-db-cache.js" defer></script>
-        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.1105-20260821" defer></script>
+        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.1107-20260821" defer></script>
         <script
             src="js/modules/services/periodic-inspection-store.js"
             defer
@@ -13003,12 +13010,12 @@
         <script src="js/modules/modules/investigation-rca.js" defer></script>
         <script src="js/modules/modules/incidents.js?v=20260719-incident-forms-v1" defer></script>
         <script src="js/modules/modules/nearmiss.js" defer></script>
-        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.1105-20260821" defer></script>
+        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.1107-20260821" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
         <script src="js/modules/modules/help-content-en.js" defer></script>
         <script src="js/modules/modules/help.js" defer></script>
         <script src="js/modules/modules/settings.js?v=20260426-2" defer></script>
-        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.1105-20260821" defer></script>
+        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.1107-20260821" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
         <script src="js/modules/modules/ppe.js?v=20260723-ppe-identity-v2" defer></script>
         <script src="js/modules/modules/periodic-equipment.js?v=20260626-1" defer></script>
@@ -13166,7 +13173,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.1105-20260821";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.1107-20260821";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

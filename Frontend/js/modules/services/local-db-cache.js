@@ -94,27 +94,34 @@ const LocalDBCache = {
             const sanitized = this.sanitizeData(key, value);
 
             return new Promise((resolve) => {
-                const tx = db.transaction(storeName, 'readwrite');
-                const store = tx.objectStore(storeName);
-                const record = {
-                    key: key,
-                    value: sanitized,
-                    updatedAt: Date.now()
-                };
-                const request = store.put(record);
+                try {
+                    const tx = db.transaction(storeName, 'readwrite');
+                    tx.onerror = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(false);
+                    };
+                    tx.onabort = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(false);
+                    };
+                    const store = tx.objectStore(storeName);
+                    const record = {
+                        key: key,
+                        value: sanitized,
+                        updatedAt: Date.now()
+                    };
+                    const request = store.put(record);
 
-                request.onsuccess = () => resolve(true);
-                request.onerror = (e) => {
-                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                        Utils.safeWarn(`⚠️ فشل حفظ المفتاح ${key} في IndexedDB:`, e.target.error);
-                    }
+                    request.onsuccess = () => resolve(true);
+                    request.onerror = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(false);
+                    };
+                } catch (txErr) {
                     resolve(false);
-                };
+                }
             });
         } catch (error) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                Utils.safeWarn(`⚠️ استثناء أثناء حفظ ${key} في IndexedDB:`, error);
-            }
             return false;
         }
     },
@@ -128,15 +135,30 @@ const LocalDBCache = {
             if (!db) return null;
 
             return new Promise((resolve) => {
-                const tx = db.transaction(storeName, 'readonly');
-                const store = tx.objectStore(storeName);
-                const request = store.get(key);
+                try {
+                    const tx = db.transaction(storeName, 'readonly');
+                    tx.onerror = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(null);
+                    };
+                    tx.onabort = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(null);
+                    };
+                    const store = tx.objectStore(storeName);
+                    const request = store.get(key);
 
-                request.onsuccess = (event) => {
-                    const record = event.target.result;
-                    resolve(record ? record.value : null);
-                };
-                request.onerror = () => resolve(null);
+                    request.onsuccess = (event) => {
+                        const record = event.target.result;
+                        resolve(record ? record.value : null);
+                    };
+                    request.onerror = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(null);
+                    };
+                } catch (txErr) {
+                    resolve(null);
+                }
             });
         } catch (error) {
             return null;
@@ -152,11 +174,26 @@ const LocalDBCache = {
             if (!db) return false;
 
             return new Promise((resolve) => {
-                const tx = db.transaction(storeName, 'readwrite');
-                const store = tx.objectStore(storeName);
-                const request = store.delete(key);
-                request.onsuccess = () => resolve(true);
-                request.onerror = () => resolve(false);
+                try {
+                    const tx = db.transaction(storeName, 'readwrite');
+                    tx.onerror = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(false);
+                    };
+                    tx.onabort = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(false);
+                    };
+                    const store = tx.objectStore(storeName);
+                    const request = store.delete(key);
+                    request.onsuccess = () => resolve(true);
+                    request.onerror = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(false);
+                    };
+                } catch (txErr) {
+                    resolve(false);
+                }
             });
         } catch (error) {
             return false;
