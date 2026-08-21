@@ -2,14 +2,14 @@
   "version": "1.0.1119",
   "highlights": {
     "ar": [
-      "التحميل المباشر لتقرير PDF الإحصائي كملف فوري مع الهيدر المؤسسي.",
-      "حساب مؤشرات الأداء الإحصائية بدقة 100% من البيانات المفلترة دون أصفار.",
-      "تصدير تقارير PPTX الاحترافية مباشرة محلياً في المتصفح بسرعة فائقة."
+      "ترقية تصميم نماذج تفاصيل تدريب المقاول وسجل التدريب التراكمي للموظف بكروت إحصائية حديثة.",
+      "تعزيز تجربة المستخدم على الهواتف الذكية (Mobile Web / PWA) ومنع التكبير التلقائي في Safari.",
+      "استقرار فائق وسرعة قصوى في تحميل ومزامنة بيانات الموظفين والتصاريح دون انقطاع."
     ],
     "en": [
-      "Direct PDF download for analytics report with official corporate header.",
-      "Accurate live KPI calculations from filtered observations data.",
-      "Instant client-side PPTX PowerPoint export with zero server dependency."
+      "Upgraded Contractor Training Details and Attendance Registry modals with modern KPI cards.",
+      "Enhanced Mobile Web & PWA experience with instant touch feedback and Safari auto-zoom fixes.",
+      "Maximum stability and ultra-fast loading for Employees, PTW, and Training modules."
     ]
   }
 }
