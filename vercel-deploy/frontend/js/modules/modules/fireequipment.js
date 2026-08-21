@@ -1495,13 +1495,15 @@ FireEquipment = {
         if (currentFilter === 'pending') {
             displayList = allInspections.filter(i => String(i.approvalStatus || '').toLowerCase() === 'pending' || (!i.approvalStatus && i.submittedBy && String(i.submittedBy).includes('Public')));
         } else if (currentFilter === 'approved') {
-            displayList = allInspections.filter(i => String(i.approvalStatus || '').toLowerCase() === 'approved');
-        } else if (currentFilter === 'rejected') {
-            displayList = allInspections.filter(i => String(i.approvalStatus || '').toLowerCase() === 'rejected');
+            displayList = allInspections.filter(i => String(i.approvalStatus || '').toLowerCase() === 'approved' || i.status === 'صالح');
+        } else if (currentFilter === 'needsRepair') {
+            displayList = allInspections.filter(i => i.status === 'يحتاج صيانة');
+        } else if (currentFilter === 'outOfService') {
+            displayList = allInspections.filter(i => i.status === 'خارج الخدمة' || String(i.approvalStatus || '').toLowerCase() === 'rejected');
         }
 
         return `
-            <div class="flex flex-col sm:flex-row gap-3 items-center justify-between mb-4">
+            <div class="flex flex-col sm:flex-row gap-3 items-center justify-between mb-5">
                 <div>
                     <h3 class="text-xl font-bold text-gray-800" style="display: flex; align-items: center; gap: 8px;">
                         <i class="fas fa-clipboard-check text-red-600"></i>
@@ -1510,55 +1512,103 @@ FireEquipment = {
                     <p class="text-xs text-gray-500 mt-1">متابعة واعتماد الفحوصات الميدانية المسجلة عبر البوابة ورموز الـ QR</p>
                 </div>
                 <div class="flex gap-2 w-full sm:w-auto">
-                    <button id="mobile-scan-qr-btn" class="btn-primary" style="padding: 0.75rem 1.25rem; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <button id="mobile-scan-qr-btn" class="btn-primary" style="padding: 0.75rem 1.25rem; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; border-radius: 10px;">
                         <i class="fas fa-qrcode"></i>
                         <span>مسح QR للفحص</span>
                     </button>
-                    <button class="btn-secondary" onclick="FireEquipment.showPublicLinkModal()" style="padding: 0.75rem 1.25rem; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <button class="btn-secondary" onclick="FireEquipment.showPublicLinkModal()" style="padding: 0.75rem 1.25rem; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; border-radius: 10px;">
                         <i class="fas fa-share-alt text-blue-500"></i>
                         <span>بوابة الفحص العام</span>
                     </button>
                 </div>
             </div>
 
-            <!-- كروت الإحصائيات -->
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
-                <div class="content-card text-center" style="cursor: pointer; ${currentFilter === 'all' ? 'border: 2px solid #3b82f6;' : ''}" onclick="FireEquipment.filterInspectionsByApproval('all')">
-                    <div class="text-2xl font-bold text-blue-600" id="inspections-total">${allInspections.length}</div>
-                    <div class="text-xs text-gray-600 mt-1">إجمالي الفحوصات</div>
+            <!-- كروت الإحصائيات الأربعة المنمقة على نمط مديول التدريب -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <!-- 1. إجمالي الفحوصات -->
+                <div class="content-card fire-kpi-card" style="background: #ffffff; border-radius: 16px; border: 1.5px solid ${currentFilter === 'all' ? '#3b82f6' : '#e2e8f0'}; padding: 18px 20px; box-shadow: 0 4px 14px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.25s ease;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 22px rgba(59,130,246,0.12)';" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 14px rgba(0,0,0,0.03)';" onclick="FireEquipment.filterInspectionsByApproval('all')">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p style="font-size: 0.82rem; font-weight: 700; color: #64748b; margin: 0 0 4px 0;">إجمالي الفحوصات</p>
+                            <h3 id="inspections-total" style="font-size: 1.85rem; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.1;">${allInspections.length}</h3>
+                            <div style="display: flex; align-items: center; gap: 4px; margin-top: 6px;">
+                                <span style="font-size: 0.72rem; color: #3b82f6; font-weight: 600;">سجل الفحص الميداني</span>
+                            </div>
+                        </div>
+                        <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; border: 1px solid #bfdbfe; box-shadow: 0 4px 10px rgba(37,99,235,0.12);">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="content-card text-center" style="cursor: pointer; background: #fffbeb; ${currentFilter === 'pending' ? 'border: 2px solid #d97706;' : ''}" onclick="FireEquipment.filterInspectionsByApproval('pending')">
-                    <div class="text-2xl font-bold text-amber-600" id="inspections-pending">${pendingCount}</div>
-                    <div class="text-xs font-bold text-amber-800 mt-1">⏳ بانتظار الاعتماد</div>
+
+                <!-- 2. صالح -->
+                <div class="content-card fire-kpi-card" style="background: #ffffff; border-radius: 16px; border: 1.5px solid ${currentFilter === 'approved' ? '#10b981' : '#e2e8f0'}; padding: 18px 20px; box-shadow: 0 4px 14px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.25s ease;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 22px rgba(16,185,129,0.12)';" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 14px rgba(0,0,0,0.03)';" onclick="FireEquipment.filterInspectionsByApproval('approved')">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p style="font-size: 0.82rem; font-weight: 700; color: #047857; margin: 0 0 4px 0;">صالح للعمل</p>
+                            <h3 id="inspections-completed" style="font-size: 1.85rem; font-weight: 800; color: #065f46; margin: 0; line-height: 1.1;">${approvedCount || allInspections.filter(i=>i.status==='صالح').length}</h3>
+                            <div style="display: flex; align-items: center; gap: 4px; margin-top: 6px;">
+                                <span style="font-size: 0.72rem; color: #10b981; font-weight: 600;">جاهزة ومطابقة للمواصفات</span>
+                            </div>
+                        </div>
+                        <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; border: 1px solid #bbf7d0; box-shadow: 0 4px 10px rgba(5,150,105,0.12);">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="content-card text-center" style="cursor: pointer; ${currentFilter === 'approved' ? 'border: 2px solid #16a34a;' : ''}" onclick="FireEquipment.filterInspectionsByApproval('approved')">
-                    <div class="text-2xl font-bold text-green-600" id="inspections-approved">${approvedCount}</div>
-                    <div class="text-xs text-gray-600 mt-1">✅ معتمد رسمياً</div>
+
+                <!-- 3. يحتاج صيانة -->
+                <div class="content-card fire-kpi-card" style="background: #ffffff; border-radius: 16px; border: 1.5px solid ${currentFilter === 'needsRepair' ? '#f59e0b' : '#e2e8f0'}; padding: 18px 20px; box-shadow: 0 4px 14px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.25s ease;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 22px rgba(245,158,11,0.12)';" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 14px rgba(0,0,0,0.03)';" onclick="FireEquipment.filterInspectionsByApproval('needsRepair')">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p style="font-size: 0.82rem; font-weight: 700; color: #b45309; margin: 0 0 4px 0;">يحتاج صيانة</p>
+                            <h3 id="inspections-needs-repair" style="font-size: 1.85rem; font-weight: 800; color: #92400e; margin: 0; line-height: 1.1;">${needsRepairCount}</h3>
+                            <div style="display: flex; align-items: center; gap: 4px; margin-top: 6px;">
+                                <span style="font-size: 0.72rem; color: #d97706; font-weight: 600;">تتطلب ضغط أو صيانة</span>
+                            </div>
+                        </div>
+                        <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; border: 1px solid #fde68a; box-shadow: 0 4px 10px rgba(217,119,6,0.12);">
+                            <i class="fas fa-tools"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="content-card text-center">
-                    <div class="text-2xl font-bold text-yellow-600" id="inspections-needs-repair">${needsRepairCount}</div>
-                    <div class="text-xs text-gray-600 mt-1">يحتاج صيانة</div>
-                </div>
-                <div class="content-card text-center" style="cursor: pointer; ${currentFilter === 'rejected' ? 'border: 2px solid #dc2626;' : ''}" onclick="FireEquipment.filterInspectionsByApproval('rejected')">
-                    <div class="text-2xl font-bold text-red-600" id="inspections-rejected">${rejectedCount || outOfServiceCount}</div>
-                    <div class="text-xs text-gray-600 mt-1">خارج الخدمة / مرفوض</div>
+
+                <!-- 4. خارج الخدمة -->
+                <div class="content-card fire-kpi-card" style="background: #ffffff; border-radius: 16px; border: 1.5px solid ${currentFilter === 'outOfService' ? '#ef4444' : '#e2e8f0'}; padding: 18px 20px; box-shadow: 0 4px 14px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.25s ease;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 22px rgba(239,68,68,0.12)';" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 14px rgba(0,0,0,0.03)';" onclick="FireEquipment.filterInspectionsByApproval('outOfService')">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p style="font-size: 0.82rem; font-weight: 700; color: #b91c1c; margin: 0 0 4px 0;">خارج الخدمة</p>
+                            <h3 id="inspections-out-of-service" style="font-size: 1.85rem; font-weight: 800; color: #991b1b; margin: 0; line-height: 1.1;">${outOfServiceCount}</h3>
+                            <div style="display: flex; align-items: center; gap: 4px; margin-top: 6px;">
+                                <span style="font-size: 0.72rem; color: #ef4444; font-weight: 600;">معطلة أو غير صالحة</span>
+                            </div>
+                        </div>
+                        <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; border: 1px solid #fecaca; box-shadow: 0 4px 10px rgba(220,38,38,0.12);">
+                            <i class="fas fa-ban"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- أزرار الفلترة السريعة -->
-            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-                <button class="btn ${currentFilter === 'all' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px;" onclick="FireEquipment.filterInspectionsByApproval('all')">
-                    الكل (${allInspections.length})
-                </button>
-                <button class="btn ${currentFilter === 'pending' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px; ${currentFilter === 'pending' ? 'background:#d97706; border-color:#d97706;' : ''}" onclick="FireEquipment.filterInspectionsByApproval('pending')">
-                    ⏳ بانتظار الاعتماد (${pendingCount})
-                </button>
-                <button class="btn ${currentFilter === 'approved' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px;" onclick="FireEquipment.filterInspectionsByApproval('approved')">
-                    ✅ المعتمدة (${approvedCount})
-                </button>
-                <button class="btn ${currentFilter === 'rejected' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px;" onclick="FireEquipment.filterInspectionsByApproval('rejected')">
-                    ❌ المرفوضة (${rejectedCount})
-                </button>
+            <!-- شريط حالة الاعتماد والتصفية السريعة -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn ${currentFilter === 'all' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px;" onclick="FireEquipment.filterInspectionsByApproval('all')">
+                        الكل (${allInspections.length})
+                    </button>
+                    <button class="btn ${currentFilter === 'pending' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px; ${currentFilter === 'pending' ? 'background:#d97706; border-color:#d97706;' : ''}" onclick="FireEquipment.filterInspectionsByApproval('pending')">
+                        ⏳ بانتظار الاعتماد (${pendingCount})
+                    </button>
+                    <button class="btn ${currentFilter === 'approved' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px;" onclick="FireEquipment.filterInspectionsByApproval('approved')">
+                        ✅ المعتمدة (${approvedCount})
+                    </button>
+                    <button class="btn ${currentFilter === 'needsRepair' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px;" onclick="FireEquipment.filterInspectionsByApproval('needsRepair')">
+                        🟡 تحتاج صيانة (${needsRepairCount})
+                    </button>
+                    <button class="btn ${currentFilter === 'outOfService' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px;" onclick="FireEquipment.filterInspectionsByApproval('outOfService')">
+                        🔴 خارج الخدمة (${outOfServiceCount})
+                    </button>
+                </div>
             </div>
 
             <div class="content-card">
