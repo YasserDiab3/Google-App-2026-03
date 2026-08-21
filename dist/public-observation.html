@@ -59,7 +59,7 @@
         /* ترويسة ISO المعتمدة ثلاثية الأعمدة */
         .iso-header-table {
             display: grid;
-            grid-template-columns: minmax(130px, 1fr) 2.2fr minmax(140px, 1fr);
+            grid-template-columns: minmax(145px, 1.1fr) 2.2fr minmax(140px, 1fr);
             background: #ffffff;
             border: 1px solid #cbd5e1;
             border-top: 4px solid #1e40af;
@@ -70,14 +70,15 @@
         }
 
         .iso-col-brand {
-            padding: 14px 12px;
+            padding: 12px 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
             border-left: 1px solid #e2e8f0;
             background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            overflow: hidden;
         }
 
         .iso-logo-wrap {
@@ -104,11 +105,12 @@
         }
 
         .iso-dept-name {
-            font-size: 0.68rem;
+            font-size: 0.65rem;
             font-weight: 800;
             color: #1e40af;
-            line-height: 1.25;
+            line-height: 1.2;
             text-align: center;
+            white-space: nowrap;
         }
 
         .iso-col-title {
@@ -776,7 +778,7 @@
                 <div class="iso-logo-wrap">
                     <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار النظام" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
                 </div>
-                <div class="iso-dept-name"><i class="fas fa-shield-halved" style="margin-left:3px;"></i> إدارة السلامة والصحة المهنية والبيئة</div>
+                <div class="iso-dept-name">إدارة السلامة والصحة المهنية والبيئة</div>
             </div>
 
             <!-- العمود الأوسط: عنوان النموذج المعتمد -->
