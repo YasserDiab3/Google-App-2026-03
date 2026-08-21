@@ -2022,6 +2022,151 @@ const IssuingAuthorities = {
         `;
     },
 
+    _renderViewDetails(record) {
+        if (!record) return '<p class="text-gray-500 py-4">لا توجد بيانات متاحة.</p>';
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
+        const personType = String(record.personType || '').toLowerCase() === 'contractor' ? 'contractor' : 'employee';
+        const name = personType === 'contractor' ? this._responsibleNameFromRecord(record) : (record.name || '—');
+        const companyName = personType === 'contractor' ? this._contractorCompanyFromRecord(record) : '';
+        const roleText = this._approvalRoleLabel(record.approvalRole);
+        const isActive = record.isActive !== false;
+
+        let gCount = 0, yCount = 0, xCount = 0;
+        const permitCards = this.PERMIT_TYPES.map(pt => {
+            const val = String(record[pt.key] || 'X').toUpperCase();
+            if (val === 'G') gCount++;
+            else if (val === 'Y') yCount++;
+            else xCount++;
+
+            const { primary, secondary } = this._permitBilingualHeader(pt);
+            let badgeBg = '#f1f5f9', badgeColor = '#64748b', badgeBorder = '#cbd5e1', badgeText = 'غير مصرح (X)', badgeIcon = 'fa-ban';
+            if (val === 'G') {
+                badgeBg = '#dcfce7'; badgeColor = '#15803d'; badgeBorder = '#86efac'; badgeText = 'توقيع مباشر (G)'; badgeIcon = 'fa-check-circle';
+            } else if (val === 'Y') {
+                badgeBg = '#fef3c7'; badgeColor = '#b45309'; badgeBorder = '#fcd34d'; badgeText = 'بتنسيق HSE (Y)'; badgeIcon = 'fa-exclamation-triangle';
+            }
+
+            return `
+            <div style="background: #ffffff; border-radius: 10px; border: 1px solid ${badgeBorder}; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                <div style="min-width: 0;">
+                    <div style="font-weight: 700; font-size: 0.9rem; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(primary)}</div>
+                    <div style="font-size: 0.75rem; color: #64748b;">${esc(secondary)}</div>
+                </div>
+                <div style="flex-shrink: 0; background: ${badgeBg}; color: ${badgeColor}; font-weight: 700; font-size: 0.8rem; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="fas ${badgeIcon}"></i>
+                    <span>${badgeText}</span>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+        return `
+        <div class="ia-view-profile" style="display: flex; flex-direction: column; gap: 20px; font-family: 'Cairo', 'Inter', sans-serif;">
+            <!-- بطاقة البروفايل الرئيسية -->
+            <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 14px; padding: 20px 24px; color: #ffffff; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(59, 130, 246, 0.25); border: 1px solid rgba(59, 130, 246, 0.5); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #60a5fa;">
+                        <i class="fas ${personType === 'contractor' ? 'fa-hard-hat' : 'fa-user-shield'}"></i>
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                            <h3 style="font-size: 1.35rem; font-weight: 800; color: #ffffff; margin: 0;">${esc(name)}</h3>
+                            <span class="badge" style="background: ${isActive ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)'}; color: ${isActive ? '#6ee7b7' : '#fca5a5'}; border: 1px solid ${isActive ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}; font-size: 0.75rem; font-weight: 700; padding: 2px 10px; border-radius: 20px;">
+                                <i class="fas ${isActive ? 'fa-check-circle' : 'fa-times-circle'} ml-1"></i> ${isActive ? 'حساب نشط' : 'غير نشط'}
+                            </span>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.85rem; color: #cbd5e1;">
+                            <span class="badge" style="background: rgba(255,255,255,0.1); padding: 3px 10px; border-radius: 6px;">
+                                <i class="fas ${personType === 'contractor' ? 'fa-building text-sky-400' : 'fa-id-card text-indigo-400'} ml-1"></i>
+                                ${personType === 'contractor' ? (esc(companyName) || 'جهة مقاول') : (record.employeeCode ? `كود: ${esc(record.employeeCode)}` : 'موظف')}
+                            </span>
+                            <span>•</span>
+                            <span style="color: #38bdf8; font-weight: 600;">${esc(roleText || 'دور الاعتماد')}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- شبكة تفاصيل الوظيفة والموقع والاتصال -->
+            <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <h4 style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin: 0 0 14px 0; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                    <i class="fas fa-id-card text-blue-600"></i>
+                    بيانات العمل والاتصال
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">نوع الشخص</div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a;">${personType === 'contractor' ? 'مقاول / مورد خارجي' : 'موظف داخلي'}</div>
+                    </div>
+                    ${personType === 'contractor' ? `
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">الشركة / المقاول</div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #0284c7;">${esc(companyName || '—')}</div>
+                    </div>
+                    ` : `
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">الكود الوظيفي</div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a;">${esc(record.employeeCode || '—')}</div>
+                    </div>
+                    `}
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">الوظيفة / المسمى الوظيفي</div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a;">${esc(record.jobTitle || '—')}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">الإدارة / القسم</div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a;">${esc(record.departmentName || '—')}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">المصنع / الفرع</div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a;">${esc(record.factory || record.branch || '—')}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">الموقع / المكان الفرعي</div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a;">${esc(record.sublocation || record.location || '—')}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">البريد الإلكتروني</div>
+                        <div style="font-size: 0.95rem; font-weight: 600; color: #0f172a; direction: ltr; text-align: right;">${esc(record.email || '—')}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">رقم الهاتف</div>
+                        <div style="font-size: 0.95rem; font-weight: 600; color: #0f172a; direction: ltr; text-align: right;">${esc(record.phone || '—')}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- مصفوفة صلاحيات التوقيع -->
+            <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                    <h4 style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-signature text-emerald-600"></i>
+                        صلاحيات التوقيع على تصاريح العمل (Permits Authorization)
+                    </h4>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="badge" style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 700; font-size: 0.8rem; padding: 2px 8px; border-radius: 6px;">مباشر (G): ${gCount}</span>
+                        <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; font-weight: 700; font-size: 0.8rem; padding: 2px 8px; border-radius: 6px;">تنسيق HSE (Y): ${yCount}</span>
+                        <span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.8rem; padding: 2px 8px; border-radius: 6px;">غير مصرح (X): ${xCount}</span>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px;">
+                    ${permitCards}
+                </div>
+            </div>
+
+            ${record.notes ? `
+            <!-- بطاقة الملاحظات -->
+            <div style="background: #fffbeb; border-radius: 10px; border: 1px solid #fef3c7; padding: 14px 16px;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: #92400e; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-sticky-note"></i> ملاحظات السجل:
+                </div>
+                <div style="font-size: 0.9rem; color: #78350f; line-height: 1.5;">${esc(record.notes)}</div>
+            </div>
+            ` : ''}
+        </div>
+        `;
+    },
+
     _renderForm(record) {
         const val = (key) => record ? (record[key] || '') : '';
         const pv  = (key) => record ? (String(record[key] || 'X').toUpperCase()) : 'X';
@@ -2686,19 +2831,24 @@ const IssuingAuthorities = {
         }
         await this._ensureFormSettingsReady();
         await this._fetchContractorOptions();
-        body.innerHTML = this._renderForm(record);
-        modal.style.display = 'flex';
-        this._togglePersonTypeInputs();
-        this._bindModalFieldEvents();
-        this._syncFactoryControls(record);
+        
+        if (readOnly && record) {
+            body.innerHTML = this._renderViewDetails(record);
+        } else {
+            body.innerHTML = this._renderForm(record);
+            this._togglePersonTypeInputs();
+            this._bindModalFieldEvents();
+            this._syncFactoryControls(record);
 
-        // Re-attach radio feedback
-        body.querySelectorAll('input[type="radio"]').forEach(radio => {
-            const lbl = radio.closest('label.ia-radio-label');
-            if (lbl) {
-                lbl.classList.toggle('is-selected', !!radio.checked);
-            }
-        });
+            // Re-attach radio feedback
+            body.querySelectorAll('input[type="radio"]').forEach(radio => {
+                const lbl = radio.closest('label.ia-radio-label');
+                if (lbl) {
+                    lbl.classList.toggle('is-selected', !!radio.checked);
+                }
+            });
+        }
+        modal.style.display = 'flex';
         this._applyModalReadOnly(readOnly);
         if (readOnly && record && typeof EmailDispatch !== 'undefined') {
             const footer = document.querySelector('.ia-modal-footer');
