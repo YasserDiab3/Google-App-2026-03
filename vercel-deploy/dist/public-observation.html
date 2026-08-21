@@ -717,10 +717,7 @@
             </div>
 
             <div class="brand-wrapper">
-                <img src="icons/icapp-logo.png" alt="Company Logo" class="logo-img" onerror="this.style.display='none'; document.getElementById('fallbackIcon').style.display='inline-flex';">
-                <div id="fallbackIcon" class="logo-icon-fallback" style="display:none;">
-                    <i class="fas fa-shield-halved"></i>
-                </div>
+                <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار النظام" class="logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
             </div>
 
             <h1 class="header-title">نموذج تسجيل الملاحظات اليومية الميدانية</h1>
@@ -965,19 +962,19 @@
                     </div>
                 </div>
 
-                <!-- خيار مجهول الهوية -->
+                <!-- خيار مجهول الهوية (مغلق افتراضياً لإظهار اسم المفتش/صاحب الملاحظة) -->
                 <div class="toggle-row">
                     <span style="font-size: 0.9rem; font-weight: 700; color: #334155;">
                         <i class="fas fa-user-secret ml-1 text-slate-600"></i> إرسال كمجهول الهوية
                     </span>
                     <label class="toggle-switch">
-                        <input type="checkbox" id="anonymousToggle" checked onchange="toggleAnonymous(this.checked)">
+                        <input type="checkbox" id="anonymousToggle" onchange="toggleAnonymous(this.checked)">
                         <span class="slider"></span>
                     </label>
                 </div>
 
-                <!-- حقول صاحب الملاحظة / مسؤول السلامة الفعلي (بدون رقم هاتف) -->
-                <div id="reporterInfoFields" style="display: none; flex-direction: column; gap: 10px;">
+                <!-- حقول صاحب الملاحظة / مسؤول السلامة الفعلي (ظاهر ومفتوح افتراضياً) -->
+                <div id="reporterInfoFields" style="display: flex; flex-direction: column; gap: 10px;">
                     <div class="form-group">
                         <label class="form-label" for="ownerSelect">
                             <i class="fas fa-user-shield text-blue-600"></i>
@@ -1573,6 +1570,8 @@
             selectType(document.querySelector('.type-card[data-type="سلوك غير آمن"]'));
             selectRisk(document.querySelector('.risk-chip[data-risk="متوسط"]'));
             document.getElementById('statusSelect').value = 'Open';
+            document.getElementById('anonymousToggle').checked = false;
+            document.getElementById('reporterInfoFields').style.display = 'flex';
             document.getElementById('customSiteGroup').style.display = 'none';
             document.getElementById('customPlaceGroup').style.display = 'none';
             document.getElementById('customOwnerGroup').style.display = 'none';

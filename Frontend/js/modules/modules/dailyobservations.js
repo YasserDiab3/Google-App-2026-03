@@ -13489,34 +13489,16 @@ const DailyObservations = {
         const updateUrl = () => {
             const fac = factorySelect.value;
             const inspector = inspectorSelect.value;
-            let fullUrl = baseUrl;
-            try {
-                const compactPayload = {
-                    s: (factories || []).map(f => [
-                        String(f.name || f.siteName || f || '').trim(),
-                        this.extractCleanPlacesList(f.places)
-                    ]).filter(x => x[0]),
-                    d: (typeof this.getDepartmentOptions === 'function') ? this.getDepartmentOptions() : [],
-                    m: (safetyMembers || []).map(m => m.name).filter(Boolean)
-                };
-                const enc = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(compactPayload)))));
-                
-                let queryParts = [];
-                if (fac) queryParts.push(`factory=${encodeURIComponent(fac)}`);
-                if (inspector) queryParts.push(`inspector=${encodeURIComponent(inspector)}`);
-                const qStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
-                fullUrl = `${baseUrl}${qStr}#cfg=${enc}`;
-            } catch (e) {
-                let queryParts = [];
-                if (fac) queryParts.push(`factory=${encodeURIComponent(fac)}`);
-                if (inspector) queryParts.push(`inspector=${encodeURIComponent(inspector)}`);
-                const qStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
-                fullUrl = `${baseUrl}${qStr}`;
-            }
+            
+            let queryParts = [];
+            if (fac) queryParts.push(`factory=${encodeURIComponent(fac)}`);
+            if (inspector) queryParts.push(`inspector=${encodeURIComponent(inspector)}`);
+            const qStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+            const fullUrl = `${baseUrl}${qStr}`;
 
             linkInput.value = fullUrl;
             
-            // توليد الرمز محلياً بالكامل عبر مكتبة qrcode-generator
+            // توليد الرمز محلياً بالكامل بدقة وجودة عالية وبدون ثقل بيانات
             let localQrData = '';
             if (typeof qrcode === 'function') {
                 try {
@@ -13535,7 +13517,7 @@ const DailyObservations = {
             if (localQrData && localQrData.startsWith('data:')) {
                 qrImg.src = localQrData;
             } else {
-                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(fullUrl)}`;
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(fullUrl)}`;
             }
             
             let desc = 'امسح الرمز بكاميرا الهاتف لفتح نموذج الملاحظات فوراً';
