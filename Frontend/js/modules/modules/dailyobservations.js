@@ -13303,13 +13303,46 @@ const DailyObservations = {
         return this.convertFileToBase64(file);
     },
 
+    extractCleanPlacesList(placesRaw) {
+        if (!placesRaw) return [];
+        let list = [];
+        if (Array.isArray(placesRaw)) {
+            list = placesRaw;
+        } else if (typeof placesRaw === 'string') {
+            try {
+                const parsed = JSON.parse(placesRaw);
+                if (Array.isArray(parsed)) list = parsed;
+                else list = placesRaw.split(/[\n,]/);
+            } catch (e) {
+                list = placesRaw.split(/[\n,]/);
+            }
+        }
+        return list.map(item => {
+            if (!item) return '';
+            if (typeof item === 'string') {
+                const tr = item.trim();
+                if (tr.startsWith('{') && tr.endsWith('}')) {
+                    try {
+                        const obj = JSON.parse(tr);
+                        return String(obj.name || obj.placeName || obj.locationName || obj.place || obj.label || obj.id || '').trim();
+                    } catch (e) {}
+                }
+                return tr;
+            }
+            if (typeof item === 'object') {
+                return String(item.name || item.placeName || item.locationName || item.place || item.label || item.title || item.id || '').trim();
+            }
+            return String(item).trim();
+        }).filter(p => p && p !== '[object Object]');
+    },
+
     exportPublicConfigToLocalStorage() {
         try {
             const sites = [];
             const rawSites = AppState.appData?.observationSites || [];
             rawSites.forEach(s => {
                 const name = String(s.name || s.siteName || s).trim();
-                const places = Array.isArray(s.places) ? s.places : (s.places ? String(s.places).split(/[\n,]/).map(p => p.trim()).filter(Boolean) : []);
+                const places = this.extractCleanPlacesList(s.places);
                 if (name && !sites.some(x => x.name === name)) {
                     sites.push({ name, places });
                 }
@@ -13320,9 +13353,9 @@ const DailyObservations = {
                 AppState.appData.dailyObservations.forEach(d => {
                     const s = String(d.siteName || d.site || '').trim();
                     const p = String(d.locationName || d.placeId || d.place || '').trim();
-                    if (s) {
+                    if (s && p && p !== '[object Object]') {
                         if (!sMap[s]) sMap[s] = [];
-                        if (p && !sMap[s].includes(p)) sMap[s].push(p);
+                        if (!sMap[s].includes(p)) sMap[s].push(p);
                     }
                 });
                 Object.keys(sMap).forEach(k => sites.push({ name: k, places: sMap[k] }));
@@ -13461,7 +13494,7 @@ const DailyObservations = {
                 const compactPayload = {
                     s: (factories || []).map(f => [
                         String(f.name || f.siteName || f || '').trim(),
-                        Array.isArray(f.places) ? f.places : (f.places ? String(f.places).split(/[\n,]/).map(p => p.trim()).filter(Boolean) : [])
+                        this.extractCleanPlacesList(f.places)
                     ]).filter(x => x[0]),
                     d: (typeof this.getDepartmentOptions === 'function') ? this.getDepartmentOptions() : [],
                     m: (safetyMembers || []).map(m => m.name).filter(Boolean)

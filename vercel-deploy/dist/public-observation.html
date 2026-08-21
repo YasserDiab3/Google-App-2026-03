@@ -993,6 +993,24 @@
             }
         }
 
+        function getCleanPlaceName(p) {
+            if (!p) return '';
+            if (typeof p === 'string') {
+                const trimmed = p.trim();
+                if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                    try {
+                        const obj = JSON.parse(trimmed);
+                        return String(obj.name || obj.placeName || obj.locationName || obj.place || obj.label || obj.title || obj.id || '').trim();
+                    } catch (e) {}
+                }
+                return trimmed;
+            }
+            if (typeof p === 'object') {
+                return String(p.name || p.placeName || p.locationName || p.place || p.label || p.title || p.id || '').trim();
+            }
+            return String(p).trim();
+        }
+
         function handleSiteChange(siteName) {
             const placeSelect = document.getElementById('placeSelect');
             const customGroup = document.getElementById('customPlaceGroup');
@@ -1021,11 +1039,16 @@
 
             placeSelect.innerHTML = '<option value="">— اختر الموقع الفرعي / المكان —</option>';
             if (foundSite && Array.isArray(foundSite.places) && foundSite.places.length > 0) {
-                foundSite.places.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p;
-                    opt.textContent = p;
-                    placeSelect.appendChild(opt);
+                const seenPlaces = new Set();
+                foundSite.places.forEach(rawP => {
+                    const pName = getCleanPlaceName(rawP);
+                    if (pName && !seenPlaces.has(pName.toLowerCase()) && pName !== '[object Object]') {
+                        seenPlaces.add(pName.toLowerCase());
+                        const opt = document.createElement('option');
+                        opt.value = pName;
+                        opt.textContent = pName;
+                        placeSelect.appendChild(opt);
+                    }
                 });
             }
             // خيار إدخال يدوي
