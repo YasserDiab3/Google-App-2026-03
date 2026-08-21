@@ -406,60 +406,42 @@ function doPost(e) {
             'getAuthBootstrapPolicy', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
-        if (!isSessionExempt) {
-            var needsSessionForWrite = !isReadOnlyAction;
+        var needsSessionForWrite = !isReadOnlyAction;
+        if (!isSessionExempt && needsSessionForWrite) {
             var hasActorIdentity = !!(actorUserData && (actorUserData.email || actorUserData.id));
-            if (needsSessionForWrite || hasActorIdentity) {
-                if (!hasActorIdentity) {
+            if (!hasActorIdentity) {
+                if (typeof logSecurityEvent === 'function') {
+                    logSecurityEvent('session_gate_missing_actor', {
+                        action: action,
+                        severity: 'high'
+                    });
+                }
+                return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                    success: false,
+                    message: 'رفض أمني: بيانات المستخدم المنفذ وجلسة صالحة مطلوبان لهذه العملية',
+                    errorCode: 'SESSION_ACTOR_REQUIRED',
+                    action: action
+                })));
+            }
+            var sessionToken = String(postData.sessionToken || (payload && payload.sessionToken) || '').trim();
+            if (typeof validateServerSessionToken_ === 'function') {
+                var sessionGate = validateServerSessionToken_(sessionToken, actorUserData);
+                if (!sessionGate.ok) {
                     if (typeof logSecurityEvent === 'function') {
-                        logSecurityEvent('session_gate_missing_actor', {
+                        logSecurityEvent('session_gate_denied', {
                             action: action,
+                            errorCode: sessionGate.errorCode,
+                            actor: actorUserData.email || actorUserData.id || '',
                             severity: 'high'
                         });
                     }
                     return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
                         success: false,
-                        message: 'رفض أمني: بيانات المستخدم المنفذ وجلسة صالحة مطلوبان لهذه العملية',
-                        errorCode: 'SESSION_ACTOR_REQUIRED',
+                        message: sessionGate.message || 'جلسة غير صالحة',
+                        errorCode: sessionGate.errorCode || 'SESSION_REQUIRED',
                         action: action
                     })));
                 }
-                var sessionToken = String(postData.sessionToken || (payload && payload.sessionToken) || '').trim();
-                if (typeof validateServerSessionToken_ === 'function') {
-                    var sessionGate = validateServerSessionToken_(sessionToken, actorUserData);
-                    if (!sessionGate.ok) {
-                        if (typeof logSecurityEvent === 'function') {
-                            logSecurityEvent('session_gate_denied', {
-                                action: action,
-                                errorCode: sessionGate.errorCode,
-                                actor: actorUserData.email || actorUserData.id || '',
-                                severity: 'high'
-                            });
-                        }
-                        return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
-                            success: false,
-                            message: sessionGate.message || 'جلسة غير صالحة',
-                            errorCode: sessionGate.errorCode || 'SESSION_REQUIRED',
-                            action: action
-                        })));
-                    }
-                }
-            }
-        }
-
-        // قراءة الأوراق: CSRF + هوية مسجّلة في Users
-        const sheetReadActions = ['readFromSheet', 'batchReadSheets'];
-        if (sheetReadActions.indexOf(action) !== -1) {
-            var readAuthGate = (typeof requireAuthenticatedActor_ === 'function')
-                ? requireAuthenticatedActor_(actorUserData, action)
-                : { ok: true };
-            if (!readAuthGate.ok) {
-                return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
-                    success: false,
-                    message: readAuthGate.message || 'رفض القراءة',
-                    errorCode: readAuthGate.errorCode || 'ACTOR_IDENTITY_REQUIRED',
-                    action: action
-                })));
             }
         }
 
