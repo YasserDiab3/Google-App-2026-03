@@ -58,7 +58,7 @@ function isSwDev() {
 // Bump cache version to force clients to pick up latest JS/CSS updates (زيادة عند كل نشر لظهور التحديثات)
 // يجب تحديث __SW_REGISTER_QUERY في index.html بنفس اللاحقة عند تغيير الإصدار لتسريع اكتشاف service-worker.js
 // Service Worker Version: 20260501 — isSwDev: مضيفات إضافية + معاينة Vercel
-const CACHE_VERSION = 'hse-app-v1.0.1181-20260821';
+const CACHE_VERSION = 'hse-app-v1.0.1182-20260821';
 const CACHE_NAME = `hse-cache-${CACHE_VERSION}`;
 
 /** أقصى حجم لعنصر في الكاش (بايت) — يحدّ تخزين ملفات CDN الضخمة */
@@ -471,46 +471,45 @@ async function cacheFirst(request) {
         const response = await fetch(request);
         
         // التحقق من نجاح الاستجابة
-        if (!response || !response.ok) {
-            // إذا كانت الاستجابة غير ناجحة، إرجاع استجابة خطأ مناسبة
-            if (request.destination === 'document') {
-                return new Response('التطبيق غير متاح حالياً. يُرجى المحاولة لاحقاً.', {
-                    headers: { 'Content-Type': 'text/html; charset=utf-8' },
-                    status: response?.status || 500
-                });
-            }
-            // للخطوط والموارد الأخرى، إرجاع استجابة 404
-            return new Response(null, { 
-                status: response?.status || 404,
-                statusText: response?.statusText || 'Not Found'
-            });
-        }
-        
-        // تخزين الاستجابة فقط إذا كانت GET/HEAD وناجحة
-        if (response && response.status === 200 && (request.method === 'GET' || request.method === 'HEAD')) {
-            // التأكد من أن الاستجابة قابلة للتخزين
-            if (response.type === 'basic' || response.type === 'cors') {
-                try {
-                    const cache = await caches.open(CACHE_NAME);
-                    await safeCachePut(cache, request, response);
-                } catch (cacheError) {
-                    // تجاهل أخطاء التخزين المؤقت
+        if (response && response.ok) {
+            // تخزين الاستجابة فقط إذا كانت GET/HEAD وناجحة
+            if (response.status === 200 && (request.method === 'GET' || request.method === 'HEAD')) {
+                // التأكد من أن الاستجابة قابلة للتخزين
+                if (response.type === 'basic' || response.type === 'cors') {
+                    try {
+                        const cache = await caches.open(CACHE_NAME);
+                        await safeCachePut(cache, request, response);
+                    } catch (cacheError) {}
                 }
             }
+            return response;
         }
-        
-        return response;
-    } catch (error) {
-        // معالجة أخطاء الشبكة بشكل صحيح
-        // إرجاع صفحة خطأ إذا كانت HTML
+
+        // إذا كانت الاستجابة غير ناجحة، محاولة الكاش أولاً
+        try {
+            const cache = await caches.open(CACHE_NAME);
+            const cached = await cache.match(request);
+            if (cached) return cached;
+        } catch (_) {}
+
         if (request.destination === 'document') {
             return new Response('التطبيق غير متاح حالياً. يُرجى المحاولة لاحقاً.', {
                 headers: { 'Content-Type': 'text/html; charset=utf-8' },
-                status: 503,
-                statusText: 'Service Unavailable'
+                status: response?.status || 500
             });
         }
-        
+        return response || new Response(null, { 
+            status: 404,
+            statusText: 'Not Found'
+        });
+    } catch (error) {
+        // محاولة جلب النسخة المخزنة في الكاش عند فشل الاتصال بالشبكة
+        try {
+            const cache = await caches.open(CACHE_NAME);
+            const cached = await cache.match(request);
+            if (cached) return cached;
+        } catch (_) {}
+
         // للـ CDN resources، محاولة fallback URLs قبل إرجاع الخطأ
         const url = new URL(request.url);
         if (isCDNResource(url)) {

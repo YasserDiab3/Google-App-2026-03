@@ -1,13 +1,21 @@
 // تطبيق الوضع الليلي فوراً عند تحميل الصفحة (قبل تعريف UI)
 (function applyThemeImmediately() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    const savedColorTheme = 'emerald';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    document.documentElement.setAttribute('data-color-theme', savedColorTheme);
-    if (document.body) {
-        document.body.setAttribute('data-color-theme', savedColorTheme);
-    }
-    localStorage.setItem('color-theme', savedColorTheme);
+    try {
+        const savedTheme = (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) || 'light';
+        const savedColorTheme = 'emerald';
+        if (document.documentElement) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.documentElement.setAttribute('data-color-theme', savedColorTheme);
+        }
+        if (document.body) {
+            document.body.setAttribute('data-color-theme', savedColorTheme);
+        }
+        if (typeof localStorage !== 'undefined') {
+            try {
+                localStorage.setItem('color-theme', savedColorTheme);
+            } catch (_) {}
+        }
+    } catch (_) {}
 })();
 
 // تعريف UI كمتغير عام (global) ليكون متاحاً لجميع الملفات

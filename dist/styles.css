@@ -275,15 +275,19 @@ body.app-active {
 /* ===== Login Screen ===== */
 .login-screen {
     min-height: 100vh;
+    min-height: 100dvh;
     min-height: -webkit-fill-available;
-    /* iOS Safari fix */
+    width: 100%;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 2rem;
-    background: var(--login-bg);
+    background: var(--login-bg, linear-gradient(135deg, #1a634f 0%, #144e3e 100%));
     position: relative;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
     transition: background 0.3s ease;
 }
 
@@ -291,11 +295,15 @@ body.app-active {
 @media (max-width: 480px) {
     .login-screen {
         padding: 1rem;
+        min-height: 100vh;
+        min-height: 100dvh;
+        align-items: center;
     }
 
     .login-container {
         width: 100%;
         max-width: 100%;
+        padding: 0;
     }
 }
 
