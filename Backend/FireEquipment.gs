@@ -843,6 +843,91 @@ function getPublicFireInspectionConfig(params) {
 /**
  * تسجيل وتوثيق الفحص الشهري العام لجهاز الإطفاء وتحديث حالة وسجل الجهاز تلقائياً
  */
+/**
+ * توليد معرف فحص شهري سريع بدون قراءة كامل الجدول
+ */
+function generateFastFireInspectionId(sheetName, spreadsheetId) {
+    try {
+        var datePrefix = Utilities.formatDate(new Date(), 'GMT+2', 'yyMM');
+        var prefix = 'FEI-' + datePrefix + '-';
+        var ss = spreadsheetId ? SpreadsheetApp.openById(spreadsheetId) : SpreadsheetApp.getActiveSpreadsheet();
+        var sheet = ss.getSheetByName(sheetName);
+        if (!sheet) return prefix + '0001';
+        
+        var lastRow = sheet.getLastRow();
+        if (lastRow <= 1) return prefix + '0001';
+        
+        var startRow = Math.max(2, lastRow - 30);
+        var numRows = lastRow - startRow + 1;
+        var values = sheet.getRange(startRow, 1, numRows, 1).getValues();
+        var maxNum = 0;
+        
+        for (var i = 0; i < values.length; i++) {
+            var val = String(values[i][0] || '').trim();
+            if (val.indexOf(prefix) === 0) {
+                var num = parseInt(val.replace(prefix, ''), 10);
+                if (!isNaN(num) && num > maxNum) maxNum = num;
+            } else {
+                var match = val.match(/FEI[-_]?(\d+)/i);
+                if (match) {
+                    var n = parseInt(match[1], 10);
+                    if (!isNaN(n) && n > maxNum) maxNum = n;
+                }
+            }
+        }
+        var nextSeq = (maxNum > 0) ? (maxNum + 1) : lastRow;
+        return prefix + String(nextSeq).padStart(4, '0');
+    } catch (e) {
+        return 'FEI-' + Utilities.formatDate(new Date(), 'GMT+2', 'yyMMddHHmmss');
+    }
+}
+
+/**
+ * تحديث سريع لحالة وتاريخ فحص الطفاية في جدول FireEquipmentAssets مباشرة
+ */
+function updateAssetInspectionStatusFast(assetId, checkDate, statusVal, nextInspectionStr, spreadsheetId) {
+    try {
+        var ss = spreadsheetId ? SpreadsheetApp.openById(spreadsheetId) : SpreadsheetApp.getActiveSpreadsheet();
+        var sheet = ss.getSheetByName('FireEquipmentAssets');
+        if (!sheet) return;
+        var lastRow = sheet.getLastRow();
+        var lastCol = sheet.getLastColumn();
+        if (lastRow <= 1 || lastCol < 1) return;
+        
+        var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+        var idColIdx = headers.indexOf('id');
+        if (idColIdx === -1) idColIdx = 0;
+        
+        var statusColIdx = headers.indexOf('status');
+        var lastInspColIdx = headers.indexOf('lastInspection');
+        var nextInspColIdx = headers.indexOf('nextInspection');
+        var lastServiceColIdx = headers.indexOf('lastServiceDate');
+        var updatedColIdx = headers.indexOf('updatedAt');
+        
+        var idValues = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
+        var cleanTarget = String(assetId || '').trim().toLowerCase();
+        
+        for (var r = 0; r < idValues.length; r++) {
+            var rowId = String(idValues[r][0] || '').trim().toLowerCase();
+            if (rowId === cleanTarget) {
+                var targetRowNum = r + 2;
+                if (statusColIdx !== -1) sheet.getRange(targetRowNum, statusColIdx + 1).setValue(statusVal);
+                if (lastInspColIdx !== -1) sheet.getRange(targetRowNum, lastInspColIdx + 1).setValue(checkDate);
+                if (lastServiceColIdx !== -1) sheet.getRange(targetRowNum, lastServiceColIdx + 1).setValue(checkDate);
+                if (nextInspColIdx !== -1) sheet.getRange(targetRowNum, nextInspColIdx + 1).setValue(nextInspectionStr);
+                if (updatedColIdx !== -1) sheet.getRange(targetRowNum, updatedColIdx + 1).setValue(new Date());
+                SpreadsheetApp.flush();
+                return;
+            }
+        }
+    } catch (err) {
+        Logger.log('Warning in updateAssetInspectionStatusFast: ' + err.toString());
+    }
+}
+
+/**
+ * تسجيل وتوثيق الفحص الشهري العام لجهاز الإطفاء وتحديث حالة وسجل الجهاز تلقائياً
+ */
 function submitPublicFireInspection(payload) {
     try {
         if (!payload || typeof payload !== 'object') {
@@ -854,35 +939,30 @@ function submitPublicFireInspection(payload) {
             return { success: true, message: 'تم إرسال الفحص بنجاح' };
         }
 
-        const assetId = String(payload.assetId || payload.id || '').trim();
+        var assetId = String(payload.assetId || payload.id || '').trim();
         if (!assetId) {
             return { success: false, message: 'يرجى تحديد أو مسح معرف جهاز الإطفاء (DeviceID)' };
         }
 
-        const inspectorName = String(payload.inspector || payload.inspectorName || '').trim();
+        var inspectorName = String(payload.inspector || payload.inspectorName || '').trim();
         if (!inspectorName) {
             return { success: false, message: 'يرجى اختيار أو إدخال اسم مسؤول الفحص' };
         }
 
-        const spreadsheetId = getSpreadsheetId();
-        const inspectionsSheet = 'FireEquipmentInspections';
-        const assetsSheet = 'FireEquipmentAssets';
+        var spreadsheetId = getSpreadsheetId();
+        var inspectionsSheet = 'FireEquipmentInspections';
 
-        // التحقق من وجود الجهاز في جدول الأصول
-        const assets = readFromSheet(assetsSheet, spreadsheetId) || [];
-        const targetAsset = assets.find(function(a) { return String(a.id || '').trim() === assetId; });
-
-        // توليد معرف الفحص
-        const inspectionId = generateSequentialId('FEI', inspectionsSheet, spreadsheetId);
-        const checkDate = payload.checkDate ? String(payload.checkDate).trim() : Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd');
-        const statusVal = String(payload.status || 'صالح').trim();
+        // توليد معرف الفحص السريع
+        var inspectionId = generateFastFireInspectionId(inspectionsSheet, spreadsheetId);
+        var checkDate = payload.checkDate ? String(payload.checkDate).trim() : Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd');
+        var statusVal = String(payload.status || 'صالح').trim();
 
         // رفع الصورة المرفقة إلى Google Drive إن وُجدت
-        const attachments = [];
+        var attachments = [];
         if (payload.photoBase64 && String(payload.photoBase64).length > 50) {
             try {
                 if (typeof uploadFileToDrive === 'function') {
-                    const uploadRes = uploadFileToDrive(payload.photoBase64, 'Fire_Insp_' + assetId + '_' + Date.now() + '.jpg', 'image/jpeg', 'FireEquipment');
+                    var uploadRes = uploadFileToDrive(payload.photoBase64, 'Fire_Insp_' + assetId + '_' + Date.now() + '.jpg', 'image/jpeg', 'FireEquipment');
                     if (uploadRes && uploadRes.success && uploadRes.file && uploadRes.file.url) {
                         attachments.push({
                             name: 'صورة فحص طفاية الحريق ' + assetId,
@@ -897,7 +977,7 @@ function submitPublicFireInspection(payload) {
         }
 
         // بناء سجل الفحص
-        const inspectionRecord = {
+        var inspectionRecord = {
             id: inspectionId,
             assetId: assetId,
             checkDate: checkDate,
@@ -918,30 +998,19 @@ function submitPublicFireInspection(payload) {
         };
 
         // إضافة الفحص لجدول الفحوصات
-        const addResult = appendToSheet(inspectionsSheet, inspectionRecord, spreadsheetId);
+        var addResult = appendToSheet(inspectionsSheet, inspectionRecord, spreadsheetId);
         if (!addResult || !addResult.success) {
             return addResult || { success: false, message: 'فشل حفظ سجل الفحص في جدول الفحوصات' };
         }
 
-        // تحديث الأصل في جدول FireEquipmentAssets
+        // تحديث حالة الأصل في جدول FireEquipmentAssets مباشرة بسرعة وخفة
         try {
-            // حساب تاريخ الفحص القادم (بعد شهر واحد للفحص الدوري الشهري)
-            const inspDateObj = new Date(checkDate);
-            const nextInspDateObj = new Date(inspDateObj);
+            var inspDateObj = new Date(checkDate);
+            var nextInspDateObj = new Date(inspDateObj);
             nextInspDateObj.setMonth(nextInspDateObj.getMonth() + 1);
-            const nextInspectionStr = Utilities.formatDate(nextInspDateObj, 'GMT+2', 'yyyy-MM-dd');
+            var nextInspectionStr = Utilities.formatDate(nextInspDateObj, 'GMT+2', 'yyyy-MM-dd');
 
-            const assetUpdateData = {
-                status: statusVal,
-                lastInspection: checkDate,
-                lastServiceDate: checkDate,
-                nextInspection: nextInspectionStr,
-                updatedAt: new Date()
-            };
-
-            if (targetAsset) {
-                updateFireEquipmentAsset(assetId, assetUpdateData);
-            }
+            updateAssetInspectionStatusFast(assetId, checkDate, statusVal, nextInspectionStr, spreadsheetId);
         } catch (assetUpdateErr) {
             Logger.log('Warning: Could not update asset status on public inspection: ' + assetUpdateErr.toString());
         }

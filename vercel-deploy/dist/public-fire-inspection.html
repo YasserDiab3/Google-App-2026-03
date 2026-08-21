@@ -1218,7 +1218,7 @@
             document.getElementById('statusVal').value = status;
         }
 
-        // معالجة الصور
+        // معالجة الصور وضغطها بكفاءة
         document.getElementById('photoInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -1228,7 +1228,7 @@
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const maxDim = 1000;
+                    const maxDim = 800;
                     let w = img.width;
                     let h = img.height;
                     if (w > maxDim || h > maxDim) {
@@ -1239,7 +1239,7 @@
                     canvas.height = h;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, w, h);
-                    currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                    currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.65);
                     
                     document.getElementById('photoPreview').src = currentPhotoBase64;
                     document.getElementById('photoPreviewWrap').style.display = 'inline-block';
@@ -1296,7 +1296,7 @@
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>جاري حفظ وتوثيق الفحص بالسجلات...</span>';
-            showToast('جاري إرسال الفحص...', 'info', 0);
+            showToast('جاري إرسال وتوثيق الفحص في قاعدة البيانات...', 'info', 0);
 
             const payload = {
                 action: 'submitPublicFireInspection',
@@ -1321,7 +1321,7 @@
             for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 60000);
+                    const timeoutId = setTimeout(() => controller.abort(), 85000);
 
                     const response = await fetch(targetApiUrl, {
                         method: 'POST',
@@ -1342,7 +1342,11 @@
                         errMsg = (res && res.message) ? res.message : 'فشل تسجيل الفحص من الخادم';
                     }
                 } catch(err) {
-                    errMsg = err.message || 'تعذر الاتصال بالخادم';
+                    if (err.name === 'AbortError' || String(err).includes('abort')) {
+                        errMsg = 'استغرقت عملية الإرسال وقتاً طويلاً. يرجى التحقق من اتصال الإنترنت ومن نشر الإصدار الجديد في Google Apps Script.';
+                    } else {
+                        errMsg = err.message || 'تعذر الاتصال بالخادم';
+                    }
                     if (attempt < 2) await new Promise(r => setTimeout(r, 1500));
                 }
             }
