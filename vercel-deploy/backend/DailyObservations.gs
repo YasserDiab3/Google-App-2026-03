@@ -2846,7 +2846,7 @@ function getPublicObservationConfig() {
         try {
             cache = CacheService.getScriptCache();
             if (cache) {
-                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V5');
+                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V6');
                 if (cachedStr) {
                     return JSON.parse(cachedStr);
                 }
@@ -2916,11 +2916,72 @@ function getPublicObservationConfig() {
         }
         sites.sort(function(a, b) { return a.name.localeCompare(b.name, 'ar'); });
 
-        // 2. مسؤولو السلامة والأشخاص الفعليون في النظام
+        // 2. مسؤولو فريق السلامة والصحة المهنية فقط (مع توحيد الأسماء ومنع التكرار)
+        function normalizeArabicKey(name) {
+            return String(name || '')
+                .trim()
+                .toLowerCase()
+                .replace(/^(م\/|أ\/|د\/|مهندس\/|أستاذ\/|دكتور\/|mr\.|eng\.)\s*/i, '')
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
+                .replace(/\s+/g, ' ');
+        }
+
         var observersMap = {};
         var safetyMembers = [];
 
-        // أ) من شيت Users
+        function registerSafetyMember(name, role, dept) {
+            var cleanName = String(name || '').trim();
+            if (!cleanName || cleanName.indexOf('مجهول') !== -1 || cleanName.indexOf('عامة') !== -1 || cleanName.length < 3) return;
+            var key = normalizeArabicKey(cleanName);
+            if (!key || observersMap[key]) return;
+            observersMap[key] = true;
+            safetyMembers.push({
+                name: cleanName,
+                role: role || 'فريق السلامة والصحة المهنية',
+                department: dept || 'السلامة والصحة المهنية',
+                isSafetyTeam: true
+            });
+        }
+
+        // أ) من إعدادات فريق السلامة في CompanySettings
+        try {
+            var compSettings = readFromSheet('CompanySettings', spreadsheetId) || [];
+            compSettings.forEach(function(cs) {
+                if (cs.key === 'safetyTeam' || cs.key === 'safetyTeamMembers' || cs.key === 'hseTeam') {
+                    var rawList = cs.value || cs.safetyTeam || '';
+                    if (typeof rawList === 'string') {
+                        rawList.split(/[\n,]/).forEach(function(item) { registerSafetyMember(item, 'مسؤول سلامة'); });
+                    }
+                }
+            });
+        } catch (csTeamErr) {}
+
+        // ب) من شيت Employees (مسؤولو السلامة وفريق HSE فقط - غير المستقيلين)
+        var employees = [];
+        try {
+            employees = readFromSheet('Employees', spreadsheetId) || [];
+            employees.forEach(function(emp) {
+                var name = String(emp.name || emp.employeeName || '').trim();
+                var dept = String(emp.department || '').trim();
+                var job = String(emp.job || emp.jobTitle || emp.position || '').trim();
+                var status = String(emp.status || emp.employeeStatus || emp.workStatus || '').toLowerCase();
+                var isResigned = (status.indexOf('مستقيل') !== -1 || status.indexOf('استقال') || status.indexOf('resign') !== -1 || status.indexOf('terminated') !== -1);
+                if (isResigned) return;
+
+                var isSafety = (
+                    dept.indexOf('سلامة') !== -1 || dept.toLowerCase().indexOf('hse') !== -1 || dept.indexOf('بيئة') !== -1 || dept.indexOf('صحة مهنية') !== -1 ||
+                    job.indexOf('سلامة') !== -1 || job.toLowerCase().indexOf('safety') !== -1 || job.toLowerCase().indexOf('hse') !== -1 ||
+                    job.indexOf('حريق') !== -1 || job.indexOf('مفتش') !== -1 || job.indexOf('أخصائي سلامة') !== -1
+                );
+                if (name && isSafety) {
+                    registerSafetyMember(name, job || 'أخصائي سلامة وصحة مهنية', dept || 'السلامة والصحة المهنية');
+                }
+            });
+        } catch (empErr) {}
+
+        // ج) من شيت Users (المستخدمون ذوو أدوار السلامة أو إدارة السلامة فقط)
         var users = [];
         try {
             users = readFromSheet('Users', spreadsheetId) || [];
@@ -2928,61 +2989,14 @@ function getPublicObservationConfig() {
                 var name = String(u.name || u.fullName || '').trim();
                 var role = String(u.role || '').trim();
                 var dept = String(u.department || '').trim();
-                var isSafety = (role.toLowerCase() === 'admin' || role === 'مدير' || dept.indexOf('سلامة') !== -1 || dept.toLowerCase().indexOf('hse') !== -1);
-                if (name && !observersMap[name.toLowerCase()]) {
-                    observersMap[name.toLowerCase()] = true;
-                    safetyMembers.push({
-                        name: name,
-                        role: role || (isSafety ? 'مسؤول سلامة' : 'مستخدم'),
-                        department: dept,
-                        isSafetyTeam: isSafety
-                    });
+                var isSafetyUser = (dept.indexOf('سلامة') !== -1 || dept.toLowerCase().indexOf('hse') !== -1 || role.indexOf('سلامة') !== -1 || role.toLowerCase().indexOf('safety') !== -1);
+                if (name && isSafetyUser) {
+                    registerSafetyMember(name, role || 'مسؤول سلامة', dept || 'السلامة والصحة المهنية');
                 }
             });
         } catch (uErr) {}
 
-        // ب) من شيت Employees (مسؤولو السلامة وفريق HSE)
-        var employees = [];
-        try {
-            employees = readFromSheet('Employees', spreadsheetId) || [];
-            employees.forEach(function(emp) {
-                var name = String(emp.name || emp.employeeName || '').trim();
-                var dept = String(emp.department || '').trim();
-                var job = String(emp.job || emp.jobTitle || '').trim();
-                var isSafety = (dept.indexOf('سلامة') !== -1 || dept.toLowerCase().indexOf('hse') !== -1 || job.indexOf('سلامة') !== -1 || job.toLowerCase().indexOf('safety') !== -1);
-                if (name && !observersMap[name.toLowerCase()] && isSafety) {
-                    observersMap[name.toLowerCase()] = true;
-                    safetyMembers.push({
-                        name: name,
-                        role: job || 'فريق السلامة والصحة المهنية',
-                        department: dept || 'السلامة والصحة المهنية',
-                        isSafetyTeam: true
-                    });
-                }
-            });
-        } catch (empErr) {}
-
-        // ج) من أصحاب الملاحظات الفعليين في DailyObservations
-        try {
-            if (dailyObs && dailyObs.length > 0) {
-                dailyObs.forEach(function(d) {
-                    var obsName = String(d.observerName || '').trim();
-                    if (obsName && !obsName.includes('مجهول') && !observersMap[obsName.toLowerCase()]) {
-                        observersMap[obsName.toLowerCase()] = true;
-                        safetyMembers.push({
-                            name: obsName,
-                            role: 'مسؤول سلامة / مفتش',
-                            department: 'السلامة والصحة المهنية',
-                            isSafetyTeam: true
-                        });
-                    }
-                });
-            }
-        } catch (dErr) {}
-
         safetyMembers.sort(function(a, b) {
-            if (a.isSafetyTeam && !b.isSafetyTeam) return -1;
-            if (!a.isSafetyTeam && b.isSafetyTeam) return 1;
             return a.name.localeCompare(b.name, 'ar');
         });
 
@@ -3053,7 +3067,7 @@ function getPublicObservationConfig() {
 
         try {
             if (cache) {
-                cache.put('PUBLIC_OBS_CONFIG_CACHE_V5', JSON.stringify(configResult), 1800);
+                cache.put('PUBLIC_OBS_CONFIG_CACHE_V6', JSON.stringify(configResult), 1800);
             }
         } catch (cPutErr) {}
 

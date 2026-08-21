@@ -1483,19 +1483,36 @@
                 deptSelect.appendChild(opt);
             });
 
-            // 3. مسؤولو السلامة والأشخاص الفعليون
+            // 3. مسؤولو فريق السلامة والصحة المهنية فقط (بدون أي تكرار)
             const ownerSelect = document.getElementById('ownerSelect');
             const previousOwner = ownerSelect.value;
-            ownerSelect.innerHTML = '<option value="">— اختر اسمك من قائمة النظام —</option>';
+            ownerSelect.innerHTML = '<option value="">— اختر اسمك من فريق السلامة —</option>';
+            
+            const seenKeys = new Set();
+            function normalizeKey(str) {
+                return String(str || '')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/^(م\/|أ\/|د\/|مهندس\/|أستاذ\/|دكتور\/|mr\.|eng\.)\s*/i, '')
+                    .replace(/[أإآ]/g, 'ا')
+                    .replace(/ة/g, 'ه')
+                    .replace(/ى/g, 'ي')
+                    .replace(/\s+/g, ' ');
+            }
+
             if (Array.isArray(cfg.safetyMembers) && cfg.safetyMembers.length > 0) {
                 cfg.safetyMembers.forEach(mem => {
-                    const mName = typeof mem === 'string' ? mem : (mem.name || '');
-                    if (mName) {
-                        const opt = document.createElement('option');
-                        opt.value = mName;
-                        opt.textContent = `${mName} (${mem.role || mem.department || 'سلامة وصحة مهنية'})`;
-                        ownerSelect.appendChild(opt);
-                    }
+                    const mName = typeof mem === 'string' ? mem.trim() : String(mem.name || '').trim();
+                    if (!mName || mName.includes('مجهول') || mName.includes('عامة') || mName.length < 3) return;
+                    const key = normalizeKey(mName);
+                    if (seenKeys.has(key)) return;
+                    seenKeys.add(key);
+
+                    const opt = document.createElement('option');
+                    opt.value = mName;
+                    const roleText = (typeof mem === 'object' && mem.role && !mem.role.includes('مستخدم')) ? ` (${mem.role})` : '';
+                    opt.textContent = `${mName}${roleText}`;
+                    ownerSelect.appendChild(opt);
                 });
             }
             const otherOwnerOpt = document.createElement('option');
@@ -1506,8 +1523,6 @@
             // قراءة query param لمفتش السلامة المخصص
             const inspectorParam = urlParams.get('inspector') || urlParams.get('officer') || urlParams.get('owner');
             if (inspectorParam) {
-                document.getElementById('anonymousToggle').checked = false;
-                toggleAnonymous(false);
                 let found = false;
                 for (let i = 0; i < ownerSelect.options.length; i++) {
                     if (ownerSelect.options[i].value === inspectorParam || ownerSelect.options[i].value.includes(inspectorParam)) {
