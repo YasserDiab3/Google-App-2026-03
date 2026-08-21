@@ -1421,5 +1421,61 @@ body.hse-has-offline-banner {
     }
 }
 
+/* ===== Mobile Web & Touch UI/UX Professional Refinements ===== */
+@media (hover: none) and (pointer: coarse) {
+    /* Touch optimization for mobile screens */
+    button, a, select, input[type="button"], input[type="submit"], .btn-primary, .btn-secondary, .ptw-tab-btn, .tab-btn {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(59, 130, 246, 0.15);
+        min-height: 38px;
+    }
+}
+
+/* iOS Safari: Prevent automatic zoom on input focus & smooth mobile touch */
+@media screen and (max-width: 768px) {
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="date"],
+    input[type="time"],
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+    
+    /* Smooth momentum touch scrolling for all scroll areas */
+    .modal-body,
+    .table-wrapper,
+    .data-table-container,
+    .sidebar,
+    .tabs-nav,
+    .ptw-tabs {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Professional mobile modal bounds */
+    .modal-content {
+        width: calc(100% - 20px) !important;
+        margin: 10px auto !important;
+        max-height: 92dvh !important;
+        max-height: 92vh !important;
+    }
+
+    .modal-body {
+        padding: 16px !important;
+    }
+
+    .modal-header {
+        padding: 14px 18px !important;
+    }
+
+    .modal-footer {
+        padding: 12px 18px !important;
+        flex-wrap: wrap !important;
+    }
+}
+
 /* ===== End of UI/UX Enhancements ===== */
 
