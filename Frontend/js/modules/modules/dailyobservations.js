@@ -13494,19 +13494,34 @@ const DailyObservations = {
             if (fac) queryParts.push(`factory=${encodeURIComponent(fac)}`);
             if (inspector) queryParts.push(`inspector=${encodeURIComponent(inspector)}`);
             const qStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
-            const fullUrl = `${baseUrl}${qStr}`;
+            
+            let encHash = '';
+            try {
+                const compactPayload = {
+                    s: (factories || []).map(f => [
+                        String(f.name || f.siteName || f || '').trim(),
+                        this.extractCleanPlacesList(f.places)
+                    ]).filter(x => x[0]),
+                    d: (typeof this.getDepartmentOptions === 'function') ? this.getDepartmentOptions() : [],
+                    m: (safetyMembers || []).map(m => m.name).filter(Boolean)
+                };
+                encHash = '#cfg=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(compactPayload)))));
+            } catch(e) {}
 
+            const fullUrl = `${baseUrl}${qStr}${encHash}`;
             linkInput.value = fullUrl;
             
-            // توليد الرمز محلياً بالكامل بدقة وجودة عالية وبدون ثقل بيانات
+            // توليد الرمز محلياً بالكامل بدقة وجودة عالية وبمستوى تصحيح L للاستيعاب السريع
             let localQrData = '';
             if (typeof qrcode === 'function') {
                 try {
-                    const qr = qrcode(0, 'M');
+                    const qr = qrcode(0, 'L');
                     qr.addData(fullUrl);
                     qr.make();
-                    localQrData = qr.createDataURL(6, 4);
-                } catch(e) {}
+                    localQrData = qr.createDataURL(5, 4);
+                } catch(e) {
+                    console.warn('qrcode compact error:', e);
+                }
             }
             if (!localQrData && window.QRCode && typeof window.QRCode.generate === 'function') {
                 try {

@@ -476,7 +476,7 @@ function deleteBehaviorRowsFromSheet_(sheetName, ids) {
  * الحصول على تكوين نموذج الملاحظات العامة (المصانع والمواقع الفرعية)
  * ============================================
  */
-function getPublicObservationConfig() {
+function getBehaviorMonitoringPublicConfig() {
     try {
         var factories = [];
         try {

@@ -1150,26 +1150,40 @@
         function renderDefaultFields() {
             const defaultDepts = [
                 'السلامة والصحة المهنية', 'الصيانة', 'الإنتاج والتشغيل', 'الجودة وسلامة الغذاء',
-                'المستودعات والخدمات اللوجستية', 'الموارد البشرية', 'الشؤون الإدارية', 'الأمن والحراسة'
+                'المستودعات والخدمات اللوجستية', 'الموارد البشرية', 'الشؤون الإدارية', 'الأمن والحراسة',
+                'الهندسة والمشاريع', 'البيئة والاستدامة'
             ];
-            renderConfigData({
-                sites: [],
+            const defaultSites = [
+                { name: 'ICAPP-1', places: ['منظومة طلمبات الحريق', 'عنبر الإنتاج الرئيسي', 'منطقة التعبئة والتغليف', 'مستودع المواد الخام', 'مستودع المنتج التام', 'غرفة المحولات واللوحات الكهربائية', 'ورشة الصيانة الميكانيكية', 'محطة معالجة المياه', 'منطقة التحميل والتعتيق'] },
+                { name: 'ICAPP-2', places: ['عنبر المعالجة والفرز', 'خطوط الإنتاج والتعبئة', 'ثلاجات التبريد والتجميد', 'مخزن قطع الغيار', 'المكاتب الإدارية', 'منطقة الشحن والتفريغ'] }
+            ];
+            loadedConfig = {
+                sites: defaultSites,
                 departments: defaultDepts,
                 safetyMembers: []
-            });
+            };
+            renderConfigData(loadedConfig);
         }
 
         function renderConfigData(cfg) {
-            // 1. المصانع والمواقع الفعلية من النظام
+            if (!cfg) return;
+
+            // 1. تطبيع واستخراج قائمة المصانع والمواقع
+            const rawSites = (Array.isArray(cfg.sites) && cfg.sites.length > 0) ? cfg.sites : ((Array.isArray(cfg.factories) && cfg.factories.length > 0) ? cfg.factories : []);
+            
             const siteSelect = document.getElementById('siteSelect');
+            const previousSelectedSite = siteSelect.value;
             siteSelect.innerHTML = '<option value="">— اختر المصنع / الموقع —</option>';
             
-            if (Array.isArray(cfg.sites) && cfg.sites.length > 0) {
-                cfg.sites.forEach(site => {
-                    const opt = document.createElement('option');
-                    opt.value = site.name;
-                    opt.textContent = site.name;
-                    siteSelect.appendChild(opt);
+            if (rawSites.length > 0) {
+                rawSites.forEach(site => {
+                    const siteName = (typeof site === 'string') ? site : (site.name || site.siteName || site.factoryName || '');
+                    if (siteName && siteName !== '__OTHER_SITE__') {
+                        const opt = document.createElement('option');
+                        opt.value = siteName;
+                        opt.textContent = siteName;
+                        siteSelect.appendChild(opt);
+                    }
                 });
             }
 
@@ -1178,7 +1192,7 @@
             otherSiteOpt.textContent = '➕ مصنع / موقع آخر (إدخال يدوي)...';
             siteSelect.appendChild(otherSiteOpt);
 
-            // قراءة query param لو وُجد
+            // قراءة query param للمصنع المحدد
             const urlParams = new URLSearchParams(window.location.search);
             const factoryParam = urlParams.get('factory') || urlParams.get('factoryName') || urlParams.get('site');
             if (factoryParam) {
@@ -1188,33 +1202,48 @@
                         break;
                     }
                 }
+            } else if (previousSelectedSite) {
+                siteSelect.value = previousSelectedSite;
+            } else if (siteSelect.options.length > 1) {
+                siteSelect.selectedIndex = 1; // اختيار أول مصنع متاح افتراضياً
             }
+
             if (siteSelect.selectedIndex > 0) {
                 handleSiteChange(siteSelect.value);
             }
 
             // 2. الإدارات الفعلية من النظام
             const deptSelect = document.getElementById('responsibleDeptSelect');
+            const previousDept = deptSelect.value;
             deptSelect.innerHTML = '<option value="">— اختر الإدارة المعنية —</option>';
-            if (Array.isArray(cfg.departments) && cfg.departments.length > 0) {
-                cfg.departments.forEach(d => {
-                    const opt = document.createElement('option');
-                    opt.value = d;
-                    opt.textContent = d;
-                    if (d.includes('سلامة') || d.toLowerCase().includes('hse')) opt.selected = true;
-                    deptSelect.appendChild(opt);
-                });
-            }
+            const deptsList = (Array.isArray(cfg.departments) && cfg.departments.length > 0) ? cfg.departments : [
+                'السلامة والصحة المهنية', 'الصيانة', 'الإنتاج والتشغيل', 'الجودة وسلامة الغذاء',
+                'المستودعات والخدمات اللوجستية', 'الموارد البشرية', 'الشؤون الإدارية', 'الأمن والحراسة',
+                'الهندسة والمشاريع', 'البيئة والاستدامة'
+            ];
+            deptsList.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                if (previousDept ? (previousDept === d) : (d.includes('سلامة') || d.toLowerCase().includes('hse'))) {
+                    opt.selected = true;
+                }
+                deptSelect.appendChild(opt);
+            });
 
-            // 3. مسؤولو السلامة والأشخاص الفعليون من النظام
+            // 3. مسؤولو السلامة والأشخاص الفعليون
             const ownerSelect = document.getElementById('ownerSelect');
+            const previousOwner = ownerSelect.value;
             ownerSelect.innerHTML = '<option value="">— اختر اسمك من قائمة النظام —</option>';
             if (Array.isArray(cfg.safetyMembers) && cfg.safetyMembers.length > 0) {
                 cfg.safetyMembers.forEach(mem => {
-                    const opt = document.createElement('option');
-                    opt.value = mem.name;
-                    opt.textContent = `${mem.name} (${mem.role || mem.department || 'سلامة'})`;
-                    ownerSelect.appendChild(opt);
+                    const mName = typeof mem === 'string' ? mem : (mem.name || '');
+                    if (mName) {
+                        const opt = document.createElement('option');
+                        opt.value = mName;
+                        opt.textContent = `${mName} (${mem.role || mem.department || 'سلامة وصحة مهنية'})`;
+                        ownerSelect.appendChild(opt);
+                    }
                 });
             }
             const otherOwnerOpt = document.createElement('option');
@@ -1242,6 +1271,8 @@
                     customOpt.selected = true;
                     ownerSelect.insertBefore(customOpt, ownerSelect.firstChild);
                 }
+            } else if (previousOwner) {
+                ownerSelect.value = previousOwner;
             }
         }
 
@@ -1286,12 +1317,16 @@
                 return;
             }
 
-            const sites = (loadedConfig && loadedConfig.sites) ? loadedConfig.sites : [];
-            const foundSite = sites.find(s => s.name === siteName);
+            const sites = (loadedConfig && (loadedConfig.sites || loadedConfig.factories)) ? (loadedConfig.sites || loadedConfig.factories) : [];
+            const foundSite = sites.find(s => {
+                const sName = (typeof s === 'string') ? s : (s.name || s.siteName || s.factoryName || '');
+                return sName === siteName || sName.toLowerCase() === siteName.toLowerCase();
+            });
 
             placeSelect.innerHTML = '<option value="">— اختر الموقع الفرعي / المكان —</option>';
+            const seenPlaces = new Set();
+
             if (foundSite && Array.isArray(foundSite.places) && foundSite.places.length > 0) {
-                const seenPlaces = new Set();
                 foundSite.places.forEach(rawP => {
                     const pName = getCleanPlaceName(rawP);
                     if (pName && !seenPlaces.has(pName.toLowerCase()) && pName !== '[object Object]') {
@@ -1302,7 +1337,21 @@
                         placeSelect.appendChild(opt);
                     }
                 });
+            } else {
+                // أماكن افتراضية قياسية بحسب نوع الموقع
+                const fallbackPlaces = [
+                    'عنبر الإنتاج الرئيسي', 'منطقة التعبئة والتغليف', 'مستودع المواد الخام',
+                    'مستودع المنتج التام', 'غرفة المحولات واللوحات الكهربائية', 'ورشة الصيانة',
+                    'منطقة الشحن والتفريغ', 'المكاتب الإدارية', 'منظومة طلمبات الحريق'
+                ];
+                fallbackPlaces.forEach(pName => {
+                    const opt = document.createElement('option');
+                    opt.value = pName;
+                    opt.textContent = pName;
+                    placeSelect.appendChild(opt);
+                });
             }
+
             // خيار إدخال يدوي
             const otherOpt = document.createElement('option');
             otherOpt.value = '__OTHER__';
