@@ -1478,55 +1478,114 @@ FireEquipment = {
     },
 
     /**
-     * عرض تبويب الفحوصات الشهرية
+     * عرض تبويب الفحوصات الشهرية مع نظام المراجعة والاعتماد
      */
     async renderInspectionsTab() {
-        // التأكد من تهيئة البيانات قبل العرض
         this.ensureData();
         
-        const inspections = this.getMonthlyInspections();
+        const allInspections = this.getInspections() || [];
+        const pendingCount = allInspections.filter(i => String(i.approvalStatus || '').toLowerCase() === 'pending' || (!i.approvalStatus && i.submittedBy && String(i.submittedBy).includes('Public'))).length;
+        const approvedCount = allInspections.filter(i => String(i.approvalStatus || '').toLowerCase() === 'approved').length;
+        const rejectedCount = allInspections.filter(i => String(i.approvalStatus || '').toLowerCase() === 'rejected').length;
+        const needsRepairCount = allInspections.filter(i => i.status === 'يحتاج صيانة').length;
+        const outOfServiceCount = allInspections.filter(i => i.status === 'خارج الخدمة').length;
+
+        const currentFilter = this.state.inspectionApprovalFilter || 'all';
+        let displayList = allInspections;
+        if (currentFilter === 'pending') {
+            displayList = allInspections.filter(i => String(i.approvalStatus || '').toLowerCase() === 'pending' || (!i.approvalStatus && i.submittedBy && String(i.submittedBy).includes('Public')));
+        } else if (currentFilter === 'approved') {
+            displayList = allInspections.filter(i => String(i.approvalStatus || '').toLowerCase() === 'approved');
+        } else if (currentFilter === 'rejected') {
+            displayList = allInspections.filter(i => String(i.approvalStatus || '').toLowerCase() === 'rejected');
+        }
+
         return `
             <div class="flex flex-col sm:flex-row gap-3 items-center justify-between mb-4">
-                <h3 class="text-xl font-bold text-gray-800">
-                    <i class="fas fa-clipboard-check ml-2"></i>
-                    الفحوصات الشهرية - ${new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' })}
-                </h3>
-                <button id="mobile-scan-qr-btn" class="btn-primary w-full sm:w-auto" style="padding: 1rem 2rem; font-size: 1.1rem;">
-                    <i class="fas fa-qrcode ml-2"></i>
-                    <span class="hidden sm:inline">مسح QR Code للفحص</span>
-                    <span class="sm:hidden">مسح QR</span>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800" style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-clipboard-check text-red-600"></i>
+                        <span>الفحوصات الشهرية لمعدات الإطفاء</span>
+                    </h3>
+                    <p class="text-xs text-gray-500 mt-1">متابعة واعتماد الفحوصات الميدانية المسجلة عبر البوابة ورموز الـ QR</p>
+                </div>
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button id="mobile-scan-qr-btn" class="btn-primary" style="padding: 0.75rem 1.25rem; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-qrcode"></i>
+                        <span>مسح QR للفحص</span>
+                    </button>
+                    <button class="btn-secondary" onclick="FireEquipment.showPublicLinkModal()" style="padding: 0.75rem 1.25rem; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-share-alt text-blue-500"></i>
+                        <span>بوابة الفحص العام</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- كروت الإحصائيات -->
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
+                <div class="content-card text-center" style="cursor: pointer; ${currentFilter === 'all' ? 'border: 2px solid #3b82f6;' : ''}" onclick="FireEquipment.filterInspectionsByApproval('all')">
+                    <div class="text-2xl font-bold text-blue-600" id="inspections-total">${allInspections.length}</div>
+                    <div class="text-xs text-gray-600 mt-1">إجمالي الفحوصات</div>
+                </div>
+                <div class="content-card text-center" style="cursor: pointer; background: #fffbeb; ${currentFilter === 'pending' ? 'border: 2px solid #d97706;' : ''}" onclick="FireEquipment.filterInspectionsByApproval('pending')">
+                    <div class="text-2xl font-bold text-amber-600" id="inspections-pending">${pendingCount}</div>
+                    <div class="text-xs font-bold text-amber-800 mt-1">⏳ بانتظار الاعتماد</div>
+                </div>
+                <div class="content-card text-center" style="cursor: pointer; ${currentFilter === 'approved' ? 'border: 2px solid #16a34a;' : ''}" onclick="FireEquipment.filterInspectionsByApproval('approved')">
+                    <div class="text-2xl font-bold text-green-600" id="inspections-approved">${approvedCount}</div>
+                    <div class="text-xs text-gray-600 mt-1">✅ معتمد رسمياً</div>
+                </div>
+                <div class="content-card text-center">
+                    <div class="text-2xl font-bold text-yellow-600" id="inspections-needs-repair">${needsRepairCount}</div>
+                    <div class="text-xs text-gray-600 mt-1">يحتاج صيانة</div>
+                </div>
+                <div class="content-card text-center" style="cursor: pointer; ${currentFilter === 'rejected' ? 'border: 2px solid #dc2626;' : ''}" onclick="FireEquipment.filterInspectionsByApproval('rejected')">
+                    <div class="text-2xl font-bold text-red-600" id="inspections-rejected">${rejectedCount || outOfServiceCount}</div>
+                    <div class="text-xs text-gray-600 mt-1">خارج الخدمة / مرفوض</div>
+                </div>
+            </div>
+
+            <!-- أزرار الفلترة السريعة -->
+            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                <button class="btn ${currentFilter === 'all' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px;" onclick="FireEquipment.filterInspectionsByApproval('all')">
+                    الكل (${allInspections.length})
                 </button>
-                        </div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                <div class="content-card text-center">
-                    <div class="text-2xl font-bold text-blue-600" id="inspections-total">${inspections.total}</div>
-                    <div class="text-sm text-gray-600 mt-1">إجمالي الفحوصات</div>
-                    </div>
-                <div class="content-card text-center">
-                    <div class="text-2xl font-bold text-green-600" id="inspections-completed">${inspections.completed}</div>
-                    <div class="text-sm text-gray-600 mt-1">صالح</div>
-                        </div>
-                <div class="content-card text-center">
-                    <div class="text-2xl font-bold text-yellow-600" id="inspections-needs-repair">${inspections.needsRepair}</div>
-                    <div class="text-sm text-gray-600 mt-1">يحتاج صيانة</div>
-                    </div>
-                <div class="content-card text-center">
-                    <div class="text-2xl font-bold text-red-600" id="inspections-out-of-service">${inspections.outOfService}</div>
-                    <div class="text-sm text-gray-600 mt-1">خارج الخدمة</div>
-                        </div>
-                    </div>
-                    <div class="content-card">
-                <div class="card-header">
+                <button class="btn ${currentFilter === 'pending' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px; ${currentFilter === 'pending' ? 'background:#d97706; border-color:#d97706;' : ''}" onclick="FireEquipment.filterInspectionsByApproval('pending')">
+                    ⏳ بانتظار الاعتماد (${pendingCount})
+                </button>
+                <button class="btn ${currentFilter === 'approved' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px;" onclick="FireEquipment.filterInspectionsByApproval('approved')">
+                    ✅ المعتمدة (${approvedCount})
+                </button>
+                <button class="btn ${currentFilter === 'rejected' ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 20px;" onclick="FireEquipment.filterInspectionsByApproval('rejected')">
+                    ❌ المرفوضة (${rejectedCount})
+                </button>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                     <h2 class="card-title">
                         <i class="fas fa-clipboard-list ml-2"></i>
                         سجل الفحوصات الشهرية
                     </h2>
+                    <span class="text-xs text-gray-500">عدد الفحوصات المعروضة: ${displayList.length}</span>
                 </div>
                 <div class="card-body" id="monthly-inspections-table">
-                    ${this.renderMonthlyInspectionsTable(inspections.list)}
+                    ${this.renderMonthlyInspectionsTable(displayList)}
                 </div>
             </div>
         `;
+    },
+
+    /**
+     * فلترة الفحوصات حسب حالة الاعتماد
+     */
+    async filterInspectionsByApproval(filterType) {
+        this.state.inspectionApprovalFilter = filterType;
+        const container = document.getElementById('fire-tab-content');
+        if (container) {
+            container.innerHTML = await this.renderInspectionsTab();
+            this.setupEventListeners();
+        }
     },
 
     /**
@@ -1634,33 +1693,65 @@ FireEquipment = {
     },
 
     /**
+     * عرض شارة حالة الاعتماد
+     */
+    getApprovalBadge(status, submittedBy) {
+        const s = String(status || '').toLowerCase();
+        if (s === 'approved') {
+            return `<span class="badge" style="background:#dcfce7; color:#166534; border:1px solid #bbf7d0; font-weight:700; padding:3px 8px; border-radius:6px; font-size:0.8rem;"><i class="fas fa-check-circle ml-1 text-emerald-600"></i> معتمد</span>`;
+        } else if (s === 'rejected') {
+            return `<span class="badge" style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca; font-weight:700; padding:3px 8px; border-radius:6px; font-size:0.8rem;"><i class="fas fa-times-circle ml-1 text-red-600"></i> مرفوض</span>`;
+        } else {
+            return `<span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:700; padding:3px 8px; border-radius:6px; font-size:0.8rem;"><i class="fas fa-clock ml-1 text-amber-600"></i> قيد المراجعة</span>`;
+        }
+    },
+
+    /**
      * عرض جدول الفحوصات الشهرية
      */
     renderMonthlyInspectionsTable(inspections) {
         if (!inspections || inspections.length === 0) {
-            return '<div class="empty-state"><p class="text-gray-500">لا توجد فحوصات مسجلة هذا الشهر</p></div>';
+            return '<div class="empty-state" style="padding: 30px; text-align: center;"><i class="fas fa-clipboard-check text-4xl text-gray-300 mb-2"></i><p class="text-gray-500">لا توجد فحوصات مسجلة تطابق التحديد</p></div>';
         }
 
         const rows = inspections.map(inspection => {
             const asset = this.getAssets().find(a => a.id === inspection.assetId);
             const assetLabel = asset ? `${asset.number || asset.id} - ${asset.location || ''}` : inspection.assetId;
             const statusBadge = this.getStatusBadge(inspection.status);
+            const approvalBadge = this.getApprovalBadge(inspection.approvalStatus, inspection.submittedBy);
             const checkDate = inspection.checkDate ? Utils.formatDate(inspection.checkDate) : '-';
+            const isPending = String(inspection.approvalStatus || '').toLowerCase() === 'pending' || (!inspection.approvalStatus && inspection.submittedBy && String(inspection.submittedBy).includes('Public'));
 
             return `
                 <tr>
                     <td>
                         <div class="font-semibold text-gray-800">${Utils.escapeHTML(assetLabel)}</div>
-                        <div class="text-xs text-gray-400">DeviceID: ${Utils.escapeHTML(inspection.assetId || '-')}</div>
+                        <div class="text-xs text-gray-400" style="direction: ltr; text-align: right;">ID: ${Utils.escapeHTML(inspection.assetId || '-')}</div>
                     </td>
                     <td>${checkDate}</td>
-                    <td>${Utils.escapeHTML(inspection.inspector || '-')}</td>
-                    <td style="word-wrap: break-word;">${statusBadge}</td>
-                    <td style="word-wrap: break-word; max-width: 250px; white-space: normal;">${Utils.escapeHTML(inspection.remarks || '-')}</td>
                     <td>
-                        <button class="btn-icon btn-icon-primary" onclick="FireEquipment.viewInspection('${inspection.id}')" title="عرض التفاصيل">
-                            <i class="fas fa-eye"></i>
-                        </button>
+                        <div class="font-medium text-gray-800">${Utils.escapeHTML(inspection.inspector || '-')}</div>
+                        ${inspection.submittedBy ? `<div class="text-xs text-gray-400">بوابة عامة</div>` : ''}
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td>${approvalBadge}</td>
+                    <td style="word-wrap: break-word; max-width: 180px; white-space: normal; font-size: 0.85rem;">
+                        ${Utils.escapeHTML(inspection.remarks || '-')}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <button class="btn-icon btn-icon-primary" onclick="FireEquipment.viewInspection('${inspection.id}')" title="عرض التفاصيل الكاملة">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${isPending ? `
+                                <button class="btn-icon" style="color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0;" onclick="FireEquipment.approveInspection('${inspection.id}')" title="اعتماد الفحص وتحديث السجل">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn-icon" style="color: #dc2626; background: #fef2f2; border: 1px solid #fecaca;" onclick="FireEquipment.rejectInspection('${inspection.id}')" title="رفض الفحص الميداني">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            ` : ''}
+                        </div>
                     </td>
                 </tr>
             `;
@@ -1672,11 +1763,12 @@ FireEquipment = {
                     <thead>
                         <tr>
                             <th style="min-width: 150px;">الجهاز</th>
-                            <th style="min-width: 120px;">تاريخ الفحص</th>
-                            <th style="min-width: 120px;">المفتش</th>
-                            <th style="min-width: 100px;">الحالة</th>
-                            <th style="min-width: 200px; word-wrap: break-word;">ملاحظات</th>
-                            <th style="min-width: 100px;">الإجراءات</th>
+                            <th style="min-width: 110px;">تاريخ الفحص</th>
+                            <th style="min-width: 130px;">المفتش</th>
+                            <th style="min-width: 100px;">الحالة الفنية</th>
+                            <th style="min-width: 110px;">حالة الاعتماد</th>
+                            <th style="min-width: 160px; word-wrap: break-word;">الملاحظات</th>
+                            <th style="min-width: 120px;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -1686,7 +1778,7 @@ FireEquipment = {
     },
 
     /**
-     * عرض تفاصيل فحص
+     * عرض تفاصيل فحص مع إجراءات الاعتماد
      */
     viewInspection(inspectionId) {
         const inspection = this.getInspections().find(i => i.id === inspectionId);
@@ -1697,72 +1789,246 @@ FireEquipment = {
 
         const asset = this.getAssets().find(a => a.id === inspection.assetId);
         const assetLabel = asset ? `${asset.number || asset.id} - ${asset.location || ''}` : inspection.assetId;
+        const isPending = String(inspection.approvalStatus || '').toLowerCase() === 'pending' || (!inspection.approvalStatus && inspection.submittedBy && String(inspection.submittedBy).includes('Public'));
+
+        // معالجة المرفقات
+        let attachmentsList = [];
+        if (inspection.attachments) {
+            try {
+                attachmentsList = typeof inspection.attachments === 'string' ? JSON.parse(inspection.attachments) : inspection.attachments;
+            } catch(e) {}
+        }
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay fire-modal';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 700px;">
-                <div class="modal-header modal-header-centered">
-                    <h2 class="modal-title">
-                        <i class="fas fa-clipboard-check"></i>
-                        تفاصيل الفحص الشهري
-                    </h2>
-                    <button class="modal-close" onclick="FireEquipment.confirmClose(this)">
+            <div class="modal-content" style="max-width: 720px; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+                <div class="modal-header" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(220, 38, 38, 0.2); border: 1px solid rgba(220, 38, 38, 0.4); display: flex; align-items: center; justify-content: center; color: #f87171;">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div>
+                            <h2 class="modal-title" style="color: #ffffff; font-size: 1.15rem; font-weight: 700; margin: 0 0 2px 0;">تفاصيل الفحص الشهري</h2>
+                            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">كود الفحص: ${Utils.escapeHTML(inspection.id)}</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" style="color: #94a3b8; font-size: 1.25rem;" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <div class="space-y-4">
+                <div class="modal-body" style="padding: 22px; background: #f8fafc;">
+                    <!-- شريط حالة الاعتماد -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; padding: 12px 16px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 16px;">
+                        <span style="font-weight: 700; color: #334155; font-size: 0.9rem;">حالة اعتماد الفحص:</span>
+                        <div>${this.getApprovalBadge(inspection.approvalStatus, inspection.submittedBy)}</div>
+                    </div>
+
+                    <div class="space-y-4" style="background: #ffffff; padding: 18px; border-radius: 12px; border: 1px solid #e2e8f0;">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">الجهاز:</label>
-                                <p class="text-gray-800">${Utils.escapeHTML(assetLabel)}</p>
+                                <label class="text-xs font-semibold text-gray-500">الجهاز والموقع:</label>
+                                <p class="text-gray-900 font-bold mt-1">${Utils.escapeHTML(assetLabel)}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">DeviceID:</label>
-                                <p class="text-gray-800">${Utils.escapeHTML(inspection.assetId || '-')}</p>
+                                <label class="text-xs font-semibold text-gray-500">كود الأصل (DeviceID):</label>
+                                <p class="text-gray-900 font-bold mt-1" style="direction: ltr; text-align: right;">${Utils.escapeHTML(inspection.assetId || '-')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">تاريخ الفحص:</label>
-                                <p class="text-gray-800">${inspection.checkDate ? Utils.formatDate(inspection.checkDate) : '-'}</p>
+                                <label class="text-xs font-semibold text-gray-500">تاريخ الفحص:</label>
+                                <p class="text-gray-800 mt-1">${inspection.checkDate ? Utils.formatDate(inspection.checkDate) : '-'}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">المفتش:</label>
-                                <p class="text-gray-800">${Utils.escapeHTML(inspection.inspector || '-')}</p>
+                                <label class="text-xs font-semibold text-gray-500">مسؤول / مفتش السلامة:</label>
+                                <p class="text-gray-800 font-bold mt-1">${Utils.escapeHTML(inspection.inspector || '-')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">الحالة:</label>
-                                <p class="text-gray-800">${this.getStatusBadge(inspection.status)}</p>
+                                <label class="text-xs font-semibold text-gray-500">الحالة التشغيلية للجهاز:</label>
+                                <p class="mt-1">${this.getStatusBadge(inspection.status)}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">قراءة العداد / الضغط:</label>
-                                <p class="text-gray-800">${Utils.escapeHTML(inspection.gaugeReading || '-')}</p>
+                                <label class="text-xs font-semibold text-gray-500">مؤشر عداد الضغط:</label>
+                                <p class="text-gray-800 mt-1">${Utils.escapeHTML(inspection.gaugeReading || 'سليم')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">صمام وتيلة الأمان:</label>
-                                <p class="text-gray-800">${inspection.sealIntact === true ? 'سليم' :
-                inspection.sealIntact === false ? 'مكسور' :
-                    'غير محدد'
-            }</p>
+                                <label class="text-xs font-semibold text-gray-500">صمام وتيلة الأمان:</label>
+                                <p class="text-gray-800 font-bold mt-1">${Utils.escapeHTML(inspection.sealIntact === true ? 'سليم' : inspection.sealIntact === false ? 'مكسور' : (inspection.sealIntact || 'سليم'))}</p>
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-gray-500">الخرطوم والقاذف / جسم الأسطوانة:</label>
+                                <p class="text-gray-800 mt-1">${Utils.escapeHTML(inspection.hoseCondition || inspection.bodyCondition || 'سليم')}</p>
                             </div>
                         </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">الملاحظات:</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(inspection.remarks || '-')}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">الإجراءات المتخذة:</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(inspection.actions || '-')}</p>
-                        </div>
+
+                        ${inspection.remarks ? `
+                        <div style="border-top: 1px solid #f1f5f9; padding-top: 10px;">
+                            <label class="text-xs font-semibold text-gray-500">الملاحظات الميدانية:</label>
+                            <p class="text-gray-800 mt-1 bg-gray-50 p-2 rounded">${Utils.escapeHTML(inspection.remarks)}</p>
+                        </div>` : ''}
+
+                        ${inspection.actions ? `
+                        <div style="border-top: 1px solid #f1f5f9; padding-top: 10px;">
+                            <label class="text-xs font-semibold text-gray-500">الإجراءات المتخذة:</label>
+                            <p class="text-gray-800 mt-1 bg-gray-50 p-2 rounded">${Utils.escapeHTML(inspection.actions)}</p>
+                        </div>` : ''}
+
+                        <!-- بيانات التدقيق والاعتماد -->
+                        ${inspection.approvedBy ? `
+                        <div style="border-top: 1px solid #dcfce7; background: #f0fdf4; padding: 10px 14px; border-radius: 8px; margin-top: 10px;">
+                            <span class="text-xs font-bold text-green-800">✅ تم الاعتماد بواسطة:</span>
+                            <span class="text-xs text-green-900 font-bold mr-1">${Utils.escapeHTML(inspection.approvedBy)}</span>
+                            ${inspection.approvedAt ? `<span class="text-xs text-green-700">بتاريخ (${Utils.formatDate(inspection.approvedAt)})</span>` : ''}
+                        </div>` : ''}
+
+                        ${inspection.rejectedBy ? `
+                        <div style="border-top: 1px solid #fee2e2; background: #fef2f2; padding: 10px 14px; border-radius: 8px; margin-top: 10px;">
+                            <span class="text-xs font-bold text-red-800">❌ تم الرفض بواسطة:</span>
+                            <span class="text-xs text-red-900 font-bold mr-1">${Utils.escapeHTML(inspection.rejectedBy)}</span>
+                            <p class="text-xs text-red-700 mt-1">السبب: ${Utils.escapeHTML(inspection.reviewNotes || '-')}</p>
+                        </div>` : ''}
+
+                        <!-- معاينة الصورة المرفقة إن وُجدت -->
+                        ${attachmentsList && attachmentsList.length > 0 ? `
+                        <div style="border-top: 1px solid #f1f5f9; padding-top: 10px;">
+                            <label class="text-xs font-semibold text-gray-500 mb-2 block">الصورة المرفقة من الفحص الميداني:</label>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                ${attachmentsList.map(att => `
+                                    <a href="${att.url}" target="_blank" style="display: inline-block; border: 1.5px solid #cbd5e1; border-radius: 8px; overflow: hidden; max-width: 200px;">
+                                        <img src="${att.url}" alt="صورة الفحص" style="max-width: 100%; max-height: 140px; display: block;">
+                                    </a>
+                                `).join('')}
+                            </div>
+                        </div>` : ''}
                     </div>
                 </div>
-                <div class="modal-footer form-actions-centered">
-                    <button class="btn-secondary" onclick="FireEquipment.confirmClose(this)">إغلاق</button>
+                <div class="modal-footer" style="padding: 16px 24px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; gap: 8px;">
+                        ${isPending ? `
+                            <button type="button" class="btn-primary" style="background: #16a34a; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px;" onclick="FireEquipment.approveInspection('${inspection.id}', this)">
+                                <i class="fas fa-check"></i> اعتماد وتحديث سجل الطفاية
+                            </button>
+                            <button type="button" class="btn-danger" style="background: #dc2626; color:#ffffff; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; border:none;" onclick="FireEquipment.rejectInspection('${inspection.id}', this)">
+                                <i class="fas fa-times"></i> رفض الفحص
+                            </button>
+                        ` : ''}
+                    </div>
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
                 </div>
             </div>
         `;
 
         document.body.appendChild(modal);
+    },
+
+    /**
+     * اعتماد الفحص الشهري وتحديث سجل الطفاية
+     */
+    async approveInspection(inspectionId, btnEl) {
+        if (!confirm('هل أنت متأكد من اعتماد نتيجة هذا الفحص وتحديث السجل الرسمي للطفاية؟')) {
+            return;
+        }
+
+        try {
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الاعتماد...';
+            }
+
+            const currentUser = AppState.currentUser || {};
+            const res = await GoogleIntegration.sendRequest({
+                action: 'approveFireEquipmentInspection',
+                data: {
+                    inspectionId: inspectionId,
+                    approverData: {
+                        name: currentUser.name || currentUser.fullName || currentUser.userName || 'مدير النظام',
+                        id: currentUser.id || currentUser.userId || '',
+                        role: currentUser.role || 'admin'
+                    },
+                    reviewNotes: 'تم الاعتماد الميداني'
+                }
+            });
+
+            if (res && res.success) {
+                if (typeof Notification !== 'undefined') Notification.success(res.message || 'تم اعتماد الفحص الشهري بنجاح');
+                
+                // تحديث البيانات محلياً
+                const inspections = this.getInspections();
+                const insp = inspections.find(i => i.id === inspectionId);
+                if (insp) {
+                    insp.approvalStatus = 'approved';
+                    insp.approvedBy = currentUser.name || 'مدير النظام';
+                    insp.approvedAt = new Date().toISOString();
+                }
+
+                // إغلاق أي نافذة مفتوحة
+                const modal = document.querySelector('.modal-overlay.fire-modal');
+                if (modal) modal.remove();
+
+                // تحديث البيانات من السيرفر وعرض الجدول
+                await this.loadFireEquipmentDataAsync();
+                await this.refreshCurrentTab();
+            } else {
+                if (typeof Notification !== 'undefined') Notification.error(res?.message || 'تعذر اعتماد الفحص');
+                if (btnEl) btnEl.disabled = false;
+            }
+        } catch (err) {
+            if (typeof Notification !== 'undefined') Notification.error('حدث خطأ أثناء اعتماد الفحص: ' + err.message);
+            if (btnEl) btnEl.disabled = false;
+        }
+    },
+
+    /**
+     * رفض الفحص الشهري مع كتابة السبب
+     */
+    async rejectInspection(inspectionId, btnEl) {
+        const reason = prompt('يرجى كتابة سبب رفض هذا الفحص الميداني (أو طلب إعادة الفحص):');
+        if (reason === null) return;
+
+        try {
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الرفض...';
+            }
+
+            const currentUser = AppState.currentUser || {};
+            const res = await GoogleIntegration.sendRequest({
+                action: 'rejectFireEquipmentInspection',
+                data: {
+                    inspectionId: inspectionId,
+                    approverData: {
+                        name: currentUser.name || currentUser.fullName || currentUser.userName || 'مدير النظام',
+                        id: currentUser.id || currentUser.userId || '',
+                        role: currentUser.role || 'admin'
+                    },
+                    reason: reason || 'مرفوض - يلزم إعادة الفحص'
+                }
+            });
+
+            if (res && res.success) {
+                if (typeof Notification !== 'undefined') Notification.success(res.message || 'تم توثيق رفض الفحص بنجاح');
+                
+                const inspections = this.getInspections();
+                const insp = inspections.find(i => i.id === inspectionId);
+                if (insp) {
+                    insp.approvalStatus = 'rejected';
+                    insp.rejectedBy = currentUser.name || 'مدير النظام';
+                    insp.rejectedAt = new Date().toISOString();
+                    insp.reviewNotes = reason;
+                }
+
+                const modal = document.querySelector('.modal-overlay.fire-modal');
+                if (modal) modal.remove();
+
+                await this.loadFireEquipmentDataAsync();
+                await this.refreshCurrentTab();
+            } else {
+                if (typeof Notification !== 'undefined') Notification.error(res?.message || 'تعذر رفض الفحص');
+                if (btnEl) btnEl.disabled = false;
+            }
+        } catch (err) {
+            if (typeof Notification !== 'undefined') Notification.error('حدث خطأ أثناء رفض الفحص: ' + err.message);
+            if (btnEl) btnEl.disabled = false;
+        }
     },
 
     /**

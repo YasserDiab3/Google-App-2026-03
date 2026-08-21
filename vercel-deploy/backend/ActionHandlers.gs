@@ -3777,6 +3777,30 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'approveFireEquipmentInspection': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = approveFireEquipmentInspection(payload.inspectionId || payload.id, payload.approverData || actorUserData, payload.reviewNotes || payload.notes);
+            return;
+        })();
+        return result;
+    },
+    'rejectFireEquipmentInspection': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = rejectFireEquipmentInspection(payload.inspectionId || payload.id, payload.approverData || actorUserData, payload.reason || payload.reviewNotes);
+            return;
+        })();
+        return result;
+    },
+    'getPendingFireInspections': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = getPendingFireInspections(spreadsheetId);
+            return;
+        })();
+        return result;
+    },
     'saveOrUpdateFireEquipmentAsset': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

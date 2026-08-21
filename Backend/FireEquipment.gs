@@ -1063,6 +1063,11 @@ function submitPublicFireInspection(payload) {
             attachments: (typeof stringifyAttachments === 'function') ? stringifyAttachments(attachments) : JSON.stringify(attachments),
             submittedBy: 'بوابة الفحص العام (Public Fire Inspection Portal)',
             submittedAt: new Date().toISOString(),
+            approvalStatus: 'pending', // قيد المراجعة والاعتماد
+            approvedBy: '',
+            approvedById: '',
+            approvedAt: '',
+            reviewNotes: '',
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -1073,28 +1078,161 @@ function submitPublicFireInspection(payload) {
             return addResult || { success: false, message: 'فشل حفظ سجل الفحص في جدول الفحوصات' };
         }
 
-        // تحديث حالة الأصل في جدول FireEquipmentAssets مباشرة بسرعة وخفة
-        try {
-            var inspDateObj = new Date(checkDate);
-            var nextInspDateObj = new Date(inspDateObj);
-            nextInspDateObj.setMonth(nextInspDateObj.getMonth() + 1);
-            var nextInspectionStr = Utilities.formatDate(nextInspDateObj, 'GMT+2', 'yyyy-MM-dd');
-
-            updateAssetInspectionStatusFast(assetId, checkDate, statusVal, nextInspectionStr, spreadsheetId);
-        } catch (assetUpdateErr) {
-            Logger.log('Warning: Could not update asset status on public inspection: ' + assetUpdateErr.toString());
-        }
-
         return {
             success: true,
             id: inspectionId,
             assetId: assetId,
-            message: 'تم تسجيل وتوثيق الفحص الشهري لجهاز الإطفاء بنجاح.',
+            approvalStatus: 'pending',
+            message: 'تم تسجيل وتوثيق الفحص الشهري لجهاز الإطفاء بنجاح (بانتظار المراجعة والاعتماد).',
             record: inspectionRecord
         };
     } catch (error) {
         Logger.log('Error in submitPublicFireInspection: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء تسجيل الفحص: ' + error.toString() };
+    }
+}
+
+/**
+ * اعتماد الفحص الشهري لمعدة الإطفاء وتحديث حالة وسجل الطفاية رسمياً
+ */
+function approveFireEquipmentInspection(inspectionId, approverData, reviewNotes) {
+    try {
+        var cleanId = String(inspectionId || '').trim();
+        if (!cleanId) return { success: false, message: 'يرجى تحديد معرف الفحص المراد اعتماده' };
+
+        var spreadsheetId = getSpreadsheetId();
+        var sheetName = 'FireEquipmentInspections';
+        var inspections = readFromSheet(sheetName, spreadsheetId) || [];
+        var targetIndex = -1;
+
+        for (var i = 0; i < inspections.length; i++) {
+            if (String(inspections[i].id || '').trim() === cleanId) {
+                targetIndex = i;
+                break;
+            }
+        }
+
+        if (targetIndex === -1) {
+            return { success: false, message: 'لم يتم العثور على سجل الفحص المحدد' };
+        }
+
+        var insp = inspections[targetIndex];
+        var approver = approverData || {};
+        var approverName = String(approver.name || approver.fullName || approver.userName || approver.email || 'مدير النظام').trim();
+        var approverId = String(approver.id || approver.userId || '').trim();
+        var nowIso = new Date().toISOString();
+
+        insp.approvalStatus = 'approved';
+        insp.approvedBy = approverName;
+        insp.approvedById = approverId;
+        insp.approvedAt = nowIso;
+        insp.reviewNotes = reviewNotes || insp.reviewNotes || 'تم الاعتماد';
+        insp.updatedAt = new Date();
+
+        var saveRes = saveToSheet(sheetName, inspections, spreadsheetId);
+        if (!saveRes || !saveRes.success) {
+            return saveRes || { success: false, message: 'تعذر حفظ اعتماد الفحص' };
+        }
+
+        // تحديث حالة الأصل الرسمي وتاريخ استحقاق الفحص القادم (+1 شهر)
+        try {
+            var checkDate = insp.checkDate || Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd');
+            var statusVal = insp.status || 'صالح';
+            var inspDateObj = new Date(checkDate);
+            var nextInspDateObj = new Date(inspDateObj);
+            nextInspDateObj.setMonth(nextInspDateObj.getMonth() + 1);
+            var nextInspectionStr = Utilities.formatDate(nextInspDateObj, 'GMT+2', 'yyyy-MM-dd');
+
+            updateAssetInspectionStatusFast(insp.assetId, checkDate, statusVal, nextInspectionStr, spreadsheetId);
+        } catch (assetUpdateErr) {
+            Logger.log('Warning updating asset on approval: ' + assetUpdateErr.toString());
+        }
+
+        return {
+            success: true,
+            message: 'تم اعتماد الفحص الشهري وتحديث سجل وحالة جهاز الإطفاء بنجاح.',
+            record: insp
+        };
+    } catch (error) {
+        Logger.log('Error in approveFireEquipmentInspection: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء اعتماد الفحص: ' + error.toString() };
+    }
+}
+
+/**
+ * رفض الفحص الشهري لمعدة الإطفاء مع توثيق سبب الرفض
+ */
+function rejectFireEquipmentInspection(inspectionId, approverData, reason) {
+    try {
+        var cleanId = String(inspectionId || '').trim();
+        if (!cleanId) return { success: false, message: 'يرجى تحديد معرف الفحص المراد رفضه' };
+
+        var spreadsheetId = getSpreadsheetId();
+        var sheetName = 'FireEquipmentInspections';
+        var inspections = readFromSheet(sheetName, spreadsheetId) || [];
+        var targetIndex = -1;
+
+        for (var i = 0; i < inspections.length; i++) {
+            if (String(inspections[i].id || '').trim() === cleanId) {
+                targetIndex = i;
+                break;
+            }
+        }
+
+        if (targetIndex === -1) {
+            return { success: false, message: 'لم يتم العثور على سجل الفحص المحدد' };
+        }
+
+        var insp = inspections[targetIndex];
+        var approver = approverData || {};
+        var approverName = String(approver.name || approver.fullName || approver.userName || approver.email || 'مدير النظام').trim();
+        var approverId = String(approver.id || approver.userId || '').trim();
+        var nowIso = new Date().toISOString();
+
+        insp.approvalStatus = 'rejected';
+        insp.rejectedBy = approverName;
+        insp.rejectedById = approverId;
+        insp.rejectedAt = nowIso;
+        insp.reviewNotes = reason || 'مرفوض - يلزم إعادة الفحص الميداني';
+        insp.updatedAt = new Date();
+
+        var saveRes = saveToSheet(sheetName, inspections, spreadsheetId);
+        if (!saveRes || !saveRes.success) {
+            return saveRes || { success: false, message: 'تعذر حفظ رفض الفحص' };
+        }
+
+        return {
+            success: true,
+            message: 'تم رفض الفحص الشهري وتوثيق الملاحظات بنجاح.',
+            record: insp
+        };
+    } catch (error) {
+        Logger.log('Error in rejectFireEquipmentInspection: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء رفض الفحص: ' + error.toString() };
+    }
+}
+
+/**
+ * الحصول على الفحوصات الشهرية المعلقة قيد الاعتماد
+ */
+function getPendingFireInspections(spreadsheetId) {
+    try {
+        var sheetName = 'FireEquipmentInspections';
+        var data = readFromSheet(sheetName, spreadsheetId || getSpreadsheetId()) || [];
+        var pending = data.filter(function(i) {
+            return String(i.approvalStatus || '').toLowerCase() === 'pending' || (!i.approvalStatus && i.submittedBy && String(i.submittedBy).indexOf('Public') !== -1);
+        });
+
+        pending.sort(function(a, b) {
+            var dateA = new Date(a.createdAt || a.checkDate || 0);
+            var dateB = new Date(b.createdAt || b.checkDate || 0);
+            return dateB - dateA;
+        });
+
+        return { success: true, data: pending, count: pending.length };
+    } catch (error) {
+        Logger.log('Error in getPendingFireInspections: ' + error.toString());
+        return { success: false, message: 'تعذر جلب الفحوصات المعلقة: ' + error.toString(), data: [] };
     }
 }
 
