@@ -1093,7 +1093,7 @@ function submitPublicFireInspection(payload) {
 }
 
 /**
- * اعتماد الفحص الشهري لمعدة الإطفاء وتحديث حالة وسجل الطفاية رسمياً
+ * اعتماد الفحص الشهري لمعدة الإطفاء وتحديث حالة وسجل الطفاية رسمياً بسرعة عالية
  */
 function approveFireEquipmentInspection(inspectionId, approverData, reviewNotes) {
     try {
@@ -1101,57 +1101,78 @@ function approveFireEquipmentInspection(inspectionId, approverData, reviewNotes)
         if (!cleanId) return { success: false, message: 'يرجى تحديد معرف الفحص المراد اعتماده' };
 
         var spreadsheetId = getSpreadsheetId();
-        var sheetName = 'FireEquipmentInspections';
-        var inspections = readFromSheet(sheetName, spreadsheetId) || [];
-        var targetIndex = -1;
+        var ss = SpreadsheetApp.openById(spreadsheetId);
+        var sheet = ss.getSheetByName('FireEquipmentInspections');
+        if (!sheet) return { success: false, message: 'جدول الفحوصات غير موجود' };
 
-        for (var i = 0; i < inspections.length; i++) {
-            if (String(inspections[i].id || '').trim() === cleanId) {
-                targetIndex = i;
+        var lastRow = sheet.getLastRow();
+        if (lastRow < 2) return { success: false, message: 'لا توجد بيانات فحوصات' };
+
+        var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        var idColIdx = headers.indexOf('id');
+        var approvalStatusColIdx = headers.indexOf('approvalStatus');
+        var approvedByColIdx = headers.indexOf('approvedBy');
+        var approvedByIdColIdx = headers.indexOf('approvedById');
+        var approvedAtColIdx = headers.indexOf('approvedAt');
+        var reviewNotesColIdx = headers.indexOf('reviewNotes');
+        var updatedColIdx = headers.indexOf('updatedAt');
+        var assetIdColIdx = headers.indexOf('assetId');
+        var statusColIdx = headers.indexOf('status');
+        var checkDateColIdx = headers.indexOf('checkDate');
+
+        if (idColIdx === -1) return { success: false, message: 'عمود id غير موجود' };
+
+        var idValues = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
+        var targetRowNum = -1;
+        var cleanTarget = cleanId.toLowerCase();
+
+        for (var r = 0; r < idValues.length; r++) {
+            var rowId = String(idValues[r][0] || '').trim().toLowerCase();
+            if (rowId === cleanTarget) {
+                targetRowNum = r + 2;
                 break;
             }
         }
 
-        if (targetIndex === -1) {
+        if (targetRowNum === -1) {
             return { success: false, message: 'لم يتم العثور على سجل الفحص المحدد' };
         }
 
-        var insp = inspections[targetIndex];
         var approver = approverData || {};
         var approverName = String(approver.name || approver.fullName || approver.userName || approver.email || 'مدير النظام').trim();
         var approverId = String(approver.id || approver.userId || '').trim();
         var nowIso = new Date().toISOString();
 
-        insp.approvalStatus = 'approved';
-        insp.approvedBy = approverName;
-        insp.approvedById = approverId;
-        insp.approvedAt = nowIso;
-        insp.reviewNotes = reviewNotes || insp.reviewNotes || 'تم الاعتماد';
-        insp.updatedAt = new Date();
+        if (approvalStatusColIdx !== -1) sheet.getRange(targetRowNum, approvalStatusColIdx + 1).setValue('approved');
+        if (approvedByColIdx !== -1) sheet.getRange(targetRowNum, approvedByColIdx + 1).setValue(approverName);
+        if (approvedByIdColIdx !== -1) sheet.getRange(targetRowNum, approvedByIdColIdx + 1).setValue(approverId);
+        if (approvedAtColIdx !== -1) sheet.getRange(targetRowNum, approvedAtColIdx + 1).setValue(nowIso);
+        if (reviewNotesColIdx !== -1 && reviewNotes) sheet.getRange(targetRowNum, reviewNotesColIdx + 1).setValue(reviewNotes);
+        if (updatedColIdx !== -1) sheet.getRange(targetRowNum, updatedColIdx + 1).setValue(new Date());
 
-        var saveRes = saveToSheet(sheetName, inspections, spreadsheetId);
-        if (!saveRes || !saveRes.success) {
-            return saveRes || { success: false, message: 'تعذر حفظ اعتماد الفحص' };
+        // تحديث الأصل في جدول FireEquipmentAssets
+        var assetId = assetIdColIdx !== -1 ? String(sheet.getRange(targetRowNum, assetIdColIdx + 1).getValue() || '').trim() : '';
+        var statusVal = statusColIdx !== -1 ? String(sheet.getRange(targetRowNum, statusColIdx + 1).getValue() || 'صالح').trim() : 'صالح';
+        var checkDate = checkDateColIdx !== -1 ? String(sheet.getRange(targetRowNum, checkDateColIdx + 1).getValue() || '').trim() : Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd');
+
+        if (assetId) {
+            try {
+                var inspDateObj = new Date(checkDate || new Date());
+                var nextInspDateObj = new Date(inspDateObj);
+                nextInspDateObj.setMonth(nextInspDateObj.getMonth() + 1);
+                var nextInspectionStr = Utilities.formatDate(nextInspDateObj, 'GMT+2', 'yyyy-MM-dd');
+                updateAssetInspectionStatusFast(assetId, checkDate, statusVal, nextInspectionStr, spreadsheetId);
+            } catch (assetErr) {
+                Logger.log('Warning updating asset fast: ' + assetErr.toString());
+            }
         }
 
-        // تحديث حالة الأصل الرسمي وتاريخ استحقاق الفحص القادم (+1 شهر)
-        try {
-            var checkDate = insp.checkDate || Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd');
-            var statusVal = insp.status || 'صالح';
-            var inspDateObj = new Date(checkDate);
-            var nextInspDateObj = new Date(inspDateObj);
-            nextInspDateObj.setMonth(nextInspDateObj.getMonth() + 1);
-            var nextInspectionStr = Utilities.formatDate(nextInspDateObj, 'GMT+2', 'yyyy-MM-dd');
-
-            updateAssetInspectionStatusFast(insp.assetId, checkDate, statusVal, nextInspectionStr, spreadsheetId);
-        } catch (assetUpdateErr) {
-            Logger.log('Warning updating asset on approval: ' + assetUpdateErr.toString());
-        }
+        SpreadsheetApp.flush();
 
         return {
             success: true,
             message: 'تم اعتماد الفحص الشهري وتحديث سجل وحالة جهاز الإطفاء بنجاح.',
-            record: insp
+            record: { id: cleanId, approvalStatus: 'approved', approvedBy: approverName, approvedAt: nowIso }
         };
     } catch (error) {
         Logger.log('Error in approveFireEquipmentInspection: ' + error.toString());
@@ -1160,7 +1181,7 @@ function approveFireEquipmentInspection(inspectionId, approverData, reviewNotes)
 }
 
 /**
- * رفض الفحص الشهري لمعدة الإطفاء مع توثيق سبب الرفض
+ * رفض الفحص الشهري لمعدة الإطفاء بسرعة عالية مع توثيق سبب الرفض
  */
 function rejectFireEquipmentInspection(inspectionId, approverData, reason) {
     try {
@@ -1168,43 +1189,58 @@ function rejectFireEquipmentInspection(inspectionId, approverData, reason) {
         if (!cleanId) return { success: false, message: 'يرجى تحديد معرف الفحص المراد رفضه' };
 
         var spreadsheetId = getSpreadsheetId();
-        var sheetName = 'FireEquipmentInspections';
-        var inspections = readFromSheet(sheetName, spreadsheetId) || [];
-        var targetIndex = -1;
+        var ss = SpreadsheetApp.openById(spreadsheetId);
+        var sheet = ss.getSheetByName('FireEquipmentInspections');
+        if (!sheet) return { success: false, message: 'جدول الفحوصات غير موجود' };
 
-        for (var i = 0; i < inspections.length; i++) {
-            if (String(inspections[i].id || '').trim() === cleanId) {
-                targetIndex = i;
+        var lastRow = sheet.getLastRow();
+        if (lastRow < 2) return { success: false, message: 'لا توجد بيانات فحوصات' };
+
+        var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        var idColIdx = headers.indexOf('id');
+        var approvalStatusColIdx = headers.indexOf('approvalStatus');
+        var rejectedByColIdx = headers.indexOf('rejectedBy');
+        var rejectedByIdColIdx = headers.indexOf('rejectedById');
+        var rejectedAtColIdx = headers.indexOf('rejectedAt');
+        var reviewNotesColIdx = headers.indexOf('reviewNotes');
+        var updatedColIdx = headers.indexOf('updatedAt');
+
+        if (idColIdx === -1) return { success: false, message: 'عمود id غير موجود' };
+
+        var idValues = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues();
+        var targetRowNum = -1;
+        var cleanTarget = cleanId.toLowerCase();
+
+        for (var r = 0; r < idValues.length; r++) {
+            var rowId = String(idValues[r][0] || '').trim().toLowerCase();
+            if (rowId === cleanTarget) {
+                targetRowNum = r + 2;
                 break;
             }
         }
 
-        if (targetIndex === -1) {
+        if (targetRowNum === -1) {
             return { success: false, message: 'لم يتم العثور على سجل الفحص المحدد' };
         }
 
-        var insp = inspections[targetIndex];
         var approver = approverData || {};
         var approverName = String(approver.name || approver.fullName || approver.userName || approver.email || 'مدير النظام').trim();
         var approverId = String(approver.id || approver.userId || '').trim();
         var nowIso = new Date().toISOString();
 
-        insp.approvalStatus = 'rejected';
-        insp.rejectedBy = approverName;
-        insp.rejectedById = approverId;
-        insp.rejectedAt = nowIso;
-        insp.reviewNotes = reason || 'مرفوض - يلزم إعادة الفحص الميداني';
-        insp.updatedAt = new Date();
+        if (approvalStatusColIdx !== -1) sheet.getRange(targetRowNum, approvalStatusColIdx + 1).setValue('rejected');
+        if (rejectedByColIdx !== -1) sheet.getRange(targetRowNum, rejectedByColIdx + 1).setValue(approverName);
+        if (rejectedByIdColIdx !== -1) sheet.getRange(targetRowNum, rejectedByIdColIdx + 1).setValue(approverId);
+        if (rejectedAtColIdx !== -1) sheet.getRange(targetRowNum, rejectedAtColIdx + 1).setValue(nowIso);
+        if (reviewNotesColIdx !== -1) sheet.getRange(targetRowNum, reviewNotesColIdx + 1).setValue(reason || 'مرفوض');
+        if (updatedColIdx !== -1) sheet.getRange(targetRowNum, updatedColIdx + 1).setValue(new Date());
 
-        var saveRes = saveToSheet(sheetName, inspections, spreadsheetId);
-        if (!saveRes || !saveRes.success) {
-            return saveRes || { success: false, message: 'تعذر حفظ رفض الفحص' };
-        }
+        SpreadsheetApp.flush();
 
         return {
             success: true,
-            message: 'تم رفض الفحص الشهري وتوثيق الملاحظات بنجاح.',
-            record: insp
+            message: 'تم رفض الفحص وتوثيق السبب بنجاح.',
+            record: { id: cleanId, approvalStatus: 'rejected', rejectedBy: approverName, rejectedAt: nowIso, reviewNotes: reason }
         };
     } catch (error) {
         Logger.log('Error in rejectFireEquipmentInspection: ' + error.toString());

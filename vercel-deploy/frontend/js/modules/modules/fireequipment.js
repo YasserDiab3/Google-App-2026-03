@@ -1971,7 +1971,7 @@ FireEquipment = {
     },
 
     /**
-     * اعتماد الفحص الشهري وتحديث سجل الطفاية
+     * اعتماد الفحص الشهري وتحديث سجل الطفاية فورياً مع المزامنة في الخلفية
      */
     async approveInspection(inspectionId, btnEl) {
         if (!confirm('هل أنت متأكد من اعتماد نتيجة هذا الفحص وتحديث السجل الرسمي للطفاية؟')) {
@@ -1979,105 +1979,139 @@ FireEquipment = {
         }
 
         try {
-            if (btnEl) {
-                btnEl.disabled = true;
-                btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الاعتماد...';
+            const currentUser = AppState.currentUser || {};
+            const approverName = currentUser.name || currentUser.fullName || currentUser.userName || 'مدير النظام';
+            const nowIso = new Date().toISOString();
+
+            // 1. تحديث فوري محلي في الذاكرة (Optimistic Update)
+            const inspections = this.getInspections() || [];
+            const insp = inspections.find(i => i.id === inspectionId);
+            if (insp) {
+                insp.approvalStatus = 'approved';
+                insp.approvedBy = approverName;
+                insp.approvedAt = nowIso;
+                insp.reviewNotes = 'تم الاعتماد الميداني';
+
+                // تحديث سجل الأصل المرتبط فوراً
+                if (insp.assetId) {
+                    const assets = this.getAssets() || [];
+                    const asset = assets.find(a => a.id === insp.assetId);
+                    if (asset) {
+                        asset.status = insp.status || 'صالح';
+                        asset.lastInspection = insp.checkDate || nowIso.split('T')[0];
+                        var nextDate = new Date(insp.checkDate || Date.now());
+                        nextDate.setMonth(nextDate.getMonth() + 1);
+                        asset.nextInspection = nextDate.toISOString().split('T')[0];
+                        asset.updatedAt = nowIso;
+                    }
+                }
             }
 
-            const currentUser = AppState.currentUser || {};
-            const res = await GoogleIntegration.sendRequest({
-                action: 'approveFireEquipmentInspection',
-                data: {
-                    inspectionId: inspectionId,
-                    approverData: {
-                        name: currentUser.name || currentUser.fullName || currentUser.userName || 'مدير النظام',
-                        id: currentUser.id || currentUser.userId || '',
-                        role: currentUser.role || 'admin'
-                    },
-                    reviewNotes: 'تم الاعتماد الميداني'
-                }
-            });
+            // حفظ التغيير محلياً فوراً
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
 
-            if (res && res.success) {
-                if (typeof Notification !== 'undefined') Notification.success(res.message || 'تم اعتماد الفحص الشهري بنجاح');
-                
-                // تحديث البيانات محلياً
-                const inspections = this.getInspections();
-                const insp = inspections.find(i => i.id === inspectionId);
-                if (insp) {
-                    insp.approvalStatus = 'approved';
-                    insp.approvedBy = currentUser.name || 'مدير النظام';
-                    insp.approvedAt = new Date().toISOString();
-                }
+            // إغلاق نافذة المعاينة فوراً
+            document.querySelectorAll('.modal-overlay.fire-modal').forEach(m => m.remove());
 
-                // إغلاق أي نافذة مفتوحة
-                const modal = document.querySelector('.modal-overlay.fire-modal');
-                if (modal) modal.remove();
+            // إعادة رسم الجدول والكروت فوراً
+            await this.refreshCurrentTab(true);
 
-                // تحديث البيانات من السيرفر وعرض الجدول
-                await this.loadFireEquipmentDataAsync();
-                await this.refreshCurrentTab();
-            } else {
-                if (typeof Notification !== 'undefined') Notification.error(res?.message || 'تعذر اعتماد الفحص');
-                if (btnEl) btnEl.disabled = false;
+            // إشعار فوري بنجاح الاعتماد
+            if (typeof Notification !== 'undefined') {
+                Notification.success('✅ تم اعتماد الفحص وتحديث سجل جهاز الإطفاء فوراً');
+            }
+
+            // 2. إرسال المزامنة للسيرفر في الخلفية بدون حظر الواجهة (Background Sync)
+            if (typeof GoogleIntegration !== 'undefined' && AppState.googleConfig?.appsScript?.enabled) {
+                GoogleIntegration.sendRequest({
+                    action: 'approveFireEquipmentInspection',
+                    data: {
+                        inspectionId: inspectionId,
+                        approverData: {
+                            name: approverName,
+                            id: currentUser.id || currentUser.userId || '',
+                            role: currentUser.role || 'admin'
+                        },
+                        reviewNotes: 'تم الاعتماد الميداني'
+                    }
+                }).then(res => {
+                    Utils.safeLog('✅ Backend inspection approval sync complete:', res);
+                }).catch(err => {
+                    Utils.safeWarn('⚠️ Background approval sync notice (saved locally):', err);
+                });
             }
         } catch (err) {
-            if (typeof Notification !== 'undefined') Notification.error('حدث خطأ أثناء اعتماد الفحص: ' + err.message);
-            if (btnEl) btnEl.disabled = false;
+            Utils.safeError('Error in approveInspection:', err);
+            if (typeof Notification !== 'undefined') {
+                Notification.error('حدث خطأ: ' + err.message);
+            }
         }
     },
 
     /**
-     * رفض الفحص الشهري مع كتابة السبب
+     * رفض الفحص الشهري مع كتابة السبب فورياً مع المزامنة في الخلفية
      */
     async rejectInspection(inspectionId, btnEl) {
         const reason = prompt('يرجى كتابة سبب رفض هذا الفحص الميداني (أو طلب إعادة الفحص):');
         if (reason === null) return;
 
         try {
-            if (btnEl) {
-                btnEl.disabled = true;
-                btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الرفض...';
+            const currentUser = AppState.currentUser || {};
+            const approverName = currentUser.name || currentUser.fullName || currentUser.userName || 'مدير النظام';
+            const nowIso = new Date().toISOString();
+
+            // 1. تحديث فوري محلي في الذاكرة (Optimistic Update)
+            const inspections = this.getInspections() || [];
+            const insp = inspections.find(i => i.id === inspectionId);
+            if (insp) {
+                insp.approvalStatus = 'rejected';
+                insp.rejectedBy = approverName;
+                insp.rejectedAt = nowIso;
+                insp.reviewNotes = reason || 'مرفوض - يلزم إعادة الفحص';
             }
 
-            const currentUser = AppState.currentUser || {};
-            const res = await GoogleIntegration.sendRequest({
-                action: 'rejectFireEquipmentInspection',
-                data: {
-                    inspectionId: inspectionId,
-                    approverData: {
-                        name: currentUser.name || currentUser.fullName || currentUser.userName || 'مدير النظام',
-                        id: currentUser.id || currentUser.userId || '',
-                        role: currentUser.role || 'admin'
-                    },
-                    reason: reason || 'مرفوض - يلزم إعادة الفحص'
-                }
-            });
+            // حفظ التغيير محلياً فوراً
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
 
-            if (res && res.success) {
-                if (typeof Notification !== 'undefined') Notification.success(res.message || 'تم توثيق رفض الفحص بنجاح');
-                
-                const inspections = this.getInspections();
-                const insp = inspections.find(i => i.id === inspectionId);
-                if (insp) {
-                    insp.approvalStatus = 'rejected';
-                    insp.rejectedBy = currentUser.name || 'مدير النظام';
-                    insp.rejectedAt = new Date().toISOString();
-                    insp.reviewNotes = reason;
-                }
+            // إغلاق نافذة المعاينة فوراً
+            document.querySelectorAll('.modal-overlay.fire-modal').forEach(m => m.remove());
 
-                const modal = document.querySelector('.modal-overlay.fire-modal');
-                if (modal) modal.remove();
+            // إعادة رسم الجدول والكروت فوراً
+            await this.refreshCurrentTab(true);
 
-                await this.loadFireEquipmentDataAsync();
-                await this.refreshCurrentTab();
-            } else {
-                if (typeof Notification !== 'undefined') Notification.error(res?.message || 'تعذر رفض الفحص');
-                if (btnEl) btnEl.disabled = false;
+            // إشعار فوري
+            if (typeof Notification !== 'undefined') {
+                Notification.success('✅ تم توثيق رفض الفحص الميداني فوراً');
+            }
+
+            // 2. إرسال المزامنة للسيرفر في الخلفية بدون حظر الواجهة (Background Sync)
+            if (typeof GoogleIntegration !== 'undefined' && AppState.googleConfig?.appsScript?.enabled) {
+                GoogleIntegration.sendRequest({
+                    action: 'rejectFireEquipmentInspection',
+                    data: {
+                        inspectionId: inspectionId,
+                        approverData: {
+                            name: approverName,
+                            id: currentUser.id || currentUser.userId || '',
+                            role: currentUser.role || 'admin'
+                        },
+                        reason: reason || 'مرفوض - يلزم إعادة الفحص'
+                    }
+                }).then(res => {
+                    Utils.safeLog('✅ Backend inspection rejection sync complete:', res);
+                }).catch(err => {
+                    Utils.safeWarn('⚠️ Background rejection sync notice (saved locally):', err);
+                });
             }
         } catch (err) {
-            if (typeof Notification !== 'undefined') Notification.error('حدث خطأ أثناء رفض الفحص: ' + err.message);
-            if (btnEl) btnEl.disabled = false;
+            Utils.safeError('Error in rejectInspection:', err);
+            if (typeof Notification !== 'undefined') {
+                Notification.error('حدث خطأ: ' + err.message);
+            }
         }
     },
 
