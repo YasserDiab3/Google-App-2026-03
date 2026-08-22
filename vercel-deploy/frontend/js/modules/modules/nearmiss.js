@@ -154,6 +154,10 @@ const NearMiss = {
                             <p class="section-subtitle">توثيق الملاحظات الطارئة وتعزيز معايير السلامة</p>
                         </div>
                         <div class="flex gap-2">
+                            <button id="nearmiss-public-qr-btn" class="btn-secondary flex items-center gap-2" style="background:#4338ca; color:#fff;" onclick="NearMiss.openPublicQrModal()">
+                                <i class="fas fa-qrcode"></i>
+                                <span>النموذج العام ورموز QR 📱</span>
+                            </button>
                             <button id="add-nearmiss-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
                                 تسجيل ملاحظة جديدة

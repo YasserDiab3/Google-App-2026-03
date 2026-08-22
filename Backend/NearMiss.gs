@@ -205,3 +205,185 @@ function deleteNearMiss(nearMissId) {
     }
 }
 
+
+
+/**
+ * استرجاع التكوين لنموذج الحوادث الوشيكة العام
+ */
+function getPublicNearMissConfig() {
+    try {
+        var sheetName = 'NearMiss';
+        var spreadsheetId = getSpreadsheetId();
+        
+        // 1. قراءة المصانع والمواقع
+        var sites = [];
+        try {
+            if (typeof getAllSites === 'function') {
+                sites = getAllSites();
+            } else {
+                var sitesSheet = getSheetByName('ObservationSites') || getSheetByName('Sites');
+                if (sitesSheet) {
+                    var sData = readAllRowsWithHeaders(sitesSheet) || [];
+                    sites = sData.map(function(r) { return r.name || r.siteName || r.factoryName || ''; }).filter(Boolean);
+                }
+            }
+        } catch (sErr) {}
+
+        if (!sites || sites.length === 0) {
+            sites = ['ICAPP-1', 'ICAPP-2', 'ICAPP-3', 'ICAPP-4', 'الموقع العام'];
+        }
+
+        // 2. قراءة الإدارات
+        var departments = [];
+        try {
+            var deptSheet = getSheetByName('Departments');
+            if (deptSheet) {
+                var dData = readAllRowsWithHeaders(deptSheet) || [];
+                departments = dData.map(function(r) { return r.name || r.departmentName || ''; }).filter(Boolean);
+            }
+        } catch (dErr) {}
+
+        if (!departments || departments.length === 0) {
+            departments = ['السلامة والصحة المهنية', 'الإنتاج', 'الصيانة الميكانيكية', 'الصيانة الكهربائية', 'الجودة', 'المخازن واللوجستيات', 'الموارد البشرية', 'المرافق والخدمات العامة'];
+        }
+
+        var logoUrl = '';
+        try {
+            var compSheet = getSheetByName('CompanySettings');
+            if (compSheet) {
+                var cData = readAllRowsWithHeaders(compSheet) || [];
+                if (cData.length > 0 && cData[0].logoUrl) logoUrl = cData[0].logoUrl;
+            }
+        } catch(lErr) {}
+
+        return {
+            success: true,
+            sites: sites.map(function(s) { return typeof s === 'string' ? { name: s, places: [] } : s; }),
+            departments: departments,
+            companyLogo: logoUrl
+        };
+    } catch(e) {
+        return { success: false, message: e.toString() };
+    }
+}
+
+/**
+ * تسجيل حادث وشيك عام من خلال النموذج الميداني
+ */
+function submitPublicNearMiss(payload) {
+    try {
+        if (!payload) return { success: false, message: 'لا توجد بيانات' };
+
+        var sheetName = 'NearMiss';
+        var spreadsheetId = getSpreadsheetId();
+        
+        var id = generateSequentialId('NRM', sheetName);
+        var isoCode = 'NM-' + new Date().getFullYear() + '-' + String(Math.floor(1000 + Math.random() * 9000));
+        
+        var record = {
+            id: id,
+            isoCode: isoCode,
+            type: payload.observationType || payload.type || 'سقوط أشياء',
+            severity: payload.riskLevel || payload.severity || 'متوسط',
+            date: payload.date || new Date().toISOString().split('T')[0],
+            observerName: payload.observerName || 'فاعل خير (سري)',
+            phone: payload.observerPhone || payload.phone || '',
+            location: payload.location || ((payload.siteName || '') + (payload.locationName ? ' - ' + payload.locationName : '')),
+            siteName: payload.siteName || '',
+            subLocation: payload.locationName || payload.subLocation || '',
+            department: payload.responsibleDepartment || payload.department || '',
+            description: payload.details || payload.description || '',
+            potentialConsequences: payload.potentialConsequences || '',
+            correctiveProposed: payload.correctiveAction || '',
+            correctiveDescription: payload.correctiveAction || '',
+            attachments: '[]',
+            status: 'جديد',
+            reportedBy: payload.observerName || 'Public Form',
+            isAnonymous: payload.isAnonymous ? 'نعم' : 'لا',
+            gpsLocation: payload.gpsLocation || '',
+            gpsMapLink: payload.gpsMapLink || '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        // رفع الصورة المرفقة إن وُجدت
+        if (payload.image && String(payload.image).startsWith('data:image/')) {
+            try {
+                var folderName = 'HSE_NearMiss_Attachments';
+                var uploadRes = uploadFileToDrive(payload.image, 'image-1', folderName, 'image/jpeg', 'NearMiss', id);
+                if (uploadRes && uploadRes.success) {
+                    var directLink = 'https://drive.google.com/uc?export=view&id=' + uploadRes.fileId;
+                    record.attachments = JSON.stringify([{
+                        name: 'image-1',
+                        url: directLink,
+                        type: 'image/jpeg',
+                        id: uploadRes.fileId
+                    }]);
+                }
+            } catch (uErr) {
+                Logger.log('Near miss photo upload error: ' + uErr.toString());
+            }
+        }
+
+        var res = appendToSheet(sheetName, record);
+        
+        // ربط تلقائي مع CAPA
+        if (record.correctiveProposed) {
+            try {
+                if (typeof addActionTrackingToSheet === 'function') {
+                    addActionTrackingToSheet({
+                        id: 'ACT_NRM_' + id,
+                        title: 'إجراء تصحيحي لحادث وشيك: ' + isoCode,
+                        actionType: 'Corrective',
+                        sourceModule: 'NearMiss',
+                        sourceId: isoCode,
+                        description: record.correctiveProposed,
+                        hazardDescription: record.description,
+                        site: record.siteName,
+                        location: record.subLocation,
+                        responsibleDepartment: record.department,
+                        assignedTo: record.department,
+                        priority: (record.severity === 'عالي' || record.severity === 'كارثي' || record.severity === 'وشيك') ? 'High' : 'Medium',
+                        status: 'Open',
+                        createdAt: new Date().toISOString(),
+                        createdBy: record.observerName
+                    });
+                }
+            } catch(aErr) {}
+        }
+
+        // إرسال تنبيه فوري لحالات الخطورة العالية
+        if (record.severity === 'عالي' || record.severity === 'كارثي' || record.severity === 'وشيك') {
+            try {
+                var emails = getActiveUserEmailsByRole('safety_manager') || [];
+                if (emails.length > 0) {
+                    emails.forEach(function(em) {
+                        try {
+                            MailApp.sendEmail({
+                                to: em,
+                                subject: '🚨 [بلاغ عاجل] رصد حادث وشيك عالي الخطورة (' + isoCode + ')',
+                                htmlBody: '<div dir="rtl" style="font-family: Arial; padding:15px; border:1px solid #dc2626; border-radius:8px;">' +
+                                    '<h3 style="color:#dc2626; margin:0 0 10px 0;">🚨 بلاغ حادث وشيك عالي الخطورة</h3>' +
+                                    '<p><b>الرقم المرجعي:</b> ' + isoCode + '</p>' +
+                                    '<p><b>الموقع:</b> ' + record.location + '</p>' +
+                                    '<p><b>التصنيف:</b> ' + record.type + '</p>' +
+                                    '<p><b>الوصف وما كاد أن يحدث:</b> ' + record.description + '</p>' +
+                                    '<p><b>الإجراء المتخذ:</b> ' + record.correctiveProposed + '</p>' +
+                                '</div>'
+                            });
+                        } catch(mErr) {}
+                    });
+                }
+            } catch(nErr) {}
+        }
+
+        return {
+            success: true,
+            id: id,
+            isoCode: isoCode,
+            message: 'تم تسجيل الحادث الوشيك بنجاح'
+        };
+    } catch(e) {
+        return { success: false, message: e.toString() };
+    }
+}

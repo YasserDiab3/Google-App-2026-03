@@ -9,6 +9,10 @@ const NearMiss={TYPES:[{value:"\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643
                             <p class="section-subtitle">\u062A\u0648\u062B\u064A\u0642 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0637\u0627\u0631\u0626\u0629 \u0648\u062A\u0639\u0632\u064A\u0632 \u0645\u0639\u0627\u064A\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629</p>
                         </div>
                         <div class="flex gap-2">
+                            <button id="nearmiss-public-qr-btn" class="btn-secondary flex items-center gap-2" style="background:#4338ca; color:#fff;" onclick="NearMiss.openPublicQrModal()">
+                                <i class="fas fa-qrcode"></i>
+                                <span>\u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0639\u0627\u0645 \u0648\u0631\u0645\u0648\u0632 QR \u{1F4F1}</span>
+                            </button>
                             <button id="add-nearmiss-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
                                 \u062A\u0633\u062C\u064A\u0644 \u0645\u0644\u0627\u062D\u0638\u0629 \u062C\u062F\u064A\u062F\u0629

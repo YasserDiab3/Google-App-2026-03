@@ -338,7 +338,7 @@ function doPost(e) {
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -516,7 +516,11 @@ function doPost(e) {
         let result = { success: false, message: '' };
 
         try {
-            if (action === 'sendWeeklyDailyObservationsDigest' && typeof sendWeeklyDailyObservationsDigest === 'function') {
+            if (action === 'submitPublicNearMiss' && typeof submitPublicNearMiss === 'function') {
+                result = submitPublicNearMiss(payload || postData.data || postData || {});
+            } else if (action === 'getPublicNearMissConfig' && typeof getPublicNearMissConfig === 'function') {
+                result = getPublicNearMissConfig();
+            } else if (action === 'sendWeeklyDailyObservationsDigest' && typeof sendWeeklyDailyObservationsDigest === 'function') {
                 result = sendWeeklyDailyObservationsDigest();
             } else if (action === 'submitPublicObservation' && typeof submitPublicObservation === 'function') {
                 result = submitPublicObservation(payload || postData.data || postData || {});

@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1224",
+  "version": "1.0.1225",
   "highlights": {
     "ar": [
-      "تطبيق التشفير الداخلي الحصري لرموز QR للمواقع (HSE-LOC-V1) لمنع فتحها من خارج ماسح السلامة المعتمد.",
-      "حماية وتأمين ملصقات الأماكن بحيث لا تعمل إلا من خلال النموذج المخصص لفريق السلامة فقط.",
-      "الربط مع خطة الإجراءات (CAPA) وتوليد ملصقات QR الشاملة ولوحة أبطال السلامة."
+      "إطلاق النموذج الميداني العام للإبلاغ عن الحوادث الوشيكة (public-near-miss.html) لجميع العاملين والمقاولين.",
+      "دعم الإبلاغ السري (Anonymous Reporting) وخيارات تصنيف الحوادث الوشيكة وأداة التأشير والرسم على الصور.",
+      "توليد وطباعة ملصقات QR الشاملة للمواقع والمصانع للحوادث الوشيكة بترويسة SafetyHub | ICAPP."
     ],
     "en": [
-      "Applied proprietary token encryption for Location QR badges (HSE-LOC-V1) preventing unauthorized external scans.",
-      "Secured field location stickers to function exclusively through the authorized safety team scanner.",
-      "Integrated CAPA action sync, batch QR sticker generator, and safety champions leaderboard."
+      "Launched Public Near Miss Field Reporting Form (public-near-miss.html) accessible to all workers and contractors.",
+      "Supported anonymous reporting, near-miss classifications, photo canvas markup, and WhatsApp share cards.",
+      "Integrated batch Location QR stickers generator for Near Miss reporting with SafetyHub | ICAPP header."
     ]
   }
 }
