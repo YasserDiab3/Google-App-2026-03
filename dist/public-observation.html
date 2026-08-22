@@ -1309,6 +1309,34 @@
             background: #334155;
             transform: translateY(-1px);
         }
+
+        /* أزرار الإجراءات السريعة الفورية */
+        .quick-action-pills {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .btn-quick-pill {
+            background: #ffffff;
+            border: 1.5px solid #a7f3d0;
+            color: #065f46;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s ease;
+        }
+        .btn-quick-pill:hover {
+            background: #dcfce7;
+            border-color: #34d399;
+            color: #047857;
+            transform: translateY(-1px);
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" defer></script>
 </head>
@@ -1617,15 +1645,29 @@
                             <i class="fas fa-shield-halved text-emerald-600"></i>
                             الإجراء التصحيحي / الوقائي الفوري
                         </label>
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <button type="button" class="btn-voice-dictation" onclick="autoSuggestCorrectiveAction()" title="اقتراح إجراء مناسب بناءً على تفاصيل الملاحظة" style="color: #047857; border-color: #a7f3d0; background: #ecfdf5;">
+                                <i class="fas fa-wand-magic-sparkles text-emerald-600"></i>
+                                <span>اقتراح ذكي</span>
+                            </button>
                             <button type="button" class="btn-voice-dictation" onclick="toggleVoiceDictation('correctiveInput', this)" title="إملاء صوتي باللغة العربية">
                                 <i class="fas fa-microphone"></i>
                                 <span>تحدث للإجراء</span>
                             </button>
-                            <span style="font-size: 0.72rem; color: #16a34a; font-weight: 700;">
-                                <i class="fas fa-check-double ml-1"></i>مقترحات الإجراء
-                            </span>
                         </div>
+                    </div>
+
+                    <!-- أزرار الإجراءات الفورية السريعة بنقرة واحدة -->
+                    <div class="quick-action-pills">
+                        <button type="button" class="btn-quick-pill" onclick="applyQuickActionText('تم التصحيح الفوري وإزالة الخطر بالموقع والتأكد من أمان بيئة العمل ✅')">
+                            ⚡ تم التصحيح الفوري بالموقع
+                        </button>
+                        <button type="button" class="btn-quick-pill" onclick="applyQuickActionText('تم إيقاف العمل مؤقتاً وتأمين المكان واستدعاء قسم الصيانة والمسؤولين 🛑')">
+                            🛑 إيقاف العمل واستدعاء الصيانة
+                        </button>
+                        <button type="button" class="btn-quick-pill" onclick="applyQuickActionText('تم توجيه وتدريب العامل على إجراءات العمل الآمنة والالتزام فوراً 🦺')">
+                            🦺 توجيه وتدريب العامل
+                        </button>
                     </div>
 
                     <!-- حاوية الوسوم السريعة للإجراء التصحيحي -->
@@ -1788,60 +1830,39 @@
             return DEFAULT_API_URL;
         }
         
+        const STANDARD_11_HAZARDS = [
+            '⚡ مخاطر الكهرباء وعزل الطاقة (Electrical & LOTO)',
+            '🧗 مخاطر السقوط والعمل على ارتفاعات (Fall Protection & Height)',
+            '🔥 مخاطر الحريق والانفجار والأعمال الساخنة (Fire & Hot Work)',
+            '⚙️ مخاطر الماكينات وحوافظ الأمان (Machine Guarding)',
+            '🧪 مخاطر المواد الكيميائية والغازات (Chemicals & HazCom)',
+            '🚶 مخاطر الانزلاق والتعثر والأسطح (Slips, Trips & Surfaces)',
+            '📦 مخاطر المناولة وتخزين ورص الأحمال (Manual Handling & Storage)',
+            '🚜 مخاطر حركة المركبات والرافعات الشوكية (Workplace Transport & Forklifts)',
+            '🚪 مخاطر الأماكن المغلقة والمحصورة (Confined Spaces)',
+            '🦺 مهمات الوقاية الشخصية والامتثال (PPE & Safety Compliance)',
+            '🌿 بيئة العمل والنظافة الصناعية (Work Environment & Hygiene)'
+        ];
+
         const SUB_CATEGORIES_MAP = {
-            'سلوك غير آمن': [
-                'عدم ارتداء أو الاستخدام الخاطئ لمهمات الوقاية (PPE)',
-                'تجاوز تصاريح وإجراءات العمل الآمن (PTW Bypass)',
-                'استخدام معدات أو أدوات يدوية تالفة / غير مخصصة',
-                'وضعيات رفع وعمل خاطئة وإجهاد بدني (Ergonomics)',
-                'السرعة الزائدة / التشتت / عدم الانتباه أثناء العمل',
-                'التدخين في مناطق غير مخصصة أو محظورة',
-                'تعطيل أو تجاوز حواجز وأجهزة الأمان بالماكينات',
-                'الوقوف أسفل الأحمال المعلقة أو في مسار الرافعات'
-            ],
-            'وضع غير آمن': [
-                'تسريب زيوت / انسكابات (مخاطر انزلاق وتعثر)',
-                'أسلاك وتوصيلات كهربائية مكشوفة أو عشوائية',
-                'عوائق أمام مسارات الهروب ومخارج الطوارئ',
-                'انعدام أو تلف أغطية وحوافظ الماكينات الدوارة',
-                'تلف السلالم أو السقالات أو حواف السقوط',
-                'ضعف الإضاءة أو سوء التهوية بموقع العمل',
-                'تكديس عشوائي للمخزون وخطر سقوط أحمال',
-                'تلف الأرضيات أو وجود فتحات غير مغطاة'
-            ],
-            'سلوك آمن وإيجابي': [
-                'التزام مثالي بمهمات الوقاية وإجراءات السلامة',
-                'ممارسة حق إيقاف العمل غير الآمن (Stop Work Authority)',
-                'الإبلاغ المبكر والمثالي عن وشيكة وقوع حادث (Near Miss)',
-                'نظافة وترتيب استثنائي لموقع العمل (Housekeeping 5S)',
-                'فحص المعدات والأدوات بدقة قبل بدء التشغيل',
-                'تقديم مقترح وفكرة هندسية لتلافي المخاطر',
-                'إرشاد وتنبيه زميل العمل لطريقة العمل الآمنة'
-            ],
+            'سلوك غير آمن': STANDARD_11_HAZARDS,
+            'وضع غير آمن': STANDARD_11_HAZARDS,
+            'سلوك آمن وإيجابي': STANDARD_11_HAZARDS,
             'ملاحظة بيئية': [
-                'تسريب أو هدر مياه وصرف صناعي',
-                'خلط أو إلقاء غير نظامي للمخلفات والنفايات الخطرة',
-                'انبعاثات أدخنة / غبار / روائح غير اعتيادية',
-                'انسكاب زيوت أو مواد كيميائية على التربة',
-                'هدر مفرط في استهلاك الطاقة والكهرباء',
-                'تلف علامات ومهمات احتواء الانسكابات (Spill Kits)',
-                'تسريب فريون أو غازات تبريد'
+                '🌿 بيئة العمل والنظافة الصناعية (Work Environment & Hygiene)',
+                '🧪 مخاطر المواد الكيميائية والغازات (Chemicals & HazCom)',
+                '🚶 مخاطر الانزلاق والتعثر والأسطح (Slips, Trips & Surfaces)',
+                '⚡ مخاطر الكهرباء وعزل الطاقة (Electrical & LOTO)',
+                '🔥 مخاطر الحريق والانفجار والأعمال الساخنة (Fire & Hot Work)'
             ],
             'خطر حريق': [
-                'وجود عائق أمام طفايات وخراطيم ومضخات الحريق',
-                'طفايات حريق تالفة / فاقدة للضغط / منتهية الفحص',
-                'تخزين مواد قابلة للاشتعال بالقرب من مصادر حرارة',
-                'أبواب طوارئ مقاومة للحريق مغلقة أو مسدودة',
-                'أعمال قطع ولحام ساخنة بدون تصريح وستائر عزل',
-                'تراكم مخلفات ورقية وكرتونية قرب لوحات الكهرباء',
-                'تسريب غاز طبيعي أو وقود'
+                '🔥 مخاطر الحريق والانفجار والأعمال الساخنة (Fire & Hot Work)',
+                '⚡ مخاطر الكهرباء وعزل الطاقة (Electrical & LOTO)',
+                '🧪 مخاطر المواد الكيميائية والغازات (Chemicals & HazCom)',
+                '🚪 مخاطر الأماكن المغلقة والمحصورة (Confined Spaces)',
+                '🦺 مهمات الوقاية الشخصية والامتثال (PPE & Safety Compliance)'
             ],
-            'أخرى': [
-                'ملاحظات صحة مهنية (إجهاد حراري / ضوضاء عالية)',
-                'مقترح تحسين عام لمنظومة السلامة',
-                'فحص دوري واستكشاف ميداني',
-                'ملاحظة تخص مقاولين خارجيين'
-            ]
+            'أخرى': STANDARD_11_HAZARDS
         };
 
         let loadedConfig = null;
@@ -3396,6 +3417,7 @@
 
             if (detailsInput) {
                 detailsInput.value = item.detail || '';
+                handleDetailsInputQuality(detailsInput.value);
                 detailsInput.focus();
             }
 
@@ -3404,10 +3426,102 @@
                 correctiveInput.value = item.corrective;
             }
 
+            // تحديث مستوى الخطورة تلقائياً إن وجد
+            if (item.risk) {
+                const targetRiskChip = document.querySelector(`.risk-chip[data-risk="${item.risk}"]`);
+                if (targetRiskChip) selectRisk(targetRiskChip);
+            }
+
+            // تحديث التاريخ المتوقع تلقائياً إن وجد
+            if (item.expected) {
+                applyDatePreset(item.expected);
+            }
+
             // تظليل الوسم المختار
             document.querySelectorAll('#detailsQuickChips .suggestion-chip').forEach((c, i) => {
                 c.classList.toggle('active', i === idx);
             });
+        }
+
+        // تطبيق أزرار الإجراءات السريعة الفورية
+        function applyQuickActionText(text) {
+            const input = document.getElementById('correctiveInput');
+            if (input) {
+                input.value = text;
+                input.focus();
+                showToast('تم تطبيق الإجراء الفوري بنجاح ✅', 'success', 2000);
+            }
+        }
+
+        // اقتراح الإجراء التصحيحي بالذكاء الاصطناعي بناءً على الكلمات المفتاحية بالوصف
+        function autoSuggestCorrectiveAction() {
+            const details = (document.getElementById('detailsInput')?.value || '').trim();
+            const correctiveInput = document.getElementById('correctiveInput');
+            if (!correctiveInput) return;
+
+            if (!details || details.length < 3) {
+                showToast('يرجى كتابة أو تسجيل تفاصيل الخطر أولاً لاقتراح الإجراء المناسب', 'info', 3000);
+                document.getElementById('detailsInput')?.focus();
+                return;
+            }
+
+            const lower = details.toLowerCase();
+            let suggestedAction = '';
+            let detectedRisk = 'متوسط';
+            let detectedDate = '24h';
+
+            if (lower.includes('سلك') || lower.includes('كابل') || lower.includes('كهربا') || lower.includes('لوحة') || lower.includes('قاطع') || lower.includes('فيشة') || lower.includes('صعق') || lower.includes('loto')) {
+                suggestedAction = 'عزل وتأمين مصدر التيار الكهربائي فوراً، وإصلاح العطل والتوصيل بمعرفة فني الكهرباء المختص مع وضع قفل وعلامة أمان (LOTO).';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('سقال') || lower.includes('حزام') || lower.includes('ارتفاع') || lower.includes('سلم') || lower.includes('سقوط') || lower.includes('فتحة')) {
+                suggestedAction = 'إيقاف العمل العالي فوراً، وتأمين السقالة وتثبيت حزام الأمان بنقطة ارتكاز معتمدة وتغطية أي فتحات أرضية بحواجز مطابقة.';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('حريق') || lower.includes('طفاية') || lower.includes('لحام') || lower.includes('قطع') || lower.includes('لهب') || lower.includes('اشتعال') || lower.includes('دخان')) {
+                suggestedAction = 'إيقاف الأعمال الساخنة وتوفير طفاية حريق معتمدة صالحة وستائر عزل مقاومة للحرارة واستخراج تصريح عمل ساخن معتمد.';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('ماكينة') || lower.includes('سير') || lower.includes('ترس') || lower.includes('حوافظ') || lower.includes('غطاء') || lower.includes('دوار')) {
+                suggestedAction = 'إيقاف الماكينة وتركيب حوافظ وسيور الأمان اللازمة والتأكد من فاعلية زر التوقف في الطوارئ (E-Stop) قبل إعادة التشغيل.';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('كيميا') || lower.includes('غاز') || lower.includes('امونيا') || lower.includes('أمونيا') || lower.includes('فريون') || lower.includes('تسريب') || lower.includes('برميل') || lower.includes('زيت') || lower.includes('حمض')) {
+                suggestedAction = 'إيقاف مصدر التسريب فوراً، واستخدام مهمات احتواء الانسكابات (Spill Kit)، وارتداء مهمات الوقاية المناسبة، وتثبيت بطاقة التحذير (SDS).';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('انزلاق') || lower.includes('مبلل') || lower.includes('عائق') || lower.includes('ممر') || lower.includes('تعثر') || lower.includes('مخلفات') || lower.includes('ارضية') || lower.includes('أرضية')) {
+                suggestedAction = 'تنظيف وتجفيف الأرضية فوراً ووضع لافتة تحذيرية (أرضية زلقة) وإزالة كافة العوائق والمخلفات عن مسارات المشاة.';
+                detectedRisk = 'متوسط';
+                detectedDate = 'today';
+            } else if (lower.includes('باليت') || lower.includes('تخزين') || lower.includes('رص') || lower.includes('كرتون') || lower.includes('سقوط احمال') || lower.includes('سقوط أحمال') || lower.includes('رفع')) {
+                suggestedAction = 'إعادة رص وتثبيت الباليتات بشكل مستقر ومطابق للارتفاع المسموح، وتأمين الممرات والالتزام بطرق الرفع الميكانيكي الآمن.';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('فوركلفت') || lower.includes('رافعة شوكية') || lower.includes('سائق') || lower.includes('سرعة') || lower.includes('مركبة') || lower.includes('لودر')) {
+                suggestedAction = 'إلزام سائق المعدة بالسرعة القانونية المقررة واستخدام آلة التنبيه وإعطاء الأولوية لمسارات المشاة والتأكد من فحص المعدة اليومي.';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('مغلق') || lower.includes('تانك') || lower.includes('خزان') || lower.includes('صومعة') || lower.includes('بيارة') || lower.includes('غرفة تفتيش')) {
+                suggestedAction = 'إيقاف الدخول فوراً حتى إجراء قياسات نسبة الأكسجين والغازات السامة وتوفير شفاطات تهوية وتصريح دخول مكان مغلق معتمد.';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('خوذة') || lower.includes('حذاء') || lower.includes('سيفتي') || lower.includes('نظارة') || lower.includes('كمامة') || lower.includes('قفاز') || lower.includes('مهمات')) {
+                suggestedAction = 'تزويد العامل بمهمات الوقاية الشخصية (PPE) المطابقة وإلزامه بارتدائها قبل متابعة العمل وتوعيته بمخاطر عدم الالتزام.';
+                detectedRisk = 'منخفض';
+                detectedDate = 'today';
+            } else {
+                suggestedAction = 'تمت مراجعة الملاحظة وتوجيه الإدارة المعنية بإزالة الخطر واستكمال الإجراء الوقائي التصحيحي والمتابعة حتى الإغلاق.';
+            }
+
+            correctiveInput.value = suggestedAction;
+            correctiveInput.focus();
+
+            const targetRiskChip = document.querySelector(`.risk-chip[data-risk="${detectedRisk}"]`);
+            if (targetRiskChip) selectRisk(targetRiskChip);
+            applyDatePreset(detectedDate);
+
+            showToast('تم استنتاج واقتراح الإجراء التصحيحي المناسب بنجاح ✨', 'success', 3000);
         }
 
         // تطبيق وسم الإجراء التصحيحي المباشر
