@@ -1700,8 +1700,8 @@ const NearMiss = {
 
                         <!-- شريط الموقع المخصص -->
                         <div class="location-banner">
-                            <div class="loc-tag-label"><i class="fas fa-map-marker-alt ml-1"></i> ملصق مخصص للموقع:</div>
-                            <div class="loc-name-highlight">${Utils.escapeHTML(site)} — ${Utils.escapeHTML(place)}</div>
+                            <span class="loc-tag-label"><i class="fas fa-map-marker-alt ml-1"></i> ملصق مخصص للموقع:</span>
+                            <span class="loc-name-highlight" dir="rtl"><bdi dir="ltr">${Utils.escapeHTML(site)}</bdi> — <bdi dir="auto">${Utils.escapeHTML(place)}</bdi></span>
                         </div>
 
                         <!-- العنوان والرسالة التوعوية الجاذبة -->
@@ -1759,11 +1759,11 @@ const NearMiss = {
                             <span><b>ثقافة السلامة الإيجابية:</b> تقديراً لمشاركتك الفعالة، يتم تكريم أفضل البلاغات الوقائية الاستباقية دورياً! 🌟</span>
                         </div>
 
-                        <!-- الفوتر الرسمي المتناسق -->
+                        <!-- الفوتر الرسمي المتناسق (RTL) -->
                         <div class="iso-footer-table">
-                            <div>SafetyHub | ICAPP — Incident Prevention System</div>
-                            <div>ISO 45001:2018 &bull; ISO 14001:2015</div>
-                            <div>إدارة السلامة والصحة المهنية والبيئة &bull; صفحة #${idx + 1} من ${itemsToPrint.length}</div>
+                            <div style="text-align:right;">إدارة السلامة والصحة المهنية والبيئة</div>
+                            <div style="text-align:center;">Incident Prevention System</div>
+                            <div style="text-align:left;">SafetyHub | ICAPP &bull; صفحة #${idx + 1} من ${itemsToPrint.length}</div>
                         </div>
                     </div>
                 `;
@@ -1833,13 +1833,13 @@ const NearMiss = {
                         /* Header */
                         .iso-header-table {
                             display: grid;
-                            grid-template-columns: 140px 1fr 140px;
+                            grid-template-columns: 165px 1fr 135px;
                             border: 2px solid #1e1b4b;
                             border-radius: 8px;
                             overflow: hidden;
                             background: #f8fafc;
                         }
-                        .iso-h-cell { padding: 6px 10px; display: flex; flex-direction: column; justify-content: center; }
+                        .iso-h-cell { padding: 6px 8px; display: flex; flex-direction: column; justify-content: center; }
                         .iso-logo-cell {
                             background: #ffffff;
                             color: #1e1b4b;
@@ -1847,21 +1847,24 @@ const NearMiss = {
                             align-items: center;
                             justify-content: center;
                             border-left: 1.5px solid #cbd5e1;
+                            padding: 6px 4px;
                         }
                         .iso-logo-img {
-                            max-height: 42px;
-                            max-width: 100px;
+                            max-height: 40px;
+                            max-width: 105px;
                             object-fit: contain;
                             display: block;
                             margin: 0 auto;
                         }
                         .iso-dept-tag {
-                            font-size: 0.6rem;
+                            font-size: 0.62rem;
                             font-weight: 800;
                             color: #065f46;
-                            margin-top: 2px;
+                            margin-top: 3px;
+                            white-space: nowrap;
                             line-height: 1.2;
                             text-align: center;
+                            display: block;
                         }
                         .iso-title-cell { text-align: center; justify-content: center; }
                         .iso-company-name { font-size: 0.8rem; font-weight: 700; color: #475569; line-height: 1.2; }
@@ -1884,12 +1887,15 @@ const NearMiss = {
                             padding: 8px 16px;
                             border-radius: 8px;
                             display: flex;
+                            flex-direction: row;
                             align-items: center;
                             justify-content: space-between;
+                            gap: 12px;
+                            white-space: nowrap;
                             box-shadow: 0 2px 8px rgba(49, 46, 129, 0.15);
                         }
-                        .loc-tag-label { font-size: 0.78rem; color: #fbbf24; font-weight: 700; }
-                        .loc-name-highlight { font-size: 1.1rem; font-weight: 900; color: #ffffff; letter-spacing: 0.3px; }
+                        .loc-tag-label { font-size: 0.82rem; color: #fbbf24; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+                        .loc-name-highlight { font-size: 1.05rem; font-weight: 900; color: #ffffff; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; unicode-bidi: isolate; }
 
                         /* Hero Callout */
                         .hero-callout {

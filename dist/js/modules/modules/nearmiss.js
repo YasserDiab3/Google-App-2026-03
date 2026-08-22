@@ -723,8 +723,8 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
 
                         <!-- \u0634\u0631\u064A\u0637 \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0645\u062E\u0635\u0635 -->
                         <div class="location-banner">
-                            <div class="loc-tag-label"><i class="fas fa-map-marker-alt ml-1"></i> \u0645\u0644\u0635\u0642 \u0645\u062E\u0635\u0635 \u0644\u0644\u0645\u0648\u0642\u0639:</div>
-                            <div class="loc-name-highlight">${Utils.escapeHTML(m)} \u2014 ${Utils.escapeHTML(u)}</div>
+                            <span class="loc-tag-label"><i class="fas fa-map-marker-alt ml-1"></i> \u0645\u0644\u0635\u0642 \u0645\u062E\u0635\u0635 \u0644\u0644\u0645\u0648\u0642\u0639:</span>
+                            <span class="loc-name-highlight" dir="rtl"><bdi dir="ltr">${Utils.escapeHTML(m)}</bdi> \u2014 <bdi dir="auto">${Utils.escapeHTML(u)}</bdi></span>
                         </div>
 
                         <!-- \u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u062A\u0648\u0639\u0648\u064A\u0629 \u0627\u0644\u062C\u0627\u0630\u0628\u0629 -->
@@ -782,11 +782,11 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                             <span><b>\u062B\u0642\u0627\u0641\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0625\u064A\u062C\u0627\u0628\u064A\u0629:</b> \u062A\u0642\u062F\u064A\u0631\u0627\u064B \u0644\u0645\u0634\u0627\u0631\u0643\u062A\u0643 \u0627\u0644\u0641\u0639\u0627\u0644\u0629\u060C \u064A\u062A\u0645 \u062A\u0643\u0631\u064A\u0645 \u0623\u0641\u0636\u0644 \u0627\u0644\u0628\u0644\u0627\u063A\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u0626\u064A\u0629 \u0627\u0644\u0627\u0633\u062A\u0628\u0627\u0642\u064A\u0629 \u062F\u0648\u0631\u064A\u0627\u064B! \u{1F31F}</span>
                         </div>
 
-                        <!-- \u0627\u0644\u0641\u0648\u062A\u0631 \u0627\u0644\u0631\u0633\u0645\u064A \u0627\u0644\u0645\u062A\u0646\u0627\u0633\u0642 -->
+                        <!-- \u0627\u0644\u0641\u0648\u062A\u0631 \u0627\u0644\u0631\u0633\u0645\u064A \u0627\u0644\u0645\u062A\u0646\u0627\u0633\u0642 (RTL) -->
                         <div class="iso-footer-table">
-                            <div>SafetyHub | ICAPP \u2014 Incident Prevention System</div>
-                            <div>ISO 45001:2018 &bull; ISO 14001:2015</div>
-                            <div>\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629 &bull; \u0635\u0641\u062D\u0629 #${b+1} \u0645\u0646 ${e.length}</div>
+                            <div style="text-align:right;">\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629</div>
+                            <div style="text-align:center;">Incident Prevention System</div>
+                            <div style="text-align:left;">SafetyHub | ICAPP &bull; \u0635\u0641\u062D\u0629 #${b+1} \u0645\u0646 ${e.length}</div>
                         </div>
                     </div>
                 `}).join("");r.document.write(`
@@ -853,13 +853,13 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                         /* Header */
                         .iso-header-table {
                             display: grid;
-                            grid-template-columns: 140px 1fr 140px;
+                            grid-template-columns: 165px 1fr 135px;
                             border: 2px solid #1e1b4b;
                             border-radius: 8px;
                             overflow: hidden;
                             background: #f8fafc;
                         }
-                        .iso-h-cell { padding: 6px 10px; display: flex; flex-direction: column; justify-content: center; }
+                        .iso-h-cell { padding: 6px 8px; display: flex; flex-direction: column; justify-content: center; }
                         .iso-logo-cell {
                             background: #ffffff;
                             color: #1e1b4b;
@@ -867,21 +867,24 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                             align-items: center;
                             justify-content: center;
                             border-left: 1.5px solid #cbd5e1;
+                            padding: 6px 4px;
                         }
                         .iso-logo-img {
-                            max-height: 42px;
-                            max-width: 100px;
+                            max-height: 40px;
+                            max-width: 105px;
                             object-fit: contain;
                             display: block;
                             margin: 0 auto;
                         }
                         .iso-dept-tag {
-                            font-size: 0.6rem;
+                            font-size: 0.62rem;
                             font-weight: 800;
                             color: #065f46;
-                            margin-top: 2px;
+                            margin-top: 3px;
+                            white-space: nowrap;
                             line-height: 1.2;
                             text-align: center;
+                            display: block;
                         }
                         .iso-title-cell { text-align: center; justify-content: center; }
                         .iso-company-name { font-size: 0.8rem; font-weight: 700; color: #475569; line-height: 1.2; }
@@ -904,12 +907,15 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                             padding: 8px 16px;
                             border-radius: 8px;
                             display: flex;
+                            flex-direction: row;
                             align-items: center;
                             justify-content: space-between;
+                            gap: 12px;
+                            white-space: nowrap;
                             box-shadow: 0 2px 8px rgba(49, 46, 129, 0.15);
                         }
-                        .loc-tag-label { font-size: 0.78rem; color: #fbbf24; font-weight: 700; }
-                        .loc-name-highlight { font-size: 1.1rem; font-weight: 900; color: #ffffff; letter-spacing: 0.3px; }
+                        .loc-tag-label { font-size: 0.82rem; color: #fbbf24; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+                        .loc-name-highlight { font-size: 1.05rem; font-weight: 900; color: #ffffff; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; unicode-bidi: isolate; }
 
                         /* Hero Callout */
                         .hero-callout {
