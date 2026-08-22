@@ -3028,24 +3028,73 @@
         }
 
         function resetForm() {
-            document.getElementById('observationForm').reset();
-            setDefaultDateTime();
-            removePhoto();
-            selectType(document.querySelector('.type-card[data-type="سلوك غير آمن"]'));
-            selectRisk(document.querySelector('.risk-chip[data-risk="متوسط"]'));
-            document.getElementById('statusSelect').value = 'Open';
-            document.getElementById('anonymousToggle').checked = false;
-            document.getElementById('reporterInfoFields').style.display = 'flex';
-            
-            document.getElementById('customPlaceGroup').style.display = 'none';
-            document.getElementById('customSubCategoryGroup').style.display = 'none';
-            document.getElementById('customOwnerGroup').style.display = 'none';
-            document.getElementById('errorMessage').style.display = 'none';
-            document.getElementById('submitBtn').disabled = false;
-            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-paper-plane"></i> <span>تسجيل الملاحظة اليومية الآن</span>';
-            document.getElementById('successScreen').style.display = 'none';
-            document.getElementById('observationForm').style.display = 'block';
-            hideToast();
+            try {
+                const form = document.getElementById('observationForm');
+                if (form) form.reset();
+
+                setDefaultDateTime();
+                removePhoto();
+
+                // استعادة النوع الافتراضي والمقترحات
+                const defaultTypeCard = document.querySelector('.type-card[data-type="سلوك غير آمن"]');
+                if (defaultTypeCard) selectType(defaultTypeCard);
+
+                // استعادة مستوى الخطر
+                const defaultRiskChip = document.querySelector('.risk-chip[data-risk="متوسط"]');
+                if (defaultRiskChip) selectRisk(defaultRiskChip);
+
+                const statusSel = document.getElementById('statusSelect');
+                if (statusSel) statusSel.value = 'Open';
+
+                const reporterFields = document.getElementById('reporterInfoFields');
+                if (reporterFields) reporterFields.style.display = 'flex';
+
+                const customPlaceGroup = document.getElementById('customPlaceGroup');
+                if (customPlaceGroup) customPlaceGroup.style.display = 'none';
+
+                const customSubGroup = document.getElementById('customSubCategoryGroup');
+                if (customSubGroup) customSubGroup.style.display = 'none';
+
+                const customOwnerGroup = document.getElementById('customOwnerGroup');
+                if (customOwnerGroup) customOwnerGroup.style.display = 'none';
+
+                const errorBox = document.getElementById('errorMessage');
+                if (errorBox) {
+                    errorBox.textContent = '';
+                    errorBox.style.display = 'none';
+                }
+
+                const submitBtn = document.getElementById('submitBtn');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span>تسجيل الملاحظة اليومية الآن</span>';
+                }
+
+                // مزامنة أماكن المصنع الأول إن وُجد
+                const siteSelect = document.getElementById('siteSelect');
+                if (siteSelect && siteSelect.value) {
+                    handleSiteChange(siteSelect.value);
+                }
+
+                // إخفاء شاشة الإيصال والنجاح وإظهار النموذج
+                const successScreen = document.getElementById('successScreen');
+                if (successScreen) successScreen.style.display = 'none';
+
+                if (form) form.style.display = 'block';
+
+                hideToast();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // إعادة محاولة التقاط الـ GPS للملاحظة الجديدة
+                initBackgroundGpsCapture();
+            } catch (err) {
+                console.error('Error resetting form:', err);
+                const successScreen = document.getElementById('successScreen');
+                if (successScreen) successScreen.style.display = 'none';
+                const form = document.getElementById('observationForm');
+                if (form) form.style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         }
     </script>
 </body>
