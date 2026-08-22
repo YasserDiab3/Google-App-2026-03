@@ -1,8 +1,7 @@
 /**
  * NearMiss Module
- * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
+ * منظومة إدارة وبلاغات الحوادث الوشيكة (SafetyHub | ICAPP)
  */
-// ===== NearMiss Module =====
 const NearMiss = {
     TYPES: [
         { value: 'سقوط أشياء / أحمال', label: 'سقوط أشياء / أحمال', icon: 'fa-arrow-down' },
@@ -16,8 +15,22 @@ const NearMiss = {
         { value: 'وضع غير آمن', label: 'وضع غير آمن', icon: 'fa-ban' },
         { value: 'مقترح', label: 'مقترح تحسين', icon: 'fa-lightbulb' }
     ],
-    _i18nSectionObserver: null,
-    _i18nBodyObserver: null,
+
+    state: {
+        activeTab: 'register', // 'register' | 'analytics'
+        filters: {
+            search: '',
+            type: '',
+            department: '',
+            startDate: '',
+            endDate: '',
+            period: '365'
+        },
+        currentAttachments: [],
+        editingId: null
+    },
+
+    _charts: {},
 
     applyModuleI18n(root) {
         const target = root || document;
@@ -29,596 +42,559 @@ const NearMiss = {
         if (typeof i18nCore.applyLiteralTranslations === 'function') i18nCore.applyLiteralTranslations(target);
     },
 
-    ensureI18nObservers(section) {
-        if (this._i18nSectionObserver) {
-            this._i18nSectionObserver.disconnect();
-            this._i18nSectionObserver = null;
-        }
-
-        if (section && typeof MutationObserver !== 'undefined') {
-            this._i18nSectionObserver = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node && node.nodeType === 1) this.applyModuleI18n(node);
-                    });
-                });
-            });
-            this._i18nSectionObserver.observe(section, { childList: true, subtree: true });
-        }
-
-        if (!this._i18nBodyObserver && typeof MutationObserver !== 'undefined') {
-            this._i18nBodyObserver = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (!node || node.nodeType !== 1) return;
-                        if (node.classList?.contains('modal-overlay') || node.querySelector?.('.modal-overlay')) {
-                            this.applyModuleI18n(node);
-                        }
-                    });
-                });
-            });
-            this._i18nBodyObserver.observe(document.body, { childList: true, subtree: true });
-        }
-    },
-
-    state: {
-        filters: {
-            search: '',
-            type: '',
-            department: '',
-            startDate: '',
-            endDate: ''
-        },
-        currentAttachments: [],
-        editingId: null
-    },
-
-    /**
-     * معالجة روابط المرفقات (تحويل روابط Google Drive القديمة و Base64)
-     */
-    processAttachmentUrl(url) {
-        if (!url || typeof url !== 'string') return null;
-
-        let trimmed = url.trim();
-
-        // تحويل روابط Google Drive القديمة
-        const oldDrivePattern = /https?:\/\/drive\.google\.com\/uc\?export=view&id=([a-zA-Z0-9_-]+)/;
-        const oldDriveMatch = trimmed.match(oldDrivePattern);
-        if (oldDriveMatch) {
-            const fileId = oldDriveMatch[1];
-            trimmed = 'https://lh3.googleusercontent.com/d/' + fileId;
-        }
-
-        // إذا كانت URL عادية أو Base64 مع prefix
-        if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
-            return trimmed;
-        }
-
-        // ✅ معالجة Base64 بدون prefix (سلسلة طويلة من الأحرف)
-        if (trimmed.length > 100 && /^[A-Za-z0-9+/=]+$/.test(trimmed.substring(0, 100))) {
-            return 'data:image/jpeg;base64,' + trimmed;
-        }
-
-        return null;
-    },
+    ensureI18nObservers(section) {},
 
     async load() {
-        // Add language change listener
-        if (!this._languageChangeListenerAdded) {
-            document.addEventListener('language-changed', () => {
-                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
-                this.load();
-            });
-            this._languageChangeListenerAdded = true;
-        }
-
         try {
             const section = document.getElementById('nearmiss-section');
-            if (!section) {
-                if (typeof Utils !== 'undefined' && Utils.safeError) {
-                    Utils.safeError(' قسم nearmiss-section غير موجود!');
-                } else {
-                    console.error(' قسم nearmiss-section غير موجود!');
-                }
-                return;
-            }
-
-            // التحقق من وجود Utils و AppState
-            if (typeof Utils === 'undefined') {
-                console.error('Utils غير متوفر!');
-                return;
-            }
-
-            if (typeof AppState === 'undefined') {
-                if (typeof Utils !== 'undefined' && Utils.safeError) {
-                    Utils.safeError('AppState غير متوفر!');
-                } else {
-                    console.error('AppState غير متوفر!');
-                }
-                return;
-            }
+            if (!section) return;
 
             this.ensureDataIntegrity();
-
-            // دالة مساعدة للهروب من HTML
-            const escapeHTML = (str) => {
-                if (typeof Utils !== 'undefined' && Utils.escapeHTML) {
-                    return Utils.escapeHTML(str);
-                }
-                return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-            };
-
-            section.innerHTML = `
-                <!-- ══════════════════════════════════════════════════════
-                     ترويسة الهوية البصرية لموديول الحوادث الوشيكة (SafetyHub)
-                ══════════════════════════════════════════════════════ -->
-                <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); border-radius: 16px; padding: 20px 24px; color: #fff; margin-bottom: 20px; box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.4); border: 1px solid rgba(255,255,255,0.1);">
-                    <div class="flex items-center justify-between flex-wrap gap-4">
-                        <div class="flex items-center gap-4">
-                            <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                                <i class="fas fa-shield-virus text-2xl text-amber-300"></i>
-                            </div>
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h1 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #fff; letter-spacing: -0.5px;">إدارة وبلاغات الحوادث الوشيكة</h1>
-                                    <span style="background: rgba(245, 158, 11, 0.25); border: 1px solid rgba(245, 158, 11, 0.6); color: #fef08a; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;">Near Miss Suite</span>
-                                </div>
-                                <p style="font-size: 0.82rem; margin: 4px 0 0 0; color: #c7d2fe;">رصد استباقي للمخاطر • تحليل الأسباب الجذرية • ثقافة السلامة الإيجابية | SafetyHub ICAPP</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <button id="nearmiss-public-qr-btn" class="btn-secondary flex items-center gap-2" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 0.85rem; font-weight: 600; padding: 8px 14px; border-radius: 10px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" onclick="NearMiss.openPublicQrModal()">
-                                <i class="fas fa-qrcode text-amber-300"></i>
-                                <span>النموذج العام ورموز QR 📱</span>
-                            </button>
-                            <button onclick="NearMiss.printLocationQrBadges()" class="btn-secondary flex items-center gap-2" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #a7f3d0; font-size: 0.85rem; font-weight: 600; padding: 8px 14px; border-radius: 10px; transition: all 0.2s;" onmouseover="this.style.background='rgba(16, 185, 129, 0.35)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.2)'">
-                                <i class="fas fa-print"></i>
-                                <span>ملصقات المواقع 🖨️</span>
-                            </button>
-                            <button id="add-nearmiss-btn" class="btn-primary flex items-center gap-2" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #fff; font-size: 0.85rem; font-weight: 700; padding: 8px 16px; border-radius: 10px; border: none; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
-                                <i class="fas fa-plus-circle"></i>
-                                <span>تسجيل بلاغ وشيك ➕</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-6 space-y-6">
-                    <div id="nearmiss-summary" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <i class="fas fa-filter ml-2"></i>
-                                عوامل التصفية المتقدمة
-                            </h2>
-                        </div>
-                        <div class="card-body">
-                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-2">بحث حر</label>
-                                    <input type="text" id="nearmiss-filter-search" class="form-input" placeholder="النوع، الموقع، الوصف أو صاحب الملاحظة" value="${escapeHTML(this.state.filters.search)}">
-                                </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-2">نوع الحادث</label>
-                                <select id="nearmiss-filter-type" class="form-input">
-                                    ${this.renderTypeOptions(this.state.filters.type)}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-2">الإدارة</label>
-                                <select id="nearmiss-filter-department" class="form-input">
-                                    ${this.renderDepartmentOptions(this.state.filters.department)}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-2">بداية الفترة</label>
-                                <input type="date" id="nearmiss-filter-start" class="form-input" value="${this.state.filters.startDate}">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-2">نهاية الفترة</label>
-                                <input type="date" id="nearmiss-filter-end" class="form-input" value="${this.state.filters.endDate}">
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-end gap-3 mt-4">
-                            <button id="nearmiss-reset-filters" class="btn-link text-blue-600">
-                                <i class="fas fa-undo ml-1"></i>
-                                إعادة التعيين
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="content-card">
-                    <div class="card-header">
-                        <div class="flex items-center justify-between flex-wrap gap-3">
-                            <h2 class="card-title">
-                                <i class="fas fa-clipboard-list ml-2"></i>
-                                سجل الملاحظات
-                            </h2>
-                            <span id="nearmiss-result-count" class="text-sm text-gray-500"></span>
-                        </div>
-                    </div>
-                    <div class="card-body" id="nearmiss-table-container">
-                        <div class="empty-state">
-                            <div style="width: 300px; margin: 0 auto 16px;">
-                                <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
-                                    <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
-                                </div>
-                            </div>
-                            <p class="text-gray-500">جاري التحميل...</p>
-                        </div>
-                    </div>
-                </div>
-                </div>
-            `;
-            this.applyModuleI18n(section);
-            this.ensureI18nObservers(section);
-
-            this.bindBaseEvents();
-            this.updateSummary();
-            this.renderTable();
+            this.renderMainLayout(section);
         } catch (error) {
-            if (typeof Utils !== 'undefined' && Utils.safeError) {
-                Utils.safeError('❌ خطأ في تحميل مديول الحوادث الوشيكة:', error);
-            } else {
-                console.error('❌ خطأ في تحميل مديول الحوادث الوشيكة:', error);
-            }
-            const section = document.getElementById('nearmiss-section');
-            if (section) {
-                section.innerHTML = `
-                    <div class="content-card">
-                        <div class="card-body">
-                            <div class="empty-state">
-                                <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل البيانات</p>
-                                <button onclick="NearMiss.load()" class="btn-primary">
-                                    <i class="fas fa-redo ml-2"></i>
-                                    إعادة المحاولة
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                this.applyModuleI18n(section);
-            }
+            console.error('Error loading NearMiss module:', error);
         }
     },
 
     ensureDataIntegrity() {
-        if (!Array.isArray(AppState.appData.nearmiss)) {
-            AppState.appData.nearmiss = [];
-        }
-        AppState.appData.nearmiss = AppState.appData.nearmiss.map((item) => this.normalizeRecord(item));
+        let raw = AppState.appData.nearmiss || AppState.appData.NearMiss || [];
+        if (!Array.isArray(raw)) raw = [];
+        AppState.appData.nearmiss = raw.map((item) => this.normalizeRecord(item));
     },
 
     normalizeRecord(record = {}) {
         const defaultType = this.TYPES[0].value;
-        const id = record.id || Utils.generateId('NEARMISS');
+        const id = record.id || (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('NEARMISS') : ('NRM-' + Math.floor(Math.random()*100000)));
         let isoDate;
         try {
             isoDate = record.date ? new Date(record.date).toISOString() : new Date().toISOString();
         } catch (error) {
             isoDate = new Date().toISOString();
         }
-        const attachments = Array.isArray(record.attachments)
-            ? record.attachments.map((attachment) => this.normalizeAttachment(attachment)).filter(Boolean)
-            : [];
-        const createdBy = record.createdBy ? record.createdBy : this.getCurrentUserSummary(record.createdBy);
-        const correctiveProposed = record.correctiveProposed === true
-            || record.correctiveAction === true
-            || record.correctiveProposal === true
-            || record.corrective === true
-            || record.suggestedAction === true;
+        
+        // معالجة attachments
+        let attachments = [];
+        if (Array.isArray(record.attachments)) {
+            attachments = record.attachments.map(att => this.normalizeAttachment(att)).filter(Boolean);
+        } else if (typeof record.attachments === 'string' && record.attachments.trim().startsWith('[')) {
+            try {
+                const parsed = JSON.parse(record.attachments);
+                if (Array.isArray(parsed)) attachments = parsed.map(att => this.normalizeAttachment(att)).filter(Boolean);
+            } catch(e) {}
+        }
+
+        const correctiveProposed = record.correctiveProposed === true || record.correctiveProposed === 'نعم' || Boolean(record.correctiveDescription || record.correctiveAction);
 
         return {
             id,
-            type: this.TYPES.some((item) => item.value === record.type) ? record.type : (record.type || defaultType),
+            isoCode: record.isoCode || record.id || id,
+            type: record.type || defaultType,
+            severity: record.severity || 'متوسط',
             date: isoDate,
-            observerName: record.observerName || record.reportedBy || '',
-            phone: record.phone || record.contactPhone || '',
+            observerName: record.observerName || record.reportedBy || 'فاعل خير (سري)',
+            phone: record.phone || '',
             location: record.location || record.place || '',
             department: record.department || record.departmentName || '',
-            description: record.description || record.details || record.title || '',
+            description: record.description || record.details || '',
             correctiveProposed,
-            correctiveDescription: correctiveProposed
-                ? (record.correctiveDescription || record.correctiveDetails || record.suggestedActionDescription || '')
-                : '',
+            correctiveDescription: record.correctiveDescription || record.correctiveProposed || record.correctiveAction || '',
             attachments,
-            createdBy,
-            createdById: record.createdById || createdBy?.id || '',
-            createdAt: record.createdAt || isoDate,
-            updatedAt: record.updatedAt || isoDate,
-            updatedBy: record.updatedBy || null,
             status: record.status || (correctiveProposed ? 'مفتوح' : 'مغلق'),
-            reportedBy: record.reportedBy || record.observerName || ''
+            createdAt: record.createdAt || isoDate,
+            updatedAt: record.updatedAt || isoDate
         };
     },
 
     normalizeAttachment(attachment) {
         if (!attachment) return null;
-        const data = attachment.data || attachment.base64 || '';
-        if (!data) return null;
-        const size = attachment.size || Math.round((data.length * 3) / 4 / 1024);
-        return {
-            id: attachment.id || Utils.generateId('ATT'),
-            name: attachment.name || 'attachment',
-            type: attachment.type || this.detectMimeType(attachment.name || ''),
-            data,
-            size,
-            uploadedAt: attachment.uploadedAt || new Date().toISOString()
-        };
-    },
-
-
-    detectMimeType(fileName = '') {
-        const ext = (fileName.split('.').pop() || '').toLowerCase();
-        if (ext === 'pdf') return 'application/pdf';
-        if (ext === 'png') return 'image/png';
-        if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
-        return 'application/octet-stream';
-    },
-
-    getCurrentUserSummary(fallback = null) {
-        if (fallback && typeof fallback === 'object') {
-            return fallback;
-        }
-        if (!AppState.currentUser) {
-            return {
-                name: 'نظام',
-                email: '',
-                role: ''
-            };
+        if (typeof attachment === 'string') {
+            return { id: 'att-' + Math.random(), name: 'مرفق', url: attachment, data: attachment, type: 'image/jpeg' };
         }
         return {
-            id: AppState.currentUser.id || '',
-            name: AppState.currentUser.name || '',
-            email: AppState.currentUser.email || '',
-            role: AppState.currentUser.role || ''
+            id: attachment.id || 'att-' + Math.random(),
+            name: attachment.name || 'مرفق',
+            type: attachment.type || 'image/jpeg',
+            url: attachment.url || attachment.data || '',
+            data: attachment.data || attachment.url || '',
+            size: attachment.size || 0
         };
     },
 
-    getDepartmentOptions() {
-        const departments = new Set();
-        (AppState.appData.nearmiss || []).forEach((item) => {
-            const value = (item.department || '').trim();
-            if (value) {
-                departments.add(value);
-            }
-        });
-        (AppState.appData.employees || []).forEach((employee) => {
-            const value = (employee.department || '').trim();
-            if (value) {
-                departments.add(value);
-            }
-        });
-        return Array.from(departments).sort((a, b) => a.localeCompare(b, 'ar'));
+    renderMainLayout(section) {
+        section.innerHTML = `
+            <!-- ══════════════════════════════════════════════════════
+                 ترويسة القيادة والهوية البصرية لموديول الحوادث الوشيكة
+            ══════════════════════════════════════════════════════ -->
+            <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); border-radius: 18px; padding: 22px 28px; color: #fff; margin-bottom: 22px; box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.4); border: 1px solid rgba(255,255,255,0.12);">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center gap-4">
+                        <div style="width: 56px; height: 56px; border-radius: 14px; background: rgba(255,255,255,0.18); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                            <i class="fas fa-shield-virus text-3xl text-amber-300"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 style="font-size: 1.45rem; font-weight: 800; margin: 0; color: #fff; letter-spacing: -0.5px;">إدارة وبلاغات الحوادث الوشيكة</h1>
+                                <span style="background: rgba(245, 158, 11, 0.25); border: 1px solid rgba(245, 158, 11, 0.6); color: #fef08a; font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 20px;">Near Miss Suite</span>
+                            </div>
+                            <p style="font-size: 0.85rem; margin: 4px 0 0 0; color: #c7d2fe;">رصد استباقي للمخاطر • تحليل الأسباب الجذرية • ثقافة السلامة الإيجابية | SafetyHub ICAPP</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <button id="nearmiss-public-qr-btn" class="btn-secondary flex items-center gap-2" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); color: #fff; font-size: 0.85rem; font-weight: 700; padding: 9px 16px; border-radius: 12px; transition: all 0.2s; cursor: pointer;">
+                            <i class="fas fa-qrcode text-amber-300"></i>
+                            <span>النموذج العام ورموز QR 📱</span>
+                        </button>
+                        <button id="nearmiss-print-badges-btn" class="btn-secondary flex items-center gap-2" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.45); color: #a7f3d0; font-size: 0.85rem; font-weight: 700; padding: 9px 16px; border-radius: 12px; transition: all 0.2s; cursor: pointer;">
+                            <i class="fas fa-print"></i>
+                            <span>ملصقات المواقع 🖨️</span>
+                        </button>
+                        <button id="nearmiss-create-new-btn" class="btn-primary flex items-center gap-2" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #fff; font-size: 0.85rem; font-weight: 800; padding: 9px 18px; border-radius: 12px; border: none; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); cursor: pointer;">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>تسجيل بلاغ وشيك ➕</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- شريط التبويبات الرئيسي -->
+                <div style="display: flex; gap: 8px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 16px;">
+                    <button class="nrm-nav-tab ${this.state.activeTab === 'register' ? 'active' : ''}" data-tab="register" style="padding: 8px 18px; border-radius: 10px; font-size: 0.88rem; font-weight: 700; border: none; cursor: pointer; transition: all .2s; background: ${this.state.activeTab === 'register' ? '#fff' : 'rgba(255,255,255,0.12)'}; color: ${this.state.activeTab === 'register' ? '#1e1b4b' : '#fff'};">
+                        <i class="fas fa-clipboard-list ml-2"></i> سجل البلاغات والملاحظات
+                    </button>
+                    <button class="nrm-nav-tab ${this.state.activeTab === 'analytics' ? 'active' : ''}" data-tab="analytics" style="padding: 8px 18px; border-radius: 10px; font-size: 0.88rem; font-weight: 700; border: none; cursor: pointer; transition: all .2s; background: ${this.state.activeTab === 'analytics' ? '#fff' : 'rgba(255,255,255,0.12)'}; color: ${this.state.activeTab === 'analytics' ? '#1e1b4b' : '#fff'};">
+                        <i class="fas fa-chart-pie ml-2"></i> لوحة التحليل البياني والإحصاءات 📊
+                    </button>
+                </div>
+            </div>
+
+            <!-- بطاقات المؤشرات الإحصائية السريعة -->
+            <div id="nearmiss-kpi-strip"></div>
+
+            <!-- محتوى التبويب النشط -->
+            <div id="nearmiss-tab-content"></div>
+        `;
+
+        this.renderKpiStrip();
+        this.renderActiveTabContent();
+        this.bindEvents();
     },
 
-    renderTypeOptions(selectedValue = '') {
-        const options = ['<option value="">جميع الأنواع</option>'];
-        this.TYPES.forEach((type) => {
-            options.push(`<option value="${Utils.escapeHTML(type.value)}" ${type.value === selectedValue ? 'selected' : ''}>${Utils.escapeHTML(type.label)}</option>`);
-        });
-        return options.join('');
-    },
-
-    renderDepartmentOptions(selectedValue = '') {
-        const options = ['<option value="">جميع الإدارات</option>'];
-        this.getDepartmentOptions().forEach((department) => {
-            options.push(`<option value="${Utils.escapeHTML(department)}" ${department === selectedValue ? 'selected' : ''}>${Utils.escapeHTML(department)}</option>`);
-        });
-        return options.join('');
-    },
-
-    bindBaseEvents() {
-        const addBtn = document.getElementById('add-nearmiss-btn');
-        if (addBtn) {
-            addBtn.addEventListener('click', () => this.showForm());
-        }
-
-        const searchInput = document.getElementById('nearmiss-filter-search');
-        if (searchInput) {
-            searchInput.addEventListener('input', (event) => this.handleFilterChange('search', event.target.value));
-        }
-
-        const typeSelect = document.getElementById('nearmiss-filter-type');
-        if (typeSelect) {
-            typeSelect.addEventListener('change', (event) => this.handleFilterChange('type', event.target.value));
-        }
-
-        const departmentSelect = document.getElementById('nearmiss-filter-department');
-        if (departmentSelect) {
-            departmentSelect.addEventListener('change', (event) => this.handleFilterChange('department', event.target.value));
-        }
-
-        const startInput = document.getElementById('nearmiss-filter-start');
-        if (startInput) {
-            startInput.addEventListener('change', (event) => this.handleFilterChange('startDate', event.target.value));
-        }
-
-        const endInput = document.getElementById('nearmiss-filter-end');
-        if (endInput) {
-            endInput.addEventListener('change', (event) => this.handleFilterChange('endDate', event.target.value));
-        }
-
-        const resetBtn = document.getElementById('nearmiss-reset-filters');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', (event) => {
-                event.preventDefault();
-                this.resetFilters();
-            });
-        }
-    },
-
-    handleFilterChange(key, value) {
-        if (!Object.prototype.hasOwnProperty.call(this.state.filters, key)) {
-            return;
-        }
-        const sanitizedValue = typeof value === 'string' ? value.trim() : value;
-        this.state.filters = {
-            ...this.state.filters,
-            [key]: sanitizedValue
-        };
-        this.renderTable();
-    },
-
-    resetFilters() {
-        this.state.filters = {
-            search: '',
-            type: '',
-            department: '',
-            startDate: '',
-            endDate: ''
-        };
-
-        const searchInput = document.getElementById('nearmiss-filter-search');
-        if (searchInput) searchInput.value = '';
-
-        const typeSelect = document.getElementById('nearmiss-filter-type');
-        if (typeSelect) typeSelect.value = '';
-
-        const departmentSelect = document.getElementById('nearmiss-filter-department');
-        if (departmentSelect) departmentSelect.value = '';
-
-        const startInput = document.getElementById('nearmiss-filter-start');
-        if (startInput) startInput.value = '';
-
-        const endInput = document.getElementById('nearmiss-filter-end');
-        if (endInput) endInput.value = '';
-
-        this.renderTable();
-    },
-
-    getFilteredItems() {
-        this.ensureDataIntegrity();
-
-        const { search, type, department, startDate, endDate } = this.state.filters;
-        let items = (AppState.appData.nearmiss || []).filter((item) => !!item);
-
-        if (type) {
-            items = items.filter((item) => (item.type || '').toLowerCase() === type.toLowerCase());
-        }
-
-        if (department) {
-            items = items.filter((item) => (item.department || '').toLowerCase() === department.toLowerCase());
-        }
-
-        if (startDate) {
-            const start = new Date(startDate);
-            start.setHours(0, 0, 0, 0);
-            items = items.filter((item) => {
-                const eventDate = new Date(item.date);
-                return eventDate >= start;
-            });
-        }
-
-        if (endDate) {
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            items = items.filter((item) => {
-                const eventDate = new Date(item.date);
-                return eventDate <= end;
-            });
-        }
-
-        if (search) {
-            const term = search.toLowerCase();
-            items = items.filter((item) => [
-                item.type,
-                item.location,
-                item.department,
-                item.observerName,
-                item.phone,
-                item.description,
-                item.correctiveDescription
-            ].some((value) => value && value.toLowerCase().includes(term)));
-        }
-
-        return items.sort((a, b) => new Date(b.date) - new Date(a.date));
-    },
-
-    updateSummary() {
-        const container = document.getElementById('nearmiss-summary');
+    renderKpiStrip() {
+        const container = document.getElementById('nearmiss-kpi-strip');
         if (!container) return;
-        container.innerHTML = this.renderSummaryCards();
-        this.applyModuleI18n(container);
-    },
 
-    renderSummaryCards() {
         const records = AppState.appData.nearmiss || [];
         const total = records.length;
-        const corrective = records.filter((item) => item.correctiveProposed).length;
-        const highSeverity = records.filter((item) => {
-            const sev = (item.severity || '').toLowerCase();
-            return sev === 'عالي' || sev === 'high' || sev === 'كارثي' || sev === 'critical' || sev === 'وشيك';
+        const corrective = records.filter(r => r.correctiveProposed).length;
+        const highSeverity = records.filter(r => {
+            const s = (r.severity || '').toLowerCase();
+            return s.includes('عالي') || s.includes('high') || s.includes('كارثي') || s.includes('critical') || s.includes('وشيك');
         }).length;
 
         const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const thisMonth = records.filter((item) => new Date(item.date) >= monthStart).length;
+        const thisMonth = records.filter(r => {
+            const d = new Date(r.date);
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        }).length;
 
-        const departmentFrequency = {};
-        records.forEach((item) => {
-            const value = (item.department || '').trim();
-            if (!value) return;
-            departmentFrequency[value] = (departmentFrequency[value] || 0) + 1;
+        const deptCounts = {};
+        records.forEach(r => {
+            const d = (r.department || '').trim();
+            if (d) deptCounts[d] = (deptCounts[d] || 0) + 1;
         });
-        const topDepartment = Object.entries(departmentFrequency)
-            .sort((a, b) => b[1] - a[1])[0];
+        const topDept = Object.entries(deptCounts).sort((a,b) => b[1] - a[1])[0];
+        const topDeptName = topDept ? `${topDept[0]} (${topDept[1]})` : 'لا توجد بيانات بعد';
 
-        const topDepartmentLabel = topDepartment
-            ? `${Utils.escapeHTML(topDepartment[0])} (${topDepartment[1]})`
-            : 'لا يوجد بيانات';
-
-        return `
+        container.innerHTML = `
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <!-- كرت إجمالي البلاغات -->
-                <div style="background:#fff; border-radius:14px; padding:18px; border:1px solid #e0e7ff; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
-                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); color:#3730a3; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                <!-- إجمالي البلاغات -->
+                <div style="background:#fff; border-radius:16px; padding:18px 20px; border:1px solid #e0e7ff; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                    <div style="width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); color:#3730a3; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
                         <i class="fas fa-clipboard-list"></i>
                     </div>
                     <div>
-                        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">إجمالي الحوادث الوشيكة</div>
-                        <div style="font-size:1.5rem; font-weight:800; color:#1e1b4b; line-height:1.2;">${total}</div>
-                        <div style="font-size:0.7rem; color:#4338ca; font-weight:600; margin-top:2px;">+${thisMonth} خلال هذا الشهر 📅</div>
+                        <div style="font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase;">إجمالي الحوادث الوشيكة</div>
+                        <div style="font-size:1.6rem; font-weight:800; color:#1e1b4b; line-height:1.2;">${total}</div>
+                        <div style="font-size:0.72rem; color:#4338ca; font-weight:600; margin-top:2px;">+${thisMonth} بلاغ هذا الشهر 📅</div>
                     </div>
                 </div>
 
-                <!-- كرت الحوادث عالية الخطورة -->
-                <div style="background:#fff; border-radius:14px; padding:18px; border:1px solid #fee2e2; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
-                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
-                        <i class="fas fa-radiation-alt"></i>
+                <!-- بلاغات عالية الخطورة -->
+                <div style="background:#fff; border-radius:16px; padding:18px 20px; border:1px solid #fee2e2; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                    <div style="width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                        <i class="fas fa-exclamation-triangle"></i>
                     </div>
                     <div>
-                        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">بلاغات عالية الخطورة</div>
-                        <div style="font-size:1.5rem; font-weight:800; color:#b91c1c; line-height:1.2;">${highSeverity}</div>
-                        <div style="font-size:0.7rem; color:#dc2626; font-weight:600; margin-top:2px;">تتطلب تدخل فوري 🚨</div>
+                        <div style="font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase;">بلاغات عالية الخطورة</div>
+                        <div style="font-size:1.6rem; font-weight:800; color:#b91c1c; line-height:1.2;">${highSeverity}</div>
+                        <div style="font-size:0.72rem; color:#dc2626; font-weight:600; margin-top:2px;">مخاطر وشيكة محتملة 🚨</div>
                     </div>
                 </div>
 
-                <!-- كرت الإجراءات التصحيحية -->
-                <div style="background:#fff; border-radius:14px; padding:18px; border:1px solid #fef3c7; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
-                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                <!-- إجراءات تصحيحية -->
+                <div style="background:#fff; border-radius:16px; padding:18px 20px; border:1px solid #fef3c7; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                    <div style="width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
                         <i class="fas fa-shield-alt"></i>
                     </div>
                     <div>
-                        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">إجراءات تصحيحية (CAPA)</div>
-                        <div style="font-size:1.5rem; font-weight:800; color:#b45309; line-height:1.2;">${corrective}</div>
-                        <div style="font-size:0.7rem; color:#d97706; font-weight:600; margin-top:2px;">مربوطة بخطة المتابعة 🔄</div>
+                        <div style="font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase;">إجراءات تصحيحية (CAPA)</div>
+                        <div style="font-size:1.6rem; font-weight:800; color:#b45309; line-height:1.2;">${corrective}</div>
+                        <div style="font-size:0.72rem; color:#d97706; font-weight:600; margin-top:2px;">متابعة الإغلاق والمعالجة 🔄</div>
                     </div>
                 </div>
 
-                <!-- كرت أكثر إدارة نشاطاً -->
-                <div style="background:#fff; border-radius:14px; padding:18px; border:1px solid #d1fae5; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
-                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                <!-- أعلى إدارة رصداً -->
+                <div style="background:#fff; border-radius:16px; padding:18px 20px; border:1px solid #d1fae5; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                    <div style="width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
                         <i class="fas fa-building"></i>
                     </div>
                     <div>
-                        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">أعلى إدارة رصداً</div>
-                        <div style="font-size:1.05rem; font-weight:800; color:#065f46; line-height:1.2; margin-top:2px;">${topDepartmentLabel}</div>
-                        <div style="font-size:0.7rem; color:#059669; font-weight:600; margin-top:2px;">بيئة إيجابية مشجعة 🏆</div>
+                        <div style="font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase;">أعلى إدارة رصداً</div>
+                        <div style="font-size:1.05rem; font-weight:800; color:#065f46; line-height:1.2; margin-top:3px;">${Utils.escapeHTML(topDeptName)}</div>
+                        <div style="font-size:0.72rem; color:#059669; font-weight:600; margin-top:2px;">ثقافة إيجابية مشجعة 🏆</div>
                     </div>
                 </div>
             </div>
         `;
+    },
+
+    renderActiveTabContent() {
+        const container = document.getElementById('nearmiss-tab-content');
+        if (!container) return;
+
+        if (this.state.activeTab === 'register') {
+            this.renderRegisterTab(container);
+        } else {
+            this.renderAnalyticsTab(container);
+        }
+    },
+
+    renderRegisterTab(container) {
+        container.innerHTML = `
+            <div class="content-card mb-6" style="background:#fff; border-radius:16px; border:1px solid #e2e8f0; padding:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <div class="flex items-center gap-2 font-bold text-gray-800 text-sm">
+                        <i class="fas fa-sliders-h text-indigo-600"></i>
+                        <span>عوامل التصفية المتقدمة</span>
+                    </div>
+                    <button id="nearmiss-reset-filters" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 cursor-pointer" style="background:none; border:none;">
+                        <i class="fas fa-undo"></i> إعادة التعيين
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">بحث حر</label>
+                        <input type="text" id="nearmiss-filter-search" class="form-input w-full p-2 rounded-lg border text-xs" placeholder="النوع، الموقع، المبلّغ..." value="${Utils.escapeHTML(this.state.filters.search)}">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">نوع الحادث</label>
+                        <select id="nearmiss-filter-type" class="form-input w-full p-2 rounded-lg border text-xs">
+                            ${this.renderTypeOptions(this.state.filters.type)}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">الإدارة المسؤولة</label>
+                        <select id="nearmiss-filter-department" class="form-input w-full p-2 rounded-lg border text-xs">
+                            ${this.renderDepartmentOptions(this.state.filters.department)}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">من تاريخ</label>
+                        <input type="date" id="nearmiss-filter-start" class="form-input w-full p-2 rounded-lg border text-xs" value="${this.state.filters.startDate}">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">إلى تاريخ</label>
+                        <input type="date" id="nearmiss-filter-end" class="form-input w-full p-2 rounded-lg border text-xs" value="${this.state.filters.endDate}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- جدول السجل -->
+            <div class="content-card" style="background:#fff; border-radius:16px; border:1px solid #e2e8f0; overflow:hidden;">
+                <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+                    <div class="flex items-center gap-2 font-bold text-gray-800 text-sm">
+                        <i class="fas fa-table text-indigo-600"></i>
+                        <span>سجل بلاغات الحوادث الوشيكة</span>
+                    </div>
+                    <span id="nearmiss-result-count" class="text-xs text-indigo-700 bg-indigo-50 font-bold px-2.5 py-1 rounded-full"></span>
+                </div>
+                <div id="nearmiss-table-container" style="padding:0;"></div>
+            </div>
+        `;
+
+        this.bindFilterEvents();
+        this.renderTable();
+    },
+
+    renderAnalyticsTab(container) {
+        const records = AppState.appData.nearmiss || [];
+        
+        container.innerHTML = `
+            <div style="background:#fff; border-radius:16px; border:1px solid #e2e8f0; padding:20px; margin-bottom:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid #f1f5f9;">
+                    <div class="flex items-center gap-3">
+                        <div style="width:40px; height:40px; border-radius:10px; background:#e0e7ff; color:#3730a3; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#1e1b4b;">لوحة التحليل البياني للحوادث الوشيكة</h3>
+                            <p style="margin:2px 0 0 0; font-size:0.75rem; color:#64748b;">تحليل توزيع المخاطر المحتملة ومعدلات التكرار بالمصانع والأقسام</p>
+                        </div>
+                    </div>
+                    <button onclick="window.print()" class="btn-secondary flex items-center gap-2" style="font-size:0.8rem; font-weight:700; padding:7px 14px; border-radius:8px;">
+                        <i class="fas fa-file-pdf text-red-500"></i>
+                        <span>تصدير تقرير PDF</span>
+                    </button>
+                </div>
+
+                <!-- شبكة الرسوم البيانية -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- تصنيف الحوادث -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:18px;">
+                        <div style="font-weight:800; font-size:0.85rem; color:#1e1b4b; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-pie-chart text-indigo-600"></i>
+                            <span>التوزيع حسب نوع وتصنيف الحادث</span>
+                        </div>
+                        <div style="height:260px; position:relative;">
+                            <canvas id="nrm-chart-types"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- مستوى الخطورة -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:18px;">
+                        <div style="font-weight:800; font-size:0.85rem; color:#1e1b4b; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-exclamation-triangle text-amber-600"></i>
+                            <span>التوزيع حسب مستوى الخطورة المحتملة</span>
+                        </div>
+                        <div style="height:260px; position:relative;">
+                            <canvas id="nrm-chart-severity"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- الرسوم البيانية: المواقع والإدارات -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- أكثر المواقع تسجيلاً -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:18px;">
+                        <div style="font-weight:800; font-size:0.85rem; color:#1e1b4b; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-map-marker-alt text-red-600"></i>
+                            <span>أكثر المواقع والمصانع تسجيلاً للبلاغات</span>
+                        </div>
+                        <div style="height:260px; position:relative;">
+                            <canvas id="nrm-chart-locations"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- أكثر الإدارات تسجيلاً -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:18px;">
+                        <div style="font-weight:800; font-size:0.85rem; color:#1e1b4b; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-building text-emerald-600"></i>
+                            <span>أكثر الإدارات رصداً وتفاعلاً</span>
+                        </div>
+                        <div style="height:260px; position:relative;">
+                            <canvas id="nrm-chart-departments"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        setTimeout(() => this.drawAnalyticsCharts(records), 100);
+    },
+
+    drawAnalyticsCharts(records) {
+        if (typeof Chart === 'undefined') return;
+
+        // تدمير الرسوم القديمة إن وُجدت
+        ['types', 'severity', 'locations', 'departments'].forEach(k => {
+            if (this._charts[k]) {
+                try { this._charts[k].destroy(); } catch(e) {}
+            }
+        });
+
+        // 1. Chart Types
+        const typeCounts = {};
+        records.forEach(r => {
+            const t = r.type || 'أخرى';
+            typeCounts[t] = (typeCounts[t] || 0) + 1;
+        });
+        const ctxType = document.getElementById('nrm-chart-types');
+        if (ctxType) {
+            this._charts.types = new Chart(ctxType, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(typeCounts),
+                    datasets: [{
+                        data: Object.values(typeCounts),
+                        backgroundColor: ['#4f46e5', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        // 2. Chart Severity
+        const sevCounts = { 'منخفض': 0, 'متوسط': 0, 'عالي': 0, 'كارثي / وشيك': 0 };
+        records.forEach(r => {
+            const s = r.severity || 'متوسط';
+            if (s.includes('منخفض')) sevCounts['منخفض']++;
+            else if (s.includes('عالي') || s.includes('high')) sevCounts['عالي']++;
+            else if (s.includes('كارثي') || s.includes('وشيك')) sevCounts['كارثي / وشيك']++;
+            else sevCounts['متوسط']++;
+        });
+        const ctxSev = document.getElementById('nrm-chart-severity');
+        if (ctxSev) {
+            this._charts.severity = new Chart(ctxSev, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(sevCounts),
+                    datasets: [{
+                        data: Object.values(sevCounts),
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#991b1b']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        // 3. Chart Locations
+        const locCounts = {};
+        records.forEach(r => {
+            const l = (r.location || 'غير محدد').split('—')[0].trim();
+            locCounts[l] = (locCounts[l] || 0) + 1;
+        });
+        const topLocs = Object.entries(locCounts).sort((a,b) => b[1] - a[1]).slice(0, 6);
+        const ctxLoc = document.getElementById('nrm-chart-locations');
+        if (ctxLoc) {
+            this._charts.locations = new Chart(ctxLoc, {
+                type: 'bar',
+                data: {
+                    labels: topLocs.map(x => x[0]),
+                    datasets: [{
+                        label: 'عدد البلاغات',
+                        data: topLocs.map(x => x[1]),
+                        backgroundColor: '#6366f1',
+                        borderRadius: 8
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        // 4. Chart Departments
+        const deptCounts = {};
+        records.forEach(r => {
+            const d = (r.department || 'غير محدد').trim();
+            deptCounts[d] = (deptCounts[d] || 0) + 1;
+        });
+        const topDepts = Object.entries(deptCounts).sort((a,b) => b[1] - a[1]).slice(0, 6);
+        const ctxDept = document.getElementById('nrm-chart-departments');
+        if (ctxDept) {
+            this._charts.departments = new Chart(ctxDept, {
+                type: 'bar',
+                data: {
+                    labels: topDepts.map(x => x[0]),
+                    datasets: [{
+                        label: 'عدد البلاغات',
+                        data: topDepts.map(x => x[1]),
+                        backgroundColor: '#10b981',
+                        borderRadius: 8
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+    },
+
+    bindEvents() {
+        // Tab switching
+        document.querySelectorAll('.nrm-nav-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.getAttribute('data-tab');
+                if (tab) {
+                    this.state.activeTab = tab;
+                    document.querySelectorAll('.nrm-nav-tab').forEach(b => {
+                        const isActive = b.getAttribute('data-tab') === tab;
+                        b.style.background = isActive ? '#fff' : 'rgba(255,255,255,0.12)';
+                        b.style.color = isActive ? '#1e1b4b' : '#fff';
+                    });
+                    this.renderActiveTabContent();
+                }
+            });
+        });
+
+        // Open QR Modal Button
+        const qrBtn = document.getElementById('nearmiss-public-qr-btn');
+        if (qrBtn) {
+            qrBtn.addEventListener('click', () => this.openPublicQrModal());
+        }
+
+        // Print Badges Button
+        const printBtn = document.getElementById('nearmiss-print-badges-btn');
+        if (printBtn) {
+            printBtn.addEventListener('click', () => this.printLocationQrBadges());
+        }
+
+        // Create New Record Button
+        const createBtn = document.getElementById('nearmiss-create-new-btn');
+        if (createBtn) {
+            createBtn.addEventListener('click', () => this.showForm());
+        }
+    },
+
+    bindFilterEvents() {
+        const searchInput = document.getElementById('nearmiss-filter-search');
+        if (searchInput) searchInput.addEventListener('input', (e) => this.handleFilterChange('search', e.target.value));
+
+        const typeSelect = document.getElementById('nearmiss-filter-type');
+        if (typeSelect) typeSelect.addEventListener('change', (e) => this.handleFilterChange('type', e.target.value));
+
+        const deptSelect = document.getElementById('nearmiss-filter-department');
+        if (deptSelect) deptSelect.addEventListener('change', (e) => this.handleFilterChange('department', e.target.value));
+
+        const startInput = document.getElementById('nearmiss-filter-start');
+        if (startInput) startInput.addEventListener('change', (e) => this.handleFilterChange('startDate', e.target.value));
+
+        const endInput = document.getElementById('nearmiss-filter-end');
+        if (endInput) endInput.addEventListener('change', (e) => this.handleFilterChange('endDate', e.target.value));
+
+        const resetBtn = document.getElementById('nearmiss-reset-filters');
+        if (resetBtn) resetBtn.addEventListener('click', () => this.resetFilters());
+    },
+
+    handleFilterChange(key, value) {
+        this.state.filters[key] = value;
+        this.renderTable();
+    },
+
+    resetFilters() {
+        this.state.filters = { search: '', type: '', department: '', startDate: '', endDate: '', period: '365' };
+        this.renderRegisterTab(document.getElementById('nearmiss-tab-content'));
+    },
+
+    getFilteredItems() {
+        const { search, type, department, startDate, endDate } = this.state.filters;
+        let items = (AppState.appData.nearmiss || []).filter(item => Boolean(item));
+
+        if (type) items = items.filter(item => (item.type || '').toLowerCase() === type.toLowerCase());
+        if (department) items = items.filter(item => (item.department || '').toLowerCase() === department.toLowerCase());
+
+        if (startDate) {
+            const s = new Date(startDate); s.setHours(0,0,0,0);
+            items = items.filter(item => new Date(item.date) >= s);
+        }
+        if (endDate) {
+            const e = new Date(endDate); e.setHours(23,59,59,999);
+            items = items.filter(item => new Date(item.date) <= e);
+        }
+
+        if (search) {
+            const t = search.toLowerCase();
+            items = items.filter(item => [
+                item.type, item.location, item.department, item.observerName, item.phone, item.description, item.correctiveDescription, item.isoCode
+            ].some(v => v && String(v).toLowerCase().includes(t)));
+        }
+
+        return items.sort((a,b) => new Date(b.date) - new Date(a.date));
     },
 
     renderTable() {
@@ -627,62 +603,73 @@ const NearMiss = {
 
         const items = this.getFilteredItems();
         const countLabel = document.getElementById('nearmiss-result-count');
-        if (countLabel) {
-            countLabel.textContent = items.length
-                ? `${items.length} ملاحظة`
-                : 'لا توجد نتائج مطابقة';
-        }
+        if (countLabel) countLabel.textContent = items.length ? `${items.length} بلاغ` : 'لا توجد نتائج';
 
         if (!items.length) {
-            this.renderEmptyState(container);
+            container.innerHTML = `
+                <div class="empty-state text-center py-12">
+                    <i class="fas fa-clipboard-check text-4xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500 font-bold">لا توجد بلاغات مطابقة لعوامل التصفية</p>
+                </div>
+            `;
             return;
         }
 
         container.innerHTML = `
             <div class="table-wrapper" style="overflow-x: auto;">
-                <table class="data-table table-header-orange">
+                <table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
                     <thead>
-                        <tr>
-                            <th>النوع</th>
-                            <th>التاريخ والوقت</th>
-                            <th>صاحب الملاحظة</th>
-                            <th>الموقع</th>
-                            <th>الإدارة</th>
-                            <th>الإجراء التصحيحي</th>
-                            <th>المرفقات</th>
-                            <th style="width: 140px;">الإجراءات</th>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; text-align: right;">
+                            <th style="padding: 12px 14px;">الرقم المرجعي</th>
+                            <th style="padding: 12px 14px;">نوع الحادث</th>
+                            <th style="padding: 12px 14px;">الخطورة</th>
+                            <th style="padding: 12px 14px;">التاريخ</th>
+                            <th style="padding: 12px 14px;">الموقع / المصنع</th>
+                            <th style="padding: 12px 14px;">الإدارة</th>
+                            <th style="padding: 12px 14px;">المبلّغ</th>
+                            <th style="padding: 12px 14px;">الإجراء الوقائي</th>
+                            <th style="padding: 12px 14px; text-align: center;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${items.map((item) => `
-                            <tr>
-                                <td>
-                                    <span class="badge ${this.formatTypeBadge(item.type)}">${Utils.escapeHTML(item.type || '')}</span>
+                            <tr style="border-bottom: 1px solid #f1f5f9; transition: all 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+                                <td style="padding: 12px 14px; font-weight: 800; color: #312e81;">
+                                    ${Utils.escapeHTML(item.isoCode || item.id)}
                                 </td>
-                                <td>
-                                    <div class="text-sm text-gray-800">${item.date ? Utils.formatDateTime(item.date) : '-'}</div>
+                                <td style="padding: 12px 14px;">
+                                    <span style="background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 0.75rem;">
+                                        ${Utils.escapeHTML(item.type || 'حادث وشيك')}
+                                    </span>
                                 </td>
-                                <td>
-                                    <div class="font-semibold text-gray-900">${Utils.escapeHTML(item.observerName || '-')}</div>
-                                    ${item.phone ? `<div class="text-xs text-gray-500">${Utils.escapeHTML(item.phone)}</div>` : ''}
+                                <td style="padding: 12px 14px;">
+                                    ${this.formatSeverityBadge(item.severity)}
                                 </td>
-                                <td>${Utils.escapeHTML(item.location || '-')}</td>
-                                <td>${Utils.escapeHTML(item.department || '-')}</td>
-                                <td>${this.formatCorrectiveBadge(item)}</td>
-                                <td>
-                                    ${item.attachments && item.attachments.length
-                ? `<span class="badge badge-secondary">${item.attachments.length}</span>`
-                : '<span class="text-xs text-gray-400">لا يوجد</span>'}
+                                <td style="padding: 12px 14px; color: #64748b;">
+                                    ${item.date ? Utils.formatDateTime(item.date) : '-'}
                                 </td>
-                                <td>
-                                    <div class="flex items-center gap-2">
-                                        <button class="btn-icon btn-icon-info" data-action="view-nearmiss" data-id="${item.id}" title="عرض التفاصيل">
+                                <td style="padding: 12px 14px; font-weight: 600; color: #1e1b4b;">
+                                    ${Utils.escapeHTML(item.location || '-')}
+                                </td>
+                                <td style="padding: 12px 14px; color: #334155;">
+                                    ${Utils.escapeHTML(item.department || '-')}
+                                </td>
+                                <td style="padding: 12px 14px;">
+                                    <div style="font-weight: 600; color: #0f172a;">${Utils.escapeHTML(item.observerName || 'فاعل خير')}</div>
+                                    ${item.phone ? `<div style="font-size: 0.7rem; color: #94a3b8;">${Utils.escapeHTML(item.phone)}</div>` : ''}
+                                </td>
+                                <td style="padding: 12px 14px;">
+                                    ${item.correctiveProposed ? '<span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:700; font-size:0.72rem;">متاح ✅</span>' : '<span style="color:#94a3b8; font-size:0.72rem;">—</span>'}
+                                </td>
+                                <td style="padding: 12px 14px; text-align: center;">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        <button class="btn-icon text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg" data-action="view-nearmiss" data-id="${item.id}" title="عرض">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button class="btn-icon btn-icon-primary" data-action="edit-nearmiss" data-id="${item.id}" title="تعديل">
+                                        <button class="btn-icon text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg" data-action="edit-nearmiss" data-id="${item.id}" title="تعديل">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="btn-icon btn-icon-danger" data-action="delete-nearmiss" data-id="${item.id}" title="حذف">
+                                        <button class="btn-icon text-red-600 hover:bg-red-50 p-1.5 rounded-lg" data-action="delete-nearmiss" data-id="${item.id}" title="حذف">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -693,27 +680,20 @@ const NearMiss = {
                 </table>
             </div>
         `;
-        this.applyModuleI18n(container);
 
         this.bindTableActions();
     },
 
-    renderEmptyState(container) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-clipboard text-4xl text-gray-300 mb-4"></i>
-                <p class="text-gray-500">لا توجد ملاحظات مطابقة لعوامل التصفية الحالية</p>
-                <button id="nearmiss-empty-create" class="btn-primary mt-4">
-                    <i class="fas fa-plus ml-2"></i>
-                    تسجيل ملاحظة جديدة
-                </button>
-            </div>
-        `;
-        this.applyModuleI18n(container);
-        const emptyBtn = document.getElementById('nearmiss-empty-create');
-        if (emptyBtn) {
-            emptyBtn.addEventListener('click', () => this.showForm());
+    formatSeverityBadge(sev = '') {
+        const s = String(sev || '').toLowerCase();
+        if (s.includes('منخفض')) {
+            return '<span style="background:#dcfce7; color:#166534; padding:3px 8px; border-radius:10px; font-weight:700; font-size:0.72rem;">🟢 منخفض</span>';
+        } else if (s.includes('عالي') || s.includes('high')) {
+            return '<span style="background:#fee2e2; color:#991b1b; padding:3px 8px; border-radius:10px; font-weight:700; font-size:0.72rem;">🔴 عالي</span>';
+        } else if (s.includes('كارثي') || s.includes('وشيك') || s.includes('critical')) {
+            return '<span style="background:#450a0a; color:#fecaca; padding:3px 8px; border-radius:10px; font-weight:700; font-size:0.72rem;">🚨 وشيك / كارثي</span>';
         }
+        return '<span style="background:#fef3c7; color:#92400e; padding:3px 8px; border-radius:10px; font-weight:700; font-size:0.72rem;">🟡 متوسط</span>';
     },
 
     bindTableActions() {
@@ -728,43 +708,171 @@ const NearMiss = {
         });
     },
 
-    formatTypeBadge(type = '') {
-        switch (type) {
-            case 'حادث وشيك':
-                return 'badge-warning';
-            case 'تصرف غير آمن':
-                return 'badge-info';
-            case 'وضع غير آمن':
-                return 'badge-secondary';
-            case 'حادث':
-                return 'badge-danger';
-            case 'مقترح':
-                return 'badge-primary';
-            default:
-                return 'badge-info';
+    getDepartmentOptions() {
+        const departments = new Set();
+        (AppState.appData.nearmiss || []).forEach(item => {
+            const value = (item.department || '').trim();
+            if (value) departments.add(value);
+        });
+        (AppState.appData.departments || []).forEach(d => {
+            const value = typeof d === 'string' ? d : (d.name || d.departmentName || '');
+            if (value) departments.add(value);
+        });
+        if (departments.size === 0) {
+            ['السلامة والصحة المهنية', 'الإنتاج', 'الصيانة الميكانيكية', 'الصيانة الكهربائية', 'الجودة', 'المخازن', 'الموارد البشرية'].forEach(d => departments.add(d));
         }
+        return Array.from(departments).sort((a, b) => a.localeCompare(b, 'ar'));
     },
 
-    formatCorrectiveBadge(record) {
-        if (record.correctiveProposed) {
-            return '<span class="badge badge-info">مقترح</span>';
+    renderTypeOptions(selectedValue = '') {
+        const options = ['<option value="">جميع الأنواع</option>'];
+        this.TYPES.forEach((type) => {
+            options.push(`<option value="${Utils.escapeHTML(type.value)}" ${type.value === selectedValue ? 'selected' : ''}>${Utils.escapeHTML(type.label)}</option>`);
+        });
+        return options.join('');
+    },
+
+    renderDepartmentOptions(selectedValue = '') {
+        const options = ['<option value="">جميع الإدارات</option>'];
+        this.getDepartmentOptions().forEach((dept) => {
+            options.push(`<option value="${Utils.escapeHTML(dept)}" ${dept === selectedValue ? 'selected' : ''}>${Utils.escapeHTML(dept)}</option>`);
+        });
+        return options.join('');
+    },
+
+    viewNearMiss(id) {
+        const item = (AppState.appData.nearmiss || []).find((record) => record.id === id);
+        if (!item) {
+            alert('لم يتم العثور على البلاغ');
+            return;
         }
-        return '<span class="badge badge-secondary">لا يوجد</span>';
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px; backdrop-filter:blur(4px);';
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 740px; width:100%; background:#fff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); font-family: 'Segoe UI', Tahoma, sans-serif; max-height:90vh; display:flex; flex-direction:column; direction:rtl;">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: #fff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="flex items-center gap-3">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                            <i class="fas fa-file-contract text-amber-300"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #fff;">تقرير تفاصيل الحادث الوشيك</h3>
+                                <span style="background: #f59e0b; color: #000; font-weight: 800; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px;">${Utils.escapeHTML(item.isoCode || item.id || '')}</span>
+                            </div>
+                            <div style="font-size: 0.75rem; color: #c7d2fe; margin-top: 2px;">SafetyHub | ICAPP — Incident Prevention Record</div>
+                        </div>
+                    </div>
+                    <button class="modal-close text-white/80 hover:text-white text-2xl" onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; cursor: pointer;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="modal-body space-y-4 p-6" style="background: #f8fafc; overflow-y:auto; flex:1;">
+                    <!-- شبكة البيانات الأساسية -->
+                    <div style="background: #fff; padding: 16px; border-radius: 14px; border: 1px solid #e2e8f0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block;">نوع وتصنيف الحادث:</span>
+                            <div style="font-weight: 700; color: #1e1b4b; font-size: 0.9rem; margin-top: 2px;">
+                                <i class="fas fa-tag text-indigo-500 ml-1"></i> ${Utils.escapeHTML(item.type || 'حادث وشيك')}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block;">مستوى الخطورة:</span>
+                            <div style="margin-top: 2px;">
+                                ${this.formatSeverityBadge(item.severity)}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block;">الموقع / المصنع:</span>
+                            <div style="font-weight: 700; color: #1e1b4b; font-size: 0.9rem; margin-top: 2px;">
+                                <i class="fas fa-map-marker-alt text-red-500 ml-1"></i> ${Utils.escapeHTML(item.location || '-')}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block;">الإدارة المسؤولة:</span>
+                            <div style="font-weight: 700; color: #1e1b4b; font-size: 0.9rem; margin-top: 2px;">
+                                <i class="fas fa-building text-blue-500 ml-1"></i> ${Utils.escapeHTML(item.department || '-')}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block;">تاريخ وتوقيت الرصد:</span>
+                            <div style="font-weight: 600; color: #334155; font-size: 0.85rem; margin-top: 2px;">
+                                <i class="far fa-calendar-alt text-amber-500 ml-1"></i> ${item.date ? Utils.formatDateTime(item.date) : '-'}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block;">صاحب البلاغ:</span>
+                            <div style="font-weight: 600; color: #334155; font-size: 0.85rem; margin-top: 2px;">
+                                <i class="fas fa-user-shield text-emerald-500 ml-1"></i> ${Utils.escapeHTML(item.observerName || 'فاعل خير (سري)')}
+                                ${item.phone ? `<span style="font-size: 0.75rem; color: #64748b;"> (${Utils.escapeHTML(item.phone)})</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- كرت وصف الواقعة وما كاد أن يحدث -->
+                    <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 14px; padding: 16px;">
+                        <div style="display:flex; align-items:center; gap:8px; font-weight:800; color:#92400e; font-size:0.88rem; margin-bottom:8px;">
+                            <i class="fas fa-exclamation-circle text-amber-600"></i>
+                            <span>تفاصيل الواقعة الوشيكة وما كاد أن يحدث:</span>
+                        </div>
+                        <div style="font-size:0.85rem; color:#78350f; line-height:1.6; white-space:pre-line;">
+                            ${Utils.escapeHTML(item.description || 'لا يوجد تفاصيل إضافية')}
+                        </div>
+                    </div>
+
+                    <!-- كرت الإجراء التصحيحي المتخذ -->
+                    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 14px; padding: 16px;">
+                        <div style="display:flex; align-items:center; gap:8px; font-weight:800; color:#166534; font-size:0.88rem; margin-bottom:8px;">
+                            <i class="fas fa-shield-alt text-emerald-600"></i>
+                            <span>الإجراء التصحيحي والوقائي الفوري المتخذ:</span>
+                        </div>
+                        <div style="font-size:0.85rem; color:#14532d; line-height:1.6; white-space:pre-line;">
+                            ${Utils.escapeHTML(item.correctiveDescription || item.correctiveProposed || 'تم التوثيق والمتابعة الميدانية مع الإدارة المختصة')}
+                        </div>
+                    </div>
+
+                    <!-- قسم المرفقات والصور -->
+                    ${item.attachments && item.attachments.length ? `
+                    <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px;">
+                        <div style="font-weight:700; color:#334155; font-size:0.85rem; margin-bottom:10px;">
+                            <i class="fas fa-camera text-indigo-600 ml-1"></i> الصور والمرفقات الميدانية:
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            ${item.attachments.map((att) => {
+                                return `
+                                    <div style="border-radius:10px; overflow:hidden; border:1px solid #cbd5e1; cursor:pointer;" onclick="window.open('${att.data || att.url}', '_blank')">
+                                        <img src="${att.data || att.url}" style="width:100%; height:160px; object-fit:cover;" />
+                                        <div style="padding:6px 10px; background:#f8fafc; font-size:0.75rem; color:#475569;">${Utils.escapeHTML(att.name || 'صورة الحادث الوشيك')}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="modal-footer" style="padding: 14px 24px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.75rem; color: #94a3b8;"><i class="fas fa-check-circle text-emerald-500 ml-1"></i> تم التحقق والأرشفة في سجلات السلامة</span>
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 7px 20px; border-radius: 10px; font-weight:700; cursor:pointer;">إغلاق النافذة</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
     },
 
     showForm(data = null) {
         const record = data ? this.normalizeRecord(data) : null;
         this.state.editingId = record?.id || null;
-        this.state.currentAttachments = record?.attachments
-            ? record.attachments.map((attachment) => this.normalizeAttachment(attachment)).filter(Boolean)
-            : [];
+        this.state.currentAttachments = record?.attachments || [];
 
         const modal = this.buildFormModal(record);
         document.body.appendChild(modal);
-        this.applyModuleI18n(modal);
         this.bindFormEvents(modal, record);
-        this.renderAttachmentsPreview();
-        this.toggleCorrectiveSection(record?.correctiveProposed === true);
     },
 
     buildFormModal(record) {
@@ -774,8 +882,10 @@ const NearMiss = {
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
+        modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px; backdrop-filter:blur(4px);';
+        
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 780px; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); font-family: 'Segoe UI', Tahoma, sans-serif;">
+            <div class="modal-content" style="max-width: 780px; width:100%; background:#fff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); font-family: 'Segoe UI', Tahoma, sans-serif; max-height:90vh; display:flex; flex-direction:column; direction:rtl;">
                 <!-- Header -->
                 <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); color: #fff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
                     <div class="flex items-center gap-3">
@@ -789,13 +899,13 @@ const NearMiss = {
                             <p style="font-size: 0.75rem; color: #c7d2fe; margin: 2px 0 0 0;">SafetyHub | ICAPP — Incident Prevention Entry</p>
                         </div>
                     </div>
-                    <button class="modal-close text-white/80 hover:text-white text-2xl" data-action="close-modal" style="background: none; border: none; cursor: pointer;">
+                    <button class="modal-close text-white/80 hover:text-white text-2xl" onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; cursor: pointer;">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
 
                 <!-- Body -->
-                <div class="modal-body p-6" style="background: #f8fafc; max-height: 75vh; overflow-y: auto;">
+                <div class="modal-body p-6" style="background: #f8fafc; overflow-y: auto; flex:1;">
                     <form id="nearmiss-form" class="space-y-5">
                         <!-- Section 1: التصنيف والخطورة -->
                         <div style="background: #fff; padding: 18px; border-radius: 14px; border: 1px solid #e2e8f0;">
@@ -816,7 +926,7 @@ const NearMiss = {
                                         <option value="منخفض" ${severityValue === 'منخفض' ? 'selected' : ''}>🟢 منخفض (Low Potential)</option>
                                         <option value="متوسط" ${severityValue === 'متوسط' ? 'selected' : ''}>🟡 متوسط (Medium Potential)</option>
                                         <option value="عالي" ${severityValue === 'عالي' ? 'selected' : ''}>🔴 عالي (High Potential)</option>
-                                        <option value="كارثي / وشيك" ${severityValue === 'كارثي / وشيك' || severityValue === 'وشيك' ? 'selected' : ''}>🚨 وشيك / كارثي (Critical Potential)</option>
+                                        <option value="كارثي / وشيك" ${severityValue.includes('وشيك') || severityValue.includes('كارثي') ? 'selected' : ''}>🚨 وشيك / كارثي (Critical Potential)</option>
                                     </select>
                                 </div>
                             </div>
@@ -889,8 +999,8 @@ const NearMiss = {
 
                         <!-- Footer -->
                         <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-                            <button type="button" id="nearmiss-cancel-btn" class="btn-secondary px-5 py-2.5 rounded-xl">إلغاء</button>
-                            <button type="submit" class="btn-primary px-6 py-2.5 rounded-xl font-bold flex items-center gap-2" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color:#fff;">
+                            <button type="button" onclick="this.closest('.modal-overlay').remove()" class="btn-secondary px-5 py-2.5 rounded-xl cursor-pointer">إلغاء</button>
+                            <button type="submit" class="btn-primary px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 cursor-pointer" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color:#fff;">
                                 <i class="fas fa-save text-amber-300"></i>
                                 <span>${record ? 'تحديث وحفظ البلاغ' : 'حفظ وتسجيل البلاغ'}</span>
                             </button>
@@ -905,799 +1015,274 @@ const NearMiss = {
     bindFormEvents(modal, record) {
         const form = modal.querySelector('#nearmiss-form');
         if (form) {
-            form.addEventListener('submit', (event) => this.handleSubmit(event));
-        }
-
-        const closeBtn = modal.querySelector('[data-action="close-modal"]');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.closeModal(modal));
-        }
-
-        const cancelBtn = modal.querySelector('#nearmiss-cancel-btn');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => this.closeModal(modal));
-        }
-
-        const attachmentsInput = modal.querySelector('#nearmiss-attachments');
-        if (attachmentsInput) {
-            attachmentsInput.addEventListener('change', (event) => this.handleAttachmentsChange(event.target.files));
-        }
-
-        const correctiveRadios = modal.querySelectorAll('input[name="nearmiss-corrective"]');
-        correctiveRadios.forEach((radio) => {
-            radio.addEventListener('change', (event) => this.toggleCorrectiveSection(event.target.value === 'yes'));
-        });
-
-        const attachmentsPreview = modal.querySelector('#nearmiss-attachments-preview');
-        if (attachmentsPreview) {
-            attachmentsPreview.addEventListener('click', (event) => {
-                const button = event.target.closest('button[data-remove-attachment]');
-                if (button) {
-                    this.removeAttachment(button.getAttribute('data-remove-attachment'));
-                }
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await this.handleSubmit(form, record);
+                modal.remove();
             });
         }
 
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                this.closeModal(modal);
-            }
-        });
-
-        setTimeout(() => {
-            modal.querySelector('#nearmiss-type')?.focus();
-        }, 100);
-    },
-
-    toggleCorrectiveSection(show) {
-        const wrapper = document.getElementById('nearmiss-corrective-wrapper');
-        const textarea = document.getElementById('nearmiss-corrective-description');
-        if (!wrapper || !textarea) return;
-        if (show) {
-            wrapper.classList.remove('hidden');
-            textarea.setAttribute('required', 'required');
-        } else {
-            wrapper.classList.add('hidden');
-            textarea.removeAttribute('required');
-            textarea.value = '';
+        const attachInput = modal.querySelector('#nearmiss-attachments');
+        if (attachInput) {
+            attachInput.addEventListener('change', async (e) => {
+                const files = e.target.files;
+                if (!files || !files.length) return;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const reader = new FileReader();
+                    reader.onload = (re) => {
+                        this.state.currentAttachments.push({
+                            id: 'att-' + Date.now() + '-' + i,
+                            name: file.name,
+                            type: file.type,
+                            data: re.target.result,
+                            url: re.target.result
+                        });
+                        this.renderAttachmentsPreview(modal);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
         }
     },
 
-    renderAttachmentsPreview() {
-        const container = document.getElementById('nearmiss-attachments-preview');
+    renderAttachmentsPreview(modal) {
+        const container = modal.querySelector('#nearmiss-attachments-preview');
         if (!container) return;
 
         if (!this.state.currentAttachments.length) {
-            container.innerHTML = '<p class="text-sm text-gray-500">لم يتم إرفاق ملفات بعد.</p>';
+            container.innerHTML = '';
             return;
         }
 
-        container.innerHTML = this.state.currentAttachments.map((attachment) => `
-            <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded px-3 py-2">
-                <div>
-                    <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(attachment.name)}</div>
-                    <div class="text-xs text-gray-500">${attachment.size ? `${attachment.size} KB` : ''}</div>
-                </div>
-                <div class="flex items-center gap-3">
-                    <a href="${attachment.data}" target="_blank" class="text-sm text-blue-600 hover:underline">عرض</a>
-                    <button type="button" class="btn-icon btn-icon-danger" data-remove-attachment="${attachment.id}" title="إزالة">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+        container.innerHTML = this.state.currentAttachments.map((att, i) => `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0; font-size:0.8rem;">
+                <span class="truncate">${Utils.escapeHTML(att.name)}</span>
+                <button type="button" onclick="NearMiss.state.currentAttachments.splice(${i},1); NearMiss.renderAttachmentsPreview(this.closest('.modal-overlay'))" class="text-red-500 hover:text-red-700" style="background:none; border:none; cursor:pointer;">
+                    <i class="fas fa-trash"></i>
+                </button>
             </div>
         `).join('');
     },
 
-    async handleAttachmentsChange(fileList) {
-        if (!fileList || !fileList.length) return;
+    async handleSubmit(form, existingRecord) {
+        const type = document.getElementById('nearmiss-type')?.value || 'حادث وشيك';
+        const severity = document.getElementById('nearmiss-severity')?.value || 'متوسط';
+        const location = document.getElementById('nearmiss-location')?.value || '';
+        const department = document.getElementById('nearmiss-department')?.value || '';
+        const date = document.getElementById('nearmiss-date')?.value || new Date().toISOString();
+        const observerName = document.getElementById('nearmiss-observer')?.value || 'فاعل خير';
+        const description = document.getElementById('nearmiss-description')?.value || '';
+        const correctiveCheck = document.getElementById('nearmiss-corrective-check')?.checked || false;
+        const correctiveDescription = document.getElementById('nearmiss-corrective-description')?.value || '';
 
-        const files = Array.from(fileList);
-        const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
-        const maxSize = 5 * 1024 * 1024;
-        const newAttachments = [];
+        const recordId = existingRecord?.id || ('NRM-' + Date.now());
+        const isoCode = existingRecord?.isoCode || ('NM-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random()*9000));
 
-        for (const file of files) {
-            const extension = (file.name.split('.').pop() || '').toLowerCase();
-            if (!allowedExtensions.includes(extension)) {
-                Notification.warning(`الملف ${file.name} غير مدعوم. يسمح بملفات JPG أو PNG أو PDF فقط.`);
-                continue;
-            }
-            if (file.size > maxSize) {
-                Notification.warning(`الملف ${file.name} يتجاوز الحد الأقصى المسموح به (5MB).`);
-                continue;
-            }
+        const record = {
+            id: recordId,
+            isoCode: isoCode,
+            type,
+            severity,
+            location,
+            department,
+            date: new Date(date).toISOString(),
+            observerName,
+            description,
+            correctiveProposed: correctiveCheck,
+            correctiveDescription: correctiveCheck ? correctiveDescription : '',
+            attachments: this.state.currentAttachments,
+            status: correctiveCheck ? 'مفتوح' : 'مغلق',
+            updatedAt: new Date().toISOString()
+        };
 
-            try {
-                const base64 = await this.readFileAsBase64(file);
-                newAttachments.push({
-                    id: Utils.generateId('ATT'),
-                    name: file.name,
-                    type: file.type || this.detectMimeType(file.name),
-                    data: base64,
-                    size: Math.round(file.size / 1024),
-                    uploadedAt: new Date().toISOString()
-                });
-            } catch (error) {
-                Notification.error(`تعذر تحميل الملف ${file.name}`);
-            }
+        if (existingRecord) {
+            const idx = AppState.appData.nearmiss.findIndex(r => r.id === existingRecord.id);
+            if (idx !== -1) AppState.appData.nearmiss[idx] = record;
+        } else {
+            record.createdAt = new Date().toISOString();
+            AppState.appData.nearmiss.unshift(record);
         }
 
-        if (newAttachments.length) {
-            this.state.currentAttachments = [...this.state.currentAttachments, ...newAttachments];
-            this.renderAttachmentsPreview();
-        }
-
-        const input = document.getElementById('nearmiss-attachments');
-        if (input) {
-            input.value = '';
-        }
-    },
-
-    removeAttachment(attachmentId) {
-        if (!attachmentId) return;
-        this.state.currentAttachments = this.state.currentAttachments.filter((attachment) => attachment.id !== attachmentId);
-        this.renderAttachmentsPreview();
-    },
-
-    async readFileAsBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (event) => resolve(event.target.result);
-            reader.onerror = (error) => reject(error);
-            reader.readAsDataURL(file);
-        });
-    },
-
-    validatePhone(phone) {
-        if (!phone) return false;
-        // إزالة المسافات والأحرف الخاصة
-        const normalized = phone.replace(/[\s\-\(\)]/g, '');
-
-        // التحقق من الأرقام المصرية
-        // +20XXXXXXXXXX (11 رقم بعد +20)
-        if (normalized.startsWith('+20')) {
-            const digits = normalized.substring(3).replace(/\D/g, '');
-            return digits.length === 10 && digits.startsWith('1');
-        }
-
-        // 01XXXXXXXXX (11 رقم يبدأ بـ 01)
-        if (normalized.startsWith('01')) {
-            const digits = normalized.replace(/\D/g, '');
-            return digits.length === 11 && digits.startsWith('01');
-        }
-
-        // 0XXXXXXXXX (10 أو 11 رقم يبدأ بـ 0)
-        if (normalized.startsWith('0')) {
-            const digits = normalized.replace(/\D/g, '');
-            return digits.length >= 10 && digits.length <= 11;
-        }
-
-        // إذا كان الرقم يبدأ مباشرة بأرقام (بدون +20 أو 0)
-        const digits = normalized.replace(/\D/g, '');
-        return digits.length >= 10 && digits.length <= 11;
-    },
-
-    async handleSubmit(event) {
-        event.preventDefault();
-        const form = event.target;
-        const modal = form.closest('.modal-overlay');
-
-        // منع النقر المتكرر
-        const submitBtn = form?.querySelector('button[type="submit"]') || 
-                         document.querySelector('.modal-overlay button[type="submit"]');
-        
-        if (submitBtn && submitBtn.disabled) {
-            return; // النموذج قيد المعالجة
-        }
-
-        const type = form.querySelector('#nearmiss-type')?.value || '';
-        const dateInput = form.querySelector('#nearmiss-date')?.value || '';
-        const observerName = (form.querySelector('#nearmiss-observer')?.value || '').trim();
-        const phone = (form.querySelector('#nearmiss-phone')?.value || '').trim();
-        const location = (form.querySelector('#nearmiss-location')?.value || '').trim();
-        const department = (form.querySelector('#nearmiss-department')?.value || '').trim();
-        const description = (form.querySelector('#nearmiss-description')?.value || '').trim();
-        const correctiveValue = form.querySelector('input[name="nearmiss-corrective"]:checked')?.value || 'no';
-        const correctiveProposed = correctiveValue === 'yes';
-        const correctiveDescription = correctiveProposed
-            ? (form.querySelector('#nearmiss-corrective-description')?.value || '').trim()
-            : '';
-
-        if (!type || !dateInput || !observerName || !location || !department || !description) {
-            Notification.error('يرجى تعبئة جميع الحقول المطلوبة');
-            return;
-        }
-
-        if (phone && !this.validatePhone(phone)) {
-            Notification.error('يرجى إدخال رقم تليفون صحيح');
-            return;
-        }
-
-        if (correctiveProposed && !correctiveDescription) {
-            Notification.error('يرجى وصف الإجراء التصحيحي المقترح');
-            return;
-        }
-
-        // ✅ إصلاح: استخدام تحويل صحيح لـ datetime-local
-        let isoDate;
+        // حفظ في السحابة
         try {
-            isoDate = Utils.dateTimeLocalToISO(dateInput) || new Date(dateInput).toISOString();
-        } catch (error) {
-            Notification.error('صيغة التاريخ غير صحيحة');
-            return;
-        }
-
-        let attachments = this.state.currentAttachments.map((attachment) => this.normalizeAttachment(attachment)).filter(Boolean);
-        const now = new Date().toISOString();
-
-        // تعطيل الزر لمنع النقر المتكرر
-        let originalText = '';
-        if (submitBtn) {
-            originalText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
-        }
-
-        try {
-            // معالجة attachments ورفعها إلى Google Drive
-            if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-                Loading.show('جاري رفع المرفقات إلى Google Drive...');
-                try {
-                    Utils.safeLog('NearMiss: قبل processAttachments - عدد المرفقات: ' + attachments.length);
-                    if (attachments.length > 0) {
-                        Utils.safeLog('NearMiss: أول مرفق قبل المعالجة:', {
-                            name: attachments[0].name,
-                            hasData: !!attachments[0].data,
-                            hasDirectLink: !!attachments[0].directLink
-                        });
-                    }
-                    attachments = await GoogleIntegration.processAttachments?.(
-                        attachments,
-                        'NearMiss'
-                    ) || attachments;
-                    Utils.safeLog('NearMiss: بعد processAttachments - عدد المرفقات: ' + attachments.length);
-                    if (attachments.length > 0) {
-                        Utils.safeLog('NearMiss: أول مرفق بعد المعالجة:', {
-                            name: attachments[0].name,
-                            directLink: attachments[0].directLink ? attachments[0].directLink.substring(0, 50) + '...' : 'لا يوجد'
-                        });
-                    }
-                } catch (uploadError) {
-                    Utils.safeError('خطأ في رفع المرفقات:', uploadError);
-                    Notification.warning('تم حفظ الملاحظة لكن فشل رفع بعض المرفقات');
-                }
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.callApi) {
+                const action = existingRecord ? 'updateNearMiss' : 'addNearMiss';
+                GoogleIntegration.callApi(action, record);
             }
+        } catch(e) {}
 
-            if (this.state.editingId) {
-                const index = AppState.appData.nearmiss.findIndex((item) => item.id === this.state.editingId);
-                if (index === -1) {
-                    throw new Error('تعذر العثور على الملاحظة المحددة');
-                }
-                const existing = this.normalizeRecord(AppState.appData.nearmiss[index]);
-                const updatedRecord = {
-                    ...existing,
-                    type,
-                    date: isoDate,
-                    observerName,
-                    phone,
-                    location,
-                    department,
-                    description,
-                    correctiveProposed,
-                    correctiveDescription,
-                    attachments,
-                    status: existing.status || (correctiveProposed ? 'مفتوح' : 'مغلق'),
-                    updatedAt: now,
-                    updatedBy: this.getCurrentUserSummary(),
-                    reportedBy: observerName
-                };
-                AppState.appData.nearmiss[index] = updatedRecord;
-            } else {
-                const createdBy = this.getCurrentUserSummary();
-                const newRecord = {
-                    id: Utils.generateSequentialId('NRM', AppState.appData?.nearmiss || []),
-                    type,
-                    date: isoDate,
-                    observerName,
-                    phone,
-                    location,
-                    department,
-                    description,
-                    correctiveProposed,
-                    correctiveDescription,
-                    attachments,
-                    createdBy,
-                    createdById: createdBy?.id || AppState.currentUser?.id || '',
-                    createdAt: now,
-                    updatedAt: now,
-                    updatedBy: null,
-                    status: correctiveProposed ? 'مفتوح' : 'مغلق',
-                    reportedBy: observerName
-                };
-                AppState.appData.nearmiss.push(newRecord);
-            }
-
-            // حفظ البيانات باستخدام window.DataManager
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            } else {
-                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-            }
-
-            // 2. إغلاق النموذج فوراً بعد الحفظ في الذاكرة
-            this.closeModal(modal);
-            
-            // 3. عرض رسالة نجاح فورية
-            Notification.success(this.state.editingId ? 'تم تحديث الملاحظة بنجاح' : 'تم تسجيل الملاحظة بنجاح');
-            
-            // 4. استعادة الزر بعد النجاح
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-            
-            // 5. تحديث القائمة فوراً
-            this.updateSummary();
-            this.renderTable();
-            this.refreshFilterOptions();
-            
-            // 6. معالجة المهام الخلفية (Google Sheets) في الخلفية
-            if (GoogleIntegration?.sendRequest) {
-                Promise.resolve().then(async () => {
-                    try {
-                        if (this.state.editingId) {
-                            await GoogleIntegration.sendRequest({
-                                action: 'updateNearMiss',
-                                data: { nearMissId: this.state.editingId, updateData: updatedRecord }
-                            });
-                        } else {
-                            await GoogleIntegration.sendRequest({
-                                action: 'addNearMiss',
-                                data: newRecord
-                            });
-                        }
-                    } catch (error) {
-                        Utils.safeWarn('⚠ فشل حفظ الحوادث الوشيكة في Google Sheets:', error);
-                    }
-                }).catch(error => {
-                    Utils.safeWarn('⚠ فشل حفظ الحوادث الوشيكة في Google Sheets:', error);
-                });
-            }
-        } catch (error) {
-            Utils.safeError('خطأ في حفظ الحادث الوشيك:', error);
-            Notification.error(error.message || 'حدث خطأ أثناء حفظ البيانات');
-            
-            // استعادة الزر في حالة الخطأ
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-        } finally {
-            this.state.currentAttachments = [];
-            this.state.editingId = null;
-        }
-    },
-
-    closeModal(modal) {
-        if (modal && modal.parentNode) {
-            modal.parentNode.removeChild(modal);
-        }
-        this.state.currentAttachments = [];
-        this.state.editingId = null;
-    },
-
-    refreshFilterOptions() {
-        const departmentSelect = document.getElementById('nearmiss-filter-department');
-        if (departmentSelect) {
-            departmentSelect.innerHTML = this.renderDepartmentOptions(this.state.filters.department);
-        }
-    },
-
-    viewNearMiss(id) {
-        if (!id) return;
-        const record = AppState.appData.nearmiss.find((item) => item.id === id);
-        if (!record) {
-            Notification.error('تعذر العثور على الملاحظة المحددة');
-            return;
-        }
-        const normalized = this.normalizeRecord(record);
-        const modal = this.buildDetailModal(normalized);
-        document.body.appendChild(modal);
-        if (typeof EmailDispatch !== 'undefined') {
-            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'nearmiss', record: normalized, recordId: normalized.id || normalized.isoCode || '' });
-        }
-        this.applyModuleI18n(modal);
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                this.closeModal(modal);
-            }
-        });
-    },
-
-    buildDetailModal(record) {
-        const attachmentsHtml = record.attachments && record.attachments.length
-            ? record.attachments.map((attachment) => {
-                // ✅ التحقق مما إذا كان المرفق صورة - بدون short-circuit
-                const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(attachment.name || '');
-                const hasImageMimeType = attachment.type && attachment.type.startsWith('image/');
-                const isImage = hasImageMimeType || hasImageExtension;
-                const attachmentUrl = this.processAttachmentUrl(attachment.data);
-
-                if (isImage && attachmentUrl) {
-                    return `
-                        <div class="bg-gray-50 border border-gray-200 rounded p-3">
-                            <div class="flex items-center justify-between mb-2">
-                                <div>
-                                    <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(attachment.name)}</div>
-                                    <div class="text-xs text-gray-500">${attachment.size ? `${attachment.size} KB` : ''}</div>
-                                </div>
-                                <a href="${attachmentUrl}" target="_blank" class="text-sm text-blue-600 hover:underline" download="${Utils.escapeHTML(attachment.name)}">تحميل</a>
-                            </div>
-                            <img src="${Utils.escapeHTML(attachmentUrl)}" alt="${Utils.escapeHTML(attachment.name)}" class="max-w-full h-auto rounded border" style="max-height: 300px;"
-                                 onerror="this.onerror=null; this.style.display='none';">
-                        </div>
-                    `;
-                } else {
-                    return `
-                        <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded px-3 py-2">
-                            <div>
-                                <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(attachment.name)}</div>
-                                <div class="text-xs text-gray-500">${attachment.size ? `${attachment.size} KB` : ''}</div>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <a href="${attachmentUrl || attachment.data}" target="_blank" class="text-sm text-blue-600 hover:underline" download="${Utils.escapeHTML(attachment.name)}">تحميل</a>
-                            </div>
-                        </div>
-                    `;
-                }
-            }).join('')
-            : '<p class="text-sm text-gray-500">لا توجد مرفقات</p>';
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width: 720px;">
-                <div class="modal-header">
-                    <h2 class="modal-title">
-                        <i class="fas fa-eye ml-2"></i>
-                        تفاصيل الملاحظة
-                    </h2>
-                    <button class="modal-close" data-action="close-modal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body space-y-5">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="detail-label">نوع الحادث</label>
-                            <p class="detail-value">${Utils.escapeHTML(record.type)}</p>
-                        </div>
-                        <div>
-                            <label class="detail-label">التاريخ والوقت</label>
-                            <p class="detail-value">${Utils.formatDateTime(record.date)}</p>
-                        </div>
-                        <div>
-                            <label class="detail-label">اسم صاحب الملاحظة</label>
-                            <p class="detail-value">${Utils.escapeHTML(record.observerName || '-')}</p>
-                            ${record.phone ? `<p class="text-xs text-gray-500 mt-1">${Utils.escapeHTML(record.phone)}</p>` : ''}
-                        </div>
-                        <div>
-                            <label class="detail-label">الإدارة</label>
-                            <p class="detail-value">${Utils.escapeHTML(record.department || '-')}</p>
-                        </div>
-                        <div>
-                            <label class="detail-label">مكان الملاحظة</label>
-                            <p class="detail-value">${Utils.escapeHTML(record.location || '-')}</p>
-                        </div>
-                        <div>
-                            <label class="detail-label">الإجراء التصحيحي</label>
-                            <p class="detail-value">${record.correctiveProposed ? 'تم اقتراح إجراء تصحيحي' : 'لا يوجد إجراء مقترح'}</p>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="detail-label">وصف الملاحظة</label>
-                        <p class="detail-value whitespace-pre-line">${Utils.escapeHTML(record.description || '-')}</p>
-                    </div>
-                    ${record.correctiveProposed ? `
-                        <div>
-                            <label class="detail-label">وصف الإجراء المقترح</label>
-                            <p class="detail-value whitespace-pre-line">${Utils.escapeHTML(record.correctiveDescription || '-')}</p>
-                        </div>
-                    ` : ''}
-                    <div>
-                        <label class="detail-label">المرفقات</label>
-                        <div class="space-y-2">
-                            ${attachmentsHtml}
-                        </div>
-                    </div>
-                    <div class="text-xs text-gray-500 border-t pt-4 space-y-1">
-                        <div>أنشئ بواسطة: ${Utils.escapeHTML(record.createdBy?.name || 'غير محدد')}</div>
-                        <div>تاريخ الإنشاء: ${Utils.formatDateTime(record.createdAt)}</div>
-                        <div>آخر تحديث: ${Utils.formatDateTime(record.updatedAt)}</div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-secondary" data-action="close-modal">إغلاق</button>
-                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('nearmiss') : ''}
-                    <button class="btn-secondary" data-action="detail-print" data-id="${record.id}">
-                        <i class="fas fa-print ml-2"></i>
-                        طباعة
-                    </button>
-                    <button class="btn-primary" data-action="detail-edit" data-id="${record.id}">
-                        <i class="fas fa-edit ml-2"></i>
-                        تعديل
-                    </button>
-                </div>
-            </div>
-        `;
-
-        const closeBtn = modal.querySelector('[data-action="close-modal"]');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.closeModal(modal));
-        }
-        const editBtn = modal.querySelector('[data-action="detail-edit"]');
-        if (editBtn) {
-            editBtn.addEventListener('click', () => {
-                const recordId = editBtn.getAttribute('data-id');
-                this.closeModal(modal);
-                this.editNearMiss(recordId);
-            });
-        }
-        const printBtn = modal.querySelector('[data-action="detail-print"]');
-        if (printBtn) {
-            printBtn.addEventListener('click', () => {
-                const recordId = printBtn.getAttribute('data-id');
-                this.printNearMiss(recordId);
-            });
-        }
-
-        return modal;
-    },
-
-    /**
-     * طباعة تفاصيل الملاحظة
-     */
-    printNearMiss(id) {
-        const record = AppState.appData.nearmiss.find((item) => item.id === id);
-        if (!record) {
-            Notification.error('تعذر العثور على الملاحظة المحددة');
-            return;
-        }
-
-        try {
-            Loading.show('جاري إعداد الطباعة...');
-
-            // معالجة المرفقات
-            const attachmentsHtml = record.attachments && record.attachments.length
-                ? record.attachments.map((attachment) => {
-                    const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(attachment.name || '');
-                    const hasImageMimeType = attachment.type && attachment.type.startsWith('image/');
-                    const isImage = hasImageMimeType || hasImageExtension;
-                    const attachmentUrl = this.processAttachmentUrl(attachment.data);
-
-                    if (isImage && attachmentUrl) {
-                        return `
-                            <div style="margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                                <div style="font-weight: bold; margin-bottom: 5px;">${Utils.escapeHTML(attachment.name)}</div>
-                                <img src="${Utils.escapeHTML(attachmentUrl)}" alt="${Utils.escapeHTML(attachment.name)}" style="max-width: 100%; max-height: 300px; border: 1px solid #ddd; border-radius: 4px;"
-                                     onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';">
-                            </div>
-                        `;
-                    } else {
-                        return `
-                            <div style="margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                                <div style="font-weight: bold;">${Utils.escapeHTML(attachment.name)}</div>
-                            </div>
-                        `;
-                    }
-                }).join('')
-                : '<p style="color: #999;">لا توجد مرفقات</p>';
-
-            const formCode = `NEAR-${record.id?.substring(0, 8) || 'UNKNOWN'}`;
-            const title = 'تقرير الملاحظة - Near Miss Report';
-
-            const content = `
-                <table class="report-table" style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <th style="width: 30%; padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">نوع الحادث</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(record.type || '-')}</td>
-                    </tr>
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">التاريخ والوقت</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${record.date ? Utils.formatDateTime(record.date) : '-'}</td>
-                    </tr>
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">اسم صاحب الملاحظة</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(record.observerName || '-')}</td>
-                    </tr>
-                    ${record.phone ? `
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">رقم الهاتف</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(record.phone)}</td>
-                    </tr>
-                    ` : ''}
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">الإدارة</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(record.department || '-')}</td>
-                    </tr>
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">مكان الملاحظة</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(record.location || '-')}</td>
-                    </tr>
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">الإجراء التصحيحي</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${record.correctiveProposed ? 'تم اقتراح إجراء تصحيحي' : 'لا يوجد إجراء مقترح'}</td>
-                    </tr>
-                </table>
-
-                <div style="margin-top: 20px;">
-                    <h3 style="font-weight: bold; margin-bottom: 10px;">وصف الملاحظة</h3>
-                    <p style="white-space: pre-wrap; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">${Utils.escapeHTML(record.description || '-')}</p>
-                </div>
-
-                ${record.correctiveProposed ? `
-                <div style="margin-top: 20px;">
-                    <h3 style="font-weight: bold; margin-bottom: 10px;">وصف الإجراء المقترح</h3>
-                    <p style="white-space: pre-wrap; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">${Utils.escapeHTML(record.correctiveDescription || '-')}</p>
-                </div>
-                ` : ''}
-
-                <div style="margin-top: 20px;">
-                    <h3 style="font-weight: bold; margin-bottom: 10px;">المرفقات</h3>
-                    ${attachmentsHtml}
-                </div>
-            `;
-
-            const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(
-                    formCode,
-                    title,
-                    content,
-                    false,
-                    true,
-                    { version: '1.0' },
-                    record.createdAt,
-                    record.updatedAt
-                )
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${title}</title></head><body>${content}</body></html>`;
-
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-
-            if (printWindow) {
-                printWindow.onload = () => {
-                    // انتظار تحميل الصور
-                    const images = printWindow.document.querySelectorAll('img');
-                    let imagesLoaded = 0;
-                    const totalImages = images.length;
-
-                    if (totalImages === 0) {
-                        setTimeout(() => {
-                            printWindow.print();
-                            setTimeout(() => URL.revokeObjectURL(url), 1000);
-                            Loading.hide();
-                        }, 300);
-                    } else {
-                        const checkAllImagesLoaded = () => {
-                            if (imagesLoaded >= totalImages) {
-                                setTimeout(() => {
-                                    printWindow.print();
-                                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                                    Loading.hide();
-                                }, 300);
-                            }
-                        };
-
-                        images.forEach(img => {
-                            if (img.complete) {
-                                imagesLoaded++;
-                                checkAllImagesLoaded();
-                            } else {
-                                img.onload = () => {
-                                    imagesLoaded++;
-                                    checkAllImagesLoaded();
-                                };
-                                img.onerror = () => {
-                                    imagesLoaded++;
-                                    checkAllImagesLoaded();
-                                };
-                            }
-                        });
-
-                        setTimeout(() => {
-                            if (imagesLoaded < totalImages) {
-                                printWindow.print();
-                                setTimeout(() => URL.revokeObjectURL(url), 1000);
-                                Loading.hide();
-                            }
-                        }, 3000);
-                    }
-                };
-            } else {
-                URL.revokeObjectURL(url);
-                Loading.hide();
-                Notification.error('يرجى السماح بنوافذ منبثقة للطباعة');
-            }
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في طباعة الملاحظة:', error);
-            Notification.error('فشل في طباعة الملاحظة: ' + error.message);
-        }
+        this.renderKpiStrip();
+        this.renderTable();
+        alert('✅ تم حفظ البلاغ بنجاح!');
     },
 
     editNearMiss(id) {
-        if (!id) return;
-        const record = AppState.appData.nearmiss.find((item) => item.id === id);
-        if (!record) {
-            Notification.error('تعذر العثور على الملاحظة المحددة');
-            return;
-        }
-        this.showForm(record);
+        const item = (AppState.appData.nearmiss || []).find((record) => record.id === id);
+        if (item) this.showForm(item);
     },
 
-    async deleteNearMiss(id) {
-        if (!id) return;
-        const record = AppState.appData.nearmiss.find((item) => item.id === id);
-        if (!record) {
-            Notification.error('تعذر العثور على الملاحظة المحددة');
+    deleteNearMiss(id) {
+        if (!confirm('هل أنت متأكد من حذف هذا البلاغ؟')) return;
+
+        AppState.appData.nearmiss = (AppState.appData.nearmiss || []).filter(r => r.id !== id);
+        try {
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.callApi) {
+                GoogleIntegration.callApi('deleteNearMiss', { nearMissId: id });
+            }
+        } catch(e) {}
+
+        this.renderKpiStrip();
+        this.renderTable();
+    },
+
+    /**
+     * فتح نافذة بطاقات QR العامة للحوادث الوشيكة
+     */
+    openPublicQrModal() {
+        const publicUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'public-near-miss.html';
+        
+        let modalEl = document.getElementById('nrm-public-qr-modal');
+        if (!modalEl) {
+            modalEl = document.createElement('div');
+            modalEl.id = 'nrm-public-qr-modal';
+            modalEl.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm';
+            document.body.appendChild(modalEl);
+        }
+
+        const qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(publicUrl);
+
+        modalEl.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-200" style="direction:rtl; font-family:'Segoe UI', Tahoma, sans-serif;">
+                <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); color:#fff; padding:20px 24px; display:flex; justify-content:space-between; align-items:center;">
+                    <div class="flex items-center gap-3">
+                        <div style="width:44px; height:44px; border-radius:12px; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center;">
+                            <i class="fas fa-qrcode text-xl text-amber-300"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg leading-tight" style="margin:0;">النموذج العام للحوادث الوشيكة</h3>
+                            <p class="text-xs text-indigo-200" style="margin:2px 0 0 0;">SafetyHub | ICAPP Near Miss Public Suite</p>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('nrm-public-qr-modal').remove()" class="text-white/80 hover:text-white text-2xl" style="background:none; border:none; cursor:pointer;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="p-6 text-center">
+                    <div style="background:#eef2ff; border:1px solid #c7d2fe; border-radius:12px; padding:12px 16px; margin-bottom:20px; text-align:right; font-size:0.8rem; color:#312e81; display:flex; align-items:center; gap:10px;">
+                        <i class="fas fa-info-circle text-indigo-600 text-lg"></i>
+                        <div>يمكن لجميع العاملين والمقاولين مسح هذا الرمز للإبلاغ السريع عن أي حادث وشيك دون الحاجة لتسجيل دخول.</div>
+                    </div>
+                    <div class="inline-block p-4 bg-white rounded-2xl shadow-md border-2 border-indigo-100 mb-4">
+                        <img src="${qrCodeUrl}" alt="QR Code" style="width:210px; height:210px; border-radius:10px;" class="mx-auto" />
+                    </div>
+                    <div style="font-size:0.75rem; color:#64748b; font-family:monospace; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:20px; word-break:break-all; direction:ltr; text-align:center;">
+                        ${publicUrl}
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="window.open('${publicUrl}', '_blank')" class="btn-secondary py-2.5 flex items-center justify-center gap-2" style="border-radius:10px; font-weight:600; cursor:pointer;">
+                            <i class="fas fa-external-link-alt"></i>
+                            <span>فتح النموذج الآن</span>
+                        </button>
+                        <button onclick="NearMiss.printLocationQrBadges()" class="btn-primary py-2.5 flex items-center justify-center gap-2" style="background:#312e81; color:#fff; border-radius:10px; font-weight:700; cursor:pointer;">
+                            <i class="fas fa-print"></i>
+                            <span>طباعة ملصقات المواقع 🖨️</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        modalEl.style.display = 'flex';
+    },
+
+    /**
+     * طباعة ملصقات QR الشاملة للمصانع والمواقع للحوادث الوشيكة
+     */
+    printLocationQrBadges() {
+        const publicUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'public-near-miss.html';
+        
+        let sites = [];
+        try {
+            if (typeof DailyObservations !== 'undefined' && DailyObservations.getAllSites) {
+                sites = DailyObservations.getAllSites();
+            } else if (Array.isArray(AppState.appData.observationSites)) {
+                sites = AppState.appData.observationSites;
+            }
+        } catch(e) {}
+
+        if (!sites || sites.length === 0) {
+            sites = ['ICAPP-1', 'ICAPP-2', 'ICAPP-3', 'ICAPP-4', 'الموقع العام'];
+        }
+
+        const cards = [];
+        sites.forEach(s => {
+            const sName = typeof s === 'string' ? s : (s.name || s.siteName || '');
+            const places = (s && Array.isArray(s.places) && s.places.length > 0) ? s.places : ['الموقع العام'];
+            places.forEach(p => {
+                const pName = typeof p === 'string' ? p : (p.name || p.placeName || '');
+                cards.push({ site: sName, place: pName });
+            });
+        });
+
+        const printWin = window.open('', '_blank');
+        if (!printWin) {
+            alert('يرجى السماح بالنوافذ المنبثقة للطباعة');
             return;
         }
-        if (!confirm('هل أنت متأكد من حذف هذه الملاحظة؟')) return;
 
-        Loading.show();
-        try {
-            AppState.appData.nearmiss = AppState.appData.nearmiss.filter((item) => item.id !== id);
-            // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-            if (GoogleIntegration?.sendRequest) {
-                try {
-                    await GoogleIntegration.sendRequest({
-                        action: 'deleteNearMiss',
-                        data: { nearMissId: id }
-                    });
-                } catch (error) {
-                    Utils.safeWarn('⚠ فشل حذف الحوادث الوشيكة من Google Sheets:', error);
-                }
-            }
-            Notification.success('تم حذف الملاحظة بنجاح');
-        } catch (error) {
-            Utils.safeError('خطأ في حذف الحادث الوشيك:', error);
-            Notification.error('حدث خطأ أثناء حذف الملاحظة');
-        } finally {
-            Loading.hide();
-            this.updateSummary();
-            this.renderTable();
-            this.refreshFilterOptions();
-        }
+        const cardsHtml = cards.map((c, idx) => {
+            const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(`${publicUrl}?factory=${encodeURIComponent(c.site)}&place=${encodeURIComponent(c.place)}`);
+            return `
+                <div style="border: 2px solid #312e81; border-radius: 12px; padding: 12px; background: #fff; text-align: right; break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e0e7ff; padding-bottom:6px; margin-bottom:8px;">
+                        <span style="font-size:0.75rem; font-weight:bold; color:#3730a3;"><i class="fas fa-shield-alt"></i> SafetyHub | ICAPP</span>
+                        <span style="font-size:0.65rem; background:#e0e7ff; color:#3730a3; padding:1px 6px; border-radius:4px; font-weight:bold;">حادث وشيك</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <img src="${qrUrl}" style="width:90px; height:90px; border-radius:6px; border:1px solid #e2e8f0;" />
+                        <div style="flex:1;">
+                            <div style="font-size:0.95rem; font-weight:800; color:#1e1b4b;">${c.site}</div>
+                            <div style="font-size:0.8rem; color:#4338ca; font-weight:600; margin-top:2px;">${c.place}</div>
+                            <div style="font-size:0.68rem; color:#64748b; margin-top:6px;"><i class="fas fa-camera"></i> امسح للإبلاغ عن حادث وشيك</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        printWin.document.write(`
+            <!DOCTYPE html>
+            <html lang="ar" dir="rtl">
+            <head>
+                <meta charset="UTF-8">
+                <title>ملصقات QR للحوادث الوشيكة - SafetyHub ICAPP</title>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                <style>
+                    @page { size: A4 portrait; margin: 8mm; }
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #fff; }
+                    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+                </style>
+            </head>
+            <body>
+                <div style="text-align:center; margin-bottom:12px; border-bottom:2px solid #312e81; padding-bottom:8px;">
+                    <h2 style="margin:0; color:#312e81; font-size:1.2rem;">ملصقات الـ QR الميدانية للإبلاغ عن الحوادث الوشيكة (Near Miss Badges)</h2>
+                    <p style="margin:4px 0 0 0; color:#64748b; font-size:0.8rem;">SafetyHub | ICAPP — جاهزة للطباعة والتثبيت بالمصانع والمواقع</p>
+                </div>
+                <div class="grid">${cardsHtml}</div>
+                <script>
+                    window.onload = function() { setTimeout(function() { window.print(); }, 500); };
+                </script>
+            </body>
+            </html>
+        `);
+        printWin.document.close();
     }
 };
-// ===== Export module to global scope =====
-// تصدير الموديول إلى window فوراً لضمان توافره
-(function () {
-    'use strict';
-    try {
-        if (typeof window !== 'undefined' && typeof NearMiss !== 'undefined') {
-            window.NearMiss = NearMiss;
-            
-            // إشعار عند تحميل الموديول بنجاح
-            if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
-                Utils.safeLog('✅ NearMiss module loaded and available on window.NearMiss');
-            }
-        }
-    } catch (error) {
-        console.error('❌ خطأ في تصدير NearMiss:', error);
-        // محاولة التصدير مرة أخرى حتى في حالة الخطأ
-        if (typeof window !== 'undefined' && typeof NearMiss !== 'undefined') {
-            try {
-                window.NearMiss = NearMiss;
-            } catch (e) {
-                console.error('❌ فشل تصدير NearMiss:', e);
-            }
-        }
-    }
-})();
+
+// Export to window
+if (typeof window !== 'undefined') {
+    window.NearMiss = NearMiss;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = NearMiss;
+}

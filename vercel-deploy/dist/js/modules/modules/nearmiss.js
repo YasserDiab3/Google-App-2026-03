@@ -1,209 +1,281 @@
-const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627\u0621 / \u0623\u062D\u0645\u0627\u0644",label:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627\u0621 / \u0623\u062D\u0645\u0627\u0644",icon:"fa-arrow-down"},{value:"\u062A\u0639\u062B\u0631 / \u0627\u0646\u0632\u0644\u0627\u0642",label:"\u062A\u0639\u062B\u0631 / \u0627\u0646\u0632\u0644\u0627\u0642",icon:"fa-walking"},{value:"\u0627\u0642\u062A\u0631\u0627\u0628 \u0645\u0639\u062F\u0627\u062A / \u0641\u0648\u0631\u0643\u0644\u0641\u062A",label:"\u0627\u0642\u062A\u0631\u0627\u0628 \u0645\u0639\u062F\u0627\u062A / \u0641\u0648\u0631\u0643\u0644\u0641\u062A",icon:"fa-truck-pickup"},{value:"\u062E\u0637\u0631 \u0643\u0647\u0631\u0628\u0627\u0626\u064A \u0648\u0634\u064A\u0643",label:"\u062E\u0637\u0631 \u0643\u0647\u0631\u0628\u0627\u0626\u064A \u0648\u0634\u064A\u0643",icon:"fa-bolt"},{value:"\u062A\u0633\u0631\u064A\u0628 \u0645\u0648\u0627\u062F \u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 / \u063A\u0627\u0632",label:"\u062A\u0633\u0631\u064A\u0628 \u0645\u0648\u0627\u062F \u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 / \u063A\u0627\u0632",icon:"fa-flask"},{value:"\u062D\u0631\u064A\u0642 \u0648\u0634\u064A\u0643",label:"\u062D\u0631\u064A\u0642 \u0648\u0634\u064A\u0643",icon:"fa-fire"},{value:"\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643",label:"\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643 \u0639\u0627\u0645",icon:"fa-exclamation-triangle"},{value:"\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0622\u0645\u0646",label:"\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0622\u0645\u0646",icon:"fa-user-times"},{value:"\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646",label:"\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646",icon:"fa-ban"},{value:"\u0645\u0642\u062A\u0631\u062D",label:"\u0645\u0642\u062A\u0631\u062D \u062A\u062D\u0633\u064A\u0646",icon:"fa-lightbulb"}],_i18nSectionObserver:null,_i18nBodyObserver:null,applyModuleI18n(e){const t=e||document,a=window.AppI18n&&typeof window.AppI18n.applyI18n=="function"?window.AppI18n:window.I18n&&typeof window.I18n.applyI18n=="function"?window.I18n:null;a&&(typeof a.applyI18n=="function"&&a.applyI18n(t),typeof a.applyLiteralTranslations=="function"&&a.applyLiteralTranslations(t))},ensureI18nObservers(e){this._i18nSectionObserver&&(this._i18nSectionObserver.disconnect(),this._i18nSectionObserver=null),e&&typeof MutationObserver<"u"&&(this._i18nSectionObserver=new MutationObserver(t=>{t.forEach(a=>{a.addedNodes.forEach(i=>{i&&i.nodeType===1&&this.applyModuleI18n(i)})})}),this._i18nSectionObserver.observe(e,{childList:!0,subtree:!0})),!this._i18nBodyObserver&&typeof MutationObserver<"u"&&(this._i18nBodyObserver=new MutationObserver(t=>{t.forEach(a=>{a.addedNodes.forEach(i=>{!i||i.nodeType!==1||(i.classList?.contains("modal-overlay")||i.querySelector?.(".modal-overlay"))&&this.applyModuleI18n(i)})})}),this._i18nBodyObserver.observe(document.body,{childList:!0,subtree:!0}))},state:{filters:{search:"",type:"",department:"",startDate:"",endDate:""},currentAttachments:[],editingId:null},processAttachmentUrl(e){if(!e||typeof e!="string")return null;let t=e.trim();const a=/https?:\/\/drive\.google\.com\/uc\?export=view&id=([a-zA-Z0-9_-]+)/,i=t.match(a);return i&&(t="https://lh3.googleusercontent.com/d/"+i[1]),t.startsWith("http://")||t.startsWith("https://")||t.startsWith("data:")?t:t.length>100&&/^[A-Za-z0-9+/=]+$/.test(t.substring(0,100))?"data:image/jpeg;base64,"+t:null},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0);try{const e=document.getElementById("nearmiss-section");if(!e){typeof Utils<"u"&&Utils.safeError&&Utils.safeError(" \u0642\u0633\u0645 nearmiss-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!");return}if(typeof Utils>"u")return;if(typeof AppState>"u"){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("AppState \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631!");return}this.ensureDataIntegrity();const t=a=>typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(a):String(a||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");e.innerHTML=`
-                <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-                     \u062A\u0631\u0648\u064A\u0633\u0629 \u0627\u0644\u0647\u0648\u064A\u0629 \u0627\u0644\u0628\u0635\u0631\u064A\u0629 \u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629 (SafetyHub)
-                \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
-                <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); border-radius: 16px; padding: 20px 24px; color: #fff; margin-bottom: 20px; box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.4); border: 1px solid rgba(255,255,255,0.1);">
-                    <div class="flex items-center justify-between flex-wrap gap-4">
-                        <div class="flex items-center gap-4">
-                            <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                                <i class="fas fa-shield-virus text-2xl text-amber-300"></i>
-                            </div>
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h1 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #fff; letter-spacing: -0.5px;">\u0625\u062F\u0627\u0631\u0629 \u0648\u0628\u0644\u0627\u063A\u0627\u062A \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629</h1>
-                                    <span style="background: rgba(245, 158, 11, 0.25); border: 1px solid rgba(245, 158, 11, 0.6); color: #fef08a; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;">Near Miss Suite</span>
-                                </div>
-                                <p style="font-size: 0.82rem; margin: 4px 0 0 0; color: #c7d2fe;">\u0631\u0635\u062F \u0627\u0633\u062A\u0628\u0627\u0642\u064A \u0644\u0644\u0645\u062E\u0627\u0637\u0631 \u2022 \u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0623\u0633\u0628\u0627\u0628 \u0627\u0644\u062C\u0630\u0631\u064A\u0629 \u2022 \u062B\u0642\u0627\u0641\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0625\u064A\u062C\u0627\u0628\u064A\u0629 | SafetyHub ICAPP</p>
-                            </div>
+const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627\u0621 / \u0623\u062D\u0645\u0627\u0644",label:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627\u0621 / \u0623\u062D\u0645\u0627\u0644",icon:"fa-arrow-down"},{value:"\u062A\u0639\u062B\u0631 / \u0627\u0646\u0632\u0644\u0627\u0642",label:"\u062A\u0639\u062B\u0631 / \u0627\u0646\u0632\u0644\u0627\u0642",icon:"fa-walking"},{value:"\u0627\u0642\u062A\u0631\u0627\u0628 \u0645\u0639\u062F\u0627\u062A / \u0641\u0648\u0631\u0643\u0644\u0641\u062A",label:"\u0627\u0642\u062A\u0631\u0627\u0628 \u0645\u0639\u062F\u0627\u062A / \u0641\u0648\u0631\u0643\u0644\u0641\u062A",icon:"fa-truck-pickup"},{value:"\u062E\u0637\u0631 \u0643\u0647\u0631\u0628\u0627\u0626\u064A \u0648\u0634\u064A\u0643",label:"\u062E\u0637\u0631 \u0643\u0647\u0631\u0628\u0627\u0626\u064A \u0648\u0634\u064A\u0643",icon:"fa-bolt"},{value:"\u062A\u0633\u0631\u064A\u0628 \u0645\u0648\u0627\u062F \u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 / \u063A\u0627\u0632",label:"\u062A\u0633\u0631\u064A\u0628 \u0645\u0648\u0627\u062F \u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 / \u063A\u0627\u0632",icon:"fa-flask"},{value:"\u062D\u0631\u064A\u0642 \u0648\u0634\u064A\u0643",label:"\u062D\u0631\u064A\u0642 \u0648\u0634\u064A\u0643",icon:"fa-fire"},{value:"\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643",label:"\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643 \u0639\u0627\u0645",icon:"fa-exclamation-triangle"},{value:"\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0622\u0645\u0646",label:"\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0622\u0645\u0646",icon:"fa-user-times"},{value:"\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646",label:"\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646",icon:"fa-ban"},{value:"\u0645\u0642\u062A\u0631\u062D",label:"\u0645\u0642\u062A\u0631\u062D \u062A\u062D\u0633\u064A\u0646",icon:"fa-lightbulb"}],state:{activeTab:"register",filters:{search:"",type:"",department:"",startDate:"",endDate:"",period:"365"},currentAttachments:[],editingId:null},_charts:{},applyModuleI18n(e){const t=e||document,i=window.AppI18n&&typeof window.AppI18n.applyI18n=="function"?window.AppI18n:window.I18n&&typeof window.I18n.applyI18n=="function"?window.I18n:null;i&&(typeof i.applyI18n=="function"&&i.applyI18n(t),typeof i.applyLiteralTranslations=="function"&&i.applyLiteralTranslations(t))},ensureI18nObservers(e){},async load(){try{const e=document.getElementById("nearmiss-section");if(!e)return;this.ensureDataIntegrity(),this.renderMainLayout(e)}catch{}},ensureDataIntegrity(){let e=AppState.appData.nearmiss||AppState.appData.NearMiss||[];Array.isArray(e)||(e=[]),AppState.appData.nearmiss=e.map(t=>this.normalizeRecord(t))},normalizeRecord(e={}){const t=this.TYPES[0].value,i=e.id||(typeof Utils<"u"&&Utils.generateId?Utils.generateId("NEARMISS"):"NRM-"+Math.floor(Math.random()*1e5));let a;try{a=e.date?new Date(e.date).toISOString():new Date().toISOString()}catch{a=new Date().toISOString()}let o=[];if(Array.isArray(e.attachments))o=e.attachments.map(r=>this.normalizeAttachment(r)).filter(Boolean);else if(typeof e.attachments=="string"&&e.attachments.trim().startsWith("["))try{const r=JSON.parse(e.attachments);Array.isArray(r)&&(o=r.map(d=>this.normalizeAttachment(d)).filter(Boolean))}catch{}const s=e.correctiveProposed===!0||e.correctiveProposed==="\u0646\u0639\u0645"||!!(e.correctiveDescription||e.correctiveAction);return{id:i,isoCode:e.isoCode||e.id||i,type:e.type||t,severity:e.severity||"\u0645\u062A\u0648\u0633\u0637",date:a,observerName:e.observerName||e.reportedBy||"\u0641\u0627\u0639\u0644 \u062E\u064A\u0631 (\u0633\u0631\u064A)",phone:e.phone||"",location:e.location||e.place||"",department:e.department||e.departmentName||"",description:e.description||e.details||"",correctiveProposed:s,correctiveDescription:e.correctiveDescription||e.correctiveProposed||e.correctiveAction||"",attachments:o,status:e.status||(s?"\u0645\u0641\u062A\u0648\u062D":"\u0645\u063A\u0644\u0642"),createdAt:e.createdAt||a,updatedAt:e.updatedAt||a}},normalizeAttachment(e){return e?typeof e=="string"?{id:"att-"+Math.random(),name:"\u0645\u0631\u0641\u0642",url:e,data:e,type:"image/jpeg"}:{id:e.id||"att-"+Math.random(),name:e.name||"\u0645\u0631\u0641\u0642",type:e.type||"image/jpeg",url:e.url||e.data||"",data:e.data||e.url||"",size:e.size||0}:null},renderMainLayout(e){e.innerHTML=`
+            <!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+                 \u062A\u0631\u0648\u064A\u0633\u0629 \u0627\u0644\u0642\u064A\u0627\u062F\u0629 \u0648\u0627\u0644\u0647\u0648\u064A\u0629 \u0627\u0644\u0628\u0635\u0631\u064A\u0629 \u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629
+            \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+            <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); border-radius: 18px; padding: 22px 28px; color: #fff; margin-bottom: 22px; box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.4); border: 1px solid rgba(255,255,255,0.12);">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center gap-4">
+                        <div style="width: 56px; height: 56px; border-radius: 14px; background: rgba(255,255,255,0.18); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                            <i class="fas fa-shield-virus text-3xl text-amber-300"></i>
                         </div>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <button id="nearmiss-public-qr-btn" class="btn-secondary flex items-center gap-2" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 0.85rem; font-weight: 600; padding: 8px 14px; border-radius: 10px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" onclick="NearMiss.openPublicQrModal()">
-                                <i class="fas fa-qrcode text-amber-300"></i>
-                                <span>\u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0639\u0627\u0645 \u0648\u0631\u0645\u0648\u0632 QR \u{1F4F1}</span>
-                            </button>
-                            <button onclick="NearMiss.printLocationQrBadges()" class="btn-secondary flex items-center gap-2" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #a7f3d0; font-size: 0.85rem; font-weight: 600; padding: 8px 14px; border-radius: 10px; transition: all 0.2s;" onmouseover="this.style.background='rgba(16, 185, 129, 0.35)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.2)'">
-                                <i class="fas fa-print"></i>
-                                <span>\u0645\u0644\u0635\u0642\u0627\u062A \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u{1F5A8}\uFE0F</span>
-                            </button>
-                            <button id="add-nearmiss-btn" class="btn-primary flex items-center gap-2" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #fff; font-size: 0.85rem; font-weight: 700; padding: 8px 16px; border-radius: 10px; border: none; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
-                                <i class="fas fa-plus-circle"></i>
-                                <span>\u062A\u0633\u062C\u064A\u0644 \u0628\u0644\u0627\u063A \u0648\u0634\u064A\u0643 \u2795</span>
-                            </button>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 style="font-size: 1.45rem; font-weight: 800; margin: 0; color: #fff; letter-spacing: -0.5px;">\u0625\u062F\u0627\u0631\u0629 \u0648\u0628\u0644\u0627\u063A\u0627\u062A \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629</h1>
+                                <span style="background: rgba(245, 158, 11, 0.25); border: 1px solid rgba(245, 158, 11, 0.6); color: #fef08a; font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 20px;">Near Miss Suite</span>
+                            </div>
+                            <p style="font-size: 0.85rem; margin: 4px 0 0 0; color: #c7d2fe;">\u0631\u0635\u062F \u0627\u0633\u062A\u0628\u0627\u0642\u064A \u0644\u0644\u0645\u062E\u0627\u0637\u0631 \u2022 \u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0623\u0633\u0628\u0627\u0628 \u0627\u0644\u062C\u0630\u0631\u064A\u0629 \u2022 \u062B\u0642\u0627\u0641\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0625\u064A\u062C\u0627\u0628\u064A\u0629 | SafetyHub ICAPP</p>
                         </div>
+                    </div>
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <button id="nearmiss-public-qr-btn" class="btn-secondary flex items-center gap-2" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); color: #fff; font-size: 0.85rem; font-weight: 700; padding: 9px 16px; border-radius: 12px; transition: all 0.2s; cursor: pointer;">
+                            <i class="fas fa-qrcode text-amber-300"></i>
+                            <span>\u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0639\u0627\u0645 \u0648\u0631\u0645\u0648\u0632 QR \u{1F4F1}</span>
+                        </button>
+                        <button id="nearmiss-print-badges-btn" class="btn-secondary flex items-center gap-2" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.45); color: #a7f3d0; font-size: 0.85rem; font-weight: 700; padding: 9px 16px; border-radius: 12px; transition: all 0.2s; cursor: pointer;">
+                            <i class="fas fa-print"></i>
+                            <span>\u0645\u0644\u0635\u0642\u0627\u062A \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u{1F5A8}\uFE0F</span>
+                        </button>
+                        <button id="nearmiss-create-new-btn" class="btn-primary flex items-center gap-2" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #fff; font-size: 0.85rem; font-weight: 800; padding: 9px 18px; border-radius: 12px; border: none; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); cursor: pointer;">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>\u062A\u0633\u062C\u064A\u0644 \u0628\u0644\u0627\u063A \u0648\u0634\u064A\u0643 \u2795</span>
+                        </button>
                     </div>
                 </div>
-                <div class="mt-6 space-y-6">
-                    <div id="nearmiss-summary" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <i class="fas fa-filter ml-2"></i>
-                                \u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u0645\u062A\u0642\u062F\u0645\u0629
-                            </h2>
-                        </div>
-                        <div class="card-body">
-                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-2">\u0628\u062D\u062B \u062D\u0631</label>
-                                    <input type="text" id="nearmiss-filter-search" class="form-input" placeholder="\u0627\u0644\u0646\u0648\u0639\u060C \u0627\u0644\u0645\u0648\u0642\u0639\u060C \u0627\u0644\u0648\u0635\u0641 \u0623\u0648 \u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629" value="${t(this.state.filters.search)}">
-                                </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-2">\u0646\u0648\u0639 \u0627\u0644\u062D\u0627\u062F\u062B</label>
-                                <select id="nearmiss-filter-type" class="form-input">
-                                    ${this.renderTypeOptions(this.state.filters.type)}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-2">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</label>
-                                <select id="nearmiss-filter-department" class="form-input">
-                                    ${this.renderDepartmentOptions(this.state.filters.department)}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-2">\u0628\u062F\u0627\u064A\u0629 \u0627\u0644\u0641\u062A\u0631\u0629</label>
-                                <input type="date" id="nearmiss-filter-start" class="form-input" value="${this.state.filters.startDate}">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-2">\u0646\u0647\u0627\u064A\u0629 \u0627\u0644\u0641\u062A\u0631\u0629</label>
-                                <input type="date" id="nearmiss-filter-end" class="form-input" value="${this.state.filters.endDate}">
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-end gap-3 mt-4">
-                            <button id="nearmiss-reset-filters" class="btn-link text-blue-600">
-                                <i class="fas fa-undo ml-1"></i>
-                                \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646
-                            </button>
-                        </div>
-                    </div>
+
+                <!-- \u0634\u0631\u064A\u0637 \u0627\u0644\u062A\u0628\u0648\u064A\u0628\u0627\u062A \u0627\u0644\u0631\u0626\u064A\u0633\u064A -->
+                <div style="display: flex; gap: 8px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 16px;">
+                    <button class="nrm-nav-tab ${this.state.activeTab==="register"?"active":""}" data-tab="register" style="padding: 8px 18px; border-radius: 10px; font-size: 0.88rem; font-weight: 700; border: none; cursor: pointer; transition: all .2s; background: ${this.state.activeTab==="register"?"#fff":"rgba(255,255,255,0.12)"}; color: ${this.state.activeTab==="register"?"#1e1b4b":"#fff"};">
+                        <i class="fas fa-clipboard-list ml-2"></i> \u0633\u062C\u0644 \u0627\u0644\u0628\u0644\u0627\u063A\u0627\u062A \u0648\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A
+                    </button>
+                    <button class="nrm-nav-tab ${this.state.activeTab==="analytics"?"active":""}" data-tab="analytics" style="padding: 8px 18px; border-radius: 10px; font-size: 0.88rem; font-weight: 700; border: none; cursor: pointer; transition: all .2s; background: ${this.state.activeTab==="analytics"?"#fff":"rgba(255,255,255,0.12)"}; color: ${this.state.activeTab==="analytics"?"#1e1b4b":"#fff"};">
+                        <i class="fas fa-chart-pie ml-2"></i> \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u064A \u0648\u0627\u0644\u0625\u062D\u0635\u0627\u0621\u0627\u062A \u{1F4CA}
+                    </button>
                 </div>
-                <div class="content-card">
-                    <div class="card-header">
-                        <div class="flex items-center justify-between flex-wrap gap-3">
-                            <h2 class="card-title">
-                                <i class="fas fa-clipboard-list ml-2"></i>
-                                \u0633\u062C\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A
-                            </h2>
-                            <span id="nearmiss-result-count" class="text-sm text-gray-500"></span>
-                        </div>
-                    </div>
-                    <div class="card-body" id="nearmiss-table-container">
-                        <div class="empty-state">
-                            <div style="width: 300px; margin: 0 auto 16px;">
-                                <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
-                                    <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
-                                </div>
-                            </div>
-                            <p class="text-gray-500">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
-                        </div>
-                    </div>
-                </div>
-                </div>
-            `,this.applyModuleI18n(e),this.ensureI18nObservers(e),this.bindBaseEvents(),this.updateSummary(),this.renderTable()}catch(e){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629:",e);const t=document.getElementById("nearmiss-section");t&&(t.innerHTML=`
-                    <div class="content-card">
-                        <div class="card-body">
-                            <div class="empty-state">
-                                <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
-                                <button onclick="NearMiss.load()" class="btn-primary">
-                                    <i class="fas fa-redo ml-2"></i>
-                                    \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `,this.applyModuleI18n(t))}},ensureDataIntegrity(){Array.isArray(AppState.appData.nearmiss)||(AppState.appData.nearmiss=[]),AppState.appData.nearmiss=AppState.appData.nearmiss.map(e=>this.normalizeRecord(e))},normalizeRecord(e={}){const t=this.TYPES[0].value,a=e.id||Utils.generateId("NEARMISS");let i;try{i=e.date?new Date(e.date).toISOString():new Date().toISOString()}catch{i=new Date().toISOString()}const n=Array.isArray(e.attachments)?e.attachments.map(r=>this.normalizeAttachment(r)).filter(Boolean):[],d=e.createdBy?e.createdBy:this.getCurrentUserSummary(e.createdBy),s=e.correctiveProposed===!0||e.correctiveAction===!0||e.correctiveProposal===!0||e.corrective===!0||e.suggestedAction===!0;return{id:a,type:this.TYPES.some(r=>r.value===e.type)?e.type:e.type||t,date:i,observerName:e.observerName||e.reportedBy||"",phone:e.phone||e.contactPhone||"",location:e.location||e.place||"",department:e.department||e.departmentName||"",description:e.description||e.details||e.title||"",correctiveProposed:s,correctiveDescription:s&&(e.correctiveDescription||e.correctiveDetails||e.suggestedActionDescription)||"",attachments:n,createdBy:d,createdById:e.createdById||d?.id||"",createdAt:e.createdAt||i,updatedAt:e.updatedAt||i,updatedBy:e.updatedBy||null,status:e.status||(s?"\u0645\u0641\u062A\u0648\u062D":"\u0645\u063A\u0644\u0642"),reportedBy:e.reportedBy||e.observerName||""}},normalizeAttachment(e){if(!e)return null;const t=e.data||e.base64||"";if(!t)return null;const a=e.size||Math.round(t.length*3/4/1024);return{id:e.id||Utils.generateId("ATT"),name:e.name||"attachment",type:e.type||this.detectMimeType(e.name||""),data:t,size:a,uploadedAt:e.uploadedAt||new Date().toISOString()}},detectMimeType(e=""){const t=(e.split(".").pop()||"").toLowerCase();return t==="pdf"?"application/pdf":t==="png"?"image/png":t==="jpg"||t==="jpeg"?"image/jpeg":"application/octet-stream"},getCurrentUserSummary(e=null){return e&&typeof e=="object"?e:AppState.currentUser?{id:AppState.currentUser.id||"",name:AppState.currentUser.name||"",email:AppState.currentUser.email||"",role:AppState.currentUser.role||""}:{name:"\u0646\u0638\u0627\u0645",email:"",role:""}},getDepartmentOptions(){const e=new Set;return(AppState.appData.nearmiss||[]).forEach(t=>{const a=(t.department||"").trim();a&&e.add(a)}),(AppState.appData.employees||[]).forEach(t=>{const a=(t.department||"").trim();a&&e.add(a)}),Array.from(e).sort((t,a)=>t.localeCompare(a,"ar"))},renderTypeOptions(e=""){const t=['<option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0646\u0648\u0627\u0639</option>'];return this.TYPES.forEach(a=>{t.push(`<option value="${Utils.escapeHTML(a.value)}" ${a.value===e?"selected":""}>${Utils.escapeHTML(a.label)}</option>`)}),t.join("")},renderDepartmentOptions(e=""){const t=['<option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0627\u062A</option>'];return this.getDepartmentOptions().forEach(a=>{t.push(`<option value="${Utils.escapeHTML(a)}" ${a===e?"selected":""}>${Utils.escapeHTML(a)}</option>`)}),t.join("")},bindBaseEvents(){const e=document.getElementById("add-nearmiss-btn");e&&e.addEventListener("click",()=>this.showForm());const t=document.getElementById("nearmiss-filter-search");t&&t.addEventListener("input",r=>this.handleFilterChange("search",r.target.value));const a=document.getElementById("nearmiss-filter-type");a&&a.addEventListener("change",r=>this.handleFilterChange("type",r.target.value));const i=document.getElementById("nearmiss-filter-department");i&&i.addEventListener("change",r=>this.handleFilterChange("department",r.target.value));const n=document.getElementById("nearmiss-filter-start");n&&n.addEventListener("change",r=>this.handleFilterChange("startDate",r.target.value));const d=document.getElementById("nearmiss-filter-end");d&&d.addEventListener("change",r=>this.handleFilterChange("endDate",r.target.value));const s=document.getElementById("nearmiss-reset-filters");s&&s.addEventListener("click",r=>{r.preventDefault(),this.resetFilters()})},handleFilterChange(e,t){if(!Object.prototype.hasOwnProperty.call(this.state.filters,e))return;const a=typeof t=="string"?t.trim():t;this.state.filters={...this.state.filters,[e]:a},this.renderTable()},resetFilters(){this.state.filters={search:"",type:"",department:"",startDate:"",endDate:""};const e=document.getElementById("nearmiss-filter-search");e&&(e.value="");const t=document.getElementById("nearmiss-filter-type");t&&(t.value="");const a=document.getElementById("nearmiss-filter-department");a&&(a.value="");const i=document.getElementById("nearmiss-filter-start");i&&(i.value="");const n=document.getElementById("nearmiss-filter-end");n&&(n.value=""),this.renderTable()},getFilteredItems(){this.ensureDataIntegrity();const{search:e,type:t,department:a,startDate:i,endDate:n}=this.state.filters;let d=(AppState.appData.nearmiss||[]).filter(s=>!!s);if(t&&(d=d.filter(s=>(s.type||"").toLowerCase()===t.toLowerCase())),a&&(d=d.filter(s=>(s.department||"").toLowerCase()===a.toLowerCase())),i){const s=new Date(i);s.setHours(0,0,0,0),d=d.filter(r=>new Date(r.date)>=s)}if(n){const s=new Date(n);s.setHours(23,59,59,999),d=d.filter(r=>new Date(r.date)<=s)}if(e){const s=e.toLowerCase();d=d.filter(r=>[r.type,r.location,r.department,r.observerName,r.phone,r.description,r.correctiveDescription].some(o=>o&&o.toLowerCase().includes(s)))}return d.sort((s,r)=>new Date(r.date)-new Date(s.date))},updateSummary(){const e=document.getElementById("nearmiss-summary");e&&(e.innerHTML=this.renderSummaryCards(),this.applyModuleI18n(e))},renderSummaryCards(){const e=AppState.appData.nearmiss||[],t=e.length,a=e.filter(l=>l.correctiveProposed).length,i=e.filter(l=>{const c=(l.severity||"").toLowerCase();return c==="\u0639\u0627\u0644\u064A"||c==="high"||c==="\u0643\u0627\u0631\u062B\u064A"||c==="critical"||c==="\u0648\u0634\u064A\u0643"}).length,n=new Date,d=new Date(n.getFullYear(),n.getMonth(),1),s=e.filter(l=>new Date(l.date)>=d).length,r={};e.forEach(l=>{const c=(l.department||"").trim();c&&(r[c]=(r[c]||0)+1)});const o=Object.entries(r).sort((l,c)=>c[1]-l[1])[0],p=o?`${Utils.escapeHTML(o[0])} (${o[1]})`:"\u0644\u0627 \u064A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A";return`
+            </div>
+
+            <!-- \u0628\u0637\u0627\u0642\u0627\u062A \u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0629 \u0627\u0644\u0633\u0631\u064A\u0639\u0629 -->
+            <div id="nearmiss-kpi-strip"></div>
+
+            <!-- \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u062A\u0628\u0648\u064A\u0628 \u0627\u0644\u0646\u0634\u0637 -->
+            <div id="nearmiss-tab-content"></div>
+        `,this.renderKpiStrip(),this.renderActiveTabContent(),this.bindEvents()},renderKpiStrip(){const e=document.getElementById("nearmiss-kpi-strip");if(!e)return;const t=AppState.appData.nearmiss||[],i=t.length,a=t.filter(p=>p.correctiveProposed).length,o=t.filter(p=>{const n=(p.severity||"").toLowerCase();return n.includes("\u0639\u0627\u0644\u064A")||n.includes("high")||n.includes("\u0643\u0627\u0631\u062B\u064A")||n.includes("critical")||n.includes("\u0648\u0634\u064A\u0643")}).length,s=new Date,r=t.filter(p=>{const n=new Date(p.date);return n.getFullYear()===s.getFullYear()&&n.getMonth()===s.getMonth()}).length,d={};t.forEach(p=>{const n=(p.department||"").trim();n&&(d[n]=(d[n]||0)+1)});const c=Object.entries(d).sort((p,n)=>n[1]-p[1])[0],f=c?`${c[0]} (${c[1]})`:"\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0639\u062F";e.innerHTML=`
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <!-- \u0643\u0631\u062A \u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0628\u0644\u0627\u063A\u0627\u062A -->
-                <div style="background:#fff; border-radius:14px; padding:18px; border:1px solid #e0e7ff; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
-                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); color:#3730a3; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                <!-- \u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0628\u0644\u0627\u063A\u0627\u062A -->
+                <div style="background:#fff; border-radius:16px; padding:18px 20px; border:1px solid #e0e7ff; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                    <div style="width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); color:#3730a3; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
                         <i class="fas fa-clipboard-list"></i>
                     </div>
                     <div>
-                        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629</div>
-                        <div style="font-size:1.5rem; font-weight:800; color:#1e1b4b; line-height:1.2;">${t}</div>
-                        <div style="font-size:0.7rem; color:#4338ca; font-weight:600; margin-top:2px;">+${s} \u062E\u0644\u0627\u0644 \u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631 \u{1F4C5}</div>
+                        <div style="font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase;">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629</div>
+                        <div style="font-size:1.6rem; font-weight:800; color:#1e1b4b; line-height:1.2;">${i}</div>
+                        <div style="font-size:0.72rem; color:#4338ca; font-weight:600; margin-top:2px;">+${r} \u0628\u0644\u0627\u063A \u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631 \u{1F4C5}</div>
                     </div>
                 </div>
 
-                <!-- \u0643\u0631\u062A \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 -->
-                <div style="background:#fff; border-radius:14px; padding:18px; border:1px solid #fee2e2; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
-                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
-                        <i class="fas fa-radiation-alt"></i>
+                <!-- \u0628\u0644\u0627\u063A\u0627\u062A \u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 -->
+                <div style="background:#fff; border-radius:16px; padding:18px 20px; border:1px solid #fee2e2; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                    <div style="width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                        <i class="fas fa-exclamation-triangle"></i>
                     </div>
                     <div>
-                        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">\u0628\u0644\u0627\u063A\u0627\u062A \u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u062E\u0637\u0648\u0631\u0629</div>
-                        <div style="font-size:1.5rem; font-weight:800; color:#b91c1c; line-height:1.2;">${i}</div>
-                        <div style="font-size:0.7rem; color:#dc2626; font-weight:600; margin-top:2px;">\u062A\u062A\u0637\u0644\u0628 \u062A\u062F\u062E\u0644 \u0641\u0648\u0631\u064A \u{1F6A8}</div>
+                        <div style="font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase;">\u0628\u0644\u0627\u063A\u0627\u062A \u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u062E\u0637\u0648\u0631\u0629</div>
+                        <div style="font-size:1.6rem; font-weight:800; color:#b91c1c; line-height:1.2;">${o}</div>
+                        <div style="font-size:0.72rem; color:#dc2626; font-weight:600; margin-top:2px;">\u0645\u062E\u0627\u0637\u0631 \u0648\u0634\u064A\u0643\u0629 \u0645\u062D\u062A\u0645\u0644\u0629 \u{1F6A8}</div>
                     </div>
                 </div>
 
-                <!-- \u0643\u0631\u062A \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629 -->
-                <div style="background:#fff; border-radius:14px; padding:18px; border:1px solid #fef3c7; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
-                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                <!-- \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629 -->
+                <div style="background:#fff; border-radius:16px; padding:18px 20px; border:1px solid #fef3c7; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                    <div style="width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
                         <i class="fas fa-shield-alt"></i>
                     </div>
                     <div>
-                        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629 (CAPA)</div>
-                        <div style="font-size:1.5rem; font-weight:800; color:#b45309; line-height:1.2;">${a}</div>
-                        <div style="font-size:0.7rem; color:#d97706; font-weight:600; margin-top:2px;">\u0645\u0631\u0628\u0648\u0637\u0629 \u0628\u062E\u0637\u0629 \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u{1F504}</div>
+                        <div style="font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase;">\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629 (CAPA)</div>
+                        <div style="font-size:1.6rem; font-weight:800; color:#b45309; line-height:1.2;">${a}</div>
+                        <div style="font-size:0.72rem; color:#d97706; font-weight:600; margin-top:2px;">\u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u0648\u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629 \u{1F504}</div>
                     </div>
                 </div>
 
-                <!-- \u0643\u0631\u062A \u0623\u0643\u062B\u0631 \u0625\u062F\u0627\u0631\u0629 \u0646\u0634\u0627\u0637\u0627\u064B -->
-                <div style="background:#fff; border-radius:14px; padding:18px; border:1px solid #d1fae5; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
-                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                <!-- \u0623\u0639\u0644\u0649 \u0625\u062F\u0627\u0631\u0629 \u0631\u0635\u062F\u0627\u064B -->
+                <div style="background:#fff; border-radius:16px; padding:18px 20px; border:1px solid #d1fae5; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                    <div style="width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
                         <i class="fas fa-building"></i>
                     </div>
                     <div>
-                        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">\u0623\u0639\u0644\u0649 \u0625\u062F\u0627\u0631\u0629 \u0631\u0635\u062F\u0627\u064B</div>
-                        <div style="font-size:1.05rem; font-weight:800; color:#065f46; line-height:1.2; margin-top:2px;">${p}</div>
-                        <div style="font-size:0.7rem; color:#059669; font-weight:600; margin-top:2px;">\u0628\u064A\u0626\u0629 \u0625\u064A\u062C\u0627\u0628\u064A\u0629 \u0645\u0634\u062C\u0639\u0629 \u{1F3C6}</div>
+                        <div style="font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase;">\u0623\u0639\u0644\u0649 \u0625\u062F\u0627\u0631\u0629 \u0631\u0635\u062F\u0627\u064B</div>
+                        <div style="font-size:1.05rem; font-weight:800; color:#065f46; line-height:1.2; margin-top:3px;">${Utils.escapeHTML(f)}</div>
+                        <div style="font-size:0.72rem; color:#059669; font-weight:600; margin-top:2px;">\u062B\u0642\u0627\u0641\u0629 \u0625\u064A\u062C\u0627\u0628\u064A\u0629 \u0645\u0634\u062C\u0639\u0629 \u{1F3C6}</div>
                     </div>
                 </div>
             </div>
-        `},renderTable(){const e=document.getElementById("nearmiss-table-container");if(!e)return;const t=this.getFilteredItems(),a=document.getElementById("nearmiss-result-count");if(a&&(a.textContent=t.length?`${t.length} \u0645\u0644\u0627\u062D\u0638\u0629`:"\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u062A\u0627\u0626\u062C \u0645\u0637\u0627\u0628\u0642\u0629"),!t.length){this.renderEmptyState(e);return}e.innerHTML=`
+        `},renderActiveTabContent(){const e=document.getElementById("nearmiss-tab-content");e&&(this.state.activeTab==="register"?this.renderRegisterTab(e):this.renderAnalyticsTab(e))},renderRegisterTab(e){e.innerHTML=`
+            <div class="content-card mb-6" style="background:#fff; border-radius:16px; border:1px solid #e2e8f0; padding:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <div class="flex items-center gap-2 font-bold text-gray-800 text-sm">
+                        <i class="fas fa-sliders-h text-indigo-600"></i>
+                        <span>\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u0645\u062A\u0642\u062F\u0645\u0629</span>
+                    </div>
+                    <button id="nearmiss-reset-filters" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 cursor-pointer" style="background:none; border:none;">
+                        <i class="fas fa-undo"></i> \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">\u0628\u062D\u062B \u062D\u0631</label>
+                        <input type="text" id="nearmiss-filter-search" class="form-input w-full p-2 rounded-lg border text-xs" placeholder="\u0627\u0644\u0646\u0648\u0639\u060C \u0627\u0644\u0645\u0648\u0642\u0639\u060C \u0627\u0644\u0645\u0628\u0644\u0651\u063A..." value="${Utils.escapeHTML(this.state.filters.search)}">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">\u0646\u0648\u0639 \u0627\u0644\u062D\u0627\u062F\u062B</label>
+                        <select id="nearmiss-filter-type" class="form-input w-full p-2 rounded-lg border text-xs">
+                            ${this.renderTypeOptions(this.state.filters.type)}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u0629</label>
+                        <select id="nearmiss-filter-department" class="form-input w-full p-2 rounded-lg border text-xs">
+                            ${this.renderDepartmentOptions(this.state.filters.department)}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">\u0645\u0646 \u062A\u0627\u0631\u064A\u062E</label>
+                        <input type="date" id="nearmiss-filter-start" class="form-input w-full p-2 rounded-lg border text-xs" value="${this.state.filters.startDate}">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E</label>
+                        <input type="date" id="nearmiss-filter-end" class="form-input w-full p-2 rounded-lg border text-xs" value="${this.state.filters.endDate}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- \u062C\u062F\u0648\u0644 \u0627\u0644\u0633\u062C\u0644 -->
+            <div class="content-card" style="background:#fff; border-radius:16px; border:1px solid #e2e8f0; overflow:hidden;">
+                <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+                    <div class="flex items-center gap-2 font-bold text-gray-800 text-sm">
+                        <i class="fas fa-table text-indigo-600"></i>
+                        <span>\u0633\u062C\u0644 \u0628\u0644\u0627\u063A\u0627\u062A \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629</span>
+                    </div>
+                    <span id="nearmiss-result-count" class="text-xs text-indigo-700 bg-indigo-50 font-bold px-2.5 py-1 rounded-full"></span>
+                </div>
+                <div id="nearmiss-table-container" style="padding:0;"></div>
+            </div>
+        `,this.bindFilterEvents(),this.renderTable()},renderAnalyticsTab(e){const t=AppState.appData.nearmiss||[];e.innerHTML=`
+            <div style="background:#fff; border-radius:16px; border:1px solid #e2e8f0; padding:20px; margin-bottom:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid #f1f5f9;">
+                    <div class="flex items-center gap-3">
+                        <div style="width:40px; height:40px; border-radius:10px; background:#e0e7ff; color:#3730a3; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#1e1b4b;">\u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u064A \u0644\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629</h3>
+                            <p style="margin:2px 0 0 0; font-size:0.75rem; color:#64748b;">\u062A\u062D\u0644\u064A\u0644 \u062A\u0648\u0632\u064A\u0639 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u0645\u062D\u062A\u0645\u0644\u0629 \u0648\u0645\u0639\u062F\u0644\u0627\u062A \u0627\u0644\u062A\u0643\u0631\u0627\u0631 \u0628\u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u0648\u0627\u0644\u0623\u0642\u0633\u0627\u0645</p>
+                        </div>
+                    </div>
+                    <button onclick="window.print()" class="btn-secondary flex items-center gap-2" style="font-size:0.8rem; font-weight:700; padding:7px 14px; border-radius:8px;">
+                        <i class="fas fa-file-pdf text-red-500"></i>
+                        <span>\u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 PDF</span>
+                    </button>
+                </div>
+
+                <!-- \u0634\u0628\u0643\u0629 \u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- \u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u062D\u0648\u0627\u062F\u062B -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:18px;">
+                        <div style="font-weight:800; font-size:0.85rem; color:#1e1b4b; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-pie-chart text-indigo-600"></i>
+                            <span>\u0627\u0644\u062A\u0648\u0632\u064A\u0639 \u062D\u0633\u0628 \u0646\u0648\u0639 \u0648\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u062D\u0627\u062F\u062B</span>
+                        </div>
+                        <div style="height:260px; position:relative;">
+                            <canvas id="nrm-chart-types"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- \u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:18px;">
+                        <div style="font-weight:800; font-size:0.85rem; color:#1e1b4b; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-exclamation-triangle text-amber-600"></i>
+                            <span>\u0627\u0644\u062A\u0648\u0632\u064A\u0639 \u062D\u0633\u0628 \u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 \u0627\u0644\u0645\u062D\u062A\u0645\u0644\u0629</span>
+                        </div>
+                        <div style="height:260px; position:relative;">
+                            <canvas id="nrm-chart-severity"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- \u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629: \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u0648\u0627\u0644\u0625\u062F\u0627\u0631\u0627\u062A -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- \u0623\u0643\u062B\u0631 \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u062A\u0633\u062C\u064A\u0644\u0627\u064B -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:18px;">
+                        <div style="font-weight:800; font-size:0.85rem; color:#1e1b4b; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-map-marker-alt text-red-600"></i>
+                            <span>\u0623\u0643\u062B\u0631 \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u0648\u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u062A\u0633\u062C\u064A\u0644\u0627\u064B \u0644\u0644\u0628\u0644\u0627\u063A\u0627\u062A</span>
+                        </div>
+                        <div style="height:260px; position:relative;">
+                            <canvas id="nrm-chart-locations"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- \u0623\u0643\u062B\u0631 \u0627\u0644\u0625\u062F\u0627\u0631\u0627\u062A \u062A\u0633\u062C\u064A\u0644\u0627\u064B -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:18px;">
+                        <div style="font-weight:800; font-size:0.85rem; color:#1e1b4b; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-building text-emerald-600"></i>
+                            <span>\u0623\u0643\u062B\u0631 \u0627\u0644\u0625\u062F\u0627\u0631\u0627\u062A \u0631\u0635\u062F\u0627\u064B \u0648\u062A\u0641\u0627\u0639\u0644\u0627\u064B</span>
+                        </div>
+                        <div style="height:260px; position:relative;">
+                            <canvas id="nrm-chart-departments"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,setTimeout(()=>this.drawAnalyticsCharts(t),100)},drawAnalyticsCharts(e){if(typeof Chart>"u")return;["types","severity","locations","departments"].forEach(n=>{if(this._charts[n])try{this._charts[n].destroy()}catch{}});const t={};e.forEach(n=>{const l=n.type||"\u0623\u062E\u0631\u0649";t[l]=(t[l]||0)+1});const i=document.getElementById("nrm-chart-types");i&&(this._charts.types=new Chart(i,{type:"doughnut",data:{labels:Object.keys(t),datasets:[{data:Object.values(t),backgroundColor:["#4f46e5","#f59e0b","#10b981","#ef4444","#06b6d4","#8b5cf6","#ec4899"]}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"bottom"}}}}));const a={\u0645\u0646\u062E\u0641\u0636:0,\u0645\u062A\u0648\u0633\u0637:0,\u0639\u0627\u0644\u064A:0,"\u0643\u0627\u0631\u062B\u064A / \u0648\u0634\u064A\u0643":0};e.forEach(n=>{const l=n.severity||"\u0645\u062A\u0648\u0633\u0637";l.includes("\u0645\u0646\u062E\u0641\u0636")?a.\u0645\u0646\u062E\u0641\u0636++:l.includes("\u0639\u0627\u0644\u064A")||l.includes("high")?a.\u0639\u0627\u0644\u064A++:l.includes("\u0643\u0627\u0631\u062B\u064A")||l.includes("\u0648\u0634\u064A\u0643")?a["\u0643\u0627\u0631\u062B\u064A / \u0648\u0634\u064A\u0643"]++:a.\u0645\u062A\u0648\u0633\u0637++});const o=document.getElementById("nrm-chart-severity");o&&(this._charts.severity=new Chart(o,{type:"pie",data:{labels:Object.keys(a),datasets:[{data:Object.values(a),backgroundColor:["#10b981","#f59e0b","#ef4444","#991b1b"]}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"bottom"}}}}));const s={};e.forEach(n=>{const l=(n.location||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").split("\u2014")[0].trim();s[l]=(s[l]||0)+1});const r=Object.entries(s).sort((n,l)=>l[1]-n[1]).slice(0,6),d=document.getElementById("nrm-chart-locations");d&&(this._charts.locations=new Chart(d,{type:"bar",data:{labels:r.map(n=>n[0]),datasets:[{label:"\u0639\u062F\u062F \u0627\u0644\u0628\u0644\u0627\u063A\u0627\u062A",data:r.map(n=>n[1]),backgroundColor:"#6366f1",borderRadius:8}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1}}}}));const c={};e.forEach(n=>{const l=(n.department||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").trim();c[l]=(c[l]||0)+1});const f=Object.entries(c).sort((n,l)=>l[1]-n[1]).slice(0,6),p=document.getElementById("nrm-chart-departments");p&&(this._charts.departments=new Chart(p,{type:"bar",data:{labels:f.map(n=>n[0]),datasets:[{label:"\u0639\u062F\u062F \u0627\u0644\u0628\u0644\u0627\u063A\u0627\u062A",data:f.map(n=>n[1]),backgroundColor:"#10b981",borderRadius:8}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1}}}}))},bindEvents(){document.querySelectorAll(".nrm-nav-tab").forEach(a=>{a.addEventListener("click",()=>{const o=a.getAttribute("data-tab");o&&(this.state.activeTab=o,document.querySelectorAll(".nrm-nav-tab").forEach(s=>{const r=s.getAttribute("data-tab")===o;s.style.background=r?"#fff":"rgba(255,255,255,0.12)",s.style.color=r?"#1e1b4b":"#fff"}),this.renderActiveTabContent())})});const e=document.getElementById("nearmiss-public-qr-btn");e&&e.addEventListener("click",()=>this.openPublicQrModal());const t=document.getElementById("nearmiss-print-badges-btn");t&&t.addEventListener("click",()=>this.printLocationQrBadges());const i=document.getElementById("nearmiss-create-new-btn");i&&i.addEventListener("click",()=>this.showForm())},bindFilterEvents(){const e=document.getElementById("nearmiss-filter-search");e&&e.addEventListener("input",r=>this.handleFilterChange("search",r.target.value));const t=document.getElementById("nearmiss-filter-type");t&&t.addEventListener("change",r=>this.handleFilterChange("type",r.target.value));const i=document.getElementById("nearmiss-filter-department");i&&i.addEventListener("change",r=>this.handleFilterChange("department",r.target.value));const a=document.getElementById("nearmiss-filter-start");a&&a.addEventListener("change",r=>this.handleFilterChange("startDate",r.target.value));const o=document.getElementById("nearmiss-filter-end");o&&o.addEventListener("change",r=>this.handleFilterChange("endDate",r.target.value));const s=document.getElementById("nearmiss-reset-filters");s&&s.addEventListener("click",()=>this.resetFilters())},handleFilterChange(e,t){this.state.filters[e]=t,this.renderTable()},resetFilters(){this.state.filters={search:"",type:"",department:"",startDate:"",endDate:"",period:"365"},this.renderRegisterTab(document.getElementById("nearmiss-tab-content"))},getFilteredItems(){const{search:e,type:t,department:i,startDate:a,endDate:o}=this.state.filters;let s=(AppState.appData.nearmiss||[]).filter(r=>!!r);if(t&&(s=s.filter(r=>(r.type||"").toLowerCase()===t.toLowerCase())),i&&(s=s.filter(r=>(r.department||"").toLowerCase()===i.toLowerCase())),a){const r=new Date(a);r.setHours(0,0,0,0),s=s.filter(d=>new Date(d.date)>=r)}if(o){const r=new Date(o);r.setHours(23,59,59,999),s=s.filter(d=>new Date(d.date)<=r)}if(e){const r=e.toLowerCase();s=s.filter(d=>[d.type,d.location,d.department,d.observerName,d.phone,d.description,d.correctiveDescription,d.isoCode].some(c=>c&&String(c).toLowerCase().includes(r)))}return s.sort((r,d)=>new Date(d.date)-new Date(r.date))},renderTable(){const e=document.getElementById("nearmiss-table-container");if(!e)return;const t=this.getFilteredItems(),i=document.getElementById("nearmiss-result-count");if(i&&(i.textContent=t.length?`${t.length} \u0628\u0644\u0627\u063A`:"\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u062A\u0627\u0626\u062C"),!t.length){e.innerHTML=`
+                <div class="empty-state text-center py-12">
+                    <i class="fas fa-clipboard-check text-4xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500 font-bold">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u0644\u0627\u063A\u0627\u062A \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u062A\u0635\u0641\u064A\u0629</p>
+                </div>
+            `;return}e.innerHTML=`
             <div class="table-wrapper" style="overflow-x: auto;">
-                <table class="data-table table-header-orange">
+                <table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
                     <thead>
-                        <tr>
-                            <th>\u0627\u0644\u0646\u0648\u0639</th>
-                            <th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0648\u0642\u062A</th>
-                            <th>\u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</th>
-                            <th>\u0627\u0644\u0645\u0648\u0642\u0639</th>
-                            <th>\u0627\u0644\u0625\u062F\u0627\u0631\u0629</th>
-                            <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A</th>
-                            <th>\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A</th>
-                            <th style="width: 140px;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; text-align: right;">
+                            <th style="padding: 12px 14px;">\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0645\u0631\u062C\u0639\u064A</th>
+                            <th style="padding: 12px 14px;">\u0646\u0648\u0639 \u0627\u0644\u062D\u0627\u062F\u062B</th>
+                            <th style="padding: 12px 14px;">\u0627\u0644\u062E\u0637\u0648\u0631\u0629</th>
+                            <th style="padding: 12px 14px;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                            <th style="padding: 12px 14px;">\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0635\u0646\u0639</th>
+                            <th style="padding: 12px 14px;">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</th>
+                            <th style="padding: 12px 14px;">\u0627\u0644\u0645\u0628\u0644\u0651\u063A</th>
+                            <th style="padding: 12px 14px;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0648\u0642\u0627\u0626\u064A</th>
+                            <th style="padding: 12px 14px; text-align: center;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${t.map(i=>`
-                            <tr>
-                                <td>
-                                    <span class="badge ${this.formatTypeBadge(i.type)}">${Utils.escapeHTML(i.type||"")}</span>
+                        ${t.map(a=>`
+                            <tr style="border-bottom: 1px solid #f1f5f9; transition: all 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+                                <td style="padding: 12px 14px; font-weight: 800; color: #312e81;">
+                                    ${Utils.escapeHTML(a.isoCode||a.id)}
                                 </td>
-                                <td>
-                                    <div class="text-sm text-gray-800">${i.date?Utils.formatDateTime(i.date):"-"}</div>
+                                <td style="padding: 12px 14px;">
+                                    <span style="background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 0.75rem;">
+                                        ${Utils.escapeHTML(a.type||"\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643")}
+                                    </span>
                                 </td>
-                                <td>
-                                    <div class="font-semibold text-gray-900">${Utils.escapeHTML(i.observerName||"-")}</div>
-                                    ${i.phone?`<div class="text-xs text-gray-500">${Utils.escapeHTML(i.phone)}</div>`:""}
+                                <td style="padding: 12px 14px;">
+                                    ${this.formatSeverityBadge(a.severity)}
                                 </td>
-                                <td>${Utils.escapeHTML(i.location||"-")}</td>
-                                <td>${Utils.escapeHTML(i.department||"-")}</td>
-                                <td>${this.formatCorrectiveBadge(i)}</td>
-                                <td>
-                                    ${i.attachments&&i.attachments.length?`<span class="badge badge-secondary">${i.attachments.length}</span>`:'<span class="text-xs text-gray-400">\u0644\u0627 \u064A\u0648\u062C\u062F</span>'}
+                                <td style="padding: 12px 14px; color: #64748b;">
+                                    ${a.date?Utils.formatDateTime(a.date):"-"}
                                 </td>
-                                <td>
-                                    <div class="flex items-center gap-2">
-                                        <button class="btn-icon btn-icon-info" data-action="view-nearmiss" data-id="${i.id}" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
+                                <td style="padding: 12px 14px; font-weight: 600; color: #1e1b4b;">
+                                    ${Utils.escapeHTML(a.location||"-")}
+                                </td>
+                                <td style="padding: 12px 14px; color: #334155;">
+                                    ${Utils.escapeHTML(a.department||"-")}
+                                </td>
+                                <td style="padding: 12px 14px;">
+                                    <div style="font-weight: 600; color: #0f172a;">${Utils.escapeHTML(a.observerName||"\u0641\u0627\u0639\u0644 \u062E\u064A\u0631")}</div>
+                                    ${a.phone?`<div style="font-size: 0.7rem; color: #94a3b8;">${Utils.escapeHTML(a.phone)}</div>`:""}
+                                </td>
+                                <td style="padding: 12px 14px;">
+                                    ${a.correctiveProposed?'<span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:700; font-size:0.72rem;">\u0645\u062A\u0627\u062D \u2705</span>':'<span style="color:#94a3b8; font-size:0.72rem;">\u2014</span>'}
+                                </td>
+                                <td style="padding: 12px 14px; text-align: center;">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        <button class="btn-icon text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg" data-action="view-nearmiss" data-id="${a.id}" title="\u0639\u0631\u0636">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button class="btn-icon btn-icon-primary" data-action="edit-nearmiss" data-id="${i.id}" title="\u062A\u0639\u062F\u064A\u0644">
+                                        <button class="btn-icon text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg" data-action="edit-nearmiss" data-id="${a.id}" title="\u062A\u0639\u062F\u064A\u0644">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="btn-icon btn-icon-danger" data-action="delete-nearmiss" data-id="${i.id}" title="\u062D\u0630\u0641">
+                                        <button class="btn-icon text-red-600 hover:bg-red-50 p-1.5 rounded-lg" data-action="delete-nearmiss" data-id="${a.id}" title="\u062D\u0630\u0641">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -213,17 +285,115 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                     </tbody>
                 </table>
             </div>
-        `,this.applyModuleI18n(e),this.bindTableActions()},renderEmptyState(e){e.innerHTML=`
-            <div class="empty-state">
-                <i class="fas fa-clipboard text-4xl text-gray-300 mb-4"></i>
-                <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629</p>
-                <button id="nearmiss-empty-create" class="btn-primary mt-4">
-                    <i class="fas fa-plus ml-2"></i>
-                    \u062A\u0633\u062C\u064A\u0644 \u0645\u0644\u0627\u062D\u0638\u0629 \u062C\u062F\u064A\u062F\u0629
-                </button>
+        `,this.bindTableActions()},formatSeverityBadge(e=""){const t=String(e||"").toLowerCase();return t.includes("\u0645\u0646\u062E\u0641\u0636")?'<span style="background:#dcfce7; color:#166534; padding:3px 8px; border-radius:10px; font-weight:700; font-size:0.72rem;">\u{1F7E2} \u0645\u0646\u062E\u0641\u0636</span>':t.includes("\u0639\u0627\u0644\u064A")||t.includes("high")?'<span style="background:#fee2e2; color:#991b1b; padding:3px 8px; border-radius:10px; font-weight:700; font-size:0.72rem;">\u{1F534} \u0639\u0627\u0644\u064A</span>':t.includes("\u0643\u0627\u0631\u062B\u064A")||t.includes("\u0648\u0634\u064A\u0643")||t.includes("critical")?'<span style="background:#450a0a; color:#fecaca; padding:3px 8px; border-radius:10px; font-weight:700; font-size:0.72rem;">\u{1F6A8} \u0648\u0634\u064A\u0643 / \u0643\u0627\u0631\u062B\u064A</span>':'<span style="background:#fef3c7; color:#92400e; padding:3px 8px; border-radius:10px; font-weight:700; font-size:0.72rem;">\u{1F7E1} \u0645\u062A\u0648\u0633\u0637</span>'},bindTableActions(){document.querySelectorAll('[data-action="view-nearmiss"]').forEach(e=>{e.addEventListener("click",()=>this.viewNearMiss(e.getAttribute("data-id")))}),document.querySelectorAll('[data-action="edit-nearmiss"]').forEach(e=>{e.addEventListener("click",()=>this.editNearMiss(e.getAttribute("data-id")))}),document.querySelectorAll('[data-action="delete-nearmiss"]').forEach(e=>{e.addEventListener("click",()=>this.deleteNearMiss(e.getAttribute("data-id")))})},getDepartmentOptions(){const e=new Set;return(AppState.appData.nearmiss||[]).forEach(t=>{const i=(t.department||"").trim();i&&e.add(i)}),(AppState.appData.departments||[]).forEach(t=>{const i=typeof t=="string"?t:t.name||t.departmentName||"";i&&e.add(i)}),e.size===0&&["\u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629","\u0627\u0644\u0625\u0646\u062A\u0627\u062C","\u0627\u0644\u0635\u064A\u0627\u0646\u0629 \u0627\u0644\u0645\u064A\u0643\u0627\u0646\u064A\u0643\u064A\u0629","\u0627\u0644\u0635\u064A\u0627\u0646\u0629 \u0627\u0644\u0643\u0647\u0631\u0628\u0627\u0626\u064A\u0629","\u0627\u0644\u062C\u0648\u062F\u0629","\u0627\u0644\u0645\u062E\u0627\u0632\u0646","\u0627\u0644\u0645\u0648\u0627\u0631\u062F \u0627\u0644\u0628\u0634\u0631\u064A\u0629"].forEach(t=>e.add(t)),Array.from(e).sort((t,i)=>t.localeCompare(i,"ar"))},renderTypeOptions(e=""){const t=['<option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0646\u0648\u0627\u0639</option>'];return this.TYPES.forEach(i=>{t.push(`<option value="${Utils.escapeHTML(i.value)}" ${i.value===e?"selected":""}>${Utils.escapeHTML(i.label)}</option>`)}),t.join("")},renderDepartmentOptions(e=""){const t=['<option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0627\u062A</option>'];return this.getDepartmentOptions().forEach(i=>{t.push(`<option value="${Utils.escapeHTML(i)}" ${i===e?"selected":""}>${Utils.escapeHTML(i)}</option>`)}),t.join("")},viewNearMiss(e){const t=(AppState.appData.nearmiss||[]).find(a=>a.id===e);if(!t){alert("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0628\u0644\u0627\u063A");return}const i=document.createElement("div");i.className="modal-overlay",i.style.cssText="position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px; backdrop-filter:blur(4px);",i.innerHTML=`
+            <div class="modal-content" style="max-width: 740px; width:100%; background:#fff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); font-family: 'Segoe UI', Tahoma, sans-serif; max-height:90vh; display:flex; flex-direction:column; direction:rtl;">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: #fff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="flex items-center gap-3">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                            <i class="fas fa-file-contract text-amber-300"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #fff;">\u062A\u0642\u0631\u064A\u0631 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u062D\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643</h3>
+                                <span style="background: #f59e0b; color: #000; font-weight: 800; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px;">${Utils.escapeHTML(t.isoCode||t.id||"")}</span>
+                            </div>
+                            <div style="font-size: 0.75rem; color: #c7d2fe; margin-top: 2px;">SafetyHub | ICAPP \u2014 Incident Prevention Record</div>
+                        </div>
+                    </div>
+                    <button class="modal-close text-white/80 hover:text-white text-2xl" onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; cursor: pointer;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="modal-body space-y-4 p-6" style="background: #f8fafc; overflow-y:auto; flex:1;">
+                    <!-- \u0634\u0628\u0643\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 -->
+                    <div style="background: #fff; padding: 16px; border-radius: 14px; border: 1px solid #e2e8f0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block;">\u0646\u0648\u0639 \u0648\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u062D\u0627\u062F\u062B:</span>
+                            <div style="font-weight: 700; color: #1e1b4b; font-size: 0.9rem; margin-top: 2px;">
+                                <i class="fas fa-tag text-indigo-500 ml-1"></i> ${Utils.escapeHTML(t.type||"\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643")}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block;">\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629:</span>
+                            <div style="margin-top: 2px;">
+                                ${this.formatSeverityBadge(t.severity)}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block;">\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u0635\u0646\u0639:</span>
+                            <div style="font-weight: 700; color: #1e1b4b; font-size: 0.9rem; margin-top: 2px;">
+                                <i class="fas fa-map-marker-alt text-red-500 ml-1"></i> ${Utils.escapeHTML(t.location||"-")}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block;">\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u0629:</span>
+                            <div style="font-weight: 700; color: #1e1b4b; font-size: 0.9rem; margin-top: 2px;">
+                                <i class="fas fa-building text-blue-500 ml-1"></i> ${Utils.escapeHTML(t.department||"-")}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block;">\u062A\u0627\u0631\u064A\u062E \u0648\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u0635\u062F:</span>
+                            <div style="font-weight: 600; color: #334155; font-size: 0.85rem; margin-top: 2px;">
+                                <i class="far fa-calendar-alt text-amber-500 ml-1"></i> ${t.date?Utils.formatDateTime(t.date):"-"}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; display: block;">\u0635\u0627\u062D\u0628 \u0627\u0644\u0628\u0644\u0627\u063A:</span>
+                            <div style="font-weight: 600; color: #334155; font-size: 0.85rem; margin-top: 2px;">
+                                <i class="fas fa-user-shield text-emerald-500 ml-1"></i> ${Utils.escapeHTML(t.observerName||"\u0641\u0627\u0639\u0644 \u062E\u064A\u0631 (\u0633\u0631\u064A)")}
+                                ${t.phone?`<span style="font-size: 0.75rem; color: #64748b;"> (${Utils.escapeHTML(t.phone)})</span>`:""}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- \u0643\u0631\u062A \u0648\u0635\u0641 \u0627\u0644\u0648\u0627\u0642\u0639\u0629 \u0648\u0645\u0627 \u0643\u0627\u062F \u0623\u0646 \u064A\u062D\u062F\u062B -->
+                    <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 14px; padding: 16px;">
+                        <div style="display:flex; align-items:center; gap:8px; font-weight:800; color:#92400e; font-size:0.88rem; margin-bottom:8px;">
+                            <i class="fas fa-exclamation-circle text-amber-600"></i>
+                            <span>\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0648\u0627\u0642\u0639\u0629 \u0627\u0644\u0648\u0634\u064A\u0643\u0629 \u0648\u0645\u0627 \u0643\u0627\u062F \u0623\u0646 \u064A\u062D\u062F\u062B:</span>
+                        </div>
+                        <div style="font-size:0.85rem; color:#78350f; line-height:1.6; white-space:pre-line;">
+                            ${Utils.escapeHTML(t.description||"\u0644\u0627 \u064A\u0648\u062C\u062F \u062A\u0641\u0627\u0635\u064A\u0644 \u0625\u0636\u0627\u0641\u064A\u0629")}
+                        </div>
+                    </div>
+
+                    <!-- \u0643\u0631\u062A \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0627\u0644\u0645\u062A\u062E\u0630 -->
+                    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 14px; padding: 16px;">
+                        <div style="display:flex; align-items:center; gap:8px; font-weight:800; color:#166534; font-size:0.88rem; margin-bottom:8px;">
+                            <i class="fas fa-shield-alt text-emerald-600"></i>
+                            <span>\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0648\u0627\u0644\u0648\u0642\u0627\u0626\u064A \u0627\u0644\u0641\u0648\u0631\u064A \u0627\u0644\u0645\u062A\u062E\u0630:</span>
+                        </div>
+                        <div style="font-size:0.85rem; color:#14532d; line-height:1.6; white-space:pre-line;">
+                            ${Utils.escapeHTML(t.correctiveDescription||t.correctiveProposed||"\u062A\u0645 \u0627\u0644\u062A\u0648\u062B\u064A\u0642 \u0648\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A\u0629 \u0645\u0639 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u062E\u062A\u0635\u0629")}
+                        </div>
+                    </div>
+
+                    <!-- \u0642\u0633\u0645 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A \u0648\u0627\u0644\u0635\u0648\u0631 -->
+                    ${t.attachments&&t.attachments.length?`
+                    <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px;">
+                        <div style="font-weight:700; color:#334155; font-size:0.85rem; margin-bottom:10px;">
+                            <i class="fas fa-camera text-indigo-600 ml-1"></i> \u0627\u0644\u0635\u0648\u0631 \u0648\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A\u0629:
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            ${t.attachments.map(a=>`
+                                    <div style="border-radius:10px; overflow:hidden; border:1px solid #cbd5e1; cursor:pointer;" onclick="window.open('${a.data||a.url}', '_blank')">
+                                        <img src="${a.data||a.url}" style="width:100%; height:160px; object-fit:cover;" />
+                                        <div style="padding:6px 10px; background:#f8fafc; font-size:0.75rem; color:#475569;">${Utils.escapeHTML(a.name||"\u0635\u0648\u0631\u0629 \u0627\u0644\u062D\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643")}</div>
+                                    </div>
+                                `).join("")}
+                        </div>
+                    </div>
+                    `:""}
+                </div>
+                <div class="modal-footer" style="padding: 14px 24px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.75rem; color: #94a3b8;"><i class="fas fa-check-circle text-emerald-500 ml-1"></i> \u062A\u0645 \u0627\u0644\u062A\u062D\u0642\u0642 \u0648\u0627\u0644\u0623\u0631\u0634\u0641\u0629 \u0641\u064A \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629</span>
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 7px 20px; border-radius: 10px; font-weight:700; cursor:pointer;">\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0646\u0627\u0641\u0630\u0629</button>
+                </div>
             </div>
-        `,this.applyModuleI18n(e);const t=document.getElementById("nearmiss-empty-create");t&&t.addEventListener("click",()=>this.showForm())},bindTableActions(){document.querySelectorAll('[data-action="view-nearmiss"]').forEach(e=>{e.addEventListener("click",()=>this.viewNearMiss(e.getAttribute("data-id")))}),document.querySelectorAll('[data-action="edit-nearmiss"]').forEach(e=>{e.addEventListener("click",()=>this.editNearMiss(e.getAttribute("data-id")))}),document.querySelectorAll('[data-action="delete-nearmiss"]').forEach(e=>{e.addEventListener("click",()=>this.deleteNearMiss(e.getAttribute("data-id")))})},formatTypeBadge(e=""){switch(e){case"\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643":return"badge-warning";case"\u062A\u0635\u0631\u0641 \u063A\u064A\u0631 \u0622\u0645\u0646":return"badge-info";case"\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646":return"badge-secondary";case"\u062D\u0627\u062F\u062B":return"badge-danger";case"\u0645\u0642\u062A\u0631\u062D":return"badge-primary";default:return"badge-info"}},formatCorrectiveBadge(e){return e.correctiveProposed?'<span class="badge badge-info">\u0645\u0642\u062A\u0631\u062D</span>':'<span class="badge badge-secondary">\u0644\u0627 \u064A\u0648\u062C\u062F</span>'},showForm(e=null){const t=e?this.normalizeRecord(e):null;this.state.editingId=t?.id||null,this.state.currentAttachments=t?.attachments?t.attachments.map(i=>this.normalizeAttachment(i)).filter(Boolean):[];const a=this.buildFormModal(t);document.body.appendChild(a),this.applyModuleI18n(a),this.bindFormEvents(a,t),this.renderAttachmentsPreview(),this.toggleCorrectiveSection(t?.correctiveProposed===!0)},buildFormModal(e){const t=e?.correctiveProposed===!0,a=this.getDepartmentOptions(),i=e?.severity||"\u0645\u062A\u0648\u0633\u0637",n=document.createElement("div");return n.className="modal-overlay",n.innerHTML=`
-            <div class="modal-content" style="max-width: 780px; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); font-family: 'Segoe UI', Tahoma, sans-serif;">
+        `,document.body.appendChild(i)},showForm(e=null){const t=e?this.normalizeRecord(e):null;this.state.editingId=t?.id||null,this.state.currentAttachments=t?.attachments||[];const i=this.buildFormModal(t);document.body.appendChild(i),this.bindFormEvents(i,t)},buildFormModal(e){const t=e?.correctiveProposed===!0,i=this.getDepartmentOptions(),a=e?.severity||"\u0645\u062A\u0648\u0633\u0637",o=document.createElement("div");return o.className="modal-overlay",o.style.cssText="position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px; backdrop-filter:blur(4px);",o.innerHTML=`
+            <div class="modal-content" style="max-width: 780px; width:100%; background:#fff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); font-family: 'Segoe UI', Tahoma, sans-serif; max-height:90vh; display:flex; flex-direction:column; direction:rtl;">
                 <!-- Header -->
                 <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); color: #fff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
                     <div class="flex items-center gap-3">
@@ -237,13 +407,13 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                             <p style="font-size: 0.75rem; color: #c7d2fe; margin: 2px 0 0 0;">SafetyHub | ICAPP \u2014 Incident Prevention Entry</p>
                         </div>
                     </div>
-                    <button class="modal-close text-white/80 hover:text-white text-2xl" data-action="close-modal" style="background: none; border: none; cursor: pointer;">
+                    <button class="modal-close text-white/80 hover:text-white text-2xl" onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; cursor: pointer;">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
 
                 <!-- Body -->
-                <div class="modal-body p-6" style="background: #f8fafc; max-height: 75vh; overflow-y: auto;">
+                <div class="modal-body p-6" style="background: #f8fafc; overflow-y: auto; flex:1;">
                     <form id="nearmiss-form" class="space-y-5">
                         <!-- Section 1: \u0627\u0644\u062A\u0635\u0646\u064A\u0641 \u0648\u0627\u0644\u062E\u0637\u0648\u0631\u0629 -->
                         <div style="background: #fff; padding: 18px; border-radius: 14px; border: 1px solid #e2e8f0;">
@@ -261,10 +431,10 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 mb-1.5">\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 \u0627\u0644\u0645\u062D\u062A\u0645\u0644\u0629 *</label>
                                     <select id="nearmiss-severity" class="form-input w-full p-2.5 rounded-lg border border-gray-300" required>
-                                        <option value="\u0645\u0646\u062E\u0641\u0636" ${i==="\u0645\u0646\u062E\u0641\u0636"?"selected":""}>\u{1F7E2} \u0645\u0646\u062E\u0641\u0636 (Low Potential)</option>
-                                        <option value="\u0645\u062A\u0648\u0633\u0637" ${i==="\u0645\u062A\u0648\u0633\u0637"?"selected":""}>\u{1F7E1} \u0645\u062A\u0648\u0633\u0637 (Medium Potential)</option>
-                                        <option value="\u0639\u0627\u0644\u064A" ${i==="\u0639\u0627\u0644\u064A"?"selected":""}>\u{1F534} \u0639\u0627\u0644\u064A (High Potential)</option>
-                                        <option value="\u0643\u0627\u0631\u062B\u064A / \u0648\u0634\u064A\u0643" ${i==="\u0643\u0627\u0631\u062B\u064A / \u0648\u0634\u064A\u0643"||i==="\u0648\u0634\u064A\u0643"?"selected":""}>\u{1F6A8} \u0648\u0634\u064A\u0643 / \u0643\u0627\u0631\u062B\u064A (Critical Potential)</option>
+                                        <option value="\u0645\u0646\u062E\u0641\u0636" ${a==="\u0645\u0646\u062E\u0641\u0636"?"selected":""}>\u{1F7E2} \u0645\u0646\u062E\u0641\u0636 (Low Potential)</option>
+                                        <option value="\u0645\u062A\u0648\u0633\u0637" ${a==="\u0645\u062A\u0648\u0633\u0637"?"selected":""}>\u{1F7E1} \u0645\u062A\u0648\u0633\u0637 (Medium Potential)</option>
+                                        <option value="\u0639\u0627\u0644\u064A" ${a==="\u0639\u0627\u0644\u064A"?"selected":""}>\u{1F534} \u0639\u0627\u0644\u064A (High Potential)</option>
+                                        <option value="\u0643\u0627\u0631\u062B\u064A / \u0648\u0634\u064A\u0643" ${a.includes("\u0648\u0634\u064A\u0643")||a.includes("\u0643\u0627\u0631\u062B\u064A")?"selected":""}>\u{1F6A8} \u0648\u0634\u064A\u0643 / \u0643\u0627\u0631\u062B\u064A (Critical Potential)</option>
                                     </select>
                                 </div>
                             </div>
@@ -285,7 +455,7 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                                     <label for="nearmiss-department" class="block text-xs font-bold text-gray-700 mb-1.5">\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u0629 *</label>
                                     <input type="text" id="nearmiss-department" class="form-input w-full p-2.5 rounded-lg border border-gray-300" list="nearmiss-departments-list" required value="${Utils.escapeHTML(e?.department||"")}" placeholder="\u0627\u062E\u062A\u0631 \u0623\u0648 \u0627\u0643\u062A\u0628 \u0627\u0644\u0625\u062F\u0627\u0631\u0629">
                                     <datalist id="nearmiss-departments-list">
-                                        ${a.map(d=>`<option value="${Utils.escapeHTML(d)}"></option>`).join("")}
+                                        ${i.map(s=>`<option value="${Utils.escapeHTML(s)}"></option>`).join("")}
                                     </datalist>
                                 </div>
                                 <div>
@@ -337,8 +507,8 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
 
                         <!-- Footer -->
                         <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-                            <button type="button" id="nearmiss-cancel-btn" class="btn-secondary px-5 py-2.5 rounded-xl">\u0625\u0644\u063A\u0627\u0621</button>
-                            <button type="submit" class="btn-primary px-6 py-2.5 rounded-xl font-bold flex items-center gap-2" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color:#fff;">
+                            <button type="button" onclick="this.closest('.modal-overlay').remove()" class="btn-secondary px-5 py-2.5 rounded-xl cursor-pointer">\u0625\u0644\u063A\u0627\u0621</button>
+                            <button type="submit" class="btn-primary px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 cursor-pointer" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color:#fff;">
                                 <i class="fas fa-save text-amber-300"></i>
                                 <span>${e?"\u062A\u062D\u062F\u064A\u062B \u0648\u062D\u0641\u0638 \u0627\u0644\u0628\u0644\u0627\u063A":"\u062D\u0641\u0638 \u0648\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0628\u0644\u0627\u063A"}</span>
                             </button>
@@ -346,173 +516,89 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                     </form>
                 </div>
             </div>
-        `,n},bindFormEvents(e,t){const a=e.querySelector("#nearmiss-form");a&&a.addEventListener("submit",o=>this.handleSubmit(o));const i=e.querySelector('[data-action="close-modal"]');i&&i.addEventListener("click",()=>this.closeModal(e));const n=e.querySelector("#nearmiss-cancel-btn");n&&n.addEventListener("click",()=>this.closeModal(e));const d=e.querySelector("#nearmiss-attachments");d&&d.addEventListener("change",o=>this.handleAttachmentsChange(o.target.files)),e.querySelectorAll('input[name="nearmiss-corrective"]').forEach(o=>{o.addEventListener("change",p=>this.toggleCorrectiveSection(p.target.value==="yes"))});const r=e.querySelector("#nearmiss-attachments-preview");r&&r.addEventListener("click",o=>{const p=o.target.closest("button[data-remove-attachment]");p&&this.removeAttachment(p.getAttribute("data-remove-attachment"))}),e.addEventListener("click",o=>{o.target===e&&this.closeModal(e)}),setTimeout(()=>{e.querySelector("#nearmiss-type")?.focus()},100)},toggleCorrectiveSection(e){const t=document.getElementById("nearmiss-corrective-wrapper"),a=document.getElementById("nearmiss-corrective-description");!t||!a||(e?(t.classList.remove("hidden"),a.setAttribute("required","required")):(t.classList.add("hidden"),a.removeAttribute("required"),a.value=""))},renderAttachmentsPreview(){const e=document.getElementById("nearmiss-attachments-preview");if(e){if(!this.state.currentAttachments.length){e.innerHTML='<p class="text-sm text-gray-500">\u0644\u0645 \u064A\u062A\u0645 \u0625\u0631\u0641\u0627\u0642 \u0645\u0644\u0641\u0627\u062A \u0628\u0639\u062F.</p>';return}e.innerHTML=this.state.currentAttachments.map(t=>`
-            <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded px-3 py-2">
-                <div>
-                    <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(t.name)}</div>
-                    <div class="text-xs text-gray-500">${t.size?`${t.size} KB`:""}</div>
-                </div>
-                <div class="flex items-center gap-3">
-                    <a href="${t.data}" target="_blank" class="text-sm text-blue-600 hover:underline">\u0639\u0631\u0636</a>
-                    <button type="button" class="btn-icon btn-icon-danger" data-remove-attachment="${t.id}" title="\u0625\u0632\u0627\u0644\u0629">
+        `,o},bindFormEvents(e,t){const i=e.querySelector("#nearmiss-form");i&&i.addEventListener("submit",async o=>{o.preventDefault(),await this.handleSubmit(i,t),e.remove()});const a=e.querySelector("#nearmiss-attachments");a&&a.addEventListener("change",async o=>{const s=o.target.files;if(!(!s||!s.length))for(let r=0;r<s.length;r++){const d=s[r],c=new FileReader;c.onload=f=>{this.state.currentAttachments.push({id:"att-"+Date.now()+"-"+r,name:d.name,type:d.type,data:f.target.result,url:f.target.result}),this.renderAttachmentsPreview(e)},c.readAsDataURL(d)}})},renderAttachmentsPreview(e){const t=e.querySelector("#nearmiss-attachments-preview");if(t){if(!this.state.currentAttachments.length){t.innerHTML="";return}t.innerHTML=this.state.currentAttachments.map((i,a)=>`
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0; font-size:0.8rem;">
+                <span class="truncate">${Utils.escapeHTML(i.name)}</span>
+                <button type="button" onclick="NearMiss.state.currentAttachments.splice(${a},1); NearMiss.renderAttachmentsPreview(this.closest('.modal-overlay'))" class="text-red-500 hover:text-red-700" style="background:none; border:none; cursor:pointer;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `).join("")}},async handleSubmit(e,t){const i=document.getElementById("nearmiss-type")?.value||"\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643",a=document.getElementById("nearmiss-severity")?.value||"\u0645\u062A\u0648\u0633\u0637",o=document.getElementById("nearmiss-location")?.value||"",s=document.getElementById("nearmiss-department")?.value||"",r=document.getElementById("nearmiss-date")?.value||new Date().toISOString(),d=document.getElementById("nearmiss-observer")?.value||"\u0641\u0627\u0639\u0644 \u062E\u064A\u0631",c=document.getElementById("nearmiss-description")?.value||"",f=document.getElementById("nearmiss-corrective-check")?.checked||!1,p=document.getElementById("nearmiss-corrective-description")?.value||"",n=t?.id||"NRM-"+Date.now(),l=t?.isoCode||"NM-"+new Date().getFullYear()+"-"+Math.floor(1e3+Math.random()*9e3),m={id:n,isoCode:l,type:i,severity:a,location:o,department:s,date:new Date(r).toISOString(),observerName:d,description:c,correctiveProposed:f,correctiveDescription:f?p:"",attachments:this.state.currentAttachments,status:f?"\u0645\u0641\u062A\u0648\u062D":"\u0645\u063A\u0644\u0642",updatedAt:new Date().toISOString()};if(t){const b=AppState.appData.nearmiss.findIndex(g=>g.id===t.id);b!==-1&&(AppState.appData.nearmiss[b]=m)}else m.createdAt=new Date().toISOString(),AppState.appData.nearmiss.unshift(m);try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.callApi){const b=t?"updateNearMiss":"addNearMiss";GoogleIntegration.callApi(b,m)}}catch{}this.renderKpiStrip(),this.renderTable(),alert("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u0644\u0627\u063A \u0628\u0646\u062C\u0627\u062D!")},editNearMiss(e){const t=(AppState.appData.nearmiss||[]).find(i=>i.id===e);t&&this.showForm(t)},deleteNearMiss(e){if(confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0628\u0644\u0627\u063A\u061F")){AppState.appData.nearmiss=(AppState.appData.nearmiss||[]).filter(t=>t.id!==e);try{typeof GoogleIntegration<"u"&&GoogleIntegration.callApi&&GoogleIntegration.callApi("deleteNearMiss",{nearMissId:e})}catch{}this.renderKpiStrip(),this.renderTable()}},openPublicQrModal(){const e=window.location.origin+window.location.pathname.replace(/[^/]*$/,"")+"public-near-miss.html";let t=document.getElementById("nrm-public-qr-modal");t||(t=document.createElement("div"),t.id="nrm-public-qr-modal",t.className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm",document.body.appendChild(t));const i="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="+encodeURIComponent(e);t.innerHTML=`
+            <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-200" style="direction:rtl; font-family:'Segoe UI', Tahoma, sans-serif;">
+                <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); color:#fff; padding:20px 24px; display:flex; justify-content:space-between; align-items:center;">
+                    <div class="flex items-center gap-3">
+                        <div style="width:44px; height:44px; border-radius:12px; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center;">
+                            <i class="fas fa-qrcode text-xl text-amber-300"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg leading-tight" style="margin:0;">\u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0639\u0627\u0645 \u0644\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629</h3>
+                            <p class="text-xs text-indigo-200" style="margin:2px 0 0 0;">SafetyHub | ICAPP Near Miss Public Suite</p>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('nrm-public-qr-modal').remove()" class="text-white/80 hover:text-white text-2xl" style="background:none; border:none; cursor:pointer;">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-            </div>
-        `).join("")}},async handleAttachmentsChange(e){if(!e||!e.length)return;const t=Array.from(e),a=["jpg","jpeg","png","pdf"],i=5*1024*1024,n=[];for(const s of t){const r=(s.name.split(".").pop()||"").toLowerCase();if(!a.includes(r)){Notification.warning(`\u0627\u0644\u0645\u0644\u0641 ${s.name} \u063A\u064A\u0631 \u0645\u062F\u0639\u0648\u0645. \u064A\u0633\u0645\u062D \u0628\u0645\u0644\u0641\u0627\u062A JPG \u0623\u0648 PNG \u0623\u0648 PDF \u0641\u0642\u0637.`);continue}if(s.size>i){Notification.warning(`\u0627\u0644\u0645\u0644\u0641 ${s.name} \u064A\u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 \u0627\u0644\u0645\u0633\u0645\u0648\u062D \u0628\u0647 (5MB).`);continue}try{const o=await this.readFileAsBase64(s);n.push({id:Utils.generateId("ATT"),name:s.name,type:s.type||this.detectMimeType(s.name),data:o,size:Math.round(s.size/1024),uploadedAt:new Date().toISOString()})}catch{Notification.error(`\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641 ${s.name}`)}}n.length&&(this.state.currentAttachments=[...this.state.currentAttachments,...n],this.renderAttachmentsPreview());const d=document.getElementById("nearmiss-attachments");d&&(d.value="")},removeAttachment(e){e&&(this.state.currentAttachments=this.state.currentAttachments.filter(t=>t.id!==e),this.renderAttachmentsPreview())},async readFileAsBase64(e){return new Promise((t,a)=>{const i=new FileReader;i.onload=n=>t(n.target.result),i.onerror=n=>a(n),i.readAsDataURL(e)})},validatePhone(e){if(!e)return!1;const t=e.replace(/[\s\-\(\)]/g,"");if(t.startsWith("+20")){const i=t.substring(3).replace(/\D/g,"");return i.length===10&&i.startsWith("1")}if(t.startsWith("01")){const i=t.replace(/\D/g,"");return i.length===11&&i.startsWith("01")}if(t.startsWith("0")){const i=t.replace(/\D/g,"");return i.length>=10&&i.length<=11}const a=t.replace(/\D/g,"");return a.length>=10&&a.length<=11},async handleSubmit(e){e.preventDefault();const t=e.target,a=t.closest(".modal-overlay"),i=t?.querySelector('button[type="submit"]')||document.querySelector('.modal-overlay button[type="submit"]');if(i&&i.disabled)return;const n=t.querySelector("#nearmiss-type")?.value||"",d=t.querySelector("#nearmiss-date")?.value||"",s=(t.querySelector("#nearmiss-observer")?.value||"").trim(),r=(t.querySelector("#nearmiss-phone")?.value||"").trim(),o=(t.querySelector("#nearmiss-location")?.value||"").trim(),p=(t.querySelector("#nearmiss-department")?.value||"").trim(),l=(t.querySelector("#nearmiss-description")?.value||"").trim(),u=(t.querySelector('input[name="nearmiss-corrective"]:checked')?.value||"no")==="yes",b=u?(t.querySelector("#nearmiss-corrective-description")?.value||"").trim():"";if(!n||!d||!s||!o||!p||!l){Notification.error("\u064A\u0631\u062C\u0649 \u062A\u0639\u0628\u0626\u0629 \u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629");return}if(r&&!this.validatePhone(r)){Notification.error("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0631\u0642\u0645 \u062A\u0644\u064A\u0641\u0648\u0646 \u0635\u062D\u064A\u062D");return}if(u&&!b){Notification.error("\u064A\u0631\u062C\u0649 \u0648\u0635\u0641 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0627\u0644\u0645\u0642\u062A\u0631\u062D");return}let g;try{g=Utils.dateTimeLocalToISO(d)||new Date(d).toISOString()}catch{Notification.error("\u0635\u064A\u063A\u0629 \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629");return}let f=this.state.currentAttachments.map(m=>this.normalizeAttachment(m)).filter(Boolean);const v=new Date().toISOString();let y="";i&&(y=i.innerHTML,i.disabled=!0,i.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');try{if(f&&Array.isArray(f)&&f.length>0){Loading.show("\u062C\u0627\u0631\u064A \u0631\u0641\u0639 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A \u0625\u0644\u0649 Google Drive...");try{Utils.safeLog("NearMiss: \u0642\u0628\u0644 processAttachments - \u0639\u062F\u062F \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A: "+f.length),f.length>0&&Utils.safeLog("NearMiss: \u0623\u0648\u0644 \u0645\u0631\u0641\u0642 \u0642\u0628\u0644 \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629:",{name:f[0].name,hasData:!!f[0].data,hasDirectLink:!!f[0].directLink}),f=await GoogleIntegration.processAttachments?.(f,"NearMiss")||f,Utils.safeLog("NearMiss: \u0628\u0639\u062F processAttachments - \u0639\u062F\u062F \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A: "+f.length),f.length>0&&Utils.safeLog("NearMiss: \u0623\u0648\u0644 \u0645\u0631\u0641\u0642 \u0628\u0639\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629:",{name:f[0].name,directLink:f[0].directLink?f[0].directLink.substring(0,50)+"...":"\u0644\u0627 \u064A\u0648\u062C\u062F"})}catch(m){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A:",m),Notification.warning("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0644\u0643\u0646 \u0641\u0634\u0644 \u0631\u0641\u0639 \u0628\u0639\u0636 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A")}}if(this.state.editingId){const m=AppState.appData.nearmiss.findIndex(w=>w.id===this.state.editingId);if(m===-1)throw new Error("\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u0645\u062D\u062F\u062F\u0629");const h=this.normalizeRecord(AppState.appData.nearmiss[m]),x={...h,type:n,date:g,observerName:s,phone:r,location:o,department:p,description:l,correctiveProposed:u,correctiveDescription:b,attachments:f,status:h.status||(u?"\u0645\u0641\u062A\u0648\u062D":"\u0645\u063A\u0644\u0642"),updatedAt:v,updatedBy:this.getCurrentUserSummary(),reportedBy:s};AppState.appData.nearmiss[m]=x}else{const m=this.getCurrentUserSummary(),h={id:Utils.generateSequentialId("NRM",AppState.appData?.nearmiss||[]),type:n,date:g,observerName:s,phone:r,location:o,department:p,description:l,correctiveProposed:u,correctiveDescription:b,attachments:f,createdBy:m,createdById:m?.id||AppState.currentUser?.id||"",createdAt:v,updatedAt:v,updatedBy:null,status:u?"\u0645\u0641\u062A\u0648\u062D":"\u0645\u063A\u0644\u0642",reportedBy:s};AppState.appData.nearmiss.push(h)}typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),this.closeModal(a),Notification.success(this.state.editingId?"\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u0646\u062C\u0627\u062D":"\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u0646\u062C\u0627\u062D"),i&&(i.disabled=!1,i.innerHTML=y),this.updateSummary(),this.renderTable(),this.refreshFilterOptions(),GoogleIntegration?.sendRequest&&Promise.resolve().then(async()=>{try{this.state.editingId?await GoogleIntegration.sendRequest({action:"updateNearMiss",data:{nearMissId:this.state.editingId,updateData:updatedRecord}}):await GoogleIntegration.sendRequest({action:"addNearMiss",data:newRecord})}catch(m){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629 \u0641\u064A Google Sheets:",m)}}).catch(m=>{Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629 \u0641\u064A Google Sheets:",m)})}catch(m){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u062D\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643:",m),Notification.error(m.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),i&&(i.disabled=!1,i.innerHTML=y)}finally{this.state.currentAttachments=[],this.state.editingId=null}},closeModal(e){e&&e.parentNode&&e.parentNode.removeChild(e),this.state.currentAttachments=[],this.state.editingId=null},refreshFilterOptions(){const e=document.getElementById("nearmiss-filter-department");e&&(e.innerHTML=this.renderDepartmentOptions(this.state.filters.department))},viewNearMiss(e){if(!e)return;const t=AppState.appData.nearmiss.find(n=>n.id===e);if(!t){Notification.error("\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u0645\u062D\u062F\u062F\u0629");return}const a=this.normalizeRecord(t),i=this.buildDetailModal(a);document.body.appendChild(i),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(i,{moduleKey:"nearmiss",record:a,recordId:a.id||a.isoCode||""}),this.applyModuleI18n(i),i.addEventListener("click",n=>{n.target===i&&this.closeModal(i)})},buildDetailModal(e){const t=e.attachments&&e.attachments.length?e.attachments.map(s=>{const r=/\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(s.name||""),p=s.type&&s.type.startsWith("image/")||r,l=this.processAttachmentUrl(s.data);return p&&l?`
-                        <div class="bg-gray-50 border border-gray-200 rounded p-3">
-                            <div class="flex items-center justify-between mb-2">
-                                <div>
-                                    <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(s.name)}</div>
-                                    <div class="text-xs text-gray-500">${s.size?`${s.size} KB`:""}</div>
-                                </div>
-                                <a href="${l}" target="_blank" class="text-sm text-blue-600 hover:underline" download="${Utils.escapeHTML(s.name)}">\u062A\u062D\u0645\u064A\u0644</a>
-                            </div>
-                            <img src="${Utils.escapeHTML(l)}" alt="${Utils.escapeHTML(s.name)}" class="max-w-full h-auto rounded border" style="max-height: 300px;"
-                                 onerror="this.onerror=null; this.style.display='none';">
-                        </div>
-                    `:`
-                        <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded px-3 py-2">
-                            <div>
-                                <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(s.name)}</div>
-                                <div class="text-xs text-gray-500">${s.size?`${s.size} KB`:""}</div>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <a href="${l||s.data}" target="_blank" class="text-sm text-blue-600 hover:underline" download="${Utils.escapeHTML(s.name)}">\u062A\u062D\u0645\u064A\u0644</a>
-                            </div>
-                        </div>
-                    `}).join(""):'<p class="text-sm text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0631\u0641\u0642\u0627\u062A</p>',a=document.createElement("div");a.className="modal-overlay",a.innerHTML=`
-            <div class="modal-content" style="max-width: 720px;">
-                <div class="modal-header">
-                    <h2 class="modal-title">
-                        <i class="fas fa-eye ml-2"></i>
-                        \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629
-                    </h2>
-                    <button class="modal-close" data-action="close-modal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body space-y-5">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="detail-label">\u0646\u0648\u0639 \u0627\u0644\u062D\u0627\u062F\u062B</label>
-                            <p class="detail-value">${Utils.escapeHTML(e.type)}</p>
-                        </div>
-                        <div>
-                            <label class="detail-label">\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0648\u0642\u062A</label>
-                            <p class="detail-value">${Utils.formatDateTime(e.date)}</p>
-                        </div>
-                        <div>
-                            <label class="detail-label">\u0627\u0633\u0645 \u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</label>
-                            <p class="detail-value">${Utils.escapeHTML(e.observerName||"-")}</p>
-                            ${e.phone?`<p class="text-xs text-gray-500 mt-1">${Utils.escapeHTML(e.phone)}</p>`:""}
-                        </div>
-                        <div>
-                            <label class="detail-label">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</label>
-                            <p class="detail-value">${Utils.escapeHTML(e.department||"-")}</p>
-                        </div>
-                        <div>
-                            <label class="detail-label">\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</label>
-                            <p class="detail-value">${Utils.escapeHTML(e.location||"-")}</p>
-                        </div>
-                        <div>
-                            <label class="detail-label">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A</label>
-                            <p class="detail-value">${e.correctiveProposed?"\u062A\u0645 \u0627\u0642\u062A\u0631\u0627\u062D \u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A":"\u0644\u0627 \u064A\u0648\u062C\u062F \u0625\u062C\u0631\u0627\u0621 \u0645\u0642\u062A\u0631\u062D"}</p>
-                        </div>
+                <div class="p-6 text-center">
+                    <div style="background:#eef2ff; border:1px solid #c7d2fe; border-radius:12px; padding:12px 16px; margin-bottom:20px; text-align:right; font-size:0.8rem; color:#312e81; display:flex; align-items:center; gap:10px;">
+                        <i class="fas fa-info-circle text-indigo-600 text-lg"></i>
+                        <div>\u064A\u0645\u0643\u0646 \u0644\u062C\u0645\u064A\u0639 \u0627\u0644\u0639\u0627\u0645\u0644\u064A\u0646 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0645\u0633\u062D \u0647\u0630\u0627 \u0627\u0644\u0631\u0645\u0632 \u0644\u0644\u0625\u0628\u0644\u0627\u063A \u0627\u0644\u0633\u0631\u064A\u0639 \u0639\u0646 \u0623\u064A \u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643 \u062F\u0648\u0646 \u0627\u0644\u062D\u0627\u062C\u0629 \u0644\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644.</div>
                     </div>
-                    <div>
-                        <label class="detail-label">\u0648\u0635\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</label>
-                        <p class="detail-value whitespace-pre-line">${Utils.escapeHTML(e.description||"-")}</p>
+                    <div class="inline-block p-4 bg-white rounded-2xl shadow-md border-2 border-indigo-100 mb-4">
+                        <img src="${i}" alt="QR Code" style="width:210px; height:210px; border-radius:10px;" class="mx-auto" />
                     </div>
-                    ${e.correctiveProposed?`
-                        <div>
-                            <label class="detail-label">\u0648\u0635\u0641 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u0642\u062A\u0631\u062D</label>
-                            <p class="detail-value whitespace-pre-line">${Utils.escapeHTML(e.correctiveDescription||"-")}</p>
-                        </div>
-                    `:""}
-                    <div>
-                        <label class="detail-label">\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A</label>
-                        <div class="space-y-2">
-                            ${t}
-                        </div>
+                    <div style="font-size:0.75rem; color:#64748b; font-family:monospace; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:20px; word-break:break-all; direction:ltr; text-align:center;">
+                        ${e}
                     </div>
-                    <div class="text-xs text-gray-500 border-t pt-4 space-y-1">
-                        <div>\u0623\u0646\u0634\u0626 \u0628\u0648\u0627\u0633\u0637\u0629: ${Utils.escapeHTML(e.createdBy?.name||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F")}</div>
-                        <div>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621: ${Utils.formatDateTime(e.createdAt)}</div>
-                        <div>\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B: ${Utils.formatDateTime(e.updatedAt)}</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="window.open('${e}', '_blank')" class="btn-secondary py-2.5 flex items-center justify-center gap-2" style="border-radius:10px; font-weight:600; cursor:pointer;">
+                            <i class="fas fa-external-link-alt"></i>
+                            <span>\u0641\u062A\u062D \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0622\u0646</span>
+                        </button>
+                        <button onclick="NearMiss.printLocationQrBadges()" class="btn-primary py-2.5 flex items-center justify-center gap-2" style="background:#312e81; color:#fff; border-radius:10px; font-weight:700; cursor:pointer;">
+                            <i class="fas fa-print"></i>
+                            <span>\u0637\u0628\u0627\u0639\u0629 \u0645\u0644\u0635\u0642\u0627\u062A \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u{1F5A8}\uFE0F</span>
+                        </button>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-secondary" data-action="close-modal">\u0625\u063A\u0644\u0627\u0642</button>
-                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("nearmiss"):""}
-                    <button class="btn-secondary" data-action="detail-print" data-id="${e.id}">
-                        <i class="fas fa-print ml-2"></i>
-                        \u0637\u0628\u0627\u0639\u0629
-                    </button>
-                    <button class="btn-primary" data-action="detail-edit" data-id="${e.id}">
-                        <i class="fas fa-edit ml-2"></i>
-                        \u062A\u0639\u062F\u064A\u0644
-                    </button>
                 </div>
             </div>
-        `;const i=a.querySelector('[data-action="close-modal"]');i&&i.addEventListener("click",()=>this.closeModal(a));const n=a.querySelector('[data-action="detail-edit"]');n&&n.addEventListener("click",()=>{const s=n.getAttribute("data-id");this.closeModal(a),this.editNearMiss(s)});const d=a.querySelector('[data-action="detail-print"]');return d&&d.addEventListener("click",()=>{const s=d.getAttribute("data-id");this.printNearMiss(s)}),a},printNearMiss(e){const t=AppState.appData.nearmiss.find(a=>a.id===e);if(!t){Notification.error("\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u0645\u062D\u062F\u062F\u0629");return}try{Loading.show("\u062C\u0627\u0631\u064A \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u0637\u0628\u0627\u0639\u0629...");const a=t.attachments&&t.attachments.length?t.attachments.map(l=>{const c=/\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(l.name||""),b=l.type&&l.type.startsWith("image/")||c,g=this.processAttachmentUrl(l.data);return b&&g?`
-                            <div style="margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                                <div style="font-weight: bold; margin-bottom: 5px;">${Utils.escapeHTML(l.name)}</div>
-                                <img src="${Utils.escapeHTML(g)}" alt="${Utils.escapeHTML(l.name)}" style="max-width: 100%; max-height: 300px; border: 1px solid #ddd; border-radius: 4px;"
-                                     onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631\u0629%3C/text%3E%3C/svg%3E';">
-                            </div>
-                        `:`
-                            <div style="margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                                <div style="font-weight: bold;">${Utils.escapeHTML(l.name)}</div>
-                            </div>
-                        `}).join(""):'<p style="color: #999;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0631\u0641\u0642\u0627\u062A</p>',i=`NEAR-${t.id?.substring(0,8)||"UNKNOWN"}`,n="\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 - Near Miss Report",d=`
-                <table class="report-table" style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <th style="width: 30%; padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">\u0646\u0648\u0639 \u0627\u0644\u062D\u0627\u062F\u062B</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(t.type||"-")}</td>
-                    </tr>
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0648\u0642\u062A</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${t.date?Utils.formatDateTime(t.date):"-"}</td>
-                    </tr>
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">\u0627\u0633\u0645 \u0635\u0627\u062D\u0628 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(t.observerName||"-")}</td>
-                    </tr>
-                    ${t.phone?`
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(t.phone)}</td>
-                    </tr>
-                    `:""}
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(t.department||"-")}</td>
-                    </tr>
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(t.location||"-")}</td>
-                    </tr>
-                    <tr>
-                        <th style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A</th>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${t.correctiveProposed?"\u062A\u0645 \u0627\u0642\u062A\u0631\u0627\u062D \u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A":"\u0644\u0627 \u064A\u0648\u062C\u062F \u0625\u062C\u0631\u0627\u0621 \u0645\u0642\u062A\u0631\u062D"}</td>
-                    </tr>
-                </table>
-
-                <div style="margin-top: 20px;">
-                    <h3 style="font-weight: bold; margin-bottom: 10px;">\u0648\u0635\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</h3>
-                    <p style="white-space: pre-wrap; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">${Utils.escapeHTML(t.description||"-")}</p>
+        `,t.style.display="flex"},printLocationQrBadges(){const e=window.location.origin+window.location.pathname.replace(/[^/]*$/,"")+"public-near-miss.html";let t=[];try{typeof DailyObservations<"u"&&DailyObservations.getAllSites?t=DailyObservations.getAllSites():Array.isArray(AppState.appData.observationSites)&&(t=AppState.appData.observationSites)}catch{}(!t||t.length===0)&&(t=["ICAPP-1","ICAPP-2","ICAPP-3","ICAPP-4","\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645"]);const i=[];t.forEach(s=>{const r=typeof s=="string"?s:s.name||s.siteName||"";(s&&Array.isArray(s.places)&&s.places.length>0?s.places:["\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645"]).forEach(c=>{const f=typeof c=="string"?c:c.name||c.placeName||"";i.push({site:r,place:f})})});const a=window.open("","_blank");if(!a){alert("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0644\u0637\u0628\u0627\u0639\u0629");return}const o=i.map((s,r)=>`
+                <div style="border: 2px solid #312e81; border-radius: 12px; padding: 12px; background: #fff; text-align: right; break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e0e7ff; padding-bottom:6px; margin-bottom:8px;">
+                        <span style="font-size:0.75rem; font-weight:bold; color:#3730a3;"><i class="fas fa-shield-alt"></i> SafetyHub | ICAPP</span>
+                        <span style="font-size:0.65rem; background:#e0e7ff; color:#3730a3; padding:1px 6px; border-radius:4px; font-weight:bold;">\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <img src="${"https://api.qrserver.com/v1/create-qr-code/?size=160x160&data="+encodeURIComponent(`${e}?factory=${encodeURIComponent(s.site)}&place=${encodeURIComponent(s.place)}`)}" style="width:90px; height:90px; border-radius:6px; border:1px solid #e2e8f0;" />
+                        <div style="flex:1;">
+                            <div style="font-size:0.95rem; font-weight:800; color:#1e1b4b;">${s.site}</div>
+                            <div style="font-size:0.8rem; color:#4338ca; font-weight:600; margin-top:2px;">${s.place}</div>
+                            <div style="font-size:0.68rem; color:#64748b; margin-top:6px;"><i class="fas fa-camera"></i> \u0627\u0645\u0633\u062D \u0644\u0644\u0625\u0628\u0644\u0627\u063A \u0639\u0646 \u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643</div>
+                        </div>
+                    </div>
                 </div>
-
-                ${t.correctiveProposed?`
-                <div style="margin-top: 20px;">
-                    <h3 style="font-weight: bold; margin-bottom: 10px;">\u0648\u0635\u0641 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u0642\u062A\u0631\u062D</h3>
-                    <p style="white-space: pre-wrap; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">${Utils.escapeHTML(t.correctiveDescription||"-")}</p>
+            `).join("");a.document.write(`
+            <!DOCTYPE html>
+            <html lang="ar" dir="rtl">
+            <head>
+                <meta charset="UTF-8">
+                <title>\u0645\u0644\u0635\u0642\u0627\u062A QR \u0644\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629 - SafetyHub ICAPP</title>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                <style>
+                    @page { size: A4 portrait; margin: 8mm; }
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #fff; }
+                    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+                </style>
+            </head>
+            <body>
+                <div style="text-align:center; margin-bottom:12px; border-bottom:2px solid #312e81; padding-bottom:8px;">
+                    <h2 style="margin:0; color:#312e81; font-size:1.2rem;">\u0645\u0644\u0635\u0642\u0627\u062A \u0627\u0644\u0640 QR \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A\u0629 \u0644\u0644\u0625\u0628\u0644\u0627\u063A \u0639\u0646 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629 (Near Miss Badges)</h2>
+                    <p style="margin:4px 0 0 0; color:#64748b; font-size:0.8rem;">SafetyHub | ICAPP \u2014 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u0637\u0628\u0627\u0639\u0629 \u0648\u0627\u0644\u062A\u062B\u0628\u064A\u062A \u0628\u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u0648\u0627\u0644\u0645\u0648\u0627\u0642\u0639</p>
                 </div>
-                `:""}
-
-                <div style="margin-top: 20px;">
-                    <h3 style="font-weight: bold; margin-bottom: 10px;">\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A</h3>
-                    ${a}
-                </div>
-            `,s=typeof FormHeader<"u"&&FormHeader.generatePDFHTML?FormHeader.generatePDFHTML(i,n,d,!1,!0,{version:"1.0"},t.createdAt,t.updatedAt):`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${n}</title></head><body>${d}</body></html>`,r=new Blob([s],{type:"text/html;charset=utf-8"}),o=URL.createObjectURL(r),p=window.open(o,"_blank");p?p.onload=()=>{const l=p.document.querySelectorAll("img");let c=0;const u=l.length;if(u===0)setTimeout(()=>{p.print(),setTimeout(()=>URL.revokeObjectURL(o),1e3),Loading.hide()},300);else{const b=()=>{c>=u&&setTimeout(()=>{p.print(),setTimeout(()=>URL.revokeObjectURL(o),1e3),Loading.hide()},300)};l.forEach(g=>{g.complete?(c++,b()):(g.onload=()=>{c++,b()},g.onerror=()=>{c++,b()})}),setTimeout(()=>{c<u&&(p.print(),setTimeout(()=>URL.revokeObjectURL(o),1e3),Loading.hide())},3e3)}}:(URL.revokeObjectURL(o),Loading.hide(),Notification.error("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0646\u0648\u0627\u0641\u0630 \u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0644\u0637\u0628\u0627\u0639\u0629"))}catch(a){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629:",a),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629: "+a.message)}},editNearMiss(e){if(!e)return;const t=AppState.appData.nearmiss.find(a=>a.id===e);if(!t){Notification.error("\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u0645\u062D\u062F\u062F\u0629");return}this.showForm(t)},async deleteNearMiss(e){if(!e)return;if(!AppState.appData.nearmiss.find(a=>a.id===e)){Notification.error("\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u0645\u062D\u062F\u062F\u0629");return}if(confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629\u061F")){Loading.show();try{if(AppState.appData.nearmiss=AppState.appData.nearmiss.filter(a=>a.id!==e),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),GoogleIntegration?.sendRequest)try{await GoogleIntegration.sendRequest({action:"deleteNearMiss",data:{nearMissId:e}})}catch(a){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629 \u0645\u0646 Google Sheets:",a)}Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629 \u0628\u0646\u062C\u0627\u062D")}catch(a){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u062D\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643:",a),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629")}finally{Loading.hide(),this.updateSummary(),this.renderTable(),this.refreshFilterOptions()}}}};(function(){"use strict";try{typeof window<"u"&&typeof NearMiss<"u"&&(window.NearMiss=NearMiss,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 NearMiss module loaded and available on window.NearMiss"))}catch{if(typeof window<"u"&&typeof NearMiss<"u")try{window.NearMiss=NearMiss}catch{}}})();
+                <div class="grid">${o}</div>
+                <script>
+                    window.onload = function() { setTimeout(function() { window.print(); }, 500); };
+                <\/script>
+            </body>
+            </html>
+        `),a.document.close()}};typeof window<"u"&&(window.NearMiss=NearMiss),typeof module<"u"&&module.exports&&(module.exports=NearMiss);
