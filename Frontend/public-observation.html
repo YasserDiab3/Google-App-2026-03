@@ -1630,25 +1630,51 @@
             background: #78350f;
         }
 
-        /* خيار تذكر بيانات المبلّغ */
+        /* كرت وتنسيق صاحب الملاحظة / مسؤول السلامة وتذكر البيانات الجمالي */
+        .reporter-profile-card {
+            background: linear-gradient(135deg, #f8faff 0%, #ffffff 50%, #faf5ff 100%);
+            border: 2px solid #c4b5fd;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 4px 14px rgba(124, 58, 237, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 14px;
+            transition: all 0.2s ease;
+        }
+        .reporter-profile-card:hover {
+            box-shadow: 0 6px 18px rgba(124, 58, 237, 0.12);
+            border-color: #a78bfa;
+        }
+
+        /* خيار تذكر بيانات المبلّغ المنمق الجمالي */
         .form-check-profile {
             margin-top: 6px;
-            padding: 8px 12px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 0.78rem;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
+            border: 1.5px solid #ddd6fe;
+            border-radius: 10px;
+            font-size: 0.84rem;
             font-weight: 700;
-            color: #475569;
+            color: #5b21b6;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(124, 58, 237, 0.05);
+            user-select: none;
+        }
+        .form-check-profile:hover {
+            background: #ede9fe;
+            border-color: #c4b5fd;
+            transform: translateY(-1px);
         }
         .form-check-profile input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: #2563eb;
+            width: 18px;
+            height: 18px;
+            accent-color: #7c3aed;
             cursor: pointer;
         }
 
@@ -2301,28 +2327,41 @@
                     </div>
                 </div>
 
-                <!-- حقول صاحب الملاحظة / مسؤول السلامة الفعلي (إلزامي *) -->
-                <div id="reporterInfoFields" style="display: flex; flex-direction: column; gap: 10px;">
-                    <div class="form-group">
-                        <label class="form-label" for="ownerSelect">
-                            <i class="fas fa-user-shield text-blue-600"></i>
-                            اسم صاحب الملاحظة / مسؤول السلامة <span class="required">*</span>
+                <!-- كرت وتنسيق صاحب الملاحظة / مسؤول السلامة وتذكر البيانات بطابع جمالي مهني منمق -->
+                <div id="reporterInfoFields" class="reporter-profile-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" for="ownerSelect" style="font-weight: 800; color: #4c1d95; font-size: 0.92rem; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-user-shield text-purple-600" style="font-size: 1.1rem;"></i>
+                            <span>اسم صاحب الملاحظة / مسؤول السلامة</span>
+                            <span class="required">*</span>
                         </label>
-                        <select id="ownerSelect" class="form-control" onchange="handleOwnerChange(this.value)">
-                            <option value="">— اختر اسمك من قائمة النظام —</option>
+                        <span style="font-size: 0.72rem; color: #7c3aed; font-weight: 800; background: #f3e8ff; border: 1px solid #ddd6fe; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-id-badge text-purple-600"></i>التوثيق والاعتماد الميداني
+                        </span>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <select id="ownerSelect" class="form-control" style="background: #ffffff; border: 1.5px solid #c4b5fd; font-weight: 700; color: #1e1b4b; font-size: 0.92rem; padding: 10px 12px; border-radius: 8px;" onchange="handleOwnerChange(this.value)">
+                            <option value="">— اختر اسمك من قائمة النظام المعتمدة —</option>
                         </select>
                     </div>
 
                     <!-- إدخال يدوي للاسم إذا لم يكن في القائمة -->
-                    <div id="customOwnerGroup" class="form-group" style="display: none;">
-                        <label class="form-label" for="customOwnerInput">اسمك الكامل (إدخال يدوي) <span class="required">*</span>:</label>
-                        <input type="text" id="customOwnerInput" class="form-control" placeholder="اكتب اسمك كاملاً...">
+                    <div id="customOwnerGroup" class="form-group" style="display: none; margin-bottom: 0;">
+                        <label class="form-label" for="customOwnerInput" style="font-size: 0.8rem; font-weight: 700; color: #4c1d95;">اسمك الكامل (إدخال يدوي) <span class="required">*</span>:</label>
+                        <input type="text" id="customOwnerInput" class="form-control" style="background: #ffffff; border: 1.5px solid #c4b5fd;" placeholder="اكتب اسمك كاملاً بدقة...">
                     </div>
 
                     <!-- خيار تذكر بياناتي على هذا الجهاز -->
                     <label class="form-check-profile">
                         <input type="checkbox" id="rememberProfileCheckbox" onchange="toggleRememberProfile(this.checked)">
-                        <span><i class="fas fa-bookmark text-blue-600 ml-1"></i> تذكّر اسمي وبياناتي على هذا الجهاز لتسهيل التسجيل القادم</span>
+                        <span style="display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-bookmark text-purple-600"></i>
+                            <span>تذكّر اسمي وبياناتي على هذا الجهاز لتسهيل التسجيل القادم</span>
+                        </span>
+                        <span style="font-size: 0.7rem; color: #7c3aed; background: #ede9fe; padding: 2px 6px; border-radius: 6px; margin-right: auto; font-weight: 700;">
+                            ⚡ حفظ تلقائي
+                        </span>
                     </label>
                 </div>
             </div>
