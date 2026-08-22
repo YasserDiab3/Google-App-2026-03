@@ -1461,53 +1461,549 @@ const NearMiss = {
     },
 
     printLocationQrBadges() {
-        const publicUrl = this.getPublicUrl();
-        
-        let sites = [];
+        this.openBatchNearMissQrModal();
+    },
+
+    /**
+     * فتح نافذة طباعة كروت وبوسترات QR الشاملة للحوادث الوشيكة مع تحديد المقاس وتخطيط الصفحة
+     */
+    openBatchNearMissQrModal() {
+        const placesBySite = {};
+
+        const addSitePlace = (site, place) => {
+            const s = String(site || '').trim();
+            const p = String(place || '').trim();
+            if (!s) return;
+            if (!placesBySite[s]) placesBySite[s] = new Set();
+            if (p) placesBySite[s].add(p);
+        };
+
         try {
             if (typeof DailyObservations !== 'undefined' && DailyObservations.getAllSites) {
-                sites = DailyObservations.getAllSites();
-            } else if (Array.isArray(AppState.appData.observationSites)) {
-                sites = AppState.appData.observationSites;
+                const allSites = DailyObservations.getAllSites();
+                allSites.forEach(s => {
+                    const sName = s.name || s.siteName;
+                    if (sName) {
+                        addSitePlace(sName, '');
+                        if (Array.isArray(s.places)) {
+                            s.places.forEach(pl => addSitePlace(sName, pl.name || pl));
+                        }
+                    }
+                });
             }
-        } catch(e) {}
+        } catch (e) {}
 
-        if (!sites || sites.length === 0) {
-            sites = ['ICAPP-1', 'ICAPP-2', 'ICAPP-3', 'ICAPP-4', 'الموقع العام'];
-        }
-
-        const cards = [];
-        sites.forEach(s => {
-            const sName = typeof s === 'string' ? s : (s.name || s.siteName || '');
-            const places = (s && Array.isArray(s.places) && s.places.length > 0) ? s.places : ['الموقع العام'];
-            places.forEach(p => {
-                const pName = typeof p === 'string' ? p : (p.name || p.placeName || '');
-                cards.push({ site: sName, place: pName });
-            });
+        (Array.isArray(AppState.appData?.observationSites) ? AppState.appData.observationSites : []).forEach(item => {
+            addSitePlace(item.siteName || item.site || item.name, item.placeName || item.locationName || item.place);
         });
 
+        (Array.isArray(AppState.appData?.subLocations) ? AppState.appData.subLocations : []).forEach(item => {
+            addSitePlace(item.factoryName || item.factory || item.siteName || item.site, item.name || item.subLocationName || item.place);
+        });
+
+        // مواقع افتراضية لضمان التغطية الكاملة لمصانع ICAPP
+        if (Object.keys(placesBySite).length === 0) {
+            ['ICAPP-1', 'ICAPP-2', 'ICAPP-3', 'ICAPP-4', 'الموقع العام'].forEach(s => addSitePlace(s, ''));
+        }
+
+        const flatItems = [];
+        for (const site of Object.keys(placesBySite)) {
+            const places = Array.from(placesBySite[site]);
+            if (places.length === 0) {
+                flatItems.push({ site: site, place: 'الموقع العام' });
+            } else {
+                places.forEach(place => {
+                    flatItems.push({ site: site, place: place });
+                });
+            }
+        }
+
+        const sitesList = Object.keys(placesBySite).sort();
+        const allPlacesList = [...new Set(flatItems.map(i => i.place).filter(p => p !== 'الموقع العام'))].sort();
+
+        // إزالة أي نافذة قديمة
+        const oldModal = document.getElementById('nrm-batch-qr-modal');
+        if (oldModal) oldModal.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'nrm-batch-qr-modal';
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(6px); direction:rtl; font-family:"Segoe UI", Tahoma, sans-serif;';
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 640px; width:100%; background:#fff; border-radius: 18px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); border: 1px solid #e0e7ff; animation:fadeIn 0.2s ease;">
+                <!-- الترويسة -->
+                <div class="modal-header" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); color: #ffffff; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255, 255, 255, 0.3); display: flex; align-items: center; justify-content: center; color: #fde68a; font-size: 1.3rem;">
+                            <i class="fas fa-print"></i>
+                        </div>
+                        <div>
+                            <h2 class="modal-title" style="color: #ffffff; font-size: 1.2rem; font-weight: 800; margin: 0 0 3px 0;">طباعة كروت وبوسترات QR للحوادث الوشيكة</h2>
+                            <p style="font-size: 0.8rem; color: #c7d2fe; margin: 0;">طباعة ملصقات وبوسترات QR لجميع المصانع والمواقع دفعة واحدة</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" style="background:none; border:none; color: #c7d2fe; font-size: 1.5rem; cursor:pointer;" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <div class="modal-body" style="padding: 24px; background: #f8fafc;">
+                    <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-info-circle text-indigo-600" style="font-size: 22px;"></i>
+                        <div style="font-size: 0.88rem; color: #312e81; font-weight: 700;">
+                            إجمالي الأماكن والمصانع المسجلة بقاعدة البيانات: <span style="font-size: 1.1rem; color: #dc2626;" id="nrm-batch-total-count">${flatItems.length}</span> موقع ومكان
+                        </div>
+                    </div>
+
+                    <!-- فلاتر التخصيص -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-industry text-indigo-600 ml-1"></i> تصفية حسب الموقع / المصنع:
+                            </label>
+                            <select id="nrm-batch-site-filter" class="form-select" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; background:#fff;">
+                                <option value="all">— جميع المواقع والمصانع —</option>
+                                ${sitesList.map(s => `<option value="${Utils.escapeHTML(s)}">${Utils.escapeHTML(s)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-tags text-indigo-600 ml-1"></i> تصفية حسب طبيعة المكان:
+                            </label>
+                            <select id="nrm-batch-place-filter" class="form-select" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; background:#fff;">
+                                <option value="all">— جميع الأقسام والأماكن —</option>
+                                ${allPlacesList.map(p => `<option value="${Utils.escapeHTML(p)}">${Utils.escapeHTML(p)}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-border-all text-indigo-600 ml-1"></i> مقاس وتخطيط الملصقات:
+                            </label>
+                            <select id="nrm-batch-layout-select" class="form-select" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #6366f1; font-size: 0.85rem; background:#fff; font-weight:700; color:#1e1b4b;">
+                                <option value="1x1" selected>⭐ بوستر إعلاني كامل (ورقة A4 كاملة - رمز واحد كبير للوحات الإعلانات)</option>
+                                <option value="2x2">بطاقات عريضة واضحة (صفين × 2 = 4 كروت في صفحة A4)</option>
+                                <option value="2x3">كروت كبيرة (صفين × 3 = 6 كروت في صفحة A4)</option>
+                                <option value="2x4">ملصقات قياسية (صفين × 4 = 8 كروت في صفحة A4)</option>
+                                <option value="3x4">ملصقات مدمجة (3 أعمدة × 4 = 12 كارت في صفحة A4)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-calculator text-emerald-600 ml-1"></i> المواقع المحددة للطباعة:
+                            </label>
+                            <div style="padding: 10px 14px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; font-weight: 800; font-size: 0.95rem; color: #047857;" id="nrm-batch-selected-preview">
+                                ${flatItems.length} موقع جاهز للطباعة
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer" style="padding: 16px 24px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <button type="button" id="nrm-batch-print-btn" style="padding: 11px 22px; border-radius: 10px; font-weight: 800; font-size:0.9rem; display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color:#fff; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(49,46,129,0.35);">
+                        <i class="fas fa-print text-amber-300"></i>
+                        <span>بدء طباعة الملصقات / البوسترات الآن (A4)</span>
+                    </button>
+                    <button type="button" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; padding:10px 18px; border-radius:10px; font-weight:700; cursor:pointer;" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const siteFilter = modal.querySelector('#nrm-batch-site-filter');
+        const placeFilter = modal.querySelector('#nrm-batch-place-filter');
+        const layoutSelect = modal.querySelector('#nrm-batch-layout-select');
+        const previewEl = modal.querySelector('#nrm-batch-selected-preview');
+        const printBtn = modal.querySelector('#nrm-batch-print-btn');
+
+        const getSelectedItems = () => {
+            const siteVal = siteFilter.value;
+            const placeVal = placeFilter.value;
+            return flatItems.filter(item => {
+                if (siteVal !== 'all' && item.site !== siteVal) return false;
+                if (placeVal !== 'all' && item.place !== placeVal) return false;
+                return true;
+            });
+        };
+
+        const updatePreview = () => {
+            const filtered = getSelectedItems();
+            previewEl.textContent = `${filtered.length} موقع جاهز للطباعة`;
+            printBtn.disabled = filtered.length === 0;
+            printBtn.style.opacity = filtered.length === 0 ? '0.5' : '1';
+        };
+
+        siteFilter.addEventListener('change', updatePreview);
+        placeFilter.addEventListener('change', updatePreview);
+
+        printBtn.addEventListener('click', () => {
+            const filtered = getSelectedItems();
+            if (filtered.length === 0) {
+                alert('لا توجد مواقع مطابقة للتصفية.');
+                return;
+            }
+            modal.remove();
+            this.renderNearMissQrPrintPage(filtered, layoutSelect.value);
+        });
+    },
+
+    /**
+     * توليد وعرض صفحة الطباعة الاحترافية للبوسترات والكروت
+     */
+    renderNearMissQrPrintPage(itemsToPrint, layoutType = '1x1') {
+        if (!itemsToPrint || itemsToPrint.length === 0) return;
+
+        const publicUrl = this.getPublicUrl();
         const printWin = window.open('', '_blank');
         if (!printWin) {
-            alert('يرجى السماح بالنوافذ المنبثقة للطباعة');
+            alert('يرجى السماح بالنوافذ المنبثقة لطباعة كروت وبوسترات QR');
             return;
         }
 
-        const cardsHtml = cards.map((c, idx) => {
-            const directTarget = `${publicUrl}?factory=${encodeURIComponent(c.site)}&place=${encodeURIComponent(c.place)}`;
-            const qrUrl = this.generateQrDataUrl(directTarget, 160);
-            const encodedTarget = encodeURIComponent(directTarget);
-            return `
-                <div style="border: 2px solid #312e81; border-radius: 12px; padding: 12px; background: #fff; text-align: right; break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e0e7ff; padding-bottom:6px; margin-bottom:8px;">
-                        <span style="font-size:0.75rem; font-weight:bold; color:#3730a3;"><i class="fas fa-shield-alt"></i> SafetyHub | ICAPP</span>
-                        <span style="font-size:0.65rem; background:#e0e7ff; color:#3730a3; padding:1px 6px; border-radius:4px; font-weight:bold;">حادث وشيك</span>
+        // ══════════════════════════════════════════════════════
+        // نمط 1: بوستر إعلاني كامل للوحة الإعلانات (ورقة A4 كاملة لكل موقع)
+        // ══════════════════════════════════════════════════════
+        if (layoutType === '1x1') {
+            const postersHtml = itemsToPrint.map((item, idx) => {
+                const site = item.site;
+                const place = item.place || 'الموقع العام';
+                const directTarget = `${publicUrl}?factory=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
+                const qrUrl = this.generateQrDataUrl(directTarget, 280);
+                const encodedTarget = encodeURIComponent(directTarget);
+
+                return `
+                    <div class="a4-poster-page">
+                        <!-- ترويسة ISO الرسمية -->
+                        <div class="iso-header-table">
+                            <div class="iso-h-cell iso-logo-cell">
+                                <div class="iso-logo-badge">ICAPP</div>
+                                <div class="iso-logo-sub">SafetyHub</div>
+                            </div>
+                            <div class="iso-h-cell iso-title-cell">
+                                <div class="iso-company-name">الشركة العالمية للتصنيع والإنتاج الزراعي (ICAPP)</div>
+                                <div class="iso-dept-name">إدارة السلامة والصحة المهنية وحماية البيئة — HSE Dept</div>
+                                <div class="iso-doc-maintitle">لوحة الإبلاغ عن الحوادث الوشيكة والملاحظات الميدانية</div>
+                                <div class="iso-doc-sub">Near Miss & Incident Prevention Alert Board</div>
+                            </div>
+                            <div class="iso-h-cell iso-meta-cell">
+                                <div><b>كود الوثيقة:</b> DOC-HSE-NRM-01</div>
+                                <div><b>الإصدار:</b> Rev. 02 (2026)</div>
+                                <div><b>الموقع:</b> ${Utils.escapeHTML(site)}</div>
+                            </div>
+                        </div>
+
+                        <!-- شريط التنبيه والموقع المحدد -->
+                        <div class="location-banner">
+                            <div class="loc-tag-label"><i class="fas fa-map-marker-alt ml-1"></i> ملصق مخصص للموقع:</div>
+                            <div class="loc-name-highlight">${Utils.escapeHTML(site)} — ${Utils.escapeHTML(place)}</div>
+                        </div>
+
+                        <!-- العنوان والرسالة التوعوية الجاذبة -->
+                        <div class="hero-callout">
+                            <h2 class="hero-title">⚠️ سلامتك وسلامة زملائك تبدأ بملحوظتك!</h2>
+                            <p class="hero-subtitle">رصدك للحادث الوشيك أو التصرف غير الآمن اليوم يمنع وقوع إصابة خطيرة غداً</p>
+                        </div>
+
+                        <!-- منطقة الرمز QR المركزية -->
+                        <div class="qr-main-container">
+                            <div class="qr-frame">
+                                <img src="${qrUrl}" alt="QR Code" class="qr-img-large" onerror="if(!this.dataset.errCount){this.dataset.errCount=1;this.src='https://quickchart.io/qr?size=280&text=${encodedTarget}';}" />
+                            </div>
+                            <div class="qr-action-caption">
+                                <i class="fas fa-camera ml-1 text-amber-500"></i>
+                                <span>امسح الرمز بكاميرا هاتفك المحمول لفتح النموذج فوراً</span>
+                            </div>
+                        </div>
+
+                        <!-- شبكة الإرشادات والتعليمات الجاذبة للانتباه -->
+                        <div class="instructions-grid">
+                            <div class="instruction-card">
+                                <div class="inst-icon"><i class="fas fa-qrcode text-indigo-600"></i></div>
+                                <div>
+                                    <div class="inst-title">1. مسح فوري وسهل</div>
+                                    <div class="inst-desc">افتح كاميرا الهاتف واقرأ الرمز، لا يلزم تحميل أي تطبيق.</div>
+                                </div>
+                            </div>
+                            <div class="instruction-card">
+                                <div class="inst-icon"><i class="fas fa-map-pin text-emerald-600"></i></div>
+                                <div>
+                                    <div class="inst-title">2. تحديد موقع تلقائي</div>
+                                    <div class="inst-desc">يفتح النموذج مباشرة على هذا المكان المحدد بدقة.</div>
+                                </div>
+                            </div>
+                            <div class="instruction-card">
+                                <div class="inst-icon"><i class="fas fa-user-shield text-blue-600"></i></div>
+                                <div>
+                                    <div class="inst-title">3. إبلاغ آمن ومتاح للجميع</div>
+                                    <div class="inst-desc">بدون تسجيل دخول، متاح للعاملين والمقاولين والزوار (باسمك أو كفاعل خير).</div>
+                                </div>
+                            </div>
+                            <div class="instruction-card">
+                                <div class="inst-icon"><i class="fas fa-bolt text-amber-600"></i></div>
+                                <div>
+                                    <div class="inst-title">4. استجابة وإجراء فوري</div>
+                                    <div class="inst-desc">يصل البلاغ فوراً لفريق السلامة والصيانة لتصحيح الخطر.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- شريط التوعية والحافز -->
+                        <div class="incentive-banner">
+                            <i class="fas fa-trophy text-amber-400 text-xl ml-2"></i>
+                            <span><b>ثقافة السلامة الإيجابية:</b> تقديراً لمشاركتك الفعالة، يتم تكريم أفضل البلاغات الوقائية الاستباقية دورياً! 🌟</span>
+                        </div>
+
+                        <!-- الفوتر الرسمي -->
+                        <div class="iso-footer-table">
+                            <div>SafetyHub | ICAPP — Incident Prevention Record</div>
+                            <div>ISO 45001:2018 (Occupational Health & Safety) &bull; ISO 14001:2015 (Environment)</div>
+                            <div>إدارة السلامة والصحة المهنية والبيئة &bull; صفحة #${idx + 1} من ${itemsToPrint.length}</div>
+                        </div>
                     </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <img src="${qrUrl}" style="width:90px; height:90px; border-radius:6px; border:1px solid #e2e8f0;" onerror="if(!this.dataset.errCount){this.dataset.errCount=1;this.src='https://quickchart.io/qr?size=160&text=${encodedTarget}';}" />
-                        <div style="flex:1;">
-                            <div style="font-size:0.95rem; font-weight:800; color:#1e1b4b;">${c.site}</div>
-                            <div style="font-size:0.8rem; color:#4338ca; font-weight:600; margin-top:2px;">${c.place}</div>
-                            <div style="font-size:0.68rem; color:#64748b; margin-top:6px;"><i class="fas fa-camera"></i> امسح للإبلاغ عن حادث وشيك</div>
+                `;
+            }).join('');
+
+            printWin.document.write(`
+                <!DOCTYPE html>
+                <html lang="ar" dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>بوسترات QR للحوادث الوشيكة (${itemsToPrint.length} بوستر A4) - ICAPP SafetyHub</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                    <style>
+                        @page { size: A4 portrait; margin: 0; }
+                        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+                        body { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; color: #0f172a; margin: 0; padding: 0; background: #525659; }
+                        
+                        .no-print-bar { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; gap: 12px; background: #1e1b4b; padding: 10px 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+                        .print-btn { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 800; font-size: 15px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: inherit; }
+                        .close-btn { background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.4); padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: inherit; }
+                        
+                        @media print {
+                            .no-print-bar { display: none !important; }
+                            body { background: #fff; }
+                            .a4-poster-page { margin: 0; box-shadow: none; border-radius: 0; page-break-after: always; break-after: page; height: 100vh; }
+                        }
+
+                        .a4-poster-page {
+                            width: 210mm;
+                            min-height: 297mm;
+                            height: 297mm;
+                            padding: 12mm 14mm 10mm;
+                            margin: 10px auto;
+                            background: #ffffff;
+                            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: space-between;
+                            position: relative;
+                            overflow: hidden;
+                        }
+
+                        /* Header */
+                        .iso-header-table {
+                            display: grid;
+                            grid-template-columns: 80px 1fr 140px;
+                            border: 2px solid #1e1b4b;
+                            border-radius: 10px;
+                            overflow: hidden;
+                            background: #f8fafc;
+                        }
+                        .iso-h-cell { padding: 8px 10px; display: flex; flex-direction: column; justify-content: center; }
+                        .iso-logo-cell { background: #1e1b4b; color: #fff; text-align: center; align-items: center; }
+                        .iso-logo-badge { font-size: 1.4rem; font-weight: 900; letter-spacing: 1px; color: #fbbf24; line-height: 1; }
+                        .iso-logo-sub { font-size: 0.62rem; color: #c7d2fe; font-weight: 700; margin-top: 2px; }
+                        .iso-title-cell { border-left: 1.5px solid #cbd5e1; border-right: 1.5px solid #cbd5e1; text-align: center; }
+                        .iso-company-name { font-size: 0.85rem; font-weight: 800; color: #1e1b4b; line-height: 1.2; }
+                        .iso-dept-name { font-size: 0.7rem; font-weight: 700; color: #059669; margin: 1px 0; }
+                        .iso-doc-maintitle { font-size: 0.95rem; font-weight: 900; color: #1e1b4b; margin-top: 2px; }
+                        .iso-doc-sub { font-size: 0.65rem; color: #64748b; font-weight: 600; }
+                        .iso-meta-cell { font-size: 0.65rem; color: #334155; line-height: 1.5; justify-content: space-evenly; }
+
+                        /* Location Banner */
+                        .location-banner {
+                            margin: 10px 0;
+                            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+                            color: #fff;
+                            padding: 10px 18px;
+                            border-radius: 10px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            box-shadow: 0 4px 10px rgba(49, 46, 129, 0.2);
+                        }
+                        .loc-tag-label { font-size: 0.8rem; color: #fbbf24; font-weight: 700; }
+                        .loc-name-highlight { font-size: 1.15rem; font-weight: 900; color: #ffffff; letter-spacing: 0.3px; }
+
+                        /* Hero Callout */
+                        .hero-callout {
+                            text-align: center;
+                            background: #fffbeb;
+                            border: 2px dashed #f59e0b;
+                            border-radius: 12px;
+                            padding: 10px 14px;
+                            margin-bottom: 10px;
+                        }
+                        .hero-title { margin: 0; font-size: 1.25rem; font-weight: 900; color: #b45309; }
+                        .hero-subtitle { margin: 4px 0 0 0; font-size: 0.85rem; font-weight: 700; color: #78350f; }
+
+                        /* QR Main Container */
+                        .qr-main-container {
+                            text-align: center;
+                            padding: 10px;
+                            background: #f8fafc;
+                            border: 2px solid #e0e7ff;
+                            border-radius: 16px;
+                            margin-bottom: 10px;
+                        }
+                        .qr-frame {
+                            display: inline-block;
+                            padding: 12px;
+                            background: #ffffff;
+                            border-radius: 14px;
+                            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+                            border: 2.5px solid #312e81;
+                        }
+                        .qr-img-large { width: 210px; height: 210px; display: block; border-radius: 6px; }
+                        .qr-action-caption {
+                            margin-top: 8px;
+                            font-size: 0.92rem;
+                            font-weight: 800;
+                            color: #1e1b4b;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 6px;
+                        }
+
+                        /* Instructions Grid */
+                        .instructions-grid {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 8px;
+                            margin-bottom: 8px;
+                        }
+                        .instruction-card {
+                            background: #ffffff;
+                            border: 1.5px solid #e2e8f0;
+                            border-radius: 10px;
+                            padding: 8px 10px;
+                            display: flex;
+                            align-items: flex-start;
+                            gap: 10px;
+                        }
+                        .inst-icon { font-size: 1.3rem; margin-top: 2px; flex-shrink: 0; }
+                        .inst-title { font-size: 0.82rem; font-weight: 800; color: #1e1b4b; line-height: 1.2; }
+                        .inst-desc { font-size: 0.72rem; color: #475569; font-weight: 600; margin-top: 2px; line-height: 1.3; }
+
+                        /* Incentive Banner */
+                        .incentive-banner {
+                            background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+                            color: #ffffff;
+                            padding: 8px 14px;
+                            border-radius: 8px;
+                            font-size: 0.78rem;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            text-align: center;
+                        }
+
+                        /* Footer */
+                        .iso-footer-table {
+                            border-top: 2px solid #1e1b4b;
+                            padding-top: 6px;
+                            margin-top: 6px;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            font-size: 0.65rem;
+                            color: #64748b;
+                            font-weight: 700;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="no-print-bar">
+                        <button class="print-btn" onclick="window.print()"><i class="fas fa-print"></i> طباعة جميع البوسترات (${itemsToPrint.length} A4)</button>
+                        <button class="close-btn" onclick="window.close()">إغلاق</button>
+                    </div>
+                    ${postersHtml}
+                    <script>
+                        window.onload = function() {
+                            setTimeout(function() {
+                                if (window.location.search.indexOf('noprint') === -1) {
+                                    window.print();
+                                }
+                            }, 500);
+                        };
+                    </script>
+                </body>
+                </html>
+            `);
+            printWin.document.close();
+            return;
+        }
+
+        // ══════════════════════════════════════════════════════
+        // نمط 2: شبكة ملصقات وبطاقات متعددة (2x4, 2x2, 2x3, 3x4)
+        // ══════════════════════════════════════════════════════
+        let gridCols = 2;
+        let cardMinHeight = '120px';
+        let qrSize = 100;
+        let fontSizeTitle = '13px';
+        let fontSizeSub = '11px';
+
+        if (layoutType === '3x4') {
+            gridCols = 3;
+            cardMinHeight = '110px';
+            qrSize = 85;
+            fontSizeTitle = '11.5px';
+            fontSizeSub = '9.5px';
+        } else if (layoutType === '2x3') {
+            gridCols = 2;
+            cardMinHeight = '150px';
+            qrSize = 125;
+            fontSizeTitle = '14px';
+            fontSizeSub = '12px';
+        } else if (layoutType === '2x2') {
+            gridCols = 2;
+            cardMinHeight = '180px';
+            qrSize = 145;
+            fontSizeTitle = '16px';
+            fontSizeSub = '13px';
+        } else {
+            // 2x4
+            gridCols = 2;
+            cardMinHeight = '130px';
+            qrSize = 105;
+            fontSizeTitle = '13.5px';
+            fontSizeSub = '11.5px';
+        }
+
+        const cardsHtml = itemsToPrint.map((item, idx) => {
+            const site = item.site;
+            const place = item.place || 'الموقع العام';
+            const directTarget = `${publicUrl}?factory=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
+            const qrUrl = this.generateQrDataUrl(directTarget, qrSize);
+            const encodedTarget = encodeURIComponent(directTarget);
+
+            return `
+                <div class="qr-card">
+                    <div class="qr-card-header">
+                        <span class="qr-card-tag"><i class="fas fa-shield-alt"></i> SafetyHub | ICAPP</span>
+                        <span class="qr-card-badge">حادث وشيك #${idx + 1}</span>
+                    </div>
+                    <div class="qr-card-body">
+                        <div class="qr-card-info">
+                            <div class="qr-card-site" style="font-size:${fontSizeTitle};">${Utils.escapeHTML(site)}</div>
+                            <div class="qr-card-place" style="font-size:${fontSizeSub};">${Utils.escapeHTML(place)}</div>
+                            <div class="qr-card-inst"><i class="fas fa-camera ml-1"></i> امسح للإبلاغ الفوري عن خطر وشيك</div>
+                        </div>
+                        <div class="qr-card-img-wrap">
+                            <img src="${qrUrl}" alt="QR" class="qr-code-img" style="width:${qrSize}px; height:${qrSize}px;" onerror="if(!this.dataset.errCount){this.dataset.errCount=1;this.src='https://quickchart.io/qr?size=${qrSize}&text=${encodedTarget}';}">
                         </div>
                     </div>
                 </div>
@@ -1519,22 +2015,79 @@ const NearMiss = {
             <html lang="ar" dir="rtl">
             <head>
                 <meta charset="UTF-8">
-                <title>ملصقات QR للحوادث الوشيكة - SafetyHub ICAPP</title>
+                <title>ملصقات وكروت QR الحوادث الوشيكة (${itemsToPrint.length} موقع) - SafetyHub ICAPP</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
                 <style>
                     @page { size: A4 portrait; margin: 8mm; }
-                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #fff; }
-                    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+                    body { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; color: #0f172a; margin: 0; padding: 6px; background: #ffffff; }
+                    .no-print-bar { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; background: #1e1b4b; color:#fff; padding: 10px 16px; border-radius: 10px; }
+                    .print-btn { background: #f59e0b; color: #000; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 800; font-family: inherit; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+                    @media print { .no-print-bar { display: none !important; } }
+                    
+                    .cards-grid {
+                        display: grid;
+                        grid-template-columns: repeat(${gridCols}, 1fr);
+                        gap: 6mm;
+                    }
+                    
+                    .qr-card {
+                        border: 2px solid #312e81;
+                        border-radius: 12px;
+                        padding: 10px 12px;
+                        background: #ffffff;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        min-height: ${cardMinHeight};
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+                    }
+                    
+                    .qr-card-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        border-bottom: 1px solid #e0e7ff;
+                        padding-bottom: 5px;
+                        margin-bottom: 6px;
+                    }
+                    
+                    .qr-card-tag { font-size: 0.72rem; font-weight: 800; color: #3730a3; }
+                    .qr-card-badge { font-size: 0.65rem; font-weight: 800; background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px; }
+                    
+                    .qr-card-body {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 8px;
+                    }
+                    
+                    .qr-card-info { flex: 1; min-width: 0; }
+                    .qr-card-site { font-weight: 900; color: #1e1b4b; line-height: 1.2; }
+                    .qr-card-place { color: #4338ca; font-weight: 700; margin-top: 3px; line-height: 1.2; }
+                    .qr-card-inst { font-size: 0.68rem; color: #64748b; margin-top: 6px; font-weight: 600; }
+                    
+                    .qr-card-img-wrap { flex-shrink: 0; }
+                    .qr-code-img { border-radius: 6px; border: 1.5px solid #e2e8f0; display: block; }
                 </style>
             </head>
             <body>
-                <div style="text-align:center; margin-bottom:12px; border-bottom:2px solid #312e81; padding-bottom:8px;">
-                    <h2 style="margin:0; color:#312e81; font-size:1.2rem;">ملصقات الـ QR الميدانية للإبلاغ عن الحوادث الوشيكة (Near Miss Badges)</h2>
-                    <p style="margin:4px 0 0 0; color:#64748b; font-size:0.8rem;">SafetyHub | ICAPP — جاهزة للطباعة والتثبيت بالمصانع والمواقع</p>
+                <div class="no-print-bar">
+                    <span style="font-weight:700;"><i class="fas fa-qrcode text-amber-300 ml-2"></i> طباعة ملصقات الـ QR للحوادث الوشيكة (${itemsToPrint.length} موقع)</span>
+                    <button class="print-btn" onclick="window.print()"><i class="fas fa-print"></i> طباعة الآن</button>
                 </div>
-                <div class="grid">${cardsHtml}</div>
+                <div class="cards-grid">
+                    ${cardsHtml}
+                </div>
                 <script>
-                    window.onload = function() { setTimeout(function() { window.print(); }, 500); };
+                    window.onload = function() {
+                        setTimeout(function() {
+                            window.print();
+                        }, 500);
+                    };
                 </script>
             </body>
             </html>
