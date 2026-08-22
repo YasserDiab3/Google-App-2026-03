@@ -843,6 +843,91 @@
             font-weight: 800;
             color: #0f172a;
         }
+    
+        /* وسوم المقترحات الذكية */
+        .suggestions-container {
+            margin-top: 6px;
+            margin-bottom: 12px;
+        }
+        .suggestions-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+        .suggestions-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .suggestion-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 11px;
+            background: #f1f5f9;
+            color: #1e293b;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            user-select: none;
+        }
+        .suggestion-chip:hover {
+            background: #eff6ff;
+            border-color: #3b82f6;
+            color: #1d4ed8;
+            transform: translateY(-1px);
+        }
+        .suggestion-chip.active {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #1d4ed8;
+            box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+        }
+        .autocomplete-dropdown {
+            position: absolute;
+            z-index: 50;
+            left: 0;
+            right: 0;
+            top: 100%;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            max-height: 220px;
+            overflow-y: auto;
+            margin-top: 4px;
+            display: none;
+        }
+        .autocomplete-item {
+            padding: 8px 12px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #1e293b;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+        .autocomplete-item:hover, .autocomplete-item.selected {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+        .autocomplete-item-sub {
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+
     </style>
 </head>
 <body>
@@ -1075,20 +1160,49 @@
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="detailsInput">
-                        <i class="fas fa-file-lines text-blue-600"></i>
-                        تفاصيل الملاحظة / التصرف غير الآمن <span class="required">*</span>
-                    </label>
-                    <textarea id="detailsInput" class="form-control" placeholder="أدخل تفاصيل ما شاهدته بدقة (مثال: عدم ارتداء مهمات الوقاية، تسريب زيوت، عائق أمام مخرج الطوارئ...)" required></textarea>
+                <div class="form-group" style="position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label class="form-label" for="detailsInput" style="margin-bottom: 4px;">
+                            <i class="fas fa-file-lines text-blue-600"></i>
+                            تفاصيل الملاحظة / التصرف غير الآمن <span class="required">*</span>
+                        </label>
+                        <span style="font-size: 0.72rem; color: #2563eb; font-weight: 700;">
+                            <i class="fas fa-wand-magic-sparkles ml-1"></i>مقترحات سريعة
+                        </span>
+                    </div>
+
+                    <!-- حاوية الوسوم السريعة للملاحظات -->
+                    <div class="suggestions-container" id="detailsSuggestionsWrap">
+                        <div class="suggestions-chips" id="detailsQuickChips">
+                            <!-- سيتم تعبئتها ديناميكياً بناءً على نوع الملاحظة -->
+                        </div>
+                    </div>
+
+                    <textarea id="detailsInput" class="form-control" placeholder="أدخل تفاصيل ما شاهدته بدقة أو اختر من المقترحات أعلاه..." required autocomplete="off"></textarea>
+                    <!-- قائمة الإكمال التلقائي عند الكتابة -->
+                    <div id="detailsAutocompleteList" class="autocomplete-dropdown"></div>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="correctiveInput">
-                        <i class="fas fa-wrench text-slate-600"></i>
-                        الإجراء التصحيحي / الوقائي الفوري
-                    </label>
-                    <textarea id="correctiveInput" class="form-control" style="min-height:70px;" placeholder="الإجراء الفوري المتخذ أو المقترح (مثال: تم تنبيه العامل، إيقاف العمل مؤقتاً، رفع العائق)..."></textarea>
+                <div class="form-group" style="position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label class="form-label" for="correctiveInput" style="margin-bottom: 4px;">
+                            <i class="fas fa-wrench text-slate-600"></i>
+                            الإجراء التصحيحي / الوقائي الفوري
+                        </label>
+                        <span style="font-size: 0.72rem; color: #16a34a; font-weight: 700;">
+                            <i class="fas fa-check-double ml-1"></i>مقترحات الإجراء الفوري
+                        </span>
+                    </div>
+
+                    <!-- حاوية الوسوم السريعة للإجراء التصحيحي -->
+                    <div class="suggestions-container" id="correctiveSuggestionsWrap">
+                        <div class="suggestions-chips" id="correctiveQuickChips">
+                            <!-- سيتم تعبئتها ديناميكياً -->
+                        </div>
+                    </div>
+
+                    <textarea id="correctiveInput" class="form-control" style="min-height:70px;" placeholder="الإجراء الفوري المتخذ أو المقترح (أو اختر من المقترحات السريعة أعلاه)..." autocomplete="off"></textarea>
+                    <div id="correctiveAutocompleteList" class="autocomplete-dropdown"></div>
                 </div>
 
                 <!-- حالة الملاحظة والتاريخ المتوقع للتنفيذ (أسفل الإجراء التصحيحي وأعلى الصورة) -->
@@ -1419,7 +1533,11 @@
                 renderDefaultFields();
             }
 
-            // 4. طلب أحدث التحديثات من الخادم بالخلفية
+            // 4. تهيئة المقترحات الذكية والإكمال التلقائي
+            renderSmartSuggestions();
+            setupObservationAutocomplete();
+
+            // 5. طلب أحدث التحديثات من الخادم بالخلفية
             loadServerConfig();
         });
 
@@ -1849,6 +1967,272 @@
             const toast = document.getElementById('toastNotification');
             if (toast) toast.classList.remove('show');
         }
+
+        
+        // ==========================================
+        // قاموس المقترحات الذكية للملاحظات والإجراءات
+        // ==========================================
+        const SAFETY_OBSERVATION_TEMPLATES = {
+            'سلوك غير آمن': [
+                {
+                    title: 'عدم ارتداء مهمات الوقاية (PPE)',
+                    detail: 'رصد عامل لا يرتدي مهمات الوقاية الشخصية المناسبة لطبيعة العمل (مثل الخوذة، الحذاء الواقي، أو النظارة).',
+                    corrective: 'تم إيقاف العامل وتزويده بمهمات الوقاية والتأكيد على ضرورة الالتزام بها.'
+                },
+                {
+                    title: 'استخدام الهاتف أثناء القيادة / العمل',
+                    detail: 'استخدام الهاتف المحمول أثناء قيادة المعدة أو تشغيل الماكينات مما يشتت الانتباه.',
+                    corrective: 'تم تنبيه السائق/العامل فوراً والتأكيد على منع استخدام الهاتف أثناء العمل.'
+                },
+                {
+                    title: 'الوقوف تحت حمل معلق',
+                    detail: 'تواجد أفراد في مسار الرفع وتحت الأحمال المعلقة بواسطة الأوناش أو الفوركلفت.',
+                    corrective: 'تم إخلاء منطقة الرفع فوراً ووضع حواجز وشريط تحذيري لمنع المرور.'
+                },
+                {
+                    title: 'التدخين في غير الأماكن المخصصة',
+                    detail: 'رصد تدخين داخل منطقة العمل / منطقة الإنتاج بالمخالفة لتعليمات السلامة.',
+                    corrective: 'تم إطفاء السيجارة فوراً وتنبيه العامل وتوجيهه للأماكن المخصصة للتدخين.'
+                },
+                {
+                    title: 'تخطي حواجز الأمان للماكينات',
+                    detail: 'محاولة تشغيل الماكينة أو تنظيفها مع تعطيل حساسات أو حواجز الحماية الميكانيكية.',
+                    corrective: 'تم إيقاف الماكينة وإعادة تركيب حاجز الأمان والتأكد من تفعيل الحساسات.'
+                },
+                {
+                    title: 'الرفع اليدوي بطريقة خاطئة',
+                    detail: 'رفع أحمال ثقيلة بأسلوب غير مريح أو خاطئ مما يهدد بحدوث إصابات للظهر.',
+                    corrective: 'تم تدريب وتوجيه العامل على طريقة الرفع الآمن واستخدام وسائل مناولة مساعدة.'
+                }
+            ],
+            'حالة غير آمنة': [
+                {
+                    title: 'انسداد مخرج / مسار الطوارئ',
+                    detail: 'وجود بضائع أو معدات تعيق مسار الخروج وباب الطوارئ.',
+                    corrective: 'تم نقل العوائق وفتح مسار ومخرج الطوارئ بالكامل والتأكيد على عدم حظرها.'
+                },
+                {
+                    title: 'تسريب زيوت / مياه على الأرضيات',
+                    detail: 'وجود بقع زيتية أو سوائل منسكبة تسبب خطر الانزلاق والسقوط.',
+                    corrective: 'تم تنظيف وتجفيف الأرضية فوراً ووضع لافتة تحذيرية واستدعاء الصيانة لإصلاح التسريب.'
+                },
+                {
+                    title: 'تلف كابلات / لوحة كهرباء مفتوحة',
+                    detail: 'وجود أسلاك كهربائية مكشوفة أو لوحة تحكم كهربائية مفتوحة وغير مؤمنة.',
+                    corrective: 'تم عزل الكهرباء وإغلاق اللوحة وإبلاغ قسم الصيانة الكهربائية للإصلاح الفوري.'
+                },
+                {
+                    title: 'سلم أو سقالة غير مؤمنة',
+                    detail: 'استخدام سلم متهالك أو سقالة ينقصها الدرابزين الواقي ومثبتات الاتزان.',
+                    corrective: 'تم إيقاف العمل واستبعاد السلم وتأمين السقالة بواسطة الفني المختص.'
+                },
+                {
+                    title: 'إضاءة ضعيفة في ممر العمل',
+                    detail: 'تعطل كشافات الإنارة في الممرات مما يعيق الرؤية الآمنة أثناء الحركة.',
+                    corrective: 'تم إبلاغ الصيانة لاستبدال الكشافات المعطلة وتوفير إضاءة كافية.'
+                },
+                {
+                    title: 'عدم وجود غطاء حماية لماكينة',
+                    detail: 'الأجزاء الدوارة للماكينة مكشوفة بدون وجود واقي الحماية (Machine Guarding).',
+                    corrective: 'تم إيقاف التشغيل حتى تركيب الغطاء الواقي واعتماده من مشرف السلامة.'
+                }
+            ],
+            'خطر حريق': [
+                {
+                    title: 'طفاية حريق محجوبة أو غير صالحة',
+                    detail: 'وجود عوائق أمام طفاية الحريق أو انخفاض مؤشر الضغط عن النطاق الأخضر.',
+                    corrective: 'تم إزالة العوائق واستبدال الطفاية بأخرى صالحة ومطابقة للفحص.'
+                },
+                {
+                    title: 'تراكم مخلفات قابلة للاشتعال',
+                    detail: 'تكدس كراتين وأخشاب ومخلفات ورقية بالقرب من مصادر الحرارة أو اللوحات.',
+                    corrective: 'تم إخلاء ونقل المخلفات القابلة للاشتعال إلى منطقة النفايات المخصصة.'
+                },
+                {
+                    title: 'تخزين مواد كيميائية بشكل غير آمن',
+                    detail: 'عبوات مواد كيميائية سريعة الاشتعال مفتوحة أو مخزنة بدون تهوية مناسبة.',
+                    corrective: 'تم إحكام إغلاق العبوات ونقلها إلى مخزن المواد الكيميائية المطابق للاشتراطات.'
+                },
+                {
+                    title: 'توصيلات كهربائية عشوائية (Overload)',
+                    detail: 'استخدام مشتركات كهربائية متعددة محملة بأجهزة تسبب ارتفاع الحرارة وخطر الماس.',
+                    corrective: 'تم فصل المشتركات الزائدة وتوصيل الأجهزة بمخارج كهربائية مخصصة.'
+                }
+            ],
+            'سلوك آمن وإيجابي': [
+                {
+                    title: 'التزام مثالي بمهمات الوقاية (PPE)',
+                    detail: 'التزام تام من فريق العمل بارتداء كافة مهمات الوقاية المعتمدة طوال فترة النشاط.',
+                    corrective: 'تم توجيه الشكر والتقدير للعامل/الفريق وتحفيزهم على الاستمرار في السلوك الآمن.'
+                },
+                {
+                    title: 'تطبيق إجراءات العزل وتأمين الطاقة (LOTO)',
+                    detail: 'تطبيق احترافي لإجراءات عزل مصادر الطاقة ووضع الأقفال والبطاقات قبل الصيانة.',
+                    corrective: 'تم تسجيل الملاحظة كنموذج إيجابي يحتذى به في موقع العمل.'
+                },
+                {
+                    title: 'الإبلاغ المبكر والمبادرة لمنع خطر',
+                    detail: 'مبادرة العامل بالإبلاغ عن عطل محتمل وتأمينه قبل وقوع أي حادث أو تلف.',
+                    corrective: 'تم توثيق المبادرة الإيجابية وتقديم شهادة شكر في اجتماع السلامة الأسبوعي.'
+                },
+                {
+                    title: 'ترتيب وتنظيم فائق لموقع العمل (5S)',
+                    detail: 'نظافة وترتيب استثنائي لممرات العمل والمعدات مما يمنع حوادث التعثر والاصطدام.',
+                    corrective: 'تم الإشادة بالفريق المسؤول وتعميم التجربة على باقي الأقسام.'
+                }
+            ],
+            'ملاحظة بيئية': [
+                {
+                    title: 'خلط المخلفات في غير الحاويات المخصصة',
+                    detail: 'إلقاء مخلفات خطرة أو صناعية في حاويات النفايات العادية.',
+                    corrective: 'تم فرز المخلفات وإعادة توزيعها في الحاويات الصحيحة وتوعية العاملين.'
+                },
+                {
+                    title: 'هدر واستهلاك زائد للمياه / الطاقة',
+                    detail: 'ترك صنابير المياه مفتوحة أو تشغيل أجهزة بدون داعٍ في غير أوقات العمل.',
+                    corrective: 'تم إغلاق المحابس والأجهزة وتنبيه مسؤولي الوردية لترشيد الاستهلاك.'
+                },
+                {
+                    title: 'انبعاث روائح أو أدخنة غير معتادة',
+                    detail: 'تصاعد أدخنة أو انبعاثات من مداخن/أنظمة التهوية بمعدل أعلى من الطبيعي.',
+                    corrective: 'تم فحص الفلاتر ونظام التهوية وإبلاغ فريق البيئة والصيانة للمعاينة.'
+                }
+            ]
+        };
+
+        const COMMON_CORRECTIVE_ACTIONS = [
+            'تم تنبيه العامل فوراً والتوجيه بالسلوك الآمن المعتمد.',
+            'تم إيقاف العمل مؤقتاً لحين معالجة وتأمين الخطر بالكامل.',
+            'تم إزالة ورفع العائق وفتح الممر فوراً.',
+            'تم إبلاغ قسم الصيانة لعمل الإصلاحات اللازمة فوراً.',
+            'تم عزل المعدة ووضع بطاقة تحذيرية لمنع الاستخدام.',
+            'تم توجيه الشكر والتقدير للعامل على الالتزام بإجراءات السلامة.'
+        ];
+
+        function renderSmartSuggestions(obsType) {
+            const container = document.getElementById('detailsQuickChips');
+            const correctiveContainer = document.getElementById('correctiveQuickChips');
+            if (!container) return;
+
+            const selectedType = obsType || document.getElementById('observationTypeSelect')?.value || 'سلوك غير آمن';
+            const items = SAFETY_OBSERVATION_TEMPLATES[selectedType] || SAFETY_OBSERVATION_TEMPLATES['سلوك غير آمن'] || [];
+
+            // تفاصيل الملاحظة
+            container.innerHTML = items.map((item, idx) => `
+                <div class="suggestion-chip" data-idx="${idx}" onclick="applySuggestionChip('${selectedType}', ${idx})">
+                    <i class="fas fa-tag text-blue-500"></i>
+                    <span>${item.title}</span>
+                </div>
+            `).join('');
+
+            // مقترحات الإجراء التصحيحي
+            if (correctiveContainer) {
+                correctiveContainer.innerHTML = COMMON_CORRECTIVE_ACTIONS.slice(0, 4).map(action => `
+                    <div class="suggestion-chip" onclick="applyCorrectiveChip(this, '${action.replace(/'/g, "\\'")}')">
+                        <i class="fas fa-check text-emerald-500"></i>
+                        <span>${action}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function applySuggestionChip(type, idx) {
+            const items = SAFETY_OBSERVATION_TEMPLATES[type];
+            if (!items || !items[idx]) return;
+            const item = items[idx];
+
+            const detailsInput = document.getElementById('detailsInput');
+            const correctiveInput = document.getElementById('correctiveInput');
+
+            if (detailsInput) {
+                detailsInput.value = item.detail;
+                detailsInput.focus();
+            }
+
+            // اقتراح الإجراء التصحيحي إذا كان فارغاً
+            if (correctiveInput && (!correctiveInput.value || correctiveInput.value.trim() === '')) {
+                correctiveInput.value = item.corrective || '';
+            }
+
+            // تظليل الوسم المختار
+            document.querySelectorAll('#detailsQuickChips .suggestion-chip').forEach((c, i) => {
+                c.classList.toggle('active', i === idx);
+            });
+        }
+
+        function applyCorrectiveChip(el, text) {
+            const correctiveInput = document.getElementById('correctiveInput');
+            if (correctiveInput) {
+                correctiveInput.value = text;
+                correctiveInput.focus();
+            }
+            document.querySelectorAll('#correctiveQuickChips .suggestion-chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // إكمال تلقائي أثناء الكتابة في حقل التفاصيل
+        function setupObservationAutocomplete() {
+            const detailsInput = document.getElementById('detailsInput');
+            const dropdown = document.getElementById('detailsAutocompleteList');
+            if (!detailsInput || !dropdown) return;
+
+            detailsInput.addEventListener('input', function(e) {
+                const query = e.target.value.trim().toLowerCase();
+                if (query.length < 2) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+
+                const currentType = document.getElementById('observationTypeSelect')?.value || '';
+                let allTemplates = [];
+                Object.keys(SAFETY_OBSERVATION_TEMPLATES).forEach(cat => {
+                    SAFETY_OBSERVATION_TEMPLATES[cat].forEach(tpl => {
+                        allTemplates.push({ ...tpl, category: cat });
+                    });
+                });
+
+                const matches = allTemplates.filter(tpl => 
+                    tpl.title.toLowerCase().includes(query) || 
+                    tpl.detail.toLowerCase().includes(query)
+                ).slice(0, 5);
+
+                if (matches.length === 0) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+
+                dropdown.innerHTML = matches.map(m => `
+                    <div class="autocomplete-item" onclick="selectAutocompleteMatch('${m.detail.replace(/'/g, "\\'")}', '${(m.corrective || '').replace(/'/g, "\\'")}')">
+                        <div>
+                            <div style="font-weight: 700;">${m.title}</div>
+                            <div class="autocomplete-item-sub">${m.detail.slice(0, 65)}...</div>
+                        </div>
+                        <span class="badge" style="font-size: 0.65rem; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px;">${m.category}</span>
+                    </div>
+                `).join('');
+
+                dropdown.style.display = 'block';
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!detailsInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+            });
+        }
+
+        function selectAutocompleteMatch(detail, corrective) {
+            const detailsInput = document.getElementById('detailsInput');
+            const correctiveInput = document.getElementById('correctiveInput');
+            const dropdown = document.getElementById('detailsAutocompleteList');
+
+            if (detailsInput) detailsInput.value = detail;
+            if (correctiveInput && (!correctiveInput.value || correctiveInput.value.trim() === '')) {
+                correctiveInput.value = corrective;
+            }
+            if (dropdown) dropdown.style.display = 'none';
+        }
+
 
         // إرسال الملاحظة
         document.getElementById('observationForm').addEventListener('submit', async function(e) {
