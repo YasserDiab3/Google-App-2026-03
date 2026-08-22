@@ -516,7 +516,9 @@ function doPost(e) {
         let result = { success: false, message: '' };
 
         try {
-            if (action === 'submitPublicObservation' && typeof submitPublicObservation === 'function') {
+            if (action === 'sendWeeklyDailyObservationsDigest' && typeof sendWeeklyDailyObservationsDigest === 'function') {
+                result = sendWeeklyDailyObservationsDigest();
+            } else if (action === 'submitPublicObservation' && typeof submitPublicObservation === 'function') {
                 result = submitPublicObservation(payload || postData.data || postData || {});
             } else if (action === 'getPublicObservationConfig' && typeof getPublicObservationConfig === 'function') {
                 result = getPublicObservationConfig();

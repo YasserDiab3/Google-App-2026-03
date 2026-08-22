@@ -829,6 +829,9 @@ ${c}
                         <i class="fas fa-sliders-h"></i><span>\u0641\u0644\u0627\u062A\u0631</span><span id="obs-filter-active-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">\u2022</span>
                     </button>
                     <!-- \u0632\u0631 \u062A\u0635\u062F\u064A\u0631 PDF -->
+                    <button id="obs-send-digest-btn" title="\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062A\u0646\u0641\u064A\u0630\u064A \u0627\u0644\u0623\u0633\u0628\u0648\u0639\u064A \u0639\u0628\u0631 \u0627\u0644\u0628\u0631\u064A\u062F" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:#059669;color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onclick="DailyObservations.sendWeeklyDigestEmailNow()">
+                        <i class="fas fa-paper-plane"></i><span>\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0644\u0644\u0625\u062F\u0627\u0631\u0629 \u{1F4E7}</span>
+                    </button>
                     <button id="obs-export-pdf-btn" title="\u062A\u0635\u062F\u064A\u0631 PDF" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(239,68,68,0.85);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(239,68,68,1)'" onmouseout="this.style.background='rgba(239,68,68,0.85)'">
                         <i class="fas fa-file-pdf"></i><span>PDF</span>
                     </button>

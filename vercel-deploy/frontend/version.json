@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1219",
+  "version": "1.0.1220",
   "highlights": {
     "ar": [
-      "الربط التلقائي للملاحظات الحرجة مع خطة متابعة الإجراءات التصحيحية الموحدة (CAPA Sync).",
-      "إضافة لوحة أبطال ومحفزي السلامة (Safety Champions Leaderboard) للأكثر رصداً ومعالجة.",
-      "تفعيل التقرير التنفيذي الأسبوعي الآلي لمدير السلامة والإدارة العليا."
+      "إضافة زر إرسال التقرير التنفيذي الأسبوعي للملاحظات عبر البريد الإلكتروني فورياً من لوحة التحليل.",
+      "عرض لوحة أبطال ومحفزي السلامة (Safety Champions) لتكريم أكثر المفتشين والإدارات التزاماً.",
+      "تكامل الملاحظات مع خطة الإجراءات التصحيحية الموحدة (CAPA) وتوليد ملصقات QR الشاملة."
     ],
     "en": [
-      "Automated critical observation synchronization with the centralized CAPA Action Tracking register.",
-      "Integrated Safety Champions Leaderboard recognizing top active safety observers & departments.",
-      "Enabled automated weekly executive summary email reports for HSE management."
+      "Added on-demand trigger button in analytics toolbar to email executive weekly observation digests.",
+      "Showcased Safety Champions leaderboard highlighting top active safety inspectors & departments.",
+      "Complete integration with CAPA action tracking and field location QR stickers."
     ]
   }
 }

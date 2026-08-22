@@ -3324,6 +3324,9 @@ const DailyObservations = {
                         <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="obs-filter-active-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">•</span>
                     </button>
                     <!-- زر تصدير PDF -->
+                    <button id="obs-send-digest-btn" title="إرسال التقرير التنفيذي الأسبوعي عبر البريد" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:#059669;color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onclick="DailyObservations.sendWeeklyDigestEmailNow()">
+                        <i class="fas fa-paper-plane"></i><span>إرسال التقرير للإدارة 📧</span>
+                    </button>
                     <button id="obs-export-pdf-btn" title="تصدير PDF" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(239,68,68,0.85);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(239,68,68,1)'" onmouseout="this.style.background='rgba(239,68,68,0.85)'">
                         <i class="fas fa-file-pdf"></i><span>PDF</span>
                     </button>
