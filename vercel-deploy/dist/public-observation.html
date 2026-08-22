@@ -3530,31 +3530,48 @@
 
         function handleQrDetectedData(text) {
             closeQrScannerModal();
-            showToast('تم مسح الـ QR بنجاح!', 'success', 2500);
             
             try {
-                // 1. فحص إذا كان JSON
-                if (text.startsWith('{') && text.endsWith('}')) {
-                    const parsed = JSON.parse(text);
+                const rawStr = String(text || '').trim();
+
+                // 1. فحص بروتوكول التشفير الحصري لفريق السلامة (HSE-LOC-V1)
+                if (rawStr.startsWith('HSE-LOC-V1:')) {
+                    const encodedPayload = rawStr.substring('HSE-LOC-V1:'.length);
+                    const decodedJson = decodeURIComponent(escape(atob(encodedPayload)));
+                    const parsed = JSON.parse(decodedJson);
+
+                    if (parsed.protocol === 'HSE_SAFETY_OFFICER_FIELD_V1' && parsed.authKey === 'HSE_AUTH_KEY_2026_SAFETY_CORP') {
+                        showToast('🔒 تم التحقق: رمز معتمد لفريق السلامة والصحة المهنية ✅', 'success', 3500);
+                        applyMatchedLocation(parsed.site || '', parsed.place || '');
+                        return;
+                    }
+                }
+
+                // 2. فحص إذا كان JSON عادي معتمد
+                if (rawStr.startsWith('{') && rawStr.endsWith('}')) {
+                    const parsed = JSON.parse(rawStr);
                     const site = parsed.site || parsed.factory || parsed.siteName || '';
                     const place = parsed.place || parsed.subLocation || parsed.location || '';
+                    showToast('تم مسح بيانات الموقع بنجاح!', 'success', 2500);
                     applyMatchedLocation(site, place);
                     return;
                 }
 
-                // 2. فحص إذا كان URL مع بارامترات
-                if (text.includes('?')) {
-                    const params = new URLSearchParams(text.split('?')[1]);
+                // 3. فحص إذا كان URL مع بارامترات
+                if (rawStr.includes('?')) {
+                    const params = new URLSearchParams(rawStr.split('?')[1]);
                     const site = params.get('site') || params.get('factory') || '';
                     const place = params.get('place') || params.get('subLocation') || '';
+                    showToast('تم مسح بيانات الموقع بنجاح!', 'success', 2500);
                     applyMatchedLocation(site, place);
                     return;
                 }
 
-                // 3. فحص نصي
-                applyMatchedLocation(text, '');
+                // 4. فحص نصي
+                showToast('تم مسح بيانات الموقع!', 'success', 2000);
+                applyMatchedLocation(rawStr, '');
             } catch (e) {
-                applyMatchedLocation(text, '');
+                showToast('رمز QR غير صالح أو غير معتمد لفريق السلامة', 'error', 3000);
             }
         }
 

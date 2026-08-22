@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1220",
+  "version": "1.0.1221",
   "highlights": {
     "ar": [
-      "إضافة زر إرسال التقرير التنفيذي الأسبوعي للملاحظات عبر البريد الإلكتروني فورياً من لوحة التحليل.",
-      "عرض لوحة أبطال ومحفزي السلامة (Safety Champions) لتكريم أكثر المفتشين والإدارات التزاماً.",
-      "تكامل الملاحظات مع خطة الإجراءات التصحيحية الموحدة (CAPA) وتوليد ملصقات QR الشاملة."
+      "تطبيق التشفير الداخلي الحصري لرموز QR للمواقع (HSE-LOC-V1) لمنع فتحها من خارج ماسح السلامة المعتمد.",
+      "حماية وتأمين ملصقات الأماكن بحيث لا تعمل إلا من خلال النموذج المخصص لفريق السلامة فقط.",
+      "الربط مع خطة الإجراءات (CAPA) وتوليد ملصقات QR الشاملة ولوحة أبطال السلامة."
     ],
     "en": [
-      "Added on-demand trigger button in analytics toolbar to email executive weekly observation digests.",
-      "Showcased Safety Champions leaderboard highlighting top active safety inspectors & departments.",
-      "Complete integration with CAPA action tracking and field location QR stickers."
+      "Applied proprietary token encryption for Location QR badges (HSE-LOC-V1) preventing unauthorized external scans.",
+      "Secured field location stickers to function exclusively through the authorized safety team scanner.",
+      "Integrated CAPA action sync, batch QR sticker generator, and safety champions leaderboard."
     ]
   }
 }

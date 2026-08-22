@@ -10016,9 +10016,14 @@ const DailyObservations = {
         const cardsHtml = itemsToPrint.map((item, idx) => {
             const site = item.site;
             const place = item.place === 'الموقع العام' ? '' : item.place;
-            const directUrl = place 
-                ? `${publicObsUrl}?factory=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`
-                : `${publicObsUrl}?factory=${encodeURIComponent(site)}`;
+            const secureObj = {
+                protocol: 'HSE_SAFETY_OFFICER_FIELD_V1',
+                authKey: 'HSE_AUTH_KEY_2026_SAFETY_CORP',
+                site: site,
+                place: place || '',
+                issuedAt: Date.now()
+            };
+            const directUrl = 'HSE-LOC-V1:' + btoa(unescape(encodeURIComponent(JSON.stringify(secureObj))));
 
             let qrDataUri = '';
             if (typeof qrcode === 'function') {
