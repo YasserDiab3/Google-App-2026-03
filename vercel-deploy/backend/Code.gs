@@ -406,6 +406,7 @@ function doPost(e) {
             'testConnection', 'warmup', 'getPublicIP', 'invalidateServerSession',
             'getAuthBootstrapPolicy', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke',
             'submitPublicObservation', 'getPublicObservationConfig',
+            'submitPublicNearMiss', 'getPublicNearMissConfig',
             'submitPublicFireInspection', 'getPublicFireInspectionConfig'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
