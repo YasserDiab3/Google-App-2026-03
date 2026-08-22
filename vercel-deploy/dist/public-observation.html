@@ -87,20 +87,21 @@
 
         /* رأس الصفحة والشعار */
         /* ترويسة ISO المعتمدة ثلاثية الأعمدة (مثبتة عند التمرير) */
+        /* ترويسة ISO المعتمدة ثلاثية الأعمدة بهوية جمالية فائقة */
         .iso-header-table {
             position: sticky;
             top: 8px;
             z-index: 100;
             display: grid;
-            grid-template-columns: minmax(145px, 1.1fr) 2.2fr minmax(140px, 1fr);
+            grid-template-columns: minmax(145px, 1.1fr) 2.2fr minmax(145px, 1.05fr);
             background: #ffffff;
-            border: 1px solid #cbd5e1;
-            border-top: 4px solid #1e40af;
-            border-radius: 12px;
+            border: 2px solid #bfdbfe;
+            border-top: 5px solid #2563eb;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.12), 0 8px 10px -6px rgba(37, 99, 235, 0.06);
             margin-bottom: 22px;
-            transition: box-shadow 0.2s ease;
+            transition: all 0.2s ease;
         }
 
         .iso-col-brand {
@@ -110,8 +111,8 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
-            border-left: 1px solid #e2e8f0;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border-left: 1.5px solid #dbeafe;
+            background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
             overflow: hidden;
         }
 
@@ -124,10 +125,10 @@
             align-items: center;
             justify-content: center;
             background: #ffffff;
-            border: 1px solid #cbd5e1;
+            border: 1.5px solid #bfdbfe;
             border-radius: 12px;
             padding: 4px 8px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
         }
 
         .iso-logo-img {
@@ -140,12 +141,16 @@
         }
 
         .iso-dept-name {
-            font-size: 0.72rem;
+            font-size: 0.74rem;
             font-weight: 800;
-            color: #1e40af;
+            color: #1e3a8a;
             line-height: 1.3;
             text-align: center;
             white-space: nowrap;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 2px 8px;
+            border-radius: 12px;
         }
 
         .iso-col-title {
@@ -155,26 +160,45 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            background: #ffffff;
+            background: radial-gradient(circle at center, #ffffff 60%, #f8fafc 100%);
             gap: 4px;
         }
 
+        .iso-badge-top {
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: #2563eb;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 2px 10px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
         .iso-doc-title {
-            font-size: 1.25rem;
+            font-size: 1.28rem;
             font-weight: 900;
             color: #0f172a;
             margin: 0;
             line-height: 1.3;
-            letter-spacing: -0.2px;
+            letter-spacing: -0.3px;
             white-space: nowrap;
         }
 
         .iso-doc-subtitle {
             font-size: 0.76rem;
-            font-weight: 700;
-            color: #64748b;
+            font-weight: 800;
+            color: #1e40af;
             margin: 0;
-            letter-spacing: 0.3px;
+            background: #f0f7ff;
+            border: 1px solid #dbeafe;
+            padding: 2px 10px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .iso-col-meta {
@@ -183,8 +207,8 @@
             flex-direction: column;
             justify-content: center;
             gap: 4px;
-            border-right: 1px solid #e2e8f0;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border-right: 1.5px solid #dbeafe;
+            background: linear-gradient(180deg, #f0f7ff 0%, #f8fafc 100%);
             font-size: 0.68rem;
             overflow: hidden;
         }
@@ -194,7 +218,7 @@
             justify-content: space-between;
             align-items: center;
             gap: 4px;
-            border-bottom: 1px dashed #e2e8f0;
+            border-bottom: 1px dashed #cbd5e1;
             padding-bottom: 3px;
         }
 
@@ -204,21 +228,39 @@
         }
 
         .iso-meta-key {
-            color: #64748b;
-            font-weight: 700;
-            font-size: 0.62rem;
+            color: #475569;
+            font-weight: 800;
+            font-size: 0.64rem;
         }
 
         .iso-meta-val {
-            color: #0f172a;
             font-weight: 800;
             font-family: monospace, inherit;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            padding: 0 4px;
-            border-radius: 4px;
+            padding: 1px 6px;
+            border-radius: 6px;
             white-space: nowrap;
-            font-size: 0.65rem;
+            font-size: 0.66rem;
+        }
+
+        .iso-meta-val.val-doc {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+        .iso-meta-val.val-rev {
+            background: #fdf2f8;
+            color: #9d174d;
+            border: 1px solid #fbcfe8;
+        }
+        .iso-meta-val.val-date {
+            background: #fefce8;
+            color: #854d0e;
+            border: 1px solid #fef08a;
+        }
+        .iso-meta-val.val-sec {
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
         }
 
         @media (max-width: 768px) {
@@ -357,18 +399,62 @@
             margin-bottom: 12px;
         }
 
-        /* تمييز وهوية ألوان الأقسام الأربعة */
-        .form-section:nth-of-type(1) { border-right-color: #2563eb; }
-        .form-section:nth-of-type(1) .section-badge { background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; }
-        
-        .form-section:nth-of-type(2) { border-right-color: #ea580c; }
-        .form-section:nth-of-type(2) .section-badge { background: #fff7ed; color: #c2410c; border: 1.5px solid #fed7aa; }
+        /* تمييز وهوية ألوان الأقسام الأربعة باحترافية */
+        .section-theme-1 {
+            border-right-color: #2563eb !important;
+            background: linear-gradient(180deg, #f8faff 0%, #ffffff 40px);
+        }
+        .section-theme-1 .section-badge {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            border: 2px solid #93c5fd;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+        }
+        .section-theme-1 .section-title {
+            color: #1e40af;
+        }
 
-        .form-section:nth-of-type(3) { border-right-color: #10b981; }
-        .form-section:nth-of-type(3) .section-badge { background: #f0fdf4; color: #047857; border: 1.5px solid #bbf7d0; }
+        .section-theme-2 {
+            border-right-color: #ea580c !important;
+            background: linear-gradient(180deg, #fffaf5 0%, #ffffff 40px);
+        }
+        .section-theme-2 .section-badge {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: #ffffff;
+            border: 2px solid #fdba74;
+            box-shadow: 0 2px 6px rgba(234, 88, 12, 0.35);
+        }
+        .section-theme-2 .section-title {
+            color: #c2410c;
+        }
 
-        .form-section:nth-of-type(4) { border-right-color: #8b5cf6; }
-        .form-section:nth-of-type(4) .section-badge { background: #faf5ff; color: #6d28d9; border: 1.5px solid #ddd6fe; }
+        .section-theme-3 {
+            border-right-color: #059669 !important;
+            background: linear-gradient(180deg, #f0fdf9 0%, #ffffff 40px);
+        }
+        .section-theme-3 .section-badge {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff;
+            border: 2px solid #6ee7b7;
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.35);
+        }
+        .section-theme-3 .section-title {
+            color: #065f46;
+        }
+
+        .section-theme-4 {
+            border-right-color: #7c3aed !important;
+            background: linear-gradient(180deg, #faf7fe 0%, #ffffff 40px);
+        }
+        .section-theme-4 .section-badge {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: #ffffff;
+            border: 2px solid #c4b5fd;
+            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.35);
+        }
+        .section-theme-4 .section-title {
+            color: #5b21b6;
+        }
 
         .section-header {
             display: flex;
@@ -378,14 +464,16 @@
         }
 
         .section-badge {
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
-            font-weight: 800;
-            font-size: 0.9rem;
+            font-weight: 900;
+            font-size: 0.95rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
+            user-select: none;
         }
 
         .section-title {
@@ -398,7 +486,7 @@
             font-size: 0.8rem;
             color: var(--text-muted);
             margin-bottom: 16px;
-            margin-right: 38px;
+            margin-right: 40px;
         }
 
         .form-group {
@@ -462,7 +550,7 @@
             }
         }
 
-        /* كروت اختيار نوع الملاحظة */
+        /* كروت اختيار نوع الملاحظة بألوان وهوية مميزة فريدة لكل نوع */
         .types-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -477,85 +565,244 @@
 
         .type-card {
             border: 2px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            padding: 12px 10px;
+            border-radius: 12px;
+            padding: 12px 8px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
             background: #ffffff;
             user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         }
 
         .type-card:hover {
-            border-color: #cbd5e1;
-            background: #f8fafc;
-        }
-
-        .type-card.selected {
-            border-color: var(--primary);
-            background: var(--primary-light);
-            color: var(--primary-dark);
-            font-weight: 700;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
         }
 
         .type-card .icon {
-            font-size: 1.4rem;
+            font-size: 1.45rem;
             margin-bottom: 6px;
-            display: block;
-        }
-
-        .type-card.selected .icon {
-            color: var(--primary);
+            display: inline-block;
+            transition: all 0.2s ease;
         }
 
         .type-card .title {
             font-size: 0.82rem;
-            line-height: 1.2;
+            font-weight: 700;
+            line-height: 1.25;
             display: block;
         }
 
-        /* شيبس مستوى الخطورة */
+        /* 1. سلوك غير آمن (Unsafe Act) - برتقالي تحذيري */
+        .type-card[data-type="سلوك غير آمن"] {
+            border-color: #fed7aa;
+            background: #fffaf5;
+            color: #9a3412;
+        }
+        .type-card[data-type="سلوك غير آمن"] .icon {
+            color: #ea580c;
+        }
+        .type-card.selected[data-type="سلوك غير آمن"] {
+            border-color: #ea580c;
+            background: linear-gradient(135deg, #ffedd5, #fff7ed);
+            color: #7c2d12;
+            box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.4), 0 4px 12px rgba(234, 88, 12, 0.15);
+            font-weight: 800;
+            transform: scale(1.02);
+        }
+
+        /* 2. وضع غير آمن (Unsafe Condition) - كهرماني ذهبي */
+        .type-card[data-type="وضع غير آمن"] {
+            border-color: #fde68a;
+            background: #fffdf0;
+            color: #92400e;
+        }
+        .type-card[data-type="وضع غير آمن"] .icon {
+            color: #d97706;
+        }
+        .type-card.selected[data-type="وضع غير آمن"] {
+            border-color: #d97706;
+            background: linear-gradient(135deg, #fef3c7, #fffbeb);
+            color: #78350f;
+            box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.4), 0 4px 12px rgba(217, 119, 6, 0.15);
+            font-weight: 800;
+            transform: scale(1.02);
+        }
+
+        /* 3. سلوك آمن وإيجابي (Safe Practice) - أخضر زمردي */
+        .type-card[data-type="سلوك آمن وإيجابي"] {
+            border-color: #bbf7d0;
+            background: #f4fdf7;
+            color: #166534;
+        }
+        .type-card[data-type="سلوك آمن وإيجابي"] .icon {
+            color: #16a34a;
+        }
+        .type-card.selected[data-type="سلوك آمن وإيجابي"] {
+            border-color: #16a34a;
+            background: linear-gradient(135deg, #dcfce7, #f0fdf4);
+            color: #14532d;
+            box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.4), 0 4px 12px rgba(22, 163, 74, 0.15);
+            font-weight: 800;
+            transform: scale(1.02);
+        }
+
+        /* 4. ملاحظة بيئية (Environmental) - فيروزي بحري / تيل */
+        .type-card[data-type="ملاحظة بيئية"] {
+            border-color: #99f6e4;
+            background: #f0fdfa;
+            color: #115e59;
+        }
+        .type-card[data-type="ملاحظة بيئية"] .icon {
+            color: #0d9488;
+        }
+        .type-card.selected[data-type="ملاحظة بيئية"] {
+            border-color: #0d9488;
+            background: linear-gradient(135deg, #ccfbf1, #f0fdfa);
+            color: #134e4a;
+            box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.4), 0 4px 12px rgba(13, 148, 136, 0.15);
+            font-weight: 800;
+            transform: scale(1.02);
+        }
+
+        /* 5. خطر حريق (Fire Hazard) - أحمر ناري ملتهب */
+        .type-card[data-type="خطر حريق"] {
+            border-color: #fecaca;
+            background: #fff5f5;
+            color: #991b1b;
+        }
+        .type-card[data-type="خطر حريق"] .icon {
+            color: #dc2626;
+        }
+        .type-card.selected[data-type="خطر حريق"] {
+            border-color: #dc2626;
+            background: linear-gradient(135deg, #fee2e2, #fef2f2);
+            color: #7f1d1d;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.4), 0 4px 12px rgba(220, 38, 38, 0.15);
+            font-weight: 800;
+            transform: scale(1.02);
+        }
+
+        /* 6. أخرى (Other) - بنفسجي ملكي */
+        .type-card[data-type="أخرى"] {
+            border-color: #ddd6fe;
+            background: #faf5ff;
+            color: #5b21b6;
+        }
+        .type-card[data-type="أخرى"] .icon {
+            color: #7c3aed;
+        }
+        .type-card.selected[data-type="أخرى"] {
+            border-color: #7c3aed;
+            background: linear-gradient(135deg, #ede9fe, #faf5ff);
+            color: #4c1d95;
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.4), 0 4px 12px rgba(124, 58, 237, 0.15);
+            font-weight: 800;
+            transform: scale(1.02);
+        }
+
+        /* كروت مستوى الخطورة المنمقة والمميزة بالألوان */
         .risk-chips {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 8px;
+            margin-top: 6px;
         }
 
         .risk-chip {
             padding: 9px 4px;
             text-align: center;
-            border-radius: var(--radius-sm);
-            border: 1.5px solid #e2e8f0;
-            font-size: 0.85rem;
-            font-weight: 700;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            font-size: 0.78rem;
+            font-weight: 800;
             cursor: pointer;
             background: #ffffff;
+            color: #475569;
             transition: all 0.2s ease;
             user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
         }
 
+        .risk-chip i {
+            font-size: 1.05rem;
+            transition: all 0.2s ease;
+        }
+
+        .risk-chip:hover {
+            transform: translateY(-1px);
+        }
+
+        /* 🟢 منخفض (Low) */
+        .risk-chip[data-risk="منخفض"] {
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+            color: #166534;
+        }
+        .risk-chip[data-risk="منخفض"] i { color: #16a34a; }
         .risk-chip[data-risk="منخفض"].selected {
-            background: #ecfdf5;
-            border-color: #10b981;
-            color: #047857;
+            background: #dcfce7;
+            border-color: #16a34a;
+            color: #14532d;
+            box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.4);
+            transform: scale(1.02);
         }
 
-        .risk-chip[data-risk="متوسط"].selected {
+        /* 🟡 متوسط (Medium) */
+        .risk-chip[data-risk="متوسط"] {
+            border-color: #fde68a;
             background: #fffbeb;
-            border-color: #f59e0b;
-            color: #b45309;
+            color: #92400e;
+        }
+        .risk-chip[data-risk="متوسط"] i { color: #d97706; }
+        .risk-chip[data-risk="متوسط"].selected {
+            background: #fef3c7;
+            border-color: #d97706;
+            color: #78350f;
+            box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.4);
+            transform: scale(1.02);
         }
 
-        .risk-chip[data-risk="عالي"].selected {
+        /* 🔴 عالي (High) */
+        .risk-chip[data-risk="عالي"] {
+            border-color: #fecaca;
             background: #fef2f2;
-            border-color: #ef4444;
-            color: #b91c1c;
+            color: #991b1b;
+        }
+        .risk-chip[data-risk="عالي"] i { color: #dc2626; }
+        .risk-chip[data-risk="عالي"].selected {
+            background: #fee2e2;
+            border-color: #dc2626;
+            color: #7f1d1d;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.4);
+            transform: scale(1.02);
         }
 
+        /* 🛑 حرج (Critical) */
+        .risk-chip[data-risk="حرج"] {
+            border-color: #cbd5e1;
+            background: #f8fafc;
+            color: #475569;
+        }
+        .risk-chip[data-risk="حرج"] i { color: #7f1d1d; }
         .risk-chip[data-risk="حرج"].selected {
             background: #450a0a;
-            border-color: #7f1d1d;
+            border-color: #991b1b;
             color: #ffffff;
+            box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.4);
+            transform: scale(1.02);
+        }
+        .risk-chip[data-risk="حرج"].selected i {
+            color: #f87171;
         }
 
         /* منطقة رفع الصورة */
@@ -749,16 +996,66 @@
             gap: 8px;
         }
 
+        /* فوتر منمق بهوية بصرية فائقة الجمال */
         .footer-card {
-            text-align: center;
-            font-size: 0.8rem;
-            color: #64748b;
             margin-top: 24px;
-            line-height: 1.6;
-            padding: 16px;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);
+            border-radius: 16px;
+            border: 1.5px solid #e2e8f0;
+            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            text-align: center;
+        }
+
+        .footer-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 800;
+            font-size: 0.88rem;
+            color: #1e3a8a;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 5px 12px;
+            border-radius: 20px;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
+        }
+
+        .footer-company {
+            font-weight: 800;
+            font-size: 0.92rem;
+            color: #0f172a;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .footer-rights {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #64748b;
+            background: #f8fafc;
             border: 1px solid #e2e8f0;
+            padding: 5px 10px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        @media (max-width: 640px) {
+            .footer-card {
+                flex-direction: column;
+                justify-content: center;
+                gap: 8px;
+                padding: 14px 12px;
+            }
         }
 
         /* إشعار عائم Toast لحالة الإرسال */
@@ -930,74 +1227,279 @@
 
     
         /* تحسينات بصرية لقسم تفاصيل الملاحظة والإجراء والتنفيذ */
-        .observation-pair-card {
-            border-radius: 12px;
-            padding: 12px;
+        .dept-selector-card {
+            background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #f0fdfa 100%);
+            border: 2px solid #a7f3d0;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.05);
             margin-bottom: 14px;
             transition: all 0.2s ease;
         }
+        .dept-selector-card:hover {
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.1);
+            border-color: #6ee7b7;
+        }
+
+        .observation-pair-card {
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
         .observation-hazard-card {
-            background: #fffaf5;
-            border: 1px solid #fed7aa;
+            background: linear-gradient(135deg, #fffaf5 0%, #ffffff 50%, #fff7ed 100%);
+            border: 2px solid #fed7aa;
+        }
+        .observation-hazard-card:hover {
+            box-shadow: 0 6px 16px rgba(234, 88, 12, 0.1);
+            border-color: #fdba74;
         }
         .observation-hazard-card:focus-within {
-            border-color: #f97316;
-            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+            border-color: #ea580c;
+            box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
         }
         .observation-corrective-card {
-            background: #f6fef9;
-            border: 1px solid #bbf7d0;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #f4fdf7 100%);
+            border: 2px solid #a7f3d0;
+        }
+        .observation-corrective-card:hover {
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.1);
+            border-color: #6ee7b7;
         }
         .observation-corrective-card:focus-within {
-            border-color: #10b981;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+            border-color: #059669;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        }
+
+        .risk-level-container-card {
+            margin-top: 14px;
+            background: linear-gradient(135deg, #fef2f2 0%, #ffffff 50%, #fff7ed 100%);
+            border: 2px solid #fecaca;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.05);
+            transition: all 0.2s ease;
+        }
+        .risk-level-container-card:hover {
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.1);
+            border-color: #fca5a5;
+        }
+
+        /* كرت وتنسيق تاريخ التنفيذ المتوقع الجمالي المهني */
+        .target-date-card {
+            margin-top: 14px;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #f0fdf9 100%);
+            border: 2px solid #a7f3d0;
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.07);
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .target-date-card:hover {
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.12);
+            border-color: #6ee7b7;
         }
 
         .date-preset-pills {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 6px;
-            flex-wrap: wrap;
-            margin-bottom: 6px;
+            margin-bottom: 10px;
+        }
+        @media (max-width: 480px) {
+            .date-preset-pills {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
         .date-preset-btn {
-            background: #f1f5f9;
-            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
             color: #334155;
-            font-size: 0.72rem;
-            font-weight: 600;
-            border-radius: 6px;
-            padding: 4px 10px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .date-preset-btn:hover, .date-preset-btn.active {
-            background: #e0f2fe;
-            border-color: #0284c7;
-            color: #0369a1;
-        }
-    
-    
-        /* تحسينات متقدمة للملاحظات اليومية */
-        .btn-qr-scan {
-            background: #f8fafc;
-            border: 1px solid #cbd5e1;
-            color: #0369a1;
-            font-size: 0.72rem;
+            font-size: 0.76rem;
             font-weight: 700;
             border-radius: 8px;
-            padding: 4px 10px;
+            padding: 7px 6px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            user-select: none;
+        }
+        .date-preset-btn:hover {
+            transform: translateY(-1px);
+            border-color: #10b981;
+            background: #f0fdf4;
+            color: #065f46;
+        }
+        .date-preset-btn.active {
+            background: linear-gradient(135deg, #059669, #047857);
+            border-color: #047857;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(5, 150, 105, 0.35);
+            transform: scale(1.02);
+        }
+        .date-preset-btn[data-preset="today"]:hover, .date-preset-btn[data-preset="today"].active {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            border-color: #b91c1c;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+        }
+        .date-preset-btn[data-preset="24h"]:hover, .date-preset-btn[data-preset="24h"].active {
+            background: linear-gradient(135deg, #d97706, #b45309);
+            border-color: #b45309;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(217, 119, 6, 0.35);
+        }
+        .date-preset-btn[data-preset="week"]:hover, .date-preset-btn[data-preset="week"].active {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border-color: #1d4ed8;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+        }
+        .date-preset-btn[data-preset="month"]:hover, .date-preset-btn[data-preset="month"].active {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            border-color: #6d28d9;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
+        }
+
+        /* كرت وتنسيق توقيت الرصد والوردية الجمالي المهني */
+        .timing-shift-card {
+            margin-top: 14px;
+            background: linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f0fdfa 100%);
+            border: 2px solid #bfdbfe;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.06);
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .timing-shift-card:hover {
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.12);
+            border-color: #93c5fd;
+        }
+
+        /* كرت وتنسيق اختيار المصنع والمكان الميداني الجمالي المهني */
+        .location-selector-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f0f7ff 100%);
+            border: 2px solid #bfdbfe;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.05);
+            margin-bottom: 0;
+            transition: all 0.2s ease;
+        }
+        .location-selector-card:hover {
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.1);
+            border-color: #93c5fd;
+        }
+
+        /* كرت وتنسيق التصنيف الفرعي المحدد الجمالي المهني */
+        .subcategory-card {
+            margin-top: 14px;
+            background: linear-gradient(135deg, #fffaf5 0%, #ffffff 50%, #fff7ed 100%);
+            border: 2px solid #fdba74;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.06);
+            transition: all 0.2s ease;
+        }
+        .subcategory-card:hover {
+            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.12);
+            border-color: #fb923c;
+        }
+    
+        /* تحسينات متقدمة للملاحظات اليومية - أزرار أيقونات QR و GPS */
+        .btn-qr-scan {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border: none;
+            color: #ffffff;
+            font-size: 0.92rem;
+            font-weight: 800;
+            border-radius: 10px;
+            width: 34px;
+            height: 34px;
+            padding: 0;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
             transition: all 0.2s ease;
         }
         .btn-qr-scan:hover {
-            background: #e0f2fe;
-            border-color: #0284c7;
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-1px) scale(1.05);
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+        }
+
+        .gps-status-pill {
+            background: #eff6ff;
+            border: 1.5px solid #bfdbfe;
+            color: #1d4ed8;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
+            position: relative;
+        }
+        .gps-status-pill:hover {
+            background: #dbeafe;
+            border-color: #93c5fd;
+            transform: translateY(-1px) scale(1.05);
+        }
+        .gps-status-pill.gps-active {
+            background: #dcfce7 !important;
+            border-color: #86efac !important;
+            color: #15803d !important;
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3) !important;
+            animation: gpsPulse 2.5s infinite;
+        }
+        @keyframes gpsPulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+            70% { box-shadow: 0 0 0 7px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        /* كرت وتنسيق قسم رفع الصور الميدانية الجمالي المهني */
+        .photo-upload-card {
+            background: linear-gradient(135deg, #fdf4ff 0%, #ffffff 50%, #f5f3ff 100%);
+            border: 2px solid #e9d5ff;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 4px 14px rgba(124, 58, 237, 0.06);
+            margin-bottom: 14px;
+            transition: all 0.2s ease;
+        }
+        .photo-upload-card:hover {
+            box-shadow: 0 6px 18px rgba(124, 58, 237, 0.12);
+            border-color: #d8b4fe;
+        }
+
+        .photo-upload-zone {
+            padding: 18px 14px;
+            text-align: center;
+            border: 2px dashed #c084fc;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #faf5ff 0%, #ffffff 50%, #fdf4ff 100%);
+            transition: all 0.2s ease;
+        }
+        .photo-upload-zone:hover {
+            border-color: #a855f7;
+            background: #faf5ff;
         }
 
         .photo-markup-btn {
@@ -1267,25 +1769,51 @@
             background: #78350f;
         }
 
-        /* خيار تذكر بيانات المبلّغ */
+        /* كرت وتنسيق صاحب الملاحظة / مسؤول السلامة وتذكر البيانات الجمالي */
+        .reporter-profile-card {
+            background: linear-gradient(135deg, #f8faff 0%, #ffffff 50%, #faf5ff 100%);
+            border: 2px solid #c4b5fd;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 4px 14px rgba(124, 58, 237, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 14px;
+            transition: all 0.2s ease;
+        }
+        .reporter-profile-card:hover {
+            box-shadow: 0 6px 18px rgba(124, 58, 237, 0.12);
+            border-color: #a78bfa;
+        }
+
+        /* خيار تذكر بيانات المبلّغ المنمق الجمالي */
         .form-check-profile {
             margin-top: 6px;
-            padding: 8px 12px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 0.78rem;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
+            border: 1.5px solid #ddd6fe;
+            border-radius: 10px;
+            font-size: 0.84rem;
             font-weight: 700;
-            color: #475569;
+            color: #5b21b6;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(124, 58, 237, 0.05);
+            user-select: none;
+        }
+        .form-check-profile:hover {
+            background: #ede9fe;
+            border-color: #c4b5fd;
+            transform: translateY(-1px);
         }
         .form-check-profile input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: #2563eb;
+            width: 18px;
+            height: 18px;
+            accent-color: #7c3aed;
             cursor: pointer;
         }
 
@@ -1309,6 +1837,237 @@
             background: #334155;
             transform: translateY(-1px);
         }
+
+        /* أزرار الإجراءات السريعة الفورية بالألوان المميزة */
+        .quick-action-pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .btn-quick-pill {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+        .btn-quick-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 1. تم التصحيح الفوري - أخضر */
+        .btn-quick-pill.pill-green {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border: 1.5px solid #86efac;
+            color: #166534;
+        }
+        .btn-quick-pill.pill-green:hover {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            border-color: #15803d;
+            color: #ffffff;
+        }
+
+        /* 2. إيقاف العمل - أحمر */
+        .btn-quick-pill.pill-red {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            border: 1.5px solid #fca5a5;
+            color: #991b1b;
+        }
+        .btn-quick-pill.pill-red:hover {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            border-color: #b91c1c;
+            color: #ffffff;
+        }
+
+        /* 3. توجيه وتدريب - أصفر */
+        .btn-quick-pill.pill-amber {
+            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+            border: 1.5px solid #fde68a;
+            color: #92400e;
+        }
+        .btn-quick-pill.pill-amber:hover {
+            background: linear-gradient(135deg, #d97706, #b45309);
+            border-color: #b45309;
+            color: #ffffff;
+        }
+
+        /* كروت حالة الملاحظة المنمقة بألوان المعايير القياسية */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 6px;
+        }
+        .status-card {
+            background: #ffffff;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px 6px;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #475569;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        .status-card i {
+            font-size: 1.2rem;
+            transition: all 0.2s ease;
+        }
+        .status-card:hover {
+            transform: translateY(-1px);
+        }
+
+        /* 🔴 مفتوحة (Open) - أحمر */
+        .status-card[data-status="Open"] {
+            border-color: #fecaca;
+            background: #fff5f5;
+            color: #991b1b;
+        }
+        .status-card[data-status="Open"] i {
+            color: #dc2626;
+        }
+        .status-card.selected[data-status="Open"] {
+            border-color: #dc2626;
+            background: #fee2e2;
+            color: #7f1d1d;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.45);
+            transform: scale(1.02);
+        }
+        .status-card.selected[data-status="Open"] i {
+            color: #b91c1c;
+        }
+
+        /* 🟡 قيد التنفيذ (In Progress) - أصفر / كهرماني */
+        .status-card[data-status="In progress"] {
+            border-color: #fde68a;
+            background: #fffdf0;
+            color: #92400e;
+        }
+        .status-card[data-status="In progress"] i {
+            color: #d97706;
+        }
+        .status-card.selected[data-status="In progress"] {
+            border-color: #d97706;
+            background: #fef3c7;
+            color: #78350f;
+            box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.45);
+            transform: scale(1.02);
+        }
+        .status-card.selected[data-status="In progress"] i {
+            color: #b45309;
+        }
+
+        /* 🟢 مغلقة (Closed) - أخضر */
+        .status-card[data-status="Closed"] {
+            border-color: #bbf7d0;
+            background: #f4fdf7;
+            color: #166534;
+        }
+        .status-card[data-status="Closed"] i {
+            color: #16a34a;
+        }
+        .status-card.selected[data-status="Closed"] {
+            border-color: #16a34a;
+            background: #dcfce7;
+            color: #14532d;
+            box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.45);
+            transform: scale(1.02);
+        }
+        .status-card.selected[data-status="Closed"] i {
+            color: #15803d;
+        }
+
+        /* تحسينات الاستجابة الفائقة للشاشات الصغيرة والهواتف الذكية */
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px 8px;
+            }
+            .form-section {
+                padding: 14px 12px;
+                border-radius: 14px;
+                margin-bottom: 12px;
+            }
+            .section-header {
+                margin-bottom: 8px;
+            }
+            .section-title {
+                font-size: 0.95rem;
+            }
+            .section-desc {
+                font-size: 0.76rem;
+                margin-bottom: 10px;
+            }
+            .location-selector-card,
+            .timing-shift-card,
+            .subcategory-card,
+            .dept-selector-card,
+            .observation-pair-card,
+            .risk-level-container-card,
+            .target-date-card,
+            .photo-upload-card,
+            .reporter-profile-card {
+                padding: 12px 10px;
+                border-radius: 12px;
+            }
+            .types-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            .type-card {
+                padding: 10px 6px;
+            }
+            .type-card .icon {
+                font-size: 1.3rem;
+                margin-bottom: 4px;
+            }
+            .type-card .title {
+                font-size: 0.8rem;
+            }
+            .risk-chips {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 5px;
+            }
+            .risk-chip {
+                padding: 8px 2px;
+                font-size: 0.72rem;
+            }
+            .risk-chip i {
+                font-size: 0.95rem;
+            }
+            .status-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 5px;
+            }
+            .status-card {
+                padding: 8px 4px;
+                font-size: 0.72rem;
+            }
+            .quick-action-pills {
+                gap: 6px;
+            }
+            .btn-quick-pill {
+                padding: 5px 8px;
+                font-size: 0.72rem;
+            }
+            .btn-submit {
+                font-size: 1rem;
+                padding: 13px 18px;
+            }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" defer></script>
 </head>
@@ -1320,39 +2079,42 @@
     </div>
 
     <div class="container">
-        <!-- ترويسة ISO المعتمدة ثلاثية الأعمدة للشركات -->
+        <!-- ترويسة ISO المعتمدة ثلاثية الأعمدة للشركات بهوية جمالية فائقة -->
         <div class="iso-header-table">
             <!-- العمود الأيمن: الشعار واسم الإدارة والشركة -->
             <div class="iso-col-brand">
                 <div class="iso-logo-wrap">
                     <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
                 </div>
-                <div class="iso-dept-name">إدارة السلامة والصحة المهنية والبيئة</div>
+                <div class="iso-dept-name">إدارة السلامة والصحة المهنية</div>
             </div>
 
             <!-- العمود الأوسط: عنوان النموذج المعتمد -->
             <div class="iso-col-title">
                 <h1 class="iso-doc-title">نموذج تسجيل الملاحظات اليومية</h1>
-                <div class="iso-doc-subtitle">Daily HSE Observation & Hazard Record</div>
+                <div class="iso-doc-subtitle">
+                    <i class="fas fa-clipboard-check text-blue-600"></i>
+                    <span>Daily HSE Observation & Hazard Record</span>
+                </div>
             </div>
 
             <!-- العمود الأيسر: بيانات ضبط وتوثيق المستند (Document Control) -->
             <div class="iso-col-meta">
                 <div class="iso-meta-row">
                     <span class="iso-meta-key">كود الوثيقة:</span>
-                    <span class="iso-meta-val">DOC-HSE-OBS-01</span>
+                    <span class="iso-meta-val val-doc">DOC-HSE-OBS-01</span>
                 </div>
                 <div class="iso-meta-row">
                     <span class="iso-meta-key">رقم الإصدار:</span>
-                    <span class="iso-meta-val">Rev. 02</span>
+                    <span class="iso-meta-val val-rev">Rev. 02</span>
                 </div>
                 <div class="iso-meta-row">
                     <span class="iso-meta-key">تاريخ الاعتماد:</span>
-                    <span class="iso-meta-val">2026-08</span>
+                    <span class="iso-meta-val val-date">2026-08</span>
                 </div>
                 <div class="iso-meta-row">
                     <span class="iso-meta-key">درجة السرية:</span>
-                    <span class="iso-meta-val" style="color: #047857;">عام داخلي</span>
+                    <span class="iso-meta-val val-sec">عام داخلي</span>
                 </div>
             </div>
         </div>
@@ -1412,59 +2174,126 @@
             <!-- Honeypot ضد السبام -->
             <input type="text" name="_hp_field" id="hpField" style="display:none;" tabindex="-1" autocomplete="off">
 
-            <!-- 1. الموقع والمكان داخل المصنع -->
-            <div class="form-section">
-                <div class="section-header" style="justify-content: space-between;">
+            <!-- 1. الموقع والمكان وتوقيت الملاحظة -->
+            <div class="form-section section-theme-1">
+                <div class="section-header">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span class="section-badge">1</span>
-                        <span class="section-title">الموقع والمكان داخل المصنع</span>
+                        <span class="section-title">الموقع وتوقيت الملاحظة</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <button type="button" class="btn-qr-scan" onclick="openQrScannerModal()" title="مسح QR الموقع">
-                            <i class="fas fa-qrcode"></i> QR
+                </div>
+
+                <!-- سطر الوصف المنمق مع أزرار الاستجابة السريعة والموقع -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: nowrap;">
+                    <p class="section-desc" style="margin-bottom: 0; line-height: 1.4; flex: 1;">حدد المصنع والمكان وتوقيت الرصد والوردية بدقة.</p>
+                    <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                        <button type="button" class="btn-qr-scan" onclick="openQrScannerModal()" title="مسح رمز QR الموقع">
+                            <i class="fas fa-qrcode"></i>
                         </button>
-                        <span id="gpsStatusBadge" title="الموقع الجغرافي" style="font-size: 1rem; color: #64748b; font-weight: 700; display: inline-flex; align-items: center; cursor: default;">
+                        <span id="gpsStatusBadge" class="gps-status-pill" onclick="triggerManualGpsCapture()" title="تثبيت وتحديث إحداثيات الموقع الحالي (GPS)">
                             <i class="fas fa-location-dot"></i>
                         </span>
                     </div>
                 </div>
-                <p class="section-desc">اختر المصنع / الموقع ثم المكان المرتبط به من قاعدة بيانات النظام.</p>
 
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="form-label" for="siteSelect">
-                            <i class="fas fa-industry text-blue-600"></i>
-                            اسم المصنع / الموقع <span class="required">*</span>
+                <!-- كرت اختيار المصنع والمكان الميداني بتصميم هندسي منمق -->
+                <div class="location-selector-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" style="font-weight: 800; color: #1e3a8a; font-size: 0.92rem; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-map-location-dot text-blue-600" style="font-size: 1.1rem;"></i>
+                            <span>تحديد المصنع والمكان الميداني</span>
+                            <span class="required">*</span>
                         </label>
-                        <select id="siteSelect" class="form-control" required onchange="handleSiteChange(this.value)">
-                            <option value="">— اختر المصنع / الموقع —</option>
-                        </select>
+                        <span style="font-size: 0.72rem; color: #1d4ed8; font-weight: 800; background: #dbeafe; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-building ml-1"></i>قاعدة المواقع المعتمدة
+                        </span>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="placeSelect">
-                            <i class="fas fa-map-pin text-blue-600"></i>
-                            الموقع الفرعي / المكان <span class="required">*</span>
-                        </label>
-                        <select id="placeSelect" class="form-control" required onchange="handlePlaceChange(this.value)" disabled>
-                            <option value="">— اختر المصنع أولاً —</option>
-                        </select>
+                    <div class="grid-2" style="margin-bottom: 0;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" for="siteSelect" style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; color: #334155; display: flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-industry text-blue-500"></i>
+                                <span>اسم المصنع / الموقع</span>
+                                <span class="required">*</span>
+                            </label>
+                            <select id="siteSelect" class="form-control" style="background: #ffffff; border: 1.5px solid #bfdbfe; font-weight: 700; color: #0f172a; font-size: 0.88rem; padding: 8px 10px; border-radius: 8px;" required onchange="handleSiteChange(this.value)">
+                                <option value="">— اختر المصنع / الموقع —</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
+                                <label class="form-label" for="placeSelect" style="font-size: 0.82rem; font-weight: 700; margin-bottom: 0; color: #334155; display: flex; align-items: center; gap: 4px;">
+                                    <i class="fas fa-map-pin text-rose-500"></i>
+                                    <span>الموقع الفرعي / المكان</span>
+                                    <span class="required">*</span>
+                                </label>
+                                <span id="placeCountBadge" style="font-size: 0.7rem; color: #64748b; font-weight: 700;"></span>
+                            </div>
+
+                            <!-- حقل البحث والتصفية السريعة في الأماكن -->
+                            <div style="position: relative; margin-bottom: 6px;">
+                                <input type="text" id="placeSearchInput" class="form-control" style="background: #f8fafc; border: 1.5px solid #cbd5e1; font-size: 0.82rem; font-weight: 600; padding: 6px 12px 6px 26px; border-radius: 8px; transition: all 0.2s ease;" placeholder="🔍 بحث سريع في الأماكن المتاحة..." oninput="filterPlaces(this.value)" disabled>
+                                <button type="button" id="clearPlaceSearchBtn" onclick="clearPlaceSearch()" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); border: none; background: none; color: #94a3b8; font-size: 0.85rem; cursor: pointer; display: none; padding: 0 4px;" title="مسح البحث">✕</button>
+                            </div>
+
+                            <select id="placeSelect" class="form-control" style="background: #ffffff; border: 1.5px solid #bfdbfe; font-weight: 700; color: #0f172a; font-size: 0.88rem; padding: 8px 10px; border-radius: 8px;" required onchange="handlePlaceChange(this.value)" disabled>
+                                <option value="">— اختر المصنع أولاً —</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- إدخال يدوي للمكان -->
+                    <div id="customPlaceGroup" class="form-group" style="display: none; margin-top: 10px; margin-bottom: 0;">
+                        <label class="form-label" for="customPlaceInput" style="font-size: 0.8rem; font-weight: 700; color: #475569;">مكان فرعي آخر (إدخال يدوي):</label>
+                        <input type="text" id="customPlaceInput" class="form-control" style="background: #ffffff; border: 1.5px solid #bfdbfe;" placeholder="اكتب المكان أو القسم بدقة...">
                     </div>
                 </div>
 
+                <!-- كرت توقيت الملاحظة والوردية بطابع جمالي مهني منمق أسفل المصنع -->
+                <div class="timing-shift-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" style="font-weight: 800; color: #1e3a8a; font-size: 0.92rem; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-business-time text-blue-600" style="font-size: 1.1rem;"></i>
+                            <span>توقيت الرصد الميداني والوردية</span>
+                            <span class="required">*</span>
+                        </label>
+                        <span style="font-size: 0.72rem; color: #1d4ed8; font-weight: 800; background: #dbeafe; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-clock-rotate-left text-blue-600"></i>تحديد الوردية تلقائياً حسب الوقت
+                        </span>
+                    </div>
 
-                <!-- إدخال يدوي للمكان -->
-                <div id="customPlaceGroup" class="form-group" style="display: none;">
-                    <label class="form-label" for="customPlaceInput">مكان فرعي آخر (إدخال يدوي):</label>
-                    <input type="text" id="customPlaceInput" class="form-control" placeholder="اكتب المكان أو القسم بدقة...">
+                    <div class="grid-2" style="margin-bottom: 0;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" for="dateInput" style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; color: #334155; display: flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-calendar-days text-blue-500"></i>
+                                <span>تاريخ ووقت الملاحظة</span>
+                                <span class="required">*</span>
+                            </label>
+                            <input type="datetime-local" id="dateInput" class="form-control" style="background: #ffffff; border: 1.5px solid #bfdbfe; font-weight: 700; color: #0f172a; font-size: 0.88rem; padding: 8px 10px; border-radius: 8px;" required onchange="handleDateChange(this.value)">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" for="shiftSelect" style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; color: #334155; display: flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-user-clock text-blue-500"></i>
+                                <span>وردية العمل (Shift)</span>
+                                <span class="required">*</span>
+                            </label>
+                            <select id="shiftSelect" class="form-control" style="background: #ffffff; border: 1.5px solid #bfdbfe; font-weight: 700; color: #1e3a8a; font-size: 0.88rem; padding: 8px 10px; border-radius: 8px;">
+                                <option value="الأولى">الأولى (07:30 ص – 03:30 م)</option>
+                                <option value="الثانية">الثانية (03:30 م – 10:30 م)</option>
+                                <option value="الثالثة">الثالثة (10:30 م – 07:30 ص)</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- 2. نوع الملاحظة والخطورة -->
-            <div class="form-section">
+            <!-- 2. نوع وتصنيف الملاحظة -->
+            <div class="form-section section-theme-2">
                 <div class="section-header">
                     <span class="section-badge">2</span>
-                    <span class="section-title">تصنيف الملاحظة ومستوى الخطورة</span>
+                    <span class="section-title">نوع وتصنيف الملاحظة ومصدر الخطر</span>
                 </div>
 
                 <!-- كروت نوع الملاحظة -->
@@ -1501,91 +2330,75 @@
                     </div>
                 </div>
 
-                <!-- التصنيف الفرعي التفاعلي المباشر -->
-                <div class="form-group" id="subCategoryGroup" style="margin-top: 14px;">
-                    <label class="form-label" for="subCategorySelect">
-                        <i class="fas fa-layer-group text-amber-600"></i>
-                        التصنيف الفرعي المحدد <span class="required">*</span>
-                    </label>
-                    <select id="subCategorySelect" class="form-control" required onchange="handleSubCategoryChange(this.value)">
-                        <!-- سيتم تعبئته ديناميكياً بناءً على نوع الملاحظة -->
-                    </select>
-                </div>
-
-                <div class="form-group" id="customSubCategoryGroup" style="display: none; margin-top: 8px;">
-                    <label class="form-label" for="customSubCategoryInput">حدد التصنيف الفرعي (إدخال يدوي):</label>
-                    <input type="text" id="customSubCategoryInput" class="form-control" placeholder="اكتب التصنيف الفرعي بدقة...">
-                </div>
-
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="form-label" for="dateInput">
-                            <i class="fas fa-calendar-alt text-slate-600"></i>
-                            تاريخ ووقت الملاحظة <span class="required">*</span>
+                <!-- التصنيف الفرعي التفاعلي المباشر بطابع جمالي مهني منمق -->
+                <div class="subcategory-card" id="subCategoryGroup">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" for="subCategorySelect" style="font-weight: 800; color: #9a3412; font-size: 0.92rem; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-layer-group text-amber-600" style="font-size: 1.1rem;"></i>
+                            <span>التصنيف الفرعي المحدد (نوع الخطر)</span>
+                            <span class="required">*</span>
                         </label>
-                        <input type="datetime-local" id="dateInput" class="form-control" required onchange="handleDateChange(this.value)">
+                        <span id="subCategoryTypeBadge" style="font-size: 0.72rem; color: #c2410c; font-weight: 800; background: #ffedd5; border: 1px solid #fed7aa; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-bolt text-amber-600"></i>محدد حسب نوع الملاحظة
+                        </span>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="shiftSelect">
-                            <i class="fas fa-clock text-slate-600"></i>
-                            الوردية
-                        </label>
-                        <select id="shiftSelect" class="form-control">
-                            <option value="الأولى">الأولى (First Shift)</option>
-                            <option value="الثانية">الثانية (Second Shift)</option>
-                            <option value="الثالثة">الثالثة (Third Shift)</option>
+                    <div style="position: relative;">
+                        <select id="subCategorySelect" class="form-control" style="background: #ffffff; border: 1.5px solid #fdba74; font-weight: 700; color: #7c2d12; font-size: 0.92rem; padding: 10px 12px; border-radius: 8px;" required onchange="handleSubCategoryChange(this.value)">
+                            <!-- سيتم تعبئته ديناميكياً بناءً على نوع الملاحظة -->
                         </select>
                     </div>
-                </div>
+                    <span style="font-size: 0.72rem; color: #9a3412; margin-top: 5px; display: block; font-weight: 600;">
+                        <i class="fas fa-wand-magic-sparkles ml-1"></i>اختيار التصنيف يملأ التفاصيل والإجراء ومعدل الخطورة تلقائياً
+                    </span>
 
-                <!-- مستوى الخطورة -->
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-gauge-high text-slate-600"></i>
-                        معدل الخطورة <span class="required">*</span>
-                    </label>
-                    <div class="risk-chips">
-                        <div class="risk-chip" data-risk="منخفض" onclick="selectRisk(this)">منخفض</div>
-                        <div class="risk-chip selected" data-risk="متوسط" onclick="selectRisk(this)">متوسط</div>
-                        <div class="risk-chip" data-risk="عالي" onclick="selectRisk(this)">عالي</div>
-                        <div class="risk-chip" data-risk="حرج" onclick="selectRisk(this)">حرج</div>
+                    <div class="form-group" id="customSubCategoryGroup" style="display: none; margin-top: 8px; margin-bottom: 0;">
+                        <label class="form-label" for="customSubCategoryInput" style="font-size: 0.8rem; font-weight: 700; color: #9a3412;">حدد التصنيف الفرعي (إدخال يدوي):</label>
+                        <input type="text" id="customSubCategoryInput" class="form-control" style="background: #ffffff; border: 1.5px solid #fdba74;" placeholder="اكتب التصنيف الفرعي بدقة...">
                     </div>
                 </div>
             </div>
 
             <!-- 3. تفاصيل الملاحظة والإدارة المسؤولة والتاريخ المتوقع -->
-            <div class="form-section">
+            <div class="form-section section-theme-3">
                 <div class="section-header">
                     <span class="section-badge">3</span>
                     <span class="section-title">تفاصيل الملاحظة والإجراء والتنفيذ</span>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="responsibleDeptSelect">
-                        <i class="fas fa-building-user text-blue-600"></i>
-                        المسؤول عن التنفيذ / الإدارة المعنية <span class="required">*</span>
-                    </label>
-                    <select id="responsibleDeptSelect" class="form-control" required >
+                <!-- كرت اختيار الإدارة المسؤولة عن التنفيذ -->
+                <div class="dept-selector-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" for="responsibleDeptSelect" style="font-weight: 800; color: #065f46; font-size: 0.92rem; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-building-user text-emerald-600" style="font-size: 1.1rem;"></i>
+                            <span>المسؤول عن التنفيذ / الإدارة المعنية</span>
+                            <span class="required">*</span>
+                        </label>
+                        <span style="font-size: 0.72rem; color: #047857; font-weight: 800; background: #d1fae5; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-users-gear text-emerald-600"></i>جهة الاختصاص والمتابعة
+                        </span>
+                    </div>
+
+                    <select id="responsibleDeptSelect" class="form-control" style="background: #ffffff; border: 1.5px solid #a7f3d0; font-weight: 700; color: #065f46; font-size: 0.92rem; padding: 10px 12px; border-radius: 8px;" required>
                         <option value="">— جاري تحميل الإدارات من النظام... —</option>
                     </select>
                 </div>
 
-
-                <!-- 1. كرت تفاصيل الملاحظة / الخطر (التمييز البصري البرتقالي) -->
+                <!-- 1. كرت تفاصيل الملاحظة / الخطر (التمييز البصري البرتقالي الدافيء) -->
                 <div class="observation-pair-card observation-hazard-card" style="position: relative;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                        <label class="form-label" for="detailsInput" style="margin-bottom: 0; color: #c2410c; font-weight: 700;">
-                            <i class="fas fa-triangle-exclamation text-amber-600"></i>
-                            تفاصيل الملاحظة / الخطر المرصود <span class="required">*</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" for="detailsInput" style="margin-bottom: 0; color: #9a3412; font-weight: 800; font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-triangle-exclamation text-amber-600" style="font-size: 1.1rem;"></i>
+                            <span>تفاصيل الملاحظة / الخطر المرصود</span>
+                            <span class="required">*</span>
                         </label>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <button type="button" class="btn-voice-dictation" onclick="toggleVoiceDictation('detailsInput', this)" title="إملاء صوتي باللغة العربية">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <button type="button" class="btn-voice-dictation" onclick="toggleVoiceDictation('detailsInput', this)" title="إملاء صوتي باللغة العربية" style="color: #9a3412; border-color: #fed7aa; background: #fff7ed; font-weight: 700;">
                                 <i class="fas fa-microphone"></i>
-                                <span>تحدث للوصف</span>
+                                <span>إملاء صوتي</span>
                             </button>
-                            <span style="font-size: 0.72rem; color: #ea580c; font-weight: 700;">
-                                <i class="fas fa-wand-magic-sparkles ml-1"></i>مقترحات سريعة
+                            <span style="font-size: 0.72rem; color: #c2410c; font-weight: 800; background: #ffedd5; border: 1px solid #fed7aa; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-wand-magic-sparkles text-amber-600"></i>مقترحات سريعة
                             </span>
                         </div>
                     </div>
@@ -1597,35 +2410,49 @@
                         </div>
                     </div>
 
-                    <textarea id="detailsInput" class="form-control" style="border-color: #fed7aa; background: #fff;" placeholder="أدخل تفاصيل ما شاهدته بدقة أو اختر من المقترحات أعلاه..." required autocomplete="off" oninput="handleDetailsInputQuality(this.value)"></textarea>
+                    <textarea id="detailsInput" class="form-control" style="border: 1.5px solid #fed7aa; background: #ffffff; font-weight: 600; color: #1e293b; padding: 10px 12px; border-radius: 8px;" placeholder="أدخل تفاصيل ما شاهدته بدقة أو اختر من المقترحات أعلاه..." required autocomplete="off" oninput="handleDetailsInputQuality(this.value)"></textarea>
                     <!-- قائمة الإكمال التلقائي عند الكتابة -->
                     <div id="detailsAutocompleteList" class="autocomplete-dropdown"></div>
 
                     <!-- مقياس جودة الوصف ومساعد الصياغة -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 0.73rem;">
-                        <div id="descQualityBadge" style="display: flex; align-items: center; gap: 5px; color: #64748b; font-weight: 600;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 0.73rem;">
+                        <div id="descQualityBadge" style="display: flex; align-items: center; gap: 5px; color: #64748b; font-weight: 700;">
                             <i class="fas fa-circle-info" id="descQualityIcon"></i> <span id="descQualityText">يرجى توضيح تفاصيل الملاحظة</span>
                         </div>
-                        <div id="descCharCounter" style="color: #64748b; font-weight: 700; background: #ffedd5; padding: 2px 6px; border-radius: 4px;">0 حرف</div>
+                        <div id="descCharCounter" style="color: #9a3412; font-weight: 800; background: #ffedd5; padding: 2px 8px; border-radius: 12px; border: 1px solid #fed7aa;">0 حرف</div>
                     </div>
                 </div>
 
-                <!-- 2. كرت الإجراء التصحيحي الفوري (التمييز البصري الأخضر) -->
+                <!-- 2. كرت الإجراء التصحيحي الفوري (التمييز البصري الأخضر الزمردي) -->
                 <div class="observation-pair-card observation-corrective-card" style="position: relative;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                        <label class="form-label" for="correctiveInput" style="margin-bottom: 0; color: #15803d; font-weight: 700;">
-                            <i class="fas fa-shield-halved text-emerald-600"></i>
-                            الإجراء التصحيحي / الوقائي الفوري
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" for="correctiveInput" style="margin-bottom: 0; color: #065f46; font-weight: 800; font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-shield-halved text-emerald-600" style="font-size: 1.1rem;"></i>
+                            <span>الإجراء التصحيحي / الوقائي الفوري</span>
                         </label>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <button type="button" class="btn-voice-dictation" onclick="toggleVoiceDictation('correctiveInput', this)" title="إملاء صوتي باللغة العربية">
-                                <i class="fas fa-microphone"></i>
-                                <span>تحدث للإجراء</span>
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <button type="button" class="btn-voice-dictation" onclick="autoSuggestCorrectiveAction()" title="اقتراح إجراء مناسب بناءً على تفاصيل الملاحظة" style="color: #ffffff; background: linear-gradient(135deg, #10b981, #059669); border: none; font-weight: 800; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);">
+                                <i class="fas fa-wand-magic-sparkles"></i>
+                                <span>اقتراح ذكي AI</span>
                             </button>
-                            <span style="font-size: 0.72rem; color: #16a34a; font-weight: 700;">
-                                <i class="fas fa-check-double ml-1"></i>مقترحات الإجراء
-                            </span>
+                            <button type="button" class="btn-voice-dictation" onclick="toggleVoiceDictation('correctiveInput', this)" title="إملاء صوتي باللغة العربية" style="color: #047857; border-color: #a7f3d0; background: #f0fdf4; font-weight: 700;">
+                                <i class="fas fa-microphone"></i>
+                                <span>إملاء صوتي</span>
+                            </button>
                         </div>
+                    </div>
+
+                    <!-- أزرار الإجراءات الفورية السريعة بنقرة واحدة بالألوان المميزة -->
+                    <div class="quick-action-pills">
+                        <button type="button" class="btn-quick-pill pill-green" onclick="applyQuickActionText('تم التصحيح الفوري وإزالة الخطر بالموقع والتأكد من أمان بيئة العمل ✅')">
+                            ⚡ تم التصحيح الفوري بالموقع
+                        </button>
+                        <button type="button" class="btn-quick-pill pill-red" onclick="applyQuickActionText('تم إيقاف العمل مؤقتاً وتأمين المكان واستدعاء قسم الصيانة والمسؤولين 🛑')">
+                            🛑 إيقاف العمل واستدعاء الصيانة
+                        </button>
+                        <button type="button" class="btn-quick-pill pill-amber" onclick="applyQuickActionText('تم توجيه وتدريب العامل على إجراءات العمل الآمنة والالتزام فوراً 🦺')">
+                            🦺 توجيه وتدريب العامل
+                        </button>
                     </div>
 
                     <!-- حاوية الوسوم السريعة للإجراء التصحيحي -->
@@ -1635,75 +2462,140 @@
                         </div>
                     </div>
 
-                    <textarea id="correctiveInput" class="form-control" style="min-height:70px; border-color: #bbf7d0; background: #fff;" placeholder="الإجراء الفوري المتخذ أو المقترح (أو اختر من المقترحات السريعة أعلاه)..." autocomplete="off"></textarea>
+                    <textarea id="correctiveInput" class="form-control" style="min-height:70px; border: 1.5px solid #a7f3d0; background: #ffffff; font-weight: 600; color: #1e293b; padding: 10px 12px; border-radius: 8px;" placeholder="الإجراء الفوري المتخذ أو المقترح (أو اختر من المقترحات السريعة أعلاه)..." autocomplete="off"></textarea>
                     <div id="correctiveAutocompleteList" class="autocomplete-dropdown"></div>
+                    <span style="font-size: 0.72rem; color: #047857; margin-top: 5px; display: block; font-weight: 600;">
+                        <i class="fas fa-circle-check ml-1"></i>وثّق الإجراء الفوري أو انقر على المقترحات الذكية أعلاه للتعبئة المباشرة
+                    </span>
                 </div>
 
-                <!-- حالة الملاحظة والتاريخ المتوقع للتنفيذ مع الاختصارات السريعة -->
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="form-label" for="statusSelect">
-                            <i class="fas fa-circle-notch text-blue-600"></i>
-                            حالة الملاحظة (Status) <span class="required">*</span>
+                <!-- معدل الخطورة منمق بالألوان وأيقونات التحذير -->
+                <div class="risk-level-container-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" style="font-weight: 800; color: #991b1b; font-size: 0.92rem; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-gauge-high text-red-600" style="font-size: 1.1rem;"></i>
+                            <span>معدل الخطورة (Risk Level)</span>
+                            <span class="required">*</span>
                         </label>
-                        <select id="statusSelect" class="form-control" required>
-                            <option value="Open" selected>Open (مفتوحة)</option>
-                            <option value="In progress">In progress (قيد التنفيذ)</option>
-                            <option value="Closed">Closed (مغلقة)</option>
-                        </select>
+                        <span style="font-size: 0.72rem; color: #dc2626; font-weight: 800; background: #fee2e2; border: 1px solid #fecaca; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-wand-magic-sparkles text-red-600"></i>تحديد ذكي حسب نوع الخطر
+                        </span>
                     </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="expectedDateInput" style="margin-bottom: 4px;">
-                            <i class="fas fa-calendar-check text-emerald-600"></i>
-                            التاريخ المتوقع للتنفيذ
-                        </label>
-
-                        <!-- اختصارات سريعة بنقرة واحدة لتاريخ التنفيذ المتوقع -->
-                        <div class="date-preset-pills">
-                            <button type="button" class="date-preset-btn" onclick="applyDatePreset('today')">⚡ فوري اليوم</button>
-                            <button type="button" class="date-preset-btn" onclick="applyDatePreset('24h')">⏱️ خلال 24 ساعة</button>
-                            <button type="button" class="date-preset-btn" onclick="applyDatePreset('week')">🗓️ خلال أسبوع</button>
-                            <button type="button" class="date-preset-btn" onclick="applyDatePreset('month')">🏁 نهاية الشهر</button>
+                    
+                    <div class="risk-chips">
+                        <div class="risk-chip" data-risk="منخفض" onclick="selectRisk(this)">
+                            <i class="fas fa-shield"></i>
+                            <span>🟢 منخفض</span>
                         </div>
-
-                        <input type="date" id="expectedDateInput" class="form-control">
-                        <span style="font-size: 0.72rem; color: #64748b; margin-top: 3px; display: block;">حدد بنقرة من الاختصارات أعلاه أو اختر من التقويم</span>
+                        <div class="risk-chip selected" data-risk="متوسط" onclick="selectRisk(this)">
+                            <i class="fas fa-triangle-exclamation"></i>
+                            <span>🟡 متوسط</span>
+                        </div>
+                        <div class="risk-chip" data-risk="عالي" onclick="selectRisk(this)">
+                            <i class="fas fa-fire"></i>
+                            <span>🔴 عالي</span>
+                        </div>
+                        <div class="risk-chip" data-risk="حرج" onclick="selectRisk(this)">
+                            <i class="fas fa-skull-crossbones"></i>
+                            <span>🛑 حرج</span>
+                        </div>
                     </div>
+                </div>
+
+                <!-- تاريخ التنفيذ المتوقع بطابع جمالي مهني منمق -->
+                <div class="target-date-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" for="expectedDateInput" style="margin-bottom: 0; font-weight: 800; color: #065f46; font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-calendar-check text-emerald-600" style="font-size: 1.1rem;"></i>
+                            <span>التاريخ المتوقع للتنفيذ (Target Date)</span>
+                        </label>
+                        <span style="font-size: 0.72rem; color: #047857; font-weight: 800; background: #d1fae5; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-bolt text-emerald-600"></i>يُحدد تلقائياً حسب شدة الخطر
+                        </span>
+                    </div>
+
+                    <!-- اختصارات سريعة جمالية بنقرة واحدة لتاريخ التنفيذ المتوقع -->
+                    <div class="date-preset-pills">
+                        <button type="button" class="date-preset-btn" data-preset="today" onclick="applyDatePreset('today')">⚡ فوري اليوم</button>
+                        <button type="button" class="date-preset-btn" data-preset="24h" onclick="applyDatePreset('24h')">⏱️ خلال 24 ساعة</button>
+                        <button type="button" class="date-preset-btn" data-preset="week" onclick="applyDatePreset('week')">🗓️ خلال أسبوع</button>
+                        <button type="button" class="date-preset-btn" data-preset="month" onclick="applyDatePreset('month')">🏁 نهاية الشهر</button>
+                    </div>
+
+                    <div style="position: relative;">
+                        <input type="date" id="expectedDateInput" class="form-control" style="background: #ffffff; border: 1.5px solid #a7f3d0; font-weight: 700; color: #0f172a; font-size: 0.92rem; padding: 10px 12px; border-radius: 8px;">
+                    </div>
+                    <span style="font-size: 0.72rem; color: #047857; margin-top: 5px; display: block; font-weight: 600;">
+                        <i class="fas fa-info-circle ml-1"></i>اختر بنقرة واحدة من الأزرار أعلاه أو حدد يدوياً من التقويم
+                    </span>
                 </div>
             </div>
 
-            <!-- 4. الصورة وصاحب الملاحظة / مسؤول السلامة -->
-            <div class="form-section">
+            <!-- 4. حالة الملاحظة والصور وصاحب الملاحظة -->
+            <div class="form-section section-theme-4">
                 <div class="section-header">
                     <span class="section-badge">4</span>
-                    <span class="section-title">الصورة وصاحب الملاحظة</span>
+                    <span class="section-title">حالة الملاحظة والصور الميدانية</span>
                 </div>
 
-                <!-- رفع الصور (متعدد حتى 3 صور مع تأشير ومعرض) -->
-                <div class="form-group">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <label class="form-label" style="margin-bottom: 0;">
-                            <i class="fas fa-camera text-blue-600"></i>
-                            الصور التوضيحية للملاحظة (حتى 3 صور) <span class="required">*</span>
+                <!-- حالة الملاحظة أعلى قسم الصور بشكل منفرد ومنمق -->
+                <div class="form-group" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label class="form-label" style="font-weight: 700; color: #1e293b; margin-bottom: 0;">
+                            <i class="fas fa-circle-notch text-blue-600"></i>
+                            حالة الملاحظة (Status) <span class="required">*</span>
                         </label>
                         <span style="font-size: 0.72rem; color: #2563eb; font-weight: 700;">
-                            <i class="fas fa-layer-group ml-1"></i>الخطر + الإجراء + إضافية
+                            <i class="fas fa-sliders ml-1"></i>اختر بنقرة واحدة
+                        </span>
+                    </div>
+                    
+                    <div class="status-grid" id="statusGrid">
+                        <div class="status-card selected" data-status="Open" onclick="selectStatusCard(this)">
+                            <i class="fas fa-lock-open"></i>
+                            <span>🔴 مفتوحة (Open)</span>
+                        </div>
+                        <div class="status-card" data-status="In progress" onclick="selectStatusCard(this)">
+                            <i class="fas fa-clock-rotate-left"></i>
+                            <span>🟡 قيد التنفيذ (In Progress)</span>
+                        </div>
+                        <div class="status-card" data-status="Closed" onclick="selectStatusCard(this)">
+                            <i class="fas fa-circle-check"></i>
+                            <span>🟢 مغلقة (Closed)</span>
+                        </div>
+                    </div>
+                    <select id="statusSelect" class="form-control" style="display: none;" required>
+                        <option value="Open" selected>Open (مفتوحة)</option>
+                        <option value="In progress">In progress (قيد التنفيذ)</option>
+                        <option value="Closed">Closed (مغلقة)</option>
+                    </select>
+                </div>
+
+                <!-- رفع الصور (متعدد حتى 3 صور مع تأشير ومعرض) بطابع جمالي مهني منمق -->
+                <div class="photo-upload-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" style="margin-bottom: 0; font-weight: 800; color: #581c87; font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-camera-retro text-purple-600" style="font-size: 1.1rem;"></i>
+                            <span>الصور التوضيحية للملاحظة (حتى 3 صور)</span>
+                            <span class="required">*</span>
+                        </label>
+                        <span style="font-size: 0.72rem; color: #7e22ce; font-weight: 800; background: #fae8ff; border: 1px solid #f0abfc; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-layer-group text-purple-600"></i>الخطر + الإجراء + إضافية
                         </span>
                     </div>
 
                     <!-- منطقة رفع وإضافة الصور -->
-                    <div id="photoUploadArea" class="photo-upload-area" style="padding: 16px 12px; text-align: center; border: 2px dashed #cbd5e1; border-radius: 12px; background: #f8fafc;">
-                        <i class="fas fa-cloud-arrow-up" style="font-size: 2rem; color: #2563eb; margin-bottom: 6px;"></i>
-                        <div style="font-weight: 800; font-size: 0.95rem; color: #1e293b;">إرفاق صور للملاحظة الميدانية <span style="color: #ef4444;">*</span></div>
-                        <div style="font-size: 0.78rem; color: #64748b; margin: 4px 0 14px;">التقط صورة بالكاميرا أو اختر من المعرض (يمكن إضافة حتى 3 صور مع تحديد موضع الخطر)</div>
+                    <div id="photoUploadArea" class="photo-upload-zone">
+                        <i class="fas fa-cloud-arrow-up" style="font-size: 2.2rem; color: #9333ea; margin-bottom: 6px; filter: drop-shadow(0 2px 4px rgba(147, 51, 234, 0.2));"></i>
+                        <div style="font-weight: 800; font-size: 0.95rem; color: #3b0764;">إرفاق صور للملاحظة الميدانية <span style="color: #ef4444;">*</span></div>
+                        <div style="font-size: 0.78rem; color: #6b21a8; margin: 4px 0 14px; font-weight: 600;">التقط صورة بالكاميرا أو اختر من المعرض مع إمكانية التحديد والرسم على الصورة</div>
                         <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; width: 100%; max-width: 400px; margin: 0 auto;">
-                            <button type="button" class="btn-action-photo" onclick="document.getElementById('photoInputCamera').click()" style="flex: 1; min-width: 145px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
+                            <button type="button" class="btn-action-photo" onclick="document.getElementById('photoInputCamera').click()" style="flex: 1; min-width: 145px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #ffffff; border: none; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);">
                                 <i class="fas fa-camera"></i>
                                 <span>التقاط بالكاميرا</span>
                             </button>
-                            <button type="button" class="btn-action-photo" onclick="document.getElementById('photoInputGallery').click()" style="flex: 1; min-width: 145px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; background: #ffffff; color: #1e293b; border: 1.5px solid #cbd5e1; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                                <i class="fas fa-images" style="color: #2563eb;"></i>
+                            <button type="button" class="btn-action-photo" onclick="document.getElementById('photoInputGallery').click()" style="flex: 1; min-width: 145px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px; background: linear-gradient(135deg, #ffffff, #faf5ff); color: #581c87; border: 1.5px solid #d8b4fe; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 2px 6px rgba(124, 58, 237, 0.08);">
+                                <i class="fas fa-images" style="color: #7c3aed;"></i>
                                 <span>فتح المعرض</span>
                             </button>
                         </div>
@@ -1719,7 +2611,7 @@
                     <div id="photosGalleryWrap" style="display: none;">
                         <div id="photosGalleryGrid" class="photos-gallery-grid"></div>
                         <div style="text-align: center; margin-top: 6px;">
-                            <button type="button" id="addMorePhotosBtn" class="btn-voice-dictation" onclick="document.getElementById('photoInputGallery').click()" style="color: #2563eb; border-color: #93c5fd; background: #eff6ff;">
+                            <button type="button" id="addMorePhotosBtn" class="btn-voice-dictation" onclick="document.getElementById('photoInputGallery').click()" style="color: #7c3aed; border-color: #c084fc; background: #faf5ff; font-weight: 800;">
                                 <i class="fas fa-plus"></i>
                                 <span>إضافة صورة أخرى (حتى 3)</span>
                             </button>
@@ -1727,28 +2619,41 @@
                     </div>
                 </div>
 
-                <!-- حقول صاحب الملاحظة / مسؤول السلامة الفعلي (إلزامي *) -->
-                <div id="reporterInfoFields" style="display: flex; flex-direction: column; gap: 10px;">
-                    <div class="form-group">
-                        <label class="form-label" for="ownerSelect">
-                            <i class="fas fa-user-shield text-blue-600"></i>
-                            اسم صاحب الملاحظة / مسؤول السلامة <span class="required">*</span>
+                <!-- كرت وتنسيق صاحب الملاحظة / مسؤول السلامة وتذكر البيانات بطابع جمالي مهني منمق -->
+                <div id="reporterInfoFields" class="reporter-profile-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" for="ownerSelect" style="font-weight: 800; color: #4c1d95; font-size: 0.92rem; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-user-shield text-purple-600" style="font-size: 1.1rem;"></i>
+                            <span>اسم صاحب الملاحظة / مسؤول السلامة</span>
+                            <span class="required">*</span>
                         </label>
-                        <select id="ownerSelect" class="form-control" onchange="handleOwnerChange(this.value)">
-                            <option value="">— اختر اسمك من قائمة النظام —</option>
+                        <span style="font-size: 0.72rem; color: #7c3aed; font-weight: 800; background: #f3e8ff; border: 1px solid #ddd6fe; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-id-badge text-purple-600"></i>التوثيق والاعتماد الميداني
+                        </span>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <select id="ownerSelect" class="form-control" style="background: #ffffff; border: 1.5px solid #c4b5fd; font-weight: 700; color: #1e1b4b; font-size: 0.92rem; padding: 10px 12px; border-radius: 8px;" onchange="handleOwnerChange(this.value)">
+                            <option value="">— اختر اسمك من قائمة النظام المعتمدة —</option>
                         </select>
                     </div>
 
                     <!-- إدخال يدوي للاسم إذا لم يكن في القائمة -->
-                    <div id="customOwnerGroup" class="form-group" style="display: none;">
-                        <label class="form-label" for="customOwnerInput">اسمك الكامل (إدخال يدوي) <span class="required">*</span>:</label>
-                        <input type="text" id="customOwnerInput" class="form-control" placeholder="اكتب اسمك كاملاً...">
+                    <div id="customOwnerGroup" class="form-group" style="display: none; margin-bottom: 0;">
+                        <label class="form-label" for="customOwnerInput" style="font-size: 0.8rem; font-weight: 700; color: #4c1d95;">اسمك الكامل (إدخال يدوي) <span class="required">*</span>:</label>
+                        <input type="text" id="customOwnerInput" class="form-control" style="background: #ffffff; border: 1.5px solid #c4b5fd;" placeholder="اكتب اسمك كاملاً بدقة...">
                     </div>
 
                     <!-- خيار تذكر بياناتي على هذا الجهاز -->
                     <label class="form-check-profile">
                         <input type="checkbox" id="rememberProfileCheckbox" onchange="toggleRememberProfile(this.checked)">
-                        <span><i class="fas fa-bookmark text-blue-600 ml-1"></i> تذكّر اسمي وبياناتي على هذا الجهاز لتسهيل التسجيل القادم</span>
+                        <span style="display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-bookmark text-purple-600"></i>
+                            <span>تذكّر اسمي وبياناتي على هذا الجهاز لتسهيل التسجيل القادم</span>
+                        </span>
+                        <span style="font-size: 0.7rem; color: #7c3aed; background: #ede9fe; padding: 2px 6px; border-radius: 6px; margin-right: auto; font-weight: 700;">
+                            ⚡ حفظ تلقائي
+                        </span>
                     </label>
                 </div>
             </div>
@@ -1761,8 +2666,18 @@
         </form>
 
         <div class="footer-card">
-            <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">منظومة إدارة السلامة والصحة المهنية والبيئة (HSE 360 Platform) © 2026</div>
-            <div>نموذج معتمد طبقا لمعايير الأيزو والسلامة المهنية (ISO 45001 / HSE) — جميع الحقوق محفوظة</div>
+            <div class="footer-rights">
+                <i class="fas fa-certificate text-amber-500"></i>
+                <span>جميع الحقوق محفوظة</span>
+            </div>
+            <div class="footer-company">
+                <i class="fas fa-industry text-emerald-600"></i>
+                <span>الشركة العالمية للانتاج والتصنيع الزراعي</span>
+            </div>
+            <div class="footer-brand" dir="ltr">
+                <i class="fas fa-shield-halved text-blue-600"></i>
+                <span>SafetyHub Platform | ICAPP © 2026</span>
+            </div>
         </div>
     </div>
 
@@ -1788,59 +2703,72 @@
             return DEFAULT_API_URL;
         }
         
-        const SUB_CATEGORIES_MAP = {
+        const STANDARD_11_HAZARDS = [
+            '⚡ مخاطر الكهرباء وعزل الطاقة (Electrical & LOTO)',
+            '🧗 مخاطر السقوط والعمل على ارتفاعات (Fall Protection & Height)',
+            '🔥 مخاطر الحريق والانفجار والأعمال الساخنة (Fire & Hot Work)',
+            '⚙️ مخاطر الماكينات وحوافظ الأمان (Machine Guarding)',
+            '🧪 مخاطر المواد الكيميائية والغازات (Chemicals & HazCom)',
+            '🚶 مخاطر الانزلاق والتعثر والأسطح (Slips, Trips & Surfaces)',
+            '📦 مخاطر المناولة وتخزين ورص الأحمال (Manual Handling & Storage)',
+            '🚜 مخاطر حركة المركبات والرافعات الشوكية (Workplace Transport & Forklifts)',
+            '🚪 مخاطر الأماكن المغلقة والمحصورة (Confined Spaces)',
+            '🦺 مهمات الوقاية الشخصية والامتثال (PPE & Safety Compliance)',
+            '🌿 بيئة العمل والنظافة الصناعية (Work Environment & Hygiene)'
+        ];
+
+                const SUB_CATEGORIES_MAP = {
             'سلوك غير آمن': [
-                'عدم ارتداء أو الاستخدام الخاطئ لمهمات الوقاية (PPE)',
-                'تجاوز تصاريح وإجراءات العمل الآمن (PTW Bypass)',
-                'استخدام معدات أو أدوات يدوية تالفة / غير مخصصة',
-                'وضعيات رفع وعمل خاطئة وإجهاد بدني (Ergonomics)',
-                'السرعة الزائدة / التشتت / عدم الانتباه أثناء العمل',
-                'التدخين في مناطق غير مخصصة أو محظورة',
-                'تعطيل أو تجاوز حواجز وأجهزة الأمان بالماكينات',
-                'الوقوف أسفل الأحمال المعلقة أو في مسار الرافعات'
+                '🦺 عدم ارتداء أو مخالفة مهمات الوقاية (PPE)',
+                '🧗 العمل على ارتفاعات بدون ربط حزام الأمان',
+                '⚡ صيانة وتشغيل كهربائي دون تطبيق عزل الطاقة LOTO',
+                '🚜 سرعة زائدة وقيادة متهورة للرافعة الشوكية (Forklift)',
+                '🚬 التدخين في مناطق محظورة وقابلة للاشتعال',
+                '🛑 تجاوز تصاريح العمل الآمن وإجراءات الأمان (PTW)',
+                '⚙️ تجاوز أو تعطيل حواجز وحساسات الأمان بالماكينات',
+                '📦 وضعيات رفع يدوي خاطئة وإجهاد بدني (Ergonomics)',
+                '⚠️ الوقوف أسفل الأحمال المعلقة أو في مسار الرافعات'
             ],
             'وضع غير آمن': [
-                'تسريب زيوت / انسكابات (مخاطر انزلاق وتعثر)',
-                'أسلاك وتوصيلات كهربائية مكشوفة أو عشوائية',
-                'عوائق أمام مسارات الهروب ومخارج الطوارئ',
-                'انعدام أو تلف أغطية وحوافظ الماكينات الدوارة',
-                'تلف السلالم أو السقالات أو حواف السقوط',
-                'ضعف الإضاءة أو سوء التهوية بموقع العمل',
-                'تكديس عشوائي للمخزون وخطر سقوط أحمال',
-                'تلف الأرضيات أو وجود فتحات غير مغطاة'
+                '⚡ أسلاك وتوصيلات كهربائية مكشوفة أو لوحات مفتوحة',
+                '⚙️ غياب أو تلف أغطية وحوافظ الماكينات الدوارة',
+                '🚶 أرضيات مبللة وزيوت وعوائق في الممرات (انزلاق وتعثر)',
+                '🔥 طفايات حريق تالفة أو انسداد مخارج الطوارئ',
+                '🧗 تلف السلالم أو السقالات أو فتحات أرضية مكشوفة',
+                '📦 رص وتخزين مائل وعشوائي للباليتات مهدد بالسقوط',
+                '🧪 تسريب مواد كيميائية أو غازات تبريد (أمونيا/فريون)',
+                '🚜 تداخل مسارات المشاة مع حركة الشاحنات والمعدات',
+                '🚪 بيئة عمل مغلقة أو محصورة غير مؤمنة (Confined Space)',
+                '💡 ضعف الإضاءة أو سوء التهوية وتراكم مخلفات (5S)'
             ],
             'سلوك آمن وإيجابي': [
-                'التزام مثالي بمهمات الوقاية وإجراءات السلامة',
-                'ممارسة حق إيقاف العمل غير الآمن (Stop Work Authority)',
-                'الإبلاغ المبكر والمثالي عن وشيكة وقوع حادث (Near Miss)',
-                'نظافة وترتيب استثنائي لموقع العمل (Housekeeping 5S)',
-                'فحص المعدات والأدوات بدقة قبل بدء التشغيل',
-                'تقديم مقترح وفكرة هندسية لتلافي المخاطر',
-                'إرشاد وتنبيه زميل العمل لطريقة العمل الآمنة'
+                '⭐ التزام مثالي بمهمات الوقاية وإجراءات السلامة',
+                '🛑 ممارسة حق إيقاف العمل غير الآمن (Stop Work Authority)',
+                '📢 الإبلاغ المبكر والمثالي عن وشيكة وقوع حادث (Near Miss)',
+                '✨ نظافة وترتيب استثنائي لموقع العمل (Housekeeping 5S)',
+                '🔍 فحص ما قبل التشغيل للمعدات والرافعات بدقة',
+                '💡 تقديم مقترح وفكرة هندسية مبتكرة لتلافي المخاطر',
+                '🤝 إرشاد وتنبيه زميل العمل لطريقة العمل الآمنة'
             ],
             'ملاحظة بيئية': [
-                'تسريب أو هدر مياه وصرف صناعي',
-                'خلط أو إلقاء غير نظامي للمخلفات والنفايات الخطرة',
-                'انبعاثات أدخنة / غبار / روائح غير اعتيادية',
-                'انسكاب زيوت أو مواد كيميائية على التربة',
-                'هدر مفرط في استهلاك الطاقة والكهرباء',
-                'تلف علامات ومهمات احتواء الانسكابات (Spill Kits)',
-                'تسريب فريون أو غازات تبريد'
+                '🌿 هدر مياه وتسريب شبكات الغسيل والصرف الصناعي',
+                '🧪 خلط المخلفات الخطرة مع النفايات العادية',
+                '💨 انبعاثات أدخنة أو غبار أو روائح غير معتادة',
+                '🛢️ تسريب زيوت أو مواد كيميائية على التربة والأرضيات',
+                '⚡ هدر واستهلاك مفرط للطاقة والكهرباء'
             ],
             'خطر حريق': [
-                'وجود عائق أمام طفايات وخراطيم ومضخات الحريق',
-                'طفايات حريق تالفة / فاقدة للضغط / منتهية الفحص',
-                'تخزين مواد قابلة للاشتعال بالقرب من مصادر حرارة',
-                'أبواب طوارئ مقاومة للحريق مغلقة أو مسدودة',
-                'أعمال قطع ولحام ساخنة بدون تصريح وستائر عزل',
-                'تراكم مخلفات ورقية وكرتونية قرب لوحات الكهرباء',
-                'تسريب غاز طبيعي أو وقود'
+                '🔥 طفايات حريق معطلة أو فاقدة للضغط أو منتهية الصلاحية',
+                '👨‍🚒 أعمال قطع ولحام ساخنة بدون تصريح وستائر عزل ومراقب حريق',
+                '🚪 انسداد أبواب ومسارات مخارج الطوارئ وصناديق الحريق',
+                '🛢️ تخزين مواد سريعة الاشتعال بالقرب من مصادر حرارة',
+                '⚡ تراكم كرتون ومخلفات ورقية ملاصقة للوحات الكهرباء'
             ],
             'أخرى': [
-                'ملاحظات صحة مهنية (إجهاد حراري / ضوضاء عالية)',
-                'مقترح تحسين عام لمنظومة السلامة',
-                'فحص دوري واستكشاف ميداني',
-                'ملاحظة تخص مقاولين خارجيين'
+                '📋 ملاحظة عامة على بيئة العمل والصحة المهنية',
+                '💡 مقترح تحسين عام لمنظومة السلامة والتشغيل',
+                '👷 ملاحظة تخص مقاولين خارجيين',
+                '🔍 فحص دوري واستكشاف ميداني'
             ]
         };
 
@@ -1875,11 +2803,14 @@
             expInput.value = `${y}-${m}-${d}`;
             expInput.dataset.autoCalculated = 'false';
 
-            // تمييز الزر النشط
-            document.querySelectorAll('.date-preset-btn').forEach(btn => btn.classList.remove('active'));
-            if (window.event && window.event.target && window.event.target.classList.contains('date-preset-btn')) {
-                window.event.target.classList.add('active');
-            }
+            // تمييز الزر النشط بدقة
+            document.querySelectorAll('.date-preset-btn').forEach(btn => {
+                if (btn.dataset.preset === type) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
         }
 
         // ==========================================
@@ -1971,7 +2902,35 @@
             }
         }
 
-        // ضبط التاريخ والوقت الافتراضي وحساب نهاية الشهر للتنفيذ
+        // حساب وتحديد وردية العمل تلقائياً بناءً على الوقت المحدد
+        function getShiftFromDateTime(dateTimeVal) {
+            let dateObj = (dateTimeVal instanceof Date) ? dateTimeVal : new Date(dateTimeVal || Date.now());
+            if (isNaN(dateObj.getTime())) dateObj = new Date();
+
+            const hours = dateObj.getHours();
+            const minutes = dateObj.getMinutes();
+            const timeInMinutes = hours * 60 + minutes;
+
+            // 07:30 ص = 7 * 60 + 30 = 450 دقيقة
+            // 03:30 م = 15 * 60 + 30 = 930 دقيقة
+            // 10:30 م = 22 * 60 + 30 = 1350 دقيقة
+            if (timeInMinutes >= 450 && timeInMinutes < 930) {
+                return 'الأولى'; // من 07:30 ص إلى 03:30 م
+            } else if (timeInMinutes >= 930 && timeInMinutes < 1350) {
+                return 'الثانية'; // من 03:30 م إلى 10:30 م
+            } else {
+                return 'الثالثة'; // من 10:30 م إلى 07:30 ص
+            }
+        }
+
+        function autoAssignShift(dateTimeVal) {
+            const shiftSelect = document.getElementById('shiftSelect');
+            if (!shiftSelect) return;
+            const shift = getShiftFromDateTime(dateTimeVal);
+            shiftSelect.value = shift;
+        }
+
+        // ضبط التاريخ والوقت الافتراضي والوردية وحساب نهاية الشهر للتنفيذ
         function setDefaultDateTime() {
             const now = new Date();
             const year = now.getFullYear();
@@ -1983,6 +2942,7 @@
             if (dateInput) {
                 dateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
             }
+            autoAssignShift(now);
             updateDefaultExpectedDate(now);
         }
 
@@ -2004,6 +2964,7 @@
 
         function handleDateChange(val) {
             if (val) {
+                autoAssignShift(new Date(val));
                 const expInput = document.getElementById('expectedDateInput');
                 if (expInput && expInput.dataset.autoCalculated !== 'false') {
                     updateDefaultExpectedDate(new Date(val));
@@ -2013,18 +2974,26 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             setDefaultDateTime();
-            initBackgroundGpsCapture();
-            renderSubCategories(selectedObservationType);
 
-            const expInput = document.getElementById('expectedDateInput');
-            if (expInput) {
-                expInput.addEventListener('input', function() {
-                    this.dataset.autoCalculated = 'false';
-                });
-            }
+            // 1. تهيئة فورية لكافة الحقول الافتراضية وإخفاء مؤشر التحميل فوراً (0ms)
+            renderDefaultFields();
+            const ind = document.getElementById('loadingIndicator');
+            if (ind) ind.style.display = 'none';
 
-            // 1. قراءة التكوين المشفر الممرر بالرابط أو رمز الـ QR
-            let configLoadedFromUrl = false;
+            // 2. محاولة استرجاع الكاش المحلي فورا لتحديث أي بيانات مخصصة
+            try {
+                const cached = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (parsed && Array.isArray(parsed.sites) && parsed.sites.length > 0) {
+                        loadedConfig = parsed;
+                        if (parsed.companyLogo) updateCompanyLogo(parsed.companyLogo);
+                        renderConfigData(parsed);
+                    }
+                }
+            } catch (cErr) {}
+
+            // 3. قراءة التكوين المشفر الممرر بالرابط أو رمز الـ QR
             try {
                 const hash = window.location.hash || '';
                 const search = window.location.search || '';
@@ -2040,45 +3009,21 @@
                             safetyMembers: (payload.m || []).map(name => ({ name, role: 'فريق السلامة والصحة المهنية' })),
                             companyLogo: payload.l || ''
                         };
-                        configLoadedFromUrl = true;
-                        if (payload.l) {
-                            updateCompanyLogo(payload.l);
-                        }
-                        try {
-                            localStorage.setItem('HSE_PUBLIC_OBS_CONFIG', JSON.stringify(loadedConfig));
-                        } catch (sErr) {}
+                        if (payload.l) updateCompanyLogo(payload.l);
+                        try { localStorage.setItem('HSE_PUBLIC_OBS_CONFIG', JSON.stringify(loadedConfig)); } catch (sErr) {}
                         renderConfigData(loadedConfig);
-                        const ind = document.getElementById('loadingIndicator');
-                        if (ind) ind.style.display = 'none';
                     }
                 }
-            } catch (uErr) {
-                console.warn('URL config decode error:', uErr);
-            }
+            } catch (uErr) {}
 
-            // محاولة تحميل الشعار من الكاش المحلي أولاً
             updateCompanyLogo();
+            renderSubCategories(selectedObservationType);
 
-            // 2. استرجاع فوري من الكاش المحلي للمتصفح في أقل من 10ms
-            if (!configLoadedFromUrl) {
-                try {
-                    const cached = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
-                    if (cached) {
-                        const parsed = JSON.parse(cached);
-                        if (parsed && Array.isArray(parsed.sites) && parsed.sites.length > 0) {
-                            loadedConfig = parsed;
-                            if (parsed.companyLogo) updateCompanyLogo(parsed.companyLogo);
-                            renderConfigData(parsed);
-                            const ind = document.getElementById('loadingIndicator');
-                            if (ind) ind.style.display = 'none';
-                        }
-                    }
-                } catch (cErr) {}
-            }
-
-            // 3. إذا لم يتوفر أي كاش، تهيئة القوائم بحقول جاهزة للاختيار أو الإدخال
-            if (!loadedConfig) {
-                renderDefaultFields();
+            const expInput = document.getElementById('expectedDateInput');
+            if (expInput) {
+                expInput.addEventListener('input', function() {
+                    this.dataset.autoCalculated = 'false';
+                });
             }
 
             // 4. تهيئة المقترحات الذكية والإكمال التلقائي
@@ -2089,8 +3034,9 @@
             loadReporterProfile();
             updateOfflineBadge();
 
-            // 6. طلب أحدث التحديثات من الخادم بالخلفية
-            loadServerConfig();
+            // 6. تشغيل التقاط GPS التلقائي فوراً وجلب أحدث البيانات من الخادم
+            initBackgroundGpsCapture(false);
+            setTimeout(loadServerConfig, 50);
         });
 
                 function updateCompanyLogo(logoUrl) {
@@ -2377,16 +3323,28 @@
             return String(p).trim();
         }
 
+        window._allCurrentPlaces = [];
+
         function handleSiteChange(siteName) {
             const placeSelect = document.getElementById('placeSelect');
+            const searchInput = document.getElementById('placeSearchInput');
             const customGroup = document.getElementById('customPlaceGroup');
+            const countBadge = document.getElementById('placeCountBadge');
             if (customGroup) customGroup.style.display = 'none';
+            if (searchInput) {
+                searchInput.value = '';
+                const clearBtn = document.getElementById('clearPlaceSearchBtn');
+                if (clearBtn) clearBtn.style.display = 'none';
+            }
+            if (countBadge) countBadge.textContent = '';
 
             if (!siteName) {
                 if (placeSelect) {
                     placeSelect.innerHTML = '<option value="">— اختر المصنع أولاً —</option>';
                     placeSelect.disabled = true;
                 }
+                if (searchInput) searchInput.disabled = true;
+                window._allCurrentPlaces = [];
                 return;
             }
 
@@ -2396,7 +3354,7 @@
                 return sName === siteName || sName.toLowerCase() === siteName.toLowerCase();
             });
 
-            placeSelect.innerHTML = '<option value="">— اختر الموقع الفرعي / المكان —</option>';
+            window._allCurrentPlaces = [];
             const seenPlaces = new Set();
 
             if (foundSite && Array.isArray(foundSite.places) && foundSite.places.length > 0) {
@@ -2404,10 +3362,7 @@
                     const pName = getCleanPlaceName(rawP);
                     if (pName && !seenPlaces.has(pName.toLowerCase()) && pName !== '[object Object]') {
                         seenPlaces.add(pName.toLowerCase());
-                        const opt = document.createElement('option');
-                        opt.value = pName;
-                        opt.textContent = pName;
-                        placeSelect.appendChild(opt);
+                        window._allCurrentPlaces.push(pName);
                     }
                 });
             } else {
@@ -2418,12 +3373,40 @@
                     'منطقة الشحن والتفريغ', 'المكاتب الإدارية', 'منظومة طلمبات الحريق'
                 ];
                 fallbackPlaces.forEach(pName => {
-                    const opt = document.createElement('option');
-                    opt.value = pName;
-                    opt.textContent = pName;
-                    placeSelect.appendChild(opt);
+                    window._allCurrentPlaces.push(pName);
                 });
             }
+
+            if (searchInput) searchInput.disabled = false;
+            placeSelect.disabled = false;
+            filterPlaces('');
+        }
+
+        function filterPlaces(query) {
+            const placeSelect = document.getElementById('placeSelect');
+            const clearBtn = document.getElementById('clearPlaceSearchBtn');
+            const countBadge = document.getElementById('placeCountBadge');
+            if (!placeSelect || !window._allCurrentPlaces) return;
+
+            const q = (query || '').trim().toLowerCase();
+            if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+
+            const filtered = q
+                ? window._allCurrentPlaces.filter(p => p.toLowerCase().includes(q))
+                : window._allCurrentPlaces;
+
+            placeSelect.innerHTML = '';
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = q ? `— نتائج البحث (${filtered.length}) —` : '— اختر الموقع الفرعي / المكان —';
+            placeSelect.appendChild(defaultOpt);
+
+            filtered.forEach(pName => {
+                const opt = document.createElement('option');
+                opt.value = pName;
+                opt.textContent = pName;
+                placeSelect.appendChild(opt);
+            });
 
             // خيار إدخال يدوي
             const otherOpt = document.createElement('option');
@@ -2431,7 +3414,24 @@
             otherOpt.textContent = '➕ مكان فرعي آخر (إدخال يدوي)...';
             placeSelect.appendChild(otherOpt);
 
-            placeSelect.disabled = false;
+            if (countBadge) {
+                countBadge.textContent = q ? `(${filtered.length} مكان مطابق)` : '';
+            }
+
+            // إذا كانت نتيجة البحث مطابقة واحدة فقط، اخترها تلقائياً
+            if (q && filtered.length === 1) {
+                placeSelect.value = filtered[0];
+                handlePlaceChange(filtered[0]);
+            }
+        }
+
+        function clearPlaceSearch() {
+            const input = document.getElementById('placeSearchInput');
+            if (input) {
+                input.value = '';
+                filterPlaces('');
+                input.focus();
+            }
         }
 
         function handlePlaceChange(val) {
@@ -2466,6 +3466,16 @@
             document.querySelectorAll('.risk-chip').forEach(c => c.classList.remove('selected'));
             el.classList.add('selected');
             selectedRiskLevel = el.dataset.risk || 'متوسط';
+        }
+
+        function selectStatusCard(el) {
+            document.querySelectorAll('#statusGrid .status-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            const status = el.dataset.status || 'Open';
+            const select = document.getElementById('statusSelect');
+            if (select) {
+                select.value = status;
+            }
         }
 
         function toggleAnonymous(isAnon) {
@@ -2789,524 +3799,473 @@
         // =======================================================
         // قاموس المقترحات الذكية المتخصصة حسب التصنيف الرئيسي والفرعي
         // =======================================================
+                // =======================================================
+        // قاموس المقترحات الذكية المتخصصة حسب تصنيفات المخاطر المعيارية الـ 11 (OSHA / ISO 45001)
+        // =======================================================
+                // =======================================================
+        // قاموس المقترحات الذكية المتخصصة الشامل لكافة السلوكيات والأوضاع والمخاطر
+        // =======================================================
         const DETAILED_SUBCATEGORY_TEMPLATES = {
-            // --- 1. سلوك غير آمن ---
-            'عدم ارتداء أو الاستخدام الخاطئ لمهمات الوقاية (PPE)': [
-                {
-                    title: 'عدم ارتداء خوذة السلامة (Safety Helmet)',
-                    detail: 'رصد عامل يتحرك في منطقة الرفع والتشغيل بدون ارتداء خوذة الأمان المعتمدة.',
-                    corrective: 'تم إيقاف العامل وتزويده بخوذة الأمان والتأكيد على ضرورة ارتدائها دائماً.'
-                },
+            // --- 1. سلوكيات غير آمنة (Unsafe Acts) ---
+            '🦺 عدم ارتداء أو مخالفة مهمات الوقاية (PPE)': [
                 {
                     title: 'العمل بدون حذاء السلامة (Safety Shoes)',
                     detail: 'تواجد عامل داخل صالة الإنتاج بحذاء عادي لا يحمي القدم من مخاطر السقوط والدهس.',
-                    corrective: 'تم إيقاف العامل واستبدال الحذاء بآخر مطابق لمعايير السلامة المهنية.'
+                    corrective: 'تم إيقاف العامل واستبدال الحذاء بآخر مطابق لمعايير السلامة المهنية فوراً.',
+                    risk: 'منخفض',
+                    expected: 'today'
                 },
                 {
-                    title: 'استخدام صاروخ الجلخ بدون نظارة واقية',
-                    detail: 'أعمال قص وتجليخ معادن دون ارتداء نظارات واقية للعين أو واقي الوجه.',
-                    corrective: 'تم إيقاف أعمال التجليخ فوراً وتوفير نظارة الحماية وواقي الوجه الشفاف.'
+                    title: 'استخدام صاروخ الجلخ بدون نظارة واقية أو واقي وجه',
+                    detail: 'أعمال قص وتجليخ معادن وتطاير رايش ساخن دون ارتداء نظارة الوقاية أو واقي الوجه.',
+                    corrective: 'تم إيقاف أعمال التجليخ وتوفير نظارة الحماية وواقي الوجه الشفاف وإلزام العامل بارتدائها.',
+                    risk: 'عالي',
+                    expected: 'today'
                 },
                 {
-                    title: 'عدم ارتداء قفازات مناسبة للمواد الكيميائية',
-                    detail: 'التعامل المباشر مع مذيبات ومواد تنظيف كيميائية بالأيدي العارية.',
-                    corrective: 'تم توفير قفازات مقاومة للكيماويات (Nitrile) وتوعية العامل بمخاطر الامتصاص الجلدي.'
+                    title: 'التعامل مع كيماويات بدون قفازات مناسبة',
+                    detail: 'ملامسة منظفات كيميائية وأحماض بالأيدي العارية دون استخدام قفازات النتريل المقاومة.',
+                    corrective: 'تم توفير قفازات مقاومة للكيماويات وتوعية العامل بمخاطر الامتصاص الجلدي.',
+                    risk: 'متوسط',
+                    expected: 'today'
                 },
                 {
-                    title: 'عدم ربط حزام الأمان على ارتفاع',
-                    detail: 'العمل على ارتفاع يتجاوز 1.8 متر فوق سقالة/منصة بدون تثبيت حزام الأمان.',
-                    corrective: 'تم إنزال العامل فوراً وتثبيت حزام الأمان بنقطة ارتكاز علوية معتمدة قبل المتابعة.'
-                },
-                {
-                    title: 'عدم ارتداء سدادات الأذن في منطقة ضوضاء عالية',
-                    detail: 'التواجد بالقرب من ضواغط الهواء والماكينات الصاخبة دون استخدام واقيات السمع.',
-                    corrective: 'تم تزويد العامل بسدادات أذن معتمدة وتوجيهه بالالتزام في مناطق الضوضاء.'
+                    title: 'عدم ارتداء خوذة الأمان في منطقة الرفع',
+                    detail: 'التواجد أسفل مسارات الرفع والرافعات دون ارتداء خوذة الرأس المعتمدة.',
+                    corrective: 'تم إلزام العامل بارتداء الخوذة والتنبيه بعدم دخول منطقة الرفع بدونها نهائياً.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'تجاوز تصاريح وإجراءات العمل الآمن (PTW Bypass)': [
+            '🧗 العمل على ارتفاعات بدون ربط حزام الأمان': [
                 {
-                    title: 'بدء عمل ساخن / مرتفعات بدون تصريح (PTW)',
-                    detail: 'مباشرة نشاط صيانة خطير دون استخراج وتوقيع تصريح العمل الآمن المطلوب.',
-                    corrective: 'تم إيقاف النشاط فوراً واستكمال إجراءات تقييم المخاطر وتصريح العمل واعتماده.'
+                    title: 'العمل فوق منصة/عنبر بدون حزام أمان',
+                    detail: 'رصد عامل على ارتفاع يتجاوز 2 متر دون ارتداء وربط حزام الأمان (Safety Harness).',
+                    corrective: 'تم إيقاف العمل وإنزال العامل فوراً وربط الحزام بنقطة تثبيت معتمدة قبل المتابعة.',
+                    risk: 'عالي',
+                    expected: 'today'
                 },
                 {
-                    title: 'انتهاء صلاحية تصريح العمل دون تجديد',
-                    detail: 'استمرار المقاول في أعمال الحفر/الصيانة بعد انقضاء الفترة الزمنية المحددة بالتصريح.',
-                    corrective: 'تم إيقاف العمل وتجديد التصريح بعد إعادة معاينة الموقع والتأكد من اشتراطات الأمان.'
-                },
-                {
-                    title: 'عدم الالتزام باحتياطات التصريح المكتوبة',
-                    detail: 'مخالفة بنود السلامة المشروطة في تصريح العمل مثل عدم توفير مراقب حريق.',
-                    corrective: 'تم تعيين مراقب سلامة مؤهل وتطبيق كافة تدابير التحكم الواردة في التصريح.'
+                    title: 'الوقوف على حافة غير مؤمنة دون تثبيت',
+                    detail: 'محاولة الوصول لجزء مرتفع بالوقوف على حواف غير محمية بدرابزين وبدون حبل نجاة.',
+                    corrective: 'تم تأمين الموقع وتوفير حبل نجاة ونقطة تثبيت علوية معتمدة طبقاً للمواصفات.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'استخدام معدات أو أدوات يدوية تالفة / غير مخصصة': [
+            '⚡ صيانة وتشغيل كهربائي دون تطبيق عزل الطاقة LOTO': [
                 {
-                    title: 'استخدام أداة يدوية مكسورة / غير معزولة',
-                    detail: 'استخدام مفكات ومطارق ذات مقابض متشققة أو شواكيش غير مثبتة بإحكام.',
-                    corrective: 'تم سحب الأداة التالفة واستبدالها بأخرى سليمة ومعتمدة من المستودع.'
+                    title: 'صيانة ماكينة دون عزل الطاقة وتثبيت القفل LOTO',
+                    detail: 'مباشرة أعمال فحص وإصلاح ماكينة كهربائية دون وضع قفل وعلامة أمان (Lockout/Tagout).',
+                    corrective: 'تم إيقاف العمل فوراً وتفريغ الطاقة وتطبيق إجراءات القفل والعزل (LOTO) وتثبيت البطاقة.',
+                    risk: 'عالي',
+                    expected: 'today'
                 },
                 {
-                    title: 'استخدام صاروخ / دريل بدون فحص دوري',
-                    detail: 'تشغيل معدة كهربائية يدوية بدون علامة الفحص الدوري (Inspection Tag) أو بها كابل تالف.',
-                    corrective: 'تم عزل المعدة وإرسالها لورشة الصيانة الكهربائية للفحص وإعادة الاختبار.'
-                },
-                {
-                    title: 'استخدام معدة غير مخصصة للنشاط',
-                    detail: 'استخدام مفك براغي كإزميل أو استخدام ماسورة كرافعة مما يعرض الأداة للكسر المفاجئ.',
-                    corrective: 'تم توجيه العامل لاستخدام الأداة الصحيحة المخصصة لكل نوع عمل.'
+                    title: 'العمل في لوحة كهربائية حية دون تصريح مؤهل',
+                    detail: 'محاولة فحص لوحة مفاتيح رئيسية وهي تحت الجهد دون ارتداء مهمات العزل الكهربائي.',
+                    corrective: 'تم فصل التيار واستدعاء مهندس الكهرباء المختص مع ارتداء القفازات العازلة المعتمدة.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'وضعيات رفع وعمل خاطئة وإجهاد بدني (Ergonomics)': [
+            '🚜 سرعة زائدة وقيادة متهورة للرافعة الشوكية (Forklift)': [
                 {
-                    title: 'رفع أحمال ثقيلة بانحناء الظهر',
-                    detail: 'رفع كراتين/بضائع ثقيلة بالاعتماد على عضلات الظهر بدلاً من ثني الركبتين واستقامة الظهر.',
-                    corrective: 'تم إرشاد العامل للوضعية السليمة للرفع اليدوي وتوفير وسيلة نقل ميكانيكية.'
+                    title: 'قيادة الفوركلفت بسرعة زائدة في ممرات المشاة',
+                    detail: 'سير الرافعة الشوكية بسرعة تتجاوز 10 كم/ساعة بالقرب من بوابات صالات الإنتاج.',
+                    corrective: 'تم إيقاف السائق وتوجيهه بالسرعة الآمنة والتأكيد على استخدام آلة التنبيه عند التقاطعات.',
+                    risk: 'عالي',
+                    expected: 'today'
                 },
                 {
-                    title: 'رفع حمل يتجاوز الوزن المسموح فردياً (>25kg)',
-                    detail: 'محاولة رفع شيكارة أو قطعة غيار تفوق 25 كجم بشكل فردي دون مساعدة زميل أو رافعة.',
-                    corrective: 'تم توجيه الرفع المزدوج وتوفير ونش هيدروليكي يدوي لمناولة القطع الثقيلة.'
-                },
-                {
-                    title: 'العمل في وضعية التواء مستمرة',
-                    detail: 'استمرار العامل في خط التعبئة بوضعية التواء للرقبة والجذع لفترات طويلة دون تدوير.',
-                    corrective: 'تم تعديل ارتفاع طاولة العمل وتدوير المهام بين العمال لتفادي الإجهاد العضلي.'
+                    title: 'حمل حمولة تحجب الرؤية مع السير للأمام',
+                    detail: 'قيادة الرافعة للأمام مع حمولة باليتات مرتفعة تحجب رؤية السائق للمسار والمشاة.',
+                    corrective: 'تم إلزام السائق بالسير للخلف (Reverse) وتشغيل الفلاشر وآلة التنبيه.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'السرعة الزائدة / التشتت / عدم الانتباه أثناء العمل': [
+            '🚬 التدخين في مناطق محظورة وقابلة للاشتعال': [
                 {
-                    title: 'قيادة الفوركلفت بسرعة زائدة في الممرات',
-                    detail: 'قيادة الرافعة الشوكية بسرعة تتجاوز 10 كم/س وعدم استخدام آلة التنبيه عند التقاطعات.',
-                    corrective: 'تم إيقاف السائق وتنبيهه بالسرعات المقررة ومراجعة سجل رخصة القيادة الداخلية.'
-                },
-                {
-                    title: 'استخدام الهاتف المحمول أثناء المشي في ممرات الرافعات',
-                    detail: 'التشتت بالهاتف وقراءة الرسائل أثناء السير في المسارات المشتركة مع المعدات الثقيلة.',
-                    corrective: 'تم تنبيه الموظف فوراً والتأكيد على استخدام المسارات المخصصة للمشاة فقط.'
-                },
-                {
-                    title: 'الجري والاستعجال في السلالم والممرات',
-                    detail: 'النزول السريع على الدرج دون الإمساك بالدرابزين الواقي (Handrail).',
-                    corrective: 'تم توجيه الموظف بالتهدئة والإمساك دائماً بالدرابزين لمنع مخاطر الانزلاق والسقوط.'
+                    title: 'تدخين داخل المستودع وقرب كراتين التعبئة',
+                    detail: 'رصد تدخين داخل منطقة المستودعات وقرب مواد سريعة الاشتعال بالمخالفة للتعليمات.',
+                    corrective: 'تم إطفاء السيجارة فوراً وتنبيه العامل وتطبيق لائحة الجزاءات وتوجيهه للمنطقة المخصصة.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'التدخين في مناطق غير مخصصة أو محظورة': [
+            '🛑 تجاوز تصاريح العمل الآمن وإجراءات الأمان (PTW)': [
                 {
-                    title: 'تدخين داخل عنبر الإنتاج / المستودع',
-                    detail: 'رصد تدخين داخل منطقة مغلقة تحتوي على مواد قابلة للاشتعال وبضائع كرتونية.',
-                    corrective: 'تم إطفاء السيجارة فوراً وتحرير مخالفة سلامة وتوجيهه لمنطقة التدخين المعتمدة.'
-                },
-                {
-                    title: 'إلقاء أعقاب السجائر في سلات المهملات العادية',
-                    detail: 'رمي عقب سيجارة مشتعل في سلة مهملات ورقية بدلاً من طفاية السجائر المخصصة.',
-                    corrective: 'تم إخماد العقب فوراً وتوفير طفاية سجائر معدنية مملوءة بالرمل في المكان المناسب.'
+                    title: 'بدء نشاط خطير بدون استخراج تصريح عمل (PTW)',
+                    detail: 'مباشرة أعمال لحام أو صيانة بالأماكن المغلقة دون استخراج وتوقيع تصريح العمل المطلوب.',
+                    corrective: 'تم إيقاف النشاط فوراً واستكمال إجراءات تقييم المخاطر وتصريح العمل واعتماده.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'تعطيل أو تجاوز حواجز وأجهزة الأمان بالماكينات': [
+            '⚙️ تجاوز أو تعطيل حواجز وحساسات الأمان بالماكينات': [
                 {
-                    title: 'تعطيل الحساس الضوئي / الميكانيكي للماكينة',
-                    detail: 'تجاوز حساس الأمان أو وضع شريط لاصق على زر التوقف الطارئ لتسريع الإنتاج.',
-                    corrective: 'تم إيقاف خط الإنتاج فوراً وإعادة تفعيل الحساسات وربط تشغيل الماكينة بالحماية.'
-                },
-                {
-                    title: 'تنظيف الماكينة أثناء دورانها',
-                    detail: 'محاولة إزالة بقايا إنتاج أو تنظيف التروس والسيور أثناء حركة الماكينة دون إيقافها.',
-                    corrective: 'تم إيقاف الماكينة وفصل الطاقة وتطبيق إجراءات العزل والتنظيف في وضع السكون.'
+                    title: 'تعطيل الحساس الضوئي أو سياج الأمان بالماكينة',
+                    detail: 'تجاوز حساس الأمان الميكانيكي بالماكينة أثناء التشغيل مما يعرض العاملين لخطر البتر.',
+                    corrective: 'تم إيقاف الماكينة فوراً وإعادة تفعيل حساس الأمان وفحصه قبل إعادة التشغيل.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'الوقوف أسفل الأحمال المعلقة أو في مسار الرافعات': [
+            '📦 وضعيات رفع يدوي خاطئة وإجهاد بدني (Ergonomics)': [
                 {
-                    title: 'تواجد أفراد تحت طبلية مرفوعة بالفوركلفت',
-                    detail: 'وقوف عمال أسفل شوك الرافعة الشوكية أثناء رفع باليتة البضائع لأعلى الرفوف.',
-                    corrective: 'تم إخلاء المنطقة المحيطة بالرافعة ووضع مسافة أمان لا تقل عن 3 أمتار.'
-                },
+                    title: 'رفع صناديق ثقيلة بانحناء الظهر',
+                    detail: 'قيام عمال بحمل أوزان ثقيلة دون ثني الركبتين مما يسبب إجهاداً شديداً للعمود الفقري.',
+                    corrective: 'تم تدريب العمال على وضعية الرفع السليمة وتوفير وسائل مناولة مساعدة كالعربات.',
+                    risk: 'منخفض',
+                    expected: 'week'
+                }
+            ],
+            '⚠️ الوقوف أسفل الأحمال المعلقة أو في مسار الرافعات': [
                 {
-                    title: 'المرور في منطقة مناولة ونش بدون تنسيق',
-                    detail: 'السير أسفل مسار ونش علوي أثناء نقل معدة ثقيلة دون ارتداء سترة عاكسة وملاحظة الإشارات.',
-                    corrective: 'تم إيقاف حركة الونش وإخلاء المسار وتكليف مراقب أرضي لتوجيه حركة المشاة.'
+                    title: 'المرور أو الوقوف أسفل باليتة مرفوعة بالونش',
+                    detail: 'تواجد أفراد في مسار الرفع وتحت الأحمال المعلقة بالونش دون مراعاة حرم الأمان.',
+                    corrective: 'تم إخلاء منطقة الرفع فوراً وتطويق المكان بشريط تحذيري وعزل المسار.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
 
-            // --- 2. وضع غير آمن ---
-            'عوائق أمام مسارات الهروب ومخارج الطوارئ': [
+            // --- 2. أوضاع غير آمنة (Unsafe Conditions) ---
+            '⚡ أسلاك وتوصيلات كهربائية مكشوفة أو لوحات مفتوحة': [
                 {
-                    title: 'تكدس بضائع / باليتات أمام مخرج الطوارئ',
-                    detail: 'وجود شحنات وباليتات خشبية تسد باب الطوارئ وتمنع فتحه بالكامل.',
-                    corrective: 'تم نقل الباليتات فوراً وفتح باب ومسار الطوارئ والتأكد من سهولة الفتح.'
+                    title: 'لوحة كهربائية رئيسية مفتوحة ومكشوفة',
+                    detail: 'رصد لوحة قواطع كهربائية مفتوحة وغير مقفلة مما يشكل خطر صعق مباشر.',
+                    corrective: 'تم إغلاق وتأمين باب اللوحة فوراً وعزل القواطع وتوجيه فني الكهرباء بالفحص.',
+                    risk: 'عالي',
+                    expected: 'today'
                 },
                 {
-                    title: 'تخزين كراتين ومعدات في ممرات الهروب',
-                    detail: 'تضييق ممر الهروب المعتمد بأشياء ومخلفات تقلل عرض الممر عن 1.2 متر.',
-                    corrective: 'تم تنظيف وإخلاء الممر وتحديد الخطوط الأرضية الصفراء لمنع التخزين.'
-                },
-                {
-                    title: 'قفل أو غلق باب الطوارئ بسلسلة أو قفل',
-                    detail: 'إغلاق باب خروج الطوارئ بقفل خارجي مما يعيق الإخلاء في حالات الحوادث.',
-                    corrective: 'تم إزالة القفل فوراً والتأكد من فتح الباب بضغطة واحدة من الداخل (Panic Bar).'
+                    title: 'كابل كهربائي معرى يمر بممر المشاة',
+                    detail: 'وجود كابل كهربائي تالف ومعرى ممدد عبر الأرضية معرض للدهس ومياه الغسيل.',
+                    corrective: 'تم فصل التيار واستبدال الكابل وتمريره داخل مجرى حماية علوي معتمد.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'تسريب زيوت / انسكابات (مخاطر انزلاق وتعثر)': [
+            '⚙️ غياب أو تلف أغطية وحوافظ الماكينات الدوارة': [
                 {
-                    title: 'بقعة زيت هيدروليك منسكبة على ممر الحركة',
-                    detail: 'تسريب زيت من ماكينة تسبب في تكون بقعة منزلقة في مسار حركة المشاة والمعدات.',
-                    corrective: 'تم وضع نشارة/مادة ماصة وتنظيف الأرضية ووضع لافتة تحذيرية واستدعاء الصيانة.'
+                    title: 'سير ماكينة دوار بدون غطاء حماية (Guarding)',
+                    detail: 'تشغيل خط إنتاج مع كشف السيور والتروس الدوارة دون تركيب أغطية وحوافظ الأمان.',
+                    corrective: 'تم إيقاف الماكينة وتثبيت غطاء الحماية المعتمد والتأكد من إحكامه قبل التشغيل.',
+                    risk: 'عالي',
+                    expected: 'today'
                 },
                 {
-                    title: 'تجمع مياه راكدة أمام منطقة الغسيل / الإنتاج',
-                    detail: 'انسداد مجرى الصرف وتجمع مياه على بلاط الأرضيات مما يهدد بانزلاق العاملين.',
-                    corrective: 'تم سحب المياه وتسليك بالوعة الصرف وتجفيف الأرضية بالكامل.'
-                },
-                {
-                    title: 'تسريب كيماويات أو سوائل حمضية',
-                    detail: 'تنقيط من محبس خزان المواد الكيميائية على أرضية المعمل/عنبر التشغيل.',
-                    corrective: 'تم استخدام طقم احتواء الانسكاب (Spill Kit) ومعالجة التسريب وإصلاح المحبس.'
+                    title: 'تعطل زر التوقف في الطوارئ (Emergency Stop)',
+                    detail: 'زر التوقف الطارئ بالماكينة مكسور أو لا يستجيب عند الضغط السريع عليه.',
+                    corrective: 'تم إبلاغ قسم الصيانة واستبدال مفتاح الطوارئ والتأكد من فاعليته.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'أسلاك وتوصيلات كهربائية مكشوفة أو عشوائية': [
+            '🚶 أرضيات مبللة وزيوت وعوائق في الممرات (انزلاق وتعثر)': [
                 {
-                    title: 'كابل كهربائي مكشوف به عزل تالف',
-                    detail: 'سلك كهربائي مغذي لماكينة به تشققات وتعرية للأسلاك النحاسية الحية.',
-                    corrective: 'تم فصل التيار فوراً واستبدال الكابل وتغليفه بواسطة فني الكهرباء المختص.'
+                    title: 'أرضية مبللة بالماء والزيوت في صالة الإنتاج',
+                    detail: 'تجمع مياه راكدة أو زيوت تسبب خطورة انزلاق وسقوط للأفراد العاملين.',
+                    corrective: 'تم تجفيف الأرضية فوراً ووضع لافتة تحذيرية (أرضية زلقة) وإصلاح مصدر المياه.',
+                    risk: 'متوسط',
+                    expected: 'today'
                 },
                 {
-                    title: 'لوحة توزيع كهرباء رئيسية مفتوحة وغير مغلقة',
-                    detail: 'ترك باب لوحة الكهرباء مفتوحاً مما يعرض الأجزاء الحية للغبار ومخاطر الصعق.',
-                    corrective: 'تم إغلاق وتأمين باب اللوحة بمفتاح القفل ووضع علامة خطر الصعق بالكهرباء.'
-                },
-                {
-                    title: 'تمديد كابلات كهربائية أرضية مكشوفة في مسار المشاة',
-                    detail: 'مرور أسلاك كهربائية عبر ممر حركة العمال دون غطاء حماية (Cable Protector).',
-                    corrective: 'تم تركيب واقي أرضي للكابلات أو رفعها على حامل كابلات علوي معزول.'
+                    title: 'خراطيم وكابلات ممددة تعيق ممرات المشاة',
+                    detail: 'تمديد خراطيم مياه بصورة عرضية تعيق حركة العمال وتزيد مخاطر التعثر.',
+                    corrective: 'تم رفع الكابلات وتثبيت الخراطيم في حوامل جدارية مخصصة لفتح المسار.',
+                    risk: 'متوسط',
+                    expected: '24h'
                 }
             ],
-            'انعدام أو تلف أغطية وحوافظ الماكينات الدوارة': [
+            '🔥 طفايات حريق تالفة أو انسداد مخارج الطوارئ': [
                 {
-                    title: 'سير نقل الحركة مكشوف بدون غطاء حماية',
-                    detail: 'طنابير وسيور الماتور تعمل بدون شبك الحماية الميكانيكي (Belt Guard).',
-                    corrective: 'تم إيقاف الماكينة وتركيب غطاء الحماية وتثبيته بالمسامير قبل إعادة التشغيل.'
+                    title: 'طفاية حريق فاقدة للضغط أو منتهية الصلاحية',
+                    detail: 'رصد طفاية حريق تالفة ومؤشر الضغط في المنطقة الحمراء.',
+                    corrective: 'تم استبدال الطفاية بأخرى صالحة ومعتمدة فوراً وإرسال التالفة للصيانة.',
+                    risk: 'عالي',
+                    expected: 'today'
                 },
                 {
-                    title: 'عمود دوران المفرمة/الخلاط غير مغطى',
-                    detail: 'أجزاء دوارة سريعة مكشوفة بجوار منصة وقوف العامل مما يهدد بانحشار الملابس.',
-                    corrective: 'تم تصنيع وتركيب حاجز حماية شبكي مطابق للمواصفات القياسية.'
+                    title: 'تكدس بضائع وباليتات أمام مخرج الطوارئ',
+                    detail: 'تخزين كراتين تعيق الفتح الكامل لباب الهروب ومخرج الطوارئ في صالة الإنتاج.',
+                    corrective: 'تم نقل البضائع فوراً وفتح مسار ومخرج الطوارئ بعرض لا يقل عن 1.2 متر.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'تلف السلالم أو السقالات أو حواف السقوط': [
+            '🧗 تلف السلالم أو السقالات أو فتحات أرضية مكشوفة': [
                 {
-                    title: 'سلم نقالي به درجات مكسورة أو بدون قواعد مانعة للانزلاق',
-                    detail: 'استخدام سلم ألومنيوم/خشب متهالك ينقصه الأرجل المطاطية المثبتة.',
-                    corrective: 'تم استبعاد السلم فوراً ووضع بطاقة تالف وتوفير سلم صناعي جديد معتمد.'
+                    title: 'سقالة تفتقر إلى درابزين وألواح خشبية كاملة',
+                    detail: 'سقالة عمل بارتفاع 3 أمتار بدون سياج حماية جانبي وبدون بطاقة فحص معتمدة.',
+                    corrective: 'تم وضع شريط تحذيري وحظر استخدام السقالة لحين استكمال مهمات الأمان والفحص.',
+                    risk: 'عالي',
+                    expected: 'today'
                 },
                 {
-                    title: 'سقالة تفتقر إلى درابزين الحماية (Guardrail) وألواح القدم',
-                    detail: 'منصة عمل سقالة غير مكتملة الألواح وبدون درابزين وسطي وعلوي لحماية السقوط.',
-                    corrective: 'تم حظر الصعود على السقالة وتكليف فريق السقالات باستكمالها ووضع كارت أخضر.'
-                },
-                {
-                    title: 'فتحة أرضية مكشوفة بدون حاجز أو غطاء',
-                    detail: 'وجود فتحة صيانة أو غرفة تفتيش مفتوحة في الأرضية بدون حاجز حماية.',
-                    corrective: 'تم تغطية الفتحة بلوح صلب وتطويقها بحواجز تحذيرية وشريط مضيء.'
+                    title: 'فتحة صيانة أرضية مكشوفة بدون غطاء',
+                    detail: 'وجود فتحة تفتيش بالأرضية بعمق 1 متر دون غطاء أو حاجز محيط.',
+                    corrective: 'تم تغطية الفتحة فوراً بغطاء معدني قوي ومطابق ووضع علامات تحذيرية.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'ضعف الإضاءة أو سوء التهوية بموقع العمل': [
+            '📦 رص وتخزين مائل وعشوائي للباليتات مهدد بالسقوط': [
                 {
-                    title: 'كشافات إنارة معطلة في المستودع / الممر الخلفي',
-                    detail: 'انعدام الرؤية الكافية في ممرات التخزين بسبب احتراق مصابيح الإضاءة.',
-                    corrective: 'تم إبلاغ الصيانة وتغيير المصابيح بكشافات LED عالية الكفاءة.'
-                },
-                {
-                    title: 'سوء تهوية وتراكم حرارة في عنبر التشغيل',
-                    detail: 'تعطل مراوح سحب الهواء وشفاطات التهوية مما يسبب ارتفاع درجات الحرارة.',
-                    corrective: 'تم صيانة مراوح الشفط وتوفير تهوية ميكانيكية ملائمة لبيئة العمل.'
+                    title: 'رص باليتات بارتفاع زائد وبشكل مائل',
+                    detail: 'تكديس كراتين على باليتات بارتفاع يتجاوز المسموح مما يهدد بانهيارها وسقوطها.',
+                    corrective: 'تم إعادة رص وتستيف الباليتات بالارتفاع الآمن المعتمد وتأمينها بالاستريتش.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'تكديس عشوائي للمخزون وخطر سقوط أحمال': [
+            '🧪 تسريب مواد كيميائية أو غازات تبريد (أمونيا/فريون)': [
                 {
-                    title: 'رص باليتات بضائع بارتفاع مائل وغير متزن',
-                    detail: 'تخزين كراتين بضائع بارتفاع زائد ومائل يهدد بانهيار الرصة على المارة.',
-                    corrective: 'تم تخفيض ارتفاع الرصات وإعادة ترتيبها ولفها بالبلاستيك (Stretch Film).'
+                    title: 'تسريب غاز تبريد بغرفة الضواغط',
+                    detail: 'رصد رائحة تسريب غاز تبريد أو انخفاض في ضغوط شبكة التبريد المركزية.',
+                    corrective: 'تم إخلاء المنطقة وتهويتها واستدعاء فني التبريد المتخصص لمعالجة التسريب وإحكامه.',
+                    risk: 'عالي',
+                    expected: 'today'
                 },
                 {
-                    title: 'تلف أرفف التخزين الحديدية (Racks) بفعل صدمات الفوركلفت',
-                    detail: 'وجود اعوجاج في قوائم الرفوف الرئيسية مع حمولة ثقيلة تهدد بانهيار الرف.',
-                    corrective: 'تم تفريغ الرف فوراً وتركيب واقيات حماية للقوائم وإصلاح الجزء المنحني.'
+                    title: 'براميل كيماويات بدون بطاقات تحذيرية (SDS)',
+                    detail: 'تخزين عبوات منظفات صناعية وأحماض بدون ملصقات النظام العالمي (GHS).',
+                    corrective: 'تم تثبيت ملصقات التحذير وتوفير صحيفة بيانات سلامة المادة (SDS).',
+                    risk: 'متوسط',
+                    expected: '24h'
                 }
             ],
-            'تلف الأرضيات أو وجود فتحات غير مغطاة': [
+            '🚜 تداخل مسارات المشاة مع حركة الشاحنات والمعدات': [
                 {
-                    title: 'هبوط أو حفر وتكسير في بلاط أرضية العنبر',
-                    detail: 'وجود حفر بالأرضية تتسبب في اهتزاز الفوركلفت وسقوط الحمولات وتعثر المشاة.',
-                    corrective: 'تم ترميم ومعالجة الأرضية بالإيبوكسي/الخرسانة لتسوية الممر بالكامل.'
+                    title: 'انعدام حواجز الفصل بين المشاة ومسار الشاحنات',
+                    detail: 'سير العمال والمشاة في نفس مسار تفريغ الشاحنات دون وجود ممرات محددة.',
+                    corrective: 'تم تخطيط ممرات المشاة باللون الأصفر وتركيب حواجز صد حديدية لحماية الأفراد.',
+                    risk: 'عالي',
+                    expected: '24h'
+                }
+            ],
+            '🚪 بيئة عمل مغلقة أو محصورة غير مؤمنة (Confined Space)': [
+                {
+                    title: 'خزان أو بيارة مفتوحة بدون تأمين وقياس غازات',
+                    detail: 'وجود خزان مياه/وقود تحت الصيانة دون وجود جهاز قياس نسبة الأكسجين ومراقب طوارئ.',
+                    corrective: 'تم تأمين المدخل واستخراج تصريح الأماكن المغلقة وقياس الغازات قبل أي دخول.',
+                    risk: 'عالي',
+                    expected: 'today'
+                }
+            ],
+            '💡 ضعف الإضاءة أو سوء التهوية وتراكم مخلفات (5S)': [
+                {
+                    title: 'تعطل كشافات الإنارة في الممر الرئيسي',
+                    detail: 'انخفاض شدة الإضاءة في منطقة الفرز مما يعيق الرؤية الآمنة ويزيد إجهاد العين.',
+                    corrective: 'تم إبلاغ قسم الكهرباء واستبدال الكشافات المعطلة بوحدات LED عالية الكفاءة.',
+                    risk: 'منخفض',
+                    expected: '24h'
+                },
+                {
+                    title: 'تراكم مخلفات كرتون وتعبئة تعيق الحركة',
+                    detail: 'تكدس أكياس وكرتون فارغ في ممرات الصالة مما يشوه الترتيب ويزيد مخاطر الحريق.',
+                    corrective: 'تم تنظيف الموقع فوراً ونقل المخلفات للحاويات المخصصة وتطبيق نظام 5S.',
+                    risk: 'منخفض',
+                    expected: 'today'
                 }
             ],
 
-            // --- 3. خطر حريق ---
-            'وجود عائق أمام طفايات وخراطيم ومضخات الحريق': [
+            // --- 3. سلوك آمن وإيجابي (Safe & Positive Behavior) ---
+            '⭐ التزام مثالي بمهمات الوقاية وإجراءات السلامة': [
                 {
-                    title: 'حجب طفاية الحريق بالبضائع أو المعدات',
-                    detail: 'وضع باليتات كرتون أمام طفاية الحريق مما يعيق الوصول السريع إليها عند الطوارئ.',
-                    corrective: 'تم إزالة العوائق فوراً وتحديد المربع الأرضي المخطط بالأحمر والأصفر.'
-                },
-                {
-                    title: 'انسداد كابينة خرطوم الحريق (Fire Hose Reel)',
-                    detail: 'تخزين قطع غيار ومعدات أمام دولاب خرطوم الإطفاء.',
-                    corrective: 'تم إخلاء المساحة أمام الكابينة بالكامل والتأكيد على بقائها خالية دائماً.'
+                    title: 'ارتداء كامل مهمات الوقاية أثناء نشاط خطير',
+                    detail: 'التزام كامل ومثالي من فريق العمل بارتداء الخوذة والسيفتي والنظارة وواقي السمع.',
+                    corrective: 'تم تقديم الشكر والتقدير للفريق وتشجيعهم على الاستمرار في هذا السلوك الإيجابي.',
+                    risk: 'منخفض',
+                    expected: 'week'
                 }
             ],
-            'طفايات حريق تالفة / فاقدة للضغط / منتهية الفحص': [
+            '🛑 ممارسة حق إيقاف العمل غير الآمن (Stop Work Authority)': [
                 {
-                    title: 'مؤشر ضغط طفاية البودرة في النطاق الأحمر (فارغة)',
-                    detail: 'انخفاض ضغط الطفاية وفقدان غاز الدفع مما يجعلها غير صالحة للاستخدام.',
-                    corrective: 'تم استبدال الطفاية فوراً بأخرى صالحة ومشحونة وإرسال التالفة للتعبئة.'
-                },
-                {
-                    title: 'تلف خرطوم الطفاية أو فقدان تيلة الأمان والرصاصة',
-                    detail: 'خرطوم الطفاية متشقق أو صمام الأمان غير مؤمن برصاصة الفحص المعتمدة.',
-                    corrective: 'تم صيانة الخرطوم وتركيب تيلة أمان ورصاصة جديدة وتدوين تاريخ الفحص.'
+                    title: 'إيقاف نشاط بسبب رصد خطر حرج من أحد العمال',
+                    detail: 'مبادرة شجاعة من فني تشغيل بإيقاف الرافعة الشوكية عند رصد تسريب زيت كثيف بممر المشاة.',
+                    corrective: 'تم تكريم العامل وإبراز تصرفه في اجتماع السلامة الأسبوعي كنموذج يحتذى به.',
+                    risk: 'منخفض',
+                    expected: 'week'
                 }
             ],
-            'أعمال قطع ولحام ساخنة بدون تصريح وستائر عزل': [
+            '📢 الإبلاغ المبكر والمثالي عن وشيكة وقوع حادث (Near Miss)': [
                 {
-                    title: 'أعمال لحام بدون توفير طفاية حريق ومراقب حريق',
-                    detail: 'تنفيذ أعمال لحام كهربائي دون وجود طفاية حريق بودرة/CO2 بجوار الفني.',
-                    corrective: 'تم توفير طفاية حريق صالحة وتعيين مراقب حريق معتمد طوال فترة العمل وبعده بـ 30 دقيقة.'
-                },
-                {
-                    title: 'تناثر شرز اللحام بالقرب من مواد قابلة للاشتعال',
-                    detail: 'تطاير شرر التجليخ واللحام بالقرب من كراتين وزيوت بدون ستائر عزل حريق.',
-                    corrective: 'تم إحاطة منطقة العمل بستائر مقاومة للحريق وإبعاد كافة المواد القابلة للاشتعال لمسافة 11 متر.'
+                    title: 'إبلاغ سريع عن كابل يطلق شرزاً قبل حدوث حريق',
+                    detail: 'إبلاغ فوري من عامل عن صدور صوت غير معتاد وشرز من لوحة تحكم قبل تصاعد أي دخان.',
+                    corrective: 'تم شكر العامل وإصلاح الخلل الكهربائي فوراً وتوثيق الواقعة كإبلاغ وقائي ناجح.',
+                    risk: 'منخفض',
+                    expected: 'week'
                 }
             ],
-            'تراكم مخلفات ورقية وكرتونية قرب لوحات الكهرباء': [
+            '✨ نظافة وترتيب استثنائي لموقع العمل (Housekeeping 5S)': [
                 {
-                    title: 'تخزين أوراق وكرتون بجوار محولات ولوحات الكهرباء',
-                    detail: 'وجود مخلفات ورقية ملاصقة للوحة القواطع الكهربائية مما ينذر بحريق عند حدوث شرر.',
-                    corrective: 'تم إخلاء ونظافة محيط اللوحة الكهربائية بمسافة أمان لا تقل عن متر واحد.'
+                    title: 'ترتيب ونظافة قياسية لخط الإنتاج والممرات',
+                    detail: 'نظافة وترتيب استثنائي لممرات العمل والمعدات مما يمنع حوادث التعثر والاصطدام.',
+                    corrective: 'تم الإشادة بالفريق المسؤول وتعميم التجربة على باقي الأقسام.',
+                    risk: 'منخفض',
+                    expected: 'week'
                 }
             ],
-            'تخزين مواد قابلة للاشتعال بالقرب من مصادر حرارة': [
+            '🔍 فحص ما قبل التشغيل للمعدات والرافعات بدقة': [
                 {
-                    title: 'وضع عبوات تنر / دهانات بجوار غلايات أو أفران',
-                    detail: 'تخزين سوائل قابلة للاشتعال في درجات حرارة مرتفعة دون تهوية أو عزل.',
-                    corrective: 'تم نقل العبوات فوراً إلى دولاب المواد الكيميائية المقاوم للحريق (Flammable Cabinet).'
+                    title: 'فحص دوري دقيق للمعدة وتعبئة قائمة الفحص',
+                    detail: 'التزام السائق بفحص فرامل وسوائل الرافعة الشوكية قبل بدء الوردية وتوثيق الفحص.',
+                    corrective: 'تم توثيق الالتزام الممتاز ونشر صورة النموذج في لوحة شرف السلامة.',
+                    risk: 'منخفض',
+                    expected: 'week'
                 }
             ],
-            'تسريب غاز طبيعي أو وقود': [
+            '💡 تقديم مقترح وفكرة هندسية مبتكرة لتلافي المخاطر': [
                 {
-                    title: 'اشتباه تسريب غاز أو وقود من خطوط الإمداد',
-                    detail: 'انبعاث رائحة غاز بالقرب من محابس خط الغاز أو محطة الوقود.',
-                    corrective: 'تم إغلاق المحبس الرئيسي وعزل المنطقة واستدعاء فريق طوارئ الغاز للفحص الفوري.'
+                    title: 'مقترح تركيب حاجز حماية إضافي لمسار المشاة',
+                    detail: 'اقتراح تصميم هندسي مبتكر يمنع تداخل مسار الفوركلفت مع مخرج غرفة الاستراحة.',
+                    corrective: 'تم رفع المقترح للإدارة الهندسية واعتماد تنفيذه ضمن خطة التطوير.',
+                    risk: 'منخفض',
+                    expected: 'week'
                 }
             ],
-
-            // --- 4. سلوك آمن وإيجابي ---
-            'التزام مثالي بمهمات الوقاية وإجراءات السلامة': [
+            '🤝 إرشاد وتنبيه زميل العمل لطريقة العمل الآمنة': [
                 {
-                    title: 'التزام كامل بنسبة 100% بارتداء مهمات الوقاية',
-                    detail: 'فريق العمل يرتدي الخوذة، الحذاء، النظارة، والسترة الفسفورية بشكل احترافي ومستمر.',
-                    corrective: 'تم توجيه الشكر والتقدير للفريق وتحفيزهم على مواصلة هذا المستوى النموذجي.'
-                }
-            ],
-            'ممارسة حق إيقاف العمل غير الآمن (Stop Work Authority)': [
-                {
-                    title: 'إيقاف عمل خطير من قبل العامل لمنع وقوع حادث',
-                    detail: 'مبادرة شجاعة من العامل بإيقاف زميله عن تشغيل معدة غير آمنة وتأمين الخطر.',
-                    corrective: 'تم تكريم العامل في اجتماع السلامة اليومي وتعميم موقفه الإيجابي كقدوة للجميع.'
-                }
-            ],
-            'تطبيق إجراءات العزل وتأمين الطاقة (LOTO)': [
-                {
-                    title: 'تطبيق نموذجي لإجراءات القفل والعزل والبطاقة LOTO',
-                    detail: 'عزل تام لكافة مصادر الطاقة الكهربائية والهيدروليكية ووضع الأقفال الفردية قبل الصيانة.',
-                    corrective: 'تم توثيق الالتزام الممتاز والإشادة بفريق الصيانة الميكانيكية والكهربائية.'
-                }
-            ],
-            'الإبلاغ المبكر والمثالي عن وشيكة وقوع حادث (Near Miss)': [
-                {
-                    title: 'إبلاغ سريع ودقيق عن خطر محتمل وتلافيه',
-                    detail: 'سرعة إبلاغ إدارة السلامة عن تسريب بسيط قبل تفاقمه وتحوله لخطر جسيم.',
-                    corrective: 'تم تسجيل البلاغ وتقديم مكافأة السلامة التشجيعية للموظف المبادر.'
-                }
-            ],
-            'نظافة وترتيب استثنائي لموقع العمل (Housekeeping 5S)': [
-                {
-                    title: 'موقع عمل منظم ونظيف بنظام 5S القياسي',
-                    detail: 'ترتيب الأدوات في أماكنها المحددة وخلو الممرات بالكامل من أي عوائق أو شوائب.',
-                    corrective: 'تم منح القسم راية "أفضل بيئة عمل آمنة ومنظمة" لهذا الأسبوع.'
+                    title: 'تنبيه زميل لضرورة ربط حزام الأمان قبل الصعود',
+                    detail: 'ملاحظة وتوجيه أخوي من عامل لزميله بضرورة ارتداء مهمات الحماية قبل مباشرة العمل.',
+                    corrective: 'تم الإشادة بالروح الإيجابية والتعاون لترسيخ ثقافة السلامة الشاملة.',
+                    risk: 'منخفض',
+                    expected: 'week'
                 }
             ],
 
-            // --- 5. ملاحظة بيئية ---
-            'تسريب أو هدر مياه وصرف صناعي': [
+            // --- 4. ملاحظات بيئية ---
+            '🌿 هدر مياه وتسريب شبكات الغسيل والصرف الصناعي': [
                 {
-                    title: 'صنبور أو محبس مياه تالف يسرب باستمرار',
-                    detail: 'هدر كميات كبيرة من المياه النظيفة بسبب تلف محبس خط التغذية.',
-                    corrective: 'تم استبدال المحبس التالف وصيانة خط المياه لترشيد الاستهلاك.'
+                    title: 'محبس مياه تالف يسرب باستمرار',
+                    detail: 'هدر كميات من المياه النظيفة بسبب تلف محبس خط التغذية بصالة الغسيل.',
+                    corrective: 'تم استبدال المحبس التالف وصيانة خط المياه لترشيد الاستهلاك فوراً.',
+                    risk: 'منخفض',
+                    expected: '24h'
                 }
             ],
-            'خلط أو إلقاء غير نظامي للمخلفات والنفايات الخطرة': [
+            '🧪 خلط المخلفات الخطرة مع النفايات العادية': [
                 {
-                    title: 'إلقاء عبوات الزيوت والفلاتر في حاوية القمامة العامة',
-                    detail: 'خلط مخلفات صيانة خطرة مع المخلفات العضوية في صندوق النفايات.',
-                    corrective: 'تم فرز المخلفات ونقلها لحاويات المخلفات الخطرة المعتمدة وتوعية الفنيين.'
+                    title: 'إلقاء فلاتر وعبوات زيوت في حاوية القمامة العامة',
+                    detail: 'خلط مخلفات صيانة كيميائية خطرة مع النفايات العضوية في صندوق النفايات.',
+                    corrective: 'تم فرز المخلفات ونقلها لحاويات المخلفات الخطرة وتوعية الفنيين بالفرز.',
+                    risk: 'منخفض',
+                    expected: 'today'
                 }
             ],
-            'انبعاثات أدخنة / غبار / روائح غير اعتيادية': [
+            '💨 انبعاثات أدخنة أو غبار أو روائح غير معتادة': [
                 {
                     title: 'تصاعد غبار أو أدخنة من فلتر الشفاط',
                     detail: 'انسداد فلاتر سحب الغبار مما يسبب تسرب انبعاثات في بيئة العمل المحيطة.',
-                    corrective: 'تم استبدال فلاتر سحب الغبار وتنظيف مجاري الهواء الميكانيكية.'
+                    corrective: 'تم استبدال فلاتر سحب الغبار وتنظيف مجاري الهواء الميكانيكية.',
+                    risk: 'منخفض',
+                    expected: '24h'
                 }
             ],
-            'هدر مفرط في استهلاك الطاقة والكهرباء': [
+            '🛢️ تسريب زيوت أو مواد كيميائية على التربة والأرضيات': [
+                {
+                    title: 'تسريب زيت هيدروليك من خزان خارجي',
+                    detail: 'وجود ترشيح زيت هيدروليك يتسرب نحو أرضية الفناء الخارجي.',
+                    corrective: 'تم تطويق التسريب بحوض احتواء ونشر رمال ماصة وإصلاح المحبس.',
+                    risk: 'متوسط',
+                    expected: 'today'
+                }
+            ],
+            '⚡ هدر واستهلاك مفرط للطاقة والكهرباء': [
                 {
                     title: 'ترك إضاءة ومكيفات العنبر تعمل بعد انتهاء الوردية',
                     detail: 'تشغيل أجهزة كهربائية وإنارة في مناطق خالية تماماً من النشاط والعمال.',
-                    corrective: 'تم إطفاء الأنظمة وتنبيه مشرف الوردية بجدول إيقاف الطاقة لتوفير الاستهلاك.'
+                    corrective: 'تم إطفاء الأنظمة وتنبيه مشرف الوردية بجدول إيقاف الطاقة لتوفير الاستهلاك.',
+                    risk: 'منخفض',
+                    expected: 'today'
                 }
-            ]
-        };
+            ],
 
-// ==========================================
-        // قاموس المقترحات الذكية للملاحظات والإجراءات
-        // ==========================================
-        const SAFETY_OBSERVATION_TEMPLATES = {
-            'سلوك غير آمن': [
+            // --- 5. مخاطر الحريق ---
+            '🔥 طفايات حريق معطلة أو فاقدة للضغط أو منتهية الصلاحية': [
                 {
-                    title: 'عدم ارتداء مهمات الوقاية (PPE)',
-                    detail: 'رصد عامل لا يرتدي مهمات الوقاية الشخصية المناسبة لطبيعة العمل (مثل الخوذة، الحذاء الواقي، أو النظارة).',
-                    corrective: 'تم إيقاف العامل وتزويده بمهمات الوقاية والتأكيد على ضرورة الالتزام بها.'
-                },
-                {
-                    title: 'استخدام الهاتف أثناء القيادة / العمل',
-                    detail: 'استخدام الهاتف المحمول أثناء قيادة المعدة أو تشغيل الماكينات مما يشتت الانتباه.',
-                    corrective: 'تم تنبيه السائق/العامل فوراً والتأكيد على منع استخدام الهاتف أثناء العمل.'
-                },
-                {
-                    title: 'الوقوف تحت حمل معلق',
-                    detail: 'تواجد أفراد في مسار الرفع وتحت الأحمال المعلقة بواسطة الأوناش أو الفوركلفت.',
-                    corrective: 'تم إخلاء منطقة الرفع فوراً ووضع حواجز وشريط تحذيري لمنع المرور.'
-                },
-                {
-                    title: 'التدخين في غير الأماكن المخصصة',
-                    detail: 'رصد تدخين داخل منطقة العمل / منطقة الإنتاج بالمخالفة لتعليمات السلامة.',
-                    corrective: 'تم إطفاء السيجارة فوراً وتنبيه العامل وتوجيهه للأماكن المخصصة للتدخين.'
-                },
-                {
-                    title: 'تخطي حواجز الأمان للماكينات',
-                    detail: 'محاولة تشغيل الماكينة أو تنظيفها مع تعطيل حساسات أو حواجز الحماية الميكانيكية.',
-                    corrective: 'تم إيقاف الماكينة وإعادة تركيب حاجز الأمان والتأكد من تفعيل الحساسات.'
-                },
-                {
-                    title: 'الرفع اليدوي بطريقة خاطئة',
-                    detail: 'رفع أحمال ثقيلة بأسلوب غير مريح أو خاطئ مما يهدد بحدوث إصابات للظهر.',
-                    corrective: 'تم تدريب وتوجيه العامل على طريقة الرفع الآمن واستخدام وسائل مناولة مساعدة.'
+                    title: 'طفاية حريق فاقدة للضغط أو منتهية الفحص',
+                    detail: 'رصد طفاية بودرة كيميائية مؤشرها باللون الأحمر وتحتاج إعادة شحن واختبار.',
+                    corrective: 'تم استبدال الطفاية بأخرى صالحة ومعتمدة وإرسال التالفة للصيانة فوراً.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'وضع غير آمن': [
+            '👨‍🚒 أعمال قطع ولحام ساخنة بدون تصريح وستائر عزل ومراقب حريق': [
                 {
-                    title: 'انسداد مخرج / مسار الطوارئ',
-                    detail: 'وجود بضائع أو معدات تعيق مسار الخروج وباب الطوارئ.',
-                    corrective: 'تم نقل العوائق وفتح مسار ومخرج الطوارئ بالكامل والتأكيد على عدم حظرها.'
-                },
-                {
-                    title: 'تسريب زيوت / مياه على الأرضيات',
-                    detail: 'وجود بقع زيتية أو سوائل منسكبة تسبب خطر الانزلاق والسقوط.',
-                    corrective: 'تم تنظيف وتجفيف الأرضية فوراً ووضع لافتة تحذيرية واستدعاء الصيانة لإصلاح التسريب.'
-                },
-                {
-                    title: 'تلف كابلات / لوحة كهرباء مفتوحة',
-                    detail: 'وجود أسلاك كهربائية مكشوفة أو لوحة تحكم كهربائية مفتوحة وغير مؤمنة.',
-                    corrective: 'تم عزل الكهرباء وإغلاق اللوحة وإبلاغ قسم الصيانة الكهربائية للإصلاح الفوري.'
-                },
-                {
-                    title: 'سلم أو سقالة غير مؤمنة',
-                    detail: 'استخدام سلم متهالك أو سقالة ينقصها الدرابزين الواقي ومثبتات الاتزان.',
-                    corrective: 'تم إيقاف العمل واستبعاد السلم وتأمين السقالة بواسطة الفني المختص.'
-                },
-                {
-                    title: 'إضاءة ضعيفة في ممر العمل',
-                    detail: 'تعطل كشافات الإنارة في الممرات مما يعيق الرؤية الآمنة أثناء الحركة.',
-                    corrective: 'تم إبلاغ الصيانة لاستبدال الكشافات المعطلة وتوفير إضاءة كافية.'
-                },
-                {
-                    title: 'عدم وجود غطاء حماية لماكينة',
-                    detail: 'الأجزاء الدوارة للماكينة مكشوفة بدون وجود واقي الحماية (Machine Guarding).',
-                    corrective: 'تم إيقاف التشغيل حتى تركيب الغطاء الواقي واعتماده من مشرف السلامة.'
+                    title: 'أعمال لحام ساخنة بدون ستائر عزل ومراقب حريق',
+                    detail: 'مباشرة أعمال تجليخ ولحام في منطقة قابلة للاشتعال دون تصريح وغياب طفاية حريق قريبة.',
+                    corrective: 'تم إيقاف العمل وتوفير طفاية حريق وستائر عزل مقاومة للحرارة وتعيين مراقب حريق.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'خطر حريق': [
+            '🚪 انسداد أبواب ومسارات مخارج الطوارئ وصناديق الحريق': [
                 {
-                    title: 'طفاية حريق محجوبة أو غير صالحة',
-                    detail: 'وجود عوائق أمام طفاية الحريق أو انخفاض مؤشر الضغط عن النطاق الأخضر.',
-                    corrective: 'تم إزالة العوائق واستبدال الطفاية بأخرى صالحة ومطابقة للفحص.'
-                },
-                {
-                    title: 'تراكم مخلفات قابلة للاشتعال',
-                    detail: 'تكدس كراتين وأخشاب ومخلفات ورقية بالقرب من مصادر الحرارة أو اللوحات.',
-                    corrective: 'تم إخلاء ونقل المخلفات القابلة للاشتعال إلى منطقة النفايات المخصصة.'
-                },
-                {
-                    title: 'تخزين مواد كيميائية بشكل غير آمن',
-                    detail: 'عبوات مواد كيميائية سريعة الاشتعال مفتوحة أو مخزنة بدون تهوية مناسبة.',
-                    corrective: 'تم إحكام إغلاق العبوات ونقلها إلى مخزن المواد الكيميائية المطابق للاشتراطات.'
-                },
-                {
-                    title: 'توصيلات كهربائية عشوائية (Overload)',
-                    detail: 'استخدام مشتركات كهربائية متعددة محملة بأجهزة تسبب ارتفاع الحرارة وخطر الماس.',
-                    corrective: 'تم فصل المشتركات الزائدة وتوصيل الأجهزة بمخارج كهربائية مخصصة.'
+                    title: 'تكدس بضائع أمام صندوق الحريق وباب الطوارئ',
+                    detail: 'وضع باليتات تعيق الوصول السريع لخرطوم الإطفاء وباب الخروج في الطوارئ.',
+                    corrective: 'تم إخلاء ونقل كافة العوائق فوراً وتحديد حرم أمان باللون الأصفر بالأرضية.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'سلوك آمن وإيجابي': [
+            '🛢️ تخزين مواد سريعة الاشتعال بالقرب من مصادر حرارة': [
                 {
-                    title: 'التزام مثالي بمهمات الوقاية (PPE)',
-                    detail: 'التزام تام من فريق العمل بارتداء كافة مهمات الوقاية المعتمدة طوال فترة النشاط.',
-                    corrective: 'تم توجيه الشكر والتقدير للعامل/الفريق وتحفيزهم على الاستمرار في السلوك الآمن.'
-                },
-                {
-                    title: 'تطبيق إجراءات العزل وتأمين الطاقة (LOTO)',
-                    detail: 'تطبيق احترافي لإجراءات عزل مصادر الطاقة ووضع الأقفال والبطاقات قبل الصيانة.',
-                    corrective: 'تم تسجيل الملاحظة كنموذج إيجابي يحتذى به في موقع العمل.'
-                },
-                {
-                    title: 'الإبلاغ المبكر والمبادرة لمنع خطر',
-                    detail: 'مبادرة العامل بالإبلاغ عن عطل محتمل وتأمينه قبل وقوع أي حادث أو تلف.',
-                    corrective: 'تم توثيق المبادرة الإيجابية وتقديم شهادة شكر في اجتماع السلامة الأسبوعي.'
-                },
-                {
-                    title: 'ترتيب وتنظيم فائق لموقع العمل (5S)',
-                    detail: 'نظافة وترتيب استثنائي لممرات العمل والمعدات مما يمنع حوادث التعثر والاصطدام.',
-                    corrective: 'تم الإشادة بالفريق المسؤول وتعميم التجربة على باقي الأقسام.'
+                    title: 'تخزين عبوات دهان/مذيبات قرب لوحات تسخين',
+                    detail: 'وجود مذيبات سريعة الاشتعال بالقرب من أفران الإنتاج ومصادر الشرر.',
+                    corrective: 'تم نقل المواد الملتهبة فوراً إلى دولاب المواد الخطرة المقاوم للحريق.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'ملاحظة بيئية': [
+            '⚡ تراكم كرتون ومخلفات ورقية ملاصقة للوحات الكهرباء': [
                 {
-                    title: 'خلط المخلفات في غير الحاويات المخصصة',
-                    detail: 'إلقاء مخلفات خطرة أو صناعية في حاويات النفايات العادية.',
-                    corrective: 'تم فرز المخلفات وإعادة توزيعها في الحاويات الصحيحة وتوعية العاملين.'
-                },
-                {
-                    title: 'هدر واستهلاك زائد للمياه / الطاقة',
-                    detail: 'ترك صنابير المياه مفتوحة أو تشغيل أجهزة بدون داعٍ في غير أوقات العمل.',
-                    corrective: 'تم إغلاق المحابس والأجهزة وتنبيه مسؤولي الوردية لترشيد الاستهلاك.'
-                },
-                {
-                    title: 'انبعاث روائح أو أدخنة غير معتادة',
-                    detail: 'تصاعد أدخنة أو انبعاثات من مداخن/أنظمة التهوية بمعدل أعلى من الطبيعي.',
-                    corrective: 'تم فحص الفلاتر ونظام التهوية وإبلاغ فريق البيئة والصيانة للمعاينة.'
+                    title: 'تخزين كراتين فارغة ملاصقة للوحة التوزيع الرئيسية',
+                    detail: 'تكدس خامات تغليف ورقية قابلة للاشتعال ملاصقة لقواطع ومحولات الكهرباء.',
+                    corrective: 'تم إخلاء الكراتين فوراً وتأمين حرم أمان بمسافة 1 متر على الأقل حول اللوحة.',
+                    risk: 'عالي',
+                    expected: 'today'
                 }
             ],
-            'أخرى': [
+
+            // --- 6. أخرى ---
+            '📋 ملاحظة عامة على بيئة العمل والصحة المهنية': [
                 {
-                    title: 'ملاحظة عامة على بيئة العمل',
-                    detail: 'رصد حالة عامة تؤثر على راحة وسلامة العاملين في الموقع.',
-                    corrective: 'تم التوجيه بعمل المعاينة والإجراء التصحيحي المطلوب.'
-                },
+                    title: 'ملاحظة عامة تخص راحة وسلامة العاملين',
+                    detail: 'رصد حالة عامة تؤثر على السلامة والصحة المهنية بموقع العمل.',
+                    corrective: 'تم التوجيه بعمل المعاينة الفنية واتخاذ الإجراء التصحيحي اللازم.',
+                    risk: 'منخفض',
+                    expected: 'week'
+                }
+            ],
+            '💡 مقترح تحسين عام لمنظومة السلامة والتشغيل': [
                 {
-                    title: 'اقتراح تحسين لإجراءات السلامة',
-                    detail: 'مقترح لتطوير بيئة العمل وتعزيز معايير السلامة والصحة المهنية.',
-                    corrective: 'تم رفع المقترح إلى إدارة السلامة لدراسة إمكانية التطبيق.'
+                    title: 'مقترح لتطوير بيئة العمل واشتراطات السلامة',
+                    detail: 'فكرة مقترحة من أحد العاملين لتعزيز الكفاءة وتلافي مسببات الحوادث.',
+                    corrective: 'تم رفع المقترح إلى إدارة السلامة لدراسة إمكانية التطبيق الميداني.',
+                    risk: 'منخفض',
+                    expected: 'week'
+                }
+            ],
+            '👷 ملاحظة تخص مقاولين خارجيين': [
+                {
+                    title: 'مخالفة اشتراطات السلامة من عمالة مقاول خارجي',
+                    detail: 'رصد عمالة مقاول تعمل دون استكمال تصاريح الدخول ومهمات الوقاية المطلوبة.',
+                    corrective: 'تم إيقاف أعمال المقاول وإلزامه بالاشتراطات المعتمدة قبل متابعة العمل.',
+                    risk: 'متوسط',
+                    expected: 'today'
+                }
+            ],
+            '🔍 فحص دوري واستكشاف ميداني': [
+                {
+                    title: 'ملاحظة مرصودة أثناء جولة التفتيش الدورية',
+                    detail: 'توثيق حالة ميدانية خلال المرور الدوري للسلامة تحتاج للمتابعة والمعالجة.',
+                    corrective: 'تم توثيق الحالة وإخطار المسؤولين المعنيين لإتمام المعالجة والإغلاق.',
+                    risk: 'منخفض',
+                    expected: 'week'
                 }
             ]
         };
@@ -3333,7 +4292,7 @@
         }
 
         
-        function renderSmartSuggestions(obsType, subCat) {
+        function renderSmartSuggestions(obsType, subCat, autoApply = true) {
             const container = document.getElementById('detailsQuickChips');
             const correctiveContainer = document.getElementById('correctiveQuickChips');
             if (!container) return;
@@ -3345,14 +4304,22 @@
             let items = [];
             if (selectedSub && DETAILED_SUBCATEGORY_TEMPLATES[selectedSub]) {
                 items = DETAILED_SUBCATEGORY_TEMPLATES[selectedSub];
-            } else {
-                // محاولة البحث بالتقريب في مفاتيح التصنيفات الفرعية
-                if (selectedSub) {
-                    const matchedKey = Object.keys(DETAILED_SUBCATEGORY_TEMPLATES).find(k => 
-                        k.includes(selectedSub) || selectedSub.includes(k)
-                    );
-                    if (matchedKey) items = DETAILED_SUBCATEGORY_TEMPLATES[matchedKey];
-                }
+            } else if (selectedSub) {
+                const kList = Object.keys(DETAILED_SUBCATEGORY_TEMPLATES);
+                const matchedKey = kList.find(k => k.includes(selectedSub) || selectedSub.includes(k) || 
+                    (k.includes('كهربا') && selectedSub.includes('كهربا')) ||
+                    (k.includes('سقوط') && selectedSub.includes('سقوط')) ||
+                    (k.includes('حريق') && selectedSub.includes('حريق')) ||
+                    (k.includes('ماكين') && selectedSub.includes('ماكين')) ||
+                    (k.includes('كيميا') && selectedSub.includes('كيميا')) ||
+                    (k.includes('انزلاق') && selectedSub.includes('انزلاق')) ||
+                    (k.includes('مناولة') && selectedSub.includes('مناولة')) ||
+                    (k.includes('مركبات') && selectedSub.includes('مركبات')) ||
+                    (k.includes('مغلق') && selectedSub.includes('مغلق')) ||
+                    (k.includes('وقاية') && selectedSub.includes('وقاية')) ||
+                    (k.includes('بيئة') && selectedSub.includes('بيئة'))
+                );
+                if (matchedKey) items = DETAILED_SUBCATEGORY_TEMPLATES[matchedKey];
             }
 
             // 2. إذا لم تتوفر مقترحات فرعية، الرجوع للمقترحات العامة للتصنيف الرئيسي
@@ -3363,7 +4330,7 @@
 
             // رسم وسوم تفاصيل الملاحظة
             container.innerHTML = items.map((item, idx) => `
-                <div class="suggestion-chip" data-idx="${idx}" onclick="applyDetailedSuggestionChip(${idx})">
+                <div class="suggestion-chip ${idx === 0 ? 'active' : ''}" data-idx="${idx}" onclick="applyDetailedSuggestionChip(${idx})">
                     <i class="fas fa-tag text-blue-500"></i>
                     <span>${item.title}</span>
                 </div>
@@ -3384,6 +4351,11 @@
                     </div>
                 `).join('');
             }
+
+            // تطبيق المقترح الأول فورياً لتحديث التفاصيل والإجراء التصحيحي والشدة
+            if (autoApply && items.length > 0) {
+                applyDetailedSuggestionChip(0);
+            }
         }
 
         function applyDetailedSuggestionChip(idx) {
@@ -3396,6 +4368,7 @@
 
             if (detailsInput) {
                 detailsInput.value = item.detail || '';
+                handleDetailsInputQuality(detailsInput.value);
                 detailsInput.focus();
             }
 
@@ -3404,10 +4377,102 @@
                 correctiveInput.value = item.corrective;
             }
 
+            // تحديث مستوى الخطورة تلقائياً إن وجد
+            if (item.risk) {
+                const targetRiskChip = document.querySelector(`.risk-chip[data-risk="${item.risk}"]`);
+                if (targetRiskChip) selectRisk(targetRiskChip);
+            }
+
+            // تحديث التاريخ المتوقع تلقائياً إن وجد
+            if (item.expected) {
+                applyDatePreset(item.expected);
+            }
+
             // تظليل الوسم المختار
             document.querySelectorAll('#detailsQuickChips .suggestion-chip').forEach((c, i) => {
                 c.classList.toggle('active', i === idx);
             });
+        }
+
+        // تطبيق أزرار الإجراءات السريعة الفورية
+        function applyQuickActionText(text) {
+            const input = document.getElementById('correctiveInput');
+            if (input) {
+                input.value = text;
+                input.focus();
+                showToast('تم تطبيق الإجراء الفوري بنجاح ✅', 'success', 2000);
+            }
+        }
+
+        // اقتراح الإجراء التصحيحي بالذكاء الاصطناعي بناءً على الكلمات المفتاحية بالوصف
+        function autoSuggestCorrectiveAction() {
+            const details = (document.getElementById('detailsInput')?.value || '').trim();
+            const correctiveInput = document.getElementById('correctiveInput');
+            if (!correctiveInput) return;
+
+            if (!details || details.length < 3) {
+                showToast('يرجى كتابة أو تسجيل تفاصيل الخطر أولاً لاقتراح الإجراء المناسب', 'info', 3000);
+                document.getElementById('detailsInput')?.focus();
+                return;
+            }
+
+            const lower = details.toLowerCase();
+            let suggestedAction = '';
+            let detectedRisk = 'متوسط';
+            let detectedDate = '24h';
+
+            if (lower.includes('سلك') || lower.includes('كابل') || lower.includes('كهربا') || lower.includes('لوحة') || lower.includes('قاطع') || lower.includes('فيشة') || lower.includes('صعق') || lower.includes('loto')) {
+                suggestedAction = 'عزل وتأمين مصدر التيار الكهربائي فوراً، وإصلاح العطل والتوصيل بمعرفة فني الكهرباء المختص مع وضع قفل وعلامة أمان (LOTO).';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('سقال') || lower.includes('حزام') || lower.includes('ارتفاع') || lower.includes('سلم') || lower.includes('سقوط') || lower.includes('فتحة')) {
+                suggestedAction = 'إيقاف العمل العالي فوراً، وتأمين السقالة وتثبيت حزام الأمان بنقطة ارتكاز معتمدة وتغطية أي فتحات أرضية بحواجز مطابقة.';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('حريق') || lower.includes('طفاية') || lower.includes('لحام') || lower.includes('قطع') || lower.includes('لهب') || lower.includes('اشتعال') || lower.includes('دخان')) {
+                suggestedAction = 'إيقاف الأعمال الساخنة وتوفير طفاية حريق معتمدة صالحة وستائر عزل مقاومة للحرارة واستخراج تصريح عمل ساخن معتمد.';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('ماكينة') || lower.includes('سير') || lower.includes('ترس') || lower.includes('حوافظ') || lower.includes('غطاء') || lower.includes('دوار')) {
+                suggestedAction = 'إيقاف الماكينة وتركيب حوافظ وسيور الأمان اللازمة والتأكد من فاعلية زر التوقف في الطوارئ (E-Stop) قبل إعادة التشغيل.';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('كيميا') || lower.includes('غاز') || lower.includes('امونيا') || lower.includes('أمونيا') || lower.includes('فريون') || lower.includes('تسريب') || lower.includes('برميل') || lower.includes('زيت') || lower.includes('حمض')) {
+                suggestedAction = 'إيقاف مصدر التسريب فوراً، واستخدام مهمات احتواء الانسكابات (Spill Kit)، وارتداء مهمات الوقاية المناسبة، وتثبيت بطاقة التحذير (SDS).';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('انزلاق') || lower.includes('مبلل') || lower.includes('عائق') || lower.includes('ممر') || lower.includes('تعثر') || lower.includes('مخلفات') || lower.includes('ارضية') || lower.includes('أرضية')) {
+                suggestedAction = 'تنظيف وتجفيف الأرضية فوراً ووضع لافتة تحذيرية (أرضية زلقة) وإزالة كافة العوائق والمخلفات عن مسارات المشاة.';
+                detectedRisk = 'متوسط';
+                detectedDate = 'today';
+            } else if (lower.includes('باليت') || lower.includes('تخزين') || lower.includes('رص') || lower.includes('كرتون') || lower.includes('سقوط احمال') || lower.includes('سقوط أحمال') || lower.includes('رفع')) {
+                suggestedAction = 'إعادة رص وتثبيت الباليتات بشكل مستقر ومطابق للارتفاع المسموح، وتأمين الممرات والالتزام بطرق الرفع الميكانيكي الآمن.';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('فوركلفت') || lower.includes('رافعة شوكية') || lower.includes('سائق') || lower.includes('سرعة') || lower.includes('مركبة') || lower.includes('لودر')) {
+                suggestedAction = 'إلزام سائق المعدة بالسرعة القانونية المقررة واستخدام آلة التنبيه وإعطاء الأولوية لمسارات المشاة والتأكد من فحص المعدة اليومي.';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('مغلق') || lower.includes('تانك') || lower.includes('خزان') || lower.includes('صومعة') || lower.includes('بيارة') || lower.includes('غرفة تفتيش')) {
+                suggestedAction = 'إيقاف الدخول فوراً حتى إجراء قياسات نسبة الأكسجين والغازات السامة وتوفير شفاطات تهوية وتصريح دخول مكان مغلق معتمد.';
+                detectedRisk = 'عالي';
+                detectedDate = 'today';
+            } else if (lower.includes('خوذة') || lower.includes('حذاء') || lower.includes('سيفتي') || lower.includes('نظارة') || lower.includes('كمامة') || lower.includes('قفاز') || lower.includes('مهمات')) {
+                suggestedAction = 'تزويد العامل بمهمات الوقاية الشخصية (PPE) المطابقة وإلزامه بارتدائها قبل متابعة العمل وتوعيته بمخاطر عدم الالتزام.';
+                detectedRisk = 'منخفض';
+                detectedDate = 'today';
+            } else {
+                suggestedAction = 'تمت مراجعة الملاحظة وتوجيه الإدارة المعنية بإزالة الخطر واستكمال الإجراء الوقائي التصحيحي والمتابعة حتى الإغلاق.';
+            }
+
+            correctiveInput.value = suggestedAction;
+            correctiveInput.focus();
+
+            const targetRiskChip = document.querySelector(`.risk-chip[data-risk="${detectedRisk}"]`);
+            if (targetRiskChip) selectRisk(targetRiskChip);
+            applyDatePreset(detectedDate);
+
+            showToast('تم استنتاج واقتراح الإجراء التصحيحي المناسب بنجاح ✨', 'success', 3000);
         }
 
         // تطبيق وسم الإجراء التصحيحي المباشر
@@ -3532,14 +4597,93 @@
         // ==========================================
         // التقاط الموقع الجغرافي GPS فائق السرعة بالخلفية
         // ==========================================
+        // 13. التقاط الموقع الجغرافي (GPS) تلقائياً وبشكل إلزامي
+        // ==========================================
         window._currentGps = null;
 
-        function initBackgroundGpsCapture() {
+        function initBackgroundGpsCapture(showPrompt = false) {
+            // استرجاع فوري من الذاكرة اللحظية لعرض حالة النشاط فوراً
+            try {
+                const cached = sessionStorage.getItem('HSE_LAST_GPS') || localStorage.getItem('HSE_LAST_GPS');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (parsed && parsed.latitude && (Date.now() - (parsed.timestamp || 0) < 900000)) {
+                        window._currentGps = parsed;
+                        updateGpsBadge(true, `الموقع الجغرافي جاهز: ${parsed.latitude}, ${parsed.longitude}`);
+                    }
+                }
+            } catch(e) {}
+
             if (!navigator.geolocation) {
-                updateGpsBadge(false, 'GPS غير مدعوم بالجهاز');
+                updateGpsBadge(false, 'خاصية GPS غير مدعومة بجهازك');
                 return;
             }
 
+            const geoOptions = {
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 10000
+            };
+
+            const onGpsSuccess = function(pos) {
+                const lat = pos.coords.latitude.toFixed(6);
+                const lng = pos.coords.longitude.toFixed(6);
+                const acc = pos.coords.accuracy ? Math.round(pos.coords.accuracy) : 0;
+                const gpsObj = {
+                    coordinates: `${lat}, ${lng}`,
+                    latitude: lat,
+                    longitude: lng,
+                    accuracy: acc,
+                    mapsUrl: `https://maps.google.com/?q=${lat},${lng}`,
+                    timestamp: Date.now()
+                };
+                window._currentGps = gpsObj;
+                try {
+                    sessionStorage.setItem('HSE_LAST_GPS', JSON.stringify(gpsObj));
+                    localStorage.setItem('HSE_LAST_GPS', JSON.stringify(gpsObj));
+                } catch(e) {}
+                updateGpsBadge(true, `تم رصد الموقع تلقائياً: ${lat}, ${lng} (دقة: ±${acc}م)`);
+            };
+
+            const onGpsError = function(err) {
+                if (!window._currentGps) {
+                    updateGpsBadge(false, 'يلزم السماح بالموقع الجغرافي (GPS) لتسجيل الملاحظة');
+                }
+            };
+
+            // قراءة فورية وتلقائية
+            navigator.geolocation.getCurrentPosition(onGpsSuccess, onGpsError, geoOptions);
+
+            // تتبع مستمر مباشر
+            if (navigator.geolocation.watchPosition) {
+                try {
+                    navigator.geolocation.watchPosition(onGpsSuccess, function() {}, { enableHighAccuracy: true, maximumAge: 15000 });
+                } catch(e) {}
+            }
+        }
+
+        function updateGpsBadge(isSuccess, text) {
+            const badge = document.getElementById('gpsStatusBadge');
+            if (!badge) return;
+
+            if (isSuccess) {
+                badge.classList.add('gps-active');
+                badge.style.color = '#15803d';
+                badge.title = text || 'تم تحديد الموقع الجغرافي تلقائياً وبدقة (GPS نشط)';
+            } else {
+                badge.classList.remove('gps-active');
+                badge.style.color = '#dc2626';
+                badge.title = text || 'يلزم السماح بالوصول للموقع الجغرافي (GPS إلزامي)';
+            }
+        }
+
+        function triggerManualGpsCapture() {
+            if (!navigator.geolocation) {
+                showToast('خاصية تحديد الموقع الجغرافي (GPS) غير مدعومة بجهازك', 'error', 3000);
+                return;
+            }
+
+            showToast('جاري التقاط وتحديث إحداثيات الموقع الحالي...', 'loading');
             navigator.geolocation.getCurrentPosition(
                 function(pos) {
                     const lat = pos.coords.latitude.toFixed(6);
@@ -3552,38 +4696,24 @@
                         accuracy: acc,
                         mapsUrl: `https://maps.google.com/?q=${lat},${lng}`
                     };
-                    updateGpsBadge(true, `موقع دقيق (±${acc}م)`);
+                    updateGpsBadge(true, `تم رصد الموقع: ${lat}, ${lng} (دقة: ±${acc}م)`);
+                    showToast(`تم التقاط الإحداثيات بنجاح 📍 (${lat}, ${lng}) بدقة ±${acc}م`, 'success', 3500);
                 },
                 function(err) {
-                    updateGpsBadge(false, 'الموقع الإداري فقط');
+                    window._currentGps = null;
+                    updateGpsBadge(false, 'تعذر الوصول للموقع الجغرافي');
+                    showToast('يرجى تفعيل صلاحية تحديد الموقع (GPS) في المتصفح', 'error', 3500);
                 },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 4000,
-                    maximumAge: 120000
-                }
+                { enableHighAccuracy: true, timeout: 6000 }
             );
         }
 
-        function updateGpsBadge(isSuccess, text) {
-            const badge = document.getElementById('gpsStatusBadge');
-            if (!badge) return;
-
-            if (isSuccess) {
-                badge.style.color = '#15803d';
-                badge.title = text || 'تم تحديد الموقع بدقة';
-            } else {
-                badge.style.color = '#64748b';
-                badge.title = text || 'الموقع الإداري فقط';
-            }
-        }
-
-        async function getQuickGpsPayload() {
-            if (window._currentGps) return window._currentGps;
+        async function getQuickGpsPayloadStrict() {
+            if (window._currentGps && window._currentGps.latitude) return window._currentGps;
             if (!navigator.geolocation) return null;
 
             return new Promise((resolve) => {
-                const timeoutId = setTimeout(() => resolve(null), 1200); // مهلة صارمة 1.2 ثانية فقط
+                const timeoutId = setTimeout(() => resolve(null), 4000);
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
                         clearTimeout(timeoutId);
@@ -3598,13 +4728,15 @@
                             mapsUrl: `https://maps.google.com/?q=${lat},${lng}`
                         };
                         window._currentGps = result;
+                        updateGpsBadge(true, `تم رصد الموقع: ${lat}, ${lng}`);
                         resolve(result);
                     },
                     () => {
                         clearTimeout(timeoutId);
+                        updateGpsBadge(false, 'تعذر الوصول للموقع الجغرافي');
                         resolve(null);
                     },
-                    { enableHighAccuracy: true, timeout: 1200, maximumAge: 120000 }
+                    { enableHighAccuracy: true, timeout: 4000, maximumAge: 30000 }
                 );
             });
         }
@@ -3676,6 +4808,21 @@
                 return;
             }
 
+            // التحقق من التقاط وتفعيل الموقع الجغرافي (إلزامي بالمطلق *)
+            let gpsData = window._currentGps;
+            if (!gpsData || !gpsData.latitude) {
+                showToast('جاري التحقق من إحداثيات الموقع الجغرافي (GPS)...', 'loading');
+                gpsData = await getQuickGpsPayloadStrict();
+            }
+
+            if (!gpsData || !gpsData.latitude) {
+                errorBox.textContent = '⚠️ إلزامية تحديد الموقع الجغرافي: يرجى تفعيل والسماح بصلاحية الموقع (GPS) في المتصفح لتوثيق مكان الملاحظة الميدانية وفقاً لمعايير السلامة.';
+                errorBox.style.display = 'block';
+                showToast('⚠️ يرجى السماح بصلاحية الموقع (GPS) لإتمام التسجيل (*)', 'error', 5000);
+                document.getElementById('gpsStatusBadge')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
             // تذكر بيانات المبلّغ إذا تم تحديد الخيار
             saveReporterProfile();
 
@@ -3684,16 +4831,6 @@
             const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
             const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
             const instantRefCode = 'OBS-' + yearMonth + '-' + randomSuffix;
-
-            let gpsData = window._currentGps;
-            if (!gpsData) {
-                try {
-                    gpsData = await Promise.race([
-                        getQuickGpsPayload(),
-                        new Promise(r => setTimeout(() => r(null), 500))
-                    ]);
-                } catch(gErr) {}
-            }
 
             const payload = {
                 action: 'submitPublicObservation',
