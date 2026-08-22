@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1226",
+  "version": "1.0.1227",
   "highlights": {
     "ar": [
-      "ترقية الهوية البصرية لموديول الحوادث الوشيكة بشريط قيادة متقدم وبطاقات مؤشرات KPI عصرية.",
-      "تصميم نافذة تفاصيل البلاغ (View Modal) بنمط تقارير ISO الرسمية المعتمدة لشركة ICAPP.",
-      "دعم تصنيفات الحوادث الوشيكة الموسعة وأيقونات الخطورة والربط مع خطة الإجراءات التصحيحية."
+      "إصلاح وتشغيل أزرار نافذة النموذج العام وطباعة ملصقات QR للحوادث الوشيكة.",
+      "إعادة تصميم وتطوير نافذة تسجيل بلاغ وشيك جديد بتصميم تنفيذي عصري وتقسيم احترافي.",
+      "إضافة حقل تحديد مستوى الخطورة المحتملة ودعم المرفقات الميدانية والصياغة الذكية."
     ],
     "en": [
-      "Upgraded Near Miss visual identity with modern command bar and glassmorphic KPI cards.",
-      "Redesigned Near Miss record detail view modal into an official ISO-styled report.",
-      "Enhanced classification categories, severity indicators, and seamless CAPA sync."
+      "Fixed and activated Near Miss public QR modal and batch location QR print buttons.",
+      "Redesigned the in-app Near Miss entry modal with executive multi-section layout and styling.",
+      "Added potential severity level selector and enhanced corrective action workflow."
     ]
   }
 }

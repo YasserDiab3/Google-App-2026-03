@@ -769,88 +769,130 @@ const NearMiss = {
 
     buildFormModal(record) {
         const showCorrective = record?.correctiveProposed === true;
-        const yesChecked = showCorrective ? 'checked' : '';
-        const noChecked = showCorrective ? '' : 'checked';
         const departmentOptions = this.getDepartmentOptions();
+        const severityValue = record?.severity || 'متوسط';
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 720px;">
-                <div class="modal-header">
-                    <h2 class="modal-title">
-                        <i class="fas fa-${record ? 'edit' : 'plus-circle'} ml-2"></i>
-                        ${record ? 'تعديل ملاحظة' : 'تسجيل ملاحظة جديدة'}
-                    </h2>
-                    <button class="modal-close" data-action="close-modal">
+            <div class="modal-content" style="max-width: 780px; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); font-family: 'Segoe UI', Tahoma, sans-serif;">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); color: #fff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="flex items-center gap-3">
+                        <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                            <i class="fas fa-${record ? 'edit' : 'plus-circle'} text-amber-300"></i>
+                        </div>
+                        <div>
+                            <h2 style="font-size: 1.2rem; font-weight: 800; margin: 0; color: #fff;">
+                                ${record ? 'تعديل بيانات الحادث الوشيك' : 'تسجيل بلاغ حادث وشيك جديد'}
+                            </h2>
+                            <p style="font-size: 0.75rem; color: #c7d2fe; margin: 2px 0 0 0;">SafetyHub | ICAPP — Incident Prevention Entry</p>
+                        </div>
+                    </div>
+                    <button class="modal-close text-white/80 hover:text-white text-2xl" data-action="close-modal" style="background: none; border: none; cursor: pointer;">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <form id="nearmiss-form" class="space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الحادث *</label>
-                                <select id="nearmiss-type" class="form-input" required>
-                                    ${this.renderTypeOptions(record?.type || '')}
-                                </select>
+
+                <!-- Body -->
+                <div class="modal-body p-6" style="background: #f8fafc; max-height: 75vh; overflow-y: auto;">
+                    <form id="nearmiss-form" class="space-y-5">
+                        <!-- Section 1: التصنيف والخطورة -->
+                        <div style="background: #fff; padding: 18px; border-radius: 14px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 0.85rem; font-weight: 800; color: #1e1b4b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-tags text-indigo-600"></i>
+                                <span>1. تصنيف الحادث ومستوى الخطورة المحتملة</span>
                             </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">التاريخ والوقت *</label>
-                                <input type="datetime-local" id="nearmiss-date" class="form-input" required value="${record?.date ? Utils.toDateTimeLocalString(record.date) : ''}">
-                            </div>
-                            <div>
-                                <label for="nearmiss-observer" class="block text-sm font-semibold text-gray-700 mb-2">اسم صاحب الملاحظة *</label>
-                                <input type="text" id="nearmiss-observer" class="form-input" required value="${Utils.escapeHTML(record?.observerName || '')}" placeholder="اكتب الاسم الثلاثي">
-                            </div>
-                            <div>
-                                <label for="nearmiss-phone" class="block text-sm font-semibold text-gray-700 mb-2">رقم التليفون</label>
-                                <input type="tel" id="nearmiss-phone" class="form-input" value="${Utils.escapeHTML(record?.phone || '')}" placeholder="+20XXXXXXXXXX أو 01XXXXXXXXX">
-                            </div>
-                            <div>
-                                <label for="nearmiss-location" class="block text-sm font-semibold text-gray-700 mb-2">مكان الملاحظة بالمصنع *</label>
-                                <input type="text" id="nearmiss-location" class="form-input" required value="${Utils.escapeHTML(record?.location || '')}" placeholder="حدد الموقع بدقة">
-                            </div>
-                            <div>
-                                <label for="nearmiss-department" class="block text-sm font-semibold text-gray-700 mb-2">الإدارة التابع لها *</label>
-                                <input type="text" id="nearmiss-department" class="form-input" list="nearmiss-departments-list" required value="${Utils.escapeHTML(record?.department || '')}" placeholder="اختر أو اكتب الإدارة">
-                                <datalist id="nearmiss-departments-list">
-                                    ${departmentOptions.map((department) => `<option value="${Utils.escapeHTML(department)}"></option>`).join('')}
-                                </datalist>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 mb-1.5">نوع وتصنيف الحادث *</label>
+                                    <select id="nearmiss-type" class="form-input w-full p-2.5 rounded-lg border border-gray-300" required>
+                                        ${this.renderTypeOptions(record?.type || '')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 mb-1.5">مستوى الخطورة المحتملة *</label>
+                                    <select id="nearmiss-severity" class="form-input w-full p-2.5 rounded-lg border border-gray-300" required>
+                                        <option value="منخفض" ${severityValue === 'منخفض' ? 'selected' : ''}>🟢 منخفض (Low Potential)</option>
+                                        <option value="متوسط" ${severityValue === 'متوسط' ? 'selected' : ''}>🟡 متوسط (Medium Potential)</option>
+                                        <option value="عالي" ${severityValue === 'عالي' ? 'selected' : ''}>🔴 عالي (High Potential)</option>
+                                        <option value="كارثي / وشيك" ${severityValue === 'كارثي / وشيك' || severityValue === 'وشيك' ? 'selected' : ''}>🚨 وشيك / كارثي (Critical Potential)</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <label for="nearmiss-description" class="block text-sm font-semibold text-gray-700 mb-2">وصف الملاحظة بكل دقة *</label>
-                            <textarea id="nearmiss-description" class="form-input" rows="4" required placeholder="أضف تفاصيل كاملة وواضحة">${Utils.escapeHTML(record?.description || '')}</textarea>
+
+                        <!-- Section 2: الموقع والتاريخ والراصد -->
+                        <div style="background: #fff; padding: 18px; border-radius: 14px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 0.85rem; font-weight: 800; color: #1e1b4b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-map-marked-alt text-blue-600"></i>
+                                <span>2. بيانات الموقع والمسؤول</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="nearmiss-location" class="block text-xs font-bold text-gray-700 mb-1.5">الموقع / المصنع والمكان الفرعي *</label>
+                                    <input type="text" id="nearmiss-location" class="form-input w-full p-2.5 rounded-lg border border-gray-300" required value="${Utils.escapeHTML(record?.location || '')}" placeholder="مثال: ICAPP-1 — عنبر الإنتاج">
+                                </div>
+                                <div>
+                                    <label for="nearmiss-department" class="block text-xs font-bold text-gray-700 mb-1.5">الإدارة المسؤولة *</label>
+                                    <input type="text" id="nearmiss-department" class="form-input w-full p-2.5 rounded-lg border border-gray-300" list="nearmiss-departments-list" required value="${Utils.escapeHTML(record?.department || '')}" placeholder="اختر أو اكتب الإدارة">
+                                    <datalist id="nearmiss-departments-list">
+                                        ${departmentOptions.map((department) => `<option value="${Utils.escapeHTML(department)}"></option>`).join('')}
+                                    </datalist>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 mb-1.5">تاريخ وتوقيت الواقعة *</label>
+                                    <input type="datetime-local" id="nearmiss-date" class="form-input w-full p-2.5 rounded-lg border border-gray-300" required value="${record?.date ? Utils.toDateTimeLocalString(record.date) : Utils.toDateTimeLocalString(new Date())}">
+                                </div>
+                                <div>
+                                    <label for="nearmiss-observer" class="block text-xs font-bold text-gray-700 mb-1.5">اسم صاحب البلاغ / المفتش *</label>
+                                    <input type="text" id="nearmiss-observer" class="form-input w-full p-2.5 rounded-lg border border-gray-300" required value="${Utils.escapeHTML(record?.observerName || '')}" placeholder="الاسم أو فاعل خير">
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">هل تقترح أي إجراء تصحيحي؟ *</label>
-                            <div class="flex items-center gap-6">
-                                <label class="flex items-center gap-2 text-sm text-gray-700">
-                                    <input type="radio" name="nearmiss-corrective" value="yes" class="form-radio" ${yesChecked}>
-                                    نعم
+
+                        <!-- Section 3: وصف الواقعة وما كاد أن يحدث -->
+                        <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 14px; padding: 18px;">
+                            <label for="nearmiss-description" class="block text-xs font-extrabold text-amber-900 mb-1.5 flex items-center gap-2">
+                                <i class="fas fa-exclamation-circle text-amber-600"></i>
+                                <span>3. وصف الواقعة الوشيكة بالتفصيل (ما كاد أن يحدث) *</span>
+                            </label>
+                            <textarea id="nearmiss-description" class="form-input w-full p-3 rounded-lg border border-amber-300 bg-white" rows="3" required placeholder="صف الواقعة بدقة: ماذا حدث؟ وما هي الخسائر أو الإصابات التي كادت أن تقع لولا تدارك الموقف؟">${Utils.escapeHTML(record?.description || '')}</textarea>
+                        </div>
+
+                        <!-- Section 4: الإجراء التصحيحي -->
+                        <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 14px; padding: 18px;">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-xs font-extrabold text-emerald-900 flex items-center gap-2">
+                                    <i class="fas fa-shield-alt text-emerald-600"></i>
+                                    <span>4. الإجراء التصحيحي / الوقائي المتخذ</span>
                                 </label>
-                                <label class="flex items-center gap-2 text-sm text-gray-700">
-                                    <input type="radio" name="nearmiss-corrective" value="no" class="form-radio" ${noChecked}>
-                                    لا
+                                <label class="flex items-center gap-2 text-xs font-bold text-emerald-800 cursor-pointer">
+                                    <input type="checkbox" id="nearmiss-corrective-check" onchange="document.getElementById('nearmiss-corrective-wrapper').style.display = this.checked ? 'block' : 'none'" ${showCorrective ? 'checked' : ''}>
+                                    <span>تم اتخاذ / اقتراح إجراء تصحيحي</span>
                                 </label>
                             </div>
+                            <div id="nearmiss-corrective-wrapper" style="${showCorrective ? 'display:block;' : 'display:none;'} margin-top:8px;">
+                                <textarea id="nearmiss-corrective-description" class="form-input w-full p-3 rounded-lg border border-emerald-300 bg-white" rows="2" placeholder="اكتب الإجراء المتخذ فورياً لمنع تكرار الواقعة...">${Utils.escapeHTML(record?.correctiveDescription || '')}</textarea>
+                            </div>
                         </div>
-                        <div id="nearmiss-corrective-wrapper" class="${showCorrective ? '' : 'hidden'}">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">وصف الإجراء المقترح *</label>
-                            <textarea id="nearmiss-corrective-description" class="form-input" rows="3" ${showCorrective ? 'required' : ''} placeholder="صف الإجراء التصحيحي المطلوب">${Utils.escapeHTML(record?.correctiveDescription || '')}</textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">صور أو مستندات توضيحية (اختياري)</label>
-                            <input type="file" id="nearmiss-attachments" class="form-input" accept="image/*,.pdf" multiple>
-                            <p class="text-xs text-gray-500 mt-2">يسمح بملفات JPG أو PNG أو PDF بحد أقصى 5MB لكل ملف.</p>
+
+                        <!-- Section 5: المرفقات -->
+                        <div style="background: #fff; padding: 18px; border-radius: 14px; border: 1px solid #e2e8f0;">
+                            <label class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-2">
+                                <i class="fas fa-camera text-indigo-600"></i>
+                                <span>5. إرفاق صور أو مستندات توضيحية (اختياري)</span>
+                            </label>
+                            <input type="file" id="nearmiss-attachments" class="form-input w-full p-2 rounded-lg border border-gray-300" accept="image/*,.pdf" multiple>
                             <div id="nearmiss-attachments-preview" class="mt-3 space-y-2"></div>
                         </div>
-                        <div class="flex items-center justify-end gap-3 pt-4 border-t">
-                            <button type="button" id="nearmiss-cancel-btn" class="btn-secondary">إلغاء</button>
-                            <button type="submit" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>
-                                ${record ? 'تحديث الملاحظة' : 'حفظ الملاحظة'}
+
+                        <!-- Footer -->
+                        <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                            <button type="button" id="nearmiss-cancel-btn" class="btn-secondary px-5 py-2.5 rounded-xl">إلغاء</button>
+                            <button type="submit" class="btn-primary px-6 py-2.5 rounded-xl font-bold flex items-center gap-2" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color:#fff;">
+                                <i class="fas fa-save text-amber-300"></i>
+                                <span>${record ? 'تحديث وحفظ البلاغ' : 'حفظ وتسجيل البلاغ'}</span>
                             </button>
                         </div>
                     </form>
