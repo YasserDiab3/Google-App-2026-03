@@ -459,16 +459,17 @@
         .section-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 6px;
+            justify-content: space-between;
+            gap: 6px;
+            margin-bottom: 3px;
         }
 
         .section-badge {
-            width: 30px;
-            height: 30px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             font-weight: 900;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -477,16 +478,18 @@
         }
 
         .section-title {
-            font-size: 1.05rem;
+            font-size: 0.96rem;
             font-weight: 800;
             color: #0f172a;
+            white-space: nowrap;
         }
 
         .section-desc {
-            font-size: 0.8rem;
+            font-size: 0.76rem;
             color: var(--text-muted);
-            margin-bottom: 16px;
-            margin-right: 40px;
+            margin-bottom: 12px;
+            margin-right: 30px;
+            line-height: 1.35;
         }
 
         .form-group {
@@ -1420,18 +1423,19 @@
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             border: none;
             color: #ffffff;
-            font-size: 0.92rem;
+            font-size: 0.85rem;
             font-weight: 800;
-            border-radius: 10px;
-            width: 34px;
-            height: 34px;
+            border-radius: 8px;
+            width: 30px;
+            height: 30px;
             padding: 0;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 2px 5px rgba(37, 99, 235, 0.25);
             transition: all 0.2s ease;
+            flex-shrink: 0;
         }
         .btn-qr-scan:hover {
             background: linear-gradient(135deg, #1d4ed8, #1e40af);
@@ -1443,11 +1447,11 @@
             background: #eff6ff;
             border: 1.5px solid #bfdbfe;
             color: #1d4ed8;
-            width: 34px;
-            height: 34px;
+            width: 30px;
+            height: 30px;
             padding: 0;
-            border-radius: 10px;
-            font-size: 0.92rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -1455,6 +1459,7 @@
             transition: all 0.2s ease;
             box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
             position: relative;
+            flex-shrink: 0;
         }
         .gps-status-pill:hover {
             background: #dbeafe;
@@ -2176,17 +2181,12 @@
 
             <!-- 1. الموقع والمكان وتوقيت الملاحظة -->
             <div class="form-section section-theme-1">
-                <div class="section-header">
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="section-header" style="justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                    <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
                         <span class="section-badge">1</span>
                         <span class="section-title">الموقع وتوقيت الملاحظة</span>
                     </div>
-                </div>
-
-                <!-- سطر الوصف المنمق مع أزرار الاستجابة السريعة والموقع -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: nowrap;">
-                    <p class="section-desc" style="margin-bottom: 0; line-height: 1.4; flex: 1;">حدد المصنع والمكان وتوقيت الرصد والوردية بدقة.</p>
-                    <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                    <div style="display: flex; align-items: center; gap: 5px; flex-shrink: 0;">
                         <button type="button" class="btn-qr-scan" onclick="openQrScannerModal()" title="مسح رمز QR الموقع">
                             <i class="fas fa-qrcode"></i>
                         </button>
@@ -2195,6 +2195,7 @@
                         </span>
                     </div>
                 </div>
+                <p class="section-desc">حدد المصنع والمكان وتوقيت الرصد الميداني والوردية بدقة.</p>
 
                 <!-- كرت اختيار المصنع والمكان الميداني بتصميم هندسي منمق -->
                 <div class="location-selector-card">
