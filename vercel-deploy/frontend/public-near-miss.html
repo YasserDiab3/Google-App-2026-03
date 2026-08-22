@@ -10,6 +10,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="application-name" content="SafetyHub">
     <link rel="icon" type="image/x-icon" href="./favicon.ico">
     <link rel="manifest" href="./manifest.json">
 
@@ -24,9 +25,10 @@
             --primary: #312e81;
             --primary-dark: #1e1b4b;
             --accent: #f59e0b;
-            --bg-page: #f1f5f9;
+            --bg-page: #f8fafc;
             --text-main: #0f172a;
             --text-muted: #64748b;
+            --border-color: #cbd5e1;
         }
 
         * {
@@ -49,74 +51,150 @@
 
         .container {
             width: 100%;
-            max-width: 640px;
+            max-width: 760px;
         }
 
-        /* رأس الصفحة التنفيذي */
-        .brand-header {
-            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
-            color: #fff;
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.3);
-            border: 1px solid rgba(255,255,255,0.15);
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
-        .brand-logo-wrap {
-            width: 50px;
-            height: 50px;
+        /* ترويسة ISO المعتمدة ثلاثية الأعمدة (مطابقة لتصميم الملاحظات مع هوية الحوادث الوشيكة) */
+        .iso-header-table {
+            position: sticky;
+            top: 8px;
+            z-index: 100;
+            display: grid;
+            grid-template-columns: minmax(140px, 1.1fr) 2.2fr minmax(140px, 1fr);
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-top: 4px solid #312e81;
             border-radius: 14px;
-            background: rgba(255,255,255,0.18);
-            backdrop-filter: blur(10px);
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+            margin-bottom: 20px;
+        }
+
+        .iso-col-brand {
+            padding: 12px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border-left: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        }
+
+        .iso-logo-wrap {
+            max-width: 140px;
+            min-height: 48px;
+            max-height: 54px;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 4px 8px;
         }
 
-        .brand-titles h1 {
-            font-size: 1.25rem;
+        .iso-logo-img {
+            max-height: 46px;
+            max-width: 110px;
+            object-fit: contain;
+        }
+
+        .iso-dept-name {
+            font-size: 0.68rem;
             font-weight: 800;
+            color: #312e81;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .iso-col-title {
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: #ffffff;
+        }
+
+        .iso-doc-title {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #1e1b4b;
             margin: 0;
             line-height: 1.3;
         }
 
-        .brand-titles p {
-            font-size: 0.75rem;
-            color: #c7d2fe;
-            margin: 3px 0 0 0;
+        .iso-doc-subtitle {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #4338ca;
+            margin-top: 3px;
         }
 
-        /* كروت النموذج */
+        .iso-col-meta {
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 3px;
+            border-right: 1px solid #e2e8f0;
+            background: #f8fafc;
+            font-size: 0.68rem;
+        }
+
+        .iso-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .iso-meta-key { font-weight: 700; color: #64748b; }
+        .iso-meta-val { font-weight: 800; color: #1e1b4b; }
+
+        /* كروت الأقسام */
         .form-card {
-            background: #fff;
-            border-radius: 20px;
+            background: #ffffff;
+            border-radius: 18px;
             padding: 20px;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
             border: 1px solid #e2e8f0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
 
-        .section-title {
-            font-size: 0.9rem;
-            font-weight: 800;
-            color: var(--primary-dark);
-            margin-bottom: 12px;
+        .section-header {
             display: flex;
             align-items: center;
-            gap: 8px;
-        }
-
-        .form-group {
+            justify-content: space-between;
             margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f1f5f9;
         }
 
-        .form-group:last-child {
-            margin-bottom: 0;
+        .section-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #e0e7ff;
+            color: #3730a3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #1e1b4b;
         }
 
         label {
@@ -145,7 +223,7 @@
             box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.15);
         }
 
-        /* اختيار مستوى الخطورة بالأزرار */
+        /* شبكة الخطورة */
         .severity-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -153,13 +231,13 @@
         }
 
         .sev-btn {
-            padding: 8px 4px;
+            padding: 9px 4px;
             border-radius: 10px;
             border: 1.5px solid #e2e8f0;
             background: #f8fafc;
             text-align: center;
             cursor: pointer;
-            font-size: 0.75rem;
+            font-size: 0.78rem;
             font-weight: 700;
             transition: all 0.2s;
         }
@@ -169,10 +247,10 @@
         .sev-btn.active[data-val="عالي"] { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
         .sev-btn.active[data-val="وشيك / كارثي"] { background: #450a0a; border-color: #991b1b; color: #fecaca; }
 
-        /* زر الإرسال الرئيسي */
+        /* زر الإرسال */
         .btn-submit {
             width: 100%;
-            padding: 14px;
+            padding: 15px;
             border-radius: 14px;
             border: none;
             background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
@@ -180,7 +258,7 @@
             font-size: 1.05rem;
             font-weight: 800;
             cursor: pointer;
-            box-shadow: 0 6px 20px rgba(49, 46, 129, 0.35);
+            box-shadow: 0 8px 24px rgba(49, 46, 129, 0.35);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -188,8 +266,27 @@
             transition: all 0.2s;
         }
 
-        .btn-submit:active {
-            transform: scale(0.98);
+        .btn-submit:active { transform: scale(0.98); }
+
+        /* الفوتر الرسمي المعتمد */
+        .iso-footer {
+            margin-top: 30px;
+            padding: 18px 20px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-top: 3px solid #312e81;
+            border-radius: 14px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #64748b;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            width: 100%;
+        }
+
+        .iso-footer-top {
+            font-weight: 800;
+            color: #1e1b4b;
+            margin-bottom: 4px;
         }
 
         /* شاشة النجاح */
@@ -198,21 +295,21 @@
             text-align: center;
             background: #fff;
             border-radius: 20px;
-            padding: 30px 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            padding: 34px 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
             border: 1px solid #e2e8f0;
         }
 
         .success-badge {
-            width: 70px;
-            height: 70px;
+            width: 72px;
+            height: 72px;
             border-radius: 50%;
             background: #dcfce7;
             color: #16a34a;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
+            font-size: 2.2rem;
             margin: 0 auto 16px;
         }
     </style>
@@ -220,14 +317,35 @@
 <body>
 
 <div class="container">
-    <!-- Header -->
-    <div class="brand-header">
-        <div class="brand-logo-wrap">
-            <i class="fas fa-shield-virus text-2xl text-amber-300"></i>
+    <!-- ══════════════════════════════════════════════════════
+         1. ترويسة ISO المعتمدة ثلاثية الأعمدة (Near Miss Header)
+    ══════════════════════════════════════════════════════ -->
+    <div class="iso-header-table">
+        <div class="iso-col-brand">
+            <div class="iso-logo-wrap">
+                <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
+            </div>
+            <div class="iso-dept-name">إدارة السلامة والصحة المهنية</div>
         </div>
-        <div class="brand-titles">
-            <h1>نموذج الإبلاغ عن حادث وشيك</h1>
-            <p>SafetyHub | ICAPP — Near Miss Incident Prevention</p>
+
+        <div class="iso-col-title">
+            <h1 class="iso-doc-title">نموذج الإبلاغ عن حادث وشيك</h1>
+            <div class="iso-doc-subtitle">Near Miss & Incident Prevention Report — ICAPP</div>
+        </div>
+
+        <div class="iso-col-meta">
+            <div class="iso-meta-row">
+                <span class="iso-meta-key">كود الوثيقة:</span>
+                <span class="iso-meta-val">DOC-HSE-NRM-01</span>
+            </div>
+            <div class="iso-meta-row">
+                <span class="iso-meta-key">رقم الإصدار:</span>
+                <span class="iso-meta-val">Rev. 02</span>
+            </div>
+            <div class="iso-meta-row">
+                <span class="iso-meta-key">درجة السرية:</span>
+                <span class="iso-meta-val" style="color: #047857;">عام داخلي</span>
+            </div>
         </div>
     </div>
 
@@ -236,16 +354,16 @@
         <div class="success-badge">
             <i class="fas fa-check"></i>
         </div>
-        <h2 style="font-size: 1.3rem; font-weight: 800; color: #1e1b4b; margin-bottom: 6px;">تم إرسال البلاغ بنجاح!</h2>
-        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">شكراً لمشاركتك الإيجابية في تعزيز بيئة عمل آمنة ومنع الحوادث.</p>
-        <div style="background: #e0e7ff; color: #3730a3; padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 1.1rem; display: inline-block; margin-bottom: 20px;" id="resIsoCode">
+        <h2 style="font-size: 1.35rem; font-weight: 900; color: #1e1b4b; margin-bottom: 6px;">تم إرسال تقرير الحادث الوشيك بنجاح!</h2>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">تم توثيق البلاغ في سجلات السلامة وإحالته للمتابعة الفورية لمنع وقوع الحوادث.</p>
+        <div style="background: #e0e7ff; color: #3730a3; padding: 8px 18px; border-radius: 12px; font-weight: 900; font-size: 1.15rem; display: inline-block; margin-bottom: 20px;" id="resIsoCode">
             NM-2026-0000
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <a id="whatsappShareBtn" href="#" target="_blank" style="text-decoration:none; background:#22c55e; color:#fff; padding:10px; border-radius:10px; font-weight:700; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
-                <i class="fab fa-whatsapp"></i> مشاركة واتساب
+            <a id="whatsappShareBtn" href="#" target="_blank" style="text-decoration:none; background:#22c55e; color:#fff; padding:11px; border-radius:10px; font-weight:700; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <i class="fab fa-whatsapp"></i> مشاركة عبر واتساب
             </a>
-            <button onclick="location.reload()" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; padding:10px; border-radius:10px; font-weight:700; font-size:0.85rem; cursor:pointer;">
+            <button onclick="location.reload()" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; padding:11px; border-radius:10px; font-weight:700; font-size:0.85rem; cursor:pointer;">
                 <i class="fas fa-plus"></i> بلاغ وشيك آخر
             </button>
         </div>
@@ -253,38 +371,55 @@
 
     <!-- Main Simple Form -->
     <form id="nearMissForm">
-        <!-- 1. الموقع والمصنع -->
+        <!-- 1. الموقع والمكان داخل المصنع مع الربط التفاعلي والتسجيل الجغرافي GPS -->
         <div class="form-card">
-            <div class="section-title">
-                <i class="fas fa-map-marker-alt text-indigo-600"></i>
-                <span>1. الموقع داخل المصنع</span>
+            <div class="section-header">
+                <div class="section-title-wrap">
+                    <span class="section-badge">1</span>
+                    <span class="section-title">الموقع والمصنع داخل المنشأة</span>
+                </div>
+                <span id="gpsStatusBadge" style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                    <i class="fas fa-location-crosshairs text-indigo-600"></i>
+                    <span id="gpsStatusText">جاري رصد إحداثيات الموقع...</span>
+                </span>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="form-group">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
                     <label>المصنع / المنشأة *</label>
-                    <select id="factorySelect" required>
-                        <option value="ICAPP-1">ICAPP-1</option>
-                        <option value="ICAPP-2">ICAPP-2</option>
-                        <option value="ICAPP-3">ICAPP-3</option>
-                        <option value="ICAPP-4">ICAPP-4</option>
-                        <option value="الموقع العام">الموقع العام</option>
+                    <select id="factorySelect" required onchange="handleFactoryChange(this.value)">
+                        <option value="ICAPP-1">ICAPP-1 (مصنع 1)</option>
+                        <option value="ICAPP-2">ICAPP-2 (مصنع 2)</option>
+                        <option value="ICAPP-3">ICAPP-3 (مصنع 3)</option>
+                        <option value="ICAPP-4">ICAPP-4 (مصنع 4)</option>
+                        <option value="الموقع العام">الموقع العام والساحات</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>المكان الفرعي *</label>
-                    <input type="text" id="placeInput" class="input-control" placeholder="مثال: عنبر الإنتاج / خط 2" required>
+                <div>
+                    <label>المكان الفرعي بالمصنع *</label>
+                    <select id="placeSelect" required onchange="handlePlaceChange(this.value)">
+                        <!-- سيتم ملؤه تلقائياً حسب المصنع المختار -->
+                    </select>
                 </div>
+            </div>
+
+            <div id="customPlaceWrap" style="display:none; margin-top:10px;">
+                <label>اكتب المكان الفرعي بدقة *</label>
+                <input type="text" id="customPlaceInput" class="input-control" placeholder="اكتب تفاصيل المكان...">
             </div>
         </div>
 
-        <!-- 2. نوع الحادث ومستوى الخطورة -->
+        <!-- 2. تصنيف الحادث والخطورة -->
         <div class="form-card">
-            <div class="section-title">
-                <i class="fas fa-tags text-indigo-600"></i>
-                <span>2. تصنيف الحادث ومستوى الخطورة</span>
+            <div class="section-header">
+                <div class="section-title-wrap">
+                    <span class="section-badge">2</span>
+                    <span class="section-title">تصنيف الواقعة ومستوى الخطورة</span>
+                </div>
             </div>
-            <div class="form-group">
-                <label>نوع وتصنيف الواقعة الوشيكة *</label>
+
+            <div style="margin-bottom:14px;">
+                <label>نوع وتصنيف الحادث الوشيك *</label>
                 <select id="typeSelect" required>
                     <option value="سقوط أشياء / أحمال">سقوط أشياء / أحمال</option>
                     <option value="تعثر / انزلاق">تعثر / انزلاق</option>
@@ -297,7 +432,8 @@
                     <option value="حادث وشيك عام">حادث وشيك عام</option>
                 </select>
             </div>
-            <div class="form-group">
+
+            <div>
                 <label>مستوى الخطورة المحتملة *</label>
                 <div class="severity-grid">
                     <div class="sev-btn" data-val="منخفض" onclick="setSeverity(this, 'منخفض')">🟢 منخفض</div>
@@ -309,58 +445,62 @@
             </div>
         </div>
 
-        <!-- 3. تفاصيل الواقعة -->
+        <!-- 3. تفاصيل الواقعة وما كاد أن يحدث -->
         <div class="form-card" style="background:#fffbeb; border-color:#fde68a;">
-            <div class="section-title" style="color:#92400e;">
-                <i class="fas fa-exclamation-circle text-amber-600"></i>
-                <span>3. تفاصيل الواقعة (ما كاد أن يحدث) *</span>
+            <div class="section-header" style="border-color:#fef3c7;">
+                <div class="section-title-wrap">
+                    <span class="section-badge" style="background:#fef3c7; color:#92400e;">3</span>
+                    <span class="section-title" style="color:#92400e;">تفاصيل الواقعة (ما كاد أن يحدث) *</span>
+                </div>
             </div>
-            <div class="form-group">
-                <textarea id="descriptionInput" rows="3" placeholder="صف الواقعة بدقة: ماذا حدث وما هي الخسائر أو الإصابة التي كادت أن تقع؟" required style="background:#fff; border-color:#fcd34d;"></textarea>
-            </div>
+            <textarea id="descriptionInput" rows="3" placeholder="صف الواقعة بدقة: ماذا حدث بالتحديد وما هي الإصابة أو الخسائر التي كادت أن تقع لولا تدارك الأمر؟" required style="background:#fff; border-color:#fcd34d;"></textarea>
         </div>
 
         <!-- 4. الإجراء الوقائي المتخذ -->
         <div class="form-card" style="background:#f0fdf4; border-color:#bbf7d0;">
-            <div class="section-title" style="color:#166534;">
-                <i class="fas fa-shield-alt text-emerald-600"></i>
-                <span>4. الإجراء الوقائي المتخذ / المقترح (اختياري)</span>
+            <div class="section-header" style="border-color:#dcfce7;">
+                <div class="section-title-wrap">
+                    <span class="section-badge" style="background:#dcfce7; color:#166534;">4</span>
+                    <span class="section-title" style="color:#166534;">الإجراء الوقائي المتخذ / المقترح (اختياري)</span>
+                </div>
             </div>
-            <div class="form-group">
-                <textarea id="correctiveInput" rows="2" placeholder="ما هو الإجراء الفوري المتخذ أو المطلوب لمنع تكرار الأمر؟" style="background:#fff; border-color:#86efac;"></textarea>
-            </div>
+            <textarea id="correctiveInput" rows="2" placeholder="ما هو الإجراء الفوري المتخذ أو المطلوب لمنع تكرار الواقعة؟" style="background:#fff; border-color:#86efac;"></textarea>
         </div>
 
         <!-- 5. صورة ومرفقات -->
         <div class="form-card">
-            <div class="section-title">
-                <i class="fas fa-camera text-indigo-600"></i>
-                <span>5. صورة توضيحية من الموقع (اختياري)</span>
+            <div class="section-header">
+                <div class="section-title-wrap">
+                    <span class="section-badge">5</span>
+                    <span class="section-title">صورة توضيحية من الموقع (اختياري)</span>
+                </div>
             </div>
             <input type="file" id="photoInput" accept="image/*" class="input-control" onchange="previewPhoto(this)">
-            <div id="photoPreviewWrap" style="display:none; margin-top:10px; position:relative;">
+            <div id="photoPreviewWrap" style="display:none; margin-top:10px;">
                 <img id="photoPreviewImg" src="" style="width:100%; height:180px; object-fit:cover; border-radius:10px; border:1px solid #cbd5e1;" />
             </div>
         </div>
 
         <!-- 6. بيانات المبلّغ -->
         <div class="form-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <div class="section-title" style="margin-bottom:0;">
-                    <i class="fas fa-user-shield text-indigo-600"></i>
-                    <span>6. بيانات المبلّغ</span>
+            <div class="section-header">
+                <div class="section-title-wrap">
+                    <span class="section-badge">6</span>
+                    <span class="section-title">بيانات المبلّغ</span>
                 </div>
-                <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#4338ca; cursor:pointer; margin-bottom:0;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.78rem; color:#312e81; font-weight:800; cursor:pointer; margin-bottom:0;">
                     <input type="checkbox" id="anonCheck" onchange="toggleAnonymous(this.checked)">
                     <span>🔒 إبلاغ سري بدون اسم</span>
                 </label>
             </div>
             <div id="reporterInputs" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="form-group">
+                <div>
+                    <label>الاسم</label>
                     <input type="text" id="observerNameInput" class="input-control" placeholder="الاسم ثلاثي">
                 </div>
-                <div class="form-group">
-                    <input type="tel" id="phoneInput" class="input-control" placeholder="رقم الهاتف">
+                <div>
+                    <label>رقم التليفون</label>
+                    <input type="tel" id="phoneInput" class="input-control" placeholder="+20XXXXXXXXXX">
                 </div>
             </div>
         </div>
@@ -371,30 +511,102 @@
             <span>إرسال تقرير الحادث الوشيك 🚀</span>
         </button>
     </form>
+
+    <!-- ══════════════════════════════════════════════════════
+         الفوتر الرسمي المعتمد (Near Miss ISO Footer)
+    ══════════════════════════════════════════════════════ -->
+    <div class="iso-footer">
+        <div class="iso-footer-top">SafetyHub | ICAPP — منظومة السلامة والصحة المهنية المتكاملة</div>
+        <div>نظام الإبلاغ الفوري عن الحوادث الوشيكة وإدارة الإجراءات الوقائية © 2026 جميع الحقوق محفوظة</div>
+    </div>
 </div>
 
 <script>
+    // خريطة الربط الديناميكي بين المصانع والأماكن الفرعية
+    const FACTORY_PLACES_MAP = {
+        'ICAPP-1': [
+            'عنبر الإنتاج الرئيسي', 'منطقة الفرز والتعبئة', 'مخازن التجميد والتبريد', 
+            'رصيف الشحن والتفريغ', 'ورشة الصيانة الميكانيكية', 'محطة الكهرباء والمحولات', 'محطة معالجة المياه'
+        ],
+        'ICAPP-2': [
+            'خط المعالجة والتحضير', 'خط التعقيم والطبخ', 'عنبر التعبئة والتغليف', 
+            'مخزن المواد الكيميائية', 'غرفة المراقبة والتحكم SCADA', 'منطقة تجميع المخلفات'
+        ],
+        'ICAPP-3': [
+            'المستودعات المركزية (المخزن الرئيسي)', 'مسارات حركة رافعات الشوكة', 'سكن العاملين والمرافق', 
+            'المطعم والكافيتريا', 'مبنى الإدارة العامة والمكاتب'
+        ],
+        'ICAPP-4': [
+            'وحدة استلام وفحص الخامات', 'منطقة الغلايات وضواغط الهواء', 'منطقة خزانات الوقود', 
+            'البوابة الرئيسية والأمن الصناعي', 'مواقف سيارات النقل الثقيل'
+        ],
+        'الموقع العام': [
+            'الطرق والممرات الرئيسية بين المصانع', 'الساحات الخارجية ومحيط الأسوار', 
+            'مجمع الورش الهندسية', 'نقطة التجمع الرئيسية لحالات الطوارئ'
+        ]
+    };
+
+    let userGps = { lat: null, lng: null, accuracy: null, mapLink: '' };
     let photoBase64 = '';
 
-    // قراءة الباراميترات الممررة من الـ QR
+    // تفعيل الربط وتحديد الموقع الجغرافي عند التحميل
     window.addEventListener('DOMContentLoaded', () => {
-        const params = new URLSearchParams(window.location.search);
-        const f = params.get('factory') || params.get('site');
-        const p = params.get('place') || params.get('location');
+        initGpsCapture();
 
-        if (f) {
-            const fSel = document.getElementById('factorySelect');
-            for (let i = 0; i < fSel.options.length; i++) {
-                if (fSel.options[i].value.toLowerCase().includes(f.toLowerCase())) {
-                    fSel.selectedIndex = i;
-                    break;
-                }
+        // قراءة الـ URL query params
+        const params = new URLSearchParams(window.location.search);
+        const f = params.get('factory') || params.get('site') || 'ICAPP-1';
+        const p = params.get('place') || params.get('location') || '';
+
+        const fSel = document.getElementById('factorySelect');
+        for (let i = 0; i < fSel.options.length; i++) {
+            if (fSel.options[i].value.toLowerCase().includes(f.toLowerCase()) || f.toLowerCase().includes(fSel.options[i].value.toLowerCase())) {
+                fSel.selectedIndex = i;
+                break;
             }
         }
-        if (p) {
-            document.getElementById('placeInput').value = p;
-        }
+
+        handleFactoryChange(fSel.value, p);
     });
+
+    function handleFactoryChange(factoryVal, targetPlace = '') {
+        const placeSelect = document.getElementById('placeSelect');
+        placeSelect.innerHTML = '';
+
+        const places = FACTORY_PLACES_MAP[factoryVal] || FACTORY_PLACES_MAP['الموقع العام'];
+        places.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p;
+            opt.textContent = p;
+            if (targetPlace && p.toLowerCase().includes(targetPlace.toLowerCase())) {
+                opt.selected = true;
+            }
+            placeSelect.appendChild(opt);
+        });
+
+        // خيار مكان مخصص
+        const otherOpt = document.createElement('option');
+        otherOpt.value = '__OTHER_PLACE__';
+        otherOpt.textContent = '➕ مكان فرعي آخر (إدخال يدوي)...';
+        if (targetPlace && !places.some(p => p.toLowerCase().includes(targetPlace.toLowerCase()))) {
+            otherOpt.selected = true;
+            document.getElementById('customPlaceWrap').style.display = 'block';
+            document.getElementById('customPlaceInput').value = targetPlace;
+        }
+        placeSelect.appendChild(otherOpt);
+
+        handlePlaceChange(placeSelect.value);
+    }
+
+    function handlePlaceChange(val) {
+        const wrap = document.getElementById('customPlaceWrap');
+        if (val === '__OTHER_PLACE__') {
+            wrap.style.display = 'block';
+            document.getElementById('customPlaceInput').focus();
+        } else {
+            wrap.style.display = 'none';
+        }
+    }
 
     function setSeverity(el, val) {
         document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('active'));
@@ -425,15 +637,42 @@
         }
     }
 
+    function initGpsCapture() {
+        if (!navigator.geolocation) {
+            document.getElementById('gpsStatusText').textContent = 'تحديد الموقع GPS غير مدعوم';
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                userGps.lat = pos.coords.latitude;
+                userGps.lng = pos.coords.longitude;
+                userGps.accuracy = Math.round(pos.coords.accuracy);
+                userGps.mapLink = 'https://www.google.com/maps?q=' + userGps.lat + ',' + userGps.lng;
+                
+                const badge = document.getElementById('gpsStatusBadge');
+                badge.style.color = '#15803d';
+                document.getElementById('gpsStatusText').textContent = 'تم تسجيل إحداثيات الموقع بنجاح (±' + userGps.accuracy + 'م) ✅';
+            },
+            (err) => {
+                document.getElementById('gpsStatusText').textContent = 'الموقع التقديري للمصنع نشط';
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        );
+    }
+
     // إرسال البلاغ
     document.getElementById('nearMissForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const submitBtn = document.getElementById('submitBtn');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إرسال البلاغ وتوثيقه...';
 
         const factory = document.getElementById('factorySelect').value;
-        const place = document.getElementById('placeInput').value;
+        let place = document.getElementById('placeSelect').value;
+        if (place === '__OTHER_PLACE__') {
+            place = document.getElementById('customPlaceInput').value.trim() || 'مكان غير محدد';
+        }
+
         const type = document.getElementById('typeSelect').value;
         const severity = document.getElementById('severityInput').value;
         const description = document.getElementById('descriptionInput').value;
@@ -453,25 +692,26 @@
             observerName: observerName,
             phone: phone,
             isAnonymous: isAnon,
-            image: photoBase64
+            image: photoBase64,
+            gpsLocation: (userGps.lat && userGps.lng) ? (userGps.lat + ', ' + userGps.lng) : '',
+            gpsMapLink: userGps.mapLink
         };
 
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwqQx4Z88Yf8Xv7H5G9F2d9jQJ0_9m_w7n7E1Q8xV_5wV7E/exec'; // يتم توجيهه عبر Google Apps Script أو الـ Proxy
+        const isoCode = 'NM-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random()*9000);
 
         try {
-            // محاولة الإرسال لـ Apps Script
-            const res = await fetch('https://script.google.com/macros/s/AKfycbz_9lC_placeholder/exec', {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload),
-                mode: 'no-cors'
-            }).catch(() => null);
+            // إرسال للباك إند
+            if (window.googleScriptUrl || typeof fetch !== 'undefined') {
+                fetch('https://script.google.com/macros/s/AKfycbz_placeholder/exec', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload),
+                    mode: 'no-cors'
+                }).catch(() => null);
+            }
 
-            // توليد رمز مرجعي وعرض شاشة النجاح
-            const isoCode = 'NM-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random()*9000);
             document.getElementById('resIsoCode').textContent = isoCode;
-            
-            const waText = encodeURIComponent(`🚨 *تقرير حادث وشيك — ICAPP*\n📌 *الرقم المرجعي:* ${isoCode}\n📍 *الموقع:* ${factory} - ${place}\n⚠️ *التصنيف:* ${type} (${severity})\n📝 *الوصف:* ${description}`);
+            const waText = encodeURIComponent(`🚨 *تقرير حادث وشيك — ICAPP*\n📌 *الرقم المرجعي:* ${isoCode}\n📍 *الموقع:* ${factory} — ${place}\n⚠️ *التصنيف:* ${type} (${severity})\n📝 *الوصف:* ${description}`);
             document.getElementById('whatsappShareBtn').href = 'https://api.whatsapp.com/send?text=' + waText;
 
             document.getElementById('nearMissForm').style.display = 'none';

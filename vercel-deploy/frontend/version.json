@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1232",
+  "version": "1.0.1233",
   "highlights": {
     "ar": [
-      "إعادة بناء نموذج الحوادث الوشيكة (public-near-miss.html) ليكون نموذجاً مبسطاً وسريعاً وخفيفاً مخصصاً للموظفين والمقاولين.",
-      "فصل تام ومستقل بين موديول الحوادث الوشيكة وموديول الملاحظات اليومية.",
-      "دعم تحديد مستوى الخطورة السريع، الإبلاغ السري، وإرفاق الصور الميدانية برمز مرجعي معتمد."
+      "تطبيق ترويسة ISO المعتمدة والفوتر الرسمي لنموذج الحوادث الوشيكة (Near Miss) مع هوية الوثيقة DOC-HSE-NRM-01.",
+      "تفعيل الربط الديناميكي التلقائي بين المصنع والمكان الفرعي مع دعم الإدخال اليدوي للأماكن غير المدرجة.",
+      "تضمين الرصد الجغرافي التلقائي لإحداثيات الموقع (GPS Coordinates) لتوثيق مكان الحادث الوشيك بدقة."
     ],
     "en": [
-      "Redesigned the public Near Miss form into an ultra-clean, simple, lightweight reporting interface for all staff.",
-      "Ensured complete separation between the Near Miss module and the Daily Observations module.",
-      "Supported rapid severity selector, anonymous reporting, and photo attachments with ISO reference."
+      "Applied ISO 3-column header and official footer for Near Miss form with DOC-HSE-NRM-01 document control.",
+      "Activated dynamic cascading link between factory and sub-locations with custom place support.",
+      "Integrated automatic background GPS coordinate capture to accurately record Near Miss incident locations."
     ]
   }
 }
