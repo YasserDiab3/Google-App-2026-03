@@ -5,11 +5,16 @@
 // ===== NearMiss Module =====
 const NearMiss = {
     TYPES: [
-        { value: 'حادث وشيك', label: 'حادث وشيك' },
-        { value: 'تصرف غير آمن', label: 'تصرف غير آمن' },
-        { value: 'وضع غير آمن', label: 'وضع غير آمن' },
-        { value: 'حادث', label: 'حادث' },
-        { value: 'مقترح', label: 'مقترح' }
+        { value: 'سقوط أشياء / أحمال', label: 'سقوط أشياء / أحمال', icon: 'fa-arrow-down' },
+        { value: 'تعثر / انزلاق', label: 'تعثر / انزلاق', icon: 'fa-walking' },
+        { value: 'اقتراب معدات / فوركلفت', label: 'اقتراب معدات / فوركلفت', icon: 'fa-truck-pickup' },
+        { value: 'خطر كهربائي وشيك', label: 'خطر كهربائي وشيك', icon: 'fa-bolt' },
+        { value: 'تسريب مواد كيميائية / غاز', label: 'تسريب مواد كيميائية / غاز', icon: 'fa-flask' },
+        { value: 'حريق وشيك', label: 'حريق وشيك', icon: 'fa-fire' },
+        { value: 'حادث وشيك', label: 'حادث وشيك عام', icon: 'fa-exclamation-triangle' },
+        { value: 'تصرف غير آمن', label: 'تصرف غير آمن', icon: 'fa-user-times' },
+        { value: 'وضع غير آمن', label: 'وضع غير آمن', icon: 'fa-ban' },
+        { value: 'مقترح', label: 'مقترح تحسين', icon: 'fa-lightbulb' }
     ],
     _i18nSectionObserver: null,
     _i18nBodyObserver: null,
@@ -144,23 +149,35 @@ const NearMiss = {
             };
 
             section.innerHTML = `
-                <div class="section-header">
-                    <div class="flex items-center justify-between flex-wrap gap-3">
-                        <div>
-                            <h1 class="section-title">
-                                <i class="fas fa-eye ml-3"></i>
-                                إدارة الحوادث الوشيكة
-                            </h1>
-                            <p class="section-subtitle">توثيق الملاحظات الطارئة وتعزيز معايير السلامة</p>
+                <!-- ══════════════════════════════════════════════════════
+                     ترويسة الهوية البصرية لموديول الحوادث الوشيكة (SafetyHub)
+                ══════════════════════════════════════════════════════ -->
+                <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); border-radius: 16px; padding: 20px 24px; color: #fff; margin-bottom: 20px; box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.4); border: 1px solid rgba(255,255,255,0.1);">
+                    <div class="flex items-center justify-between flex-wrap gap-4">
+                        <div class="flex items-center gap-4">
+                            <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                <i class="fas fa-shield-virus text-2xl text-amber-300"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h1 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #fff; letter-spacing: -0.5px;">إدارة وبلاغات الحوادث الوشيكة</h1>
+                                    <span style="background: rgba(245, 158, 11, 0.25); border: 1px solid rgba(245, 158, 11, 0.6); color: #fef08a; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;">Near Miss Suite</span>
+                                </div>
+                                <p style="font-size: 0.82rem; margin: 4px 0 0 0; color: #c7d2fe;">رصد استباقي للمخاطر • تحليل الأسباب الجذرية • ثقافة السلامة الإيجابية | SafetyHub ICAPP</p>
+                            </div>
                         </div>
-                        <div class="flex gap-2">
-                            <button id="nearmiss-public-qr-btn" class="btn-secondary flex items-center gap-2" style="background:#4338ca; color:#fff;" onclick="NearMiss.openPublicQrModal()">
-                                <i class="fas fa-qrcode"></i>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button id="nearmiss-public-qr-btn" class="btn-secondary flex items-center gap-2" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 0.85rem; font-weight: 600; padding: 8px 14px; border-radius: 10px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" onclick="NearMiss.openPublicQrModal()">
+                                <i class="fas fa-qrcode text-amber-300"></i>
                                 <span>النموذج العام ورموز QR 📱</span>
                             </button>
-                            <button id="add-nearmiss-btn" class="btn-primary">
-                                <i class="fas fa-plus ml-2"></i>
-                                تسجيل ملاحظة جديدة
+                            <button onclick="NearMiss.printLocationQrBadges()" class="btn-secondary flex items-center gap-2" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #a7f3d0; font-size: 0.85rem; font-weight: 600; padding: 8px 14px; border-radius: 10px; transition: all 0.2s;" onmouseover="this.style.background='rgba(16, 185, 129, 0.35)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.2)'">
+                                <i class="fas fa-print"></i>
+                                <span>ملصقات المواقع 🖨️</span>
+                            </button>
+                            <button id="add-nearmiss-btn" class="btn-primary flex items-center gap-2" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #fff; font-size: 0.85rem; font-weight: 700; padding: 8px 16px; border-radius: 10px; border: none; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>تسجيل بلاغ وشيك ➕</span>
                             </button>
                         </div>
                     </div>
@@ -529,6 +546,11 @@ const NearMiss = {
         const records = AppState.appData.nearmiss || [];
         const total = records.length;
         const corrective = records.filter((item) => item.correctiveProposed).length;
+        const highSeverity = records.filter((item) => {
+            const sev = (item.severity || '').toLowerCase();
+            return sev === 'عالي' || sev === 'high' || sev === 'كارثي' || sev === 'critical' || sev === 'وشيك';
+        }).length;
+
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const thisMonth = records.filter((item) => new Date(item.date) >= monthStart).length;
@@ -547,33 +569,53 @@ const NearMiss = {
             : 'لا يوجد بيانات';
 
         return `
-            <div class="summary-card">
-                <div class="summary-card-icon bg-indigo-100 text-indigo-600">
-                    <i class="fas fa-clipboard-check"></i>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <!-- كرت إجمالي البلاغات -->
+                <div style="background:#fff; border-radius:14px; padding:18px; border:1px solid #e0e7ff; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); color:#3730a3; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">إجمالي الحوادث الوشيكة</div>
+                        <div style="font-size:1.5rem; font-weight:800; color:#1e1b4b; line-height:1.2;">${total}</div>
+                        <div style="font-size:0.7rem; color:#4338ca; font-weight:600; margin-top:2px;">+${thisMonth} خلال هذا الشهر 📅</div>
+                    </div>
                 </div>
-                <div>
-                    <p class="summary-card-label">إجمالي الملاحظات</p>
-                    <p class="summary-card-value">${total}</p>
-                    <p class="text-xs text-gray-500 mt-1">${thisMonth} ملاحظة خلال هذا الشهر</p>
+
+                <!-- كرت الحوادث عالية الخطورة -->
+                <div style="background:#fff; border-radius:14px; padding:18px; border:1px solid #fee2e2; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                        <i class="fas fa-radiation-alt"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">بلاغات عالية الخطورة</div>
+                        <div style="font-size:1.5rem; font-weight:800; color:#b91c1c; line-height:1.2;">${highSeverity}</div>
+                        <div style="font-size:0.7rem; color:#dc2626; font-weight:600; margin-top:2px;">تتطلب تدخل فوري 🚨</div>
+                    </div>
                 </div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-card-icon bg-emerald-100 text-emerald-600">
-                    <i class="fas fa-lightbulb"></i>
+
+                <!-- كرت الإجراءات التصحيحية -->
+                <div style="background:#fff; border-radius:14px; padding:18px; border:1px solid #fef3c7; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">إجراءات تصحيحية (CAPA)</div>
+                        <div style="font-size:1.5rem; font-weight:800; color:#b45309; line-height:1.2;">${corrective}</div>
+                        <div style="font-size:0.7rem; color:#d97706; font-weight:600; margin-top:2px;">مربوطة بخطة المتابعة 🔄</div>
+                    </div>
                 </div>
-                <div>
-                    <p class="summary-card-label">مقترحات تصحيحية</p>
-                    <p class="summary-card-value">${corrective}</p>
-                    <p class="text-xs text-gray-500 mt-1">تشمل إجراءات متابعة مطلوبة</p>
-                </div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-card-icon bg-blue-100 text-blue-600">
-                    <i class="fas fa-building"></i>
-                </div>
-                <div>
-                    <p class="summary-card-label">أكثر إدارة تسجيلاً</p>
-                    <p class="summary-card-value">${topDepartmentLabel}</p>
+
+                <!-- كرت أكثر إدارة نشاطاً -->
+                <div style="background:#fff; border-radius:14px; padding:18px; border:1px solid #d1fae5; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; align-items:center; gap:16px;">
+                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">أعلى إدارة رصداً</div>
+                        <div style="font-size:1.05rem; font-weight:800; color:#065f46; line-height:1.2; margin-top:2px;">${topDepartmentLabel}</div>
+                        <div style="font-size:0.7rem; color:#059669; font-weight:600; margin-top:2px;">بيئة إيجابية مشجعة 🏆</div>
+                    </div>
                 </div>
             </div>
         `;

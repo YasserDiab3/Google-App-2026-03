@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1225",
+  "version": "1.0.1226",
   "highlights": {
     "ar": [
-      "إطلاق النموذج الميداني العام للإبلاغ عن الحوادث الوشيكة (public-near-miss.html) لجميع العاملين والمقاولين.",
-      "دعم الإبلاغ السري (Anonymous Reporting) وخيارات تصنيف الحوادث الوشيكة وأداة التأشير والرسم على الصور.",
-      "توليد وطباعة ملصقات QR الشاملة للمواقع والمصانع للحوادث الوشيكة بترويسة SafetyHub | ICAPP."
+      "ترقية الهوية البصرية لموديول الحوادث الوشيكة بشريط قيادة متقدم وبطاقات مؤشرات KPI عصرية.",
+      "تصميم نافذة تفاصيل البلاغ (View Modal) بنمط تقارير ISO الرسمية المعتمدة لشركة ICAPP.",
+      "دعم تصنيفات الحوادث الوشيكة الموسعة وأيقونات الخطورة والربط مع خطة الإجراءات التصحيحية."
     ],
     "en": [
-      "Launched Public Near Miss Field Reporting Form (public-near-miss.html) accessible to all workers and contractors.",
-      "Supported anonymous reporting, near-miss classifications, photo canvas markup, and WhatsApp share cards.",
-      "Integrated batch Location QR stickers generator for Near Miss reporting with SafetyHub | ICAPP header."
+      "Upgraded Near Miss visual identity with modern command bar and glassmorphic KPI cards.",
+      "Redesigned Near Miss record detail view modal into an official ISO-styled report.",
+      "Enhanced classification categories, severity indicators, and seamless CAPA sync."
     ]
   }
 }
