@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1229",
+  "version": "1.0.1230",
   "highlights": {
     "ar": [
-      "تصحيح توليد رابط الـ QR ليوجه بدقة إلى نموذج الحوادث الوشيكة (public-near-miss.html).",
-      "تشغيل النافذة المنبثقة للـ QR ومصفوفة طباعة الملصقات مع الرابط المباشر وأزرار الفتح والنسخ.",
-      "تعبئة المصنع والمكان تلقائياً عند مسح ملصقات الـ QR الميدانية للحوادث الوشيكة."
+      "ترقية كامل نصوص وهوية النموذج الميداني (public-near-miss.html) ليكون 100% مخصصاً للحوادث الوشيكة.",
+      "تعديل الترويسة وبطاقات الوصف (ما كاد أن يحدث) والإجراءات الوقائية وإيصال البلاغ.",
+      "تثبيت وتأكيد عمل أزرار الـ QR وملصقات المواقع والتوجيه الدقيق للرابط الميداني."
     ],
     "en": [
-      "Fixed Near Miss QR generator to precisely direct to public-near-miss.html.",
-      "Activated Near Miss QR modal and batch location printing with direct links and action buttons.",
-      "Auto-populated factory and location when scanning Near Miss QR stickers."
+      "Overhauled all titles and texts in public-near-miss.html to be 100% Near Miss branded.",
+      "Customized scenario descriptions (what could have happened), preventive actions, and receipts.",
+      "Fixed QR button events and location printing routing directly to Near Miss public form."
     ]
   }
 }
