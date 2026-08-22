@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1237",
+  "version": "1.0.1238",
   "highlights": {
     "ar": [
-      "مطابقة كاملة بين حقول النموذج والجدول وقاعدة البيانات لشيت NearMiss (الإصدار @338).",
-      "إضافة زر التحديث السحابي المباشر وجلب البلاغات الميدانية الحية تلقائياً في الواجهة الداخلية.",
-      "توثيق كافة بيانات الموقع والتصنيف والخطورة والإجراءات الوقائية وإحداثيات GPS."
+      "تضمين كافة مصانع ومواقع شركة ICAPP المعتمدة (ICAPP-1, ICAPP-2, WH, الموقع العام) مع أكثر من 130 موقعاً فرعياً دقيقاً.",
+      "تنقية أسماء الأماكن الفرعية من البادئات والرموز التقنية لتظهر بأسماء عربية واضحة ومنسقة.",
+      "ربط وتفعيل التحميل الفوري للمصانع والأماكن من قاعدة البيانات السحابية مع دعم المزامنة التلقائية."
     ],
     "en": [
-      "Full 100% schema alignment across public form, in-app table, and NearMiss Google Sheet (@338).",
-      "Added live cloud sync button and auto-fetch for field reports inside the Near Miss module.",
-      "Fully captured location, classification, severity, preventive actions, and GPS coordinates."
+      "Embedded authentic ICAPP factories (ICAPP-1, ICAPP-2, WH, General Site) with over 130 accurate sub-locations.",
+      "Cleaned sub-location names from technical prefixes for professional Arabic dropdown display.",
+      "Linked instant factory and sub-location cloud loading with auto-sync support."
     ]
   }
 }
