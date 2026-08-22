@@ -2348,13 +2348,90 @@ const DailyObservations = {
                 </div>
                 <div class="card-body" style="padding-top: 20px;">
                     <div id="observations-table-container">
-                        <div class="empty-state" style="direction: ${isRTL ? 'rtl' : 'ltr'}; text-align: ${isRTL ? 'right' : 'left'};">
-                            <p class="text-gray-500">${t('empty.noObservations')}</p>
-                        </div>
+                        ${this._buildInitialTableHtml(observations, isRTL, t)}
                     </div>
                 </div>
             </div>
         `;
+    },
+
+    _buildInitialTableHtml(observations, isRTL, t) {
+        if (!Array.isArray(observations) || observations.length === 0) {
+            return `<div class="empty-state" style="direction: ${isRTL ? 'rtl' : 'ltr'}; text-align: ${isRTL ? 'right' : 'left'};"><p class="text-gray-500">${Utils.escapeHTML(t('empty.noObservations'))}</p></div>`;
+        }
+        const tbl = {
+            code: this._t('module.dailyobs.registry.table.code', 'رقم الملاحظة'),
+            location: this._t('module.dailyobs.registry.table.location', 'الموقع / المكان'),
+            datetime: this._t('module.dailyobs.registry.table.datetime', 'التاريخ والوقت'),
+            type: this._t('module.dailyobs.registry.table.type', 'نوع الملاحظة'),
+            shift: this._t('module.dailyobs.registry.table.shift', 'الوردية'),
+            risk: this._t('module.dailyobs.registry.table.risk', 'معدل الخطورة'),
+            status: this._t('module.dailyobs.registry.table.status', 'الحالة'),
+            observer: this._t('module.dailyobs.registry.table.observer', 'صاحب الملاحظة'),
+            responsible: this._t('module.dailyobs.registry.table.responsible', 'المسؤول'),
+            attachments: this._t('module.dailyobs.registry.table.attachments', 'المرفقات'),
+            actions: this._t('module.dailyobs.registry.table.actions', 'الإجراءات'),
+            emptySearch: this._t('module.dailyobs.registry.emptySearch', 'لا توجد نتائج للبحث'),
+            view: this._t('module.dailyobs.common.view', 'عرض')
+        };
+        const extractObservationNumber = (isoCode) => {
+            if (!isoCode) return 0;
+            const match = String(isoCode).match(/(\d+)$/);
+            return match ? parseInt(match[1], 10) : 0;
+        };
+        const sorted = [...observations].sort((a, b) => extractObservationNumber(a.isoCode) - extractObservationNumber(b.isoCode));
+        return `
+            <div class="table-wrapper observations-table-wrapper" style="overflow-x: auto; overflow-y: auto; max-height: 70vh;" dir="rtl">
+                <table class="data-table" style="font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+                    <thead>
+                        <tr>
+                            <th>${Utils.escapeHTML(tbl.code)}</th>
+                            <th>${Utils.escapeHTML(tbl.location)}</th>
+                            <th>${Utils.escapeHTML(tbl.datetime)}</th>
+                            <th>${Utils.escapeHTML(tbl.type)}</th>
+                            <th>${Utils.escapeHTML(tbl.shift)}</th>
+                            <th>${Utils.escapeHTML(tbl.risk)}</th>
+                            <th>${Utils.escapeHTML(tbl.status)}</th>
+                            <th>${Utils.escapeHTML(tbl.observer)}</th>
+                            <th>${Utils.escapeHTML(tbl.responsible)}</th>
+                            <th>${Utils.escapeHTML(tbl.attachments)}</th>
+                            <th>${Utils.escapeHTML(tbl.actions)}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sorted.map(obs => this._renderObservationTableRow(obs, tbl)).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    },
+
+    _renderObservationTableRow(obs, tbl) {
+        return `
+            <tr>
+                <td>${Utils.escapeHTML(obs.isoCode || '')}</td>
+                <td>
+                    <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(obs.siteName || '-')}</div>
+                    <div class="text-xs text-gray-500">${Utils.escapeHTML(obs.locationName || '')}</div>
+                </td>
+                <td>${obs.date ? Utils.formatDateTime(obs.date) : '-'}</td>
+                <td>${Utils.escapeHTML(this.getObservationTypeLabel(obs.observationType))}</td>
+                <td>${Utils.escapeHTML(obs.shift || '-')}</td>
+                <td>
+                    <span class="badge badge-${this.getRiskBadgeClass(obs.riskLevel)}">${Utils.escapeHTML(obs.riskLevel || '-')}</span>
+                </td>
+                <td>
+                    <div>${Utils.escapeHTML(obs.observerName || '-')}</div>
+                    ${(obs.submittedBy === 'نموذج عام (Public Form)' || String(obs.remarks || '').includes('نموذج عام')) ? `<span class="badge" style="background:#f3e8ff;color:#7e22ce;font-size:0.7rem;padding:2px 6px;border-radius:4px;font-weight:700;">نموذج عام</span>` : ''}
+                </td>
+                <td>${this.formatResponsibleTableCell(obs)}</td>
+                <td>${obs.attachments && obs.attachments.length > 0 ? `<i class="fas fa-paperclip text-blue-500" title="${Utils.escapeHTML(this._tf('module.dailyobs.registry.attachments.count', { n: obs.attachments.length }, `${obs.attachments.length} ملف`))}"></i>` : '-'}</td>
+                <td>
+                    <button onclick="DailyObservations.viewObservation('${obs.id}')" class="btn-icon btn-icon-primary" title="${Utils.escapeHTML(tbl ? tbl.view : 'عرض')}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>`;
     },
 
     /**
@@ -3222,6 +3299,13 @@ const DailyObservations = {
                     if (tabContent) {
                         tabContent.classList.add('active');
                         tabContent.style.display = 'block';
+                        
+                        // تحديث سجل الملاحظات فوراً عند فتح التبويب
+                        if (tabName === 'observations-registry') {
+                            try {
+                                this.loadObservationsList();
+                            } catch (e) {}
+                        }
                         
                         // تحميل بيانات التحليل عند فتح التبويب
                         if (tabName === 'data-analysis') {
@@ -7640,31 +7724,7 @@ const DailyObservations = {
             view: this._t('module.dailyobs.common.view', 'عرض')
         };
 
-        const renderRow = (obs) => `
-                <tr>
-                    <td>${Utils.escapeHTML(obs.isoCode || '')}</td>
-                    <td>
-                        <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(obs.siteName || '-')}</div>
-                        <div class="text-xs text-gray-500">${Utils.escapeHTML(obs.locationName || '')}</div>
-                    </td>
-                    <td>${obs.date ? Utils.formatDateTime(obs.date) : '-'}</td>
-                    <td>${Utils.escapeHTML(this.getObservationTypeLabel(obs.observationType))}</td>
-                    <td>${Utils.escapeHTML(obs.shift || '-')}</td>
-                    <td>
-                        <span class="badge badge-${this.getRiskBadgeClass(obs.riskLevel)}">${Utils.escapeHTML(obs.riskLevel || '-')}</span>
-                    </td>
-                    <td>
-                        <div>${Utils.escapeHTML(obs.observerName || '-')}</div>
-                        ${(obs.submittedBy === 'نموذج عام (Public Form)' || String(obs.remarks || '').includes('نموذج عام')) ? `<span class="badge" style="background:#f3e8ff;color:#7e22ce;font-size:0.7rem;padding:2px 6px;border-radius:4px;font-weight:700;">نموذج عام</span>` : ''}
-                    </td>
-                    <td>${this.formatResponsibleTableCell(obs)}</td>
-                    <td>${obs.attachments && obs.attachments.length > 0 ? `<i class="fas fa-paperclip text-blue-500" title="${Utils.escapeHTML(this._tf('module.dailyobs.registry.attachments.count', { n: obs.attachments.length }, `${obs.attachments.length} ملف`))}"></i>` : '-'}</td>
-                    <td>
-                        <button onclick="DailyObservations.viewObservation('${obs.id}')" class="btn-icon btn-icon-primary" title="${Utils.escapeHTML(tbl.view)}">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>`;
+        const renderRow = (obs) => this._renderObservationTableRow(obs, tbl);
 
         // دالة مساعدة لاستخراج الرقم من رقم الملاحظة للترتيب
         const extractObservationNumber = (isoCode) => {
