@@ -1459,6 +1459,87 @@
         let selectedRiskLevel = 'متوسط';
         let currentPhotoBase64 = '';
 
+        // ==========================================
+        // 1. اختصارات سريعة لتاريخ التنفيذ المتوقع
+        // ==========================================
+        function applyDatePreset(type) {
+            const expInput = document.getElementById('expectedDateInput');
+            if (!expInput) return;
+
+            const now = new Date();
+            let targetDate = new Date();
+
+            if (type === 'today') {
+                targetDate = now;
+            } else if (type === '24h') {
+                targetDate.setDate(now.getDate() + 1);
+            } else if (type === 'week') {
+                targetDate.setDate(now.getDate() + 7);
+            } else if (type === 'month') {
+                targetDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            }
+
+            const y = targetDate.getFullYear();
+            const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+            const d = String(targetDate.getDate()).padStart(2, '0');
+            expInput.value = `${y}-${m}-${d}`;
+            expInput.dataset.autoCalculated = 'false';
+
+            // تمييز الزر النشط
+            document.querySelectorAll('.date-preset-btn').forEach(btn => btn.classList.remove('active'));
+            if (window.event && window.event.target && window.event.target.classList.contains('date-preset-btn')) {
+                window.event.target.classList.add('active');
+            }
+        }
+
+        // ==========================================
+        // 2. مقياس جودة الوصف ومساعد الصياغة المباشر
+        // ==========================================
+        function handleDetailsInputQuality(val) {
+            const text = String(val || '').trim();
+            const countEl = document.getElementById('descCharCounter');
+            const badgeEl = document.getElementById('descQualityBadge');
+            const textEl = document.getElementById('descQualityText');
+            const iconEl = document.getElementById('descQualityIcon');
+
+            if (countEl) countEl.textContent = `${text.length} حرف`;
+            if (!badgeEl || !textEl || !iconEl) return;
+
+            if (text.length === 0) {
+                badgeEl.style.color = '#64748b';
+                iconEl.className = 'fas fa-circle-info';
+                textEl.textContent = 'يرجى توضيح تفاصيل الملاحظة بدقة';
+                if (countEl) {
+                    countEl.style.background = '#f1f5f9';
+                    countEl.style.color = '#64748b';
+                }
+            } else if (text.length < 15) {
+                badgeEl.style.color = '#d97706';
+                iconEl.className = 'fas fa-triangle-exclamation';
+                textEl.textContent = 'وصف مقتضب — يفضل إضافة تفاصيل محددة';
+                if (countEl) {
+                    countEl.style.background = '#fef3c7';
+                    countEl.style.color = '#b45309';
+                }
+            } else if (text.length < 35) {
+                badgeEl.style.color = '#2563eb';
+                iconEl.className = 'fas fa-thumbs-up';
+                textEl.textContent = 'وصف جيد وواضح 👍';
+                if (countEl) {
+                    countEl.style.background = '#e0f2fe';
+                    countEl.style.color = '#0369a1';
+                }
+            } else {
+                badgeEl.style.color = '#15803d';
+                iconEl.className = 'fas fa-circle-check';
+                textEl.textContent = 'وصف مفصل وممتاز مكتمل العناصر ✅';
+                if (countEl) {
+                    countEl.style.background = '#dcfce7';
+                    countEl.style.color = '#15803d';
+                }
+            }
+        }
+
         function renderSubCategories(obsType) {
             const subSelect = document.getElementById('subCategorySelect');
             const customGroup = document.getElementById('customSubCategoryGroup');
