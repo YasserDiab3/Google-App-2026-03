@@ -2846,7 +2846,7 @@ function getPublicObservationConfig() {
         try {
             cache = CacheService.getScriptCache();
             if (cache) {
-                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V16');
+                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V17');
                 if (cachedStr) {
                     return JSON.parse(cachedStr);
                 }
@@ -3023,54 +3023,29 @@ function getPublicObservationConfig() {
             return a.name.localeCompare(b.name, 'ar');
         });
 
-        // 3. الإدارات الرسمية الموحدة مع الدمج والتنقية الشاملة لمنع أي تكرار
+        // 3. الإدارات الفعلية الموجودة بقاعدة بيانات النظام حصراً (بدون أي إضافات خارجية)
         var departmentsMap = {};
         var departments = [];
 
-        function canonicalDepartmentName(deptStr) {
-            if (!deptStr) return '';
-            var clean = String(deptStr).trim().replace(/\s+/g, ' ');
-            var lower = clean.toLowerCase();
-
-            if (lower.includes('سلامة') || lower.includes('hse') || lower.includes('صحة مهنية') || lower.includes('بيئة')) {
-                return 'إدارة السلامة والصحة المهنية والبيئة (HSE)';
-            }
-            if (lower.includes('صيانة') || lower.includes('ورش') || lower.includes('فنية')) {
-                return 'إدارة الصيانة';
-            }
-            if (lower.includes('إنتاج') || lower.includes('انتاج') || lower.includes('تشغيل')) {
-                return 'إدارة الإنتاج والتشغيل';
-            }
-            if (lower.includes('جودة') || lower.includes('غذاء') || lower.includes('معمل')) {
-                return 'إدارة الجودة وسلامة الغذاء';
-            }
-            if (lower.includes('مستودع') || lower.includes('مخازن') || lower.includes('لوجست') || lower.includes('شحن')) {
-                return 'إدارة المستودعات والخدمات اللوجستية';
-            }
-            if (lower.includes('موارد بشرية') || lower.includes('شؤون إدارية') || lower.includes('شؤون عاملين') || lower.includes('hr')) {
-                return 'إدارة الموارد البشرية والشؤون الإدارية';
-            }
-            if (lower.includes('هندسة') || lower.includes('مشاريع')) {
-                return 'إدارة الهندسة والمشاريع';
-            }
-            if (lower.includes('مشتريات') || lower.includes('سلاسل إمداد') || lower.includes('توريد')) {
-                return 'إدارة سلاسل الإمداد والمشتريات';
-            }
-            if (lower.includes('أمن') || lower.includes('امن') || lower.includes('حراسة')) {
-                return 'إدارة الأمن والحراسة';
-            }
-            if (lower.includes('نظم') || lower.includes('معلومات') || lower.includes('it') || lower.includes('تكنولوجيا') || lower.includes('شبكات')) {
-                return 'إدارة تكنولوجيا ونظم المعلومات (IT)';
-            }
-            return clean;
+        function normalizeDeptKey(str) {
+            return String(str || '')
+                .trim()
+                .toLowerCase()
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
+                .replace(/[^\w\u0600-\u06FF]/g, '');
         }
 
         function registerDept(deptStr) {
             if (!deptStr) return;
-            var canon = canonicalDepartmentName(deptStr);
-            if (canon && canon.length >= 2 && !departmentsMap[canon]) {
-                departmentsMap[canon] = true;
-                departments.push(canon);
+            var clean = String(deptStr).trim().replace(/\s+/g, ' ');
+            if (clean && clean.length >= 2) {
+                var normKey = normalizeDeptKey(clean);
+                if (normKey && !departmentsMap[normKey]) {
+                    departmentsMap[normKey] = true;
+                    departments.push(clean);
+                }
             }
         }
 
@@ -3095,20 +3070,6 @@ function getPublicObservationConfig() {
         try {
             employees.forEach(function(e) { registerDept(e.department); });
         } catch (eDeptErr) {}
-
-        var officialCompanyDepts = [
-            'إدارة السلامة والصحة المهنية والبيئة (HSE)',
-            'إدارة الصيانة',
-            'إدارة الإنتاج والتشغيل',
-            'إدارة الجودة وسلامة الغذاء',
-            'إدارة المستودعات والخدمات اللوجستية',
-            'إدارة الموارد البشرية والشؤون الإدارية',
-            'إدارة الهندسة والمشاريع',
-            'إدارة سلاسل الإمداد والمشتريات',
-            'إدارة الأمن والحراسة',
-            'إدارة تكنولوجيا ونظم المعلومات (IT)'
-        ];
-        officialCompanyDepts.forEach(registerDept);
 
         if (!companyLogo) companyLogo = 'icons/icapp-logo.png';
         departments.sort(function(a, b) { return a.localeCompare(b, 'ar'); });
@@ -3138,7 +3099,7 @@ function getPublicObservationConfig() {
 
         try {
             if (cache) {
-                cache.put('PUBLIC_OBS_CONFIG_CACHE_V16', JSON.stringify(configResult), 1800);
+                cache.put('PUBLIC_OBS_CONFIG_CACHE_V17', JSON.stringify(configResult), 1800);
             }
         } catch (cPutErr) {}
 

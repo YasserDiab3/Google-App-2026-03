@@ -1622,18 +1622,17 @@
         }
 
         function renderDefaultFields() {
-            const defaultDepts = [
-                'إدارة السلامة والصحة المهنية والبيئة (HSE)',
-                'إدارة الصيانة',
-                'إدارة الإنتاج والتشغيل',
-                'إدارة الجودة وسلامة الغذاء',
-                'إدارة المستودعات والخدمات اللوجستية',
-                'إدارة الموارد البشرية والشؤون الإدارية',
-                'إدارة الهندسة والمشاريع',
-                'إدارة سلاسل الإمداد والمشتريات',
-                'إدارة الأمن والحراسة',
-                'إدارة تكنولوجيا ونظم المعلومات (IT)'
-            ];
+            let defaultDepts = [];
+            try {
+                const sCache = localStorage.getItem('HSE_SETTINGS_CACHE') || localStorage.getItem('appData');
+                if (sCache) {
+                    const parsed = JSON.parse(sCache);
+                    if (parsed.companySettings && (parsed.companySettings.formDepartments || parsed.companySettings.departments)) {
+                        const raw = parsed.companySettings.formDepartments || parsed.companySettings.departments;
+                        defaultDepts = Array.isArray(raw) ? raw : String(raw).split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+                    }
+                }
+            } catch(e) {}
             const defaultSites = [
                 { name: 'ICAPP-1', places: ['منظومة طلمبات الحريق', 'عنبر الإنتاج الرئيسي', 'منطقة التعبئة والتغليف', 'مستودع المواد الخام', 'مستودع المنتج التام', 'غرفة المحولات واللوحات الكهربائية', 'ورشة الصيانة الميكانيكية', 'محطة معالجة المياه', 'منطقة التحميل والتعتيق'] },
                 { name: 'ICAPP-2', places: ['عنبر المعالجة والفرز', 'خطوط الإنتاج والتعبئة', 'ثلاجات التبريد والتجميد', 'مخزن قطع الغيار', 'المكاتب الإدارية', 'منطقة الشحن والتفريغ'] }
@@ -1723,47 +1722,18 @@
                 ];
             }
 
-            const canonicalMap = {
-                'سلامة': 'إدارة السلامة والصحة المهنية والبيئة (HSE)',
-                'صيانة': 'إدارة الصيانة',
-                'ورش': 'إدارة الصيانة',
-                'إنتاج': 'إدارة الإنتاج والتشغيل',
-                'انتاج': 'إدارة الإنتاج والتشغيل',
-                'تشغيل': 'إدارة الإنتاج والتشغيل',
-                'جودة': 'إدارة الجودة وسلامة الغذاء',
-                'غذاء': 'إدارة الجودة وسلامة الغذاء',
-                'مستودع': 'إدارة المستودعات والخدمات اللوجستية',
-                'مخازن': 'إدارة المستودعات والخدمات اللوجستية',
-                'لوجست': 'إدارة المستودعات والخدمات اللوجستية',
-                'موارد': 'إدارة الموارد البشرية والشؤون الإدارية',
-                'شؤون': 'إدارة الموارد البشرية والشؤون الإدارية',
-                'hr': 'إدارة الموارد البشرية والشؤون الإدارية',
-                'هندسة': 'إدارة الهندسة والمشاريع',
-                'مشاريع': 'إدارة الهندسة والمشاريع',
-                'مشتريات': 'إدارة سلاسل الإمداد والمشتريات',
-                'سلاسل': 'إدارة سلاسل الإمداد والمشتريات',
-                'أمن': 'إدارة الأمن والحراسة',
-                'امن': 'إدارة الأمن والحراسة',
-                'حراسة': 'إدارة الأمن والحراسة',
-                'نظم': 'إدارة تكنولوجيا ونظم المعلومات (IT)',
-                'معلومات': 'إدارة تكنولوجيا ونظم المعلومات (IT)',
-                'it': 'إدارة تكنولوجيا ونظم المعلومات (IT)'
-            };
-
-            function getCanonicalDept(raw) {
-                const str = String(raw || '').trim();
-                const lower = str.toLowerCase();
-                for (const key of Object.keys(canonicalMap)) {
-                    if (lower.includes(key)) return canonicalMap[key];
-                }
-                return str;
+            const seenDepts = new Set();
+            function normalizeD(s) {
+                return String(s || '').trim().toLowerCase()
+                    .replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[^\w\u0600-\u06FF]/g, '');
             }
 
-            const seenDepts = new Set();
             deptsList.forEach(rawD => {
-                const d = getCanonicalDept(rawD);
-                if (!d || d.length < 2 || seenDepts.has(d)) return;
-                seenDepts.add(d);
+                const d = String(rawD || '').trim();
+                if (!d || d.length < 2) return;
+                const normKey = normalizeD(d);
+                if (seenDepts.has(normKey)) return;
+                seenDepts.add(normKey);
 
                 const opt = document.createElement('option');
                 opt.value = d;
