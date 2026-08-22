@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1239",
+  "version": "1.0.1240",
   "highlights": {
     "ar": [
-      "تحسين استجابة ترويسة ISO والفوتر على مختلف شاشات الهواتف المحمولة بأعلى درجات التنسيق والاحترافية.",
-      "تثبيت وقفل المصنع والموقع الفرعي تلقائياً عند مسح رمز QR مع إظهار شارة التوثيق الميداني لمنع الخطأ.",
-      "إتاحة زر تحرير يدوي اختياري وإبقاء النموذج جاهزاً للإرسال المباشر بعد استكمال باقي التفاصيل."
+      "تخصيص فتح النموذج عند مسح QR لعرض المصنع والمكان الممسوحين فقط بدون أي خيارات أخرى وبدون بانرات تثبيت.",
+      "إلغاء النص التوضيحي للـ GPS والاكتفاء بالأيقونة الذكية (تتحول للأخضر تلقائياً فور رصد الإحداثيات).",
+      "تجربة مستخدم سريعة وميدانية مباشرة جاهزة لتسجيل البلاغ واستكماله فوراً."
     ],
     "en": [
-      "Enhanced mobile responsiveness for ISO Header and Footer with crisp layout.",
-      "Auto-locked factory and sub-location upon scanning QR code with verified badge to prevent errors.",
-      "Provided optional manual unlock while keeping form ready for instant submission upon filling details."
+      "Customized QR scan mode to display only the scanned factory and sub-location cleanly without extra dropdowns or lock banners.",
+      "Removed GPS status text and retained only smart location pin icon that turns green when GPS is acquired.",
+      "Streamlined instant field reporting workflow ready for immediate submission."
     ]
   }
 }

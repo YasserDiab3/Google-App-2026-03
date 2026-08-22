@@ -55,7 +55,7 @@
         }
 
         /* ══════════════════════════════════════════════════════
-           ترويسة ISO المعتمدة ثلاثية الأعمدة المطابقة للملاحظات
+           ترويسة ISO المعتمدة ثلاثية الأعمدة
         ══════════════════════════════════════════════════════ */
         .iso-header-table {
             position: sticky;
@@ -170,7 +170,7 @@
             font-size: 0.66rem;
         }
 
-        /* استجابة الهيدر الاحترافية على الهواتف */
+        /* استجابة الهيدر على الهواتف */
         @media (max-width: 768px) {
             .iso-header-table {
                 grid-template-columns: minmax(72px, 85px) 1fr minmax(90px, 115px);
@@ -290,28 +290,14 @@
             box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.15);
         }
 
-        /* قفل الحقول عند المسح بالـ QR */
-        .locked-field {
+        /* حقول الموقع الممسوحة بالـ QR الثابتة */
+        .qr-fixed-input {
             background-color: #f1f5f9 !important;
-            border-color: #10b981 !important;
+            border: 1.5px solid #10b981 !important;
             color: #065f46 !important;
             font-weight: 800 !important;
-            cursor: not-allowed !important;
+            cursor: default !important;
             pointer-events: none;
-        }
-
-        .qr-locked-banner {
-            display: none;
-            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-            border: 1.5px solid #10b981;
-            border-radius: 12px;
-            padding: 10px 14px;
-            margin-bottom: 12px;
-            align-items: center;
-            justify-content: space-between;
-            color: #065f46;
-            font-size: 0.8rem;
-            font-weight: 800;
         }
 
         /* شبكة الخطورة */
@@ -462,28 +448,17 @@
 
     <!-- Main Simple Form -->
     <form id="nearMissForm">
-        <!-- 1. الموقع والمكان داخل المصنع مع قفل الموقع عند مسح الـ QR -->
+        <!-- 1. الموقع والمكان داخل المصنع -->
         <div class="form-card">
             <div class="section-header">
                 <div class="section-title-wrap">
                     <span class="section-badge">1</span>
                     <span class="section-title">الموقع والمصنع داخل المنشأة</span>
                 </div>
-                <span id="gpsStatusBadge" style="font-size: 0.7rem; color: #64748b; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-                    <i class="fas fa-location-crosshairs text-indigo-600"></i>
-                    <span id="gpsStatusText">جاري رصد إحداثيات الموقع...</span>
+                <!-- أيقونة الموقع فقط بدون نص الملاحظة -->
+                <span id="gpsStatusBadge" title="تحديد الموقع الجغرافي">
+                    <i id="gpsIcon" class="fas fa-location-crosshairs" style="color: #64748b; font-size: 1.1rem; transition: all 0.3s ease;"></i>
                 </span>
-            </div>
-
-            <!-- بانر تأكيد مسح الـ QR والقفل -->
-            <div id="qrLockedBanner" class="qr-locked-banner">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <i class="fas fa-qrcode text-emerald-600 text-lg"></i>
-                    <span>📍 تم تثبيت الموقع عبر ملصق QR ومطابقته (مغلق لمنع الخطأ)</span>
-                </div>
-                <button type="button" onclick="unlockSitePlace()" style="background:#fff; border:1px solid #10b981; color:#065f46; border-radius:8px; padding:3px 8px; font-size:0.7rem; font-weight:700; cursor:pointer;">
-                    🔓 تعديل يدوي
-                </button>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -774,7 +749,7 @@
     let loadedConfig = { sites: defaultSites };
     let userGps = { lat: null, lng: null, accuracy: null, mapLink: '' };
     let photoBase64 = '';
-    let isQrLocked = false;
+    let isDirectQrScan = false;
 
     window.addEventListener('DOMContentLoaded', () => {
         initGpsCapture();
@@ -782,6 +757,17 @@
     });
 
     async function loadConfiguration() {
+        // فحص ما إذا كان الرابط قادماً من مسح رمز QR لموقع محدد
+        const urlParams = new URLSearchParams(window.location.search);
+        const factoryParam = urlParams.get('factory') || urlParams.get('site') || urlParams.get('factoryName');
+        const placeParam = urlParams.get('place') || urlParams.get('location') || urlParams.get('subLocation');
+
+        if (factoryParam && placeParam) {
+            isDirectQrScan = true;
+            setupFixedQrLocation(factoryParam, placeParam);
+            return;
+        }
+
         try {
             const cached = localStorage.getItem('HSE_SETTINGS_CACHE') || localStorage.getItem('appData');
             if (cached) {
@@ -804,14 +790,31 @@
             const data = await res.json();
             if (data && data.success && Array.isArray(data.sites) && data.sites.length > 0) {
                 loadedConfig = data;
-                if (!isQrLocked) {
+                if (!isDirectQrScan) {
                     renderSitesDropdown(loadedConfig);
                 }
             }
         } catch(e) {}
     }
 
+    // إعداد وتثبيت الموقع الممسوح بالـ QR فقط دون أي مواقع أخرى وبدون رسائل تثبيت
+    function setupFixedQrLocation(factoryName, placeName) {
+        const siteSelect = document.getElementById('siteSelect');
+        const placeSelect = document.getElementById('placeSelect');
+        const cleanPlace = getCleanPlaceName(placeName);
+
+        // وضع خيار وحيد للمصنع وخيار وحيد للمكان الفرعي
+        siteSelect.innerHTML = `<option value="${factoryName}" selected>${factoryName}</option>`;
+        placeSelect.innerHTML = `<option value="${cleanPlace}" selected>${cleanPlace}</option>`;
+
+        siteSelect.classList.add('qr-fixed-input');
+        placeSelect.classList.add('qr-fixed-input');
+        placeSelect.disabled = false;
+    }
+
     function renderSitesDropdown(cfg) {
+        if (isDirectQrScan) return;
+
         const siteSelect = document.getElementById('siteSelect');
         const rawSites = (Array.isArray(cfg.sites) && cfg.sites.length > 0) ? cfg.sites : defaultSites;
 
@@ -827,65 +830,15 @@
             }
         });
 
-        // قراءة الـ query params للمصنع والمكان من رابط مسح الـ QR
-        const urlParams = new URLSearchParams(window.location.search);
-        const factoryParam = urlParams.get('factory') || urlParams.get('site') || urlParams.get('factoryName');
-        const placeParam = urlParams.get('place') || urlParams.get('location') || urlParams.get('subLocation');
-
-        if (factoryParam) {
-            let matched = false;
-            for (let i = 0; i < siteSelect.options.length; i++) {
-                if (siteSelect.options[i].value.toLowerCase().includes(factoryParam.toLowerCase()) || factoryParam.toLowerCase().includes(siteSelect.options[i].value.toLowerCase())) {
-                    siteSelect.selectedIndex = i;
-                    matched = true;
-                    break;
-                }
-            }
-            if (!matched) {
-                const newOpt = document.createElement('option');
-                newOpt.value = factoryParam;
-                newOpt.textContent = factoryParam;
-                siteSelect.appendChild(newOpt);
-                siteSelect.value = factoryParam;
-            }
-
-            // تفعيل القفل عند مسح رمز الـ QR
-            if (placeParam) {
-                handleSiteChange(siteSelect.value, placeParam);
-                lockSitePlace();
-                return;
-            }
-        } else if (prevVal) {
+        if (prevVal) {
             siteSelect.value = prevVal;
         } else if (siteSelect.options.length > 1) {
             siteSelect.selectedIndex = 1;
         }
 
         if (siteSelect.selectedIndex > 0) {
-            handleSiteChange(siteSelect.value, placeParam);
+            handleSiteChange(siteSelect.value);
         }
-    }
-
-    function lockSitePlace() {
-        isQrLocked = true;
-        const siteSelect = document.getElementById('siteSelect');
-        const placeSelect = document.getElementById('placeSelect');
-        const banner = document.getElementById('qrLockedBanner');
-
-        siteSelect.classList.add('locked-field');
-        placeSelect.classList.add('locked-field');
-        if (banner) banner.style.display = 'flex';
-    }
-
-    function unlockSitePlace() {
-        isQrLocked = false;
-        const siteSelect = document.getElementById('siteSelect');
-        const placeSelect = document.getElementById('placeSelect');
-        const banner = document.getElementById('qrLockedBanner');
-
-        siteSelect.classList.remove('locked-field');
-        placeSelect.classList.remove('locked-field');
-        if (banner) banner.style.display = 'none';
     }
 
     function getCleanPlaceName(p) {
@@ -909,11 +862,12 @@
             str = String(p).trim();
         }
 
-        // إزالة أي بادئات مثل ICAPP-1__ أو ICAPP-2_ ليظهر الاسم نظيفاً
-        return str.replace(/^(ICAPP-[1-4]|WH)[_—s-]+/i, '').trim() || str;
+        return str.replace(/^(ICAPP-[1-4]|WH)[_—\s-]+/i, '').trim() || str;
     }
 
     function handleSiteChange(siteName, targetPlace = '') {
+        if (isDirectQrScan) return;
+
         const placeSelect = document.getElementById('placeSelect');
         const customGroup = document.getElementById('customPlaceGroup');
         if (customGroup) customGroup.style.display = 'none';
@@ -951,16 +905,6 @@
                     placeSelect.appendChild(opt);
                 }
             });
-        }
-
-        if (targetPlace && !matchedTarget) {
-            const targetClean = getCleanPlaceName(targetPlace);
-            const opt = document.createElement('option');
-            opt.value = targetClean;
-            opt.textContent = targetClean;
-            opt.selected = true;
-            placeSelect.insertBefore(opt, placeSelect.firstChild.nextSibling);
-            matchedTarget = true;
         }
 
         // خيار مكان فرعي آخر
@@ -1016,10 +960,9 @@
     }
 
     function initGpsCapture() {
-        if (!navigator.geolocation) {
-            document.getElementById('gpsStatusText').textContent = 'تحديد الموقع GPS غير مدعوم';
-            return;
-        }
+        const icon = document.getElementById('gpsIcon');
+        if (!navigator.geolocation) return;
+
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 userGps.lat = pos.coords.latitude;
@@ -1027,12 +970,13 @@
                 userGps.accuracy = Math.round(pos.coords.accuracy);
                 userGps.mapLink = 'https://www.google.com/maps?q=' + userGps.lat + ',' + userGps.lng;
                 
-                const badge = document.getElementById('gpsStatusBadge');
-                badge.style.color = '#15803d';
-                document.getElementById('gpsStatusText').textContent = 'تم تسجيل إحداثيات الموقع بدقة (±' + userGps.accuracy + 'م) ✅';
+                if (icon) {
+                    icon.style.color = '#10b981';
+                    icon.className = 'fas fa-location-dot';
+                }
             },
             (err) => {
-                document.getElementById('gpsStatusText').textContent = 'الموقع التقديري للمصنع نشط';
+                if (icon) icon.style.color = '#64748b';
             },
             { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
         );
