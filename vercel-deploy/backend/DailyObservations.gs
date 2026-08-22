@@ -3162,6 +3162,15 @@ function submitPublicObservation(payload) {
             detailsText = '[' + subCategory + '] ' + detailsText;
         }
 
+        var gpsCoords = String(payload.gpsCoordinates || payload.coordinates || payload.gps || '').trim();
+        var mapsUrl = String(payload.mapsUrl || (gpsCoords ? ('https://maps.google.com/?q=' + encodeURIComponent(gpsCoords)) : '')).trim();
+        var gpsAcc = payload.gpsAccuracy ? (' (دقة: ±' + Math.round(payload.gpsAccuracy) + 'م)') : '';
+
+        var remarksText = subCategory ? ('التصنيف الفرعي: ' + subCategory) : 'المصدر: نموذج عام ميداني';
+        if (gpsCoords) {
+            remarksText += ' | إحداثيات GPS: ' + gpsCoords + gpsAcc;
+        }
+
         var obsRecord = {
             id: obsId,
             isoCode: isoCode,
@@ -3181,10 +3190,13 @@ function submitPublicObservation(payload) {
             expectedCompletionDate: payload.expectedCompletionDate || payload.expectedDate || '',
             status: payload.status || 'Open',
             workflowStage: 'pending_specialist',
+            gpsCoordinates: gpsCoords,
+            gpsAccuracy: payload.gpsAccuracy || '',
+            mapsUrl: mapsUrl,
             submittedBy: 'نموذج عام (Public Form)',
             submittedByEmail: '',
             submittedAt: new Date().toISOString(),
-            remarks: subCategory ? ('التصنيف الفرعي: ' + subCategory) : 'المصدر: نموذج عام ميداني بدون تسجيل دخول',
+            remarks: remarksText,
             attachments: stringifyAttachments(attachments),
             createdAt: new Date(),
             updatedAt: new Date()

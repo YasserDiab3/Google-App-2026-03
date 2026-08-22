@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1204",
+  "version": "1.0.1206",
   "highlights": {
     "ar": [
-      "إضافة نظام المقترحات الذكية والإكمال التلقائي المتطابق مع التصنيفات الفرعية واقتراح الإجراء التصحيحي الفوري في نموذج الملاحظات.",
-      "دعم رفع الصور من استوديو/معرض الهاتف بجانب الكاميرا المباشرة في نماذج الملاحظات وفحص معدات الإطفاء.",
-      "تثبيت ترويسة ISO المعتمدة عند التمرير (Sticky Header) ومطابقة قائمة الإدارات الرسمية ومنع أي تكرار."
+      "إضافة التقاط الموقع الجغرافي الذكي (GPS) في الخلفية بسرعة فائقة مع توليد رابط مباشر لخرائط جوجل.",
+      "قصر خيارات الإدارات والمصانع على البيانات المسجلة رسمياً بقاعدة بيانات النظام ومنع التكرار.",
+      "تحديث نظام المقترحات التخصصية والإكمال التلقائي ودعم فتح استوديو الصور والكاميرا المباشرة."
     ],
     "en": [
-      "Added hierarchical smart suggestions, live autocomplete, and auto-corrective action fill tailored to sub-categories in daily observations.",
-      "Enabled dual photo upload buttons for direct camera capture and device studio/gallery across public inspection & observation forms.",
-      "Implemented sticky ISO header on scroll and strict system department deduplication."
+      "Integrated zero-lag background GPS geolocation capture with automatic Google Maps link generation upon observation submission.",
+      "Strictly bound factories and responsible departments to system database records with zero synthetic duplicates.",
+      "Enhanced hierarchical smart suggestions, live typeahead autocomplete, and dual camera/gallery photo upload."
     ]
   }
 }

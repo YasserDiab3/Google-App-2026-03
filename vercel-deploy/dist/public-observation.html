@@ -1008,9 +1008,14 @@
 
             <!-- 1. الموقع والمكان داخل المصنع -->
             <div class="form-section">
-                <div class="section-header">
-                    <span class="section-badge">1</span>
-                    <span class="section-title">الموقع والمكان داخل المصنع</span>
+                <div class="section-header" style="justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="section-badge">1</span>
+                        <span class="section-title">الموقع والمكان داخل المصنع</span>
+                    </div>
+                    <span id="gpsStatusBadge" style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-location-dot"></i><span id="gpsStatusText">تحديد الموقع GPS...</span>
+                    </span>
                 </div>
                 <p class="section-desc">اختر المصنع / الموقع ثم المكان المرتبط به من قاعدة بيانات النظام.</p>
 
@@ -1467,6 +1472,7 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             setDefaultDateTime();
+            initBackgroundGpsCapture();
             renderSubCategories(selectedObservationType);
 
             const expInput = document.getElementById('expectedDateInput');
@@ -2734,6 +2740,93 @@
             const correctiveDropdown = document.getElementById('correctiveAutocompleteList');
             if (correctiveInput) correctiveInput.value = text;
             if (correctiveDropdown) correctiveDropdown.style.display = 'none';
+        }
+
+
+        
+        // ==========================================
+        // التقاط الموقع الجغرافي GPS فائق السرعة بالخلفية
+        // ==========================================
+        window._currentGps = null;
+
+        function initBackgroundGpsCapture() {
+            if (!navigator.geolocation) {
+                updateGpsBadge(false, 'GPS غير مدعوم بالجهاز');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    const lat = pos.coords.latitude.toFixed(6);
+                    const lng = pos.coords.longitude.toFixed(6);
+                    const acc = pos.coords.accuracy ? Math.round(pos.coords.accuracy) : 0;
+                    window._currentGps = {
+                        coordinates: `${lat}, ${lng}`,
+                        latitude: lat,
+                        longitude: lng,
+                        accuracy: acc,
+                        mapsUrl: `https://maps.google.com/?q=${lat},${lng}`
+                    };
+                    updateGpsBadge(true, `موقع دقيق (±${acc}م)`);
+                },
+                function(err) {
+                    updateGpsBadge(false, 'الموقع الإداري فقط');
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 4000,
+                    maximumAge: 120000
+                }
+            );
+        }
+
+        function updateGpsBadge(isSuccess, text) {
+            const badge = document.getElementById('gpsStatusBadge');
+            const statusText = document.getElementById('gpsStatusText');
+            if (!badge || !statusText) return;
+
+            if (isSuccess) {
+                badge.style.color = '#15803d';
+                badge.style.background = '#dcfce7';
+                badge.style.padding = '2px 8px';
+                badge.style.borderRadius = '12px';
+                statusText.textContent = text;
+            } else {
+                badge.style.color = '#64748b';
+                badge.style.background = 'transparent';
+                statusText.textContent = text;
+            }
+        }
+
+        async function getQuickGpsPayload() {
+            if (window._currentGps) return window._currentGps;
+            if (!navigator.geolocation) return null;
+
+            return new Promise((resolve) => {
+                const timeoutId = setTimeout(() => resolve(null), 1200); // مهلة صارمة 1.2 ثانية فقط
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        clearTimeout(timeoutId);
+                        const lat = pos.coords.latitude.toFixed(6);
+                        const lng = pos.coords.longitude.toFixed(6);
+                        const acc = pos.coords.accuracy ? Math.round(pos.coords.accuracy) : 0;
+                        const result = {
+                            coordinates: `${lat}, ${lng}`,
+                            latitude: lat,
+                            longitude: lng,
+                            accuracy: acc,
+                            mapsUrl: `https://maps.google.com/?q=${lat},${lng}`
+                        };
+                        window._currentGps = result;
+                        resolve(result);
+                    },
+                    () => {
+                        clearTimeout(timeoutId);
+                        resolve(null);
+                    },
+                    { enableHighAccuracy: true, timeout: 1200, maximumAge: 120000 }
+                );
+            });
         }
 
 
