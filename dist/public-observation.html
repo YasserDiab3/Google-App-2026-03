@@ -1415,25 +1415,27 @@
             border-color: #fb923c;
         }
     
-        /* تحسينات متقدمة للملاحظات اليومية */
+        /* تحسينات متقدمة للملاحظات اليومية - أزرار أيقونات QR و GPS */
         .btn-qr-scan {
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             border: none;
             color: #ffffff;
-            font-size: 0.76rem;
+            font-size: 0.92rem;
             font-weight: 800;
-            border-radius: 8px;
-            padding: 6px 12px;
+            border-radius: 10px;
+            width: 34px;
+            height: 34px;
+            padding: 0;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
             box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
             transition: all 0.2s ease;
         }
         .btn-qr-scan:hover {
             background: linear-gradient(135deg, #1d4ed8, #1e40af);
-            transform: translateY(-1px);
+            transform: translateY(-1px) scale(1.05);
             box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
         }
 
@@ -1441,20 +1443,22 @@
             background: #eff6ff;
             border: 1.5px solid #bfdbfe;
             color: #1d4ed8;
-            padding: 4px 10px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 0.76rem;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border-radius: 10px;
+            font-size: 0.92rem;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            justify-content: center;
             cursor: pointer;
             transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
         }
         .gps-status-pill:hover {
             background: #dbeafe;
             border-color: #93c5fd;
-            transform: translateY(-1px);
+            transform: translateY(-1px) scale(1.05);
         }
 
         /* كرت وتنسيق قسم رفع الصور الميدانية الجمالي المهني */
@@ -2088,10 +2092,10 @@
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <button type="button" class="btn-qr-scan" onclick="openQrScannerModal()" title="مسح رمز QR الموقع">
-                            <i class="fas fa-qrcode"></i> مسح QR
+                            <i class="fas fa-qrcode"></i>
                         </button>
-                        <span id="gpsStatusBadge" class="gps-status-pill" onclick="triggerManualGpsCapture()" title="انقر لتثبيت وتحديث إحداثيات الموقع الحالي (GPS)">
-                            <i class="fas fa-location-dot"></i> <span>تثبيت GPS</span>
+                        <span id="gpsStatusBadge" class="gps-status-pill" onclick="triggerManualGpsCapture()" title="تثبيت وتحديث إحداثيات الموقع الحالي (GPS)">
+                            <i class="fas fa-location-dot"></i>
                         </span>
                     </div>
                 </div>
