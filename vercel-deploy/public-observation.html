@@ -1255,25 +1255,62 @@
             box-shadow: 0 6px 16px rgba(37, 99, 235, 0.12);
             border-color: #93c5fd;
         }
+
+        /* كرت وتنسيق اختيار المصنع والمكان الميداني الجمالي المهني */
+        .location-selector-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f0f7ff 100%);
+            border: 2px solid #bfdbfe;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.05);
+            margin-bottom: 0;
+            transition: all 0.2s ease;
+        }
+        .location-selector-card:hover {
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.1);
+            border-color: #93c5fd;
+        }
     
         /* تحسينات متقدمة للملاحظات اليومية */
         .btn-qr-scan {
-            background: #f8fafc;
-            border: 1px solid #cbd5e1;
-            color: #0369a1;
-            font-size: 0.72rem;
-            font-weight: 700;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border: none;
+            color: #ffffff;
+            font-size: 0.76rem;
+            font-weight: 800;
             border-radius: 8px;
-            padding: 4px 10px;
+            padding: 6px 12px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
             transition: all 0.2s ease;
         }
         .btn-qr-scan:hover {
-            background: #e0f2fe;
-            border-color: #0284c7;
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+        }
+
+        .gps-status-pill {
+            background: #eff6ff;
+            border: 1.5px solid #bfdbfe;
+            color: #1d4ed8;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.76rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .gps-status-pill:hover {
+            background: #dbeafe;
+            border-color: #93c5fd;
+            transform: translateY(-1px);
         }
 
         .photo-markup-btn {
@@ -1816,42 +1853,58 @@
                         <span class="section-title">الموقع وتوقيت الملاحظة الميدانية</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <button type="button" class="btn-qr-scan" onclick="openQrScannerModal()" title="مسح QR الموقع">
-                            <i class="fas fa-qrcode"></i> QR
+                        <button type="button" class="btn-qr-scan" onclick="openQrScannerModal()" title="مسح رمز QR الموقع">
+                            <i class="fas fa-qrcode"></i> مسح QR
                         </button>
-                        <span id="gpsStatusBadge" onclick="triggerManualGpsCapture()" title="انقر لتحديث إحداثيات الموقع الحالي (GPS)" style="font-size: 1.1rem; color: #64748b; font-weight: 700; display: inline-flex; align-items: center; cursor: pointer; padding: 4px;" class="hover:scale-110 transition-transform">
-                            <i class="fas fa-location-dot"></i>
+                        <span id="gpsStatusBadge" class="gps-status-pill" onclick="triggerManualGpsCapture()" title="انقر لتثبيت وتحديث إحداثيات الموقع الحالي (GPS)">
+                            <i class="fas fa-location-dot"></i> <span>تثبيت GPS</span>
                         </span>
                     </div>
                 </div>
                 <p class="section-desc">حدد المصنع والمكان وتوقيت الرصد الميداني والوردية بدقة.</p>
 
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="form-label" for="siteSelect">
-                            <i class="fas fa-industry text-blue-600"></i>
-                            اسم المصنع / الموقع <span class="required">*</span>
+                <!-- كرت اختيار المصنع والمكان الميداني بتصميم هندسي منمق -->
+                <div class="location-selector-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" style="font-weight: 800; color: #1e3a8a; font-size: 0.92rem; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-map-location-dot text-blue-600" style="font-size: 1.1rem;"></i>
+                            <span>تحديد المصنع والمكان الميداني</span>
+                            <span class="required">*</span>
                         </label>
-                        <select id="siteSelect" class="form-control" required onchange="handleSiteChange(this.value)">
-                            <option value="">— اختر المصنع / الموقع —</option>
-                        </select>
+                        <span style="font-size: 0.72rem; color: #1d4ed8; font-weight: 800; background: #dbeafe; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-building ml-1"></i>قاعدة المواقع المعتمدة
+                        </span>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="placeSelect">
-                            <i class="fas fa-map-pin text-blue-600"></i>
-                            الموقع الفرعي / المكان <span class="required">*</span>
-                        </label>
-                        <select id="placeSelect" class="form-control" required onchange="handlePlaceChange(this.value)" disabled>
-                            <option value="">— اختر المصنع أولاً —</option>
-                        </select>
-                    </div>
-                </div>
+                    <div class="grid-2" style="margin-bottom: 0;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" for="siteSelect" style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; color: #334155; display: flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-industry text-blue-500"></i>
+                                <span>اسم المصنع / الموقع</span>
+                                <span class="required">*</span>
+                            </label>
+                            <select id="siteSelect" class="form-control" style="background: #ffffff; border: 1.5px solid #bfdbfe; font-weight: 700; color: #0f172a; font-size: 0.88rem; padding: 8px 10px; border-radius: 8px;" required onchange="handleSiteChange(this.value)">
+                                <option value="">— اختر المصنع / الموقع —</option>
+                            </select>
+                        </div>
 
-                <!-- إدخال يدوي للمكان -->
-                <div id="customPlaceGroup" class="form-group" style="display: none;">
-                    <label class="form-label" for="customPlaceInput">مكان فرعي آخر (إدخال يدوي):</label>
-                    <input type="text" id="customPlaceInput" class="form-control" placeholder="اكتب المكان أو القسم بدقة...">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" for="placeSelect" style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; color: #334155; display: flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-map-pin text-rose-500"></i>
+                                <span>الموقع الفرعي / المكان</span>
+                                <span class="required">*</span>
+                            </label>
+                            <select id="placeSelect" class="form-control" style="background: #ffffff; border: 1.5px solid #bfdbfe; font-weight: 700; color: #0f172a; font-size: 0.88rem; padding: 8px 10px; border-radius: 8px;" required onchange="handlePlaceChange(this.value)" disabled>
+                                <option value="">— اختر المصنع أولاً —</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- إدخال يدوي للمكان -->
+                    <div id="customPlaceGroup" class="form-group" style="display: none; margin-top: 10px; margin-bottom: 0;">
+                        <label class="form-label" for="customPlaceInput" style="font-size: 0.8rem; font-weight: 700; color: #475569;">مكان فرعي آخر (إدخال يدوي):</label>
+                        <input type="text" id="customPlaceInput" class="form-control" style="background: #ffffff; border: 1.5px solid #bfdbfe;" placeholder="اكتب المكان أو القسم بدقة...">
+                    </div>
                 </div>
 
                 <!-- كرت توقيت الملاحظة والوردية بطابع جمالي مهني منمق أسفل المصنع -->
