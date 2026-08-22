@@ -2176,12 +2176,17 @@
 
             <!-- 1. الموقع والمكان وتوقيت الملاحظة -->
             <div class="form-section section-theme-1">
-                <div class="section-header" style="justify-content: space-between;">
+                <div class="section-header">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span class="section-badge">1</span>
                         <span class="section-title">الموقع وتوقيت الملاحظة</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                </div>
+
+                <!-- سطر الوصف المنمق مع أزرار الاستجابة السريعة والموقع -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: nowrap;">
+                    <p class="section-desc" style="margin-bottom: 0; line-height: 1.4; flex: 1;">حدد المصنع والمكان وتوقيت الرصد والوردية بدقة.</p>
+                    <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
                         <button type="button" class="btn-qr-scan" onclick="openQrScannerModal()" title="مسح رمز QR الموقع">
                             <i class="fas fa-qrcode"></i>
                         </button>
@@ -2190,7 +2195,6 @@
                         </span>
                     </div>
                 </div>
-                <p class="section-desc">حدد المصنع والمكان وتوقيت الرصد الميداني والوردية بدقة.</p>
 
                 <!-- كرت اختيار المصنع والمكان الميداني بتصميم هندسي منمق -->
                 <div class="location-selector-card">
