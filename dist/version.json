@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1235",
+  "version": "1.0.1237",
   "highlights": {
     "ar": [
-      "تحديث Deployment السحابي (Google Apps Script @337) واستثناء submitPublicNearMiss من بوابة الجلسة.",
-      "تأكيد واختبار تسجيل البلاغات الحية بنجاح وتوليد الأرقام المرجعية في جدول NearMiss.",
-      "مطابقة كاملة لآلية اختيار المصنع والمكان الفرعي مع دعم التعبئة التلقائية والإدخال اليدوي."
+      "مطابقة كاملة بين حقول النموذج والجدول وقاعدة البيانات لشيت NearMiss (الإصدار @338).",
+      "إضافة زر التحديث السحابي المباشر وجلب البلاغات الميدانية الحية تلقائياً في الواجهة الداخلية.",
+      "توثيق كافة بيانات الموقع والتصنيف والخطورة والإجراءات الوقائية وإحداثيات GPS."
     ],
     "en": [
-      "Updated Google Apps Script deployment (@337) with session exemption for submitPublicNearMiss.",
-      "Tested and verified live Near Miss submissions recording into the NearMiss sheet with sequential IDs.",
-      "Fully matched factory and sub-location cascading selection with auto-fill and manual override."
+      "Full 100% schema alignment across public form, in-app table, and NearMiss Google Sheet (@338).",
+      "Added live cloud sync button and auto-fetch for field reports inside the Near Miss module.",
+      "Fully captured location, classification, severity, preventive actions, and GPS coordinates."
     ]
   }
 }

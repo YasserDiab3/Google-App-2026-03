@@ -44,6 +44,23 @@ const NearMiss = {
 
     ensureI18nObservers(section) {},
 
+    
+    async fetchLiveNearMisses() {
+        try {
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.callApi) {
+                const res = await GoogleIntegration.callApi('getAllNearMisses');
+                if (res && res.success && Array.isArray(res.data)) {
+                    AppState.appData.nearmiss = res.data.map(item => this.normalizeRecord(item));
+                    this.renderKpiStrip();
+                    this.renderActiveTabContent();
+                    console.log('✅ Fetched live Near Miss data from Google Sheets:', res.data.length);
+                }
+            }
+        } catch(e) {
+            console.warn('Could not fetch live Near Miss data:', e);
+        }
+    },
+
     async load() {
         try {
             const section = document.getElementById('nearmiss-section');
@@ -51,6 +68,7 @@ const NearMiss = {
 
             this.ensureDataIntegrity();
             this.renderMainLayout(section);
+            this.fetchLiveNearMisses();
         } catch (error) {
             console.error('Error loading NearMiss module:', error);
         }
@@ -140,6 +158,10 @@ const NearMiss = {
                         </div>
                     </div>
                     <div class="flex items-center gap-2.5 flex-wrap">
+                        <button id="nearmiss-refresh-btn" class="btn-secondary flex items-center gap-2" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); color: #fff; font-size: 0.85rem; font-weight: 700; padding: 9px 16px; border-radius: 12px; transition: all 0.2s; cursor: pointer;" onclick="NearMiss.fetchLiveNearMisses(); alert('جاري تحديث البيانات من السحابة...');">
+                            <i class="fas fa-sync-alt text-cyan-300"></i>
+                            <span>تحديث السحابة 🔄</span>
+                        </button>
                         <button id="nearmiss-public-qr-btn" class="btn-secondary flex items-center gap-2" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); color: #fff; font-size: 0.85rem; font-weight: 700; padding: 9px 16px; border-radius: 12px; transition: all 0.2s; cursor: pointer;">
                             <i class="fas fa-qrcode text-amber-300"></i>
                             <span>النموذج العام ورموز QR 📱</span>

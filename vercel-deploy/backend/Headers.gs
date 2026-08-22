@@ -18,7 +18,7 @@ function getDefaultHeaders(sheetName) {
         'Incident_Analysis_Settings': ['id', 'enabledSections', 'updatedAt', 'updatedBy', 'createdAt'],
         // ✅ سجل الحوادث (الإدخال اليدوي) - Registry
         'IncidentsRegistry': ['id', 'sequentialNumber', 'incidentId', 'incidentType', 'factory', 'incidentLocation', 'incidentDate', 'incidentDay', 'incidentTime', 'shift', 'employeeAffiliation', 'employeeCode', 'employeeName', 'employeeJob', 'employeeDepartment', 'incidentDetails', 'incidentDetailsBrief', 'injuryDescription', 'injuredPart', 'losses', 'equipmentCause', 'actionsTaken', 'leaveStartDate', 'returnToWorkDate', 'totalLeaveDays', 'treatingDoctor', 'status', 'createdAt', 'updatedAt'],
-        'NearMiss': ['id', 'type', 'date', 'observerName', 'phone', 'location', 'department', 'description', 'correctiveProposed', 'correctiveDescription', 'attachments', 'status', 'reportedBy', 'createdAt', 'updatedAt'],
+        'NearMiss': ['id', 'isoCode', 'type', 'severity', 'date', 'observerName', 'phone', 'location', 'siteName', 'subLocation', 'department', 'description', 'potentialConsequences', 'correctiveProposed', 'correctiveDescription', 'attachments', 'status', 'reportedBy', 'isAnonymous', 'gpsLocation', 'gpsMapLink', 'createdAt', 'updatedAt'],
         'PTW': ['id', 'workType', 'workDescription', 'location', 'department', 'startDate', 'endDate', 'responsible', 'status', 'approvals', 'requiredPPE', 'riskAssessment', 'riskNotes', 'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow', 'createdBy', 'createdById', 'updatedBy', 'updatedById', 'createdAt', 'updatedAt'],
         // ✅ سجل حصر التصاريح (الإدخال اليدوي) - PTW Registry (جميع القيم تخزن كنص أو رقم فقط، لا JSON)
         'PTWRegistry': [
