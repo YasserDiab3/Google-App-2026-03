@@ -2846,7 +2846,7 @@ function getPublicObservationConfig() {
         try {
             cache = CacheService.getScriptCache();
             if (cache) {
-                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V15');
+                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V16');
                 if (cachedStr) {
                     return JSON.parse(cachedStr);
                 }
@@ -3023,58 +3023,94 @@ function getPublicObservationConfig() {
             return a.name.localeCompare(b.name, 'ar');
         });
 
-        // 3. الإدارات الفعلية الموجودة في النظام
+        // 3. الإدارات الرسمية الموحدة مع الدمج والتنقية الشاملة لمنع أي تكرار
         var departmentsMap = {};
         var departments = [];
 
+        function canonicalDepartmentName(deptStr) {
+            if (!deptStr) return '';
+            var clean = String(deptStr).trim().replace(/\s+/g, ' ');
+            var lower = clean.toLowerCase();
+
+            if (lower.includes('سلامة') || lower.includes('hse') || lower.includes('صحة مهنية') || lower.includes('بيئة')) {
+                return 'إدارة السلامة والصحة المهنية والبيئة (HSE)';
+            }
+            if (lower.includes('صيانة') || lower.includes('ورش') || lower.includes('فنية')) {
+                return 'إدارة الصيانة';
+            }
+            if (lower.includes('إنتاج') || lower.includes('انتاج') || lower.includes('تشغيل')) {
+                return 'إدارة الإنتاج والتشغيل';
+            }
+            if (lower.includes('جودة') || lower.includes('غذاء') || lower.includes('معمل')) {
+                return 'إدارة الجودة وسلامة الغذاء';
+            }
+            if (lower.includes('مستودع') || lower.includes('مخازن') || lower.includes('لوجست') || lower.includes('شحن')) {
+                return 'إدارة المستودعات والخدمات اللوجستية';
+            }
+            if (lower.includes('موارد بشرية') || lower.includes('شؤون إدارية') || lower.includes('شؤون عاملين') || lower.includes('hr')) {
+                return 'إدارة الموارد البشرية والشؤون الإدارية';
+            }
+            if (lower.includes('هندسة') || lower.includes('مشاريع')) {
+                return 'إدارة الهندسة والمشاريع';
+            }
+            if (lower.includes('مشتريات') || lower.includes('سلاسل إمداد') || lower.includes('توريد')) {
+                return 'إدارة سلاسل الإمداد والمشتريات';
+            }
+            if (lower.includes('أمن') || lower.includes('امن') || lower.includes('حراسة')) {
+                return 'إدارة الأمن والحراسة';
+            }
+            if (lower.includes('نظم') || lower.includes('معلومات') || lower.includes('it') || lower.includes('تكنولوجيا') || lower.includes('شبكات')) {
+                return 'إدارة تكنولوجيا ونظم المعلومات (IT)';
+            }
+            return clean;
+        }
+
         function registerDept(deptStr) {
             if (!deptStr) return;
-            var clean = String(deptStr).trim();
-            if (clean && clean.length > 1 && !departmentsMap[clean.toLowerCase()]) {
-                departmentsMap[clean.toLowerCase()] = true;
-                departments.push(clean);
+            var canon = canonicalDepartmentName(deptStr);
+            if (canon && canon.length >= 2 && !departmentsMap[canon]) {
+                departmentsMap[canon] = true;
+                departments.push(canon);
             }
         }
 
-        try {
-            if (dailyObs) dailyObs.forEach(function(d) { registerDept(d.responsibleDepartment); });
-        } catch (e) {}
-        try {
-            if (employees) employees.forEach(function(e) { registerDept(e.department); });
-        } catch (e) {}
-        try {
-            if (users) users.forEach(function(u) { registerDept(u.department); });
-        } catch (e) {}
-
-        // استخراج شعار وإدارات الشركة من CompanySettings
         var companyLogo = '';
         try {
             var compSettings = readFromSheet('CompanySettings', spreadsheetId) || [];
             if (compSettings && compSettings.length > 0) {
                 var first = compSettings[0];
                 companyLogo = String(first.logo || first.companyLogo || '').trim();
-                if (first.departments || first.formDepartments) {
-                    var dList = String(first.departments || first.formDepartments || '');
-                    dList.split(/[\n,]/).forEach(function(item) { registerDept(item); });
+                if (first.formDepartments || first.departments) {
+                    String(first.formDepartments || first.departments).split(/[\n,]/).forEach(registerDept);
                 }
             }
             compSettings.forEach(function(cs) {
-                if (cs.key === 'logo' || cs.key === 'companyLogo') {
-                    companyLogo = cs.value || companyLogo;
-                }
+                if (cs.key === 'logo' || cs.key === 'companyLogo') companyLogo = cs.value || companyLogo;
                 if (cs.key === 'formDepartments' || cs.key === 'departments') {
-                    var list = cs.value || '';
-                    if (typeof list === 'string') {
-                        list.split(/[\n,]/).forEach(function(item) { registerDept(item); });
-                    }
+                    if (typeof cs.value === 'string') cs.value.split(/[\n,]/).forEach(registerDept);
                 }
             });
         } catch (csErr) {}
 
-        if (!companyLogo) {
-            companyLogo = 'icons/icapp-logo.png';
-        }
+        try {
+            employees.forEach(function(e) { registerDept(e.department); });
+        } catch (eDeptErr) {}
 
+        var officialCompanyDepts = [
+            'إدارة السلامة والصحة المهنية والبيئة (HSE)',
+            'إدارة الصيانة',
+            'إدارة الإنتاج والتشغيل',
+            'إدارة الجودة وسلامة الغذاء',
+            'إدارة المستودعات والخدمات اللوجستية',
+            'إدارة الموارد البشرية والشؤون الإدارية',
+            'إدارة الهندسة والمشاريع',
+            'إدارة سلاسل الإمداد والمشتريات',
+            'إدارة الأمن والحراسة',
+            'إدارة تكنولوجيا ونظم المعلومات (IT)'
+        ];
+        officialCompanyDepts.forEach(registerDept);
+
+        if (!companyLogo) companyLogo = 'icons/icapp-logo.png';
         departments.sort(function(a, b) { return a.localeCompare(b, 'ar'); });
 
         var configResult = {
@@ -3102,7 +3138,7 @@ function getPublicObservationConfig() {
 
         try {
             if (cache) {
-                cache.put('PUBLIC_OBS_CONFIG_CACHE_V15', JSON.stringify(configResult), 1800);
+                cache.put('PUBLIC_OBS_CONFIG_CACHE_V16', JSON.stringify(configResult), 1800);
             }
         } catch (cPutErr) {}
 

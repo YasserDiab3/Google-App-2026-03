@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1202",
+  "version": "1.0.1203",
   "highlights": {
     "ar": [
-      "ترقية لوحة تحليل بيانات معدات الإطفاء (KPIs، كروت المواقع والمباني التفاعلية، ورسوم Chart.js المتطورة).",
-      "دمج نظام الموافقات والاعتمادات الفورية لفحوصات أجهزة الإطفاء الميدانية مع المزامنة الخلفية بدون انتظار.",
-      "تحسين كروت الفحص الشهري التفاعلية ودعم التصفية المباشرة وتصدير تقارير التحليل PDF و Excel."
+      "إضافة نظام المقترحات الذكية والإكمال التلقائي المتطابق مع التصنيفات الفرعية واقتراح الإجراء التصحيحي الفوري في نموذج الملاحظات.",
+      "دعم رفع الصور من استوديو/معرض الهاتف بجانب الكاميرا المباشرة في نماذج الملاحظات وفحص معدات الإطفاء.",
+      "تثبيت ترويسة ISO المعتمدة عند التمرير (Sticky Header) ومطابقة قائمة الإدارات الرسمية ومنع أي تكرار."
     ],
     "en": [
-      "Modernized Fire Equipment Analytics dashboard with PPE-style KPI strip, interactive location cards, and Chart.js graphs.",
-      "Integrated instant optimistic approval workflow for monthly fire inspections with zero-wait background sync.",
-      "Upgraded interactive monthly inspection stat cards, live filtering, and PDF/Excel analysis report export."
+      "Added hierarchical smart suggestions, live autocomplete, and auto-corrective action fill tailored to sub-categories in daily observations.",
+      "Enabled dual photo upload buttons for direct camera capture and device studio/gallery across public inspection & observation forms.",
+      "Implemented sticky ISO header on scroll and strict system department deduplication."
     ]
   }
 }
