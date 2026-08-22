@@ -1451,7 +1451,7 @@
                         <button type="button" class="btn-qr-scan" onclick="openQrScannerModal()" title="مسح QR الموقع">
                             <i class="fas fa-qrcode"></i> QR
                         </button>
-                        <span id="gpsStatusBadge" title="الموقع الجغرافي" style="font-size: 1rem; color: #64748b; font-weight: 700; display: inline-flex; align-items: center; cursor: default;">
+                        <span id="gpsStatusBadge" onclick="triggerManualGpsCapture()" title="انقر لتحديث إحداثيات الموقع الحالي (GPS)" style="font-size: 1.1rem; color: #64748b; font-weight: 700; display: inline-flex; align-items: center; cursor: pointer; padding: 4px;" class="hover:scale-110 transition-transform">
                             <i class="fas fa-location-dot"></i>
                         </span>
                     </div>
@@ -3690,6 +3690,36 @@
                 badge.style.color = '#64748b';
                 badge.title = text || 'الموقع الإداري فقط';
             }
+        }
+
+        function triggerManualGpsCapture() {
+            if (!navigator.geolocation) {
+                showToast('خاصية تحديد الموقع الجغرافي (GPS) غير مدعومة بجهازك', 'error', 3000);
+                return;
+            }
+
+            showToast('جاري التقاط وتحديث إحداثيات الموقع الحالي...', 'loading');
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    const lat = pos.coords.latitude.toFixed(6);
+                    const lng = pos.coords.longitude.toFixed(6);
+                    const acc = pos.coords.accuracy ? Math.round(pos.coords.accuracy) : 0;
+                    window._currentGps = {
+                        coordinates: `${lat}, ${lng}`,
+                        latitude: lat,
+                        longitude: lng,
+                        accuracy: acc,
+                        mapsUrl: `https://maps.google.com/?q=${lat},${lng}`
+                    };
+                    updateGpsBadge(true, `تم رصد الموقع: ${lat}, ${lng} (دقة: ±${acc}م)`);
+                    showToast(`تم التقاط الإحداثيات بنجاح 📍 (${lat}, ${lng}) بدقة ±${acc}م`, 'success', 3500);
+                },
+                function(err) {
+                    updateGpsBadge(false, 'تعذر الوصول للموقع الجغرافي');
+                    showToast('يرجى تفعيل صلاحية تحديد الموقع (GPS) في المتصفح', 'error', 3500);
+                },
+                { enableHighAccuracy: true, timeout: 6000 }
+            );
         }
 
         async function getQuickGpsPayload() {
