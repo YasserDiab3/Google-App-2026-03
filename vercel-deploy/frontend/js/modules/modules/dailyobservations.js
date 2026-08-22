@@ -13551,10 +13551,15 @@ const DailyObservations = {
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="padding: 16px 24px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                    <button type="button" id="print-poster-btn" class="btn-primary" style="padding: 9px 20px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; background: #15803d;">
-                        <i class="fas fa-print"></i> طباعة بوستر الملاحظات (A4)
-                    </button>
+                <div class="modal-footer" style="padding: 16px 24px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" id="print-poster-btn" class="btn-primary" style="padding: 9px 16px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; background: #15803d;">
+                            <i class="fas fa-print"></i> طباعة بوستر الملاحظات (A4)
+                        </button>
+                        <button type="button" class="btn-primary" onclick="DailyObservations.printLocationQrBadges()" style="padding: 9px 16px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; background: #0284c7;">
+                            <i class="fas fa-tags"></i> طباعة ملصقات QR لجميع الأماكن
+                        </button>
+                    </div>
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
                 </div>
             </div>

@@ -3189,10 +3189,15 @@ ${o}${s.length>5?`
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="padding: 16px 24px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                    <button type="button" id="print-poster-btn" class="btn-primary" style="padding: 9px 20px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; background: #15803d;">
-                        <i class="fas fa-print"></i> \u0637\u0628\u0627\u0639\u0629 \u0628\u0648\u0633\u062A\u0631 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A (A4)
-                    </button>
+                <div class="modal-footer" style="padding: 16px 24px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" id="print-poster-btn" class="btn-primary" style="padding: 9px 16px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; background: #15803d;">
+                            <i class="fas fa-print"></i> \u0637\u0628\u0627\u0639\u0629 \u0628\u0648\u0633\u062A\u0631 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A (A4)
+                        </button>
+                        <button type="button" class="btn-primary" onclick="DailyObservations.printLocationQrBadges()" style="padding: 9px 16px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; background: #0284c7;">
+                            <i class="fas fa-tags"></i> \u0637\u0628\u0627\u0639\u0629 \u0645\u0644\u0635\u0642\u0627\u062A QR \u0644\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0645\u0627\u0643\u0646
+                        </button>
+                    </div>
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u063A\u0644\u0627\u0642</button>
                 </div>
             </div>
