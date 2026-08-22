@@ -357,18 +357,62 @@
             margin-bottom: 12px;
         }
 
-        /* تمييز وهوية ألوان الأقسام الأربعة */
-        .form-section:nth-of-type(1) { border-right-color: #2563eb; }
-        .form-section:nth-of-type(1) .section-badge { background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; }
-        
-        .form-section:nth-of-type(2) { border-right-color: #ea580c; }
-        .form-section:nth-of-type(2) .section-badge { background: #fff7ed; color: #c2410c; border: 1.5px solid #fed7aa; }
+        /* تمييز وهوية ألوان الأقسام الأربعة باحترافية */
+        .section-theme-1 {
+            border-right-color: #2563eb !important;
+            background: linear-gradient(180deg, #f8faff 0%, #ffffff 40px);
+        }
+        .section-theme-1 .section-badge {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            border: 2px solid #93c5fd;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+        }
+        .section-theme-1 .section-title {
+            color: #1e40af;
+        }
 
-        .form-section:nth-of-type(3) { border-right-color: #10b981; }
-        .form-section:nth-of-type(3) .section-badge { background: #f0fdf4; color: #047857; border: 1.5px solid #bbf7d0; }
+        .section-theme-2 {
+            border-right-color: #ea580c !important;
+            background: linear-gradient(180deg, #fffaf5 0%, #ffffff 40px);
+        }
+        .section-theme-2 .section-badge {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: #ffffff;
+            border: 2px solid #fdba74;
+            box-shadow: 0 2px 6px rgba(234, 88, 12, 0.35);
+        }
+        .section-theme-2 .section-title {
+            color: #c2410c;
+        }
 
-        .form-section:nth-of-type(4) { border-right-color: #8b5cf6; }
-        .form-section:nth-of-type(4) .section-badge { background: #faf5ff; color: #6d28d9; border: 1.5px solid #ddd6fe; }
+        .section-theme-3 {
+            border-right-color: #059669 !important;
+            background: linear-gradient(180deg, #f0fdf9 0%, #ffffff 40px);
+        }
+        .section-theme-3 .section-badge {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff;
+            border: 2px solid #6ee7b7;
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.35);
+        }
+        .section-theme-3 .section-title {
+            color: #065f46;
+        }
+
+        .section-theme-4 {
+            border-right-color: #7c3aed !important;
+            background: linear-gradient(180deg, #faf7fe 0%, #ffffff 40px);
+        }
+        .section-theme-4 .section-badge {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: #ffffff;
+            border: 2px solid #c4b5fd;
+            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.35);
+        }
+        .section-theme-4 .section-title {
+            color: #5b21b6;
+        }
 
         .section-header {
             display: flex;
@@ -378,14 +422,16 @@
         }
 
         .section-badge {
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
-            font-weight: 800;
-            font-size: 0.9rem;
+            font-weight: 900;
+            font-size: 0.95rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
+            user-select: none;
         }
 
         .section-title {
@@ -398,7 +444,7 @@
             font-size: 0.8rem;
             color: var(--text-muted);
             margin-bottom: 16px;
-            margin-right: 38px;
+            margin-right: 40px;
         }
 
         .form-group {
@@ -1556,7 +1602,7 @@
             <input type="text" name="_hp_field" id="hpField" style="display:none;" tabindex="-1" autocomplete="off">
 
             <!-- 1. الموقع والمكان وتوقيت الملاحظة -->
-            <div class="form-section">
+            <div class="form-section section-theme-1">
                 <div class="section-header" style="justify-content: space-between;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span class="section-badge">1</span>
@@ -1638,10 +1684,10 @@
             </div>
 
             <!-- 2. نوع وتصنيف الملاحظة -->
-            <div class="form-section">
+            <div class="form-section section-theme-2">
                 <div class="section-header">
                     <span class="section-badge">2</span>
-                    <span class="section-title">نوع وتصنيف الملاحظة</span>
+                    <span class="section-title">نوع وتصنيف الملاحظة ومصدر الخطر</span>
                 </div>
 
                 <!-- كروت نوع الملاحظة -->
@@ -1696,7 +1742,7 @@
             </div>
 
             <!-- 3. تفاصيل الملاحظة والإدارة المسؤولة والتاريخ المتوقع -->
-            <div class="form-section">
+            <div class="form-section section-theme-3">
                 <div class="section-header">
                     <span class="section-badge">3</span>
                     <span class="section-title">تفاصيل الملاحظة والإجراء والتنفيذ</span>
@@ -1852,7 +1898,7 @@
             </div>
 
             <!-- 4. حالة الملاحظة والصور وصاحب الملاحظة -->
-            <div class="form-section">
+            <div class="form-section section-theme-4">
                 <div class="section-header">
                     <span class="section-badge">4</span>
                     <span class="section-title">حالة الملاحظة والصور الميدانية</span>
