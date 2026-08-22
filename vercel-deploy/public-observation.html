@@ -1674,9 +1674,9 @@
                                 وردية العمل (Shift) <span class="required">*</span>
                             </label>
                             <select id="shiftSelect" class="form-control" style="background: #ffffff;">
-                                <option value="الأولى">الأولى (First Shift - صباحية)</option>
-                                <option value="الثانية">الثانية (Second Shift - مسائية)</option>
-                                <option value="الثالثة">الثالثة (Third Shift - ليلية)</option>
+                                <option value="الأولى">الأولى (07:30 ص – 03:30 م)</option>
+                                <option value="الثانية">الثانية (03:30 م – 10:30 م)</option>
+                                <option value="الثالثة">الثالثة (10:30 م – 07:30 ص)</option>
                             </select>
                         </div>
                     </div>
@@ -2241,7 +2241,35 @@
             }
         }
 
-        // ضبط التاريخ والوقت الافتراضي وحساب نهاية الشهر للتنفيذ
+        // حساب وتحديد وردية العمل تلقائياً بناءً على الوقت المحدد
+        function getShiftFromDateTime(dateTimeVal) {
+            let dateObj = (dateTimeVal instanceof Date) ? dateTimeVal : new Date(dateTimeVal || Date.now());
+            if (isNaN(dateObj.getTime())) dateObj = new Date();
+
+            const hours = dateObj.getHours();
+            const minutes = dateObj.getMinutes();
+            const timeInMinutes = hours * 60 + minutes;
+
+            // 07:30 ص = 7 * 60 + 30 = 450 دقيقة
+            // 03:30 م = 15 * 60 + 30 = 930 دقيقة
+            // 10:30 م = 22 * 60 + 30 = 1350 دقيقة
+            if (timeInMinutes >= 450 && timeInMinutes < 930) {
+                return 'الأولى'; // من 07:30 ص إلى 03:30 م
+            } else if (timeInMinutes >= 930 && timeInMinutes < 1350) {
+                return 'الثانية'; // من 03:30 م إلى 10:30 م
+            } else {
+                return 'الثالثة'; // من 10:30 م إلى 07:30 ص
+            }
+        }
+
+        function autoAssignShift(dateTimeVal) {
+            const shiftSelect = document.getElementById('shiftSelect');
+            if (!shiftSelect) return;
+            const shift = getShiftFromDateTime(dateTimeVal);
+            shiftSelect.value = shift;
+        }
+
+        // ضبط التاريخ والوقت الافتراضي والوردية وحساب نهاية الشهر للتنفيذ
         function setDefaultDateTime() {
             const now = new Date();
             const year = now.getFullYear();
@@ -2253,6 +2281,7 @@
             if (dateInput) {
                 dateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
             }
+            autoAssignShift(now);
             updateDefaultExpectedDate(now);
         }
 
@@ -2274,6 +2303,7 @@
 
         function handleDateChange(val) {
             if (val) {
+                autoAssignShift(new Date(val));
                 const expInput = document.getElementById('expectedDateInput');
                 if (expInput && expInput.dataset.autoCalculated !== 'false') {
                     updateDefaultExpectedDate(new Date(val));
