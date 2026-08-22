@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1238",
+  "version": "1.0.1239",
   "highlights": {
     "ar": [
-      "تضمين كافة مصانع ومواقع شركة ICAPP المعتمدة (ICAPP-1, ICAPP-2, WH, الموقع العام) مع أكثر من 130 موقعاً فرعياً دقيقاً.",
-      "تنقية أسماء الأماكن الفرعية من البادئات والرموز التقنية لتظهر بأسماء عربية واضحة ومنسقة.",
-      "ربط وتفعيل التحميل الفوري للمصانع والأماكن من قاعدة البيانات السحابية مع دعم المزامنة التلقائية."
+      "تحسين استجابة ترويسة ISO والفوتر على مختلف شاشات الهواتف المحمولة بأعلى درجات التنسيق والاحترافية.",
+      "تثبيت وقفل المصنع والموقع الفرعي تلقائياً عند مسح رمز QR مع إظهار شارة التوثيق الميداني لمنع الخطأ.",
+      "إتاحة زر تحرير يدوي اختياري وإبقاء النموذج جاهزاً للإرسال المباشر بعد استكمال باقي التفاصيل."
     ],
     "en": [
-      "Embedded authentic ICAPP factories (ICAPP-1, ICAPP-2, WH, General Site) with over 130 accurate sub-locations.",
-      "Cleaned sub-location names from technical prefixes for professional Arabic dropdown display.",
-      "Linked instant factory and sub-location cloud loading with auto-sync support."
+      "Enhanced mobile responsiveness for ISO Header and Footer with crisp layout.",
+      "Auto-locked factory and sub-location upon scanning QR code with verified badge to prevent errors.",
+      "Provided optional manual unlock while keeping form ready for instant submission upon filling details."
     ]
   }
 }
