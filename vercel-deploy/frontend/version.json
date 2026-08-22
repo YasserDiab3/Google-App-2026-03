@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1231",
+  "version": "1.0.1232",
   "highlights": {
     "ar": [
-      "توحيد وتثبيت جميع مقاسات أيقونات تطبيق الويب (PWA Icons) لمنع تكرار رسالة مراجعة الشعار في المتصفح.",
-      "تثبيت الشعار الرسمي الموحد لجميع المقاسات من 16px وحتى 512px.",
-      "اعتماد نموذج الحوادث الوشيكة الميداني الشامل بالكامل."
+      "إعادة بناء نموذج الحوادث الوشيكة (public-near-miss.html) ليكون نموذجاً مبسطاً وسريعاً وخفيفاً مخصصاً للموظفين والمقاولين.",
+      "فصل تام ومستقل بين موديول الحوادث الوشيكة وموديول الملاحظات اليومية.",
+      "دعم تحديد مستوى الخطورة السريع، الإبلاغ السري، وإرفاق الصور الميدانية برمز مرجعي معتمد."
     ],
     "en": [
-      "Unified and stabilized all PWA icon sizes to permanently prevent recurring browser branding update prompts.",
-      "Synchronized official application branding across all icon resolutions from 16px to 512px.",
-      "Finalized complete public Near Miss reporting form deployment."
+      "Redesigned the public Near Miss form into an ultra-clean, simple, lightweight reporting interface for all staff.",
+      "Ensured complete separation between the Near Miss module and the Daily Observations module.",
+      "Supported rapid severity selector, anonymous reporting, and photo attachments with ISO reference."
     ]
   }
 }
