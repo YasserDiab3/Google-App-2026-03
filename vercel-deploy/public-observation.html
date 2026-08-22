@@ -2218,11 +2218,21 @@
                         </div>
 
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label" for="placeSelect" style="font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; color: #334155; display: flex; align-items: center; gap: 4px;">
-                                <i class="fas fa-map-pin text-rose-500"></i>
-                                <span>الموقع الفرعي / المكان</span>
-                                <span class="required">*</span>
-                            </label>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
+                                <label class="form-label" for="placeSelect" style="font-size: 0.82rem; font-weight: 700; margin-bottom: 0; color: #334155; display: flex; align-items: center; gap: 4px;">
+                                    <i class="fas fa-map-pin text-rose-500"></i>
+                                    <span>الموقع الفرعي / المكان</span>
+                                    <span class="required">*</span>
+                                </label>
+                                <span id="placeCountBadge" style="font-size: 0.7rem; color: #64748b; font-weight: 700;"></span>
+                            </div>
+
+                            <!-- حقل البحث والتصفية السريعة في الأماكن -->
+                            <div style="position: relative; margin-bottom: 6px;">
+                                <input type="text" id="placeSearchInput" class="form-control" style="background: #f8fafc; border: 1.5px solid #cbd5e1; font-size: 0.82rem; font-weight: 600; padding: 6px 12px 6px 26px; border-radius: 8px; transition: all 0.2s ease;" placeholder="🔍 بحث سريع في الأماكن المتاحة..." oninput="filterPlaces(this.value)" disabled>
+                                <button type="button" id="clearPlaceSearchBtn" onclick="clearPlaceSearch()" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); border: none; background: none; color: #94a3b8; font-size: 0.85rem; cursor: pointer; display: none; padding: 0 4px;" title="مسح البحث">✕</button>
+                            </div>
+
                             <select id="placeSelect" class="form-control" style="background: #ffffff; border: 1.5px solid #bfdbfe; font-weight: 700; color: #0f172a; font-size: 0.88rem; padding: 8px 10px; border-radius: 8px;" required onchange="handlePlaceChange(this.value)" disabled>
                                 <option value="">— اختر المصنع أولاً —</option>
                             </select>
@@ -3309,16 +3319,28 @@
             return String(p).trim();
         }
 
+        window._allCurrentPlaces = [];
+
         function handleSiteChange(siteName) {
             const placeSelect = document.getElementById('placeSelect');
+            const searchInput = document.getElementById('placeSearchInput');
             const customGroup = document.getElementById('customPlaceGroup');
+            const countBadge = document.getElementById('placeCountBadge');
             if (customGroup) customGroup.style.display = 'none';
+            if (searchInput) {
+                searchInput.value = '';
+                const clearBtn = document.getElementById('clearPlaceSearchBtn');
+                if (clearBtn) clearBtn.style.display = 'none';
+            }
+            if (countBadge) countBadge.textContent = '';
 
             if (!siteName) {
                 if (placeSelect) {
                     placeSelect.innerHTML = '<option value="">— اختر المصنع أولاً —</option>';
                     placeSelect.disabled = true;
                 }
+                if (searchInput) searchInput.disabled = true;
+                window._allCurrentPlaces = [];
                 return;
             }
 
@@ -3328,7 +3350,7 @@
                 return sName === siteName || sName.toLowerCase() === siteName.toLowerCase();
             });
 
-            placeSelect.innerHTML = '<option value="">— اختر الموقع الفرعي / المكان —</option>';
+            window._allCurrentPlaces = [];
             const seenPlaces = new Set();
 
             if (foundSite && Array.isArray(foundSite.places) && foundSite.places.length > 0) {
@@ -3336,10 +3358,7 @@
                     const pName = getCleanPlaceName(rawP);
                     if (pName && !seenPlaces.has(pName.toLowerCase()) && pName !== '[object Object]') {
                         seenPlaces.add(pName.toLowerCase());
-                        const opt = document.createElement('option');
-                        opt.value = pName;
-                        opt.textContent = pName;
-                        placeSelect.appendChild(opt);
+                        window._allCurrentPlaces.push(pName);
                     }
                 });
             } else {
@@ -3350,12 +3369,40 @@
                     'منطقة الشحن والتفريغ', 'المكاتب الإدارية', 'منظومة طلمبات الحريق'
                 ];
                 fallbackPlaces.forEach(pName => {
-                    const opt = document.createElement('option');
-                    opt.value = pName;
-                    opt.textContent = pName;
-                    placeSelect.appendChild(opt);
+                    window._allCurrentPlaces.push(pName);
                 });
             }
+
+            if (searchInput) searchInput.disabled = false;
+            placeSelect.disabled = false;
+            filterPlaces('');
+        }
+
+        function filterPlaces(query) {
+            const placeSelect = document.getElementById('placeSelect');
+            const clearBtn = document.getElementById('clearPlaceSearchBtn');
+            const countBadge = document.getElementById('placeCountBadge');
+            if (!placeSelect || !window._allCurrentPlaces) return;
+
+            const q = (query || '').trim().toLowerCase();
+            if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+
+            const filtered = q
+                ? window._allCurrentPlaces.filter(p => p.toLowerCase().includes(q))
+                : window._allCurrentPlaces;
+
+            placeSelect.innerHTML = '';
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = q ? `— نتائج البحث (${filtered.length}) —` : '— اختر الموقع الفرعي / المكان —';
+            placeSelect.appendChild(defaultOpt);
+
+            filtered.forEach(pName => {
+                const opt = document.createElement('option');
+                opt.value = pName;
+                opt.textContent = pName;
+                placeSelect.appendChild(opt);
+            });
 
             // خيار إدخال يدوي
             const otherOpt = document.createElement('option');
@@ -3363,7 +3410,24 @@
             otherOpt.textContent = '➕ مكان فرعي آخر (إدخال يدوي)...';
             placeSelect.appendChild(otherOpt);
 
-            placeSelect.disabled = false;
+            if (countBadge) {
+                countBadge.textContent = q ? `(${filtered.length} مكان مطابق)` : '';
+            }
+
+            // إذا كانت نتيجة البحث مطابقة واحدة فقط، اخترها تلقائياً
+            if (q && filtered.length === 1) {
+                placeSelect.value = filtered[0];
+                handlePlaceChange(filtered[0]);
+            }
+        }
+
+        function clearPlaceSearch() {
+            const input = document.getElementById('placeSearchInput');
+            if (input) {
+                input.value = '';
+                filterPlaces('');
+                input.focus();
+            }
         }
 
         function handlePlaceChange(val) {
