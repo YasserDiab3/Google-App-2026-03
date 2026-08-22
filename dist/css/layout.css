@@ -342,20 +342,26 @@
 
 .sidebar-app-version-text {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex: 1;
     min-width: 0;
 }
 
 .sidebar-app-version-label {
-    font-size: 0.68rem;
-    opacity: 0.82;
+    font-size: 0.75rem;
+    opacity: 0.88;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .sidebar-app-version-value {
     font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: 0.02em;
+    white-space: nowrap;
 }
 
 .sidebar.collapsed .sidebar-app-version {
