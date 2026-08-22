@@ -323,27 +323,7 @@
                             }
                             mainFav.href = defaultIcon;
 
-                            // تحديث manifest ديناميكياً للـ PWA وشريط العنوان
-                            var pwaManifestLink = document.getElementById("pwa-manifest-link") || document.querySelector('link[rel="manifest"]');
-                            if (pwaManifestLink) {
-                                var baseUrl = (typeof window !== "undefined" && window.location && window.location.href) ? window.location.href.split('#')[0].split('?')[0] : "./";
-                                var manifestData = {
-                                    "name": document.title || "SafetyHub | ICAPP",
-                                    "short_name": "SafetyHub | ICAPP",
-                                    "description": "نظام إدارة السلامة المهنية",
-                                    "start_url": baseUrl,
-                                    "scope": baseUrl,
-                                    "display": "standalone",
-                                    "background_color": "#ffffff",
-                                    "theme_color": "#3B82F6",
-                                    "icons": [
-                                        { "src": map[192] || url, "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-                                        { "src": map[512] || url, "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
-                                    ]
-                                };
-                                var blob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
-                                pwaManifestLink.href = URL.createObjectURL(blob);
-                            }
+
                         } catch (err) {}
                     };
 
@@ -781,7 +761,7 @@
                         var link = document.createElement("link");
                         link.rel = "manifest";
                         // مسار نسبي ليعمل من الجذر (Vercel) أو من /Frontend/
-                        link.href = "manifest.json?v=20260718-brand-title-v2";
+                        link.href = "manifest.json";
                         link.id = "pwa-manifest-link";
                         link.onerror = function () {
                             if (
