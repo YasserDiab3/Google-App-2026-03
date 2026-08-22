@@ -3579,9 +3579,13 @@
             const siteSelect = document.getElementById('siteSelect');
             if (!siteSelect) return;
 
+            const cleanSite = String(siteName || '').trim();
+            const cleanPlace = String(placeName || '').trim();
+
             let matchedSite = false;
             for (let i = 0; i < siteSelect.options.length; i++) {
-                if (siteName && siteSelect.options[i].value.toLowerCase().includes(siteName.toLowerCase())) {
+                const optVal = siteSelect.options[i].value;
+                if (cleanSite && (optVal.toLowerCase() === cleanSite.toLowerCase() || optVal.toLowerCase().includes(cleanSite.toLowerCase()) || cleanSite.toLowerCase().includes(optVal.toLowerCase()))) {
                     siteSelect.selectedIndex = i;
                     handleSiteChange(siteSelect.value);
                     matchedSite = true;
@@ -3589,16 +3593,44 @@
                 }
             }
 
-            if (matchedSite && placeName) {
-                setTimeout(() => {
-                    const placeSelect = document.getElementById('placeSelect');
+            // إذا لم يكن المصنع موجوداً في القائمة، نضيفه ونختاره
+            if (!matchedSite && cleanSite) {
+                const newSiteOpt = document.createElement('option');
+                newSiteOpt.value = cleanSite;
+                newSiteOpt.textContent = cleanSite;
+                siteSelect.appendChild(newSiteOpt);
+                siteSelect.value = cleanSite;
+                handleSiteChange(cleanSite);
+                matchedSite = true;
+            }
+
+            if (matchedSite && cleanPlace && cleanPlace !== 'الموقع العام') {
+                const placeSelect = document.getElementById('placeSelect');
+                if (placeSelect) {
+                    let matchedPlace = false;
                     for (let j = 0; j < placeSelect.options.length; j++) {
-                        if (placeSelect.options[j].value.toLowerCase().includes(placeName.toLowerCase())) {
+                        const pVal = placeSelect.options[j].value;
+                        if (pVal.toLowerCase() === cleanPlace.toLowerCase() || pVal.toLowerCase().includes(cleanPlace.toLowerCase()) || cleanPlace.toLowerCase().includes(pVal.toLowerCase())) {
                             placeSelect.selectedIndex = j;
+                            matchedPlace = true;
                             break;
                         }
                     }
-                }, 100);
+
+                    // إذا لم يكن المكان الفرعي موجوداً في القائمة، نضيفه فوراً ونختاره
+                    if (!matchedPlace) {
+                        const newPlaceOpt = document.createElement('option');
+                        newPlaceOpt.value = cleanPlace;
+                        newPlaceOpt.textContent = cleanPlace;
+                        const otherOpt = placeSelect.querySelector('option[value="__OTHER__"]');
+                        if (otherOpt) {
+                            placeSelect.insertBefore(newPlaceOpt, otherOpt);
+                        } else {
+                            placeSelect.appendChild(newPlaceOpt);
+                        }
+                        placeSelect.value = cleanPlace;
+                    }
+                }
             }
         }
 
