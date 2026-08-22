@@ -291,53 +291,112 @@ const NearMiss = {
     },
 
     renderRegisterTab(container) {
-        container.innerHTML = `
-            <div class="content-card mb-6" style="background:#fff; border-radius:16px; border:1px solid #e2e8f0; padding:20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                    <div class="flex items-center gap-2 font-bold text-gray-800 text-sm">
-                        <i class="fas fa-sliders-h text-indigo-600"></i>
-                        <span>عوامل التصفية المتقدمة</span>
-                    </div>
-                    <button id="nearmiss-reset-filters" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 cursor-pointer" style="background:none; border:none;">
-                        <i class="fas fa-undo"></i> إعادة التعيين
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">بحث حر</label>
-                        <input type="text" id="nearmiss-filter-search" class="form-input w-full p-2 rounded-lg border text-xs" placeholder="النوع، الموقع، المبلّغ..." value="${Utils.escapeHTML(this.state.filters.search)}">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">نوع الحادث</label>
-                        <select id="nearmiss-filter-type" class="form-input w-full p-2 rounded-lg border text-xs">
-                            ${this.renderTypeOptions(this.state.filters.type)}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">الإدارة المسؤولة</label>
-                        <select id="nearmiss-filter-department" class="form-input w-full p-2 rounded-lg border text-xs">
-                            ${this.renderDepartmentOptions(this.state.filters.department)}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">من تاريخ</label>
-                        <input type="date" id="nearmiss-filter-start" class="form-input w-full p-2 rounded-lg border text-xs" value="${this.state.filters.startDate}">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">إلى تاريخ</label>
-                        <input type="date" id="nearmiss-filter-end" class="form-input w-full p-2 rounded-lg border text-xs" value="${this.state.filters.endDate}">
-                    </div>
-                </div>
-            </div>
+        const f = this.state.filters;
+        const activeCount = this._getActiveFilterCount();
+        const severityOptions = [
+            { value: '', label: 'جميع المستويات' },
+            { value: 'منخفض', label: '🟢 منخفض' },
+            { value: 'متوسط', label: '🟡 متوسط' },
+            { value: 'عالي', label: '🔴 عالي' },
+            { value: 'كارثي', label: '🚨 كارثي / وشيك' }
+        ];
 
-            <!-- جدول السجل -->
-            <div class="content-card" style="background:#fff; border-radius:16px; border:1px solid #e2e8f0; overflow:hidden;">
-                <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+        container.innerHTML = `
+            <style>
+                .nrm-filter-bar { background:#fff; border-radius:16px; border:1px solid #e2e8f0; overflow:hidden; margin-bottom:0; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+                .nrm-filter-header { padding:12px 20px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; border-bottom:1px solid #f1f5f9; }
+                .nrm-filter-toggle { display:flex; align-items:center; gap:8px; cursor:pointer; background:none; border:none; font-size:0.82rem; font-weight:700; color:#1e1b4b; padding:0; }
+                .nrm-filter-toggle .nrm-chevron { transition:transform .25s ease; font-size:.7rem; color:#6366f1; }
+                .nrm-filter-toggle .nrm-chevron.open { transform:rotate(180deg); }
+                .nrm-filter-badge { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; font-size:.65rem; font-weight:800; min-width:18px; height:18px; border-radius:99px; display:inline-flex; align-items:center; justify-content:center; padding:0 5px; }
+                .nrm-filter-actions { display:flex; align-items:center; gap:8px; }
+                .nrm-filter-reset { background:none; border:1px solid #e2e8f0; border-radius:8px; padding:5px 12px; font-size:.72rem; font-weight:700; color:#6366f1; cursor:pointer; display:flex; align-items:center; gap:4px; transition:all .2s; }
+                .nrm-filter-reset:hover { background:#eef2ff; border-color:#c7d2fe; }
+                .nrm-filter-body { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; padding:14px 20px 16px; transition:all .3s ease; }
+                .nrm-filter-body.collapsed { display:none; }
+                .nrm-filter-group { position:relative; }
+                .nrm-filter-group label { display:block; font-size:.68rem; font-weight:700; color:#64748b; margin-bottom:4px; letter-spacing:.02em; text-transform:uppercase; }
+                .nrm-filter-group input, .nrm-filter-group select { width:100%; padding:8px 10px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:.78rem; color:#1e1b4b; background:#f8fafc; transition:all .2s; outline:none; font-family:inherit; }
+                .nrm-filter-group input:focus, .nrm-filter-group select:focus { border-color:#6366f1; background:#fff; box-shadow:0 0 0 3px rgba(99,102,241,.1); }
+                .nrm-filter-group input.has-value, .nrm-filter-group select.has-value { border-color:#6366f1; background:#eef2ff; }
+                .nrm-filter-group .nrm-search-icon { position:absolute; left:10px; top:26px; color:#94a3b8; font-size:.75rem; pointer-events:none; }
+                .nrm-active-tags { display:flex; flex-wrap:wrap; gap:6px; padding:0 20px 12px; }
+                .nrm-active-tags:empty { display:none; }
+                .nrm-tag { display:inline-flex; align-items:center; gap:4px; background:#eef2ff; color:#4338ca; font-size:.7rem; font-weight:700; padding:4px 10px 4px 6px; border-radius:99px; border:1px solid #c7d2fe; animation:nrmTagIn .25s ease; }
+                .nrm-tag button { background:none; border:none; color:#6366f1; cursor:pointer; font-size:.65rem; padding:0 2px; display:flex; align-items:center; }
+                .nrm-tag button:hover { color:#ef4444; }
+                @keyframes nrmTagIn { from { opacity:0; transform:scale(.85); } to { opacity:1; transform:scale(1); } }
+
+                .nrm-table-card { background:#fff; border-radius:0 0 16px 16px; border:1px solid #e2e8f0; border-top:none; overflow:hidden; }
+                .nrm-table-header { padding:12px 20px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; }
+
+                @media (max-width: 1024px) {
+                    .nrm-filter-body { grid-template-columns:repeat(3,1fr); }
+                }
+                @media (max-width: 640px) {
+                    .nrm-filter-body { grid-template-columns:1fr 1fr; gap:8px; padding:10px 14px 14px; }
+                    .nrm-filter-header { padding:10px 14px; }
+                    .nrm-active-tags { padding:0 14px 10px; }
+                    .nrm-table-header { padding:10px 14px; }
+                }
+            </style>
+
+            <div class="nrm-filter-bar">
+                <div class="nrm-filter-header">
+                    <button id="nrm-filter-toggle-btn" class="nrm-filter-toggle" type="button">
+                        <i class="fas fa-filter" style="color:#6366f1;font-size:.85rem;"></i>
+                        <span>تصفية البلاغات</span>
+                        ${activeCount ? `<span class="nrm-filter-badge">${activeCount}</span>` : ''}
+                        <i class="fas fa-chevron-down nrm-chevron ${this.state._filtersExpanded !== false ? 'open' : ''}"></i>
+                    </button>
+                    <div class="nrm-filter-actions">
+                        ${activeCount ? `<button id="nearmiss-reset-filters" class="nrm-filter-reset" type="button"><i class="fas fa-undo" style="font-size:.65rem;"></i> مسح الكل</button>` : ''}
+                        <span id="nearmiss-result-count" class="text-xs text-indigo-700 bg-indigo-50 font-bold px-2.5 py-1 rounded-full" style="min-width:40px;text-align:center;"></span>
+                    </div>
+                </div>
+
+                <div id="nrm-filter-body" class="nrm-filter-body ${this.state._filtersExpanded === false ? 'collapsed' : ''}">
+                    <div class="nrm-filter-group" style="position:relative;">
+                        <label><i class="fas fa-search" style="margin-left:3px;"></i> بحث حر</label>
+                        <input type="text" id="nearmiss-filter-search" placeholder="اسم، موقع، رقم مرجعي..." value="${Utils.escapeHTML(f.search)}" class="${f.search ? 'has-value' : ''}">
+                    </div>
+                    <div class="nrm-filter-group">
+                        <label><i class="fas fa-tag" style="margin-left:3px;"></i> نوع الحادث</label>
+                        <select id="nearmiss-filter-type" class="${f.type ? 'has-value' : ''}">
+                            ${this.renderTypeOptions(f.type)}
+                        </select>
+                    </div>
+                    <div class="nrm-filter-group">
+                        <label><i class="fas fa-exclamation-circle" style="margin-left:3px;"></i> الخطورة</label>
+                        <select id="nearmiss-filter-severity" class="${f.severity ? 'has-value' : ''}">
+                            ${severityOptions.map(o => `<option value="${o.value}" ${(f.severity || '') === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="nrm-filter-group">
+                        <label><i class="fas fa-building" style="margin-left:3px;"></i> الإدارة</label>
+                        <select id="nearmiss-filter-department" class="${f.department ? 'has-value' : ''}">
+                            ${this.renderDepartmentOptions(f.department)}
+                        </select>
+                    </div>
+                    <div class="nrm-filter-group">
+                        <label><i class="fas fa-calendar" style="margin-left:3px;"></i> من تاريخ</label>
+                        <input type="date" id="nearmiss-filter-start" value="${f.startDate}" class="${f.startDate ? 'has-value' : ''}">
+                    </div>
+                    <div class="nrm-filter-group">
+                        <label><i class="fas fa-calendar-check" style="margin-left:3px;"></i> إلى تاريخ</label>
+                        <input type="date" id="nearmiss-filter-end" value="${f.endDate}" class="${f.endDate ? 'has-value' : ''}">
+                    </div>
+                </div>
+
+                <div id="nrm-active-tags" class="nrm-active-tags">
+                    ${this._renderActiveFilterTags()}
+                </div>
+
+                <div class="nrm-table-header">
                     <div class="flex items-center gap-2 font-bold text-gray-800 text-sm">
                         <i class="fas fa-table text-indigo-600"></i>
                         <span>سجل بلاغات الحوادث الوشيكة</span>
                     </div>
-                    <span id="nearmiss-result-count" class="text-xs text-indigo-700 bg-indigo-50 font-bold px-2.5 py-1 rounded-full"></span>
                 </div>
                 <div id="nearmiss-table-container" style="padding:0;"></div>
             </div>
@@ -564,11 +623,37 @@ const NearMiss = {
     },
 
     bindFilterEvents() {
+        // Toggle expand/collapse
+        const toggleBtn = document.getElementById('nrm-filter-toggle-btn');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                const body = document.getElementById('nrm-filter-body');
+                const chevron = toggleBtn.querySelector('.nrm-chevron');
+                if (body) {
+                    const isCollapsed = body.classList.toggle('collapsed');
+                    this.state._filtersExpanded = !isCollapsed;
+                    if (chevron) chevron.classList.toggle('open', !isCollapsed);
+                }
+            });
+        }
+
+        // Search with debounce
         const searchInput = document.getElementById('nearmiss-filter-search');
-        if (searchInput) searchInput.addEventListener('input', (e) => this.handleFilterChange('search', e.target.value));
+        if (searchInput) {
+            let debounceTimer;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    this.handleFilterChange('search', e.target.value);
+                }, 250);
+            });
+        }
 
         const typeSelect = document.getElementById('nearmiss-filter-type');
         if (typeSelect) typeSelect.addEventListener('change', (e) => this.handleFilterChange('type', e.target.value));
+
+        const sevSelect = document.getElementById('nearmiss-filter-severity');
+        if (sevSelect) sevSelect.addEventListener('change', (e) => this.handleFilterChange('severity', e.target.value));
 
         const deptSelect = document.getElementById('nearmiss-filter-department');
         if (deptSelect) deptSelect.addEventListener('change', (e) => this.handleFilterChange('department', e.target.value));
@@ -581,24 +666,137 @@ const NearMiss = {
 
         const resetBtn = document.getElementById('nearmiss-reset-filters');
         if (resetBtn) resetBtn.addEventListener('click', () => this.resetFilters());
+
+        // Active tag × buttons (delegated)
+        const tagsContainer = document.getElementById('nrm-active-tags');
+        if (tagsContainer) {
+            tagsContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-clear-filter]');
+                if (btn) {
+                    const key = btn.getAttribute('data-clear-filter');
+                    this.handleFilterChange(key, '');
+                }
+            });
+        }
     },
 
     handleFilterChange(key, value) {
         this.state.filters[key] = value;
+        this._refreshFilterUI();
         this.renderTable();
     },
 
     resetFilters() {
-        this.state.filters = { search: '', type: '', department: '', startDate: '', endDate: '', period: '365' };
+        this.state.filters = { search: '', type: '', severity: '', department: '', startDate: '', endDate: '', period: '365' };
         this.renderRegisterTab(document.getElementById('nearmiss-tab-content'));
     },
 
+    _getActiveFilterCount() {
+        const f = this.state.filters;
+        let count = 0;
+        if (f.search) count++;
+        if (f.type) count++;
+        if (f.severity) count++;
+        if (f.department) count++;
+        if (f.startDate) count++;
+        if (f.endDate) count++;
+        return count;
+    },
+
+    _renderActiveFilterTags() {
+        const f = this.state.filters;
+        const tags = [];
+        const labelMap = {
+            search: { icon: 'fa-search', prefix: 'بحث' },
+            type: { icon: 'fa-tag', prefix: 'النوع' },
+            severity: { icon: 'fa-exclamation-circle', prefix: 'الخطورة' },
+            department: { icon: 'fa-building', prefix: 'الإدارة' },
+            startDate: { icon: 'fa-calendar', prefix: 'من' },
+            endDate: { icon: 'fa-calendar-check', prefix: 'إلى' }
+        };
+        for (const [key, meta] of Object.entries(labelMap)) {
+            if (f[key]) {
+                tags.push(`<span class="nrm-tag"><i class="fas ${meta.icon}" style="font-size:.6rem;opacity:.7;"></i> ${meta.prefix}: ${Utils.escapeHTML(f[key])}<button data-clear-filter="${key}" title="إزالة"><i class="fas fa-times"></i></button></span>`);
+            }
+        }
+        return tags.join('');
+    },
+
+    _refreshFilterUI() {
+        // Update active tags
+        const tagsContainer = document.getElementById('nrm-active-tags');
+        if (tagsContainer) tagsContainer.innerHTML = this._renderActiveFilterTags();
+
+        // Update badge count
+        const activeCount = this._getActiveFilterCount();
+        const toggleBtn = document.getElementById('nrm-filter-toggle-btn');
+        if (toggleBtn) {
+            const existingBadge = toggleBtn.querySelector('.nrm-filter-badge');
+            if (activeCount) {
+                if (existingBadge) {
+                    existingBadge.textContent = activeCount;
+                } else {
+                    const badge = document.createElement('span');
+                    badge.className = 'nrm-filter-badge';
+                    badge.textContent = activeCount;
+                    const chevron = toggleBtn.querySelector('.nrm-chevron');
+                    toggleBtn.insertBefore(badge, chevron);
+                }
+            } else if (existingBadge) {
+                existingBadge.remove();
+            }
+        }
+
+        // Show/hide reset button
+        const filterActions = document.querySelector('.nrm-filter-actions');
+        if (filterActions) {
+            const existingReset = filterActions.querySelector('.nrm-filter-reset');
+            if (activeCount && !existingReset) {
+                const resetBtn = document.createElement('button');
+                resetBtn.id = 'nearmiss-reset-filters';
+                resetBtn.className = 'nrm-filter-reset';
+                resetBtn.type = 'button';
+                resetBtn.innerHTML = '<i class="fas fa-undo" style="font-size:.65rem;"></i> مسح الكل';
+                resetBtn.addEventListener('click', () => this.resetFilters());
+                filterActions.insertBefore(resetBtn, filterActions.firstChild);
+            } else if (!activeCount && existingReset) {
+                existingReset.remove();
+            }
+        }
+
+        // Update has-value classes on inputs
+        ['nearmiss-filter-search', 'nearmiss-filter-type', 'nearmiss-filter-severity', 'nearmiss-filter-department', 'nearmiss-filter-start', 'nearmiss-filter-end'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (el.value) el.classList.add('has-value');
+                else el.classList.remove('has-value');
+            }
+        });
+
+        // Sync input values (for when tag × clears a filter)
+        const f = this.state.filters;
+        const idMap = { 'nearmiss-filter-search': 'search', 'nearmiss-filter-type': 'type', 'nearmiss-filter-severity': 'severity', 'nearmiss-filter-department': 'department', 'nearmiss-filter-start': 'startDate', 'nearmiss-filter-end': 'endDate' };
+        for (const [id, key] of Object.entries(idMap)) {
+            const el = document.getElementById(id);
+            if (el && el.value !== f[key]) el.value = f[key];
+        }
+    },
+
     getFilteredItems() {
-        const { search, type, department, startDate, endDate } = this.state.filters;
+        const { search, type, severity, department, startDate, endDate } = this.state.filters;
         let items = (AppState.appData.nearmiss || []).filter(item => Boolean(item));
 
         if (type) items = items.filter(item => (item.type || '').toLowerCase() === type.toLowerCase());
         if (department) items = items.filter(item => (item.department || '').toLowerCase() === department.toLowerCase());
+
+        if (severity) {
+            items = items.filter(item => {
+                const s = String(item.severity || '').toLowerCase();
+                const f = severity.toLowerCase();
+                if (f === 'كارثي') return s.includes('كارثي') || s.includes('وشيك') || s.includes('critical');
+                return s.includes(f);
+            });
+        }
 
         if (startDate) {
             const s = new Date(startDate); s.setHours(0,0,0,0);
