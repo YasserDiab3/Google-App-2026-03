@@ -1185,27 +1185,64 @@
 
     
         /* تحسينات بصرية لقسم تفاصيل الملاحظة والإجراء والتنفيذ */
-        .observation-pair-card {
-            border-radius: 12px;
-            padding: 12px;
+        .dept-selector-card {
+            background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #f0fdfa 100%);
+            border: 2px solid #a7f3d0;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.05);
             margin-bottom: 14px;
             transition: all 0.2s ease;
         }
+        .dept-selector-card:hover {
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.1);
+            border-color: #6ee7b7;
+        }
+
+        .observation-pair-card {
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
         .observation-hazard-card {
-            background: #fffaf5;
-            border: 1px solid #fed7aa;
+            background: linear-gradient(135deg, #fffaf5 0%, #ffffff 50%, #fff7ed 100%);
+            border: 2px solid #fed7aa;
+        }
+        .observation-hazard-card:hover {
+            box-shadow: 0 6px 16px rgba(234, 88, 12, 0.1);
+            border-color: #fdba74;
         }
         .observation-hazard-card:focus-within {
-            border-color: #f97316;
-            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+            border-color: #ea580c;
+            box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
         }
         .observation-corrective-card {
-            background: #f6fef9;
-            border: 1px solid #bbf7d0;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #f4fdf7 100%);
+            border: 2px solid #a7f3d0;
+        }
+        .observation-corrective-card:hover {
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.1);
+            border-color: #6ee7b7;
         }
         .observation-corrective-card:focus-within {
-            border-color: #10b981;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+            border-color: #059669;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        }
+
+        .risk-level-container-card {
+            margin-top: 14px;
+            background: linear-gradient(135deg, #fef2f2 0%, #ffffff 50%, #fff7ed 100%);
+            border: 2px solid #fecaca;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.05);
+            transition: all 0.2s ease;
+        }
+        .risk-level-container-card:hover {
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.1);
+            border-color: #fca5a5;
         }
 
         /* كرت وتنسيق تاريخ التنفيذ المتوقع الجمالي المهني */
@@ -2114,31 +2151,39 @@
                     <span class="section-title">تفاصيل الملاحظة والإجراء والتنفيذ</span>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="responsibleDeptSelect">
-                        <i class="fas fa-building-user text-blue-600"></i>
-                        المسؤول عن التنفيذ / الإدارة المعنية <span class="required">*</span>
-                    </label>
-                    <select id="responsibleDeptSelect" class="form-control" required >
+                <!-- كرت اختيار الإدارة المسؤولة عن التنفيذ -->
+                <div class="dept-selector-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" for="responsibleDeptSelect" style="font-weight: 800; color: #065f46; font-size: 0.92rem; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-building-user text-emerald-600" style="font-size: 1.1rem;"></i>
+                            <span>المسؤول عن التنفيذ / الإدارة المعنية</span>
+                            <span class="required">*</span>
+                        </label>
+                        <span style="font-size: 0.72rem; color: #047857; font-weight: 800; background: #d1fae5; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-users-gear text-emerald-600"></i>جهة الاختصاص والمتابعة
+                        </span>
+                    </div>
+
+                    <select id="responsibleDeptSelect" class="form-control" style="background: #ffffff; border: 1.5px solid #a7f3d0; font-weight: 700; color: #065f46; font-size: 0.92rem; padding: 10px 12px; border-radius: 8px;" required>
                         <option value="">— جاري تحميل الإدارات من النظام... —</option>
                     </select>
                 </div>
 
-
-                <!-- 1. كرت تفاصيل الملاحظة / الخطر (التمييز البصري البرتقالي) -->
+                <!-- 1. كرت تفاصيل الملاحظة / الخطر (التمييز البصري البرتقالي الدافيء) -->
                 <div class="observation-pair-card observation-hazard-card" style="position: relative;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                        <label class="form-label" for="detailsInput" style="margin-bottom: 0; color: #c2410c; font-weight: 700;">
-                            <i class="fas fa-triangle-exclamation text-amber-600"></i>
-                            تفاصيل الملاحظة / الخطر المرصود <span class="required">*</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" for="detailsInput" style="margin-bottom: 0; color: #9a3412; font-weight: 800; font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-triangle-exclamation text-amber-600" style="font-size: 1.1rem;"></i>
+                            <span>تفاصيل الملاحظة / الخطر المرصود</span>
+                            <span class="required">*</span>
                         </label>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <button type="button" class="btn-voice-dictation" onclick="toggleVoiceDictation('detailsInput', this)" title="إملاء صوتي باللغة العربية">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <button type="button" class="btn-voice-dictation" onclick="toggleVoiceDictation('detailsInput', this)" title="إملاء صوتي باللغة العربية" style="color: #9a3412; border-color: #fed7aa; background: #fff7ed; font-weight: 700;">
                                 <i class="fas fa-microphone"></i>
-                                <span>تحدث للوصف</span>
+                                <span>إملاء صوتي</span>
                             </button>
-                            <span style="font-size: 0.72rem; color: #ea580c; font-weight: 700;">
-                                <i class="fas fa-wand-magic-sparkles ml-1"></i>مقترحات سريعة
+                            <span style="font-size: 0.72rem; color: #c2410c; font-weight: 800; background: #ffedd5; border: 1px solid #fed7aa; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-wand-magic-sparkles text-amber-600"></i>مقترحات سريعة
                             </span>
                         </div>
                     </div>
@@ -2150,34 +2195,34 @@
                         </div>
                     </div>
 
-                    <textarea id="detailsInput" class="form-control" style="border-color: #fed7aa; background: #fff;" placeholder="أدخل تفاصيل ما شاهدته بدقة أو اختر من المقترحات أعلاه..." required autocomplete="off" oninput="handleDetailsInputQuality(this.value)"></textarea>
+                    <textarea id="detailsInput" class="form-control" style="border: 1.5px solid #fed7aa; background: #ffffff; font-weight: 600; color: #1e293b; padding: 10px 12px; border-radius: 8px;" placeholder="أدخل تفاصيل ما شاهدته بدقة أو اختر من المقترحات أعلاه..." required autocomplete="off" oninput="handleDetailsInputQuality(this.value)"></textarea>
                     <!-- قائمة الإكمال التلقائي عند الكتابة -->
                     <div id="detailsAutocompleteList" class="autocomplete-dropdown"></div>
 
                     <!-- مقياس جودة الوصف ومساعد الصياغة -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 0.73rem;">
-                        <div id="descQualityBadge" style="display: flex; align-items: center; gap: 5px; color: #64748b; font-weight: 600;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 0.73rem;">
+                        <div id="descQualityBadge" style="display: flex; align-items: center; gap: 5px; color: #64748b; font-weight: 700;">
                             <i class="fas fa-circle-info" id="descQualityIcon"></i> <span id="descQualityText">يرجى توضيح تفاصيل الملاحظة</span>
                         </div>
-                        <div id="descCharCounter" style="color: #64748b; font-weight: 700; background: #ffedd5; padding: 2px 6px; border-radius: 4px;">0 حرف</div>
+                        <div id="descCharCounter" style="color: #9a3412; font-weight: 800; background: #ffedd5; padding: 2px 8px; border-radius: 12px; border: 1px solid #fed7aa;">0 حرف</div>
                     </div>
                 </div>
 
-                <!-- 2. كرت الإجراء التصحيحي الفوري (التمييز البصري الأخضر) -->
+                <!-- 2. كرت الإجراء التصحيحي الفوري (التمييز البصري الأخضر الزمردي) -->
                 <div class="observation-pair-card observation-corrective-card" style="position: relative;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                        <label class="form-label" for="correctiveInput" style="margin-bottom: 0; color: #15803d; font-weight: 700;">
-                            <i class="fas fa-shield-halved text-emerald-600"></i>
-                            الإجراء التصحيحي / الوقائي الفوري
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" for="correctiveInput" style="margin-bottom: 0; color: #065f46; font-weight: 800; font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-shield-halved text-emerald-600" style="font-size: 1.1rem;"></i>
+                            <span>الإجراء التصحيحي / الوقائي الفوري</span>
                         </label>
                         <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                            <button type="button" class="btn-voice-dictation" onclick="autoSuggestCorrectiveAction()" title="اقتراح إجراء مناسب بناءً على تفاصيل الملاحظة" style="color: #047857; border-color: #a7f3d0; background: #ecfdf5;">
+                            <button type="button" class="btn-voice-dictation" onclick="autoSuggestCorrectiveAction()" title="اقتراح إجراء مناسب بناءً على تفاصيل الملاحظة" style="color: #047857; border-color: #a7f3d0; background: #ecfdf5; font-weight: 800;">
                                 <i class="fas fa-wand-magic-sparkles text-emerald-600"></i>
                                 <span>اقتراح ذكي</span>
                             </button>
-                            <button type="button" class="btn-voice-dictation" onclick="toggleVoiceDictation('correctiveInput', this)" title="إملاء صوتي باللغة العربية">
+                            <button type="button" class="btn-voice-dictation" onclick="toggleVoiceDictation('correctiveInput', this)" title="إملاء صوتي باللغة العربية" style="color: #047857; border-color: #a7f3d0; background: #f0fdf4; font-weight: 700;">
                                 <i class="fas fa-microphone"></i>
-                                <span>تحدث للإجراء</span>
+                                <span>إملاء صوتي</span>
                             </button>
                         </div>
                     </div>
@@ -2202,19 +2247,20 @@
                         </div>
                     </div>
 
-                    <textarea id="correctiveInput" class="form-control" style="min-height:70px; border-color: #bbf7d0; background: #fff;" placeholder="الإجراء الفوري المتخذ أو المقترح (أو اختر من المقترحات السريعة أعلاه)..." autocomplete="off"></textarea>
+                    <textarea id="correctiveInput" class="form-control" style="min-height:70px; border: 1.5px solid #a7f3d0; background: #ffffff; font-weight: 600; color: #1e293b; padding: 10px 12px; border-radius: 8px;" placeholder="الإجراء الفوري المتخذ أو المقترح (أو اختر من المقترحات السريعة أعلاه)..." autocomplete="off"></textarea>
                     <div id="correctiveAutocompleteList" class="autocomplete-dropdown"></div>
                 </div>
 
                 <!-- معدل الخطورة منمق بالألوان وأيقونات التحذير -->
-                <div class="form-group" style="margin-top: 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
-                        <label class="form-label" style="font-weight: 700; color: #1e293b; margin-bottom: 0;">
-                            <i class="fas fa-gauge-high text-red-600"></i>
-                            معدل الخطورة (Risk Level) <span class="required">*</span>
+                <div class="risk-level-container-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" style="font-weight: 800; color: #991b1b; font-size: 0.92rem; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-gauge-high text-red-600" style="font-size: 1.1rem;"></i>
+                            <span>معدل الخطورة (Risk Level)</span>
+                            <span class="required">*</span>
                         </label>
-                        <span style="font-size: 0.72rem; color: #dc2626; font-weight: 700;">
-                            <i class="fas fa-wand-magic-sparkles ml-1"></i>يُحدد تلقائياً مع إمكانية التعديل
+                        <span style="font-size: 0.72rem; color: #dc2626; font-weight: 800; background: #fee2e2; border: 1px solid #fecaca; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-wand-magic-sparkles text-red-600"></i>تحديد ذكي حسب نوع الخطر
                         </span>
                     </div>
                     
