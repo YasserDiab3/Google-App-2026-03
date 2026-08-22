@@ -1374,6 +1374,28 @@ const NearMiss = {
         }
     },
 
+    generateQrDataUrl(data, size = 250) {
+        try {
+            if (typeof qrcode === 'function') {
+                const qr = qrcode(0, 'M');
+                qr.addData(String(data));
+                qr.make();
+                const moduleCount = typeof qr.getModuleCount === 'function' ? qr.getModuleCount() : 0;
+                const cellSize = moduleCount ? Math.max(1, Math.floor(size / moduleCount)) : Math.max(2, Math.floor(size / 25));
+                return qr.createDataURL(cellSize, 2);
+            }
+        } catch (e) {}
+
+        try {
+            if (typeof window !== 'undefined' && window.QRCode && typeof window.QRCode.generate === 'function') {
+                const res = window.QRCode.generate(data, size);
+                if (res) return res;
+            }
+        } catch (e) {}
+
+        return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}`;
+    },
+
     openPublicQrModal() {
         const publicUrl = this.getPublicUrl();
         
@@ -1385,7 +1407,8 @@ const NearMiss = {
         modalEl.id = 'nrm-public-qr-modal';
         modalEl.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(6px); direction:rtl; font-family:"Segoe UI", Tahoma, sans-serif;';
 
-        const qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(publicUrl);
+        const qrCodeUrl = this.generateQrDataUrl(publicUrl, 250);
+        const encodedUrl = encodeURIComponent(publicUrl);
 
         modalEl.innerHTML = `
             <div style="background:#fff; border-radius:24px; max-width:520px; width:100%; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.4); border:1px solid #e0e7ff; animation:fadeIn 0.2s ease;">
@@ -1413,7 +1436,7 @@ const NearMiss = {
                     </div>
 
                     <div style="display:inline-block; padding:16px; background:#fff; border-radius:20px; box-shadow:0 6px 20px rgba(0,0,0,0.06); border:2px solid #e0e7ff; margin-bottom:18px;">
-                        <img src="${qrCodeUrl}" alt="QR Code" style="width:220px; height:220px; border-radius:12px; display:block; margin:0 auto;" />
+                        <img src="${qrCodeUrl}" alt="QR Code" style="width:220px; height:220px; border-radius:12px; display:block; margin:0 auto;" onerror="if(!this.dataset.errCount){this.dataset.errCount=1;this.src='https://quickchart.io/qr?size=250&text=${encodedUrl}';}else if(this.dataset.errCount=='1'){this.dataset.errCount=2;this.src='https://chart.googleapis.com/chart?cht=qr&chs=250x250&chl=${encodedUrl}';}" />
                     </div>
 
                     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; margin-bottom:20px; font-family:monospace; font-size:0.75rem; color:#475569; direction:ltr; text-align:center; word-break:break-all; user-select:all;">
@@ -1471,7 +1494,8 @@ const NearMiss = {
 
         const cardsHtml = cards.map((c, idx) => {
             const directTarget = `${publicUrl}?factory=${encodeURIComponent(c.site)}&place=${encodeURIComponent(c.place)}`;
-            const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(directTarget);
+            const qrUrl = this.generateQrDataUrl(directTarget, 160);
+            const encodedTarget = encodeURIComponent(directTarget);
             return `
                 <div style="border: 2px solid #312e81; border-radius: 12px; padding: 12px; background: #fff; text-align: right; break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e0e7ff; padding-bottom:6px; margin-bottom:8px;">
@@ -1479,7 +1503,7 @@ const NearMiss = {
                         <span style="font-size:0.65rem; background:#e0e7ff; color:#3730a3; padding:1px 6px; border-radius:4px; font-weight:bold;">حادث وشيك</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <img src="${qrUrl}" style="width:90px; height:90px; border-radius:6px; border:1px solid #e2e8f0;" />
+                        <img src="${qrUrl}" style="width:90px; height:90px; border-radius:6px; border:1px solid #e2e8f0;" onerror="if(!this.dataset.errCount){this.dataset.errCount=1;this.src='https://quickchart.io/qr?size=160&text=${encodedTarget}';}" />
                         <div style="flex:1;">
                             <div style="font-size:0.95rem; font-weight:800; color:#1e1b4b;">${c.site}</div>
                             <div style="font-size:0.8rem; color:#4338ca; font-weight:600; margin-top:2px;">${c.place}</div>
