@@ -928,6 +928,57 @@
             color: #64748b;
         }
 
+    
+        /* تحسينات بصرية لقسم تفاصيل الملاحظة والإجراء والتنفيذ */
+        .observation-pair-card {
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 14px;
+            transition: all 0.2s ease;
+        }
+        .observation-hazard-card {
+            background: #fffaf5;
+            border: 1px solid #fed7aa;
+        }
+        .observation-hazard-card:focus-within {
+            border-color: #f97316;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+        }
+        .observation-corrective-card {
+            background: #f6fef9;
+            border: 1px solid #bbf7d0;
+        }
+        .observation-corrective-card:focus-within {
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+        }
+
+        .date-preset-pills {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 6px;
+        }
+        .date-preset-btn {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            font-size: 0.72rem;
+            font-weight: 600;
+            border-radius: 6px;
+            padding: 4px 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .date-preset-btn:hover, .date-preset-btn.active {
+            background: #e0f2fe;
+            border-color: #0284c7;
+            color: #0369a1;
+        }
+    
     </style>
 </head>
 <body>
@@ -1161,13 +1212,14 @@
                 </div>
 
 
-                <div class="form-group" style="position: relative;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label class="form-label" for="detailsInput" style="margin-bottom: 4px;">
-                            <i class="fas fa-file-lines text-blue-600"></i>
-                            تفاصيل الملاحظة / التصرف غير الآمن <span class="required">*</span>
+                <!-- 1. كرت تفاصيل الملاحظة / الخطر (التمييز البصري البرتقالي) -->
+                <div class="observation-pair-card observation-hazard-card" style="position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label class="form-label" for="detailsInput" style="margin-bottom: 0; color: #c2410c; font-weight: 700;">
+                            <i class="fas fa-triangle-exclamation text-amber-600"></i>
+                            تفاصيل الملاحظة / الخطر المرصود <span class="required">*</span>
                         </label>
-                        <span style="font-size: 0.72rem; color: #2563eb; font-weight: 700;">
+                        <span style="font-size: 0.72rem; color: #ea580c; font-weight: 700;">
                             <i class="fas fa-wand-magic-sparkles ml-1"></i>مقترحات سريعة
                         </span>
                     </div>
@@ -1179,15 +1231,24 @@
                         </div>
                     </div>
 
-                    <textarea id="detailsInput" class="form-control" placeholder="أدخل تفاصيل ما شاهدته بدقة أو اختر من المقترحات أعلاه..." required autocomplete="off"></textarea>
+                    <textarea id="detailsInput" class="form-control" style="border-color: #fed7aa; background: #fff;" placeholder="أدخل تفاصيل ما شاهدته بدقة أو اختر من المقترحات أعلاه..." required autocomplete="off" oninput="handleDetailsInputQuality(this.value)"></textarea>
                     <!-- قائمة الإكمال التلقائي عند الكتابة -->
                     <div id="detailsAutocompleteList" class="autocomplete-dropdown"></div>
+
+                    <!-- مقياس جودة الوصف ومساعد الصياغة -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 0.73rem;">
+                        <div id="descQualityBadge" style="display: flex; align-items: center; gap: 5px; color: #64748b; font-weight: 600;">
+                            <i class="fas fa-circle-info" id="descQualityIcon"></i> <span id="descQualityText">يرجى توضيح تفاصيل الملاحظة</span>
+                        </div>
+                        <div id="descCharCounter" style="color: #64748b; font-weight: 700; background: #ffedd5; padding: 2px 6px; border-radius: 4px;">0 حرف</div>
+                    </div>
                 </div>
 
-                <div class="form-group" style="position: relative;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label class="form-label" for="correctiveInput" style="margin-bottom: 4px;">
-                            <i class="fas fa-wrench text-slate-600"></i>
+                <!-- 2. كرت الإجراء التصحيحي الفوري (التمييز البصري الأخضر) -->
+                <div class="observation-pair-card observation-corrective-card" style="position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label class="form-label" for="correctiveInput" style="margin-bottom: 0; color: #15803d; font-weight: 700;">
+                            <i class="fas fa-shield-halved text-emerald-600"></i>
                             الإجراء التصحيحي / الوقائي الفوري
                         </label>
                         <span style="font-size: 0.72rem; color: #16a34a; font-weight: 700;">
@@ -1202,11 +1263,11 @@
                         </div>
                     </div>
 
-                    <textarea id="correctiveInput" class="form-control" style="min-height:70px;" placeholder="الإجراء الفوري المتخذ أو المقترح (أو اختر من المقترحات السريعة أعلاه)..." autocomplete="off"></textarea>
+                    <textarea id="correctiveInput" class="form-control" style="min-height:70px; border-color: #bbf7d0; background: #fff;" placeholder="الإجراء الفوري المتخذ أو المقترح (أو اختر من المقترحات السريعة أعلاه)..." autocomplete="off"></textarea>
                     <div id="correctiveAutocompleteList" class="autocomplete-dropdown"></div>
                 </div>
 
-                <!-- حالة الملاحظة والتاريخ المتوقع للتنفيذ (أسفل الإجراء التصحيحي وأعلى الصورة) -->
+                <!-- حالة الملاحظة والتاريخ المتوقع للتنفيذ مع الاختصارات السريعة -->
                 <div class="grid-2">
                     <div class="form-group">
                         <label class="form-label" for="statusSelect">
@@ -1221,12 +1282,21 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="expectedDateInput">
+                        <label class="form-label" for="expectedDateInput" style="margin-bottom: 4px;">
                             <i class="fas fa-calendar-check text-emerald-600"></i>
                             التاريخ المتوقع للتنفيذ
                         </label>
+
+                        <!-- اختصارات سريعة بنقرة واحدة لتاريخ التنفيذ المتوقع -->
+                        <div class="date-preset-pills">
+                            <button type="button" class="date-preset-btn" onclick="applyDatePreset('today')">⚡ فوري اليوم</button>
+                            <button type="button" class="date-preset-btn" onclick="applyDatePreset('24h')">⏱️ خلال 24 ساعة</button>
+                            <button type="button" class="date-preset-btn" onclick="applyDatePreset('week')">🗓️ خلال أسبوع</button>
+                            <button type="button" class="date-preset-btn" onclick="applyDatePreset('month')">🏁 نهاية الشهر</button>
+                        </div>
+
                         <input type="date" id="expectedDateInput" class="form-control">
-                        <span style="font-size: 0.75rem; color: #64748b; margin-top: 3px; display: block;">يُحدد تلقائياً بنهاية الشهر الحالي إذا لم يُحدد مسبقاً</span>
+                        <span style="font-size: 0.72rem; color: #64748b; margin-top: 3px; display: block;">حدد بنقرة من الاختصارات أعلاه أو اختر من التقويم</span>
                     </div>
                 </div>
             </div>

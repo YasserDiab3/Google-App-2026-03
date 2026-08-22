@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1209",
+  "version": "1.0.1212",
   "highlights": {
     "ar": [
-      "تفعيل الإرسال الفوري اللحظي للملاحظات (Optimistic UI) بدون أي شاشات انتظار أو توقف مع المزامنة في الخلفية.",
-      "إضافة التقاط إحداثيات الموقع الجغرافي الذكي (GPS) وربطه بخرائط جوجل تلقائياً.",
-      "مطابقة خيارات الإدارات والمصانع الرسمية وإزالة التكرارات بالكامل."
+      "إضافة اختصارات سريعة لتاريخ التنفيذ المتوقع (فوري، 24 ساعة، أسبوع، نهاية الشهر) بنقرة واحدة.",
+      "تطوير التمييز البصري اللوني المتناسق لحقل الخطر المرصود (برتقالي) مقابل الإجراء التصحيحي (أخضر).",
+      "إضافة مقياس جودة الوصف ومساعد الصياغة المباشر مع عداد الحروف لتشجيع الصياغة المكتملة."
     ],
     "en": [
-      "Enabled instant optimistic UI observation submission with zero-wait background cloud synchronization.",
-      "Integrated smart non-blocking GPS geolocation capture with automatic Google Maps navigation link.",
-      "Strictly synchronized responsible departments and factories with system database records."
+      "Added single-click quick preset shortcuts for expected completion dates (Today, 24h, 1 Week, End of Month).",
+      "Introduced distinct visual pairing & color themes for hazard observations vs corrective actions.",
+      "Implemented a live description quality meter and character counter for comprehensive reporting."
     ]
   }
 }
