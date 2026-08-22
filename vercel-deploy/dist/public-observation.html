@@ -1241,11 +1241,11 @@
                         <span class="section-title">الموقع والمكان داخل المصنع</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <button type="button" class="btn-qr-scan" onclick="openQrScannerModal()">
-                            <i class="fas fa-qrcode"></i> مسح QR الموقع
+                        <button type="button" class="btn-qr-scan" onclick="openQrScannerModal()" title="مسح QR الموقع">
+                            <i class="fas fa-qrcode"></i> QR
                         </button>
-                        <span id="gpsStatusBadge" style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-                            <i class="fas fa-location-dot"></i><span id="gpsStatusText">تحديد الموقع GPS...</span>
+                        <span id="gpsStatusBadge" title="الموقع الجغرافي" style="font-size: 1rem; color: #64748b; font-weight: 700; display: inline-flex; align-items: center; cursor: default;">
+                            <i class="fas fa-location-dot"></i>
                         </span>
                     </div>
                 </div>
@@ -3114,19 +3114,14 @@
 
         function updateGpsBadge(isSuccess, text) {
             const badge = document.getElementById('gpsStatusBadge');
-            const statusText = document.getElementById('gpsStatusText');
-            if (!badge || !statusText) return;
+            if (!badge) return;
 
             if (isSuccess) {
                 badge.style.color = '#15803d';
-                badge.style.background = '#dcfce7';
-                badge.style.padding = '2px 8px';
-                badge.style.borderRadius = '12px';
-                statusText.textContent = text;
+                badge.title = text || 'تم تحديد الموقع بدقة';
             } else {
                 badge.style.color = '#64748b';
-                badge.style.background = 'transparent';
-                statusText.textContent = text;
+                badge.title = text || 'الموقع الإداري فقط';
             }
         }
 
