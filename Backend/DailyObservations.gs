@@ -2846,7 +2846,7 @@ function getPublicObservationConfig() {
         try {
             cache = CacheService.getScriptCache();
             if (cache) {
-                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V12');
+                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V15');
                 if (cachedStr) {
                     return JSON.parse(cachedStr);
                 }
@@ -3102,7 +3102,7 @@ function getPublicObservationConfig() {
 
         try {
             if (cache) {
-                cache.put('PUBLIC_OBS_CONFIG_CACHE_V12', JSON.stringify(configResult), 1800);
+                cache.put('PUBLIC_OBS_CONFIG_CACHE_V15', JSON.stringify(configResult), 1800);
             }
         } catch (cPutErr) {}
 
