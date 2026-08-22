@@ -11847,30 +11847,8 @@ const DailyObservations = {
                         ${Array.isArray(observation.attachments) && observation.attachments.length > 0 ? `
                         <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
                             <strong class="text-gray-700 block mb-3 text-lg">المرفقات:</strong>
-                            <div data-section="attachments" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                ${observation.attachments.map((attachment) => {
-            const isImage = (attachment.type || '').startsWith('image/');
-            const name = Utils.escapeHTML(attachment.name || 'مرفق');
-            if (isImage) {
-                return `
-                                            <div class="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                                <img src="${attachment.data}" alt="${name}" class="w-full h-48 object-cover cursor-pointer" onclick="window.open('${attachment.data}', '_blank')">
-                                                <div class="px-3 py-2 bg-gray-50 text-xs text-gray-700">${name}</div>
-                                            </div>
-                                        `;
-            }
-            return `
-                                        <div class="border rounded-lg p-3 bg-gray-50 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow">
-                                            <i class="fas fa-file-pdf text-2xl text-red-500"></i>
-                                            <div class="flex-1">
-                                                <p class="text-sm font-semibold text-gray-800">${name}</p>
-                                                <button type="button" class="btn-secondary btn-xs mt-2" onclick="window.open('${attachment.data}', '_blank')">
-                                                    <i class="fas fa-eye ml-1"></i>عرض
-                                                </button>
-                                            </div>
-                                        </div>
-                                    `;
-        }).join('')}
+                            <div data-section="attachments" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                ${this._buildObservationAttachmentsHtml(observation.attachments)}
                             </div>
                         </div>
                         ` : ''}
@@ -12095,35 +12073,7 @@ const DailyObservations = {
             
             if (Array.isArray(observation.attachments) && observation.attachments.length > 0) {
                 if (attachmentsSection) {
-                    // تحديث المرفقات الموجودة
-                    attachmentsSection.innerHTML = `
-                            <strong class="text-gray-700 block mb-3 text-lg">المرفقات:</strong>
-                            <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                ${observation.attachments.map((attachment) => {
-                                    const isImage = (attachment.type || '').startsWith('image/');
-                                    const name = Utils.escapeHTML(attachment.name || 'مرفق');
-                                    if (isImage) {
-                                        return `
-                                            <div class="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                                <img src="${attachment.data}" alt="${name}" class="w-full h-48 object-cover cursor-pointer" onclick="window.open('${attachment.data}', '_blank')">
-                                                <div class="px-3 py-2 bg-gray-50 text-xs text-gray-700">${name}</div>
-                                            </div>
-                                        `;
-                                    }
-                                    return `
-                                        <div class="border rounded-lg p-3 bg-gray-50 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow">
-                                            <i class="fas fa-file-pdf text-2xl text-red-500"></i>
-                                            <div class="flex-1">
-                                                <p class="text-sm font-semibold text-gray-800">${name}</p>
-                                                <button type="button" class="btn-secondary btn-xs mt-2" onclick="window.open('${attachment.data}', '_blank')">
-                                                    <i class="fas fa-eye ml-1"></i>عرض
-                                                </button>
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                        `;
+                    attachmentsSection.innerHTML = this._buildObservationAttachmentsHtml(observation.attachments);
                     Utils.safeLog('✅ updateObservationModalContent: تم تحديث المرفقات بنجاح');
                 }
             } else if (attachmentsParent) {
@@ -13691,6 +13641,99 @@ const DailyObservations = {
         };
 
         return this.normalizeRecord(payload);
+    },
+
+    viewFullImage(url) {
+        if (!url) return;
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.zIndex = '99999';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 90vw; max-height: 90vh; background: rgba(15, 23, 42, 0.95); border-radius: 16px; padding: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="color: #ffffff; font-weight: 700; font-size: 1rem;"><i class="fas fa-image ml-2 text-blue-400"></i>معاينة الصورة بالحجم الكامل</span>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="color: #ffffff; font-size: 1.4rem; cursor: pointer; background: transparent; border: none;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div style="display: flex; justify-content: center; align-items: center; overflow: auto; max-height: 80vh;">
+                    <img src="${Utils.escapeHTML(url)}" alt="صورة الملاحظة" style="max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    _buildObservationAttachmentsHtml(attachments) {
+        if (!Array.isArray(attachments) || attachments.length === 0) return '';
+
+        const isImgAttachment = (att) => {
+            if (!att) return false;
+            const type = String(att.type || '').toLowerCase();
+            if (type.startsWith('image/')) return true;
+            const name = String(att.name || '').toLowerCase();
+            if (/\.(jpg|jpeg|png|gif|webp|bmp|heic|svg)($|\?)/i.test(name)) return true;
+            if (/^image[-_]?\d+/i.test(name)) return true;
+            const src = String(att.data || att.url || att.shareableLink || att.directLink || (att.cloudLink && att.cloudLink.url) || '').trim();
+            if (src.startsWith('data:image/')) return true;
+            if (/\.(jpg|jpeg|png|gif|webp|bmp|heic|svg)($|\?)/i.test(src)) return true;
+            if (src && !/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|txt)($|\?)/i.test(name) && !/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|txt)($|\?)/i.test(src)) {
+                return true;
+            }
+            return false;
+        };
+
+        const getAttachmentSrc = (att) => {
+            if (!att) return '';
+            return att.data || att.url || att.shareableLink || att.directLink || (att.cloudLink && att.cloudLink.url) || '';
+        };
+
+        return attachments.map((att) => {
+            const isImg = isImgAttachment(att);
+            const rawSrc = getAttachmentSrc(att);
+            const name = Utils.escapeHTML(att.name || 'صورة توضيحية');
+
+            if (isImg && rawSrc) {
+                const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                    ? Utils.resolveDriveAwareImgDisplay(rawSrc)
+                    : { canonical: rawSrc, displaySrc: rawSrc, needsProxy: false, proxyFileId: '' };
+                const imgSrc = disp.canonical ? disp.displaySrc : rawSrc;
+                const proxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+
+                return `
+                    <div class="border-2 border-gray-200 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all bg-slate-50 flex flex-col items-center p-3">
+                        <div class="w-full flex justify-center items-center overflow-hidden rounded-lg bg-black/5" style="max-height: 420px;">
+                            <img src="${Utils.escapeHTML(imgSrc)}"${proxyAttr} alt="${name}" 
+                                 class="w-auto max-w-full max-h-80 object-contain rounded-lg cursor-pointer transition-transform hover:scale-[1.02]"
+                                 onclick="DailyObservations.viewFullImage('${Utils.escapeHTML(rawSrc)}')"
+                                 title="انقر لعرض الصورة بالحجم الكامل"
+                                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f1f5f9%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%2364748b%22 font-family=%22sans-serif%22 font-size=%2216%22 font-weight=%22bold%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eتعذر تحميل الصورة مباشرة%3C/text%3E%3C/svg%3E';">
+                        </div>
+                        <div class="w-full mt-2 flex items-center justify-between text-xs text-gray-600 px-1">
+                            <span class="font-bold truncate max-w-[200px]"><i class="fas fa-image ml-1 text-blue-500"></i>${name}</span>
+                            <button type="button" onclick="DailyObservations.viewFullImage('${Utils.escapeHTML(rawSrc)}')" class="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer">
+                                <i class="fas fa-expand"></i> تكبير
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="border rounded-xl p-4 bg-gray-50 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow">
+                    <i class="fas fa-file-pdf text-3xl text-red-500"></i>
+                    <div class="flex-1">
+                        <p class="text-sm font-bold text-gray-800">${name}</p>
+                        <button type="button" class="btn-secondary btn-xs mt-2" onclick="window.open('${Utils.escapeHTML(rawSrc)}', '_blank')">
+                            <i class="fas fa-external-link-alt ml-1"></i>فتح الملف
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
     },
 
     shareViaWhatsApp(id) {
