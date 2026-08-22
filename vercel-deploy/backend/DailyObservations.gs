@@ -3136,12 +3136,21 @@ function submitPublicObservation(payload) {
             try {
                 if (typeof uploadFileToDrive === 'function') {
                     var uploadRes = uploadFileToDrive(payload.photoBase64, 'Obs_' + obsId + '_' + Date.now() + '.jpg', 'image/jpeg', 'DailyObservations');
-                    if (uploadRes && uploadRes.success && uploadRes.file && uploadRes.file.url) {
-                        attachments.push({
-                            name: 'صورة الملاحظة الميدانية',
-                            url: uploadRes.file.url,
-                            type: 'image/jpeg'
-                        });
+                    if (uploadRes && uploadRes.success) {
+                        var dLink = uploadRes.directLink || uploadRes.shareableLink || '';
+                        var sLink = uploadRes.shareableLink || uploadRes.directLink || '';
+                        if (dLink || sLink) {
+                            attachments.push({
+                                id: uploadRes.fileId || Utilities.getUuid(),
+                                name: 'صورة الملاحظة الميدانية',
+                                url: dLink,
+                                directLink: dLink,
+                                shareableLink: sLink,
+                                fileId: uploadRes.fileId || '',
+                                type: 'image/jpeg',
+                                uploadedAt: new Date().toISOString()
+                            });
+                        }
                     }
                 }
             } catch (imgErr) {
