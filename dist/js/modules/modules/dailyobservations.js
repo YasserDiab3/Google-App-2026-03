@@ -2720,7 +2720,7 @@ ${c}
                                 <input type="file"
                                        id="after-execution-photo-input-${e.id}"
                                        accept="image/*"
-                                       capture="environment"
+                                       
                                        class="form-input w-full"
                                        style="font-family: 'Cairo', sans-serif;"
                                        onchange="DailyObservations.handleAfterExecutionPhotoUpload('${e.id}', this)" />

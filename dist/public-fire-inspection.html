@@ -1178,10 +1178,23 @@
                         <i class="fas fa-camera text-emerald-600"></i>
                         صورة توضيحية للجهاز أثناء الفحص:
                     </label>
-                    <div class="photo-area" id="photoArea" onclick="document.getElementById('photoInput').click()">
-                        <i class="fas fa-camera-retro" style="font-size: 28px; color: #94a3b8; margin-bottom: 6px; display: block;"></i>
-                        <span style="font-size: 0.85rem; font-weight: 700; color: #475569;">اضغط لالتقاط أو اختيار صورة من الهاتف</span>
-                        <input type="file" id="photoInput" accept="image/*" capture="environment" style="display: none;">
+                    <div class="photo-area" id="photoArea" style="padding: 16px 12px; text-align: center; border: 2px dashed #cbd5e1; border-radius: 12px; background: #f8fafc;">
+                        <i class="fas fa-camera-retro" style="font-size: 28px; color: #dc2626; margin-bottom: 6px; display: block;"></i>
+                        <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">إرفاق صورة توضيحية للجهاز أثناء الفحص</div>
+                        <div style="font-size: 0.76rem; color: #64748b; margin-bottom: 12px;">يمكنك التصوير المباشر بالكاميرا أو الاختيار من استوديو الصور</div>
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; width: 100%; max-width: 400px; margin: 0 auto;">
+                            <button type="button" class="btn-action-photo" onclick="document.getElementById('photoInputCamera').click()" style="flex: 1; min-width: 145px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; background: #dc2626; color: #ffffff; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; box-shadow: 0 2px 6px rgba(220,38,38,0.25);">
+                                <i class="fas fa-camera"></i>
+                                <span>التقاط بالكاميرا</span>
+                            </button>
+                            <button type="button" class="btn-action-photo" onclick="document.getElementById('photoInputGallery').click()" style="flex: 1; min-width: 145px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; background: #ffffff; color: #1e293b; border: 1.5px solid #cbd5e1; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                                <i class="fas fa-images" style="color: #dc2626;"></i>
+                                <span>فتح الاستوديو / المعرض</span>
+                            </button>
+                        </div>
+                        <input type="file" id="photoInputCamera" accept="image/*" capture="environment" style="display: none;">
+                        <input type="file" id="photoInputGallery" accept="image/*" style="display: none;">
+                        <input type="file" id="photoInput" accept="image/*" style="display: none;">
                     </div>
                     <div id="photoPreviewWrap" class="photo-preview-wrap" style="display: none;">
                         <img id="photoPreview" src="" alt="Preview" class="photo-preview-img">
@@ -1699,35 +1712,40 @@
         }
 
         // معالجة الصور وضغطها بكفاءة
-        document.getElementById('photoInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        ['photoInput', 'photoInputCamera', 'photoInputGallery'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const maxDim = 800;
-                    let w = img.width;
-                    let h = img.height;
-                    if (w > maxDim || h > maxDim) {
-                        if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
-                        else { w = Math.round((w * maxDim) / h); h = maxDim; }
-                    }
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.65);
-                    
-                    document.getElementById('photoPreview').src = currentPhotoBase64;
-                    document.getElementById('photoPreviewWrap').style.display = 'inline-block';
-                    document.getElementById('photoArea').style.display = 'none';
-                };
-                img.src = evt.target.result;
-            };
-            reader.readAsDataURL(file);
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        const img = new Image();
+                        img.onload = function() {
+                            const canvas = document.createElement('canvas');
+                            const maxDim = 800;
+                            let w = img.width;
+                            let h = img.height;
+                            if (w > maxDim || h > maxDim) {
+                                if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                                else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                            }
+                            canvas.width = w;
+                            canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+                            currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.65);
+                            
+                            document.getElementById('photoPreview').src = currentPhotoBase64;
+                            document.getElementById('photoPreviewWrap').style.display = 'inline-block';
+                            document.getElementById('photoArea').style.display = 'none';
+                        };
+                        img.src = evt.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
         });
 
         function removePhoto() {
