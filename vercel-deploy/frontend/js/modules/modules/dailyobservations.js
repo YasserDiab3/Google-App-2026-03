@@ -3415,6 +3415,25 @@ const DailyObservations = {
                 <div style="text-align:center;padding:8px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
             </div>
 
+            
+            <!-- ══════════════════════════════════════════════════════
+                 لوحة أبطال ومحفزي السلامة (Safety Champions Leaderboard 🏆)
+            ══════════════════════════════════════════════════════ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;background:#fff;border-radius:14px;border:1.5px solid #e2e8f0;box-shadow:0 4px 15px rgba(0,0,0,0.03);">
+                <div style="padding:14px 20px;background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);color:#fff;display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:1.2rem;">🏆</span>
+                        <div>
+                            <span style="font-weight:800;font-size:0.95rem;">لوحة أبطال ومحفزي السلامة (Safety Champions)</span>
+                            <div style="font-size:0.72rem;color:#94a3b8;">أعلى مسؤولي السلامة والإدارات رصداً ومعالجة للملاحظات الميدانية</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;" id="obs-leaderboard-container">
+                    <!-- سيتم بناؤها تلقائياً -->
+                </div>
+            </div>
+    
             <!-- ══════════════════════════════════════════════════════
                  Row 1: الحالة + الخطورة
             ══════════════════════════════════════════════════════ -->
@@ -4757,6 +4776,51 @@ const DailyObservations = {
             const kpiProgress = obs.filter(o => o.status === 'جاري' || o.status === 'قيد التنفيذ').length;
             const kpiHighRisk = obs.filter(o => o.riskLevel === 'عالي' || o.riskLevel === 'عالية').length;
             const kpiMonth = obs.filter(o => { if(!o.date) return false; const d=new Date(o.date); const n=new Date(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth(); }).length;
+            
+        // تحديث لوحة أبطال السلامة
+        const leaderboardContainer = document.getElementById('obs-leaderboard-container');
+        if (leaderboardContainer) {
+            const observerCounts = {};
+            const deptCounts = {};
+
+            obs.forEach(o => {
+                const obsName = (o.observerName || '').trim();
+                const deptName = (o.responsibleDepartment || '').trim();
+                if (obsName && !obsName.includes('مجهول')) observerCounts[obsName] = (observerCounts[obsName] || 0) + 1;
+                if (deptName) deptCounts[deptName] = (deptCounts[deptName] || 0) + 1;
+            });
+
+            const topObservers = Object.entries(observerCounts).sort((a,b) => b[1] - a[1]).slice(0, 3);
+            const topDepts = Object.entries(deptCounts).sort((a,b) => b[1] - a[1]).slice(0, 3);
+
+            const medals = ['🥇', '🥈', '🥉'];
+            let lHtml = '<div style="background:#f8fafc;padding:12px;border-radius:10px;border:1px solid #e2e8f0;"><div style="font-weight:700;font-size:0.85rem;color:#1e3a8a;margin-bottom:8px;"><i class="fas fa-user-shield ml-1 text-blue-600"></i> أكثر المفتشين رصداً:</div>';
+            if (topObservers.length === 0) lHtml += '<div style="font-size:0.78rem;color:#94a3b8;">لا توجد بيانات كافية</div>';
+            else {
+                topObservers.forEach(([name, count], i) => {
+                    lHtml += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:0.82rem;">
+                        <span>${medals[i]} <b>${Utils.escapeHTML(name)}</b></span>
+                        <span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:10px;font-weight:700;font-size:0.75rem;">${count} ملاحظة</span>
+                    </div>`;
+                });
+            }
+            lHtml += '</div>';
+
+            lHtml += '<div style="background:#f8fafc;padding:12px;border-radius:10px;border:1px solid #e2e8f0;"><div style="font-weight:700;font-size:0.85rem;color:#15803d;margin-bottom:8px;"><i class="fas fa-building ml-1 text-emerald-600"></i> أكثر الإدارات تفاعلاً:</div>';
+            if (topDepts.length === 0) lHtml += '<div style="font-size:0.78rem;color:#94a3b8;">لا توجد بيانات كافية</div>';
+            else {
+                topDepts.forEach(([dept, count], i) => {
+                    lHtml += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:0.82rem;">
+                        <span>${medals[i]} <b>${Utils.escapeHTML(dept)}</b></span>
+                        <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-weight:700;font-size:0.75rem;">${count} إجراء</span>
+                    </div>`;
+                });
+            }
+            lHtml += '</div>';
+
+            leaderboardContainer.innerHTML = lHtml;
+        }
+        
             const kpiRate = kpiTotal > 0 ? (Math.round((kpiClosed / kpiTotal) * 100) + '%') : '0%';
             const closedWithDays = obs.filter(o => o.status === 'مغلق' && o.overdays > 0);
             const kpiAvgDays = closedWithDays.length > 0 ? (Math.round(closedWithDays.reduce((s,o) => s + (o.overdays||0), 0) / closedWithDays.length) + ' يوم') : '—';

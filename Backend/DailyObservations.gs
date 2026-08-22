@@ -3241,6 +3241,7 @@ function submitPublicObservation(payload) {
             try {
                 if (typeof notifyObservationWorkflowEmails === 'function') {
                     notifyObservationWorkflowEmails('new_pending_specialist', obsRecord);
+                syncObservationToCAPA_(obsRecord);
                 }
             } catch (nErr) {
                 Logger.log('Workflow alert notify error: ' + nErr.toString());
@@ -3259,3 +3260,95 @@ function submitPublicObservation(payload) {
     }
 }
 
+
+
+/**
+ * مزامنة الملاحظة الحرجة أو ذات الإجراء التصحيحي مع خطة متابعة الإجراءات (CAPA)
+ */
+function syncObservationToCAPA_(obsRecord) {
+    try {
+        if (!obsRecord || !obsRecord.correctiveAction || String(obsRecord.correctiveAction).trim().length === 0) return;
+        if (typeof addActionTrackingToSheet !== 'function') return;
+
+        var actionData = {
+            id: 'ACT_OBS_' + (obsRecord.id || Utilities.getUuid()),
+            title: 'إجراء تصحيحي لملاحظة: ' + (obsRecord.isoCode || obsRecord.id),
+            actionType: 'Corrective',
+            sourceModule: 'DailyObservations',
+            sourceId: obsRecord.isoCode || obsRecord.id,
+            description: obsRecord.correctiveAction,
+            hazardDescription: obsRecord.details || '',
+            site: obsRecord.siteName || '',
+            location: obsRecord.locationName || '',
+            responsibleDepartment: obsRecord.responsibleDepartment || '',
+            assignedTo: obsRecord.responsibleDepartment || '',
+            priority: (obsRecord.riskLevel === 'حرج' || obsRecord.riskLevel === 'عالي') ? 'High' : 'Medium',
+            status: 'Open',
+            dueDate: obsRecord.expectedCompletionDate || '',
+            createdAt: new Date().toISOString(),
+            createdBy: obsRecord.observerName || 'نظام الملاحظات اليومية'
+        };
+
+        addActionTrackingToSheet(actionData);
+    } catch (e) {
+        Logger.log('syncObservationToCAPA_ error: ' + e.toString());
+    }
+}
+
+/**
+ * إرسال التقرير التنفيذي الأسبوعي للملاحظات اليومية إلى إدارة السلامة
+ */
+function sendWeeklyDailyObservationsDigest() {
+    try {
+        var sheet = getSheetByName('DailyObservations');
+        if (!sheet) return { success: false, message: 'ورقة الملاحظات غير موجودة' };
+        
+        var rawData = readAllRowsWithHeaders(sheet) || [];
+        var now = new Date();
+        var oneWeekAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+        
+        var weekObs = rawData.filter(function(r) {
+            if (!r.date && !r.createdAt) return false;
+            var d = new Date(r.date || r.createdAt);
+            return !isNaN(d.getTime()) && d >= oneWeekAgo;
+        });
+
+        var totalCount = weekObs.length;
+        var closedCount = weekObs.filter(function(r) { return r.status === 'Closed' || r.status === 'مغلق'; }).length;
+        var criticalCount = weekObs.filter(function(r) { return r.riskLevel === 'حرج' || r.riskLevel === 'عالي'; }).length;
+        var closureRate = totalCount > 0 ? Math.round((closedCount / totalCount) * 100) : 100;
+
+        var htmlBody = '<div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">' +
+            '<div style="background: #1e3a8a; color: #fff; padding: 18px 24px;">' +
+                '<h2 style="margin:0; font-size: 1.2rem;">📊 التقرير التنفيذي الأسبوعي للملاحظات الميدانية (HSE)</h2>' +
+                '<p style="margin: 4px 0 0 0; font-size: 0.85rem; opacity: 0.85;">ملخص نشاط السلامة خلال آخر 7 أيام</p>' +
+            '</div>' +
+            '<div style="padding: 20px; background: #f8fafc;">' +
+                '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; margin-bottom: 20px;">' +
+                    '<div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1;"><div style="font-size: 1.3rem; font-weight: bold; color: #2563eb;">' + totalCount + '</div><div style="font-size: 0.75rem; color: #64748b;">إجمالي الملاحظات</div></div>' +
+                    '<div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1;"><div style="font-size: 1.3rem; font-weight: bold; color: #16a34a;">' + closureRate + '%</div><div style="font-size: 0.75rem; color: #64748b;">نسبة المعالجة والإغلاق</div></div>' +
+                    '<div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1;"><div style="font-size: 1.3rem; font-weight: bold; color: #dc2626;">' + criticalCount + '</div><div style="font-size: 0.75rem; color: #64748b;">مخاطر حرجة</div></div>' +
+                '</div>' +
+                '<p style="font-size: 0.85rem; color: #334155; margin-bottom: 12px;">تم توثيق هذا التقرير آلياً عبر منظومة السلامة والصحة المهنية الرقمية.</p>' +
+            '</div>' +
+        '</div>';
+
+        var recipients = getActiveUserEmailsWithDailyObsPermission('observations-manager-approve') || [];
+        if (recipients.length === 0) recipients = getActiveUserEmailsByRole('safety_manager');
+        
+        if (recipients.length > 0) {
+            recipients.forEach(function(email) {
+                try {
+                    MailApp.sendEmail({
+                        to: email,
+                        subject: '📊 [HSE Weekly] التقرير التنفيذي الأسبوعي للملاحظات الميدانية',
+                        htmlBody: htmlBody
+                    });
+                } catch(mErr) {}
+            });
+        }
+        return { success: true, message: 'تم إرسال التقرير الأسبوعي بنجاح' };
+    } catch(e) {
+        return { success: false, message: e.toString() };
+    }
+}

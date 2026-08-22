@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1218",
+  "version": "1.0.1219",
   "highlights": {
     "ar": [
-      "إضافة نظام التنبيه البريدي الفوري للمخاطر الحرجة وعالية الخطورة لمدير السلامة والإدارات المعنية.",
-      "إضافة أداة توليد وطباعة بطاقات وملصقات QR كود الجاهزة للأماكن والمصانع ميدانياً.",
-      "تحديث ميزات الملاحظات اليومية الشاملة (أداة الرسم، مشاركة واتساب، المزامنة غير المتصلة، ماسح QR)."
+      "الربط التلقائي للملاحظات الحرجة مع خطة متابعة الإجراءات التصحيحية الموحدة (CAPA Sync).",
+      "إضافة لوحة أبطال ومحفزي السلامة (Safety Champions Leaderboard) للأكثر رصداً ومعالجة.",
+      "تفعيل التقرير التنفيذي الأسبوعي الآلي لمدير السلامة والإدارة العليا."
     ],
     "en": [
-      "Integrated automated instant critical hazard email alerts for HSE managers and responsible departments.",
-      "Added printable field-ready Location QR sticker badge generator for all factories & sub-locations.",
-      "Full daily observation suite upgrades (drawing tool, WhatsApp sharing, offline sync, QR scanner)."
+      "Automated critical observation synchronization with the centralized CAPA Action Tracking register.",
+      "Integrated Safety Champions Leaderboard recognizing top active safety observers & departments.",
+      "Enabled automated weekly executive summary email reports for HSE management."
     ]
   }
 }
