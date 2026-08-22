@@ -764,7 +764,7 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                                 <div class="inst-icon"><i class="fas fa-user-shield text-blue-600"></i></div>
                                 <div>
                                     <div class="inst-title">3. \u0625\u0628\u0644\u0627\u063A \u0622\u0645\u0646 \u0648\u0645\u062A\u0627\u062D \u0644\u0644\u062C\u0645\u064A\u0639</div>
-                                    <div class="inst-desc">\u0628\u062F\u0648\u0646 \u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644\u060C \u0645\u062A\u0627\u062D \u0644\u0644\u0639\u0627\u0645\u0644\u064A\u0646 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 (\u0628\u0627\u0633\u0645\u0643 \u0623\u0648 \u0643\u0641\u0627\u0639\u0644 \u062E\u064A\u0631).</div>
+                                    <div class="inst-desc">\u0628\u062F\u0648\u0646 \u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644\u060C \u0645\u062A\u0627\u062D \u0644\u0644\u0639\u0627\u0645\u0644\u064A\u0646 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0648\u0627\u0644\u0632\u0648\u0627\u0631 (\u0628\u0627\u0633\u0645\u0643 \u0623\u0648 \u0645\u062E\u0641\u064A).</div>
                                 </div>
                             </div>
                             <div class="instruction-card">

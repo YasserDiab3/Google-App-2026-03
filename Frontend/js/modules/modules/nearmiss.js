@@ -1741,7 +1741,7 @@ const NearMiss = {
                                 <div class="inst-icon"><i class="fas fa-user-shield text-blue-600"></i></div>
                                 <div>
                                     <div class="inst-title">3. إبلاغ آمن ومتاح للجميع</div>
-                                    <div class="inst-desc">بدون تسجيل دخول، متاح للعاملين والمقاولين (باسمك أو كفاعل خير).</div>
+                                    <div class="inst-desc">بدون تسجيل دخول، متاح للعاملين والمقاولين والزوار (باسمك أو مخفي).</div>
                                 </div>
                             </div>
                             <div class="instruction-card">
