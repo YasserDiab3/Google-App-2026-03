@@ -265,84 +265,127 @@
 
         @media (max-width: 768px) {
             .iso-header-table {
-                grid-template-columns: minmax(75px, 95px) 1fr minmax(95px, 125px);
-                border-radius: 10px;
+                display: grid;
+                grid-template-columns: auto 1fr;
+                grid-template-areas:
+                    "brand title"
+                    "meta  meta";
+                padding: 10px 12px;
+                gap: 8px;
+                border-radius: 14px;
                 margin-bottom: 14px;
+                border: 2px solid #bfdbfe;
+                border-top: 4px solid #2563eb;
+                background: #ffffff;
+                box-shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
             }
+
             .iso-col-brand {
-                padding: 6px 4px;
-                gap: 4px;
-                border-left: 1px solid #e2e8f0;
-                border-bottom: none;
-                flex-direction: column;
-                justify-content: center;
+                grid-area: brand;
+                border: none;
+                padding: 0;
+                display: flex;
+                flex-direction: row;
                 align-items: center;
+                justify-content: flex-start;
+                gap: 6px;
             }
+
             .iso-logo-wrap {
-                max-width: 65px;
-                min-height: 36px;
-                max-height: 40px;
+                max-width: 46px;
+                min-height: 32px;
+                max-height: 36px;
                 padding: 2px 4px;
                 border-radius: 8px;
             }
+
             .iso-logo-img {
-                max-height: 32px;
-                max-width: 55px;
+                max-height: 28px;
+                max-width: 40px;
             }
+
             .iso-dept-name {
-                font-size: 0.52rem;
-                text-align: center;
+                font-size: 0.65rem;
+                font-weight: 800;
+                color: #1e3a8a;
                 white-space: normal;
                 line-height: 1.2;
+                text-align: right;
+                max-width: 90px;
             }
+
             .iso-col-title {
-                padding: 6px 6px;
-                border-bottom: none;
-                gap: 2px;
-            }
-            .iso-doc-title {
-                font-size: 0.78rem;
-                font-weight: 900;
-                white-space: nowrap;
-                line-height: 1.2;
-                text-align: center;
-                letter-spacing: -0.2px;
-            }
-            .iso-doc-subtitle {
-                font-size: 0.55rem;
-                line-height: 1.2;
-                text-align: center;
-            }
-            .iso-col-meta {
-                padding: 4px 6px;
-                border-right: 1px solid #e2e8f0;
+                grid-area: title;
+                border: none;
+                padding: 0;
                 display: flex;
                 flex-direction: column;
+                align-items: flex-end;
+                justify-content: center;
+                text-align: left;
+                gap: 2px;
+            }
+
+            .iso-doc-title {
+                font-size: 0.84rem;
+                font-weight: 900;
+                color: #0f172a;
+                white-space: nowrap;
+                line-height: 1.2;
+                letter-spacing: -0.2px;
+            }
+
+            .iso-doc-subtitle {
+                font-size: 0.52rem;
+                line-height: 1.2;
+                text-align: left;
+                padding: 1px 6px;
+                white-space: nowrap;
+            }
+
+            .iso-col-meta {
+                grid-area: meta;
+                border: none;
+                border-top: 1px dashed #cbd5e1;
+                padding: 6px 2px 0 2px;
+                background: transparent;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 4px;
+                width: 100%;
+            }
+
+            .iso-meta-row {
+                border: none;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
                 justify-content: center;
                 gap: 2px;
-                background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+                text-align: center;
             }
-            .iso-meta-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                gap: 2px;
-                border-bottom: 1px dashed #e2e8f0;
-                padding-bottom: 1px;
-            }
+
             .iso-meta-row:last-child {
                 border-bottom: none;
                 padding-bottom: 0;
             }
+
             .iso-meta-key {
-                font-size: 0.52rem;
+                font-size: 0.56rem;
+                color: #64748b;
+                font-weight: 700;
                 white-space: nowrap;
             }
+
             .iso-meta-val {
-                font-size: 0.52rem;
-                padding: 0 3px;
-                border-radius: 3px;
+                font-size: 0.62rem;
+                font-weight: 800;
+                padding: 1px 4px;
+                border-radius: 4px;
                 white-space: nowrap;
+                text-align: center;
+                width: 100%;
             }
         }
 
