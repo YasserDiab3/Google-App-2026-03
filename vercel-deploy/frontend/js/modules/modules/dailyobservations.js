@@ -9726,56 +9726,105 @@ const DailyObservations = {
 
     
     /**
-     * توليد وطباعة ملصقات الـ QR الميدانية لجميع المواقع والأماكن
+     * توليد وطباعة ملصقات الـ QR الميدانية الشاملة لجميع المواقع والأماكن بقاعدة البيانات
      */
     printLocationQrBadges() {
-        const sites = this.getSiteOptions ? this.getSiteOptions() : ['ICAPP-1', 'ICAPP-2'];
         const placesBySite = {};
 
-        // جمع المواقع والأماكن
-        (AppState.appData.observationSites || []).forEach(item => {
+        const addSitePlace = (site, place) => {
+            const s = String(site || '').trim();
+            const p = String(place || '').trim();
+            if (!s) return;
+            if (!placesBySite[s]) placesBySite[s] = new Set();
+            if (p) placesBySite[s].add(p);
+        };
+
+        // 1. من getAllSites()
+        try {
+            const allSites = this.getAllSites ? this.getAllSites() : [];
+            allSites.forEach(s => {
+                const sName = s.name || s.siteName;
+                if (sName) {
+                    addSitePlace(sName, '');
+                    if (Array.isArray(s.places)) {
+                        s.places.forEach(pl => addSitePlace(sName, pl.name || pl));
+                    }
+                }
+            });
+        } catch (e) {}
+
+        // 2. من ObservationSites
+        const obsSites = Array.isArray(AppState.appData?.observationSites) ? AppState.appData.observationSites : [];
+        obsSites.forEach(item => {
             const s = item.siteName || item.site || item.name;
             const p = item.placeName || item.locationName || item.place;
-            if (s && p) {
-                if (!placesBySite[s]) placesBySite[s] = new Set();
-                placesBySite[s].add(p);
-            }
-        });
-        (AppState.appData.subLocations || []).forEach(item => {
-            const s = item.factoryName || item.factory || item.siteName;
-            const p = item.name || item.subLocationName;
-            if (s && p) {
-                if (!placesBySite[s]) placesBySite[s] = new Set();
-                placesBySite[s].add(p);
-            }
+            addSitePlace(s, p);
         });
 
-        if (Object.keys(placesBySite).length === 0) {
-            placesBySite['ICAPP-1'] = new Set(['منظومة طلمبات الحريق', 'عنبر الإنتاج الرئيسي', 'منطقة التعبئة والتغليف', 'مستودع المواد الخام', 'غرفة المحولات']);
-            placesBySite['ICAPP-2'] = new Set(['عنبر المعالجة والفرز', 'خطوط الإنتاج والتعبئة', 'ثلاجات التبريد والتجميد', 'المكاتب الإدارية']);
-        }
+        // 3. من SubLocations
+        const subLocs = Array.isArray(AppState.appData?.subLocations) ? AppState.appData.subLocations : [];
+        subLocs.forEach(item => {
+            const s = item.factoryName || item.factory || item.siteName || item.site;
+            const p = item.name || item.subLocationName || item.place;
+            addSitePlace(s, p);
+        });
+
+        // 4. من سجل الملاحظات اليومية الفعلي في قاعدة البيانات
+        const dailyObs = Array.isArray(AppState.appData?.dailyObservations) ? AppState.appData.dailyObservations : [];
+        dailyObs.forEach(obs => {
+            const s = obs.siteName || obs.site || obs.siteId;
+            const p = obs.locationName || obs.placeName || obs.place || obs.placeId;
+            addSitePlace(s, p);
+        });
+
+        // 5. من AppState.sites / CompanySettings
+        const configSites = Array.isArray(AppState.sites) ? AppState.sites : (Array.isArray(AppState.appData?.sites) ? AppState.appData.sites : []);
+        configSites.forEach(s => {
+            const sName = typeof s === 'string' ? s : (s.name || s.siteName);
+            addSitePlace(sName, '');
+        });
 
         const origin = window.location.origin || '';
         const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
         const publicObsUrl = `${origin}${basePath}public-observation.html`;
 
         let cardsHtml = '';
+        let totalCount = 0;
+
         for (const site of Object.keys(placesBySite)) {
             const places = Array.from(placesBySite[site]);
-            places.forEach(place => {
-                const targetQrUrl = `${publicObsUrl}?factory=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
-                const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(targetQrUrl)}`;
-
+            
+            // إذا لم يكن هناك أماكن فرعية، نطبع ملصق الموقع العام
+            if (places.length === 0) {
+                totalCount++;
+                const targetQrUrl = `${publicObsUrl}?factory=${encodeURIComponent(site)}`;
+                const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(targetQrUrl)}`;
                 cardsHtml += `
-                    <div style="border: 2px dashed #0284c7; border-radius: 12px; padding: 14px; text-align: center; page-break-inside: avoid; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between;">
+                    <div style="border: 2px solid #0284c7; border-radius: 12px; padding: 14px; text-align: center; page-break-inside: avoid; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
                         <div style="font-size: 0.85rem; font-weight: 800; color: #0369a1; margin-bottom: 4px;">منظومة السلامة والصحة المهنية (HSE)</div>
                         <img src="${qrImgSrc}" alt="QR Code" style="width: 140px; height: 140px; margin: 8px 0; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px;">
-                        <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a;">${site}</div>
-                        <div style="font-size: 0.82rem; font-weight: 700; color: #475569; margin-top: 2px;">${place}</div>
-                        <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 6px;">امسح الكاميرا لتسجيل ملاحظة فورية بالموقع</div>
+                        <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">${site}</div>
+                        <div style="font-size: 0.82rem; font-weight: 700; color: #0284c7; margin-top: 2px;">(الموقع العام)</div>
+                        <div style="font-size: 0.65rem; color: #64748b; margin-top: 6px;">امسح الكاميرا لتسجيل ملاحظة فورية بالموقع</div>
                     </div>
                 `;
-            });
+            } else {
+                places.forEach(place => {
+                    totalCount++;
+                    const targetQrUrl = `${publicObsUrl}?factory=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
+                    const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(targetQrUrl)}`;
+
+                    cardsHtml += `
+                        <div style="border: 2px solid #0284c7; border-radius: 12px; padding: 14px; text-align: center; page-break-inside: avoid; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                            <div style="font-size: 0.85rem; font-weight: 800; color: #0369a1; margin-bottom: 4px;">منظومة السلامة والصحة المهنية (HSE)</div>
+                            <img src="${qrImgSrc}" alt="QR Code" style="width: 140px; height: 140px; margin: 8px 0; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px;">
+                            <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">${site}</div>
+                            <div style="font-size: 0.88rem; font-weight: 700; color: #0369a1; margin-top: 2px;">${place}</div>
+                            <div style="font-size: 0.65rem; color: #64748b; margin-top: 6px;">امسح الكاميرا لتسجيل ملاحظة فورية بالموقع</div>
+                        </div>
+                    `;
+                });
+            }
         }
 
         const printWindow = window.open('', '_blank');
@@ -9784,7 +9833,7 @@ const DailyObservations = {
             <html lang="ar" dir="rtl">
             <head>
                 <meta charset="UTF-8">
-                <title>ملصقات QR كود المواقع الميدانية - HSE</title>
+                <title>ملصقات QR كود لجميع المواقع والأماكن الميدانية (${totalCount} ملصق)</title>
                 <style>
                     body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 20px; background: #f8fafc; color: #0f172a; }
                     .print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -9796,9 +9845,14 @@ const DailyObservations = {
                 </style>
             </head>
             <body>
-                <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 12px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                    <h2 style="margin: 0; font-size: 1.1rem; color: #0369a1;">🖨️ ملصقات QR كود للمواقع الميدانية الجاهزة للطباعة</h2>
-                    <button onclick="window.print()" style="background: #0284c7; color: #fff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; cursor: pointer;">طباعة الملصقات الآن</button>
+                <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 14px 24px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+                    <div>
+                        <h2 style="margin: 0 0 4px 0; font-size: 1.15rem; color: #0369a1;">🖨️ ملصقات QR كود الشاملة لجميع المواقع الميدانية</h2>
+                        <div style="font-size: 0.85rem; color: #64748b;">إجمالي الملصقات المولدة: <b>${totalCount} ملصق</b> جاهز للطباعة واللصق</div>
+                    </div>
+                    <button onclick="window.print()" style="background: #0284c7; color: #fff; border: none; padding: 10px 22px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.95rem;">
+                        <i class="fas fa-print"></i> طباعة جميع الملصقات (${totalCount})
+                    </button>
                 </div>
                 <div class="print-grid">${cardsHtml}</div>
             </body>
