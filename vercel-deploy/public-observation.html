@@ -1555,12 +1555,12 @@
             <!-- Honeypot ضد السبام -->
             <input type="text" name="_hp_field" id="hpField" style="display:none;" tabindex="-1" autocomplete="off">
 
-            <!-- 1. الموقع والمكان داخل المصنع -->
+            <!-- 1. الموقع والمكان وتوقيت الملاحظة -->
             <div class="form-section">
                 <div class="section-header" style="justify-content: space-between;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span class="section-badge">1</span>
-                        <span class="section-title">الموقع والمكان داخل المصنع</span>
+                        <span class="section-title">الموقع وتوقيت الملاحظة الميدانية</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <button type="button" class="btn-qr-scan" onclick="openQrScannerModal()" title="مسح QR الموقع">
@@ -1571,7 +1571,7 @@
                         </span>
                     </div>
                 </div>
-                <p class="section-desc">اختر المصنع / الموقع ثم المكان المرتبط به من قاعدة بيانات النظام.</p>
+                <p class="section-desc">حدد المصنع والمكان وتوقيت الرصد الميداني والوردية بدقة.</p>
 
                 <div class="grid-2">
                     <div class="form-group">
@@ -1595,11 +1595,45 @@
                     </div>
                 </div>
 
-
                 <!-- إدخال يدوي للمكان -->
                 <div id="customPlaceGroup" class="form-group" style="display: none;">
                     <label class="form-label" for="customPlaceInput">مكان فرعي آخر (إدخال يدوي):</label>
                     <input type="text" id="customPlaceInput" class="form-control" placeholder="اكتب المكان أو القسم بدقة...">
+                </div>
+
+                <!-- كرت توقيت الملاحظة والوردية بهوية بصرية مميزة ومنمقة أسفل المصنع -->
+                <div class="form-group" style="margin-top: 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 4px;">
+                        <label class="form-label" style="font-weight: 700; color: #1e293b; margin-bottom: 0;">
+                            <i class="fas fa-business-time text-blue-600"></i>
+                            توقيت الرصد والوردية <span class="required">*</span>
+                        </label>
+                        <span style="font-size: 0.72rem; color: #2563eb; font-weight: 700;">
+                            <i class="fas fa-clock-rotate-left ml-1"></i>توقيت مباشر مع إمكانية التعديل
+                        </span>
+                    </div>
+
+                    <div class="grid-2" style="margin-bottom: 0;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" for="dateInput" style="font-size: 0.8rem; margin-bottom: 4px; color: #475569;">
+                                <i class="fas fa-calendar-days text-slate-500"></i>
+                                تاريخ ووقت الملاحظة <span class="required">*</span>
+                            </label>
+                            <input type="datetime-local" id="dateInput" class="form-control" style="background: #ffffff;" required onchange="handleDateChange(this.value)">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" for="shiftSelect" style="font-size: 0.8rem; margin-bottom: 4px; color: #475569;">
+                                <i class="fas fa-user-clock text-slate-500"></i>
+                                وردية العمل (Shift) <span class="required">*</span>
+                            </label>
+                            <select id="shiftSelect" class="form-control" style="background: #ffffff;">
+                                <option value="الأولى">الأولى (First Shift - صباحية)</option>
+                                <option value="الثانية">الثانية (Second Shift - مسائية)</option>
+                                <option value="الثالثة">الثالثة (Third Shift - ليلية)</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1607,7 +1641,7 @@
             <div class="form-section">
                 <div class="section-header">
                     <span class="section-badge">2</span>
-                    <span class="section-title">نوع وتصنيف الملاحظة وتوقيتها</span>
+                    <span class="section-title">نوع وتصنيف الملاحظة</span>
                 </div>
 
                 <!-- كروت نوع الملاحظة -->
@@ -1658,28 +1692,6 @@
                 <div class="form-group" id="customSubCategoryGroup" style="display: none; margin-top: 8px;">
                     <label class="form-label" for="customSubCategoryInput">حدد التصنيف الفرعي (إدخال يدوي):</label>
                     <input type="text" id="customSubCategoryInput" class="form-control" placeholder="اكتب التصنيف الفرعي بدقة...">
-                </div>
-
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="form-label" for="dateInput">
-                            <i class="fas fa-calendar-alt text-slate-600"></i>
-                            تاريخ ووقت الملاحظة <span class="required">*</span>
-                        </label>
-                        <input type="datetime-local" id="dateInput" class="form-control" required onchange="handleDateChange(this.value)">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="shiftSelect">
-                            <i class="fas fa-clock text-slate-600"></i>
-                            الوردية
-                        </label>
-                        <select id="shiftSelect" class="form-control">
-                            <option value="الأولى">الأولى (First Shift)</option>
-                            <option value="الثانية">الثانية (Second Shift)</option>
-                            <option value="الثالثة">الثالثة (Third Shift)</option>
-                        </select>
-                    </div>
                 </div>
             </div>
 
