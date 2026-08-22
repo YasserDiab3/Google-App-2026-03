@@ -514,48 +514,102 @@
             display: block;
         }
 
-        /* شيبس مستوى الخطورة */
+        /* كروت مستوى الخطورة المنمقة والمميزة بالألوان */
         .risk-chips {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 8px;
+            margin-top: 6px;
         }
 
         .risk-chip {
             padding: 9px 4px;
             text-align: center;
-            border-radius: var(--radius-sm);
-            border: 1.5px solid #e2e8f0;
-            font-size: 0.85rem;
-            font-weight: 700;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            font-size: 0.78rem;
+            font-weight: 800;
             cursor: pointer;
             background: #ffffff;
+            color: #475569;
             transition: all 0.2s ease;
             user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
         }
 
+        .risk-chip i {
+            font-size: 1.05rem;
+            transition: all 0.2s ease;
+        }
+
+        .risk-chip:hover {
+            transform: translateY(-1px);
+        }
+
+        /* 🟢 منخفض (Low) */
+        .risk-chip[data-risk="منخفض"] {
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+            color: #166534;
+        }
+        .risk-chip[data-risk="منخفض"] i { color: #16a34a; }
         .risk-chip[data-risk="منخفض"].selected {
-            background: #ecfdf5;
-            border-color: #10b981;
-            color: #047857;
+            background: #dcfce7;
+            border-color: #16a34a;
+            color: #14532d;
+            box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.4);
+            transform: scale(1.02);
         }
 
-        .risk-chip[data-risk="متوسط"].selected {
+        /* 🟡 متوسط (Medium) */
+        .risk-chip[data-risk="متوسط"] {
+            border-color: #fde68a;
             background: #fffbeb;
-            border-color: #f59e0b;
-            color: #b45309;
+            color: #92400e;
+        }
+        .risk-chip[data-risk="متوسط"] i { color: #d97706; }
+        .risk-chip[data-risk="متوسط"].selected {
+            background: #fef3c7;
+            border-color: #d97706;
+            color: #78350f;
+            box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.4);
+            transform: scale(1.02);
         }
 
-        .risk-chip[data-risk="عالي"].selected {
+        /* 🔴 عالي (High) */
+        .risk-chip[data-risk="عالي"] {
+            border-color: #fecaca;
             background: #fef2f2;
-            border-color: #ef4444;
-            color: #b91c1c;
+            color: #991b1b;
+        }
+        .risk-chip[data-risk="عالي"] i { color: #dc2626; }
+        .risk-chip[data-risk="عالي"].selected {
+            background: #fee2e2;
+            border-color: #dc2626;
+            color: #7f1d1d;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.4);
+            transform: scale(1.02);
         }
 
+        /* 🛑 حرج (Critical) */
+        .risk-chip[data-risk="حرج"] {
+            border-color: #cbd5e1;
+            background: #f8fafc;
+            color: #475569;
+        }
+        .risk-chip[data-risk="حرج"] i { color: #7f1d1d; }
         .risk-chip[data-risk="حرج"].selected {
             background: #450a0a;
-            border-color: #7f1d1d;
+            border-color: #991b1b;
             color: #ffffff;
+            box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.4);
+            transform: scale(1.02);
+        }
+        .risk-chip[data-risk="حرج"].selected i {
+            color: #f87171;
         }
 
         /* منطقة رفع الصورة */
@@ -1549,11 +1603,11 @@
                 </div>
             </div>
 
-            <!-- 2. نوع الملاحظة والخطورة -->
+            <!-- 2. نوع وتصنيف الملاحظة -->
             <div class="form-section">
                 <div class="section-header">
                     <span class="section-badge">2</span>
-                    <span class="section-title">تصنيف الملاحظة ومستوى الخطورة</span>
+                    <span class="section-title">نوع وتصنيف الملاحظة وتوقيتها</span>
                 </div>
 
                 <!-- كروت نوع الملاحظة -->
@@ -1625,20 +1679,6 @@
                             <option value="الثانية">الثانية (Second Shift)</option>
                             <option value="الثالثة">الثالثة (Third Shift)</option>
                         </select>
-                    </div>
-                </div>
-
-                <!-- مستوى الخطورة -->
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-gauge-high text-slate-600"></i>
-                        معدل الخطورة <span class="required">*</span>
-                    </label>
-                    <div class="risk-chips">
-                        <div class="risk-chip" data-risk="منخفض" onclick="selectRisk(this)">منخفض</div>
-                        <div class="risk-chip selected" data-risk="متوسط" onclick="selectRisk(this)">متوسط</div>
-                        <div class="risk-chip" data-risk="عالي" onclick="selectRisk(this)">عالي</div>
-                        <div class="risk-chip" data-risk="حرج" onclick="selectRisk(this)">حرج</div>
                     </div>
                 </div>
             </div>
@@ -1740,6 +1780,38 @@
 
                     <textarea id="correctiveInput" class="form-control" style="min-height:70px; border-color: #bbf7d0; background: #fff;" placeholder="الإجراء الفوري المتخذ أو المقترح (أو اختر من المقترحات السريعة أعلاه)..." autocomplete="off"></textarea>
                     <div id="correctiveAutocompleteList" class="autocomplete-dropdown"></div>
+                </div>
+
+                <!-- معدل الخطورة منمق بالألوان وأيقونات التحذير -->
+                <div class="form-group" style="margin-top: 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 4px;">
+                        <label class="form-label" style="font-weight: 700; color: #1e293b; margin-bottom: 0;">
+                            <i class="fas fa-gauge-high text-red-600"></i>
+                            معدل الخطورة (Risk Level) <span class="required">*</span>
+                        </label>
+                        <span style="font-size: 0.72rem; color: #dc2626; font-weight: 700;">
+                            <i class="fas fa-wand-magic-sparkles ml-1"></i>يُحدد تلقائياً مع إمكانية التعديل
+                        </span>
+                    </div>
+                    
+                    <div class="risk-chips">
+                        <div class="risk-chip" data-risk="منخفض" onclick="selectRisk(this)">
+                            <i class="fas fa-shield"></i>
+                            <span>🟢 منخفض</span>
+                        </div>
+                        <div class="risk-chip selected" data-risk="متوسط" onclick="selectRisk(this)">
+                            <i class="fas fa-triangle-exclamation"></i>
+                            <span>🟡 متوسط</span>
+                        </div>
+                        <div class="risk-chip" data-risk="عالي" onclick="selectRisk(this)">
+                            <i class="fas fa-fire"></i>
+                            <span>🔴 عالي</span>
+                        </div>
+                        <div class="risk-chip" data-risk="حرج" onclick="selectRisk(this)">
+                            <i class="fas fa-skull-crossbones"></i>
+                            <span>🛑 حرج</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- تاريخ التنفيذ المتوقع أعلى الحالة بشكل منسق ومنفرد -->
