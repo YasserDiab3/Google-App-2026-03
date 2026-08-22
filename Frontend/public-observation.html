@@ -1155,9 +1155,15 @@
                         <i class="fas fa-building-user text-blue-600"></i>
                         المسؤول عن التنفيذ / الإدارة المعنية <span class="required">*</span>
                     </label>
-                    <select id="responsibleDeptSelect" class="form-control" required>
+                    <select id="responsibleDeptSelect" class="form-control" required onchange="handleDeptChange(this.value)">
                         <option value="">— جاري تحميل الإدارات من النظام... —</option>
                     </select>
+                </div>
+
+                <!-- إدخال يدوي للإدارة في حال عدم وجودها في القائمة -->
+                <div id="customDeptGroup" class="form-group" style="display: none;">
+                    <label class="form-label" for="customDeptInput">اسم الإدارة / الجهة المعنية (إدخال يدوي) <span class="required">*</span>:</label>
+                    <input type="text" id="customDeptInput" class="form-control" placeholder="اكتب اسم الإدارة أو القسم المسؤول...">
                 </div>
 
                 <div class="form-group" style="position: relative;">
@@ -1698,15 +1704,39 @@
                 handleSiteChange(siteSelect.value);
             }
 
-            // 2. الإدارات الفعلية من النظام
+            // 2. الإدارات الفعلية الشاملة من النظام
             const deptSelect = document.getElementById('responsibleDeptSelect');
             const previousDept = deptSelect.value;
-            deptSelect.innerHTML = '<option value="">— اختر الإدارة المعنية —</option>';
-            const deptsList = (Array.isArray(cfg.departments) && cfg.departments.length > 0) ? cfg.departments : [
-                'السلامة والصحة المهنية', 'الصيانة', 'الإنتاج والتشغيل', 'الجودة وسلامة الغذاء',
-                'المستودعات والخدمات اللوجستية', 'الموارد البشرية', 'الشؤون الإدارية', 'الأمن والحراسة',
-                'الهندسة والمشاريع', 'البيئة والاستدامة'
-            ];
+            deptSelect.innerHTML = '<option value="">— اختر الإدارة المسؤولة عن التنفيذ —</option>';
+            
+            let deptsList = (Array.isArray(cfg.departments) && cfg.departments.length > 0) ? cfg.departments : [];
+            if (deptsList.length === 0) {
+                try {
+                    const localCache = localStorage.getItem('HSE_SETTINGS_CACHE') || localStorage.getItem('appData');
+                    if (localCache) {
+                        const parsed = JSON.parse(localCache);
+                        if (parsed.companySettings && (parsed.companySettings.formDepartments || parsed.companySettings.departments)) {
+                            const raw = parsed.companySettings.formDepartments || parsed.companySettings.departments;
+                            deptsList = Array.isArray(raw) ? raw : String(raw).split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+                        }
+                    }
+                } catch(e) {}
+            }
+            if (deptsList.length === 0) {
+                deptsList = [
+                    'إدارة السلامة والصحة المهنية والبيئة (HSE)',
+                    'إدارة الصيانة والخدمات الفنية',
+                    'إدارة الإنتاج والتشغيل',
+                    'إدارة الجودة وسلامة الغذاء',
+                    'إدارة المستودعات والخدمات اللوجستية',
+                    'إدارة الموارد البشرية والشؤون الإدارية',
+                    'إدارة الهندسة والمشاريع',
+                    'إدارة سلاسل الإمداد والمشتريات',
+                    'إدارة الأمن والحراسة',
+                    'إدارة تكنولوجيا المعلومات (IT)'
+                ];
+            }
+
             deptsList.forEach(d => {
                 const opt = document.createElement('option');
                 opt.value = d;
@@ -1716,6 +1746,11 @@
                 }
                 deptSelect.appendChild(opt);
             });
+
+            const customDeptOpt = document.createElement('option');
+            customDeptOpt.value = '__OTHER_DEPT__';
+            customDeptOpt.textContent = '➕ إدارة أخرى (إدخال يدوي)...';
+            deptSelect.appendChild(customDeptOpt);
 
             // 3. مسؤولو فريق السلامة والصحة المهنية فقط (بدون أي تكرار)
             const ownerSelect = document.getElementById('ownerSelect');
@@ -1792,6 +1827,16 @@
                 return String(p.name || p.placeName || p.locationName || p.place || p.label || p.title || p.id || '').trim();
             }
             return String(p).trim();
+        }
+
+                function handleDeptChange(val) {
+            const customGroup = document.getElementById('customDeptGroup');
+            if (val === '__OTHER_DEPT__') {
+                customGroup.style.display = 'block';
+                document.getElementById('customDeptInput').focus();
+            } else {
+                customGroup.style.display = 'none';
+            }
         }
 
         function handleSiteChange(siteName) {
@@ -2750,7 +2795,10 @@
             const corrective = document.getElementById('correctiveInput').value.trim();
             const dateVal = document.getElementById('dateInput').value;
             const shift = document.getElementById('shiftSelect').value;
-            const dept = document.getElementById('responsibleDeptSelect').value;
+            let dept = document.getElementById('responsibleDeptSelect').value;
+            if (dept === '__OTHER_DEPT__') {
+                dept = document.getElementById('customDeptInput').value.trim() || 'إدارة أخرى';
+            }
             const statusVal = document.getElementById('statusSelect').value || 'Open';
             const expectedDateVal = document.getElementById('expectedDateInput').value || '';
             
