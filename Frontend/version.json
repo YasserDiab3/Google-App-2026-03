@@ -2,14 +2,14 @@
   "version": "1.0.1235",
   "highlights": {
     "ar": [
-      "ربط الإرسال الفوري لنموذج الحوادث الوشيكة مع Google Apps Script وتسجيل البلاغات في شيت NearMiss مباشرة.",
-      "تطبيق آلية الربط الديناميكي للمصانع والمواقع الفرعية بمطابقة تامة مع نموذج الملاحظات اليومية.",
-      "دعم المزامنة السحابية مع آليات إعادة المحاولة التلقائية والرصد الجغرافي الدقيق."
+      "تحديث Deployment السحابي (Google Apps Script @337) واستثناء submitPublicNearMiss من بوابة الجلسة.",
+      "تأكيد واختبار تسجيل البلاغات الحية بنجاح وتوليد الأرقام المرجعية في جدول NearMiss.",
+      "مطابقة كاملة لآلية اختيار المصنع والمكان الفرعي مع دعم التعبئة التلقائية والإدخال اليدوي."
     ],
     "en": [
-      "Connected instant Near Miss submission to Google Apps Script and recorded reports directly into the NearMiss sheet.",
-      "Applied exact dynamic cascading site-to-place dropdown linkage identically to Daily Observations.",
-      "Supported cloud background sync with automatic retries and precise GPS capture."
+      "Updated Google Apps Script deployment (@337) with session exemption for submitPublicNearMiss.",
+      "Tested and verified live Near Miss submissions recording into the NearMiss sheet with sequential IDs.",
+      "Fully matched factory and sub-location cascading selection with auto-fill and manual override."
     ]
   }
 }
