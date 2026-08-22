@@ -1666,14 +1666,26 @@ const NearMiss = {
             return;
         }
 
+        const cleanPlaceName = (rawPlace, siteName) => {
+            if (!rawPlace) return 'الموقع العام';
+            let p = String(rawPlace).trim();
+            p = p.replace(/^(?:\d+[-_]?ICAPP|ICAPP[-_]?\d+)[-_ ]*/i, '').trim();
+            if (siteName) {
+                const escapedSite = String(siteName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                p = p.replace(new RegExp(`^${escapedSite}[-_ ]*`, 'i'), '').trim();
+            }
+            return p || 'الموقع العام';
+        };
+
         // ══════════════════════════════════════════════════════
         // نمط 1: بوستر إعلاني كامل للوحة الإعلانات (ورقة A4 كاملة لكل موقع)
         // ══════════════════════════════════════════════════════
         if (layoutType === '1x1') {
             const postersHtml = itemsToPrint.map((item, idx) => {
                 const site = item.site;
-                const place = item.place || 'الموقع العام';
-                const directTarget = `${publicUrl}?factory=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
+                const rawPlace = item.place || 'الموقع العام';
+                const displayPlace = cleanPlaceName(rawPlace, site);
+                const directTarget = `${publicUrl}?factory=${encodeURIComponent(site)}&place=${encodeURIComponent(rawPlace)}`;
                 const qrUrl = this.generateQrDataUrl(directTarget, 280);
                 const encodedTarget = encodeURIComponent(directTarget);
 
@@ -1699,7 +1711,11 @@ const NearMiss = {
                         <!-- شريط الموقع المخصص -->
                         <div class="location-banner">
                             <span class="loc-tag-label"><i class="fas fa-map-marker-alt ml-1"></i> ملصق مخصص للموقع:</span>
-                            <span class="loc-name-highlight" dir="rtl"><bdi dir="ltr">${Utils.escapeHTML(site)}</bdi> — <bdi dir="auto">${Utils.escapeHTML(place)}</bdi></span>
+                            <span class="loc-name-highlight">
+                                <bdi dir="ltr">${Utils.escapeHTML(site)}</bdi>
+                                <span style="margin: 0 6px; opacity: 0.85;">—</span>
+                                <bdi dir="auto">${Utils.escapeHTML(displayPlace)}</bdi>
+                            </span>
                         </div>
 
                         <!-- العنوان والرسالة التوعوية الجاذبة -->
@@ -2085,8 +2101,9 @@ const NearMiss = {
 
         const cardsHtml = itemsToPrint.map((item, idx) => {
             const site = item.site;
-            const place = item.place || 'الموقع العام';
-            const directTarget = `${publicUrl}?factory=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
+            const rawPlace = item.place || 'الموقع العام';
+            const displayPlace = cleanPlaceName(rawPlace, site);
+            const directTarget = `${publicUrl}?factory=${encodeURIComponent(site)}&place=${encodeURIComponent(rawPlace)}`;
             const qrUrl = this.generateQrDataUrl(directTarget, qrSize);
             const encodedTarget = encodeURIComponent(directTarget);
 
@@ -2098,8 +2115,8 @@ const NearMiss = {
                     </div>
                     <div class="qr-card-body">
                         <div class="qr-card-info">
-                            <div class="qr-card-site" style="font-size:${fontSizeTitle};">${Utils.escapeHTML(site)}</div>
-                            <div class="qr-card-place" style="font-size:${fontSizeSub};">${Utils.escapeHTML(place)}</div>
+                            <div class="qr-card-site" style="font-size:${fontSizeTitle};"><bdi dir="ltr">${Utils.escapeHTML(site)}</bdi></div>
+                            <div class="qr-card-place" style="font-size:${fontSizeSub};"><bdi dir="auto">${Utils.escapeHTML(displayPlace)}</bdi></div>
                             <div class="qr-card-inst"><i class="fas fa-camera ml-1"></i> امسح للإبلاغ الفوري عن خطر وشيك</div>
                         </div>
                         <div class="qr-card-img-wrap">
