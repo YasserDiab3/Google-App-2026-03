@@ -1990,6 +1990,84 @@
         .status-card.selected[data-status="Closed"] i {
             color: #15803d;
         }
+
+        /* تحسينات الاستجابة الفائقة للشاشات الصغيرة والهواتف الذكية */
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px 8px;
+            }
+            .form-section {
+                padding: 14px 12px;
+                border-radius: 14px;
+                margin-bottom: 12px;
+            }
+            .section-header {
+                margin-bottom: 8px;
+            }
+            .section-title {
+                font-size: 0.95rem;
+            }
+            .section-desc {
+                font-size: 0.76rem;
+                margin-bottom: 10px;
+            }
+            .location-selector-card,
+            .timing-shift-card,
+            .subcategory-card,
+            .dept-selector-card,
+            .observation-pair-card,
+            .risk-level-container-card,
+            .target-date-card,
+            .photo-upload-card,
+            .reporter-profile-card {
+                padding: 12px 10px;
+                border-radius: 12px;
+            }
+            .types-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            .type-card {
+                padding: 10px 6px;
+            }
+            .type-card .icon {
+                font-size: 1.3rem;
+                margin-bottom: 4px;
+            }
+            .type-card .title {
+                font-size: 0.8rem;
+            }
+            .risk-chips {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 5px;
+            }
+            .risk-chip {
+                padding: 8px 2px;
+                font-size: 0.72rem;
+            }
+            .risk-chip i {
+                font-size: 0.95rem;
+            }
+            .status-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 5px;
+            }
+            .status-card {
+                padding: 8px 4px;
+                font-size: 0.72rem;
+            }
+            .quick-action-pills {
+                gap: 6px;
+            }
+            .btn-quick-pill {
+                padding: 5px 8px;
+                font-size: 0.72rem;
+            }
+            .btn-submit {
+                font-size: 1rem;
+                padding: 13px 18px;
+            }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" defer></script>
 </head>
