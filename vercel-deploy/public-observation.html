@@ -1320,6 +1320,21 @@
             box-shadow: 0 6px 16px rgba(37, 99, 235, 0.1);
             border-color: #93c5fd;
         }
+
+        /* كرت وتنسيق التصنيف الفرعي المحدد الجمالي المهني */
+        .subcategory-card {
+            margin-top: 14px;
+            background: linear-gradient(135deg, #fffaf5 0%, #ffffff 50%, #fff7ed 100%);
+            border: 2px solid #fdba74;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.06);
+            transition: all 0.2s ease;
+        }
+        .subcategory-card:hover {
+            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.12);
+            border-color: #fb923c;
+        }
     
         /* تحسينات متقدمة للملاحظات اليومية */
         .btn-qr-scan {
@@ -2063,20 +2078,32 @@
                     </div>
                 </div>
 
-                <!-- التصنيف الفرعي التفاعلي المباشر -->
-                <div class="form-group" id="subCategoryGroup" style="margin-top: 14px;">
-                    <label class="form-label" for="subCategorySelect">
-                        <i class="fas fa-layer-group text-amber-600"></i>
-                        التصنيف الفرعي المحدد <span class="required">*</span>
-                    </label>
-                    <select id="subCategorySelect" class="form-control" required onchange="handleSubCategoryChange(this.value)">
-                        <!-- سيتم تعبئته ديناميكياً بناءً على نوع الملاحظة -->
-                    </select>
-                </div>
+                <!-- التصنيف الفرعي التفاعلي المباشر بطابع جمالي مهني منمق -->
+                <div class="subcategory-card" id="subCategoryGroup">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                        <label class="form-label" for="subCategorySelect" style="font-weight: 800; color: #9a3412; font-size: 0.92rem; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-layer-group text-amber-600" style="font-size: 1.1rem;"></i>
+                            <span>التصنيف الفرعي المحدد (نوع الخطر)</span>
+                            <span class="required">*</span>
+                        </label>
+                        <span id="subCategoryTypeBadge" style="font-size: 0.72rem; color: #c2410c; font-weight: 800; background: #ffedd5; border: 1px solid #fed7aa; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-bolt text-amber-600"></i>محدد حسب نوع الملاحظة
+                        </span>
+                    </div>
 
-                <div class="form-group" id="customSubCategoryGroup" style="display: none; margin-top: 8px;">
-                    <label class="form-label" for="customSubCategoryInput">حدد التصنيف الفرعي (إدخال يدوي):</label>
-                    <input type="text" id="customSubCategoryInput" class="form-control" placeholder="اكتب التصنيف الفرعي بدقة...">
+                    <div style="position: relative;">
+                        <select id="subCategorySelect" class="form-control" style="background: #ffffff; border: 1.5px solid #fdba74; font-weight: 700; color: #7c2d12; font-size: 0.92rem; padding: 10px 12px; border-radius: 8px;" required onchange="handleSubCategoryChange(this.value)">
+                            <!-- سيتم تعبئته ديناميكياً بناءً على نوع الملاحظة -->
+                        </select>
+                    </div>
+                    <span style="font-size: 0.72rem; color: #9a3412; margin-top: 5px; display: block; font-weight: 600;">
+                        <i class="fas fa-wand-magic-sparkles ml-1"></i>اختيار التصنيف يملأ التفاصيل والإجراء ومعدل الخطورة تلقائياً
+                    </span>
+
+                    <div class="form-group" id="customSubCategoryGroup" style="display: none; margin-top: 8px; margin-bottom: 0;">
+                        <label class="form-label" for="customSubCategoryInput" style="font-size: 0.8rem; font-weight: 700; color: #9a3412;">حدد التصنيف الفرعي (إدخال يدوي):</label>
+                        <input type="text" id="customSubCategoryInput" class="form-control" style="background: #ffffff; border: 1.5px solid #fdba74;" placeholder="اكتب التصنيف الفرعي بدقة...">
+                    </div>
                 </div>
             </div>
 
