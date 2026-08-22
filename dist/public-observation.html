@@ -1751,32 +1751,65 @@
             transform: translateY(-1px);
         }
 
-        /* أزرار الإجراءات السريعة الفورية */
+        /* أزرار الإجراءات السريعة الفورية بالألوان المميزة */
         .quick-action-pills {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             flex-wrap: wrap;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
         .btn-quick-pill {
-            background: #ffffff;
-            border: 1.5px solid #a7f3d0;
-            color: #065f46;
-            padding: 4px 10px;
+            padding: 6px 12px;
             border-radius: 8px;
-            font-size: 0.72rem;
-            font-weight: 700;
+            font-size: 0.76rem;
+            font-weight: 800;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            transition: all 0.15s ease;
+            gap: 6px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         }
         .btn-quick-pill:hover {
-            background: #dcfce7;
-            border-color: #34d399;
-            color: #047857;
             transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 1. تم التصحيح الفوري - أخضر */
+        .btn-quick-pill.pill-green {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border: 1.5px solid #86efac;
+            color: #166534;
+        }
+        .btn-quick-pill.pill-green:hover {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            border-color: #15803d;
+            color: #ffffff;
+        }
+
+        /* 2. إيقاف العمل - أحمر */
+        .btn-quick-pill.pill-red {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            border: 1.5px solid #fca5a5;
+            color: #991b1b;
+        }
+        .btn-quick-pill.pill-red:hover {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            border-color: #b91c1c;
+            color: #ffffff;
+        }
+
+        /* 3. توجيه وتدريب - أصفر */
+        .btn-quick-pill.pill-amber {
+            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+            border: 1.5px solid #fde68a;
+            color: #92400e;
+        }
+        .btn-quick-pill.pill-amber:hover {
+            background: linear-gradient(135deg, #d97706, #b45309);
+            border-color: #b45309;
+            color: #ffffff;
         }
 
         /* كروت حالة الملاحظة المنمقة بألوان المعايير القياسية */
@@ -2216,9 +2249,9 @@
                             <span>الإجراء التصحيحي / الوقائي الفوري</span>
                         </label>
                         <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                            <button type="button" class="btn-voice-dictation" onclick="autoSuggestCorrectiveAction()" title="اقتراح إجراء مناسب بناءً على تفاصيل الملاحظة" style="color: #047857; border-color: #a7f3d0; background: #ecfdf5; font-weight: 800;">
-                                <i class="fas fa-wand-magic-sparkles text-emerald-600"></i>
-                                <span>اقتراح ذكي</span>
+                            <button type="button" class="btn-voice-dictation" onclick="autoSuggestCorrectiveAction()" title="اقتراح إجراء مناسب بناءً على تفاصيل الملاحظة" style="color: #ffffff; background: linear-gradient(135deg, #10b981, #059669); border: none; font-weight: 800; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);">
+                                <i class="fas fa-wand-magic-sparkles"></i>
+                                <span>اقتراح ذكي AI</span>
                             </button>
                             <button type="button" class="btn-voice-dictation" onclick="toggleVoiceDictation('correctiveInput', this)" title="إملاء صوتي باللغة العربية" style="color: #047857; border-color: #a7f3d0; background: #f0fdf4; font-weight: 700;">
                                 <i class="fas fa-microphone"></i>
@@ -2227,15 +2260,15 @@
                         </div>
                     </div>
 
-                    <!-- أزرار الإجراءات الفورية السريعة بنقرة واحدة -->
+                    <!-- أزرار الإجراءات الفورية السريعة بنقرة واحدة بالألوان المميزة -->
                     <div class="quick-action-pills">
-                        <button type="button" class="btn-quick-pill" onclick="applyQuickActionText('تم التصحيح الفوري وإزالة الخطر بالموقع والتأكد من أمان بيئة العمل ✅')">
+                        <button type="button" class="btn-quick-pill pill-green" onclick="applyQuickActionText('تم التصحيح الفوري وإزالة الخطر بالموقع والتأكد من أمان بيئة العمل ✅')">
                             ⚡ تم التصحيح الفوري بالموقع
                         </button>
-                        <button type="button" class="btn-quick-pill" onclick="applyQuickActionText('تم إيقاف العمل مؤقتاً وتأمين المكان واستدعاء قسم الصيانة والمسؤولين 🛑')">
+                        <button type="button" class="btn-quick-pill pill-red" onclick="applyQuickActionText('تم إيقاف العمل مؤقتاً وتأمين المكان واستدعاء قسم الصيانة والمسؤولين 🛑')">
                             🛑 إيقاف العمل واستدعاء الصيانة
                         </button>
-                        <button type="button" class="btn-quick-pill" onclick="applyQuickActionText('تم توجيه وتدريب العامل على إجراءات العمل الآمنة والالتزام فوراً 🦺')">
+                        <button type="button" class="btn-quick-pill pill-amber" onclick="applyQuickActionText('تم توجيه وتدريب العامل على إجراءات العمل الآمنة والالتزام فوراً 🦺')">
                             🦺 توجيه وتدريب العامل
                         </button>
                     </div>
@@ -2249,6 +2282,9 @@
 
                     <textarea id="correctiveInput" class="form-control" style="min-height:70px; border: 1.5px solid #a7f3d0; background: #ffffff; font-weight: 600; color: #1e293b; padding: 10px 12px; border-radius: 8px;" placeholder="الإجراء الفوري المتخذ أو المقترح (أو اختر من المقترحات السريعة أعلاه)..." autocomplete="off"></textarea>
                     <div id="correctiveAutocompleteList" class="autocomplete-dropdown"></div>
+                    <span style="font-size: 0.72rem; color: #047857; margin-top: 5px; display: block; font-weight: 600;">
+                        <i class="fas fa-circle-check ml-1"></i>وثّق الإجراء الفوري أو انقر على المقترحات الذكية أعلاه للتعبئة المباشرة
+                    </span>
                 </div>
 
                 <!-- معدل الخطورة منمق بالألوان وأيقونات التحذير -->
