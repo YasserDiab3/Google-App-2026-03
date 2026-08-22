@@ -2034,18 +2034,26 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             setDefaultDateTime();
-            initBackgroundGpsCapture();
-            renderSubCategories(selectedObservationType);
 
-            const expInput = document.getElementById('expectedDateInput');
-            if (expInput) {
-                expInput.addEventListener('input', function() {
-                    this.dataset.autoCalculated = 'false';
-                });
-            }
+            // 1. تهيئة فورية لكافة الحقول الافتراضية وإخفاء مؤشر التحميل فوراً (0ms)
+            renderDefaultFields();
+            const ind = document.getElementById('loadingIndicator');
+            if (ind) ind.style.display = 'none';
 
-            // 1. قراءة التكوين المشفر الممرر بالرابط أو رمز الـ QR
-            let configLoadedFromUrl = false;
+            // 2. محاولة استرجاع الكاش المحلي فورا لتحديث أي بيانات مخصصة
+            try {
+                const cached = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (parsed && Array.isArray(parsed.sites) && parsed.sites.length > 0) {
+                        loadedConfig = parsed;
+                        if (parsed.companyLogo) updateCompanyLogo(parsed.companyLogo);
+                        renderConfigData(parsed);
+                    }
+                }
+            } catch (cErr) {}
+
+            // 3. قراءة التكوين المشفر الممرر بالرابط أو رمز الـ QR
             try {
                 const hash = window.location.hash || '';
                 const search = window.location.search || '';
@@ -2061,45 +2069,21 @@
                             safetyMembers: (payload.m || []).map(name => ({ name, role: 'فريق السلامة والصحة المهنية' })),
                             companyLogo: payload.l || ''
                         };
-                        configLoadedFromUrl = true;
-                        if (payload.l) {
-                            updateCompanyLogo(payload.l);
-                        }
-                        try {
-                            localStorage.setItem('HSE_PUBLIC_OBS_CONFIG', JSON.stringify(loadedConfig));
-                        } catch (sErr) {}
+                        if (payload.l) updateCompanyLogo(payload.l);
+                        try { localStorage.setItem('HSE_PUBLIC_OBS_CONFIG', JSON.stringify(loadedConfig)); } catch (sErr) {}
                         renderConfigData(loadedConfig);
-                        const ind = document.getElementById('loadingIndicator');
-                        if (ind) ind.style.display = 'none';
                     }
                 }
-            } catch (uErr) {
-                console.warn('URL config decode error:', uErr);
-            }
+            } catch (uErr) {}
 
-            // محاولة تحميل الشعار من الكاش المحلي أولاً
             updateCompanyLogo();
+            renderSubCategories(selectedObservationType);
 
-            // 2. استرجاع فوري من الكاش المحلي للمتصفح في أقل من 10ms
-            if (!configLoadedFromUrl) {
-                try {
-                    const cached = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
-                    if (cached) {
-                        const parsed = JSON.parse(cached);
-                        if (parsed && Array.isArray(parsed.sites) && parsed.sites.length > 0) {
-                            loadedConfig = parsed;
-                            if (parsed.companyLogo) updateCompanyLogo(parsed.companyLogo);
-                            renderConfigData(parsed);
-                            const ind = document.getElementById('loadingIndicator');
-                            if (ind) ind.style.display = 'none';
-                        }
-                    }
-                } catch (cErr) {}
-            }
-
-            // 3. إذا لم يتوفر أي كاش، تهيئة القوائم بحقول جاهزة للاختيار أو الإدخال
-            if (!loadedConfig) {
-                renderDefaultFields();
+            const expInput = document.getElementById('expectedDateInput');
+            if (expInput) {
+                expInput.addEventListener('input', function() {
+                    this.dataset.autoCalculated = 'false';
+                });
             }
 
             // 4. تهيئة المقترحات الذكية والإكمال التلقائي
@@ -2110,8 +2094,9 @@
             loadReporterProfile();
             updateOfflineBadge();
 
-            // 6. طلب أحدث التحديثات من الخادم بالخلفية
-            loadServerConfig();
+            // 6. تشغيل GPS وجلب أحدث البيانات من الخادم في الخلفية دون تعطيل الواجهة
+            setTimeout(initBackgroundGpsCapture, 200);
+            setTimeout(loadServerConfig, 300);
         });
 
                 function updateCompanyLogo(logoUrl) {
