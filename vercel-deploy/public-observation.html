@@ -508,7 +508,7 @@
             }
         }
 
-        /* كروت اختيار نوع الملاحظة */
+        /* كروت اختيار نوع الملاحظة بألوان وهوية مميزة فريدة لكل نوع */
         .types-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -523,41 +523,146 @@
 
         .type-card {
             border: 2px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            padding: 12px 10px;
+            border-radius: 12px;
+            padding: 12px 8px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
             background: #ffffff;
             user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         }
 
         .type-card:hover {
-            border-color: #cbd5e1;
-            background: #f8fafc;
-        }
-
-        .type-card.selected {
-            border-color: var(--primary);
-            background: var(--primary-light);
-            color: var(--primary-dark);
-            font-weight: 700;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
         }
 
         .type-card .icon {
-            font-size: 1.4rem;
+            font-size: 1.45rem;
             margin-bottom: 6px;
-            display: block;
-        }
-
-        .type-card.selected .icon {
-            color: var(--primary);
+            display: inline-block;
+            transition: all 0.2s ease;
         }
 
         .type-card .title {
             font-size: 0.82rem;
-            line-height: 1.2;
+            font-weight: 700;
+            line-height: 1.25;
             display: block;
+        }
+
+        /* 1. سلوك غير آمن (Unsafe Act) - برتقالي تحذيري */
+        .type-card[data-type="سلوك غير آمن"] {
+            border-color: #fed7aa;
+            background: #fffaf5;
+            color: #9a3412;
+        }
+        .type-card[data-type="سلوك غير آمن"] .icon {
+            color: #ea580c;
+        }
+        .type-card.selected[data-type="سلوك غير آمن"] {
+            border-color: #ea580c;
+            background: linear-gradient(135deg, #ffedd5, #fff7ed);
+            color: #7c2d12;
+            box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.4), 0 4px 12px rgba(234, 88, 12, 0.15);
+            font-weight: 800;
+            transform: scale(1.02);
+        }
+
+        /* 2. وضع غير آمن (Unsafe Condition) - كهرماني ذهبي */
+        .type-card[data-type="وضع غير آمن"] {
+            border-color: #fde68a;
+            background: #fffdf0;
+            color: #92400e;
+        }
+        .type-card[data-type="وضع غير آمن"] .icon {
+            color: #d97706;
+        }
+        .type-card.selected[data-type="وضع غير آمن"] {
+            border-color: #d97706;
+            background: linear-gradient(135deg, #fef3c7, #fffbeb);
+            color: #78350f;
+            box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.4), 0 4px 12px rgba(217, 119, 6, 0.15);
+            font-weight: 800;
+            transform: scale(1.02);
+        }
+
+        /* 3. سلوك آمن وإيجابي (Safe Practice) - أخضر زمردي */
+        .type-card[data-type="سلوك آمن وإيجابي"] {
+            border-color: #bbf7d0;
+            background: #f4fdf7;
+            color: #166534;
+        }
+        .type-card[data-type="سلوك آمن وإيجابي"] .icon {
+            color: #16a34a;
+        }
+        .type-card.selected[data-type="سلوك آمن وإيجابي"] {
+            border-color: #16a34a;
+            background: linear-gradient(135deg, #dcfce7, #f0fdf4);
+            color: #14532d;
+            box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.4), 0 4px 12px rgba(22, 163, 74, 0.15);
+            font-weight: 800;
+            transform: scale(1.02);
+        }
+
+        /* 4. ملاحظة بيئية (Environmental) - فيروزي بحري / تيل */
+        .type-card[data-type="ملاحظة بيئية"] {
+            border-color: #99f6e4;
+            background: #f0fdfa;
+            color: #115e59;
+        }
+        .type-card[data-type="ملاحظة بيئية"] .icon {
+            color: #0d9488;
+        }
+        .type-card.selected[data-type="ملاحظة بيئية"] {
+            border-color: #0d9488;
+            background: linear-gradient(135deg, #ccfbf1, #f0fdfa);
+            color: #134e4a;
+            box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.4), 0 4px 12px rgba(13, 148, 136, 0.15);
+            font-weight: 800;
+            transform: scale(1.02);
+        }
+
+        /* 5. خطر حريق (Fire Hazard) - أحمر ناري ملتهب */
+        .type-card[data-type="خطر حريق"] {
+            border-color: #fecaca;
+            background: #fff5f5;
+            color: #991b1b;
+        }
+        .type-card[data-type="خطر حريق"] .icon {
+            color: #dc2626;
+        }
+        .type-card.selected[data-type="خطر حريق"] {
+            border-color: #dc2626;
+            background: linear-gradient(135deg, #fee2e2, #fef2f2);
+            color: #7f1d1d;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.4), 0 4px 12px rgba(220, 38, 38, 0.15);
+            font-weight: 800;
+            transform: scale(1.02);
+        }
+
+        /* 6. أخرى (Other) - بنفسجي ملكي */
+        .type-card[data-type="أخرى"] {
+            border-color: #ddd6fe;
+            background: #faf5ff;
+            color: #5b21b6;
+        }
+        .type-card[data-type="أخرى"] .icon {
+            color: #7c3aed;
+        }
+        .type-card.selected[data-type="أخرى"] {
+            border-color: #7c3aed;
+            background: linear-gradient(135deg, #ede9fe, #faf5ff);
+            color: #4c1d95;
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.4), 0 4px 12px rgba(124, 58, 237, 0.15);
+            font-weight: 800;
+            transform: scale(1.02);
         }
 
         /* كروت مستوى الخطورة المنمقة والمميزة بالألوان */
