@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1213",
+  "version": "1.0.1214",
   "highlights": {
     "ar": [
-      "إضافة اختصارات سريعة لتاريخ التنفيذ المتوقع (فوري، 24 ساعة، أسبوع، نهاية الشهر) بنقرة واحدة.",
-      "تطوير التمييز البصري اللوني المتناسق لحقل الخطر المرصود (برتقالي) مقابل الإجراء التصحيحي (أخضر).",
-      "إضافة مقياس جودة الوصف ومساعد الصياغة المباشر مع عداد الحروف لتشجيع الصياغة المكتملة."
+      "إضافة أداة التأشير والرسم الميداني المباشر على الصورة (دوائر حمراء وأسهم لتحديد موضع الخطر).",
+      "إضافة زر المشاركة الفورية للملاحظة عبر واتساب وطباعة / حفظ إيصال الملاحظة PDF معتمد.",
+      "تفعيل ماسح الـ QR السريع للمواقع والمعدات ودعم المزامنة التلقائية عند انقطاع الإنترنت (Offline PWA)."
     ],
     "en": [
-      "Added single-click quick preset shortcuts for expected completion dates (Today, 24h, 1 Week, End of Month).",
-      "Introduced distinct visual pairing & color themes for hazard observations vs corrective actions.",
-      "Implemented a live description quality meter and character counter for comprehensive reporting."
+      "Added interactive photo annotation tool with red circle & arrow markup to pinpoint hazard locations directly on photos.",
+      "Integrated instant WhatsApp observation sharing and printable ISO-standard PDF receipts.",
+      "Enabled instant location QR scanner and seamless offline PWA local queue synchronization."
     ]
   }
 }
