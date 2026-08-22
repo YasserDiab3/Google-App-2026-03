@@ -11993,6 +11993,9 @@ const DailyObservations = {
                         <i class="fas fa-times ml-2"></i>إغلاق
                     </button>
                     ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('daily-observations') : ''}
+                    <button type="button" onclick="DailyObservations.shareViaWhatsApp('${observation.id}');" class="btn-secondary" style="margin: 0 5px; background: #22c55e; color: #ffffff; border-color: #16a34a;">
+                        <i class="fab fa-whatsapp ml-2"></i>مشاركة واتساب
+                    </button>
                     <button type="button" onclick="DailyObservations.exportPDF('${observation.id}');" class="btn-secondary" style="margin: 0 5px;">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                     </button>
@@ -13688,6 +13691,45 @@ const DailyObservations = {
         };
 
         return this.normalizeRecord(payload);
+    },
+
+    shareViaWhatsApp(id) {
+        const observationRaw = (AppState.appData.dailyObservations || []).find((o) => String(o.id) === String(id) || String(o.isoCode) === String(id));
+        if (!observationRaw) {
+            Notification.error('الملاحظة غير موجودة');
+            return;
+        }
+
+        const obs = this.normalizeRecord(observationRaw);
+        const riskEmoji = (obs.riskLevel === 'عالي' || obs.riskLevel === 'عالية') ? '🔴' : ((obs.riskLevel === 'متوسط' || obs.riskLevel === 'متوسطة') ? '🟡' : '🟢');
+        const statusEmoji = (obs.status === 'مغلق') ? '✅' : '⏳';
+        const cleanIso = obs.isoCode || (obs.id ? getObservationIsoCodeFromId(obs.id) : '-') || '-';
+        const site = obs.siteName || '';
+        const place = obs.locationName || '';
+        const loc = (site && place) ? `${site} — ${place}` : (site || place || '-');
+
+        const waMessage = 
+            '🛡️ *تقرير ملاحظة سلامة وصحة مهنية (HSE)*\n' +
+            '*الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)*\n' +
+            '━━━━━━━━━━━━━━━━━━━━\n' +
+            '📌 *رقم الملاحظة:* `' + cleanIso + '`\n' +
+            '📅 *تاريخ التسجيل:* ' + (obs.date ? Utils.formatDateTime(obs.date) : 'اليوم') + (obs.shift ? (' (' + obs.shift + ')') : '') + '\n' +
+            '🏭 *المصنع / الموقع:* ' + loc + '\n' +
+            '⚠️ *نوع الملاحظة:* ' + (this.getObservationTypeLabel(obs.observationType)) + ' (' + riskEmoji + ' ' + (obs.riskLevel || 'متوسط') + ')\n' +
+            (obs.subCategory ? ('🏷️ *التصنيف الفرعي:* ' + obs.subCategory + '\n') : '') +
+            '🏢 *الإدارة المعنية:* ' + (obs.responsibleDepartment || 'غير محدد') + '\n' +
+            '👤 *راصد الملاحظة:* ' + (obs.observerName || 'ميداني') + '\n' +
+            '━━━━━━━━━━━━━━━━━━━━\n' +
+            '📝 *تفاصيل الملاحظة:*\n' +
+            (obs.description || obs.details || 'لا توجد تفاصيل إضافية') + '\n\n' +
+            (obs.correctiveAction ? ('🛡️ *الإجراء التصحيحي المطلوب:*\n' + obs.correctiveAction + '\n\n') : '') +
+            '📊 *حالة الملاحظة:* ' + statusEmoji + ' ' + (obs.status || 'مفتوح') + '\n' +
+            (obs.expectedCompletionDate || obs.targetDate ? ('⏳ *تاريخ المعالجة المستهدف:* ' + (obs.expectedCompletionDate || obs.targetDate) + '\n') : '') +
+            '━━━━━━━━━━━━━━━━━━━━\n' +
+            '🌐 _منظومة إدارة السلامة والصحة المهنية (SafetyHub)_';
+
+        const url = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(waMessage);
+        window.open(url, '_blank');
     },
 
     async exportPDF(id) {

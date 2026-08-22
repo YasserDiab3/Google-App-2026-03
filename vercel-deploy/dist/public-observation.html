@@ -3728,22 +3728,34 @@
             // تجهيز رابط ورسالة واتساب المنسقة
             const waBtn = document.getElementById('shareWhatsappBtn');
             if (waBtn && p) {
-                const waText = encodeURIComponent(
-                    '🚨 *ملاحظة سلامة وصحة مهنية ميدانية (HSE)*\n' +
-                    '━━━━━━━━━━━━━━━━━━\n' +
-                    '📋 *رقم الملاحظة:* ' + refId + '\n' +
-                    '🏭 *الموقع:* ' + (p.siteName || '') + ' - ' + (p.locationName || '') + '\n' +
-                    '⚠️ *النوع:* ' + (p.observationType || '') + ' (' + (p.riskLevel || 'متوسط') + ')\n' +
-                    (p.subCategory ? ('🏷️ *التصنيف:* ' + p.subCategory + '\n') : '') +
-                    '🏢 *الإدارة المعنية:* ' + (p.responsibleDepartment || '') + '\n' +
-                    '📝 *التفاصيل:* ' + (p.details || '') + '\n' +
-                    (p.correctiveAction ? ('🛡️ *الإجراء المقترح:* ' + p.correctiveAction + '\n') : '') +
-                    '👤 *مسؤول السلامة:* ' + (p.observerName || '') + '\n' +
-                    (p.mapsUrl ? ('📍 *موقع GPS:* ' + p.mapsUrl + '\n') : '') +
-                    '━━━━━━━━━━━━━━━━━━\n' +
-                    '✅ _تم التسجيل عبر منظومة HSE الرقمية_'
-                );
-                waBtn.href = 'https://wa.me/?text=' + waText;
+                const riskEmoji = (p.riskLevel === 'عالي' || p.riskLevel === 'عالية') ? '🔴' : ((p.riskLevel === 'متوسط' || p.riskLevel === 'متوسطة') ? '🟡' : '🟢');
+                const statusEmoji = (p.status === 'مغلق') ? '✅' : '⏳';
+                const site = p.siteName || '';
+                const place = p.locationName || '';
+                const loc = (site && place) ? `${site} — ${place}` : (site || place || '-');
+
+                const waMessage = 
+                    '🛡️ *تقرير ملاحظة سلامة وصحة مهنية (HSE)*\n' +
+                    '*الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)*\n' +
+                    '━━━━━━━━━━━━━━━━━━━━\n' +
+                    '📌 *رقم الملاحظة:* `' + refId + '`\n' +
+                    '📅 *تاريخ التسجيل:* ' + (p.date || 'اليوم') + (p.shift ? (' (' + p.shift + ')') : '') + '\n' +
+                    '🏭 *المصنع / الموقع:* ' + loc + '\n' +
+                    '⚠️ *نوع الملاحظة:* ' + (p.observationType || '') + ' (' + riskEmoji + ' ' + (p.riskLevel || 'متوسط') + ')\n' +
+                    (p.subCategory ? ('🏷️ *التصنيف الفرعي:* ' + p.subCategory + '\n') : '') +
+                    '🏢 *الإدارة المعنية:* ' + (p.responsibleDepartment || 'غير محدد') + '\n' +
+                    '👤 *راصد الملاحظة:* ' + (p.observerName || 'ميداني') + '\n' +
+                    '━━━━━━━━━━━━━━━━━━━━\n' +
+                    '📝 *تفاصيل الملاحظة:*\n' +
+                    (p.details || 'لا توجد تفاصيل إضافية') + '\n\n' +
+                    (p.correctiveAction ? ('🛡️ *الإجراء التصحيحي المطلوب:*\n' + p.correctiveAction + '\n\n') : '') +
+                    '📊 *حالة الملاحظة:* ' + statusEmoji + ' ' + (p.status || 'مفتوح') + '\n' +
+                    (p.expectedCompletionDate ? ('⏳ *تاريخ المعالجة المستهدف:* ' + p.expectedCompletionDate + '\n') : '') +
+                    (p.mapsUrl ? ('📍 *الموقع على الخريطة:* ' + p.mapsUrl + '\n') : '') +
+                    '━━━━━━━━━━━━━━━━━━━━\n' +
+                    '🌐 _منظومة إدارة السلامة والصحة المهنية (SafetyHub)_';
+
+                waBtn.href = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(waMessage);
             }
 
             const rec = document.getElementById('receiptContainer');
