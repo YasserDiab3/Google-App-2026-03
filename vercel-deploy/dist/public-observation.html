@@ -2585,19 +2585,136 @@
             const correctiveInput = document.getElementById('correctiveInput');
 
             if (detailsInput) {
-                detailsInput.value = item.detail;
+                detailsInput.value = item.detail || '';
                 detailsInput.focus();
             }
 
-            // اقتراح الإجراء التصحيحي التلقائي
-            if (correctiveInput && (!correctiveInput.value || correctiveInput.value.trim() === '')) {
-                correctiveInput.value = item.corrective || '';
+            // تحديث الإجراء التصحيحي فوراً بما يطابق الملاحظة
+            if (correctiveInput && item.corrective) {
+                correctiveInput.value = item.corrective;
             }
 
             // تظليل الوسم المختار
             document.querySelectorAll('#detailsQuickChips .suggestion-chip').forEach((c, i) => {
                 c.classList.toggle('active', i === idx);
             });
+        }
+
+        // تطبيق وسم الإجراء التصحيحي المباشر
+        function applyCorrectiveChip(el, text) {
+            const correctiveInput = document.getElementById('correctiveInput');
+            if (correctiveInput) {
+                correctiveInput.value = text;
+                correctiveInput.focus();
+            }
+            document.querySelectorAll('#correctiveQuickChips .suggestion-chip').forEach(c => c.classList.remove('active'));
+            if (el) el.classList.add('active');
+        }
+
+        // إكمال تلقائي أثناء الكتابة في حقل التفاصيل والإجراءات
+        function setupObservationAutocomplete() {
+            const detailsInput = document.getElementById('detailsInput');
+            const detailsDropdown = document.getElementById('detailsAutocompleteList');
+            const correctiveInput = document.getElementById('correctiveInput');
+            const correctiveDropdown = document.getElementById('correctiveAutocompleteList');
+
+            if (detailsInput && detailsDropdown) {
+                detailsInput.addEventListener('input', function(e) {
+                    const query = e.target.value.trim().toLowerCase();
+                    if (query.length < 2) {
+                        detailsDropdown.style.display = 'none';
+                        return;
+                    }
+
+                    let allTemplates = [];
+                    Object.keys(DETAILED_SUBCATEGORY_TEMPLATES).forEach(sub => {
+                        DETAILED_SUBCATEGORY_TEMPLATES[sub].forEach(tpl => {
+                            allTemplates.push({ ...tpl, subCategory: sub });
+                        });
+                    });
+
+                    const matches = allTemplates.filter(tpl => 
+                        tpl.title.toLowerCase().includes(query) || 
+                        tpl.detail.toLowerCase().includes(query)
+                    ).slice(0, 5);
+
+                    if (matches.length === 0) {
+                        detailsDropdown.style.display = 'none';
+                        return;
+                    }
+
+                    detailsDropdown.innerHTML = matches.map(m => `
+                        <div class="autocomplete-item" onclick="selectDetailsMatch('${m.detail.replace(/'/g, "\\'")}', '${(m.corrective || '').replace(/'/g, "\\'")}')">
+                            <div>
+                                <div style="font-weight: 700;">${m.title}</div>
+                                <div class="autocomplete-item-sub">${m.detail.slice(0, 65)}...</div>
+                            </div>
+                            <span class="badge" style="font-size: 0.65rem; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px;">${m.subCategory.slice(0, 20)}</span>
+                        </div>
+                    `).join('');
+
+                    detailsDropdown.style.display = 'block';
+                });
+            }
+
+            if (correctiveInput && correctiveDropdown) {
+                correctiveInput.addEventListener('input', function(e) {
+                    const query = e.target.value.trim().toLowerCase();
+                    if (query.length < 2) {
+                        correctiveDropdown.style.display = 'none';
+                        return;
+                    }
+
+                    let allActions = [...COMMON_CORRECTIVE_ACTIONS];
+                    Object.keys(DETAILED_SUBCATEGORY_TEMPLATES).forEach(sub => {
+                        DETAILED_SUBCATEGORY_TEMPLATES[sub].forEach(tpl => {
+                            if (tpl.corrective) allActions.push(tpl.corrective);
+                        });
+                    });
+
+                    const uniqueActions = Array.from(new Set(allActions));
+                    const matches = uniqueActions.filter(act => act.toLowerCase().includes(query)).slice(0, 4);
+
+                    if (matches.length === 0) {
+                        correctiveDropdown.style.display = 'none';
+                        return;
+                    }
+
+                    correctiveDropdown.innerHTML = matches.map(m => `
+                        <div class="autocomplete-item" onclick="selectCorrectiveMatch('${m.replace(/'/g, "\\'")}')">
+                            <div style="font-weight: 600; font-size: 0.8rem;">${m}</div>
+                        </div>
+                    `).join('');
+
+                    correctiveDropdown.style.display = 'block';
+                });
+            }
+
+            document.addEventListener('click', function(e) {
+                if (detailsInput && detailsDropdown && !detailsInput.contains(e.target) && !detailsDropdown.contains(e.target)) {
+                    detailsDropdown.style.display = 'none';
+                }
+                if (correctiveInput && correctiveDropdown && !correctiveInput.contains(e.target) && !correctiveDropdown.contains(e.target)) {
+                    correctiveDropdown.style.display = 'none';
+                }
+            });
+        }
+
+        function selectDetailsMatch(detail, corrective) {
+            const detailsInput = document.getElementById('detailsInput');
+            const correctiveInput = document.getElementById('correctiveInput');
+            const detailsDropdown = document.getElementById('detailsAutocompleteList');
+
+            if (detailsInput) detailsInput.value = detail;
+            if (correctiveInput && corrective) correctiveInput.value = corrective;
+            if (detailsDropdown) detailsDropdown.style.display = 'none';
+        }
+
+        function selectCorrectiveMatch(text) {
+            const correctiveInput = document.getElementById('correctiveInput');
+            const correctiveDropdown = document.getElementById('correctiveAutocompleteList');
+            if (correctiveInput) correctiveInput.value = text;
+            if (correctiveDropdown) correctiveDropdown.style.display = 'none';
         }
 
 
