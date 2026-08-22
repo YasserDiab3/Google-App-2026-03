@@ -10046,7 +10046,7 @@ const DailyObservations = {
             return `
                 <div class="qr-card">
                     <div class="qr-card-header">
-                        <span class="qr-card-tag"><i class="fas fa-shield-halved"></i> منظومة HSE الميدانية</span>
+                        <span class="qr-card-tag"><i class="fas fa-shield-halved"></i> SafetyHub | ICAPP</span>
                         <span class="qr-card-num">#${idx + 1}</span>
                     </div>
                     <div class="qr-card-body">
