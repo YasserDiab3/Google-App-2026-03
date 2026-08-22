@@ -3137,16 +3137,17 @@ function submitPublicObservation(payload) {
                 if (typeof uploadFileToDrive === 'function') {
                     var uploadRes = uploadFileToDrive(payload.photoBase64, 'Obs_' + obsId + '_' + Date.now() + '.jpg', 'image/jpeg', 'DailyObservations');
                     if (uploadRes && uploadRes.success) {
-                        var dLink = uploadRes.directLink || uploadRes.shareableLink || '';
-                        var sLink = uploadRes.shareableLink || uploadRes.directLink || '';
-                        if (dLink || sLink) {
+                        var fileId = uploadRes.fileId || '';
+                        var unifiedUrl = fileId ? ('https://drive.google.com/uc?export=view&id=' + fileId) : (uploadRes.directLink || uploadRes.shareableLink || '');
+                        var shareLink = fileId ? ('https://drive.google.com/file/d/' + fileId + '/view') : (uploadRes.shareableLink || uploadRes.directLink || '');
+                        if (unifiedUrl) {
                             attachments.push({
-                                id: uploadRes.fileId || Utilities.getUuid(),
-                                name: 'صورة الملاحظة الميدانية',
-                                url: dLink,
-                                directLink: dLink,
-                                shareableLink: sLink,
-                                fileId: uploadRes.fileId || '',
+                                id: fileId || Utilities.getUuid(),
+                                name: 'image-1',
+                                url: unifiedUrl,
+                                directLink: unifiedUrl,
+                                shareableLink: shareLink,
+                                fileId: fileId,
                                 type: 'image/jpeg',
                                 uploadedAt: new Date().toISOString()
                             });
