@@ -4438,14 +4438,17 @@
         // ==========================================
         // التقاط الموقع الجغرافي GPS فائق السرعة بالخلفية
         // ==========================================
+        // 13. التقاط الموقع الجغرافي (GPS) تلقائياً وبشكل إلزامي
+        // ==========================================
         window._currentGps = null;
 
-        function initBackgroundGpsCapture() {
+        function initBackgroundGpsCapture(showPrompt = false) {
             if (!navigator.geolocation) {
-                updateGpsBadge(false, 'GPS غير مدعوم بالجهاز');
+                updateGpsBadge(false, 'خاصية GPS غير مدعومة بجهازك');
                 return;
             }
 
+            // التقاط فوري وتلقائي للموقع عند فتح الصفحة
             navigator.geolocation.getCurrentPosition(
                 function(pos) {
                     const lat = pos.coords.latitude.toFixed(6);
@@ -4458,17 +4461,44 @@
                         accuracy: acc,
                         mapsUrl: `https://maps.google.com/?q=${lat},${lng}`
                     };
-                    updateGpsBadge(true, `موقع دقيق (±${acc}م)`);
+                    updateGpsBadge(true, `تم رصد الموقع تلقائياً: ${lat}, ${lng} (دقة: ±${acc}م)`);
                 },
                 function(err) {
-                    updateGpsBadge(false, 'الموقع الإداري فقط');
+                    window._currentGps = null;
+                    updateGpsBadge(false, 'يلزم السماح بالموقع الجغرافي (GPS) لتسجيل الملاحظة');
+                    if (showPrompt || err.code === 1) { // 1 = PERMISSION_DENIED
+                        showToast('⚠️ يرجى السماح بصلاحية الموقع الجغرافي (GPS) لإتمام تسجيل الملاحظات', 'warning', 4000);
+                    }
                 },
                 {
                     enableHighAccuracy: true,
-                    timeout: 4000,
-                    maximumAge: 120000
+                    timeout: 8000,
+                    maximumAge: 60000
                 }
             );
+
+            // تتبع الموقع المباشر المستمر أثناء التحرك في الميدان
+            if (navigator.geolocation.watchPosition) {
+                try {
+                    navigator.geolocation.watchPosition(
+                        function(pos) {
+                            const lat = pos.coords.latitude.toFixed(6);
+                            const lng = pos.coords.longitude.toFixed(6);
+                            const acc = pos.coords.accuracy ? Math.round(pos.coords.accuracy) : 0;
+                            window._currentGps = {
+                                coordinates: `${lat}, ${lng}`,
+                                latitude: lat,
+                                longitude: lng,
+                                accuracy: acc,
+                                mapsUrl: `https://maps.google.com/?q=${lat},${lng}`
+                            };
+                            updateGpsBadge(true, `الموقع محدّث تلقائياً (دقة: ±${acc}م)`);
+                        },
+                        function() {},
+                        { enableHighAccuracy: true, maximumAge: 30000 }
+                    );
+                } catch(e) {}
+            }
         }
 
         function updateGpsBadge(isSuccess, text) {
@@ -4477,10 +4507,16 @@
 
             if (isSuccess) {
                 badge.style.color = '#15803d';
-                badge.title = text || 'تم تحديد الموقع بدقة';
+                badge.style.background = '#dcfce7';
+                badge.style.borderColor = '#86efac';
+                badge.style.boxShadow = '0 0 0 2px rgba(34, 197, 94, 0.25)';
+                badge.title = text || 'تم تحديد الموقع الجغرافي بدقة (GPS نشط)';
             } else {
-                badge.style.color = '#64748b';
-                badge.title = text || 'الموقع الإداري فقط';
+                badge.style.color = '#dc2626';
+                badge.style.background = '#fef2f2';
+                badge.style.borderColor = '#fecaca';
+                badge.style.boxShadow = '0 0 0 2px rgba(239, 68, 68, 0.25)';
+                badge.title = text || 'يلزم السماح بالوصول للموقع الجغرافي (GPS إلزامي)';
             }
         }
 
@@ -4507,6 +4543,7 @@
                     showToast(`تم التقاط الإحداثيات بنجاح 📍 (${lat}, ${lng}) بدقة ±${acc}م`, 'success', 3500);
                 },
                 function(err) {
+                    window._currentGps = null;
                     updateGpsBadge(false, 'تعذر الوصول للموقع الجغرافي');
                     showToast('يرجى تفعيل صلاحية تحديد الموقع (GPS) في المتصفح', 'error', 3500);
                 },
@@ -4514,12 +4551,12 @@
             );
         }
 
-        async function getQuickGpsPayload() {
-            if (window._currentGps) return window._currentGps;
+        async function getQuickGpsPayloadStrict() {
+            if (window._currentGps && window._currentGps.latitude) return window._currentGps;
             if (!navigator.geolocation) return null;
 
             return new Promise((resolve) => {
-                const timeoutId = setTimeout(() => resolve(null), 1200); // مهلة صارمة 1.2 ثانية فقط
+                const timeoutId = setTimeout(() => resolve(null), 4000);
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
                         clearTimeout(timeoutId);
@@ -4534,13 +4571,15 @@
                             mapsUrl: `https://maps.google.com/?q=${lat},${lng}`
                         };
                         window._currentGps = result;
+                        updateGpsBadge(true, `تم رصد الموقع: ${lat}, ${lng}`);
                         resolve(result);
                     },
                     () => {
                         clearTimeout(timeoutId);
+                        updateGpsBadge(false, 'تعذر الوصول للموقع الجغرافي');
                         resolve(null);
                     },
-                    { enableHighAccuracy: true, timeout: 1200, maximumAge: 120000 }
+                    { enableHighAccuracy: true, timeout: 4000, maximumAge: 30000 }
                 );
             });
         }
@@ -4612,6 +4651,21 @@
                 return;
             }
 
+            // التحقق من التقاط وتفعيل الموقع الجغرافي (إلزامي بالمطلق *)
+            let gpsData = window._currentGps;
+            if (!gpsData || !gpsData.latitude) {
+                showToast('جاري التحقق من إحداثيات الموقع الجغرافي (GPS)...', 'loading');
+                gpsData = await getQuickGpsPayloadStrict();
+            }
+
+            if (!gpsData || !gpsData.latitude) {
+                errorBox.textContent = '⚠️ إلزامية تحديد الموقع الجغرافي: يرجى تفعيل والسماح بصلاحية الموقع (GPS) في المتصفح لتوثيق مكان الملاحظة الميدانية وفقاً لمعايير السلامة.';
+                errorBox.style.display = 'block';
+                showToast('⚠️ يرجى السماح بصلاحية الموقع (GPS) لإتمام التسجيل (*)', 'error', 5000);
+                document.getElementById('gpsStatusBadge')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
             // تذكر بيانات المبلّغ إذا تم تحديد الخيار
             saveReporterProfile();
 
@@ -4620,16 +4674,6 @@
             const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
             const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
             const instantRefCode = 'OBS-' + yearMonth + '-' + randomSuffix;
-
-            let gpsData = window._currentGps;
-            if (!gpsData) {
-                try {
-                    gpsData = await Promise.race([
-                        getQuickGpsPayload(),
-                        new Promise(r => setTimeout(() => r(null), 500))
-                    ]);
-                } catch(gErr) {}
-            }
 
             const payload = {
                 action: 'submitPublicObservation',
