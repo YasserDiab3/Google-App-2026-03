@@ -1681,20 +1681,18 @@ const NearMiss = {
                     <div class="a4-poster-page">
                         <!-- ترويسة ISO الرسمية المعتمدة -->
                         <div class="iso-header-table">
-                            <div class="iso-h-cell iso-logo-cell">
-                                <img src="${logoUrl}" alt="ICAPP" class="iso-logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                                <div class="iso-logo-fallback" style="display:none; font-size:1.25rem; font-weight:900; color:#1e1b4b;">ICAPP</div>
+                            <div class="iso-h-cell iso-brand-cell">
+                                <div class="iso-company-text">الشركة العالمية للإنتاج والتصنيع الزراعي</div>
                                 <div class="iso-dept-tag">إدارة السلامة والصحة المهنية والبيئة</div>
                             </div>
                             <div class="iso-h-cell iso-title-cell">
-                                <div class="iso-company-name">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
                                 <div class="iso-doc-maintitle">نظام الإبلاغ عن الحوادث الوشيكة</div>
                                 <div class="iso-doc-sub">Near Miss & Incident Prevention Reporting System</div>
                             </div>
-                            <div class="iso-h-cell iso-meta-cell">
-                                <div><b>كود الوثيقة:</b> DOC-HSE-NRM-01</div>
-                                <div><b>رقم الإصدار:</b> Rev. 02 (2026)</div>
-                                <div><b>الموقع:</b> ${Utils.escapeHTML(site)}</div>
+                            <div class="iso-h-cell iso-logo-cell">
+                                <img src="${logoUrl}" alt="ICAPP" class="iso-logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div class="iso-logo-fallback" style="display:none; font-size:1.15rem; font-weight:900; color:#1e1b4b;">ICAPP</div>
+                                <div class="iso-logo-subtag">SafetyHub</div>
                             </div>
                         </div>
 
@@ -1759,11 +1757,22 @@ const NearMiss = {
                             <span><b>ثقافة السلامة الإيجابية:</b> تقديراً لمشاركتك الفعالة، يتم تكريم أفضل البلاغات الوقائية الاستباقية دورياً! 🌟</span>
                         </div>
 
-                        <!-- الفوتر الرسمي المتناسق (RTL) -->
+                        <!-- الفوتر الرسمي المتناسق المعتمد (مع شعار ICAPP وبيانات الوثيقة) -->
                         <div class="iso-footer-table">
-                            <div style="text-align:right;">إدارة السلامة والصحة المهنية والبيئة</div>
-                            <div style="text-align:center;">Incident Prevention System</div>
-                            <div style="text-align:left;">SafetyHub | ICAPP &bull; صفحة #${idx + 1} من ${itemsToPrint.length}</div>
+                            <div class="footer-meta-block">
+                                <span class="f-meta-item"><b>كود النموذج:</b> HSE-DOC-NRM-01</span>
+                                <span class="f-meta-sep">|</span>
+                                <span class="f-meta-item"><b>تاريخ الإصدار:</b> 01-08-2026</span>
+                                <span class="f-meta-sep">|</span>
+                                <span class="f-meta-item"><b>رقم الإصدار:</b> Rev. 02 (2026)</span>
+                            </div>
+                            <div class="footer-center-tag">
+                                <span>Incident Prevention System</span> &bull; <span>صفحة #${idx + 1} من ${itemsToPrint.length}</span>
+                            </div>
+                            <div class="footer-logo-block">
+                                <img src="${logoUrl}" alt="ICAPP" class="footer-logo-img" onerror="this.style.display='none';">
+                                <span class="footer-logo-text">SafetyHub | ICAPP</span>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1833,50 +1842,120 @@ const NearMiss = {
                         /* Header */
                         .iso-header-table {
                             display: grid;
-                            grid-template-columns: 165px 1fr 135px;
+                            grid-template-columns: 215px 1fr 135px;
                             border: 2px solid #1e1b4b;
                             border-radius: 8px;
                             overflow: hidden;
                             background: #f8fafc;
                         }
-                        .iso-h-cell { padding: 6px 8px; display: flex; flex-direction: column; justify-content: center; }
+                        .iso-h-cell { padding: 6px 10px; display: flex; flex-direction: column; justify-content: center; }
+                        .iso-brand-cell {
+                            border-left: 1.5px solid #cbd5e1;
+                            text-align: right;
+                        }
+                        .iso-company-text {
+                            font-size: 0.78rem;
+                            font-weight: 800;
+                            color: #1e1b4b;
+                            line-height: 1.2;
+                            white-space: nowrap;
+                        }
+                        .iso-dept-tag {
+                            font-size: 0.64rem;
+                            font-weight: 800;
+                            color: #065f46;
+                            margin-top: 3px;
+                            white-space: nowrap;
+                            line-height: 1.2;
+                        }
+                        .iso-title-cell {
+                            text-align: center;
+                            justify-content: center;
+                            border-left: 1.5px solid #cbd5e1;
+                        }
+                        .iso-doc-maintitle {
+                            font-size: 1.12rem;
+                            font-weight: 900;
+                            color: #1e1b4b;
+                            margin: 0;
+                            line-height: 1.2;
+                        }
+                        .iso-doc-sub {
+                            font-size: 0.65rem;
+                            color: #64748b;
+                            font-weight: 700;
+                            margin-top: 2px;
+                        }
                         .iso-logo-cell {
                             background: #ffffff;
                             color: #1e1b4b;
                             text-align: center;
                             align-items: center;
                             justify-content: center;
-                            border-left: 1.5px solid #cbd5e1;
-                            padding: 6px 4px;
+                            padding: 6px;
                         }
                         .iso-logo-img {
-                            max-height: 40px;
-                            max-width: 105px;
+                            max-height: 38px;
+                            max-width: 95px;
                             object-fit: contain;
                             display: block;
                             margin: 0 auto;
                         }
-                        .iso-dept-tag {
-                            font-size: 0.62rem;
+                        .iso-logo-subtag {
+                            font-size: 0.58rem;
+                            color: #4338ca;
                             font-weight: 800;
-                            color: #065f46;
-                            margin-top: 3px;
-                            white-space: nowrap;
-                            line-height: 1.2;
-                            text-align: center;
-                            display: block;
+                            margin-top: 2px;
                         }
-                        .iso-title-cell { text-align: center; justify-content: center; }
-                        .iso-company-name { font-size: 0.8rem; font-weight: 700; color: #475569; line-height: 1.2; }
-                        .iso-doc-maintitle { font-size: 1.05rem; font-weight: 900; color: #1e1b4b; margin: 1px 0; }
-                        .iso-doc-sub { font-size: 0.65rem; color: #64748b; font-weight: 600; }
-                        .iso-meta-cell {
-                            border-right: 1.5px solid #cbd5e1;
-                            font-size: 0.65rem;
-                            color: #334155;
-                            line-height: 1.4;
-                            justify-content: center;
+
+                        /* Footer */
+                        .iso-footer-table {
+                            border: 1.5px solid #cbd5e1;
                             background: #f8fafc;
+                            border-radius: 8px;
+                            padding: 6px 12px;
+                            margin-top: 4px;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            font-size: 0.66rem;
+                            color: #334155;
+                            font-weight: 700;
+                            gap: 8px;
+                        }
+                        .footer-meta-block {
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                            white-space: nowrap;
+                        }
+                        .f-meta-item b {
+                            color: #1e1b4b;
+                        }
+                        .f-meta-sep {
+                            color: #cbd5e1;
+                        }
+                        .footer-center-tag {
+                            color: #047857;
+                            font-weight: 800;
+                            white-space: nowrap;
+                            text-align: center;
+                        }
+                        .footer-logo-block {
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                            white-space: nowrap;
+                        }
+                        .footer-logo-img {
+                            max-height: 20px;
+                            max-width: 48px;
+                            object-fit: contain;
+                        }
+                        .footer-logo-text {
+                            font-weight: 900;
+                            color: #1e1b4b;
+                            font-size: 0.7rem;
                         }
 
                         /* Location Banner */
