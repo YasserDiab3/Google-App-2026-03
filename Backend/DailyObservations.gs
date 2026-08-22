@@ -3132,10 +3132,18 @@ function submitPublicObservation(payload) {
         var dateVal = payload.date ? String(payload.date).trim() : Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd HH:mm:ss');
         
         var attachments = [];
-        if (payload.photoBase64 && String(payload.photoBase64).length > 50) {
-            try {
-                if (typeof uploadFileToDrive === 'function') {
-                    var uploadRes = uploadFileToDrive(payload.photoBase64, 'Obs_' + obsId + '_' + Date.now() + '.jpg', 'image/jpeg', 'DailyObservations');
+        var photosToUpload = [];
+        if (Array.isArray(payload.photos) && payload.photos.length > 0) {
+            photosToUpload = payload.photos.filter(function(p) { return p && String(p).length > 50; });
+        } else if (payload.photoBase64 && String(payload.photoBase64).length > 50) {
+            photosToUpload = [payload.photoBase64];
+        }
+
+        if (photosToUpload.length > 0 && typeof uploadFileToDrive === 'function') {
+            photosToUpload.forEach(function(pBase64, idx) {
+                try {
+                    var filename = 'Obs_' + obsId + '_' + (idx + 1) + '_' + Date.now() + '.jpg';
+                    var uploadRes = uploadFileToDrive(pBase64, filename, 'image/jpeg', 'DailyObservations');
                     if (uploadRes && uploadRes.success) {
                         var fileId = uploadRes.fileId || '';
                         var unifiedUrl = fileId ? ('https://drive.google.com/uc?export=view&id=' + fileId) : (uploadRes.directLink || uploadRes.shareableLink || '');
@@ -3143,7 +3151,7 @@ function submitPublicObservation(payload) {
                         if (unifiedUrl) {
                             attachments.push({
                                 id: fileId || Utilities.getUuid(),
-                                name: 'image-1',
+                                name: 'image-' + (idx + 1),
                                 url: unifiedUrl,
                                 directLink: unifiedUrl,
                                 shareableLink: shareLink,
@@ -3153,10 +3161,10 @@ function submitPublicObservation(payload) {
                             });
                         }
                     }
+                } catch (imgErr) {
+                    Logger.log('⚠️ تعذر رفع صورة الملاحظة العامة (' + (idx + 1) + '): ' + imgErr.toString());
                 }
-            } catch (imgErr) {
-                Logger.log('⚠️ تعذر رفع صورة الملاحظة العامة: ' + imgErr.toString());
-            }
+            });
         }
 
         var siteName = payload.siteName || payload.site || payload.factory || payload.factoryName || '';
