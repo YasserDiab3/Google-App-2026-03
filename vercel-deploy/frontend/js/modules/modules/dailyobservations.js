@@ -9728,7 +9728,11 @@ const DailyObservations = {
     /**
      * توليد وطباعة ملصقات الـ QR الميدانية الشاملة لجميع المواقع والأماكن بقاعدة البيانات
      */
-    printLocationQrBadges() {
+    
+    /**
+     * فتح نافذة طباعة كروت QR الشاملة للمواقع والمصانع مع تحديد المقاس والتحميل المباشر PDF
+     */
+    openBatchLocationQrModal() {
         const placesBySite = {};
 
         const addSitePlace = (site, place) => {
@@ -9739,7 +9743,6 @@ const DailyObservations = {
             if (p) placesBySite[s].add(p);
         };
 
-        // 1. من getAllSites()
         try {
             const allSites = this.getAllSites ? this.getAllSites() : [];
             allSites.forEach(s => {
@@ -9753,113 +9756,366 @@ const DailyObservations = {
             });
         } catch (e) {}
 
-        // 2. من ObservationSites
-        const obsSites = Array.isArray(AppState.appData?.observationSites) ? AppState.appData.observationSites : [];
-        obsSites.forEach(item => {
-            const s = item.siteName || item.site || item.name;
-            const p = item.placeName || item.locationName || item.place;
-            addSitePlace(s, p);
+        (Array.isArray(AppState.appData?.observationSites) ? AppState.appData.observationSites : []).forEach(item => {
+            addSitePlace(item.siteName || item.site || item.name, item.placeName || item.locationName || item.place);
         });
 
-        // 3. من SubLocations
-        const subLocs = Array.isArray(AppState.appData?.subLocations) ? AppState.appData.subLocations : [];
-        subLocs.forEach(item => {
-            const s = item.factoryName || item.factory || item.siteName || item.site;
-            const p = item.name || item.subLocationName || item.place;
-            addSitePlace(s, p);
+        (Array.isArray(AppState.appData?.subLocations) ? AppState.appData.subLocations : []).forEach(item => {
+            addSitePlace(item.factoryName || item.factory || item.siteName || item.site, item.name || item.subLocationName || item.place);
         });
 
-        // 4. من سجل الملاحظات اليومية الفعلي في قاعدة البيانات
-        const dailyObs = Array.isArray(AppState.appData?.dailyObservations) ? AppState.appData.dailyObservations : [];
-        dailyObs.forEach(obs => {
-            const s = obs.siteName || obs.site || obs.siteId;
-            const p = obs.locationName || obs.placeName || obs.place || obs.placeId;
-            addSitePlace(s, p);
+        (Array.isArray(AppState.appData?.dailyObservations) ? AppState.appData.dailyObservations : []).forEach(obs => {
+            addSitePlace(obs.siteName || obs.site || obs.siteId, obs.locationName || obs.placeName || obs.place || obs.placeId);
         });
 
-        // 5. من AppState.sites / CompanySettings
-        const configSites = Array.isArray(AppState.sites) ? AppState.sites : (Array.isArray(AppState.appData?.sites) ? AppState.appData.sites : []);
-        configSites.forEach(s => {
-            const sName = typeof s === 'string' ? s : (s.name || s.siteName);
-            addSitePlace(sName, '');
+        (Array.isArray(AppState.sites) ? AppState.sites : (Array.isArray(AppState.appData?.sites) ? AppState.appData.sites : [])).forEach(s => {
+            addSitePlace(typeof s === 'string' ? s : (s.name || s.siteName), '');
         });
+
+        // تحويل البيانات إلى مصفوفة عناصر مسطحة
+        const flatItems = [];
+        for (const site of Object.keys(placesBySite)) {
+            const places = Array.from(placesBySite[site]);
+            if (places.length === 0) {
+                flatItems.push({ site: site, place: 'الموقع العام' });
+            } else {
+                places.forEach(place => {
+                    flatItems.push({ site: site, place: place });
+                });
+            }
+        }
+
+        const sitesList = Object.keys(placesBySite).sort();
+        const allPlacesList = [...new Set(flatItems.map(i => i.place).filter(p => p !== 'الموقع العام'))].sort();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 640px; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                <div class="modal-header" style="background: linear-gradient(135deg, #0b2a55 0%, #1e40af 100%); color: #ffffff; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); display: flex; align-items: center; justify-content: center; color: #fde68a; font-size: 1.25rem;">
+                            <i class="fas fa-print"></i>
+                        </div>
+                        <div>
+                            <h2 class="modal-title" style="color: #ffffff; font-size: 1.15rem; font-weight: 700; margin: 0 0 2px 0;">طباعة كروت QR الشاملة للمواقع والمصانع</h2>
+                            <p style="font-size: 0.8rem; color: #bfdbfe; margin: 0;">طباعة ملصقات QR لجميع المواقع دفعة واحدة بدلاً من موقع تلو الآخر</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" style="color: #bfdbfe; font-size: 1.25rem;" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" style="padding: 24px; background: #f8fafc;">
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-info-circle text-blue-600" style="font-size: 20px;"></i>
+                        <div style="font-size: 0.85rem; color: #1e3a8a; font-weight: 700;">
+                            إجمالي المواقع والأماكن المسجلة بقاعدة البيانات: <span style="font-size: 1rem; color: #dc2626;" id="loc-batch-total-count">${flatItems.length}</span> موقع ومكان
+                        </div>
+                    </div>
+
+                    <!-- فلاتر التخصيص -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-map-marker-alt text-blue-600 ml-1"></i> تصفية حسب الموقع / المصنع:
+                            </label>
+                            <select id="loc-batch-site-filter" class="form-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">
+                                <option value="all">— جميع المواقع والمصانع —</option>
+                                ${sitesList.map(s => `<option value="${Utils.escapeHTML(s)}">${Utils.escapeHTML(s)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-tags text-indigo-600 ml-1"></i> تصفية حسب طبيعة المكان:
+                            </label>
+                            <select id="loc-batch-place-filter" class="form-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">
+                                <option value="all">— جميع الأقسام والأماكن —</option>
+                                ${allPlacesList.map(p => `<option value="${Utils.escapeHTML(p)}">${Utils.escapeHTML(p)}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-border-all text-indigo-600 ml-1"></i> مقاس وتخطيط الملصقات:
+                            </label>
+                            <select id="loc-batch-layout-select" class="form-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem;">
+                                <option value="2x4">ملصقات قياسية (صفين × 4 = 8 كروت في صفحة A4)</option>
+                                <option value="3x4">ملصقات مدمجة (3 أعمدة × 4 = 12 كارت في صفحة A4)</option>
+                                <option value="2x3">كروت كبيرة واضحة (صفين × 3 = 6 كروت في صفحة A4)</option>
+                                <option value="2x2">بطاقات عريضة (صفين × 2 = 4 كروت في صفحة A4)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-calculator text-emerald-600 ml-1"></i> الأماكن المحددة للطباعة:
+                            </label>
+                            <div style="padding: 10px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; font-weight: 800; font-size: 0.95rem; color: #047857;" id="loc-batch-selected-preview">
+                                ${flatItems.length} مكان جاهز للطباعة
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 16px 24px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" id="loc-batch-print-btn" class="btn-primary" style="padding: 10px 20px; border-radius: 8px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; background: #1e40af;">
+                            <i class="fas fa-print"></i> بدء طباعة مصفوفة الكروت الآن (A4)
+                        </button>
+                    </div>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const siteFilter = modal.querySelector('#loc-batch-site-filter');
+        const placeFilter = modal.querySelector('#loc-batch-place-filter');
+        const layoutSelect = modal.querySelector('#loc-batch-layout-select');
+        const previewEl = modal.querySelector('#loc-batch-selected-preview');
+        const printBtn = modal.querySelector('#loc-batch-print-btn');
+
+        const getSelectedItems = () => {
+            const siteVal = siteFilter.value;
+            const placeVal = placeFilter.value;
+            return flatItems.filter(item => {
+                if (siteVal !== 'all' && item.site !== siteVal) return false;
+                if (placeVal !== 'all' && item.place !== placeVal) return false;
+                return true;
+            });
+        };
+
+        const updatePreview = () => {
+            const filtered = getSelectedItems();
+            previewEl.textContent = `${filtered.length} مكان جاهز للطباعة / التحميل`;
+            printBtn.disabled = filtered.length === 0;
+        };
+
+        siteFilter.addEventListener('change', updatePreview);
+        placeFilter.addEventListener('change', updatePreview);
+
+        printBtn.addEventListener('click', () => {
+            const filtered = getSelectedItems();
+            if (filtered.length === 0) {
+                alert('لا توجد مواقع مطابقة للتصفية.');
+                return;
+            }
+            modal.remove();
+            this.renderLocationQrCardsPrintPage(filtered, layoutSelect.value);
+        });
+    },
+
+    /**
+     * فتح صفحة الطباعة / تصدير PDF لكروت ومصفوفة الـ QR بالمقاس المحدد
+     */
+    renderLocationQrCardsPrintPage(itemsToPrint, layoutType = '2x4') {
+        if (!itemsToPrint || itemsToPrint.length === 0) return;
+
+        let gridCols = 2;
+        let cardMinHeight = '120px';
+        let qrSize = 100;
+        let fontSizeTitle = '13px';
+        let fontSizeSub = '11px';
+
+        if (layoutType === '3x4') {
+            gridCols = 3;
+            cardMinHeight = '110px';
+            qrSize = 85;
+            fontSizeTitle = '11.5px';
+            fontSizeSub = '9.5px';
+        } else if (layoutType === '2x3') {
+            gridCols = 2;
+            cardMinHeight = '150px';
+            qrSize = 125;
+            fontSizeTitle = '14px';
+            fontSizeSub = '12px';
+        } else if (layoutType === '2x2') {
+            gridCols = 2;
+            cardMinHeight = '180px';
+            qrSize = 145;
+            fontSizeTitle = '16px';
+            fontSizeSub = '13px';
+        }
 
         const origin = window.location.origin || '';
         const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
         const publicObsUrl = `${origin}${basePath}public-observation.html`;
 
-        let cardsHtml = '';
-        let totalCount = 0;
-
-        for (const site of Object.keys(placesBySite)) {
-            const places = Array.from(placesBySite[site]);
-            
-            // إذا لم يكن هناك أماكن فرعية، نطبع ملصق الموقع العام
-            if (places.length === 0) {
-                totalCount++;
-                const targetQrUrl = `${publicObsUrl}?factory=${encodeURIComponent(site)}`;
-                const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(targetQrUrl)}`;
-                cardsHtml += `
-                    <div style="border: 2px solid #0284c7; border-radius: 12px; padding: 14px; text-align: center; page-break-inside: avoid; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
-                        <div style="font-size: 0.85rem; font-weight: 800; color: #0369a1; margin-bottom: 4px;">منظومة السلامة والصحة المهنية (HSE)</div>
-                        <img src="${qrImgSrc}" alt="QR Code" style="width: 140px; height: 140px; margin: 8px 0; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px;">
-                        <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">${site}</div>
-                        <div style="font-size: 0.82rem; font-weight: 700; color: #0284c7; margin-top: 2px;">(الموقع العام)</div>
-                        <div style="font-size: 0.65rem; color: #64748b; margin-top: 6px;">امسح الكاميرا لتسجيل ملاحظة فورية بالموقع</div>
-                    </div>
-                `;
-            } else {
-                places.forEach(place => {
-                    totalCount++;
-                    const targetQrUrl = `${publicObsUrl}?factory=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
-                    const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(targetQrUrl)}`;
-
-                    cardsHtml += `
-                        <div style="border: 2px solid #0284c7; border-radius: 12px; padding: 14px; text-align: center; page-break-inside: avoid; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
-                            <div style="font-size: 0.85rem; font-weight: 800; color: #0369a1; margin-bottom: 4px;">منظومة السلامة والصحة المهنية (HSE)</div>
-                            <img src="${qrImgSrc}" alt="QR Code" style="width: 140px; height: 140px; margin: 8px 0; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px;">
-                            <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">${site}</div>
-                            <div style="font-size: 0.88rem; font-weight: 700; color: #0369a1; margin-top: 2px;">${place}</div>
-                            <div style="font-size: 0.65rem; color: #64748b; margin-top: 6px;">امسح الكاميرا لتسجيل ملاحظة فورية بالموقع</div>
-                        </div>
-                    `;
-                });
-            }
+        const printWin = window.open('', '_blank');
+        if (!printWin) {
+            alert('يرجى السماح بالنوافذ المنبثقة لطباعة كروت QR');
+            return;
         }
 
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
+        const cardsHtml = itemsToPrint.map((item, idx) => {
+            const site = item.site;
+            const place = item.place === 'الموقع العام' ? '' : item.place;
+            const directUrl = place 
+                ? `${publicObsUrl}?factory=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`
+                : `${publicObsUrl}?factory=${encodeURIComponent(site)}`;
+
+            let qrDataUri = '';
+            if (typeof qrcode === 'function') {
+                try {
+                    const qr = qrcode(0, 'M');
+                    qr.addData(directUrl);
+                    qr.make();
+                    qrDataUri = qr.createDataURL(4, 2);
+                } catch(e) {}
+            }
+            if (!qrDataUri && window.QRCode && typeof window.QRCode.generate === 'function') {
+                try {
+                    qrDataUri = window.QRCode.generate(directUrl, qrSize);
+                } catch(e) {}
+            }
+            if (!qrDataUri) {
+                qrDataUri = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(directUrl)}`;
+            }
+
+            return `
+                <div class="qr-card">
+                    <div class="qr-card-header">
+                        <span class="qr-card-tag"><i class="fas fa-shield-halved"></i> منظومة HSE الميدانية</span>
+                        <span class="qr-card-num">#${idx + 1}</span>
+                    </div>
+                    <div class="qr-card-body">
+                        <div class="qr-card-info">
+                            <div class="qr-card-site">${Utils.escapeHTML(site)}</div>
+                            <div class="qr-card-place">${Utils.escapeHTML(place || 'الموقع العام')}</div>
+                            <div class="qr-card-inst"><i class="fas fa-camera ml-1"></i> امسح الكاميرا لتسجيل ملاحظة فورية</div>
+                        </div>
+                        <div class="qr-card-img-wrap">
+                            <img src="${qrDataUri}" alt="QR ${site}" class="qr-code-img" style="width: ${qrSize}px; height: ${qrSize}px;">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        printWin.document.write(`
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
                 <meta charset="UTF-8">
-                <title>ملصقات QR كود لجميع المواقع والأماكن الميدانية (${totalCount} ملصق)</title>
+                <title>ملصقات وكروت QR المواقع والمصانع (${itemsToPrint.length} موقع)</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
                 <style>
-                    body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 20px; background: #f8fafc; color: #0f172a; }
-                    .print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-                    @media print {
-                        body { background: #fff; margin: 0; }
-                        .no-print { display: none; }
-                        .print-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+                    @page { size: A4 portrait; margin: 6mm; }
+                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+                    body { font-family: 'Cairo', system-ui, sans-serif; color: #0f172a; margin: 0; padding: 6px; background: #ffffff; }
+                    .no-print-bar { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; }
+                    .print-btn { background: #1e40af; color: #fff; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 800; font-family: inherit; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+                    @media print { .no-print-bar { display: none !important; } }
+                    
+                    .cards-grid {
+                        display: grid;
+                        grid-template-columns: repeat(${gridCols}, 1fr);
+                        gap: 7mm;
+                    }
+                    
+                    .qr-card {
+                        border: 2px dashed #0284c7;
+                        border-radius: 10px;
+                        padding: 8px 12px;
+                        background: #ffffff;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        min-height: ${cardMinHeight};
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                    }
+                    
+                    .qr-card-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        border-bottom: 1.5px solid #e2e8f0;
+                        padding-bottom: 4px;
+                        margin-bottom: 6px;
+                    }
+                    
+                    .qr-card-tag {
+                        font-size: 9.5px;
+                        font-weight: 800;
+                        color: #0369a1;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 4px;
+                    }
+                    
+                    .qr-card-num {
+                        font-size: 9.5px;
+                        font-weight: 800;
+                        color: #64748b;
+                    }
+                    
+                    .qr-card-body {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 8px;
+                    }
+                    
+                    .qr-card-info {
+                        flex: 1;
+                    }
+                    
+                    .qr-card-site {
+                        font-size: ${fontSizeTitle};
+                        font-weight: 900;
+                        color: #0f172a;
+                        margin-bottom: 2px;
+                    }
+                    
+                    .qr-card-place {
+                        font-size: ${fontSizeSub};
+                        font-weight: 700;
+                        color: #0284c7;
+                        margin-bottom: 6px;
+                    }
+                    
+                    .qr-card-inst {
+                        font-size: 8.5px;
+                        color: #64748b;
+                        font-weight: 600;
+                    }
+                    
+                    .qr-card-img-wrap {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 3px;
+                        background: #ffffff;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 6px;
                     }
                 </style>
             </head>
             <body>
-                <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 14px 24px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
-                    <div>
-                        <h2 style="margin: 0 0 4px 0; font-size: 1.15rem; color: #0369a1;">🖨️ ملصقات QR كود الشاملة لجميع المواقع الميدانية</h2>
-                        <div style="font-size: 0.85rem; color: #64748b;">إجمالي الملصقات المولدة: <b>${totalCount} ملصق</b> جاهز للطباعة واللصق</div>
+                <div class="no-print-bar">
+                    <div style="font-weight: 800; font-size: 13px; color: #1e3a8a;">
+                        <i class="fas fa-qrcode ml-1"></i> كروت QR للمواقع والمصانع الميدانية (${itemsToPrint.length} كارت جاهز)
                     </div>
-                    <button onclick="window.print()" style="background: #0284c7; color: #fff; border: none; padding: 10px 22px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.95rem;">
-                        <i class="fas fa-print"></i> طباعة جميع الملصقات (${totalCount})
-                    </button>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="window.print()" class="print-btn">
+                            <i class="fas fa-print"></i> طباعة / حفظ PDF مباشر
+                        </button>
+                    </div>
                 </div>
-                <div class="print-grid">${cardsHtml}</div>
+                <div class="cards-grid">
+                    ${cardsHtml}
+                </div>
             </body>
             </html>
         `);
-        printWindow.document.close();
+        printWin.document.close();
     },
+
+    printLocationQrBadges() {
+        this.openBatchLocationQrModal();
+    },
+    
 
     getDepartmentOptions() {
         const normalizedMap = new Map();
