@@ -1881,6 +1881,7 @@
             el.classList.add('selected');
             selectedObservationType = el.dataset.type || 'سلوك غير آمن';
             renderSubCategories(selectedObservationType);
+            renderSmartSuggestions(selectedObservationType);
         }
 
         function selectRisk(el) {
@@ -1969,7 +1970,7 @@
         }
 
         
-        // ==========================================
+                // ==========================================
         // قاموس المقترحات الذكية للملاحظات والإجراءات
         // ==========================================
         const SAFETY_OBSERVATION_TEMPLATES = {
@@ -2005,7 +2006,7 @@
                     corrective: 'تم تدريب وتوجيه العامل على طريقة الرفع الآمن واستخدام وسائل مناولة مساعدة.'
                 }
             ],
-            'حالة غير آمنة': [
+            'وضع غير آمن': [
                 {
                     title: 'انسداد مخرج / مسار الطوارئ',
                     detail: 'وجود بضائع أو معدات تعيق مسار الخروج وباب الطوارئ.',
@@ -2097,8 +2098,22 @@
                     detail: 'تصاعد أدخنة أو انبعاثات من مداخن/أنظمة التهوية بمعدل أعلى من الطبيعي.',
                     corrective: 'تم فحص الفلاتر ونظام التهوية وإبلاغ فريق البيئة والصيانة للمعاينة.'
                 }
+            ],
+            'أخرى': [
+                {
+                    title: 'ملاحظة عامة على بيئة العمل',
+                    detail: 'رصد حالة عامة تؤثر على راحة وسلامة العاملين في الموقع.',
+                    corrective: 'تم التوجيه بعمل المعاينة والإجراء التصحيحي المطلوب.'
+                },
+                {
+                    title: 'اقتراح تحسين لإجراءات السلامة',
+                    detail: 'مقترح لتطوير بيئة العمل وتعزيز معايير السلامة والصحة المهنية.',
+                    corrective: 'تم رفع المقترح إلى إدارة السلامة لدراسة إمكانية التطبيق.'
+                }
             ]
         };
+
+        SAFETY_OBSERVATION_TEMPLATES['حالة غير آمنة'] = SAFETY_OBSERVATION_TEMPLATES['وضع غير آمن'];
 
         const COMMON_CORRECTIVE_ACTIONS = [
             'تم تنبيه العامل فوراً والتوجيه بالسلوك الآمن المعتمد.',
@@ -2109,17 +2124,28 @@
             'تم توجيه الشكر والتقدير للعامل على الالتزام بإجراءات السلامة.'
         ];
 
+        function normalizeObsType(type) {
+            const t = String(type || '').trim();
+            if (t.includes('سلوك غير') || t.includes('تصرف غير')) return 'سلوك غير آمن';
+            if (t.includes('وضع غير') || t.includes('حالة غير') || t.includes('ظرف غير')) return 'وضع غير آمن';
+            if (t.includes('حريق') || t.includes('اطفاء') || t.includes('إطفاء')) return 'خطر حريق';
+            if (t.includes('إيجابي') || t.includes('ايجابي') || t.includes('آمن')) return 'سلوك آمن وإيجابي';
+            if (t.includes('بيئ') || t.includes('بيئة')) return 'ملاحظة بيئية';
+            return 'أخرى';
+        }
+
         function renderSmartSuggestions(obsType) {
             const container = document.getElementById('detailsQuickChips');
             const correctiveContainer = document.getElementById('correctiveQuickChips');
             if (!container) return;
 
-            const selectedType = obsType || document.getElementById('observationTypeSelect')?.value || 'سلوك غير آمن';
-            const items = SAFETY_OBSERVATION_TEMPLATES[selectedType] || SAFETY_OBSERVATION_TEMPLATES['سلوك غير آمن'] || [];
+            const selectedType = obsType || selectedObservationType || 'سلوك غير آمن';
+            const normalized = normalizeObsType(selectedType);
+            const items = SAFETY_OBSERVATION_TEMPLATES[normalized] || SAFETY_OBSERVATION_TEMPLATES['سلوك غير آمن'] || [];
 
             // تفاصيل الملاحظة
             container.innerHTML = items.map((item, idx) => `
-                <div class="suggestion-chip" data-idx="${idx}" onclick="applySuggestionChip('${selectedType}', ${idx})">
+                <div class="suggestion-chip" data-idx="${idx}" onclick="applySuggestionChip('${normalized}', ${idx})">
                     <i class="fas fa-tag text-blue-500"></i>
                     <span>${item.title}</span>
                 </div>
@@ -2127,7 +2153,12 @@
 
             // مقترحات الإجراء التصحيحي
             if (correctiveContainer) {
-                correctiveContainer.innerHTML = COMMON_CORRECTIVE_ACTIONS.slice(0, 4).map(action => `
+                const correctiveList = (items && items.length > 0)
+                    ? items.map(i => i.corrective).filter(Boolean).concat(COMMON_CORRECTIVE_ACTIONS)
+                    : COMMON_CORRECTIVE_ACTIONS;
+                
+                const uniqueActions = Array.from(new Set(correctiveList)).slice(0, 5);
+                correctiveContainer.innerHTML = uniqueActions.map(action => `
                     <div class="suggestion-chip" onclick="applyCorrectiveChip(this, '${action.replace(/'/g, "\\'")}')">
                         <i class="fas fa-check text-emerald-500"></i>
                         <span>${action}</span>
@@ -2137,7 +2168,7 @@
         }
 
         function applySuggestionChip(type, idx) {
-            const items = SAFETY_OBSERVATION_TEMPLATES[type];
+            const items = SAFETY_OBSERVATION_TEMPLATES[type] || SAFETY_OBSERVATION_TEMPLATES[normalizeObsType(type)];
             if (!items || !items[idx]) return;
             const item = items[idx];
 
@@ -2183,12 +2214,13 @@
                     return;
                 }
 
-                const currentType = document.getElementById('observationTypeSelect')?.value || '';
                 let allTemplates = [];
                 Object.keys(SAFETY_OBSERVATION_TEMPLATES).forEach(cat => {
-                    SAFETY_OBSERVATION_TEMPLATES[cat].forEach(tpl => {
-                        allTemplates.push({ ...tpl, category: cat });
-                    });
+                    if (cat !== 'حالة غير آمنة') {
+                        SAFETY_OBSERVATION_TEMPLATES[cat].forEach(tpl => {
+                            allTemplates.push({ ...tpl, category: cat });
+                        });
+                    }
                 });
 
                 const matches = allTemplates.filter(tpl => 
@@ -2232,7 +2264,6 @@
             }
             if (dropdown) dropdown.style.display = 'none';
         }
-
 
         // إرسال الملاحظة
         document.getElementById('observationForm').addEventListener('submit', async function(e) {
