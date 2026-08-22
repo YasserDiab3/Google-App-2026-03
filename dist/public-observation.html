@@ -1813,26 +1813,16 @@
             return String(p).trim();
         }
 
-                        function handleSiteChange(siteName) {
+        function handleSiteChange(siteName) {
             const placeSelect = document.getElementById('placeSelect');
             const customGroup = document.getElementById('customPlaceGroup');
-            const customSiteGroup = document.getElementById('customSiteGroup');
-            customGroup.style.display = 'none';
-
-            if (siteName === '__OTHER_SITE__') {
-                customSiteGroup.style.display = 'block';
-                document.getElementById('customSiteInput').focus();
-                placeSelect.innerHTML = '<option value="__OTHER__">➕ مكان فرعي آخر (إدخال يدوي)...</option>';
-                placeSelect.disabled = false;
-                customGroup.style.display = 'block';
-                return;
-            } else {
-                customSiteGroup.style.display = 'none';
-            }
+            if (customGroup) customGroup.style.display = 'none';
 
             if (!siteName) {
-                placeSelect.innerHTML = '<option value="">— اختر المصنع أولاً —</option>';
-                placeSelect.disabled = true;
+                if (placeSelect) {
+                    placeSelect.innerHTML = '<option value="">— اختر المصنع أولاً —</option>';
+                    placeSelect.disabled = true;
+                }
                 return;
             }
 
