@@ -1036,11 +1036,6 @@
                     </div>
                 </div>
 
-                <!-- إدخال يدوي للمصنع إذا لم يكن بالقائمة -->
-                <div id="customSiteGroup" class="form-group" style="display: none;">
-                    <label class="form-label" for="customSiteInput">اسم المصنع / الموقع (إدخال يدوي):</label>
-                    <input type="text" id="customSiteInput" class="form-control" placeholder="اكتب اسم المصنع أو الموقع بدقة...">
-                </div>
 
                 <!-- إدخال يدوي للمكان -->
                 <div id="customPlaceGroup" class="form-group" style="display: none;">
@@ -1155,16 +1150,11 @@
                         <i class="fas fa-building-user text-blue-600"></i>
                         المسؤول عن التنفيذ / الإدارة المعنية <span class="required">*</span>
                     </label>
-                    <select id="responsibleDeptSelect" class="form-control" required onchange="handleDeptChange(this.value)">
+                    <select id="responsibleDeptSelect" class="form-control" required >
                         <option value="">— جاري تحميل الإدارات من النظام... —</option>
                     </select>
                 </div>
 
-                <!-- إدخال يدوي للإدارة في حال عدم وجودها في القائمة -->
-                <div id="customDeptGroup" class="form-group" style="display: none;">
-                    <label class="form-label" for="customDeptInput">اسم الإدارة / الجهة المعنية (إدخال يدوي) <span class="required">*</span>:</label>
-                    <input type="text" id="customDeptInput" class="form-control" placeholder="اكتب اسم الإدارة أو القسم المسؤول...">
-                </div>
 
                 <div class="form-group" style="position: relative;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1679,10 +1669,7 @@
                 });
             }
 
-            const otherSiteOpt = document.createElement('option');
-            otherSiteOpt.value = '__OTHER_SITE__';
-            otherSiteOpt.textContent = '➕ مصنع / موقع آخر (إدخال يدوي)...';
-            siteSelect.appendChild(otherSiteOpt);
+
 
             // قراءة query param للمصنع المحدد
             const urlParams = new URLSearchParams(window.location.search);
@@ -1747,10 +1734,7 @@
                 deptSelect.appendChild(opt);
             });
 
-            const customDeptOpt = document.createElement('option');
-            customDeptOpt.value = '__OTHER_DEPT__';
-            customDeptOpt.textContent = '➕ إدارة أخرى (إدخال يدوي)...';
-            deptSelect.appendChild(customDeptOpt);
+
 
             // 3. مسؤولو فريق السلامة والصحة المهنية فقط (بدون أي تكرار)
             const ownerSelect = document.getElementById('ownerSelect');
@@ -1829,17 +1813,7 @@
             return String(p).trim();
         }
 
-                function handleDeptChange(val) {
-            const customGroup = document.getElementById('customDeptGroup');
-            if (val === '__OTHER_DEPT__') {
-                customGroup.style.display = 'block';
-                document.getElementById('customDeptInput').focus();
-            } else {
-                customGroup.style.display = 'none';
-            }
-        }
-
-        function handleSiteChange(siteName) {
+                        function handleSiteChange(siteName) {
             const placeSelect = document.getElementById('placeSelect');
             const customGroup = document.getElementById('customPlaceGroup');
             const customSiteGroup = document.getElementById('customSiteGroup');
@@ -2776,10 +2750,7 @@
             const errorBox = document.getElementById('errorMessage');
             errorBox.style.display = 'none';
 
-            let site = document.getElementById('siteSelect').value;
-            if (site === '__OTHER_SITE__') {
-                site = document.getElementById('customSiteInput').value.trim();
-            }
+            let site = document.getElementById('siteSelect').value.trim();
 
             let place = document.getElementById('placeSelect').value;
             if (place === '__OTHER__') {
@@ -2795,10 +2766,7 @@
             const corrective = document.getElementById('correctiveInput').value.trim();
             const dateVal = document.getElementById('dateInput').value;
             const shift = document.getElementById('shiftSelect').value;
-            let dept = document.getElementById('responsibleDeptSelect').value;
-            if (dept === '__OTHER_DEPT__') {
-                dept = document.getElementById('customDeptInput').value.trim() || 'إدارة أخرى';
-            }
+            let dept = document.getElementById('responsibleDeptSelect').value.trim();
             const statusVal = document.getElementById('statusSelect').value || 'Open';
             const expectedDateVal = document.getElementById('expectedDateInput').value || '';
             
@@ -2967,7 +2935,7 @@
             document.getElementById('statusSelect').value = 'Open';
             document.getElementById('anonymousToggle').checked = false;
             document.getElementById('reporterInfoFields').style.display = 'flex';
-            document.getElementById('customSiteGroup').style.display = 'none';
+            
             document.getElementById('customPlaceGroup').style.display = 'none';
             document.getElementById('customSubCategoryGroup').style.display = 'none';
             document.getElementById('customOwnerGroup').style.display = 'none';
