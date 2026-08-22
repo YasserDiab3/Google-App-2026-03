@@ -1840,7 +1840,8 @@ const Settings = {
         const version = (typeof AppState !== 'undefined' && AppState.appVersion)
             ? String(AppState.appVersion).trim()
             : '—';
-        const label = version === '—' ? version : `v${version}`;
+        const isEn = (typeof I18n !== 'undefined' && I18n.currentLang === 'en') || (document.documentElement.lang === 'en');
+        const label = version === '—' ? version : (isEn ? `Version${version}` : `V.${version}`);
         return `
             <div class="content-card mt-6">
                 <div class="card-header">

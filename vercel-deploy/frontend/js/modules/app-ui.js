@@ -3926,16 +3926,39 @@ window.UI = {
      */
     updateAppVersionDisplay() {
         const raw = this.getAppVersionDisplay_();
-        const label = raw === '—' ? raw : `v${raw}`;
+        const lang = (typeof AppState !== 'undefined' && AppState.currentLanguage)
+            || (typeof I18n !== 'undefined' && I18n.currentLang)
+            || (typeof AppI18n !== 'undefined' && AppI18n.currentLang)
+            || document.documentElement.lang
+            || 'ar';
+        const isEn = lang === 'en';
+
+        const valText = raw === '—' ? raw : (isEn ? `Version${raw}` : `V.${raw}`);
+        const fullText = raw === '—' ? raw : (isEn ? `Version${raw}` : `إصدار النظام V.${raw}`);
+
         const sidebar = document.getElementById('sidebar-app-version');
+        const sidebarLabel = sidebar ? sidebar.querySelector('.sidebar-app-version-label') : null;
         const sidebarValue = document.getElementById('sidebar-app-version-value');
         const loginEl = document.getElementById('login-footer-version');
         const mobileEl = document.getElementById('mobile-app-version');
-        if (sidebarValue) sidebarValue.textContent = label;
-        if (sidebar) sidebar.setAttribute('title', `إصدار النظام ${label}`);
-        if (loginEl) loginEl.textContent = label;
+
+        if (sidebarLabel) {
+            sidebarLabel.textContent = isEn ? 'System Version' : 'إصدار النظام';
+        }
+        if (sidebarValue) {
+            sidebarValue.textContent = valText;
+        }
+        if (sidebar) {
+            sidebar.setAttribute('title', fullText);
+            sidebar.setAttribute('aria-label', fullText);
+        }
+        if (loginEl) {
+            loginEl.textContent = fullText;
+            loginEl.setAttribute('aria-label', fullText);
+        }
         if (mobileEl) {
-            mobileEl.textContent = label;
+            mobileEl.textContent = valText;
+            mobileEl.setAttribute('aria-label', fullText);
             mobileEl.style.display = raw === '—' ? 'none' : 'block';
         }
     },
@@ -10230,6 +10253,9 @@ window.UI = {
 
         // تحديث هوية الشركة والاسم المترجم
         this.updateCompanyBranding();
+
+        // تحديث نص إصدار النظام حسب اللغة المختارة
+        this.updateAppVersionDisplay();
 
         // تحديث aria-label للـ navigation
         const navElement = document.querySelector('nav.navigation');
