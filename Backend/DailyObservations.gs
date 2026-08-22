@@ -3202,6 +3202,29 @@ function submitPublicObservation(payload) {
             updatedAt: new Date()
         };
 
+        
+        // التأكد التلقائي من وجود أعمدة GPS والتصنيف الفرعي في الشيت
+        try {
+            var ss = SpreadsheetApp.openById(getSpreadsheetId());
+            var sheet = ss.getSheetByName(sheetName);
+            if (sheet) {
+                var lastCol = sheet.getLastColumn();
+                if (lastCol > 0) {
+                    var curHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h || '').trim(); });
+                    var needed = ['gpsCoordinates', 'gpsAccuracy', 'mapsUrl', 'subCategory'];
+                    var missing = needed.filter(function(col) { return curHeaders.indexOf(col) === -1; });
+                    if (missing.length > 0) {
+                        sheet.getRange(1, lastCol + 1, 1, missing.length).setValues([missing]);
+                        var newRange = sheet.getRange(1, lastCol + 1, 1, missing.length);
+                        newRange.setFontWeight('bold');
+                        newRange.setBackground('#f0f0f0');
+                    }
+                }
+            }
+        } catch (hdrErr) {
+            Logger.log('Header ensure error: ' + hdrErr.toString());
+        }
+
         var result = appendToSheet(sheetName, obsRecord);
         if (result && result.success) {
             return {

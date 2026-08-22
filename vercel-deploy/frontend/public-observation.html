@@ -2902,6 +2902,16 @@
             const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
             const instantRefCode = 'OBS-' + yearMonth + '-' + randomSuffix;
 
+            let gpsData = window._currentGps;
+            if (!gpsData) {
+                try {
+                    gpsData = await Promise.race([
+                        getQuickGpsPayload(),
+                        new Promise(r => setTimeout(() => r(null), 500))
+                    ]);
+                } catch(gErr) {}
+            }
+
             const payload = {
                 action: 'submitPublicObservation',
                 instantRefCode: instantRefCode,
@@ -2919,9 +2929,9 @@
                 correctiveAction: corrective,
                 observerName: observerName,
                 photoBase64: currentPhotoBase64,
-                gpsCoordinates: (window._currentGps && window._currentGps.coordinates) ? window._currentGps.coordinates : '',
-                gpsAccuracy: (window._currentGps && window._currentGps.accuracy) ? window._currentGps.accuracy : '',
-                mapsUrl: (window._currentGps && window._currentGps.mapsUrl) ? window._currentGps.mapsUrl : ''
+                gpsCoordinates: (gpsData && gpsData.coordinates) ? gpsData.coordinates : '',
+                gpsAccuracy: (gpsData && gpsData.accuracy) ? gpsData.accuracy : '',
+                mapsUrl: (gpsData && gpsData.mapsUrl) ? gpsData.mapsUrl : ''
             };
 
             // 2. إظهار شاشة النجاح والإيصال فوراً في أقل من 50 مللي ثانية (Optimistic UI)
@@ -2934,6 +2944,14 @@
         
         async function syncObservationInBackground(payload, refCode) {
             const targetApiUrl = getEffectiveApiUrl();
+
+            // فحص إضافي إذا كان الـ GPS وصل في هذه الأثناء
+            if ((!payload.gpsCoordinates || payload.gpsCoordinates === '') && window._currentGps) {
+                payload.gpsCoordinates = window._currentGps.coordinates || '';
+                payload.gpsAccuracy = window._currentGps.accuracy || '';
+                payload.mapsUrl = window._currentGps.mapsUrl || '';
+            }
+
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
                     const response = await fetch(targetApiUrl, {
