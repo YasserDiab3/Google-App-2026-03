@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1206",
+  "version": "1.0.1207",
   "highlights": {
     "ar": [
-      "إضافة التقاط الموقع الجغرافي الذكي (GPS) في الخلفية بسرعة فائقة مع توليد رابط مباشر لخرائط جوجل.",
-      "قصر خيارات الإدارات والمصانع على البيانات المسجلة رسمياً بقاعدة بيانات النظام ومنع التكرار.",
-      "تحديث نظام المقترحات التخصصية والإكمال التلقائي ودعم فتح استوديو الصور والكاميرا المباشرة."
+      "تفعيل الإرسال الفوري اللحظي للملاحظات (Optimistic UI) بدون أي شاشات انتظار أو توقف مع المزامنة في الخلفية.",
+      "إضافة التقاط إحداثيات الموقع الجغرافي الذكي (GPS) وربطه بخرائط جوجل تلقائياً.",
+      "مطابقة خيارات الإدارات والمصانع الرسمية وإزالة التكرارات بالكامل."
     ],
     "en": [
-      "Integrated zero-lag background GPS geolocation capture with automatic Google Maps link generation upon observation submission.",
-      "Strictly bound factories and responsible departments to system database records with zero synthetic duplicates.",
-      "Enhanced hierarchical smart suggestions, live typeahead autocomplete, and dual camera/gallery photo upload."
+      "Enabled instant optimistic UI observation submission with zero-wait background cloud synchronization.",
+      "Integrated smart non-blocking GPS geolocation capture with automatic Google Maps navigation link.",
+      "Strictly synchronized responsible departments and factories with system database records."
     ]
   }
 }
