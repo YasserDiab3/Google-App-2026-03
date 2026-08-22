@@ -3237,6 +3237,15 @@ function submitPublicObservation(payload) {
 
         var result = appendToSheet(sheetName, obsRecord);
         if (result && result.success) {
+            // إرسال تنبيه عاجل للمخاطر الحرجة وعالية الخطورة
+            try {
+                if (typeof notifyObservationWorkflowEmails === 'function') {
+                    notifyObservationWorkflowEmails('new_pending_specialist', obsRecord);
+                }
+            } catch (nErr) {
+                Logger.log('Workflow alert notify error: ' + nErr.toString());
+            }
+
             return {
                 success: true,
                 id: obsRecord.isoCode || obsRecord.id,

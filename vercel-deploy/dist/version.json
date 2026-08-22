@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1214",
+  "version": "1.0.1215",
   "highlights": {
     "ar": [
-      "إضافة أداة التأشير والرسم الميداني المباشر على الصورة (دوائر حمراء وأسهم لتحديد موضع الخطر).",
-      "إضافة زر المشاركة الفورية للملاحظة عبر واتساب وطباعة / حفظ إيصال الملاحظة PDF معتمد.",
-      "تفعيل ماسح الـ QR السريع للمواقع والمعدات ودعم المزامنة التلقائية عند انقطاع الإنترنت (Offline PWA)."
+      "إضافة نظام التنبيه البريدي الفوري للمخاطر الحرجة وعالية الخطورة لمدير السلامة والإدارات المعنية.",
+      "إضافة أداة توليد وطباعة بطاقات وملصقات QR كود الجاهزة للأماكن والمصانع ميدانياً.",
+      "تحديث ميزات الملاحظات اليومية الشاملة (أداة الرسم، مشاركة واتساب، المزامنة غير المتصلة، ماسح QR)."
     ],
     "en": [
-      "Added interactive photo annotation tool with red circle & arrow markup to pinpoint hazard locations directly on photos.",
-      "Integrated instant WhatsApp observation sharing and printable ISO-standard PDF receipts.",
-      "Enabled instant location QR scanner and seamless offline PWA local queue synchronization."
+      "Integrated automated instant critical hazard email alerts for HSE managers and responsible departments.",
+      "Added printable field-ready Location QR sticker badge generator for all factories & sub-locations.",
+      "Full daily observation suite upgrades (drawing tool, WhatsApp sharing, offline sync, QR scanner)."
     ]
   }
 }

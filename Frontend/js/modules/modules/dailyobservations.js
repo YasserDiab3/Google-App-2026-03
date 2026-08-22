@@ -9724,6 +9724,89 @@ const DailyObservations = {
         return sites.sort();
     },
 
+    
+    /**
+     * توليد وطباعة ملصقات الـ QR الميدانية لجميع المواقع والأماكن
+     */
+    printLocationQrBadges() {
+        const sites = this.getSiteOptions ? this.getSiteOptions() : ['ICAPP-1', 'ICAPP-2'];
+        const placesBySite = {};
+
+        // جمع المواقع والأماكن
+        (AppState.appData.observationSites || []).forEach(item => {
+            const s = item.siteName || item.site || item.name;
+            const p = item.placeName || item.locationName || item.place;
+            if (s && p) {
+                if (!placesBySite[s]) placesBySite[s] = new Set();
+                placesBySite[s].add(p);
+            }
+        });
+        (AppState.appData.subLocations || []).forEach(item => {
+            const s = item.factoryName || item.factory || item.siteName;
+            const p = item.name || item.subLocationName;
+            if (s && p) {
+                if (!placesBySite[s]) placesBySite[s] = new Set();
+                placesBySite[s].add(p);
+            }
+        });
+
+        if (Object.keys(placesBySite).length === 0) {
+            placesBySite['ICAPP-1'] = new Set(['منظومة طلمبات الحريق', 'عنبر الإنتاج الرئيسي', 'منطقة التعبئة والتغليف', 'مستودع المواد الخام', 'غرفة المحولات']);
+            placesBySite['ICAPP-2'] = new Set(['عنبر المعالجة والفرز', 'خطوط الإنتاج والتعبئة', 'ثلاجات التبريد والتجميد', 'المكاتب الإدارية']);
+        }
+
+        const origin = window.location.origin || '';
+        const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        const publicObsUrl = `${origin}${basePath}public-observation.html`;
+
+        let cardsHtml = '';
+        for (const site of Object.keys(placesBySite)) {
+            const places = Array.from(placesBySite[site]);
+            places.forEach(place => {
+                const targetQrUrl = `${publicObsUrl}?factory=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
+                const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(targetQrUrl)}`;
+
+                cardsHtml += `
+                    <div style="border: 2px dashed #0284c7; border-radius: 12px; padding: 14px; text-align: center; page-break-inside: avoid; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between;">
+                        <div style="font-size: 0.85rem; font-weight: 800; color: #0369a1; margin-bottom: 4px;">منظومة السلامة والصحة المهنية (HSE)</div>
+                        <img src="${qrImgSrc}" alt="QR Code" style="width: 140px; height: 140px; margin: 8px 0; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px;">
+                        <div style="font-size: 0.95rem; font-weight: 800; color: #0f172a;">${site}</div>
+                        <div style="font-size: 0.82rem; font-weight: 700; color: #475569; margin-top: 2px;">${place}</div>
+                        <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 6px;">امسح الكاميرا لتسجيل ملاحظة فورية بالموقع</div>
+                    </div>
+                `;
+            });
+        }
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="ar" dir="rtl">
+            <head>
+                <meta charset="UTF-8">
+                <title>ملصقات QR كود المواقع الميدانية - HSE</title>
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 20px; background: #f8fafc; color: #0f172a; }
+                    .print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+                    @media print {
+                        body { background: #fff; margin: 0; }
+                        .no-print { display: none; }
+                        .print-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 12px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                    <h2 style="margin: 0; font-size: 1.1rem; color: #0369a1;">🖨️ ملصقات QR كود للمواقع الميدانية الجاهزة للطباعة</h2>
+                    <button onclick="window.print()" style="background: #0284c7; color: #fff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; cursor: pointer;">طباعة الملصقات الآن</button>
+                </div>
+                <div class="print-grid">${cardsHtml}</div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    },
+
     getDepartmentOptions() {
         const normalizedMap = new Map();
 
