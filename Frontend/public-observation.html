@@ -1512,7 +1512,7 @@
             // محاولة تحميل الشعار من الكاش المحلي أولاً
             updateCompanyLogo();
 
-            // 2. إذا لم يكن بالرابط، استرجاع من الكاش المحلي للمتصفح
+            // 2. استرجاع فوري من الكاش المحلي للمتصفح في أقل من 10ms
             if (!configLoadedFromUrl) {
                 try {
                     const cached = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
@@ -1591,7 +1591,7 @@
             try {
                 const targetUrl = getEffectiveApiUrl();
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                const timeoutId = setTimeout(() => controller.abort(), 25000);
 
                 const res = await fetch(targetUrl, {
                     method: 'POST',
