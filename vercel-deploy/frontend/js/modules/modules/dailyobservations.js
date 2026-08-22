@@ -5689,6 +5689,9 @@ const DailyObservations = {
         `;
 
         document.body.appendChild(modal);
+        if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal);
+        }
         const close = () => modal.remove();
         modal.querySelector('.modal-close')?.addEventListener('click', close);
         modal.querySelector('[data-action="close"]')?.addEventListener('click', close);
@@ -12025,6 +12028,9 @@ const DailyObservations = {
                 if (modal && modal.getAttribute('data-observation-id') === observationId) {
                     // تحديث المحتوى فقط دون استبدال المودال
                     this.updateObservationModalContent(modal, updatedObs);
+                    if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+                        Utils.hydrateDriveProxyImages(modal);
+                    }
                 }
             } else if (response && !response.success && response.message) {
                 this.showObservationDetailInlineAlert(observationId, 'warning', response.message);
@@ -13643,8 +13649,21 @@ const DailyObservations = {
         return this.normalizeRecord(payload);
     },
 
+    _extractDriveFileId(url) {
+        if (!url || typeof url !== 'string') return '';
+        const match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+                      url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+                      url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/) ||
+                      url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+                      url.match(/googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/) ||
+                      (url.match(/^[a-zA-Z0-9_-]{25,}$/) ? [null, url] : null);
+        return match ? match[1] : '';
+    },
+
     viewFullImage(url) {
         if (!url) return;
+        const fileId = this._extractDriveFileId(url);
+        const resolvedSrc = fileId ? `https://lh3.googleusercontent.com/d/${fileId}=w1600` : url;
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.zIndex = '99999';
@@ -13657,7 +13676,8 @@ const DailyObservations = {
                     </button>
                 </div>
                 <div style="display: flex; justify-content: center; align-items: center; overflow: auto; max-height: 80vh;">
-                    <img src="${Utils.escapeHTML(url)}" alt="صورة الملاحظة" style="max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                    <img src="${Utils.escapeHTML(resolvedSrc)}" alt="صورة الملاحظة" style="max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);"
+                         onerror="if (this.src !== '${Utils.escapeHTML(url)}') { this.src = '${Utils.escapeHTML(url)}'; }">
                 </div>
             </div>
         `;
@@ -13694,27 +13714,52 @@ const DailyObservations = {
         return attachments.map((att) => {
             const isImg = isImgAttachment(att);
             const rawSrc = getAttachmentSrc(att);
-            const name = Utils.escapeHTML(att.name || 'صورة توضيحية');
+            const name = Utils.escapeHTML(att.name || 'صورة الملاحظة');
 
             if (isImg && rawSrc) {
-                const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
-                    ? Utils.resolveDriveAwareImgDisplay(rawSrc)
-                    : { canonical: rawSrc, displaySrc: rawSrc, needsProxy: false, proxyFileId: '' };
-                const imgSrc = disp.canonical ? disp.displaySrc : rawSrc;
-                const proxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                const fileId = this._extractDriveFileId(rawSrc);
+                let primarySrc = rawSrc;
+                let fallbacks = [];
+
+                if (fileId) {
+                    primarySrc = `https://lh3.googleusercontent.com/d/${fileId}=w1200`;
+                    fallbacks = [
+                        `https://drive.google.com/thumbnail?id=${fileId}&sz=w1200`,
+                        `https://drive.google.com/uc?export=view&id=${fileId}`,
+                        `https://drive.google.com/uc?export=download&id=${fileId}`,
+                        rawSrc
+                    ];
+                } else if (rawSrc.startsWith('http://') || rawSrc.startsWith('https://')) {
+                    primarySrc = rawSrc;
+                }
+
+                const driveProxyAttr = fileId ? ` data-drive-proxy-id="${fileId}"` : '';
+                const fallbacksAttr = fallbacks.length ? ` data-fallbacks="${Utils.escapeHTML(JSON.stringify(fallbacks))}"` : '';
 
                 return `
                     <div class="border-2 border-gray-200 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all bg-slate-50 flex flex-col items-center p-3">
-                        <div class="w-full flex justify-center items-center overflow-hidden rounded-lg bg-black/5" style="max-height: 420px;">
-                            <img src="${Utils.escapeHTML(imgSrc)}"${proxyAttr} alt="${name}" 
-                                 class="w-auto max-w-full max-h-80 object-contain rounded-lg cursor-pointer transition-transform hover:scale-[1.02]"
-                                 onclick="DailyObservations.viewFullImage('${Utils.escapeHTML(rawSrc)}')"
+                        <div class="w-full flex justify-center items-center overflow-hidden rounded-lg bg-black/5" style="min-height: 200px; max-height: 450px;">
+                            <img src="${Utils.escapeHTML(primarySrc)}"${driveProxyAttr}${fallbacksAttr} alt="${name}" 
+                                 class="observation-detail-photo w-auto max-w-full max-h-80 object-contain rounded-lg cursor-pointer transition-transform hover:scale-[1.02]"
+                                 onclick="DailyObservations.viewFullImage(this.currentSrc || this.src || '${Utils.escapeHTML(rawSrc)}')"
                                  title="انقر لعرض الصورة بالحجم الكامل"
-                                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f1f5f9%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%2364748b%22 font-family=%22sans-serif%22 font-size=%2216%22 font-weight=%22bold%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eتعذر تحميل الصورة مباشرة%3C/text%3E%3C/svg%3E';">
+                                 onerror="
+                                     try {
+                                         const fb = this.dataset.fallbacks ? JSON.parse(this.dataset.fallbacks) : [];
+                                         if (fb && fb.length > 0) {
+                                             const next = fb.shift();
+                                             this.dataset.fallbacks = JSON.stringify(fb);
+                                             this.src = next;
+                                             return;
+                                         }
+                                     } catch(e){}
+                                     this.onerror = null;
+                                     this.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22260%22%3E%3Crect fill=%22%23f8fafc%22 width=%22400%22 height=%22260%22/%3E%3Ctext fill=%22%2394a3b8%22 font-family=%22sans-serif%22 font-size=%2215%22 font-weight=%22bold%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eتعذر عرض الصورة مباشرة%3C/text%3E%3C/svg%3E';
+                                 ">
                         </div>
                         <div class="w-full mt-2 flex items-center justify-between text-xs text-gray-600 px-1">
                             <span class="font-bold truncate max-w-[200px]"><i class="fas fa-image ml-1 text-blue-500"></i>${name}</span>
-                            <button type="button" onclick="DailyObservations.viewFullImage('${Utils.escapeHTML(rawSrc)}')" class="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer">
+                            <button type="button" onclick="DailyObservations.viewFullImage(this.closest('.border-2').querySelector('img')?.currentSrc || '${Utils.escapeHTML(rawSrc)}')" class="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer">
                                 <i class="fas fa-expand"></i> تكبير
                             </button>
                         </div>
