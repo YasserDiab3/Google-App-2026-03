@@ -3472,10 +3472,24 @@
         }
 
         // ==========================================
-        // 2. ماسح QR الموقع السريع
+        // 2. ماسح QR الموقع السريع مع فك التشفير الآمن
         // ==========================================
         let qrStream = null;
         let qrScanning = false;
+
+        function safeB64DecodeUnicode(str) {
+            try {
+                return decodeURIComponent(atob(str).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+            } catch (e) {
+                try {
+                    return decodeURIComponent(escape(atob(str)));
+                } catch (e2) {
+                    return atob(str);
+                }
+            }
+        }
 
         async function openQrScannerModal() {
             const modal = document.getElementById('qrScannerModal');
@@ -3537,11 +3551,10 @@
                 // 1. فحص بروتوكول التشفير الحصري لفريق السلامة (HSE-LOC-V1)
                 if (rawStr.startsWith('HSE-LOC-V1:')) {
                     const encodedPayload = rawStr.substring('HSE-LOC-V1:'.length);
-                    const decodedJson = decodeURIComponent(escape(atob(encodedPayload)));
+                    const decodedJson = safeB64DecodeUnicode(encodedPayload);
                     const parsed = JSON.parse(decodedJson);
 
                     if (parsed.protocol === 'HSE_SAFETY_OFFICER_FIELD_V1' && parsed.authKey === 'HSE_AUTH_KEY_2026_SAFETY_CORP') {
-                        showToast('🔒 تم التحقق: رمز معتمد لفريق السلامة والصحة المهنية ✅', 'success', 3500);
                         applyMatchedLocation(parsed.site || '', parsed.place || '');
                         return;
                     }
@@ -3552,23 +3565,21 @@
                     const parsed = JSON.parse(rawStr);
                     const site = parsed.site || parsed.factory || parsed.siteName || '';
                     const place = parsed.place || parsed.subLocation || parsed.location || '';
-                    showToast('تم مسح بيانات الموقع بنجاح!', 'success', 2500);
                     applyMatchedLocation(site, place);
                     return;
                 }
 
                 // 3. فحص إذا كان URL مع بارامترات
                 if (rawStr.includes('?')) {
-                    const params = new URLSearchParams(rawStr.split('?')[1]);
-                    const site = params.get('site') || params.get('factory') || '';
-                    const place = params.get('place') || params.get('subLocation') || '';
-                    showToast('تم مسح بيانات الموقع بنجاح!', 'success', 2500);
+                    const queryString = rawStr.split('?')[1];
+                    const params = new URLSearchParams(queryString);
+                    const site = params.get('site') || params.get('factory') || params.get('factoryName') || params.get('siteName') || '';
+                    const place = params.get('place') || params.get('subLocation') || params.get('location') || params.get('placeName') || '';
                     applyMatchedLocation(site, place);
                     return;
                 }
 
-                // 4. فحص نصي
-                showToast('تم مسح بيانات الموقع!', 'success', 2000);
+                // 4. فحص نصي عادي أو مدمج
                 applyMatchedLocation(rawStr, '');
             } catch (e) {
                 showToast('رمز QR غير صالح أو غير معتمد لفريق السلامة', 'error', 3000);
@@ -3577,61 +3588,95 @@
 
         function applyMatchedLocation(siteName, placeName) {
             const siteSelect = document.getElementById('siteSelect');
-            if (!siteSelect) return;
+            const placeSelect = document.getElementById('placeSelect');
+            if (!siteSelect || !placeSelect) return;
 
-            const cleanSite = String(siteName || '').trim();
-            const cleanPlace = String(placeName || '').trim();
+            let cleanSite = String(siteName || '').trim();
+            let cleanPlace = String(placeName || '').trim();
 
-            let matchedSite = false;
+            // إذا كان النص مدمجاً مثل "ICAPP-1 — عنبر الإنتاج" أو "ICAPP-1 - عنبر الإنتاج"
+            if (!cleanPlace && (cleanSite.includes('—') || cleanSite.includes(' - ') || cleanSite.includes('::') || cleanSite.includes('/'))) {
+                const parts = cleanSite.split(/\s*[-—/::]\s*/);
+                if (parts.length >= 2) {
+                    cleanSite = parts[0].trim();
+                    cleanPlace = parts.slice(1).join(' - ').trim();
+                }
+            }
+
+            if (!cleanSite) return;
+
+            // 1. تحديد أو إضافة المصنع
+            let matchedSiteVal = '';
             for (let i = 0; i < siteSelect.options.length; i++) {
                 const optVal = siteSelect.options[i].value;
-                if (cleanSite && (optVal.toLowerCase() === cleanSite.toLowerCase() || optVal.toLowerCase().includes(cleanSite.toLowerCase()) || cleanSite.toLowerCase().includes(optVal.toLowerCase()))) {
+                if (optVal && (optVal.toLowerCase() === cleanSite.toLowerCase() || optVal.toLowerCase().includes(cleanSite.toLowerCase()) || cleanSite.toLowerCase().includes(optVal.toLowerCase()))) {
+                    matchedSiteVal = optVal;
                     siteSelect.selectedIndex = i;
-                    handleSiteChange(siteSelect.value);
-                    matchedSite = true;
                     break;
                 }
             }
 
-            // إذا لم يكن المصنع موجوداً في القائمة، نضيفه ونختاره
-            if (!matchedSite && cleanSite) {
-                const newSiteOpt = document.createElement('option');
-                newSiteOpt.value = cleanSite;
-                newSiteOpt.textContent = cleanSite;
-                siteSelect.appendChild(newSiteOpt);
+            if (!matchedSiteVal) {
+                const newOpt = document.createElement('option');
+                newOpt.value = cleanSite;
+                newOpt.textContent = cleanSite;
+                siteSelect.appendChild(newOpt);
                 siteSelect.value = cleanSite;
-                handleSiteChange(cleanSite);
-                matchedSite = true;
+                matchedSiteVal = cleanSite;
+            } else {
+                siteSelect.value = matchedSiteVal;
             }
 
-            if (matchedSite && cleanPlace && cleanPlace !== 'الموقع العام') {
-                const placeSelect = document.getElementById('placeSelect');
-                if (placeSelect) {
-                    let matchedPlace = false;
-                    for (let j = 0; j < placeSelect.options.length; j++) {
-                        const pVal = placeSelect.options[j].value;
-                        if (pVal.toLowerCase() === cleanPlace.toLowerCase() || pVal.toLowerCase().includes(cleanPlace.toLowerCase()) || cleanPlace.toLowerCase().includes(pVal.toLowerCase())) {
-                            placeSelect.selectedIndex = j;
-                            matchedPlace = true;
-                            break;
-                        }
-                    }
+            // 2. تحديث قائمة الأماكن التابعة للمصنع فورياً
+            handleSiteChange(siteSelect.value);
 
-                    // إذا لم يكن المكان الفرعي موجوداً في القائمة، نضيفه فوراً ونختاره
-                    if (!matchedPlace) {
-                        const newPlaceOpt = document.createElement('option');
-                        newPlaceOpt.value = cleanPlace;
-                        newPlaceOpt.textContent = cleanPlace;
-                        const otherOpt = placeSelect.querySelector('option[value="__OTHER__"]');
-                        if (otherOpt) {
-                            placeSelect.insertBefore(newPlaceOpt, otherOpt);
-                        } else {
-                            placeSelect.appendChild(newPlaceOpt);
-                        }
-                        placeSelect.value = cleanPlace;
+            // 3. تحديد أو إضافة المكان الفرعي
+            if (cleanPlace && cleanPlace !== 'الموقع العام') {
+                let matchedPlaceVal = '';
+                for (let j = 0; j < placeSelect.options.length; j++) {
+                    const pVal = placeSelect.options[j].value;
+                    if (pVal && (pVal.toLowerCase() === cleanPlace.toLowerCase() || pVal.toLowerCase().includes(cleanPlace.toLowerCase()) || cleanPlace.toLowerCase().includes(pVal.toLowerCase()))) {
+                        matchedPlaceVal = pVal;
+                        placeSelect.selectedIndex = j;
+                        break;
                     }
                 }
+
+                if (!matchedPlaceVal) {
+                    const newPlaceOpt = document.createElement('option');
+                    newPlaceOpt.value = cleanPlace;
+                    newPlaceOpt.textContent = cleanPlace;
+                    const otherOpt = placeSelect.querySelector('option[value="__OTHER__"]');
+                    if (otherOpt) {
+                        placeSelect.insertBefore(newPlaceOpt, otherOpt);
+                    } else {
+                        placeSelect.appendChild(newPlaceOpt);
+                    }
+                    placeSelect.value = cleanPlace;
+                } else {
+                    placeSelect.value = matchedPlaceVal;
+                }
+                placeSelect.disabled = false;
             }
+
+            // 4. وميض بصري أخضر لتأكيد التحديد التلقائي
+            siteSelect.style.transition = 'all 0.3s ease';
+            placeSelect.style.transition = 'all 0.3s ease';
+            siteSelect.style.borderColor = '#10b981';
+            siteSelect.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.25)';
+            placeSelect.style.borderColor = '#10b981';
+            placeSelect.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.25)';
+
+            setTimeout(() => {
+                siteSelect.style.borderColor = '';
+                siteSelect.style.boxShadow = '';
+                placeSelect.style.borderColor = '';
+                placeSelect.style.boxShadow = '';
+            }, 3000);
+
+            // إشعار تأكيدي واضح
+            const placeDisplay = (cleanPlace && cleanPlace !== 'الموقع العام') ? ` (${cleanPlace})` : '';
+            showToast(`📍 تم تحديد الموقع تلقائياً: ${siteSelect.value}${placeDisplay} ✅`, 'success', 4000);
         }
 
         // ==========================================
