@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1230",
+  "version": "1.0.1231",
   "highlights": {
     "ar": [
-      "ترقية كامل نصوص وهوية النموذج الميداني (public-near-miss.html) ليكون 100% مخصصاً للحوادث الوشيكة.",
-      "تعديل الترويسة وبطاقات الوصف (ما كاد أن يحدث) والإجراءات الوقائية وإيصال البلاغ.",
-      "تثبيت وتأكيد عمل أزرار الـ QR وملصقات المواقع والتوجيه الدقيق للرابط الميداني."
+      "توحيد وتثبيت جميع مقاسات أيقونات تطبيق الويب (PWA Icons) لمنع تكرار رسالة مراجعة الشعار في المتصفح.",
+      "تثبيت الشعار الرسمي الموحد لجميع المقاسات من 16px وحتى 512px.",
+      "اعتماد نموذج الحوادث الوشيكة الميداني الشامل بالكامل."
     ],
     "en": [
-      "Overhauled all titles and texts in public-near-miss.html to be 100% Near Miss branded.",
-      "Customized scenario descriptions (what could have happened), preventive actions, and receipts.",
-      "Fixed QR button events and location printing routing directly to Near Miss public form."
+      "Unified and stabilized all PWA icon sizes to permanently prevent recurring browser branding update prompts.",
+      "Synchronized official application branding across all icon resolutions from 16px to 512px.",
+      "Finalized complete public Near Miss reporting form deployment."
     ]
   }
 }
