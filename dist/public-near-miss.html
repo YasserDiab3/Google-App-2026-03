@@ -2035,6 +2035,30 @@
                 handleSiteChange(siteSelect.value);
             }
 
+            const placeParam = urlParams.get('place') || urlParams.get('location') || urlParams.get('subLocation');
+            if (placeParam && placeParam !== 'الموقع العام') {
+                const placeSelect = document.getElementById('placeSelect');
+                if (placeSelect) {
+                    let matchedP = false;
+                    for (let j = 0; j < placeSelect.options.length; j++) {
+                        if (placeSelect.options[j].value.toLowerCase().includes(placeParam.toLowerCase()) || placeParam.toLowerCase().includes(placeSelect.options[j].value.toLowerCase())) {
+                            placeSelect.selectedIndex = j;
+                            matchedP = true;
+                            break;
+                        }
+                    }
+                    if (!matchedP && placeParam.trim()) {
+                        const newOpt = document.createElement('option');
+                        newOpt.value = placeParam;
+                        newOpt.textContent = placeParam;
+                        const otherOpt = placeSelect.querySelector('option[value="__OTHER__"]');
+                        if (otherOpt) placeSelect.insertBefore(newOpt, otherOpt);
+                        else placeSelect.appendChild(newOpt);
+                        placeSelect.value = placeParam;
+                    }
+                }
+            }
+
             // 2. الإدارات الفعلية الشاملة من النظام
             const deptSelect = document.getElementById('responsibleDeptSelect');
             const previousDept = deptSelect.value;

@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1228",
+  "version": "1.0.1229",
   "highlights": {
     "ar": [
-      "إضافة تبويب التحليل البياني المتقدم (Analytics Dashboard) لموديول الحوادث الوشيكة.",
-      "تحديث بطاقات المؤشرات الإحصائية وحساب الأرقام والنسب تلقائياً من قاعدة البيانات.",
-      "إصلاح وتشغيل أزرار نافذة الـ QR وطباعة الملصقات فورياً بدون أي تأخير."
+      "تصحيح توليد رابط الـ QR ليوجه بدقة إلى نموذج الحوادث الوشيكة (public-near-miss.html).",
+      "تشغيل النافذة المنبثقة للـ QR ومصفوفة طباعة الملصقات مع الرابط المباشر وأزرار الفتح والنسخ.",
+      "تعبئة المصنع والمكان تلقائياً عند مسح ملصقات الـ QR الميدانية للحوادث الوشيكة."
     ],
     "en": [
-      "Added full visual analytics and charts tab for Near Miss module.",
-      "Refined KPI cards with live database counts and severity segmentation.",
-      "Guaranteed immediate response for public QR code modal and batch sticker printing."
+      "Fixed Near Miss QR generator to precisely direct to public-near-miss.html.",
+      "Activated Near Miss QR modal and batch location printing with direct links and action buttons.",
+      "Auto-populated factory and location when scanning Near Miss QR stickers."
     ]
   }
 }

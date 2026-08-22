@@ -1139,67 +1139,86 @@ const NearMiss = {
     /**
      * فتح نافذة بطاقات QR العامة للحوادث الوشيكة
      */
-    openPublicQrModal() {
-        const publicUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'public-near-miss.html';
-        
-        let modalEl = document.getElementById('nrm-public-qr-modal');
-        if (!modalEl) {
-            modalEl = document.createElement('div');
-            modalEl.id = 'nrm-public-qr-modal';
-            modalEl.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm';
-            document.body.appendChild(modalEl);
+    getPublicUrl() {
+        try {
+            const loc = window.location;
+            let base = loc.origin + loc.pathname;
+            if (base.endsWith('.html')) {
+                base = base.substring(0, base.lastIndexOf('/') + 1);
+            } else if (!base.endsWith('/')) {
+                base = base + '/';
+            }
+            return base + 'public-near-miss.html';
+        } catch(e) {
+            return window.location.href.split('?')[0].split('#')[0].replace(/[^/]*$/, '') + 'public-near-miss.html';
         }
+    },
+
+    openPublicQrModal() {
+        const publicUrl = this.getPublicUrl();
+        
+        // إزالة أي نافذة قديمة
+        const oldModal = document.getElementById('nrm-public-qr-modal');
+        if (oldModal) oldModal.remove();
+
+        const modalEl = document.createElement('div');
+        modalEl.id = 'nrm-public-qr-modal';
+        modalEl.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(6px); direction:rtl; font-family:"Segoe UI", Tahoma, sans-serif;';
 
         const qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(publicUrl);
 
         modalEl.innerHTML = `
-            <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-200" style="direction:rtl; font-family:'Segoe UI', Tahoma, sans-serif;">
-                <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); color:#fff; padding:20px 24px; display:flex; justify-content:space-between; align-items:center;">
-                    <div class="flex items-center gap-3">
-                        <div style="width:44px; height:44px; border-radius:12px; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center;">
-                            <i class="fas fa-qrcode text-xl text-amber-300"></i>
+            <div style="background:#fff; border-radius:24px; max-width:520px; width:100%; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.4); border:1px solid #e0e7ff; animation:fadeIn 0.2s ease;">
+                <!-- الترويسة -->
+                <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); color:#fff; padding:22px 26px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:14px;">
+                        <div style="width:48px; height:48px; border-radius:14px; background:rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center;">
+                            <i class="fas fa-qrcode text-2xl text-amber-300"></i>
                         </div>
                         <div>
-                            <h3 class="font-bold text-lg leading-tight" style="margin:0;">النموذج العام للحوادث الوشيكة</h3>
-                            <p class="text-xs text-indigo-200" style="margin:2px 0 0 0;">SafetyHub | ICAPP Near Miss Public Suite</p>
+                            <h3 style="font-size:1.25rem; font-weight:800; margin:0; color:#fff;">النموذج العام للحوادث الوشيكة</h3>
+                            <p style="font-size:0.75rem; color:#c7d2fe; margin:3px 0 0 0;">SafetyHub | ICAPP — Near Miss Public Reporting</p>
                         </div>
                     </div>
-                    <button onclick="document.getElementById('nrm-public-qr-modal').remove()" class="text-white/80 hover:text-white text-2xl" style="background:none; border:none; cursor:pointer;">
+                    <button onclick="document.getElementById('nrm-public-qr-modal').remove()" style="background:none; border:none; color:rgba(255,255,255,0.8); font-size:1.8rem; cursor:pointer;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.8)'">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="p-6 text-center">
-                    <div style="background:#eef2ff; border:1px solid #c7d2fe; border-radius:12px; padding:12px 16px; margin-bottom:20px; text-align:right; font-size:0.8rem; color:#312e81; display:flex; align-items:center; gap:10px;">
-                        <i class="fas fa-info-circle text-indigo-600 text-lg"></i>
-                        <div>يمكن لجميع العاملين والمقاولين مسح هذا الرمز للإبلاغ السريع عن أي حادث وشيك دون الحاجة لتسجيل دخول.</div>
+
+                <!-- المحتوى -->
+                <div style="padding:24px; text-align:center;">
+                    <div style="background:#eef2ff; border:1px solid #c7d2fe; border-radius:14px; padding:14px 18px; margin-bottom:20px; text-align:right; font-size:0.82rem; color:#312e81; display:flex; align-items:center; gap:12px;">
+                        <i class="fas fa-shield-alt text-indigo-600 text-2xl"></i>
+                        <div><b>رابط متاح لجميع العاملين والمقاولين:</b> يمكن مسح الرمز بكاميرا الهاتف لفتح نموذج الإبلاغ عن الحوادث الوشيكة فوراً بدون تسجيل دخول.</div>
                     </div>
-                    <div class="inline-block p-4 bg-white rounded-2xl shadow-md border-2 border-indigo-100 mb-4">
-                        <img src="${qrCodeUrl}" alt="QR Code" style="width:210px; height:210px; border-radius:10px;" class="mx-auto" />
+
+                    <div style="display:inline-block; padding:16px; background:#fff; border-radius:20px; box-shadow:0 6px 20px rgba(0,0,0,0.06); border:2px solid #e0e7ff; margin-bottom:18px;">
+                        <img src="${qrCodeUrl}" alt="QR Code" style="width:220px; height:220px; border-radius:12px; display:block; margin:0 auto;" />
                     </div>
-                    <div style="font-size:0.75rem; color:#64748b; font-family:monospace; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:20px; word-break:break-all; direction:ltr; text-align:center;">
+
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; margin-bottom:20px; font-family:monospace; font-size:0.75rem; color:#475569; direction:ltr; text-align:center; word-break:break-all; user-select:all;">
                         ${publicUrl}
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="window.open('${publicUrl}', '_blank')" class="btn-secondary py-2.5 flex items-center justify-center gap-2" style="border-radius:10px; font-weight:600; cursor:pointer;">
-                            <i class="fas fa-external-link-alt"></i>
+
+                    <!-- أزرار الإجراءات -->
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <button onclick="window.open('${publicUrl}', '_blank')" style="background:#f1f5f9; color:#1e293b; border:1px solid #cbd5e1; padding:11px 16px; border-radius:12px; font-weight:700; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                            <i class="fas fa-external-link-alt text-indigo-600"></i>
                             <span>فتح النموذج الآن</span>
                         </button>
-                        <button onclick="NearMiss.printLocationQrBadges()" class="btn-primary py-2.5 flex items-center justify-center gap-2" style="background:#312e81; color:#fff; border-radius:10px; font-weight:700; cursor:pointer;">
-                            <i class="fas fa-print"></i>
+                        <button onclick="NearMiss.printLocationQrBadges()" style="background:linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color:#fff; border:none; padding:11px 16px; border-radius:12px; font-weight:700; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                            <i class="fas fa-print text-amber-300"></i>
                             <span>طباعة ملصقات المواقع 🖨️</span>
                         </button>
                     </div>
                 </div>
             </div>
         `;
-        modalEl.style.display = 'flex';
+        document.body.appendChild(modalEl);
     },
 
-    /**
-     * طباعة ملصقات QR الشاملة للمصانع والمواقع للحوادث الوشيكة
-     */
     printLocationQrBadges() {
-        const publicUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'public-near-miss.html';
+        const publicUrl = this.getPublicUrl();
         
         let sites = [];
         try {
@@ -1231,7 +1250,8 @@ const NearMiss = {
         }
 
         const cardsHtml = cards.map((c, idx) => {
-            const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(`${publicUrl}?factory=${encodeURIComponent(c.site)}&place=${encodeURIComponent(c.place)}`);
+            const directTarget = `${publicUrl}?factory=${encodeURIComponent(c.site)}&place=${encodeURIComponent(c.place)}`;
+            const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(directTarget);
             return `
                 <div style="border: 2px solid #312e81; border-radius: 12px; padding: 12px; background: #fff; text-align: right; break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e0e7ff; padding-bottom:6px; margin-bottom:8px;">
