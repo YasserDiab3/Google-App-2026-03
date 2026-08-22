@@ -13722,13 +13722,20 @@ const DailyObservations = {
                 let fallbacks = [];
 
                 if (fileId) {
-                    primarySrc = `https://lh3.googleusercontent.com/d/${fileId}=w1200`;
-                    fallbacks = [
-                        `https://drive.google.com/thumbnail?id=${fileId}&sz=w1200`,
-                        `https://drive.google.com/uc?export=view&id=${fileId}`,
-                        `https://drive.google.com/uc?export=download&id=${fileId}`,
-                        rawSrc
-                    ];
+                    const cached = (typeof Utils !== 'undefined' && Utils._driveImageMemoryCache && Utils._driveImageMemoryCache.get(fileId))
+                        || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('HSE_IMG_CACHE_' + fileId));
+                    if (cached) {
+                        primarySrc = cached;
+                    } else {
+                        primarySrc = `https://lh3.googleusercontent.com/d/${fileId}`;
+                        fallbacks = [
+                            `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`,
+                            `https://lh3.googleusercontent.com/d/${fileId}=w1000`,
+                            `https://drive.google.com/uc?export=view&id=${fileId}`,
+                            `https://drive.google.com/uc?export=download&id=${fileId}`,
+                            rawSrc
+                        ];
+                    }
                 } else if (rawSrc.startsWith('http://') || rawSrc.startsWith('https://')) {
                     primarySrc = rawSrc;
                 }
@@ -13738,9 +13745,14 @@ const DailyObservations = {
 
                 return `
                     <div class="border-2 border-gray-200 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all bg-slate-50 flex flex-col items-center p-3">
-                        <div class="w-full flex justify-center items-center overflow-hidden rounded-lg bg-black/5" style="min-height: 200px; max-height: 450px;">
+                        <div class="w-full flex justify-center items-center overflow-hidden rounded-lg bg-slate-100 relative min-h-[220px]" style="max-height: 450px;">
+                            <div class="photo-loading-spinner flex flex-col items-center justify-center p-6 text-slate-400 gap-2 absolute inset-0">
+                                <i class="fas fa-circle-notch fa-spin text-2xl text-blue-500"></i>
+                                <span class="text-xs font-semibold">جاري تحميل وتجهيز الصورة...</span>
+                            </div>
                             <img src="${Utils.escapeHTML(primarySrc)}"${driveProxyAttr}${fallbacksAttr} alt="${name}" 
-                                 class="observation-detail-photo w-auto max-w-full max-h-80 object-contain rounded-lg cursor-pointer transition-transform hover:scale-[1.02]"
+                                 class="observation-detail-photo relative z-10 w-auto max-w-full max-h-80 object-contain rounded-lg cursor-pointer transition-transform hover:scale-[1.02]"
+                                 onload="const sp = this.parentElement.querySelector('.photo-loading-spinner'); if(sp) sp.style.display='none';"
                                  onclick="DailyObservations.viewFullImage(this.currentSrc || this.src || '${Utils.escapeHTML(rawSrc)}')"
                                  title="انقر لعرض الصورة بالحجم الكامل"
                                  onerror="
@@ -13753,6 +13765,7 @@ const DailyObservations = {
                                              return;
                                          }
                                      } catch(e){}
+                                     const sp = this.parentElement.querySelector('.photo-loading-spinner'); if(sp) sp.style.display='none';
                                      this.onerror = null;
                                      this.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22260%22%3E%3Crect fill=%22%23f8fafc%22 width=%22400%22 height=%22260%22/%3E%3Ctext fill=%22%2394a3b8%22 font-family=%22sans-serif%22 font-size=%2215%22 font-weight=%22bold%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eتعذر عرض الصورة مباشرة%3C/text%3E%3C/svg%3E';
                                  ">

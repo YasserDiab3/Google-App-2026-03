@@ -4396,7 +4396,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1258',
+    appVersion: '1.0.1259',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -5308,16 +5308,39 @@ const Utils = {
         return scriptUrl + (scriptUrl.indexOf('?') !== -1 ? '&' : '?') + 'action=getProfileImage&id=' + encodeURIComponent(id);
     },
 
+    _driveImageMemoryCache: new Map(),
+
     /**
-     * جلب صورة Drive عبر السكربت وإرجاع data URI للعرض في img.
+     * جلب صورة Drive عبر السكربت وإرجاع data URI للعرض في img مع التخزين المؤقت الفوري.
      */
     async fetchDriveImageDataUri(fileId) {
+        if (!fileId) return null;
+        if (this._driveImageMemoryCache && this._driveImageMemoryCache.has(fileId)) {
+            return this._driveImageMemoryCache.get(fileId);
+        }
+        try {
+            const cached = sessionStorage.getItem('HSE_IMG_CACHE_' + fileId);
+            if (cached) {
+                if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(fileId, cached);
+                return cached;
+            }
+        } catch (e) {}
+
         const url = this.buildGetProfileImageProxyUrl(fileId);
         if (!url) return null;
         try {
             const res = await fetch(url, { method: 'GET', credentials: 'omit' });
             const data = await res.json();
-            if (data && data.success && data.dataUri) return String(data.dataUri);
+            if (data && data.success && data.dataUri) {
+                const uri = String(data.dataUri);
+                if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(fileId, uri);
+                try {
+                    if (uri.length < 500000) {
+                        sessionStorage.setItem('HSE_IMG_CACHE_' + fileId, uri);
+                    }
+                } catch (e) {}
+                return uri;
+            }
         } catch (e) {
             /* ignore */
         }
