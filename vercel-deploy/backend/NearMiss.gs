@@ -278,39 +278,41 @@ function submitPublicNearMiss(payload) {
         var spreadsheetId = getSpreadsheetId();
         
         var id = generateSequentialId('NRM', sheetName);
-        var isoCode = 'NM-' + new Date().getFullYear() + '-' + String(Math.floor(1000 + Math.random() * 9000));
-        
+        var isoCode = payload.instantRefCode || ('NM-' + new Date().getFullYear() + '-' + String(Math.floor(1000 + Math.random() * 9000)));
+        var corrective = payload.correctiveProposed || payload.correctiveAction || payload.correctiveDescription || '';
+        var photoData = payload.photoBase64 || payload.image || '';
+
         var record = {
             id: id,
             isoCode: isoCode,
-            type: payload.observationType || payload.type || 'سقوط أشياء',
+            type: payload.observationType || payload.type || 'سقوط أشياء / أحمال',
             severity: payload.riskLevel || payload.severity || 'متوسط',
             date: payload.date || new Date().toISOString().split('T')[0],
             observerName: payload.observerName || 'فاعل خير (سري)',
             phone: payload.observerPhone || payload.phone || '',
-            location: payload.location || ((payload.siteName || '') + (payload.locationName ? ' - ' + payload.locationName : '')),
+            location: payload.location || ((payload.siteName || '') + (payload.subLocation || payload.locationName ? ' - ' + (payload.subLocation || payload.locationName) : '')),
             siteName: payload.siteName || '',
-            subLocation: payload.locationName || payload.subLocation || '',
-            department: payload.responsibleDepartment || payload.department || '',
+            subLocation: payload.subLocation || payload.locationName || '',
+            department: payload.responsibleDepartment || payload.department || 'السلامة والصحة المهنية',
             description: payload.details || payload.description || '',
             potentialConsequences: payload.potentialConsequences || '',
-            correctiveProposed: payload.correctiveAction || '',
-            correctiveDescription: payload.correctiveAction || '',
+            correctiveProposed: corrective,
+            correctiveDescription: corrective,
             attachments: '[]',
             status: 'جديد',
             reportedBy: payload.observerName || 'Public Form',
-            isAnonymous: payload.isAnonymous ? 'نعم' : 'لا',
-            gpsLocation: payload.gpsLocation || '',
-            gpsMapLink: payload.gpsMapLink || '',
+            isAnonymous: (payload.isAnonymous === true || payload.isAnonymous === 'نعم') ? 'نعم' : 'لا',
+            gpsLocation: payload.gpsLocation || payload.gpsCoordinates || '',
+            gpsMapLink: payload.gpsMapLink || payload.mapsUrl || '',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
 
         // رفع الصورة المرفقة إن وُجدت
-        if (payload.image && String(payload.image).startsWith('data:image/')) {
+        if (photoData && String(photoData).startsWith('data:image/')) {
             try {
                 var folderName = 'HSE_NearMiss_Attachments';
-                var uploadRes = uploadFileToDrive(payload.image, 'image-1', folderName, 'image/jpeg', 'NearMiss', id);
+                var uploadRes = uploadFileToDrive(photoData, 'image-1', folderName, 'image/jpeg', 'NearMiss', id);
                 if (uploadRes && uploadRes.success) {
                     var directLink = 'https://drive.google.com/uc?export=view&id=' + uploadRes.fileId;
                     record.attachments = JSON.stringify([{

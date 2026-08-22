@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1234",
+  "version": "1.0.1235",
   "highlights": {
     "ar": [
-      "مطابقة آلية الربط الديناميكي بين المصنع والمكان الفرعي في نموذج الحوادث الوشيكة بنفس طريقة الملاحظات اليومية.",
-      "تحديث تلقائي لقائمة الأماكن الفرعية من إعدادات النظام ومصادر المواقع المعتمدة لشركة ICAPP.",
-      "دعم التحديد الفوري للمكان عبر رموز الـ QR مع خيار الإدخال اليدوي للأماكن الفرعية غير المدرجة."
+      "ربط الإرسال الفوري لنموذج الحوادث الوشيكة مع Google Apps Script وتسجيل البلاغات في شيت NearMiss مباشرة.",
+      "تطبيق آلية الربط الديناميكي للمصانع والمواقع الفرعية بمطابقة تامة مع نموذج الملاحظات اليومية.",
+      "دعم المزامنة السحابية مع آليات إعادة المحاولة التلقائية والرصد الجغرافي الدقيق."
     ],
     "en": [
-      "Matched dynamic factory-to-place cascading linkage in Near Miss form identically to Daily Observations.",
-      "Automatically loaded sub-locations list from system settings and official ICAPP site configurations.",
-      "Supported instant QR place prefill and manual entry for custom sub-locations."
+      "Connected instant Near Miss submission to Google Apps Script and recorded reports directly into the NearMiss sheet.",
+      "Applied exact dynamic cascading site-to-place dropdown linkage identically to Daily Observations.",
+      "Supported cloud background sync with automatic retries and precise GPS capture."
     ]
   }
 }

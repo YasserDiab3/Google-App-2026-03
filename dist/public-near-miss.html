@@ -355,7 +355,7 @@
             <i class="fas fa-check"></i>
         </div>
         <h2 style="font-size: 1.35rem; font-weight: 900; color: #1e1b4b; margin-bottom: 6px;">تم إرسال تقرير الحادث الوشيك بنجاح!</h2>
-        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">تم توثيق البلاغ في سجلات السلامة وإحالته للمتابعة الفورية لمنع وقوع الحوادث.</p>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">تم توثيق البلاغ في سجلات السلامة بقاعدة البيانات وإحالته للمتابعة الفورية لمنع وقوع الحوادث.</p>
         <div style="background: #e0e7ff; color: #3730a3; padding: 8px 18px; border-radius: 12px; font-weight: 900; font-size: 1.15rem; display: inline-block; margin-bottom: 20px;" id="resIsoCode">
             NM-2026-0000
         </div>
@@ -518,6 +518,27 @@
 </div>
 
 <script>
+    const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+    
+    function getEffectiveApiUrl() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const p = urlParams.get('apiUrl') || urlParams.get('api');
+            if (p && p.includes('script.google.com')) return p;
+            const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
+            if (s1) {
+                const parsed = JSON.parse(s1);
+                if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+            }
+            const s2 = localStorage.getItem('hse_app_settings');
+            if (s2) {
+                const parsed = JSON.parse(s2);
+                if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+            }
+        } catch(e) {}
+        return DEFAULT_API_URL;
+    }
+
     let loadedConfig = null;
     let userGps = { lat: null, lng: null, accuracy: null, mapLink: '' };
     let photoBase64 = '';
@@ -565,7 +586,7 @@
         loadConfiguration();
     });
 
-    function loadConfiguration() {
+    async function loadConfiguration() {
         try {
             const cached = localStorage.getItem('HSE_SETTINGS_CACHE') || localStorage.getItem('appData');
             if (cached) {
@@ -584,12 +605,24 @@
         }
 
         renderSitesDropdown(loadedConfig);
+
+        // جلب الإعدادات المحدثة من السحابة في الخلفية
+        try {
+            const targetUrl = getEffectiveApiUrl();
+            const res = await fetch(targetUrl + '?action=getPublicObservationConfig', { method: 'GET', mode: 'cors' });
+            const data = await res.json();
+            if (data && data.success && Array.isArray(data.sites) && data.sites.length > 0) {
+                loadedConfig = data;
+                renderSitesDropdown(loadedConfig);
+            }
+        } catch(e) {}
     }
 
     function renderSitesDropdown(cfg) {
         const siteSelect = document.getElementById('siteSelect');
         const rawSites = (Array.isArray(cfg.sites) && cfg.sites.length > 0) ? cfg.sites : defaultSites;
 
+        const prevVal = siteSelect.value;
         siteSelect.innerHTML = '<option value="">— اختر المصنع / الموقع —</option>';
         rawSites.forEach(site => {
             const siteName = (typeof site === 'string') ? site : (site.name || site.siteName || site.factoryName || '');
@@ -613,6 +646,8 @@
                     break;
                 }
             }
+        } else if (prevVal) {
+            siteSelect.value = prevVal;
         } else if (siteSelect.options.length > 1) {
             siteSelect.selectedIndex = 1;
         }
@@ -762,7 +797,7 @@
         );
     }
 
-    // إرسال البلاغ
+    // إرسال البلاغ والمزامنة مع قاعدة البيانات السحابية
     document.getElementById('nearMissForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const submitBtn = document.getElementById('submitBtn');
@@ -783,8 +818,11 @@
         const observerName = isAnon ? 'فاعل خير (سري)' : (document.getElementById('observerNameInput').value || 'فاعل خير');
         const phone = isAnon ? '' : document.getElementById('phoneInput').value;
 
+        const instantRefCode = 'NM-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random()*9000);
+
         const payload = {
             action: 'submitPublicNearMiss',
+            instantRefCode: instantRefCode,
             siteName: factory,
             subLocation: place,
             type: type,
@@ -799,29 +837,46 @@
             gpsMapLink: userGps.mapLink
         };
 
-        const isoCode = 'NM-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random()*9000);
+        // عرض شاشة النجاح فوراً
+        document.getElementById('resIsoCode').textContent = instantRefCode;
+        const waText = encodeURIComponent(`🚨 *تقرير حادث وشيك — ICAPP*\n📌 *الرقم المرجعي:* ${instantRefCode}\n📍 *الموقع:* ${factory} — ${place}\n⚠️ *التصنيف:* ${type} (${severity})\n📝 *الوصف:* ${description}`);
+        document.getElementById('whatsappShareBtn').href = 'https://api.whatsapp.com/send?text=' + waText;
 
-        try {
-            if (typeof fetch !== 'undefined') {
-                fetch('https://script.google.com/macros/s/AKfycbz_placeholder/exec', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload),
-                    mode: 'no-cors'
-                }).catch(() => null);
-            }
+        document.getElementById('nearMissForm').style.display = 'none';
+        document.getElementById('successScreen').style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
 
-            document.getElementById('resIsoCode').textContent = isoCode;
-            const waText = encodeURIComponent(`🚨 *تقرير حادث وشيك — ICAPP*\n📌 *الرقم المرجعي:* ${isoCode}\n📍 *الموقع:* ${factory} — ${place}\n⚠️ *التصنيف:* ${type} (${severity})\n📝 *الوصف:* ${description}`);
-            document.getElementById('whatsappShareBtn').href = 'https://api.whatsapp.com/send?text=' + waText;
-
-            document.getElementById('nearMissForm').style.display = 'none';
-            document.getElementById('successScreen').style.display = 'block';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        } catch(err) {
-            alert('تم توثيق البلاغ محلياً!');
-        }
+        // مزامنة فورية في الخلفية مع قاعدة البيانات السحابية (NearMiss Sheet)
+        syncNearMissToCloud(payload, instantRefCode);
     });
+
+    async function syncNearMissToCloud(payload, refCode) {
+        const targetApiUrl = getEffectiveApiUrl();
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                const response = await fetch(targetApiUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result && result.success) {
+                    console.log('✅ Near Miss successfully recorded to cloud sheet:', result);
+                    if (result.isoCode) {
+                        document.getElementById('resIsoCode').textContent = result.isoCode;
+                    }
+                    break;
+                }
+            } catch (err) {
+                console.warn(`Cloud sync attempt ${attempt} failed:`, err);
+                if (attempt < 3) {
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+        }
+    }
 </script>
 </body>
 </html>
