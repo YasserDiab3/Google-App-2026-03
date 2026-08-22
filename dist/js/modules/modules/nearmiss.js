@@ -576,7 +576,7 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
-        `).join("")}},async handleSubmit(e,t){const i=document.getElementById("nearmiss-type")?.value||"\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643",a=document.getElementById("nearmiss-severity")?.value||"\u0645\u062A\u0648\u0633\u0637",l=document.getElementById("nearmiss-location")?.value||"",p=document.getElementById("nearmiss-department")?.value||"",r=document.getElementById("nearmiss-date")?.value||new Date().toISOString(),s=document.getElementById("nearmiss-observer")?.value||"\u0641\u0627\u0639\u0644 \u062E\u064A\u0631",d=document.getElementById("nearmiss-description")?.value||"",c=document.getElementById("nearmiss-corrective-check")?.checked||!1,f=document.getElementById("nearmiss-corrective-description")?.value||"",o=t?.id||"NRM-"+Date.now(),g=t?.isoCode||"NM-"+new Date().getFullYear()+"-"+Math.floor(1e3+Math.random()*9e3),x={id:o,isoCode:g,type:i,severity:a,location:l,department:p,date:new Date(r).toISOString(),observerName:s,description:d,correctiveProposed:c,correctiveDescription:c?f:"",attachments:this.state.currentAttachments,status:c?"\u0645\u0641\u062A\u0648\u062D":"\u0645\u063A\u0644\u0642",updatedAt:new Date().toISOString()};if(t){const n=AppState.appData.nearmiss.findIndex(m=>m.id===t.id);n!==-1&&(AppState.appData.nearmiss[n]=x)}else x.createdAt=new Date().toISOString(),AppState.appData.nearmiss.unshift(x);try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.callApi){const n=t?"updateNearMiss":"addNearMiss";GoogleIntegration.callApi(n,x)}}catch{}this.renderKpiStrip(),this.renderTable(),alert("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u0644\u0627\u063A \u0628\u0646\u062C\u0627\u062D!")},editNearMiss(e){const t=(AppState.appData.nearmiss||[]).find(i=>i.id===e);t&&this.showForm(t)},deleteNearMiss(e){if(confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0628\u0644\u0627\u063A\u061F")){AppState.appData.nearmiss=(AppState.appData.nearmiss||[]).filter(t=>t.id!==e);try{typeof GoogleIntegration<"u"&&GoogleIntegration.callApi&&GoogleIntegration.callApi("deleteNearMiss",{nearMissId:e})}catch{}this.renderKpiStrip(),this.renderTable()}},getPublicUrl(){try{const e=window.location;let t=e.origin+e.pathname;return t.endsWith(".html")?t=t.substring(0,t.lastIndexOf("/")+1):t.endsWith("/")||(t=t+"/"),t+"public-near-miss.html"}catch{return window.location.href.split("?")[0].split("#")[0].replace(/[^/]*$/,"")+"public-near-miss.html"}},generateQrDataUrl(e,t=250){try{if(typeof qrcode=="function"){const i=qrcode(0,"M");i.addData(String(e)),i.make();const a=typeof i.getModuleCount=="function"?i.getModuleCount():0,l=a?Math.max(1,Math.floor(t/a)):Math.max(2,Math.floor(t/25));return i.createDataURL(l,2)}}catch{}try{if(typeof window<"u"&&window.QRCode&&typeof window.QRCode.generate=="function"){const i=window.QRCode.generate(e,t);if(i)return i}}catch{}return`https://api.qrserver.com/v1/create-qr-code/?size=${t}x${t}&data=${encodeURIComponent(e)}`},openPublicQrModal(){const e=this.getPublicUrl(),t=document.getElementById("nrm-public-qr-modal");t&&t.remove();const i=document.createElement("div");i.id="nrm-public-qr-modal",i.style.cssText='position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(6px); direction:rtl; font-family:"Segoe UI", Tahoma, sans-serif;';const a=this.generateQrDataUrl(e,250),l=encodeURIComponent(e);i.innerHTML=`
+        `).join("")}},async handleSubmit(e,t){const i=document.getElementById("nearmiss-type")?.value||"\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643",a=document.getElementById("nearmiss-severity")?.value||"\u0645\u062A\u0648\u0633\u0637",l=document.getElementById("nearmiss-location")?.value||"",p=document.getElementById("nearmiss-department")?.value||"",r=document.getElementById("nearmiss-date")?.value||new Date().toISOString(),s=document.getElementById("nearmiss-observer")?.value||"\u0641\u0627\u0639\u0644 \u062E\u064A\u0631",d=document.getElementById("nearmiss-description")?.value||"",c=document.getElementById("nearmiss-corrective-check")?.checked||!1,f=document.getElementById("nearmiss-corrective-description")?.value||"",o=t?.id||"NRM-"+Date.now(),g=t?.isoCode||"NM-"+new Date().getFullYear()+"-"+Math.floor(1e3+Math.random()*9e3),x={id:o,isoCode:g,type:i,severity:a,location:l,department:p,date:new Date(r).toISOString(),observerName:s,description:d,correctiveProposed:c,correctiveDescription:c?f:"",attachments:this.state.currentAttachments,status:c?"\u0645\u0641\u062A\u0648\u062D":"\u0645\u063A\u0644\u0642",updatedAt:new Date().toISOString()};if(t){const n=AppState.appData.nearmiss.findIndex(b=>b.id===t.id);n!==-1&&(AppState.appData.nearmiss[n]=x)}else x.createdAt=new Date().toISOString(),AppState.appData.nearmiss.unshift(x);try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.callApi){const n=t?"updateNearMiss":"addNearMiss";GoogleIntegration.callApi(n,x)}}catch{}this.renderKpiStrip(),this.renderTable(),alert("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u0644\u0627\u063A \u0628\u0646\u062C\u0627\u062D!")},editNearMiss(e){const t=(AppState.appData.nearmiss||[]).find(i=>i.id===e);t&&this.showForm(t)},deleteNearMiss(e){if(confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0628\u0644\u0627\u063A\u061F")){AppState.appData.nearmiss=(AppState.appData.nearmiss||[]).filter(t=>t.id!==e);try{typeof GoogleIntegration<"u"&&GoogleIntegration.callApi&&GoogleIntegration.callApi("deleteNearMiss",{nearMissId:e})}catch{}this.renderKpiStrip(),this.renderTable()}},getPublicUrl(){try{const e=window.location;let t=e.origin+e.pathname;return t.endsWith(".html")?t=t.substring(0,t.lastIndexOf("/")+1):t.endsWith("/")||(t=t+"/"),t+"public-near-miss.html"}catch{return window.location.href.split("?")[0].split("#")[0].replace(/[^/]*$/,"")+"public-near-miss.html"}},generateQrDataUrl(e,t=250){try{if(typeof qrcode=="function"){const i=qrcode(0,"M");i.addData(String(e)),i.make();const a=typeof i.getModuleCount=="function"?i.getModuleCount():0,l=a?Math.max(1,Math.floor(t/a)):Math.max(2,Math.floor(t/25));return i.createDataURL(l,2)}}catch{}try{if(typeof window<"u"&&window.QRCode&&typeof window.QRCode.generate=="function"){const i=window.QRCode.generate(e,t);if(i)return i}}catch{}return`https://api.qrserver.com/v1/create-qr-code/?size=${t}x${t}&data=${encodeURIComponent(e)}`},openPublicQrModal(){const e=this.getPublicUrl(),t=document.getElementById("nrm-public-qr-modal");t&&t.remove();const i=document.createElement("div");i.id="nrm-public-qr-modal",i.style.cssText='position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(6px); direction:rtl; font-family:"Segoe UI", Tahoma, sans-serif;';const a=this.generateQrDataUrl(e,250),l=encodeURIComponent(e);i.innerHTML=`
             <div style="background:#fff; border-radius:24px; max-width:520px; width:100%; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.4); border:1px solid #e0e7ff; animation:fadeIn 0.2s ease;">
                 <!-- \u0627\u0644\u062A\u0631\u0648\u064A\u0633\u0629 -->
                 <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); color:#fff; padding:22px 26px; display:flex; justify-content:space-between; align-items:center;">
@@ -622,7 +622,7 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                     </div>
                 </div>
             </div>
-        `,document.body.appendChild(i)},printLocationQrBadges(){this.openBatchNearMissQrModal()},openBatchNearMissQrModal(){const e={},t=(n,m)=>{const b=String(n||"").trim(),u=String(m||"").trim();b&&(e[b]||(e[b]=new Set),u&&e[b].add(u))};try{typeof DailyObservations<"u"&&DailyObservations.getAllSites&&DailyObservations.getAllSites().forEach(m=>{const b=m.name||m.siteName;b&&(t(b,""),Array.isArray(m.places)&&m.places.forEach(u=>t(b,u.name||u)))})}catch{}(Array.isArray(AppState.appData?.observationSites)?AppState.appData.observationSites:[]).forEach(n=>{t(n.siteName||n.site||n.name,n.placeName||n.locationName||n.place)}),(Array.isArray(AppState.appData?.subLocations)?AppState.appData.subLocations:[]).forEach(n=>{t(n.factoryName||n.factory||n.siteName||n.site,n.name||n.subLocationName||n.place)}),Object.keys(e).length===0&&["ICAPP-1","ICAPP-2","ICAPP-3","ICAPP-4","\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645"].forEach(n=>t(n,""));const i=[];for(const n of Object.keys(e)){const m=Array.from(e[n]);m.length===0?i.push({site:n,place:"\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645"}):m.forEach(b=>{i.push({site:n,place:b})})}const a=Object.keys(e).sort(),l=[...new Set(i.map(n=>n.place).filter(n=>n!=="\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645"))].sort(),p=document.getElementById("nrm-batch-qr-modal");p&&p.remove();const r=document.createElement("div");r.id="nrm-batch-qr-modal",r.className="modal-overlay",r.style.cssText='position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(6px); direction:rtl; font-family:"Segoe UI", Tahoma, sans-serif;',r.innerHTML=`
+        `,document.body.appendChild(i)},printLocationQrBadges(){this.openBatchNearMissQrModal()},openBatchNearMissQrModal(){const e={},t=(n,b)=>{const m=String(n||"").trim(),u=String(b||"").trim();m&&(e[m]||(e[m]=new Set),u&&e[m].add(u))};try{typeof DailyObservations<"u"&&DailyObservations.getAllSites&&DailyObservations.getAllSites().forEach(b=>{const m=b.name||b.siteName;m&&(t(m,""),Array.isArray(b.places)&&b.places.forEach(u=>t(m,u.name||u)))})}catch{}(Array.isArray(AppState.appData?.observationSites)?AppState.appData.observationSites:[]).forEach(n=>{t(n.siteName||n.site||n.name,n.placeName||n.locationName||n.place)}),(Array.isArray(AppState.appData?.subLocations)?AppState.appData.subLocations:[]).forEach(n=>{t(n.factoryName||n.factory||n.siteName||n.site,n.name||n.subLocationName||n.place)}),Object.keys(e).length===0&&["ICAPP-1","ICAPP-2","ICAPP-3","ICAPP-4","\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645"].forEach(n=>t(n,""));const i=[];for(const n of Object.keys(e)){const b=Array.from(e[n]);b.length===0?i.push({site:n,place:"\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645"}):b.forEach(m=>{i.push({site:n,place:m})})}const a=Object.keys(e).sort(),l=[...new Set(i.map(n=>n.place).filter(n=>n!=="\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645"))].sort(),p=document.getElementById("nrm-batch-qr-modal");p&&p.remove();const r=document.createElement("div");r.id="nrm-batch-qr-modal",r.className="modal-overlay",r.style.cssText='position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(6px); direction:rtl; font-family:"Segoe UI", Tahoma, sans-serif;',r.innerHTML=`
             <div class="modal-content" style="max-width: 640px; width:100%; background:#fff; border-radius: 18px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); border: 1px solid #e0e7ff; animation:fadeIn 0.2s ease;">
                 <!-- \u0627\u0644\u062A\u0631\u0648\u064A\u0633\u0629 -->
                 <div class="modal-header" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); color: #ffffff; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between;">
@@ -700,7 +700,7 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                     <button type="button" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; padding:10px 18px; border-radius:10px; font-weight:700; cursor:pointer;" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
                 </div>
             </div>
-        `,document.body.appendChild(r);const s=r.querySelector("#nrm-batch-site-filter"),d=r.querySelector("#nrm-batch-place-filter"),c=r.querySelector("#nrm-batch-layout-select"),f=r.querySelector("#nrm-batch-selected-preview"),o=r.querySelector("#nrm-batch-print-btn"),g=()=>{const n=s.value,m=d.value;return i.filter(b=>!(n!=="all"&&b.site!==n||m!=="all"&&b.place!==m))},x=()=>{const n=g();f.textContent=`${n.length} \u0645\u0648\u0642\u0639 \u062C\u0627\u0647\u0632 \u0644\u0644\u0637\u0628\u0627\u0639\u0629`,o.disabled=n.length===0,o.style.opacity=n.length===0?"0.5":"1"};s.addEventListener("change",x),d.addEventListener("change",x),o.addEventListener("click",()=>{const n=g();if(n.length===0){alert("\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0648\u0627\u0642\u0639 \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0644\u062A\u0635\u0641\u064A\u0629.");return}r.remove(),this.renderNearMissQrPrintPage(n,c.value)})},renderNearMissQrPrintPage(e,t="1x1"){if(!e||e.length===0)return;const i=this.getPublicUrl(),a=window.location.origin||"";let l=window.location.pathname.substring(0,window.location.pathname.lastIndexOf("/")+1);l.endsWith("/")||(l+="/");const p=`${a}${l}icons/icapp-logo.png`,r=window.open("","_blank");if(!r){alert("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0637\u0628\u0627\u0639\u0629 \u0643\u0631\u0648\u062A \u0648\u0628\u0648\u0633\u062A\u0631\u0627\u062A QR");return}if(t==="1x1"){const x=e.map((n,m)=>{const b=n.site,u=n.place||"\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645",h=`${i}?factory=${encodeURIComponent(b)}&place=${encodeURIComponent(u)}`,v=this.generateQrDataUrl(h,280),y=encodeURIComponent(h);return`
+        `,document.body.appendChild(r);const s=r.querySelector("#nrm-batch-site-filter"),d=r.querySelector("#nrm-batch-place-filter"),c=r.querySelector("#nrm-batch-layout-select"),f=r.querySelector("#nrm-batch-selected-preview"),o=r.querySelector("#nrm-batch-print-btn"),g=()=>{const n=s.value,b=d.value;return i.filter(m=>!(n!=="all"&&m.site!==n||b!=="all"&&m.place!==b))},x=()=>{const n=g();f.textContent=`${n.length} \u0645\u0648\u0642\u0639 \u062C\u0627\u0647\u0632 \u0644\u0644\u0637\u0628\u0627\u0639\u0629`,o.disabled=n.length===0,o.style.opacity=n.length===0?"0.5":"1"};s.addEventListener("change",x),d.addEventListener("change",x),o.addEventListener("click",()=>{const n=g();if(n.length===0){alert("\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0648\u0627\u0642\u0639 \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0644\u062A\u0635\u0641\u064A\u0629.");return}r.remove(),this.renderNearMissQrPrintPage(n,c.value)})},renderNearMissQrPrintPage(e,t="1x1"){if(!e||e.length===0)return;const i=this.getPublicUrl(),a=window.location.origin||"";let l=window.location.pathname.substring(0,window.location.pathname.lastIndexOf("/")+1);l.endsWith("/")||(l+="/");const p=`${a}${l}icons/icapp-logo.png`,r=window.open("","_blank");if(!r){alert("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0637\u0628\u0627\u0639\u0629 \u0643\u0631\u0648\u062A \u0648\u0628\u0648\u0633\u062A\u0631\u0627\u062A QR");return}if(t==="1x1"){const x=e.map((n,b)=>{const m=n.site,u=n.place||"\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645",h=`${i}?factory=${encodeURIComponent(m)}&place=${encodeURIComponent(u)}`,v=this.generateQrDataUrl(h,280),y=encodeURIComponent(h);return`
                     <div class="a4-poster-page">
                         <!-- \u062A\u0631\u0648\u064A\u0633\u0629 ISO \u0627\u0644\u0631\u0633\u0645\u064A\u0629 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 -->
                         <div class="iso-header-table">
@@ -722,7 +722,7 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                         <!-- \u0634\u0631\u064A\u0637 \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0645\u062E\u0635\u0635 -->
                         <div class="location-banner">
                             <span class="loc-tag-label"><i class="fas fa-map-marker-alt ml-1"></i> \u0645\u0644\u0635\u0642 \u0645\u062E\u0635\u0635 \u0644\u0644\u0645\u0648\u0642\u0639:</span>
-                            <span class="loc-name-highlight" dir="rtl"><bdi dir="ltr">${Utils.escapeHTML(b)}</bdi> \u2014 <bdi dir="auto">${Utils.escapeHTML(u)}</bdi></span>
+                            <span class="loc-name-highlight" dir="rtl"><bdi dir="ltr">${Utils.escapeHTML(m)}</bdi> \u2014 <bdi dir="auto">${Utils.escapeHTML(u)}</bdi></span>
                         </div>
 
                         <!-- \u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u062A\u0648\u0639\u0648\u064A\u0629 \u0627\u0644\u062C\u0627\u0630\u0628\u0629 -->
@@ -746,28 +746,28 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                         <div class="instructions-grid">
                             <div class="instruction-card">
                                 <div class="inst-icon"><i class="fas fa-qrcode text-indigo-600"></i></div>
-                                <div>
+                                <div class="inst-text-wrap">
                                     <div class="inst-title">1. \u0645\u0633\u062D \u0641\u0648\u0631\u064A \u0648\u0633\u0647\u0644</div>
                                     <div class="inst-desc">\u0627\u0641\u062A\u062D \u0643\u0627\u0645\u064A\u0631\u0627 \u0627\u0644\u0647\u0627\u062A\u0641 \u0648\u0627\u0642\u0631\u0623 \u0627\u0644\u0631\u0645\u0632\u060C \u0644\u0627 \u064A\u0644\u0632\u0645 \u062A\u062D\u0645\u064A\u0644 \u0623\u064A \u062A\u0637\u0628\u064A\u0642.</div>
                                 </div>
                             </div>
                             <div class="instruction-card">
                                 <div class="inst-icon"><i class="fas fa-map-pin text-emerald-600"></i></div>
-                                <div>
+                                <div class="inst-text-wrap">
                                     <div class="inst-title">2. \u062A\u062D\u062F\u064A\u062F \u0645\u0648\u0642\u0639 \u062A\u0644\u0642\u0627\u0626\u064A</div>
                                     <div class="inst-desc">\u064A\u0641\u062A\u062D \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0645\u0628\u0627\u0634\u0631\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062D\u062F\u062F \u0628\u062F\u0642\u0629.</div>
                                 </div>
                             </div>
                             <div class="instruction-card">
                                 <div class="inst-icon"><i class="fas fa-user-shield text-blue-600"></i></div>
-                                <div>
+                                <div class="inst-text-wrap">
                                     <div class="inst-title">3. \u0625\u0628\u0644\u0627\u063A \u0622\u0645\u0646 \u0648\u0645\u062A\u0627\u062D \u0644\u0644\u062C\u0645\u064A\u0639</div>
                                     <div class="inst-desc">\u0628\u062F\u0648\u0646 \u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644\u060C \u0645\u062A\u0627\u062D \u0644\u0644\u0639\u0627\u0645\u0644\u064A\u0646 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0648\u0627\u0644\u0632\u0648\u0627\u0631 (\u0628\u0627\u0633\u0645\u0643 \u0623\u0648 \u0645\u062E\u0641\u064A).</div>
                                 </div>
                             </div>
                             <div class="instruction-card">
                                 <div class="inst-icon"><i class="fas fa-bolt text-amber-600"></i></div>
-                                <div>
+                                <div class="inst-text-wrap">
                                     <div class="inst-title">4. \u0627\u0633\u062A\u062C\u0627\u0628\u0629 \u0648\u0625\u062C\u0631\u0627\u0621 \u0641\u0648\u0631\u064A</div>
                                     <div class="inst-desc">\u064A\u0635\u0644 \u0627\u0644\u0628\u0644\u0627\u063A \u0641\u0648\u0631\u0627\u064B \u0644\u0641\u0631\u064A\u0642 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u064A\u0627\u0646\u0629 \u0644\u062A\u0635\u062D\u064A\u062D \u0627\u0644\u062E\u0637\u0631.</div>
                                 </div>
@@ -780,22 +780,13 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                             <span><b>\u062B\u0642\u0627\u0641\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0625\u064A\u062C\u0627\u0628\u064A\u0629:</b> \u062A\u0642\u062F\u064A\u0631\u0627\u064B \u0644\u0645\u0634\u0627\u0631\u0643\u062A\u0643 \u0627\u0644\u0641\u0639\u0627\u0644\u0629\u060C \u064A\u062A\u0645 \u062A\u0643\u0631\u064A\u0645 \u0623\u0641\u0636\u0644 \u0627\u0644\u0628\u0644\u0627\u063A\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u0626\u064A\u0629 \u0627\u0644\u0627\u0633\u062A\u0628\u0627\u0642\u064A\u0629 \u062F\u0648\u0631\u064A\u0627\u064B! \u{1F31F}</span>
                         </div>
 
-                        <!-- \u0627\u0644\u0641\u0648\u062A\u0631 \u0627\u0644\u0631\u0633\u0645\u064A \u0627\u0644\u0645\u062A\u0646\u0627\u0633\u0642 \u0627\u0644\u0645\u0639\u062A\u0645\u062F (\u0645\u0639 \u0634\u0639\u0627\u0631 ICAPP \u0648\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u062B\u064A\u0642\u0629) -->
+                        <!-- \u0627\u0644\u0641\u0648\u062A\u0631 \u0627\u0644\u0631\u0633\u0645\u064A \u0627\u0644\u0635\u0627\u0641\u064A (\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u0648\u062B\u064A\u0642 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0641\u0642\u0637) -->
                         <div class="iso-footer-table">
-                            <div class="footer-meta-block">
-                                <span class="f-meta-item"><b>\u0643\u0648\u062F \u0627\u0644\u0646\u0645\u0648\u0630\u062C:</b> HSE-DOC-NRM-01</span>
-                                <span class="f-meta-sep">|</span>
-                                <span class="f-meta-item"><b>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631:</b> 01-08-2026</span>
-                                <span class="f-meta-sep">|</span>
-                                <span class="f-meta-item"><b>\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631:</b> Rev. 02 (2026)</span>
-                            </div>
-                            <div class="footer-center-tag">
-                                <span>Incident Prevention System</span> &bull; <span>\u0635\u0641\u062D\u0629 #${m+1} \u0645\u0646 ${e.length}</span>
-                            </div>
-                            <div class="footer-logo-block">
-                                <img src="${p}" alt="ICAPP" class="footer-logo-img" onerror="this.style.display='none';">
-                                <span class="footer-logo-text">SafetyHub | ICAPP</span>
-                            </div>
+                            <div class="footer-meta-item"><b>\u0643\u0648\u062F \u0627\u0644\u0646\u0645\u0648\u0630\u062C:</b> <span dir="ltr">HSE-DOC-NRM-01</span></div>
+                            <div class="footer-meta-sep">|</div>
+                            <div class="footer-meta-item"><b>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631:</b> <span dir="ltr">01-08-2026</span></div>
+                            <div class="footer-meta-sep">|</div>
+                            <div class="footer-meta-item"><b>\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631:</b> <span dir="ltr">Rev. 02 (2026)</span></div>
                         </div>
                     </div>
                 `}).join("");r.document.write(`
@@ -862,7 +853,7 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                         /* Header */
                         .iso-header-table {
                             display: grid;
-                            grid-template-columns: 215px 1fr 135px;
+                            grid-template-columns: 235px 1fr 125px;
                             border: 2px solid #1e1b4b;
                             border-radius: 8px;
                             overflow: hidden;
@@ -872,21 +863,22 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                         .iso-brand-cell {
                             border-left: 1.5px solid #cbd5e1;
                             text-align: right;
+                            padding: 6px 12px;
                         }
                         .iso-company-text {
-                            font-size: 0.78rem;
+                            font-size: 0.72rem;
                             font-weight: 800;
                             color: #1e1b4b;
-                            line-height: 1.2;
+                            line-height: 1.25;
                             white-space: nowrap;
                         }
                         .iso-dept-tag {
-                            font-size: 0.64rem;
+                            font-size: 0.62rem;
                             font-weight: 800;
                             color: #065f46;
                             margin-top: 3px;
                             white-space: nowrap;
-                            line-height: 1.2;
+                            line-height: 1.25;
                         }
                         .iso-title-cell {
                             text-align: center;
@@ -926,56 +918,6 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                             color: #4338ca;
                             font-weight: 800;
                             margin-top: 2px;
-                        }
-
-                        /* Footer */
-                        .iso-footer-table {
-                            border: 1.5px solid #cbd5e1;
-                            background: #f8fafc;
-                            border-radius: 8px;
-                            padding: 6px 12px;
-                            margin-top: 4px;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            font-size: 0.66rem;
-                            color: #334155;
-                            font-weight: 700;
-                            gap: 8px;
-                        }
-                        .footer-meta-block {
-                            display: flex;
-                            align-items: center;
-                            gap: 6px;
-                            white-space: nowrap;
-                        }
-                        .f-meta-item b {
-                            color: #1e1b4b;
-                        }
-                        .f-meta-sep {
-                            color: #cbd5e1;
-                        }
-                        .footer-center-tag {
-                            color: #047857;
-                            font-weight: 800;
-                            white-space: nowrap;
-                            text-align: center;
-                        }
-                        .footer-logo-block {
-                            display: flex;
-                            align-items: center;
-                            gap: 6px;
-                            white-space: nowrap;
-                        }
-                        .footer-logo-img {
-                            max-height: 20px;
-                            max-width: 48px;
-                            object-fit: contain;
-                        }
-                        .footer-logo-text {
-                            font-weight: 900;
-                            color: #1e1b4b;
-                            font-size: 0.7rem;
                         }
 
                         /* Location Banner */
@@ -1041,21 +983,23 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                         .instructions-grid {
                             display: grid;
                             grid-template-columns: 1fr 1fr;
-                            gap: 6px;
+                            gap: 8px;
                             margin-bottom: 6px;
                         }
                         .instruction-card {
                             background: #ffffff;
                             border: 1.5px solid #e2e8f0;
                             border-radius: 8px;
-                            padding: 6px 10px;
+                            padding: 7px 10px;
                             display: flex;
-                            align-items: flex-start;
+                            align-items: center;
                             gap: 8px;
+                            min-width: 0;
                         }
-                        .inst-icon { font-size: 1.15rem; margin-top: 1px; flex-shrink: 0; }
-                        .inst-title { font-size: 0.8rem; font-weight: 800; color: #1e1b4b; line-height: 1.2; }
-                        .inst-desc { font-size: 0.68rem; color: #475569; font-weight: 600; margin-top: 2px; line-height: 1.25; }
+                        .inst-icon { font-size: 1.15rem; flex-shrink: 0; }
+                        .inst-text-wrap { min-width: 0; flex: 1; }
+                        .inst-title { font-size: 0.78rem; font-weight: 800; color: #1e1b4b; line-height: 1.2; }
+                        .inst-desc { font-size: 0.64rem; color: #475569; font-weight: 600; margin-top: 2px; line-height: 1.25; white-space: nowrap; }
 
                         /* Incentive Banner */
                         .incentive-banner {
@@ -1073,15 +1017,31 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
 
                         /* Footer */
                         .iso-footer-table {
-                            border-top: 1.5px solid #cbd5e1;
-                            padding-top: 6px;
+                            border: 1.5px solid #cbd5e1;
+                            background: #f8fafc;
+                            border-radius: 8px;
+                            padding: 7px 16px;
                             margin-top: 4px;
                             display: flex;
-                            justify-content: space-between;
+                            justify-content: center;
                             align-items: center;
-                            font-size: 0.65rem;
-                            color: #475569;
+                            font-size: 0.74rem;
+                            color: #334155;
                             font-weight: 700;
+                            gap: 18px;
+                        }
+                        .footer-meta-item {
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                            white-space: nowrap;
+                        }
+                        .footer-meta-item b {
+                            color: #1e1b4b;
+                        }
+                        .footer-meta-sep {
+                            color: #94a3b8;
+                            font-weight: 900;
                         }
                     </style>
                 </head>
@@ -1102,7 +1062,7 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                     <\/script>
                 </body>
                 </html>
-            `),r.document.close();return}let s=2,d="120px",c=100,f="13px",o="11px";t==="3x4"?(s=3,d="110px",c=85,f="11.5px",o="9.5px"):t==="2x3"?(s=2,d="150px",c=125,f="14px",o="12px"):t==="2x2"?(s=2,d="180px",c=145,f="16px",o="13px"):(s=2,d="130px",c=105,f="13.5px",o="11.5px");const g=e.map((x,n)=>{const m=x.site,b=x.place||"\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645",u=`${i}?factory=${encodeURIComponent(m)}&place=${encodeURIComponent(b)}`,h=this.generateQrDataUrl(u,c),v=encodeURIComponent(u);return`
+            `),r.document.close();return}let s=2,d="120px",c=100,f="13px",o="11px";t==="3x4"?(s=3,d="110px",c=85,f="11.5px",o="9.5px"):t==="2x3"?(s=2,d="150px",c=125,f="14px",o="12px"):t==="2x2"?(s=2,d="180px",c=145,f="16px",o="13px"):(s=2,d="130px",c=105,f="13.5px",o="11.5px");const g=e.map((x,n)=>{const b=x.site,m=x.place||"\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645",u=`${i}?factory=${encodeURIComponent(b)}&place=${encodeURIComponent(m)}`,h=this.generateQrDataUrl(u,c),v=encodeURIComponent(u);return`
                 <div class="qr-card">
                     <div class="qr-card-header">
                         <span class="qr-card-tag"><i class="fas fa-shield-alt"></i> SafetyHub | ICAPP</span>
@@ -1110,8 +1070,8 @@ const NearMiss={TYPES:[{value:"\u0633\u0642\u0648\u0637 \u0623\u0634\u064A\u0627
                     </div>
                     <div class="qr-card-body">
                         <div class="qr-card-info">
-                            <div class="qr-card-site" style="font-size:${f};">${Utils.escapeHTML(m)}</div>
-                            <div class="qr-card-place" style="font-size:${o};">${Utils.escapeHTML(b)}</div>
+                            <div class="qr-card-site" style="font-size:${f};">${Utils.escapeHTML(b)}</div>
+                            <div class="qr-card-place" style="font-size:${o};">${Utils.escapeHTML(m)}</div>
                             <div class="qr-card-inst"><i class="fas fa-camera ml-1"></i> \u0627\u0645\u0633\u062D \u0644\u0644\u0625\u0628\u0644\u0627\u063A \u0627\u0644\u0641\u0648\u0631\u064A \u0639\u0646 \u062E\u0637\u0631 \u0648\u0634\u064A\u0643</div>
                         </div>
                         <div class="qr-card-img-wrap">

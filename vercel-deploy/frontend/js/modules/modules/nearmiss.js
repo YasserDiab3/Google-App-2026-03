@@ -1723,28 +1723,28 @@ const NearMiss = {
                         <div class="instructions-grid">
                             <div class="instruction-card">
                                 <div class="inst-icon"><i class="fas fa-qrcode text-indigo-600"></i></div>
-                                <div>
+                                <div class="inst-text-wrap">
                                     <div class="inst-title">1. مسح فوري وسهل</div>
                                     <div class="inst-desc">افتح كاميرا الهاتف واقرأ الرمز، لا يلزم تحميل أي تطبيق.</div>
                                 </div>
                             </div>
                             <div class="instruction-card">
                                 <div class="inst-icon"><i class="fas fa-map-pin text-emerald-600"></i></div>
-                                <div>
+                                <div class="inst-text-wrap">
                                     <div class="inst-title">2. تحديد موقع تلقائي</div>
                                     <div class="inst-desc">يفتح النموذج مباشرة على هذا المكان المحدد بدقة.</div>
                                 </div>
                             </div>
                             <div class="instruction-card">
                                 <div class="inst-icon"><i class="fas fa-user-shield text-blue-600"></i></div>
-                                <div>
+                                <div class="inst-text-wrap">
                                     <div class="inst-title">3. إبلاغ آمن ومتاح للجميع</div>
                                     <div class="inst-desc">بدون تسجيل دخول، متاح للعاملين والمقاولين والزوار (باسمك أو مخفي).</div>
                                 </div>
                             </div>
                             <div class="instruction-card">
                                 <div class="inst-icon"><i class="fas fa-bolt text-amber-600"></i></div>
-                                <div>
+                                <div class="inst-text-wrap">
                                     <div class="inst-title">4. استجابة وإجراء فوري</div>
                                     <div class="inst-desc">يصل البلاغ فوراً لفريق السلامة والصيانة لتصحيح الخطر.</div>
                                 </div>
@@ -1757,22 +1757,13 @@ const NearMiss = {
                             <span><b>ثقافة السلامة الإيجابية:</b> تقديراً لمشاركتك الفعالة، يتم تكريم أفضل البلاغات الوقائية الاستباقية دورياً! 🌟</span>
                         </div>
 
-                        <!-- الفوتر الرسمي المتناسق المعتمد (مع شعار ICAPP وبيانات الوثيقة) -->
+                        <!-- الفوتر الرسمي الصافي (بيانات توثيق النموذج فقط) -->
                         <div class="iso-footer-table">
-                            <div class="footer-meta-block">
-                                <span class="f-meta-item"><b>كود النموذج:</b> HSE-DOC-NRM-01</span>
-                                <span class="f-meta-sep">|</span>
-                                <span class="f-meta-item"><b>تاريخ الإصدار:</b> 01-08-2026</span>
-                                <span class="f-meta-sep">|</span>
-                                <span class="f-meta-item"><b>رقم الإصدار:</b> Rev. 02 (2026)</span>
-                            </div>
-                            <div class="footer-center-tag">
-                                <span>Incident Prevention System</span> &bull; <span>صفحة #${idx + 1} من ${itemsToPrint.length}</span>
-                            </div>
-                            <div class="footer-logo-block">
-                                <img src="${logoUrl}" alt="ICAPP" class="footer-logo-img" onerror="this.style.display='none';">
-                                <span class="footer-logo-text">SafetyHub | ICAPP</span>
-                            </div>
+                            <div class="footer-meta-item"><b>كود النموذج:</b> <span dir="ltr">HSE-DOC-NRM-01</span></div>
+                            <div class="footer-meta-sep">|</div>
+                            <div class="footer-meta-item"><b>تاريخ الإصدار:</b> <span dir="ltr">01-08-2026</span></div>
+                            <div class="footer-meta-sep">|</div>
+                            <div class="footer-meta-item"><b>رقم الإصدار:</b> <span dir="ltr">Rev. 02 (2026)</span></div>
                         </div>
                     </div>
                 `;
@@ -1842,7 +1833,7 @@ const NearMiss = {
                         /* Header */
                         .iso-header-table {
                             display: grid;
-                            grid-template-columns: 215px 1fr 135px;
+                            grid-template-columns: 235px 1fr 125px;
                             border: 2px solid #1e1b4b;
                             border-radius: 8px;
                             overflow: hidden;
@@ -1852,21 +1843,22 @@ const NearMiss = {
                         .iso-brand-cell {
                             border-left: 1.5px solid #cbd5e1;
                             text-align: right;
+                            padding: 6px 12px;
                         }
                         .iso-company-text {
-                            font-size: 0.78rem;
+                            font-size: 0.72rem;
                             font-weight: 800;
                             color: #1e1b4b;
-                            line-height: 1.2;
+                            line-height: 1.25;
                             white-space: nowrap;
                         }
                         .iso-dept-tag {
-                            font-size: 0.64rem;
+                            font-size: 0.62rem;
                             font-weight: 800;
                             color: #065f46;
                             margin-top: 3px;
                             white-space: nowrap;
-                            line-height: 1.2;
+                            line-height: 1.25;
                         }
                         .iso-title-cell {
                             text-align: center;
@@ -1906,56 +1898,6 @@ const NearMiss = {
                             color: #4338ca;
                             font-weight: 800;
                             margin-top: 2px;
-                        }
-
-                        /* Footer */
-                        .iso-footer-table {
-                            border: 1.5px solid #cbd5e1;
-                            background: #f8fafc;
-                            border-radius: 8px;
-                            padding: 6px 12px;
-                            margin-top: 4px;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            font-size: 0.66rem;
-                            color: #334155;
-                            font-weight: 700;
-                            gap: 8px;
-                        }
-                        .footer-meta-block {
-                            display: flex;
-                            align-items: center;
-                            gap: 6px;
-                            white-space: nowrap;
-                        }
-                        .f-meta-item b {
-                            color: #1e1b4b;
-                        }
-                        .f-meta-sep {
-                            color: #cbd5e1;
-                        }
-                        .footer-center-tag {
-                            color: #047857;
-                            font-weight: 800;
-                            white-space: nowrap;
-                            text-align: center;
-                        }
-                        .footer-logo-block {
-                            display: flex;
-                            align-items: center;
-                            gap: 6px;
-                            white-space: nowrap;
-                        }
-                        .footer-logo-img {
-                            max-height: 20px;
-                            max-width: 48px;
-                            object-fit: contain;
-                        }
-                        .footer-logo-text {
-                            font-weight: 900;
-                            color: #1e1b4b;
-                            font-size: 0.7rem;
                         }
 
                         /* Location Banner */
@@ -2021,21 +1963,23 @@ const NearMiss = {
                         .instructions-grid {
                             display: grid;
                             grid-template-columns: 1fr 1fr;
-                            gap: 6px;
+                            gap: 8px;
                             margin-bottom: 6px;
                         }
                         .instruction-card {
                             background: #ffffff;
                             border: 1.5px solid #e2e8f0;
                             border-radius: 8px;
-                            padding: 6px 10px;
+                            padding: 7px 10px;
                             display: flex;
-                            align-items: flex-start;
+                            align-items: center;
                             gap: 8px;
+                            min-width: 0;
                         }
-                        .inst-icon { font-size: 1.15rem; margin-top: 1px; flex-shrink: 0; }
-                        .inst-title { font-size: 0.8rem; font-weight: 800; color: #1e1b4b; line-height: 1.2; }
-                        .inst-desc { font-size: 0.68rem; color: #475569; font-weight: 600; margin-top: 2px; line-height: 1.25; }
+                        .inst-icon { font-size: 1.15rem; flex-shrink: 0; }
+                        .inst-text-wrap { min-width: 0; flex: 1; }
+                        .inst-title { font-size: 0.78rem; font-weight: 800; color: #1e1b4b; line-height: 1.2; }
+                        .inst-desc { font-size: 0.64rem; color: #475569; font-weight: 600; margin-top: 2px; line-height: 1.25; white-space: nowrap; }
 
                         /* Incentive Banner */
                         .incentive-banner {
@@ -2053,15 +1997,31 @@ const NearMiss = {
 
                         /* Footer */
                         .iso-footer-table {
-                            border-top: 1.5px solid #cbd5e1;
-                            padding-top: 6px;
+                            border: 1.5px solid #cbd5e1;
+                            background: #f8fafc;
+                            border-radius: 8px;
+                            padding: 7px 16px;
                             margin-top: 4px;
                             display: flex;
-                            justify-content: space-between;
+                            justify-content: center;
                             align-items: center;
-                            font-size: 0.65rem;
-                            color: #475569;
+                            font-size: 0.74rem;
+                            color: #334155;
                             font-weight: 700;
+                            gap: 18px;
+                        }
+                        .footer-meta-item {
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                            white-space: nowrap;
+                        }
+                        .footer-meta-item b {
+                            color: #1e1b4b;
+                        }
+                        .footer-meta-sep {
+                            color: #94a3b8;
+                            font-weight: 900;
                         }
                     </style>
                 </head>
