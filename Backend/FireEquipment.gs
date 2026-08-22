@@ -890,11 +890,17 @@ function getPublicFireInspectionConfig(params) {
         let logo = '';
         try {
             const settings = readFromSheet('CompanySettings', spreadsheetId) || [];
-            settings.forEach(function(s) {
-                if (s.key === 'logo' || s.key === 'companyLogo' || s.key === 'appLogo') {
-                    logo = s.value || s.logo || '';
-                }
-            });
+            if (settings && settings.length > 0) {
+                const first = settings[0];
+                logo = String(first.logo || first.companyLogo || '').trim();
+            }
+            if (!logo && Array.isArray(settings)) {
+                settings.forEach(function(s) {
+                    if (s.key === 'logo' || s.key === 'companyLogo' || s.key === 'appLogo') {
+                        logo = s.value || s.logo || '';
+                    }
+                });
+            }
         } catch (sErr) {}
 
         return {

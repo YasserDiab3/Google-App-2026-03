@@ -1495,29 +1495,69 @@
             }
         }
 
-        function applyConfigData(config, targetId, presetInspector) {
+                function updatePageFaviconAndLogo(logoUrl) {
+            if (!logoUrl || typeof logoUrl !== 'string' || logoUrl.trim().length < 5) return;
+            const cleanUrl = logoUrl.trim();
+            
+            // 1. Update header logo
             const logoImg = document.getElementById('isoLogoImg');
             if (logoImg) {
-                let finalLogo = config.logo;
-                if (!finalLogo) {
-                    try {
+                logoImg.src = cleanUrl;
+                logoImg.style.display = 'block';
+            }
+
+            // 2. Update all browser favicon links
+            document.querySelectorAll('link[rel*="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]').forEach(link => {
+                link.href = cleanUrl;
+            });
+
+            // 3. Cache locally
+            try {
+                localStorage.setItem('hse_company_logo', cleanUrl);
+                localStorage.setItem('company_logo', cleanUrl);
+            } catch(e) {}
+        }
+
+        // Apply immediately from local cache on startup
+        (function initInstantLogo() {
+            try {
+                const cachedLogo = localStorage.getItem('hse_company_logo') || localStorage.getItem('company_logo');
+                if (cachedLogo) {
+                    updatePageFaviconAndLogo(cachedLogo);
+                } else {
+                    const localData = localStorage.getItem('appData');
+                    if (localData) {
+                        const p = JSON.parse(localData);
+                        const l = p.companyLogo || (p.companySettings && p.companySettings.logo);
+                        if (l) updatePageFaviconAndLogo(l);
+                    }
+                }
+            } catch(e) {}
+        })();
+
+        function applyConfigData(config, targetId, presetInspector) {
+            let finalLogo = config.logo || config.companyLogo;
+            if (!finalLogo) {
+                try {
+                    finalLogo = localStorage.getItem('hse_company_logo') || localStorage.getItem('company_logo');
+                    if (!finalLogo) {
                         const localData = localStorage.getItem('appData');
                         if (localData) {
                             const p = JSON.parse(localData);
                             finalLogo = p.companyLogo || (p.companySettings && p.companySettings.logo) || (p.settings && p.settings.logo);
                         }
-                        if (!finalLogo) {
-                            const cData = localStorage.getItem('companySettings');
-                            if (cData) {
-                                const p2 = JSON.parse(cData);
-                                finalLogo = p2.logo || p2.companyLogo;
-                            }
+                    }
+                    if (!finalLogo) {
+                        const cData = localStorage.getItem('companySettings') || localStorage.getItem('hse_company_settings');
+                        if (cData) {
+                            const p2 = JSON.parse(cData);
+                            finalLogo = p2.logo || p2.companyLogo;
                         }
-                    } catch(e) {}
-                }
-                if (finalLogo) {
-                    logoImg.src = finalLogo;
-                }
+                    }
+                } catch(e) {}
+            }
+            if (finalLogo) {
+                updatePageFaviconAndLogo(finalLogo);
             }
 
             if (config.assets && Array.isArray(config.assets)) {

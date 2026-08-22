@@ -1405,20 +1405,22 @@
             loadServerConfig();
         });
 
-        function updateCompanyLogo(logoUrl) {
+                function updateCompanyLogo(logoUrl) {
             const img = document.getElementById('companyLogoImg');
-            if (!img) return;
 
             let finalLogo = logoUrl;
             if (!finalLogo) {
                 try {
-                    const c1 = localStorage.getItem('HSE_SETTINGS_CACHE');
-                    if (c1) {
-                        const p1 = JSON.parse(c1);
-                        finalLogo = p1.companyLogo || (p1.companySettings && p1.companySettings.logo) || (p1.settings && p1.settings.logo);
+                    finalLogo = localStorage.getItem('hse_company_logo') || localStorage.getItem('company_logo');
+                    if (!finalLogo) {
+                        const c1 = localStorage.getItem('HSE_SETTINGS_CACHE') || localStorage.getItem('appData');
+                        if (c1) {
+                            const p1 = JSON.parse(c1);
+                            finalLogo = p1.companyLogo || (p1.companySettings && p1.companySettings.logo) || (p1.settings && p1.settings.logo);
+                        }
                     }
                     if (!finalLogo) {
-                        const c2 = localStorage.getItem('hse_company_settings');
+                        const c2 = localStorage.getItem('hse_company_settings') || localStorage.getItem('companySettings');
                         if (c2) {
                             const p2 = JSON.parse(c2);
                             finalLogo = p2.logo || p2.companyLogo;
@@ -1428,11 +1430,23 @@
             }
 
             if (finalLogo && typeof finalLogo === 'string' && finalLogo.trim().length > 5 && !finalLogo.includes('icon-192x192') && !finalLogo.includes('icon-128x128')) {
-                img.src = finalLogo.trim();
-            } else {
+                const clean = finalLogo.trim();
+                if (img) {
+                    img.src = clean;
+                    img.style.display = 'block';
+                }
+                // Update browser favicons
+                document.querySelectorAll('link[rel*="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]').forEach(link => {
+                    link.href = clean;
+                });
+                try {
+                    localStorage.setItem('hse_company_logo', clean);
+                    localStorage.setItem('company_logo', clean);
+                } catch(e) {}
+            } else if (img) {
                 img.src = 'icons/icapp-logo.png';
+                img.style.display = 'block';
             }
-            img.style.display = 'block';
         }
 
         async function loadServerConfig() {
