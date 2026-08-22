@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1233",
+  "version": "1.0.1234",
   "highlights": {
     "ar": [
-      "تطبيق ترويسة ISO المعتمدة والفوتر الرسمي لنموذج الحوادث الوشيكة (Near Miss) مع هوية الوثيقة DOC-HSE-NRM-01.",
-      "تفعيل الربط الديناميكي التلقائي بين المصنع والمكان الفرعي مع دعم الإدخال اليدوي للأماكن غير المدرجة.",
-      "تضمين الرصد الجغرافي التلقائي لإحداثيات الموقع (GPS Coordinates) لتوثيق مكان الحادث الوشيك بدقة."
+      "مطابقة آلية الربط الديناميكي بين المصنع والمكان الفرعي في نموذج الحوادث الوشيكة بنفس طريقة الملاحظات اليومية.",
+      "تحديث تلقائي لقائمة الأماكن الفرعية من إعدادات النظام ومصادر المواقع المعتمدة لشركة ICAPP.",
+      "دعم التحديد الفوري للمكان عبر رموز الـ QR مع خيار الإدخال اليدوي للأماكن الفرعية غير المدرجة."
     ],
     "en": [
-      "Applied ISO 3-column header and official footer for Near Miss form with DOC-HSE-NRM-01 document control.",
-      "Activated dynamic cascading link between factory and sub-locations with custom place support.",
-      "Integrated automatic background GPS coordinate capture to accurately record Near Miss incident locations."
+      "Matched dynamic factory-to-place cascading linkage in Near Miss form identically to Daily Observations.",
+      "Automatically loaded sub-locations list from system settings and official ICAPP site configurations.",
+      "Supported instant QR place prefill and manual entry for custom sub-locations."
     ]
   }
 }

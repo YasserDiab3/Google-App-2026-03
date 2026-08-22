@@ -54,7 +54,7 @@
             max-width: 760px;
         }
 
-        /* ترويسة ISO المعتمدة ثلاثية الأعمدة (مطابقة لتصميم الملاحظات مع هوية الحوادث الوشيكة) */
+        /* ترويسة ISO المعتمدة ثلاثية الأعمدة المطابقة تماماً للملاحظات مع هوية الحوادث الوشيكة */
         .iso-header-table {
             position: sticky;
             top: 8px;
@@ -387,25 +387,21 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div>
                     <label>المصنع / المنشأة *</label>
-                    <select id="factorySelect" required onchange="handleFactoryChange(this.value)">
-                        <option value="ICAPP-1">ICAPP-1 (مصنع 1)</option>
-                        <option value="ICAPP-2">ICAPP-2 (مصنع 2)</option>
-                        <option value="ICAPP-3">ICAPP-3 (مصنع 3)</option>
-                        <option value="ICAPP-4">ICAPP-4 (مصنع 4)</option>
-                        <option value="الموقع العام">الموقع العام والساحات</option>
+                    <select id="siteSelect" required onchange="handleSiteChange(this.value)">
+                        <option value="">— اختر المصنع أولاً —</option>
                     </select>
                 </div>
                 <div>
                     <label>المكان الفرعي بالمصنع *</label>
                     <select id="placeSelect" required onchange="handlePlaceChange(this.value)">
-                        <!-- سيتم ملؤه تلقائياً حسب المصنع المختار -->
+                        <option value="">— اختر المصنع أولاً —</option>
                     </select>
                 </div>
             </div>
 
-            <div id="customPlaceWrap" style="display:none; margin-top:10px;">
-                <label>اكتب المكان الفرعي بدقة *</label>
-                <input type="text" id="customPlaceInput" class="input-control" placeholder="اكتب تفاصيل المكان...">
+            <div id="customPlaceGroup" style="display:none; margin-top:12px;">
+                <label>اكتب اسم المكان الفرعي بدقة *</label>
+                <input type="text" id="customPlaceInput" class="input-control" placeholder="اكتب تفاصيل المكان الفرعي...">
             </div>
         </div>
 
@@ -522,89 +518,195 @@
 </div>
 
 <script>
-    // خريطة الربط الديناميكي بين المصانع والأماكن الفرعية
-    const FACTORY_PLACES_MAP = {
-        'ICAPP-1': [
-            'عنبر الإنتاج الرئيسي', 'منطقة الفرز والتعبئة', 'مخازن التجميد والتبريد', 
-            'رصيف الشحن والتفريغ', 'ورشة الصيانة الميكانيكية', 'محطة الكهرباء والمحولات', 'محطة معالجة المياه'
-        ],
-        'ICAPP-2': [
-            'خط المعالجة والتحضير', 'خط التعقيم والطبخ', 'عنبر التعبئة والتغليف', 
-            'مخزن المواد الكيميائية', 'غرفة المراقبة والتحكم SCADA', 'منطقة تجميع المخلفات'
-        ],
-        'ICAPP-3': [
-            'المستودعات المركزية (المخزن الرئيسي)', 'مسارات حركة رافعات الشوكة', 'سكن العاملين والمرافق', 
-            'المطعم والكافيتريا', 'مبنى الإدارة العامة والمكاتب'
-        ],
-        'ICAPP-4': [
-            'وحدة استلام وفحص الخامات', 'منطقة الغلايات وضواغط الهواء', 'منطقة خزانات الوقود', 
-            'البوابة الرئيسية والأمن الصناعي', 'مواقف سيارات النقل الثقيل'
-        ],
-        'الموقع العام': [
-            'الطرق والممرات الرئيسية بين المصانع', 'الساحات الخارجية ومحيط الأسوار', 
-            'مجمع الورش الهندسية', 'نقطة التجمع الرئيسية لحالات الطوارئ'
-        ]
-    };
-
+    let loadedConfig = null;
     let userGps = { lat: null, lng: null, accuracy: null, mapLink: '' };
     let photoBase64 = '';
 
-    // تفعيل الربط وتحديد الموقع الجغرافي عند التحميل
+    const defaultSites = [
+        {
+            name: 'ICAPP-1',
+            places: [
+                'عنبر الإنتاج الرئيسي', 'منطقة الفرز والتعبئة', 'مخازن التجميد والتبريد', 
+                'رصيف الشحن والتفريغ', 'ورشة الصيانة الميكانيكية', 'محطة الكهرباء والمحولات', 'محطة معالجة المياه'
+            ]
+        },
+        {
+            name: 'ICAPP-2',
+            places: [
+                'خط المعالجة والتحضير', 'خط التعقيم والطبخ', 'عنبر التعبئة والتغليف', 
+                'مخزن المواد الكيميائية', 'غرفة المراقبة والتحكم SCADA', 'منطقة تجميع المخلفات'
+            ]
+        },
+        {
+            name: 'ICAPP-3',
+            places: [
+                'المستودعات المركزية (المخزن الرئيسي)', 'مسارات حركة رافعات الشوكة', 'سكن العاملين والمرافق', 
+                'المطعم والكافيتريا', 'مبنى الإدارة العامة والمكاتب'
+            ]
+        },
+        {
+            name: 'ICAPP-4',
+            places: [
+                'وحدة استلام وفحص الخامات', 'منطقة الغلايات وضواغط الهواء', 'منطقة خزانات الوقود', 
+                'البوابة الرئيسية والأمن الصناعي', 'مواقف سيارات النقل الثقيل'
+            ]
+        },
+        {
+            name: 'الموقع العام',
+            places: [
+                'الطرق والممرات الرئيسية بين المصانع', 'الساحات الخارجية ومحيط الأسوار', 
+                'مجمع الورش الهندسية', 'نقطة التجمع الرئيسية لحالات الطوارئ'
+            ]
+        }
+    ];
+
     window.addEventListener('DOMContentLoaded', () => {
         initGpsCapture();
-
-        // قراءة الـ URL query params
-        const params = new URLSearchParams(window.location.search);
-        const f = params.get('factory') || params.get('site') || 'ICAPP-1';
-        const p = params.get('place') || params.get('location') || '';
-
-        const fSel = document.getElementById('factorySelect');
-        for (let i = 0; i < fSel.options.length; i++) {
-            if (fSel.options[i].value.toLowerCase().includes(f.toLowerCase()) || f.toLowerCase().includes(fSel.options[i].value.toLowerCase())) {
-                fSel.selectedIndex = i;
-                break;
-            }
-        }
-
-        handleFactoryChange(fSel.value, p);
+        loadConfiguration();
     });
 
-    function handleFactoryChange(factoryVal, targetPlace = '') {
-        const placeSelect = document.getElementById('placeSelect');
-        placeSelect.innerHTML = '';
-
-        const places = FACTORY_PLACES_MAP[factoryVal] || FACTORY_PLACES_MAP['الموقع العام'];
-        places.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p;
-            opt.textContent = p;
-            if (targetPlace && p.toLowerCase().includes(targetPlace.toLowerCase())) {
-                opt.selected = true;
+    function loadConfiguration() {
+        try {
+            const cached = localStorage.getItem('HSE_SETTINGS_CACHE') || localStorage.getItem('appData');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed.companySettings && (parsed.companySettings.sites || parsed.companySettings.observationSites)) {
+                    const rawS = parsed.companySettings.sites || parsed.companySettings.observationSites;
+                    if (Array.isArray(rawS) && rawS.length > 0) {
+                        loadedConfig = { sites: rawS };
+                    }
+                }
             }
-            placeSelect.appendChild(opt);
+        } catch(e) {}
+
+        if (!loadedConfig) {
+            loadedConfig = { sites: defaultSites };
+        }
+
+        renderSitesDropdown(loadedConfig);
+    }
+
+    function renderSitesDropdown(cfg) {
+        const siteSelect = document.getElementById('siteSelect');
+        const rawSites = (Array.isArray(cfg.sites) && cfg.sites.length > 0) ? cfg.sites : defaultSites;
+
+        siteSelect.innerHTML = '<option value="">— اختر المصنع / الموقع —</option>';
+        rawSites.forEach(site => {
+            const siteName = (typeof site === 'string') ? site : (site.name || site.siteName || site.factoryName || '');
+            if (siteName && siteName !== '__OTHER_SITE__') {
+                const opt = document.createElement('option');
+                opt.value = siteName;
+                opt.textContent = siteName;
+                siteSelect.appendChild(opt);
+            }
         });
 
-        // خيار مكان مخصص
+        // قراءة الـ query params للمصنع والمكان
+        const urlParams = new URLSearchParams(window.location.search);
+        const factoryParam = urlParams.get('factory') || urlParams.get('site') || urlParams.get('factoryName');
+        const placeParam = urlParams.get('place') || urlParams.get('location') || urlParams.get('subLocation');
+
+        if (factoryParam) {
+            for (let i = 0; i < siteSelect.options.length; i++) {
+                if (siteSelect.options[i].value.toLowerCase().includes(factoryParam.toLowerCase()) || factoryParam.toLowerCase().includes(siteSelect.options[i].value.toLowerCase())) {
+                    siteSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        } else if (siteSelect.options.length > 1) {
+            siteSelect.selectedIndex = 1;
+        }
+
+        if (siteSelect.selectedIndex > 0) {
+            handleSiteChange(siteSelect.value, placeParam);
+        }
+    }
+
+    function getCleanPlaceName(p) {
+        if (!p) return '';
+        if (typeof p === 'string') {
+            const trimmed = p.trim();
+            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                try {
+                    const obj = JSON.parse(trimmed);
+                    return String(obj.name || obj.placeName || obj.locationName || obj.place || obj.label || obj.title || obj.id || '').trim();
+                } catch (e) {}
+            }
+            return trimmed;
+        }
+        if (typeof p === 'object') {
+            return String(p.name || p.placeName || p.locationName || p.place || p.label || p.title || p.id || '').trim();
+        }
+        return String(p).trim();
+    }
+
+    function handleSiteChange(siteName, targetPlace = '') {
+        const placeSelect = document.getElementById('placeSelect');
+        const customGroup = document.getElementById('customPlaceGroup');
+        if (customGroup) customGroup.style.display = 'none';
+
+        if (!siteName) {
+            placeSelect.innerHTML = '<option value="">— اختر المصنع أولاً —</option>';
+            placeSelect.disabled = true;
+            return;
+        }
+
+        placeSelect.disabled = false;
+        placeSelect.innerHTML = '<option value="">— اختر الموقع الفرعي / المكان —</option>';
+
+        const sites = (loadedConfig && loadedConfig.sites) ? loadedConfig.sites : defaultSites;
+        const foundSite = sites.find(s => {
+            const sName = (typeof s === 'string') ? s : (s.name || s.siteName || s.factoryName || '');
+            return sName === siteName || sName.toLowerCase() === siteName.toLowerCase();
+        });
+
+        const seenPlaces = new Set();
+        let matchedTarget = false;
+
+        if (foundSite && Array.isArray(foundSite.places) && foundSite.places.length > 0) {
+            foundSite.places.forEach(rawP => {
+                const pName = getCleanPlaceName(rawP);
+                if (pName && !seenPlaces.has(pName.toLowerCase()) && pName !== '[object Object]') {
+                    seenPlaces.add(pName.toLowerCase());
+                    const opt = document.createElement('option');
+                    opt.value = pName;
+                    opt.textContent = pName;
+                    if (targetPlace && (pName.toLowerCase().includes(targetPlace.toLowerCase()) || targetPlace.toLowerCase().includes(pName.toLowerCase()))) {
+                        opt.selected = true;
+                        matchedTarget = true;
+                    }
+                    placeSelect.appendChild(opt);
+                }
+            });
+        }
+
+        // خيار مكان فرعي آخر
         const otherOpt = document.createElement('option');
         otherOpt.value = '__OTHER_PLACE__';
         otherOpt.textContent = '➕ مكان فرعي آخر (إدخال يدوي)...';
-        if (targetPlace && !places.some(p => p.toLowerCase().includes(targetPlace.toLowerCase()))) {
+        if (targetPlace && !matchedTarget) {
             otherOpt.selected = true;
-            document.getElementById('customPlaceWrap').style.display = 'block';
-            document.getElementById('customPlaceInput').value = targetPlace;
+            if (customGroup) {
+                customGroup.style.display = 'block';
+                document.getElementById('customPlaceInput').value = targetPlace;
+            }
         }
         placeSelect.appendChild(otherOpt);
 
-        handlePlaceChange(placeSelect.value);
+        if (!targetPlace && placeSelect.options.length > 1) {
+            placeSelect.selectedIndex = 1;
+        }
     }
 
     function handlePlaceChange(val) {
-        const wrap = document.getElementById('customPlaceWrap');
+        const customGroup = document.getElementById('customPlaceGroup');
         if (val === '__OTHER_PLACE__') {
-            wrap.style.display = 'block';
-            document.getElementById('customPlaceInput').focus();
+            if (customGroup) {
+                customGroup.style.display = 'block';
+                document.getElementById('customPlaceInput').focus();
+            }
         } else {
-            wrap.style.display = 'none';
+            if (customGroup) customGroup.style.display = 'none';
         }
     }
 
@@ -651,7 +753,7 @@
                 
                 const badge = document.getElementById('gpsStatusBadge');
                 badge.style.color = '#15803d';
-                document.getElementById('gpsStatusText').textContent = 'تم تسجيل إحداثيات الموقع بنجاح (±' + userGps.accuracy + 'م) ✅';
+                document.getElementById('gpsStatusText').textContent = 'تم تسجيل إحداثيات الموقع بدقة (±' + userGps.accuracy + 'م) ✅';
             },
             (err) => {
                 document.getElementById('gpsStatusText').textContent = 'الموقع التقديري للمصنع نشط';
@@ -667,7 +769,7 @@
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إرسال البلاغ وتوثيقه...';
 
-        const factory = document.getElementById('factorySelect').value;
+        const factory = document.getElementById('siteSelect').value;
         let place = document.getElementById('placeSelect').value;
         if (place === '__OTHER_PLACE__') {
             place = document.getElementById('customPlaceInput').value.trim() || 'مكان غير محدد';
@@ -700,8 +802,7 @@
         const isoCode = 'NM-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random()*9000);
 
         try {
-            // إرسال للباك إند
-            if (window.googleScriptUrl || typeof fetch !== 'undefined') {
+            if (typeof fetch !== 'undefined') {
                 fetch('https://script.google.com/macros/s/AKfycbz_placeholder/exec', {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
