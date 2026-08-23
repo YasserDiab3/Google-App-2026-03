@@ -8246,7 +8246,7 @@ const Training = {
     async showForm(data = null) {
         this.ensureData();
         if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
-            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+            try { Permissions.ensureFormSettingsState().catch(() => {}); } catch (e) { /* ignore non-blocking */ }
         }
         this.currentEditId = data?.id || null;
 
@@ -8471,7 +8471,7 @@ const Training = {
                             </div>
                             <div>
                                 <h3 class="text-base font-bold text-gray-900 m-0">الجدولة الزمنية، التوقيت والصلاحية</h3>
-                                <p class="text-xs text-indigo-800 m-0 font-medium">تحديد أوقات الانعقاد والانتهاء واحتساب الساعات وتاريخ تجديد الشهادة</p>
+                                <p class="text-xs text-indigo-800 m-0 font-medium">تحديد تواريخ وأوقات الانعقاد والانتهاء واحتساب الساعات وتاريخ تجديد الشهادة</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
@@ -8481,19 +8481,60 @@ const Training = {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                        <!-- تاريخ الانعقاد والحالة -->
-                        <div class="lg:col-span-5 space-y-3 bg-white p-4 rounded-xl border border-indigo-100 shadow-xs">
+                    <div class="space-y-4">
+                        <!-- السطر 1: تاريخ البدء وتاريخ الانتهاء بجانب بعضهما تماماً (50% / 50%) -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl border border-indigo-100 shadow-xs">
+                            <!-- تاريخ البدء / الانعقاد -->
                             <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1.5">
-                                    <i class="fas fa-calendar-day ml-1.5 text-indigo-600"></i> تاريخ الانعقاد *
+                                <label class="block text-xs font-bold text-gray-800 mb-1.5">
+                                    <i class="fas fa-calendar-day ml-1.5 text-indigo-600"></i> تاريخ بدء / انعقاد التدريب *
                                 </label>
                                 <input type="date" id="training-startDate" required class="form-input text-sm font-semibold"
                                     value="${data?.startDate ? new Date(data.startDate).toISOString().slice(0, 10) : ''}">
+                                <p class="text-xs text-gray-400 mt-1 font-medium">تاريخ تنفيذ الجلسة التدريبية</p>
                             </div>
 
+                            <!-- تاريخ انتهاء التدريب (الصلاحية) مع أزرار التحديد السريع -->
                             <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1.5">
+                                <label class="block text-xs font-bold text-gray-800 mb-1.5">
+                                    <i class="fas fa-calendar-check ml-1.5 text-indigo-600"></i> تاريخ انتهاء التدريب (صلاحية الشهادة)
+                                </label>
+                                <input type="date" id="training-expiryDate" class="form-input text-sm font-semibold"
+                                    value="${data?.expiryDate ? new Date(data.expiryDate).toISOString().slice(0, 10) : ''}">
+                                <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+                                    <span class="text-xs text-gray-500 font-bold ml-1">تحديد سريع:</span>
+                                    <button type="button" onclick="Training.setExpiryFromStart(6)" class="px-2 py-0.5 text-xs font-bold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+6 أشهر</button>
+                                    <button type="button" onclick="Training.setExpiryFromStart(12)" class="px-2 py-0.5 text-xs font-bold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+سنة</button>
+                                    <button type="button" onclick="Training.setExpiryFromStart(24)" class="px-2 py-0.5 text-xs font-bold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+سنتين</button>
+                                    <button type="button" onclick="Training.setExpiryFromStart(36)" class="px-2 py-0.5 text-xs font-bold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+3 سنوات</button>
+                                    <button type="button" onclick="document.getElementById('training-expiryDate').value=''" class="px-2 py-0.5 text-xs font-bold rounded-md bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-all cursor-pointer">مسح</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- السطر 2: أوقات التدريب (البدء والانتهاء) وحالة البرنامج بجانب بعضهم -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-indigo-100 shadow-xs">
+                            <!-- وقت البدء -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-800 mb-1.5">
+                                    <i class="fas fa-clock ml-1.5 text-indigo-600"></i> وقت البدء *
+                                </label>
+                                <input type="time" id="training-startTime" required class="form-input text-sm font-bold text-center"
+                                    value="${data?.startTime ? this.cleanTime(data.startTime) : ''}">
+                            </div>
+
+                            <!-- وقت الانتهاء -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-800 mb-1.5">
+                                    <i class="fas fa-clock ml-1.5 text-indigo-600"></i> وقت الانتهاء *
+                                </label>
+                                <input type="time" id="training-endTime" required class="form-input text-sm font-bold text-center"
+                                    value="${data?.endTime ? this.cleanTime(data.endTime) : ''}">
+                            </div>
+
+                            <!-- حالة البرنامج -->
+                            <div>
+                                <label class="block text-xs font-bold text-gray-800 mb-1.5">
                                     <i class="fas fa-circle-check ml-1.5 text-indigo-600"></i> حالة البرنامج *
                                 </label>
                                 <select id="training-status" required class="form-input text-sm font-semibold">
@@ -8502,55 +8543,6 @@ const Training = {
                                     <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
                                     <option value="ملغي" ${data?.status === 'ملغي' ? 'selected' : ''}>ملغي</option>
                                 </select>
-                            </div>
-                        </div>
-
-                        <!-- توقيت البداية والنهاية جنباً إلى جنب + الصلاحية -->
-                        <div class="lg:col-span-7 space-y-3">
-                            <!-- صف وقت البدء ووقت الانتهاء جنباً إلى جنب بشكل أنيق -->
-                            <div class="bg-white p-4 rounded-xl border border-indigo-100 shadow-xs">
-                                <label class="block text-xs font-bold text-gray-800 mb-2">
-                                    <i class="fas fa-clock ml-1.5 text-indigo-600"></i> توقيت الانعقاد وساعات البرنامج التدريبي *
-                                </label>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <div class="flex items-center justify-between mb-1">
-                                            <span class="text-xs font-semibold text-gray-600">وقت البدء:</span>
-                                        </div>
-                                        <div class="relative">
-                                            <input type="time" id="training-startTime" required class="form-input text-sm font-bold text-center pr-3"
-                                                value="${data?.startTime ? this.cleanTime(data.startTime) : ''}">
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div class="flex items-center justify-between mb-1">
-                                            <span class="text-xs font-semibold text-gray-600">وقت الانتهاء:</span>
-                                        </div>
-                                        <div class="relative">
-                                            <input type="time" id="training-endTime" required class="form-input text-sm font-bold text-center pr-3"
-                                                value="${data?.endTime ? this.cleanTime(data.endTime) : ''}">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- تاريخ انتهاء الصلاحية وأزرار التحديد السريع -->
-                            <div class="bg-white p-4 rounded-xl border border-indigo-100 shadow-xs">
-                                <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
-                                    <label class="text-xs font-bold text-gray-700 m-0">
-                                        <i class="fas fa-calendar-check ml-1.5 text-indigo-600"></i> تاريخ انتهاء التدريب (صلاحية الشهادة / إعادة التدريب الدوري)
-                                    </label>
-                                </div>
-                                <input type="date" id="training-expiryDate" class="form-input text-sm font-semibold"
-                                    value="${data?.expiryDate ? new Date(data.expiryDate).toISOString().slice(0, 10) : ''}">
-                                <div class="flex items-center gap-1.5 mt-2.5 flex-wrap">
-                                    <span class="text-xs text-gray-500 font-bold ml-1">تحديد سريع:</span>
-                                    <button type="button" onclick="Training.setExpiryFromStart(6)" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+6 أشهر</button>
-                                    <button type="button" onclick="Training.setExpiryFromStart(12)" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+سنة واحدة</button>
-                                    <button type="button" onclick="Training.setExpiryFromStart(24)" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+سنتين</button>
-                                    <button type="button" onclick="Training.setExpiryFromStart(36)" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+3 سنوات</button>
-                                    <button type="button" onclick="document.getElementById('training-expiryDate').value=''" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-all cursor-pointer">مسح</button>
-                                </div>
                             </div>
                         </div>
                     </div>
