@@ -1028,35 +1028,109 @@ const DailyObservations = {
     },
 
     /**
-     * ✅ الحصول على قائمة الإدارات المطابقة تماماً لفلتر وسجلات النظام
+     * ✅ الحصول على قائمة إدارات النظام الرسمية المعتمدة (بدون أي مسميات إنجليزية أو افتراضية)
      */
     getDepartments() {
-        const obs = Array.isArray(AppState.appData?.dailyObservations) ? AppState.appData.dailyObservations : [];
-        const fromObs = obs.map(o => o.responsibleDepartment).filter(Boolean);
-        const fromUsers = (AppState.appData?.users || []).map(u => u.department).filter(Boolean);
-        const fromEmployees = (AppState.appData?.employees || []).map(e => e.department).filter(Boolean);
-        const fromSettings = (Array.isArray(AppState.companySettings?.formDepartments) 
-            ? AppState.companySettings.formDepartments 
-            : (typeof AppState.companySettings?.formDepartments === 'string' ? AppState.companySettings.formDepartments.split(/\n|,/) : []))
-            .map(s => s.trim()).filter(Boolean);
+        const rawDepts = [];
 
-        const all = [...new Set([...fromObs, ...fromUsers, ...fromEmployees, ...fromSettings])].filter(Boolean);
-        if (all.length === 0) {
-            return [
-                'CI & Projects Lead',
-                'HSE',
-                'Quality, Health, Safety and Environment',
-                'Top Managament',
+        // 1. من إعدادات الشركة بالنظام
+        const compSettings = AppState.companySettings || {};
+        const formDepts = Array.isArray(compSettings.formDepartments)
+            ? compSettings.formDepartments
+            : (typeof compSettings.formDepartments === 'string' ? compSettings.formDepartments.split(/\n|,/) : []);
+        formDepts.forEach(d => rawDepts.push(d));
+
+        const legacyDepts = Array.isArray(compSettings.departments)
+            ? compSettings.departments
+            : (typeof compSettings.departments === 'string' ? compSettings.departments.split(/\n|,/) : []);
+        legacyDepts.forEach(d => rawDepts.push(d));
+
+        // 2. من سجلات الموظفين والمستخدمين الفعلية بالنظام
+        (AppState.appData?.employees || []).forEach(e => rawDepts.push(e.department));
+        (AppState.appData?.users || []).forEach(u => rawDepts.push(u.department));
+
+        // 3. تطبيع وتوحيد المسميات الرسمية واستبعاد أي نصوص إنجليزية
+        const normalizedMap = new Map();
+
+        const ALIAS_MAP = {
+            'hse': 'إدارة السلامة والصحة المهنية',
+            'quality health safety and environment': 'إدارة السلامة والصحة المهنية',
+            'ci projects lead': 'إدارة المشروعات',
+            'projects': 'إدارة المشروعات',
+            'top managament': 'إدارة الموارد البشرية',
+            'top management': 'إدارة الموارد البشرية',
+            'ادارة الانتاج': 'إدارة الإنتاج',
+            'ادارة التصنيع': 'إدارة الإنتاج',
+            'ادارة التعبئة': 'إدارة الإنتاج',
+            'ادارة الجودة': 'إدارة الجودة',
+            'ادارة الصيانة': 'إدارة الصيانة',
+            'ادارة المخازن': 'إدارة المخازن'
+        };
+
+        const normalizeKey = (str) => {
+            return String(str || '').toLowerCase()
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي')
+                .replace(/[^\w\u0600-\u06FF]/g, '');
+        };
+
+        const addCleanDept = (deptName) => {
+            if (!deptName) return;
+            const str = String(deptName).trim().replace(/\s+/g, ' ');
+            if (!str || str.length < 2) return;
+
+            const lowerKey = str.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+            if (ALIAS_MAP[lowerKey]) {
+                const mapped = ALIAS_MAP[lowerKey];
+                normalizedMap.set(normalizeKey(mapped), mapped);
+                return;
+            }
+
+            const arKey = normalizeKey(str);
+            if (ALIAS_MAP[arKey]) {
+                const mapped = ALIAS_MAP[arKey];
+                normalizedMap.set(normalizeKey(mapped), mapped);
+                return;
+            }
+
+            // استبعاد أي نص بالإنجليزية فقط
+            if (!/[\u0600-\u06FF]/.test(str)) return;
+
+            // توحيد بداية اسم الإدارة لتكون رسمية (إدارة ...)
+            let cleanName = str;
+            if (cleanName.startsWith('ادارة ')) {
+                cleanName = 'إدارة ' + cleanName.substring(6).trim();
+            } else if (!cleanName.startsWith('إدارة ')) {
+                cleanName = 'إدارة ' + cleanName;
+            }
+
+            const finalKey = normalizeKey(cleanName);
+            if (finalKey && !normalizedMap.has(finalKey)) {
+                normalizedMap.set(finalKey, cleanName);
+            }
+        };
+
+        rawDepts.forEach(addCleanDept);
+
+        // إذا لم تتوفر بعد أي إدارات من السجلات، استخدام الإدارات الأساسية للنظام
+        if (normalizedMap.size === 0) {
+            [
                 'إدارة السلامة والصحة المهنية',
-                'ادارة الانتاج',
-                'ادارة التصنيع',
-                'ادارة التعبئة',
-                'ادارة الجودة',
-                'ادارة الصيانة',
-                'ادارة المخازن'
-            ];
+                'إدارة الصيانة',
+                'إدارة الإنتاج',
+                'إدارة الجودة',
+                'إدارة المخازن',
+                'إدارة الموارد البشرية',
+                'إدارة الأمن والحراسة',
+                'إدارة المشروعات',
+                'إدارة المشتريات',
+                'إدارة الخدمات اللوجستية',
+                'إدارة الزراعة'
+            ].forEach(addCleanDept);
         }
-        return all.sort((a, b) => a.localeCompare(b, 'ar'));
+
+        return Array.from(normalizedMap.values()).sort((a, b) => a.localeCompare(b, 'ar'));
     },
 
     /**
