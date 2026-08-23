@@ -58,7 +58,7 @@ function isSwDev() {
 // Bump cache version to force clients to pick up latest JS/CSS updates (زيادة عند كل نشر لظهور التحديثات)
 // يجب تحديث __SW_REGISTER_QUERY في index.html بنفس اللاحقة عند تغيير الإصدار لتسريع اكتشاف service-worker.js
 // Service Worker Version: 20260501 — isSwDev: مضيفات إضافية + معاينة Vercel
-const CACHE_VERSION = 'hse-app-v1.0.1298-20260823';
+const CACHE_VERSION = 'hse-app-v1.0.1299-20260823';
 const CACHE_NAME = `hse-cache-${CACHE_VERSION}`;
 
 /** أقصى حجم لعنصر في الكاش (بايت) — يحدّ تخزين ملفات CDN الضخمة */
@@ -685,7 +685,7 @@ async function networkOnly(request) {
  */
 function isShellOrCriticalFile(pathname) {
     const p = pathname.replace(BASE_PATH, '') || pathname;
-    if (p === '/' || p === '/index.html' || p.endsWith('/index.html')) return true;
+    if (p === '/' || p === '/index.html' || p.endsWith('/index.html') || p.endsWith('.html') || p.includes('public-observation')) return true;
     // Vercel يخدم الواجهة من الجذر: الملفات الحرجة تحت js/modules وليس js/app-ui.js مباشرة
     if (p.endsWith('.css')) return true;
     if (p.endsWith('/js/app-bootstrap.js')) return true;
