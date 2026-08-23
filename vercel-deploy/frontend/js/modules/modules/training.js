@@ -8135,6 +8135,114 @@ const Training = {
         expiryInput.value = expiry.toISOString().slice(0, 10);
     },
 
+    getPreviousTrainingTopics() {
+        const set = new Set();
+        
+        // 1. برامج التدريب المسجلة مسبقاً
+        if (Array.isArray(AppState.appData.training)) {
+            AppState.appData.training.forEach(t => {
+                const name = String(t.name || t.subject || t.topic || '').trim();
+                if (name) set.add(name);
+            });
+        }
+
+        // 2. سجل الحضور
+        if (Array.isArray(AppState.appData.trainingAttendance)) {
+            AppState.appData.trainingAttendance.forEach(a => {
+                const topic = String(a.topic || '').trim();
+                if (topic) set.add(topic);
+            });
+        }
+
+        // 3. الخطة السنوية
+        if (Array.isArray(AppState.appData.annualTrainingPlans)) {
+            AppState.appData.annualTrainingPlans.forEach(plan => {
+                if (Array.isArray(plan.programs)) {
+                    plan.programs.forEach(p => {
+                        const title = String(p.title || p.name || p.topic || '').trim();
+                        if (title) set.add(title);
+                    });
+                }
+            });
+        }
+
+        // 4. موضوعات السلامة والصحة المهنية القياسية المعتمدة
+        const standardTopics = [
+            'مهمات الوقاية الشخصية (PPE) وكيفية استخدامها والحفاظ عليها',
+            'مخاطر العمل على ارتفاعات واشتراطات السقالات واستخدام حزام الأمان',
+            'إجراءات عزل وتأمين مصادر الطاقة الخطرة (LOTO - Lockout/Tagout)',
+            'السلامة والصحة المهنية ومخاطر بيئة العمل العامة',
+            'خطة الطوارئ والإخلاء والتعامل في حالات الحريق والطوارئ',
+            'المخاطر الميكانيكية وإجراءات السلامة حول المعدات المتحركة والسيور',
+            'المخاطر الكهربائية وتجنب الصعق وفصل التيار عند العمل',
+            'المخاطر الكيميائية والتعامل الآمن مع المواد الخطرة ونشرات SDS',
+            'السلامة في الأماكن المغلقة (Confined Spaces) والتصاريح الخاصة بها',
+            'الإسعافات الأولية الأساسية والإنعاش القلبي الرئوي (CPR)',
+            'مخاطر المناولة اليدوية للأحمال والسلامة الإرجونومية (Ergonomics)',
+            'سلامة عمليات الرفع والتحميل واستخدام الأوناش ووسائل التصبين',
+            'تصاريح العمل الآمن (PTW - Permit to Work) ومسؤوليات المنفذين',
+            'القيادة الآمنة وسلامة المركبات وحركة الرافعات الشوكية (Forklifts)',
+            'مخاطر الانزلاق والتعثر والسقوط (Slips, Trips and Falls)',
+            'السلامة من الحرائق واستخدام أنواع طفايات الحريق وخراطيم الإطفاء',
+            'إجراءات التفتيش الدوري والسلامة قبل بدء وردية العمل'
+        ];
+
+        standardTopics.forEach(t => set.add(t));
+
+        return Array.from(set).filter(Boolean);
+    },
+
+    toggleTopicSuggestions(force) {
+        const popup = document.getElementById('training-name-suggestions-popup');
+        const chevron = document.getElementById('training-name-chevron');
+        if (!popup) return;
+        
+        const isVisible = popup.style.display === 'block';
+        const shouldShow = typeof force === 'boolean' ? force : !isVisible;
+        
+        if (shouldShow) {
+            popup.style.display = 'block';
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+            this.filterTopicSuggestions(document.getElementById('training-name')?.value || '');
+        } else {
+            popup.style.display = 'none';
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+        }
+    },
+
+    selectTopicOption(topicName) {
+        const input = document.getElementById('training-name');
+        if (input) {
+            input.value = topicName;
+            input.focus();
+        }
+        this.toggleTopicSuggestions(false);
+    },
+
+    filterTopicSuggestions(query) {
+        const container = document.getElementById('training-topics-list-items');
+        const countDisplay = document.getElementById('training-topics-count');
+        if (!container) return;
+
+        const cleanQuery = String(query || '').trim().toLowerCase();
+        const items = container.querySelectorAll('.training-topic-option');
+        let matchCount = 0;
+
+        items.forEach(item => {
+            const text = (item.getAttribute('data-topic-text') || item.textContent || '').toLowerCase();
+            if (!cleanQuery || text.includes(cleanQuery)) {
+                item.style.display = 'flex';
+                matchCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        if (countDisplay) {
+            countDisplay.textContent = `${matchCount} موضوع`;
+        }
+    },
+
     async showForm(data = null) {
         this.ensureData();
         if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
@@ -8233,6 +8341,7 @@ const Training = {
         const selectedTrainerLegacyOption = selectedTrainerName && !selectedTrainerExists
             ? `<option value="${Utils.escapeHTML(selectedTrainerName)}" selected>${Utils.escapeHTML(selectedTrainerName)}</option>`
             : '';
+        const previousTopics = this.getPreviousTrainingTopics();
         return `
             <form id="training-form" class="space-y-5">
                 <!-- 1. بيانات البرنامج التدريبي الأساسية -->
@@ -8253,13 +8362,48 @@ const Training = {
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <!-- موضوع المحاضرة -->
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-bold text-gray-700 mb-1.5">
-                                <i class="fas fa-book-bookmark ml-1.5 text-blue-600"></i> موضوع المحاضرة / البرنامج التدريبي *
-                            </label>
-                            <input type="text" id="training-name" required class="form-input text-sm font-semibold"
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="أدخل موضوع التدريب بوضوح (مثال: مخاطر العمل على ارتفاعات)">
+                        <!-- موضوع المحاضرة مع قائمة مقترحات وتدريبات سابقة -->
+                        <div class="md:col-span-2 relative" id="training-name-wrapper">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block text-xs font-bold text-gray-700 m-0">
+                                    <i class="fas fa-book-bookmark ml-1.5 text-blue-600"></i> موضوع المحاضرة / البرنامج التدريبي *
+                                </label>
+                                <button type="button" onclick="Training.toggleTopicSuggestions()" class="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer bg-transparent border-none p-0">
+                                    <i class="fas fa-list-check"></i> استعراض الموضوعات السابقة (${previousTopics.length})
+                                </button>
+                            </div>
+                            <div class="relative flex items-center">
+                                <input type="text" id="training-name" required list="training-name-datalist" class="form-input text-sm font-bold pr-3 pl-10"
+                                    value="${Utils.escapeHTML(data?.name || '')}" placeholder="اكتب موضوع التدريب أو اختر من المقترحات السابقة..."
+                                    autocomplete="off">
+                                <button type="button" id="training-name-toggle-btn" onclick="Training.toggleTopicSuggestions()" class="absolute left-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-blue-600 hover:bg-blue-100/80 transition-all cursor-pointer border-none bg-transparent" title="عرض قائمة التدريبات السابقة">
+                                    <i class="fas fa-chevron-down text-xs transition-transform duration-200" id="training-name-chevron"></i>
+                                </button>
+                            </div>
+
+                            <!-- Datalist لمتصفحات الجوال والـ Native Autocomplete -->
+                            <datalist id="training-name-datalist">
+                                ${previousTopics.map(t => `<option value="${Utils.escapeHTML(t)}">`).join('')}
+                            </datalist>
+
+                            <!-- قائمة مقترحات التدريبات السابقة المنسدلة -->
+                            <div id="training-name-suggestions-popup" class="hidden absolute right-0 left-0 mt-1.5 bg-white border-2 border-blue-200 rounded-xl shadow-2xl z-50 overflow-hidden" style="max-height: 280px; display: none;">
+                                <div class="p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 flex items-center justify-between">
+                                    <span class="text-xs font-bold text-blue-900"><i class="fas fa-history ml-1 text-blue-600"></i> موضوعات وتدريبات سابقة معتمدة</span>
+                                    <span class="text-xs text-blue-700 font-bold" id="training-topics-count">${previousTopics.length} موضوع</span>
+                                </div>
+                                <div class="overflow-y-auto divide-y divide-gray-100" style="max-height: 220px;" id="training-topics-list-items">
+                                    ${previousTopics.map(t => `
+                                        <div class="training-topic-option p-2.5 hover:bg-blue-50/80 text-xs font-semibold text-gray-800 cursor-pointer flex items-center justify-between transition-colors" data-topic-text="${Utils.escapeHTML(t)}" onclick="Training.selectTopicOption('${Utils.escapeHTML(t).replace(/'/g, "\\'")}')">
+                                            <div class="flex items-center gap-2">
+                                                <i class="fas fa-check-circle text-blue-500 text-xs flex-shrink-0"></i>
+                                                <span>${Utils.escapeHTML(t)}</span>
+                                            </div>
+                                            <span class="text-xs text-blue-600 font-bold opacity-70"><i class="fas fa-arrow-left"></i> اختيار</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
                         </div>
 
                         <!-- نوع التدريب -->
@@ -8599,6 +8743,29 @@ const Training = {
             endTimeInput.addEventListener('change', updateCalculatedHours);
         }
         updateCalculatedHours();
+
+        // تفعيل استكمال وتصفية مقترحات موضوع التدريب فورياً
+        const trainingNameInput = document.getElementById('training-name');
+        if (trainingNameInput) {
+            trainingNameInput.addEventListener('input', (e) => {
+                module.filterTopicSuggestions(e.target.value);
+                const popup = document.getElementById('training-name-suggestions-popup');
+                if (popup && popup.style.display !== 'block') {
+                    module.toggleTopicSuggestions(true);
+                }
+            });
+        }
+
+        // إغلاق قائمة المقترحات عند النقر في أي مكان خارج الحاوية
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('training-name-wrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                const popup = document.getElementById('training-name-suggestions-popup');
+                if (popup && popup.style.display === 'block') {
+                    module.toggleTopicSuggestions(false);
+                }
+            }
+        });
 
         const updateTypeUI = (focusCompany = false) => {
             const typeValue = typeSelect?.value || 'employee';
