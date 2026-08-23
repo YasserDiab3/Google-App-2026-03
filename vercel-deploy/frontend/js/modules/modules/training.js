@@ -457,8 +457,8 @@ const Training = {
                     </button>
                     ` : ''}
                     <button id="add-training-btn" onclick="Training.showForm()" class="btn-primary">
-                        <i class="fas fa-plus ml-2"></i>
-                        نموذج حضور تدريب
+                        <i class="fas fa-user-plus ml-2"></i>
+                        إضافة تدريب موظف
                     </button>
                     <button id="training-refresh-btn" class="btn-secondary" title="تحديث البيانات">
                         <i class="fas fa-sync-alt ml-2"></i>
@@ -3208,8 +3208,8 @@ const Training = {
                     <i class="fas fa-graduation-cap text-4xl text-gray-300 mb-4"></i>
                     <p class="text-gray-500">لا توجد برامج تدريبية</p>
                     <button id="add-training-empty-btn" onclick="Training.showForm()" class="btn-primary mt-4">
-                        <i class="fas fa-plus ml-2"></i>
-                        إضافة برنامج تدريبي
+                        <i class="fas fa-user-plus ml-2"></i>
+                        إضافة تدريب موظف
                     </button>
                 </div>
             `;
@@ -8276,11 +8276,11 @@ const Training = {
                 <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #ffffff;">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 20px;">
-                            <i class="fas fa-${data ? 'edit' : 'clipboard-user'}"></i>
+                            <i class="fas fa-${data ? 'edit' : 'user-plus'}"></i>
                         </div>
                         <div>
                             <h2 style="font-size: 18px; font-weight: 800; margin: 0; color: #ffffff; line-height: 1.3;">
-                                ${data ? 'تعديل نموذج حضور تدريب' : 'نموذج حضور تدريب رسمي'}
+                                ${data ? 'تعديل تدريب موظف' : 'إضافة تدريب موظف'}
                             </h2>
                             <div style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
                                 <span style="font-size: 11px; background: rgba(255,255,255,0.25); padding: 1px 8px; border-radius: 12px; font-weight: 700;">منظومة السلامة والصحة المهنية - ICAPP</span>
@@ -8342,42 +8342,44 @@ const Training = {
             ? `<option value="${Utils.escapeHTML(selectedTrainerName)}" selected>${Utils.escapeHTML(selectedTrainerName)}</option>`
             : '';
         const previousTopics = this.getPreviousTrainingTopics();
+        const inputStyle = `width: 100%; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 9px 12px; font-size: 13px; font-weight: 600; color: #1e293b; background: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.03); outline: none; transition: border-color 0.2s, box-shadow 0.2s;`;
+        
         return `
-            <form id="training-form" class="space-y-5">
+            <form id="training-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
                 <!-- 1. بيانات البرنامج التدريبي الأساسية -->
-                <div class="bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/40 border border-blue-200/80 rounded-2xl p-5 shadow-xs">
-                    <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-blue-200/70">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md">
-                                <i class="fas fa-graduation-cap text-lg"></i>
+                <div style="background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border: 1.5px solid #bfdbfe; border-radius: 16px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #dbeafe; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(37,99,235,0.25);">
+                                <i class="fas fa-graduation-cap"></i>
                             </div>
                             <div>
-                                <h3 class="text-base font-bold text-gray-900 m-0">بيانات البرنامج التدريبي</h3>
-                                <p class="text-xs text-blue-800 m-0 font-medium">المعلومات والموضوع الأساسي للتدريب والموقع</p>
+                                <h3 style="font-size: 15px; font-weight: 800; color: #0f172a; margin: 0;">بيانات البرنامج التدريبي</h3>
+                                <p style="font-size: 12px; color: #1e40af; margin: 0; font-weight: 600;">المعلومات والموضوع الأساسي للتدريب والموقع</p>
                             </div>
                         </div>
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100/80 text-blue-900 border border-blue-200">
-                            <i class="fas fa-shield-alt ml-1.5 text-blue-600"></i> منظومة السلامة والصحة المهنية
+                        <span style="font-size: 11px; font-weight: 700; background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 9999px; padding: 4px 12px; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-shield-alt" style="color: #2563eb;"></i> منظومة السلامة والصحة المهنية
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
                         <!-- موضوع المحاضرة مع قائمة مقترحات وتدريبات سابقة -->
-                        <div class="md:col-span-2 relative" id="training-name-wrapper">
-                            <div class="flex items-center justify-between mb-1.5">
-                                <label class="block text-xs font-bold text-gray-700 m-0">
-                                    <i class="fas fa-book-bookmark ml-1.5 text-blue-600"></i> موضوع المحاضرة / البرنامج التدريبي *
+                        <div style="grid-column: span 2; position: relative;" id="training-name-wrapper">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                                <label style="font-size: 12px; font-weight: 700; color: #334155; margin: 0; display: inline-flex; align-items: center; gap: 5px;">
+                                    <i class="fas fa-book-bookmark" style="color: #2563eb;"></i> موضوع المحاضرة / البرنامج التدريبي *
                                 </label>
-                                <button type="button" onclick="Training.toggleTopicSuggestions()" class="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer bg-transparent border-none p-0">
+                                <button type="button" onclick="Training.toggleTopicSuggestions()" style="font-size: 11px; font-weight: 700; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; padding: 3px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'">
                                     <i class="fas fa-list-check"></i> استعراض الموضوعات السابقة (${previousTopics.length})
                                 </button>
                             </div>
-                            <div class="relative flex items-center">
-                                <input type="text" id="training-name" required list="training-name-datalist" class="form-input text-sm font-bold pr-3 pl-10"
+                            <div style="position: relative; display: flex; align-items: center;">
+                                <input type="text" id="training-name" required list="training-name-datalist" style="${inputStyle} padding-left: 36px;"
                                     value="${Utils.escapeHTML(data?.name || '')}" placeholder="اكتب موضوع التدريب أو اختر من المقترحات السابقة..."
                                     autocomplete="off">
-                                <button type="button" id="training-name-toggle-btn" onclick="Training.toggleTopicSuggestions()" class="absolute left-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-blue-600 hover:bg-blue-100/80 transition-all cursor-pointer border-none bg-transparent" title="عرض قائمة التدريبات السابقة">
-                                    <i class="fas fa-chevron-down text-xs transition-transform duration-200" id="training-name-chevron"></i>
+                                <button type="button" id="training-name-toggle-btn" onclick="Training.toggleTopicSuggestions()" style="position: absolute; left: 4px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #2563eb; background: transparent; border: none; cursor: pointer;" title="عرض قائمة التدريبات السابقة">
+                                    <i class="fas fa-chevron-down" style="font-size: 11px; transition: transform 0.2s;" id="training-name-chevron"></i>
                                 </button>
                             </div>
 
@@ -8387,19 +8389,19 @@ const Training = {
                             </datalist>
 
                             <!-- قائمة مقترحات التدريبات السابقة المنسدلة -->
-                            <div id="training-name-suggestions-popup" class="hidden absolute right-0 left-0 mt-1.5 bg-white border-2 border-blue-200 rounded-xl shadow-2xl z-50 overflow-hidden" style="max-height: 280px; display: none;">
-                                <div class="p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 flex items-center justify-between">
-                                    <span class="text-xs font-bold text-blue-900"><i class="fas fa-history ml-1 text-blue-600"></i> موضوعات وتدريبات سابقة معتمدة</span>
-                                    <span class="text-xs text-blue-700 font-bold" id="training-topics-count">${previousTopics.length} موضوع</span>
+                            <div id="training-name-suggestions-popup" style="position: absolute; right: 0; left: 0; margin-top: 6px; background: #ffffff; border: 2px solid #93c5fd; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 50; overflow: hidden; max-height: 280px; display: none;">
+                                <div style="padding: 8px 12px; background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%); border-bottom: 1px solid #bfdbfe; display: flex; align-items: center; justify-content: space-between;">
+                                    <span style="font-size: 12px; font-weight: 700; color: #1e3a8a;"><i class="fas fa-history" style="color: #2563eb; margin-left: 4px;"></i> موضوعات وتدريبات سابقة معتمدة</span>
+                                    <span style="font-size: 11px; font-weight: 800; color: #1d4ed8;" id="training-topics-count">${previousTopics.length} موضوع</span>
                                 </div>
-                                <div class="overflow-y-auto divide-y divide-gray-100" style="max-height: 220px;" id="training-topics-list-items">
+                                <div style="overflow-y: auto; max-height: 220px;" id="training-topics-list-items">
                                     ${previousTopics.map(t => `
-                                        <div class="training-topic-option p-2.5 hover:bg-blue-50/80 text-xs font-semibold text-gray-800 cursor-pointer flex items-center justify-between transition-colors" data-topic-text="${Utils.escapeHTML(t)}" onclick="Training.selectTopicOption('${Utils.escapeHTML(t).replace(/'/g, "\\'")}')">
-                                            <div class="flex items-center gap-2">
-                                                <i class="fas fa-check-circle text-blue-500 text-xs flex-shrink-0"></i>
+                                        <div class="training-topic-option" style="padding: 9px 12px; border-bottom: 1px solid #f1f5f9; font-size: 12px; font-weight: 600; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.15s;" data-topic-text="${Utils.escapeHTML(t)}" onclick="Training.selectTopicOption('${Utils.escapeHTML(t).replace(/'/g, "\\'")}')" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#ffffff'">
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <i class="fas fa-check-circle" style="color: #3b82f6; font-size: 12px; flex-shrink: 0;"></i>
                                                 <span>${Utils.escapeHTML(t)}</span>
                                             </div>
-                                            <span class="text-xs text-blue-600 font-bold opacity-70"><i class="fas fa-arrow-left"></i> اختيار</span>
+                                            <span style="font-size: 11px; font-weight: 700; color: #2563eb;"><i class="fas fa-arrow-left"></i> اختيار</span>
                                         </div>
                                     `).join('')}
                                 </div>
@@ -8408,10 +8410,10 @@ const Training = {
 
                         <!-- نوع التدريب -->
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1.5">
-                                <i class="fas fa-tag ml-1.5 text-blue-600"></i> نوع التدريب *
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                                <i class="fas fa-tag" style="color: #2563eb; margin-left: 4px;"></i> نوع التدريب *
                             </label>
-                            <select id="training-type" required class="form-input text-sm font-medium">
+                            <select id="training-type" required style="${inputStyle}">
                                 <option value="">اختر نوع التدريب</option>
                                 <option value="داخلي" ${data?.trainingType === 'داخلي' || (!data?.trainingType && !data) ? 'selected' : ''}>داخلي (داخل المنشأة)</option>
                                 <option value="خارجي" ${data?.trainingType === 'خارجي' ? 'selected' : ''}>خارجي (جهة معتمدة)</option>
@@ -8420,10 +8422,10 @@ const Training = {
 
                         <!-- المصنع -->
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1.5">
-                                <i class="fas fa-industry ml-1.5 text-blue-600"></i> المصنع / المنشأة *
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                                <i class="fas fa-industry" style="color: #2563eb; margin-left: 4px;"></i> المصنع / المنشأة *
                             </label>
-                            <select id="training-factory" required class="form-input text-sm font-medium">
+                            <select id="training-factory" required style="${inputStyle}">
                                 <option value="">اختر المصنع</option>
                                 ${this.getSiteOptions().map(site => `
                                     <option value="${Utils.escapeHTML(site.id)}" ${data?.factory === site.id || data?.factory === site.name ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>
@@ -8433,10 +8435,10 @@ const Training = {
 
                         <!-- مكان التدريب -->
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1.5">
-                                <i class="fas fa-map-pin ml-1.5 text-blue-600"></i> مكان / قاعة التدريب *
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                                <i class="fas fa-map-pin" style="color: #2563eb; margin-left: 4px;"></i> مكان / قاعة التدريب *
                             </label>
-                            <select id="training-location" required class="form-input text-sm font-medium">
+                            <select id="training-location" required style="${inputStyle}">
                                 <option value="">اختر مكان التدريب</option>
                                 ${this.getPlaceOptions(data?.factory || '').map(place => `
                                     <option value="${Utils.escapeHTML(place.id)}" ${data?.location === place.id || data?.location === place.name ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>
@@ -8446,10 +8448,10 @@ const Training = {
 
                         <!-- اسم المحاضر -->
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1.5">
-                                <i class="fas fa-chalkboard-user ml-1.5 text-blue-600"></i> اسم المحاضر / المدرب *
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                                <i class="fas fa-chalkboard-user" style="color: #2563eb; margin-left: 4px;"></i> اسم المحاضر / المدرب *
                             </label>
-                            <select id="training-trainer" required class="form-input text-sm font-medium">
+                            <select id="training-trainer" required style="${inputStyle}">
                                 <option value="">اختر اسم المحاضر</option>
                                 ${selectedTrainerLegacyOption}
                                 ${safetyTeamTrainers.map(member => `
@@ -8463,81 +8465,81 @@ const Training = {
                 </div>
 
                 <!-- 2. الجدولة الزمنية، التوقيت، وحساب الساعات والصلاحية -->
-                <div class="bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-slate-50 border border-indigo-200/80 rounded-2xl p-5 shadow-xs">
-                    <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-indigo-200/70 flex-wrap">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-md">
-                                <i class="fas fa-business-time text-lg"></i>
+                <div style="background: linear-gradient(135deg, #faf5ff 0%, #eef2ff 100%); border: 1.5px solid #c7d2fe; border-radius: 16px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e0e7ff; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(99,102,241,0.25);">
+                                <i class="fas fa-business-time"></i>
                             </div>
                             <div>
-                                <h3 class="text-base font-bold text-gray-900 m-0">الجدولة الزمنية، التوقيت والصلاحية</h3>
-                                <p class="text-xs text-indigo-800 m-0 font-medium">تحديد تواريخ وأوقات الانعقاد والانتهاء واحتساب الساعات وتاريخ تجديد الشهادة</p>
+                                <h3 style="font-size: 15px; font-weight: 800; color: #0f172a; margin: 0;">الجدولة الزمنية، التوقيت والصلاحية</h3>
+                                <p style="font-size: 12px; color: #4338ca; margin: 0; font-weight: 600;">تحديد تواريخ وأوقات الانعقاد والانتهاء واحتساب الساعات وتاريخ تجديد الشهادة</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-white text-indigo-900 border border-indigo-200 shadow-xs" id="training-calculated-hours-pill">
-                                <i class="fas fa-hourglass-half ml-1.5 text-indigo-600"></i> مدة التدريب: <strong id="training-hours-number" class="mr-1 text-indigo-700 font-bold">${data?.hours || '0.00'}</strong> ساعة
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 12px; font-weight: 800; background: #ffffff; color: #3730a3; border: 1.5px solid #c7d2fe; border-radius: 9999px; padding: 5px 14px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" id="training-calculated-hours-pill">
+                                <i class="fas fa-hourglass-half" style="color: #6366f1;"></i> مدة التدريب: <strong id="training-hours-number" style="color: #4338ca; font-size: 14px;">${data?.hours || '0.00'}</strong> ساعة
                             </span>
                         </div>
                     </div>
 
-                    <div class="space-y-4">
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <!-- السطر 1: تاريخ البدء وتاريخ الانتهاء بجانب بعضهما تماماً (50% / 50%) -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl border border-indigo-100 shadow-xs">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
                             <!-- تاريخ البدء / الانعقاد -->
                             <div>
-                                <label class="block text-xs font-bold text-gray-800 mb-1.5">
-                                    <i class="fas fa-calendar-day ml-1.5 text-indigo-600"></i> تاريخ بدء / انعقاد التدريب *
+                                <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
+                                    <i class="fas fa-calendar-day" style="color: #4f46e5; margin-left: 4px;"></i> تاريخ بدء / انعقاد التدريب *
                                 </label>
-                                <input type="date" id="training-startDate" required class="form-input text-sm font-semibold"
+                                <input type="date" id="training-startDate" required style="${inputStyle}"
                                     value="${data?.startDate ? new Date(data.startDate).toISOString().slice(0, 10) : ''}">
-                                <p class="text-xs text-gray-400 mt-1 font-medium">تاريخ تنفيذ الجلسة التدريبية</p>
+                                <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0; font-weight: 500;">تاريخ تنفيذ الجلسة التدريبية</p>
                             </div>
 
                             <!-- تاريخ انتهاء التدريب (الصلاحية) مع أزرار التحديد السريع -->
                             <div>
-                                <label class="block text-xs font-bold text-gray-800 mb-1.5">
-                                    <i class="fas fa-calendar-check ml-1.5 text-indigo-600"></i> تاريخ انتهاء التدريب (صلاحية الشهادة)
+                                <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
+                                    <i class="fas fa-calendar-check" style="color: #4f46e5; margin-left: 4px;"></i> تاريخ انتهاء التدريب (صلاحية الشهادة)
                                 </label>
-                                <input type="date" id="training-expiryDate" class="form-input text-sm font-semibold"
+                                <input type="date" id="training-expiryDate" style="${inputStyle}"
                                     value="${data?.expiryDate ? new Date(data.expiryDate).toISOString().slice(0, 10) : ''}">
-                                <div class="flex items-center gap-1.5 mt-2 flex-wrap">
-                                    <span class="text-xs text-gray-500 font-bold ml-1">تحديد سريع:</span>
-                                    <button type="button" onclick="Training.setExpiryFromStart(6)" class="px-2 py-0.5 text-xs font-bold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+6 أشهر</button>
-                                    <button type="button" onclick="Training.setExpiryFromStart(12)" class="px-2 py-0.5 text-xs font-bold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+سنة</button>
-                                    <button type="button" onclick="Training.setExpiryFromStart(24)" class="px-2 py-0.5 text-xs font-bold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+سنتين</button>
-                                    <button type="button" onclick="Training.setExpiryFromStart(36)" class="px-2 py-0.5 text-xs font-bold rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+3 سنوات</button>
-                                    <button type="button" onclick="document.getElementById('training-expiryDate').value=''" class="px-2 py-0.5 text-xs font-bold rounded-md bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-all cursor-pointer">مسح</button>
+                                <div style="display: flex; align-items: center; gap: 5px; margin-top: 6px; flex-wrap: wrap;">
+                                    <span style="font-size: 11px; color: #64748b; font-weight: 700; margin-left: 4px;">تحديد سريع:</span>
+                                    <button type="button" onclick="Training.setExpiryFromStart(6)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+6 أشهر</button>
+                                    <button type="button" onclick="Training.setExpiryFromStart(12)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+سنة</button>
+                                    <button type="button" onclick="Training.setExpiryFromStart(24)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+سنتين</button>
+                                    <button type="button" onclick="Training.setExpiryFromStart(36)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+3 سنوات</button>
+                                    <button type="button" onclick="document.getElementById('training-expiryDate').value=''" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; cursor: pointer;">مسح</button>
                                 </div>
                             </div>
                         </div>
 
                         <!-- السطر 2: أوقات التدريب (البدء والانتهاء) وحالة البرنامج بجانب بعضهم -->
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-indigo-100 shadow-xs">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
                             <!-- وقت البدء -->
                             <div>
-                                <label class="block text-xs font-bold text-gray-800 mb-1.5">
-                                    <i class="fas fa-clock ml-1.5 text-indigo-600"></i> وقت البدء *
+                                <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
+                                    <i class="fas fa-clock" style="color: #4f46e5; margin-left: 4px;"></i> وقت البدء *
                                 </label>
-                                <input type="time" id="training-startTime" required class="form-input text-sm font-bold text-center"
+                                <input type="time" id="training-startTime" required style="${inputStyle} text-align: center;"
                                     value="${data?.startTime ? this.cleanTime(data.startTime) : ''}">
                             </div>
 
                             <!-- وقت الانتهاء -->
                             <div>
-                                <label class="block text-xs font-bold text-gray-800 mb-1.5">
-                                    <i class="fas fa-clock ml-1.5 text-indigo-600"></i> وقت الانتهاء *
+                                <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
+                                    <i class="fas fa-clock" style="color: #4f46e5; margin-left: 4px;"></i> وقت الانتهاء *
                                 </label>
-                                <input type="time" id="training-endTime" required class="form-input text-sm font-bold text-center"
+                                <input type="time" id="training-endTime" required style="${inputStyle} text-align: center;"
                                     value="${data?.endTime ? this.cleanTime(data.endTime) : ''}">
                             </div>
 
                             <!-- حالة البرنامج -->
                             <div>
-                                <label class="block text-xs font-bold text-gray-800 mb-1.5">
-                                    <i class="fas fa-circle-check ml-1.5 text-indigo-600"></i> حالة البرنامج *
+                                <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
+                                    <i class="fas fa-circle-check" style="color: #4f46e5; margin-left: 4px;"></i> حالة البرنامج *
                                 </label>
-                                <select id="training-status" required class="form-input text-sm font-semibold">
+                                <select id="training-status" required style="${inputStyle}">
                                     <option value="مخطط" ${data?.status === 'مخطط' || !data?.status ? 'selected' : ''}>مخطط</option>
                                     <option value="قيد التنفيذ" ${data?.status === 'قيد التنفيذ' ? 'selected' : ''}>قيد التنفيذ</option>
                                     <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
@@ -8548,96 +8550,96 @@ const Training = {
                     </div>
                 </div>
                 
-                <!-- 2. كشف حضور الموظفين (المشاركون من كوادر الشركة) -->
-                <div class="bg-gradient-to-br from-emerald-50 via-teal-50 to-green-50 border-2 border-emerald-300 rounded-2xl p-5 shadow-sm">
-                    <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-emerald-200 flex-wrap">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center shadow-md">
-                                <i class="fas fa-user-check text-lg"></i>
+                <!-- 3. كشف حضور الموظفين (المشاركون من كوادر الشركة) -->
+                <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1.5px solid #a7f3d0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #d1fae5; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(16,185,129,0.25);">
+                                <i class="fas fa-user-check"></i>
                             </div>
                             <div>
-                                <h3 class="text-base font-bold text-gray-900 m-0">كشف حضور الموظفين</h3>
-                                <p class="text-xs text-emerald-800 m-0 font-medium">تسجيل حضور كوادر وموظفي الشركة بالبرنامج التدريبي</p>
+                                <h3 style="font-size: 15px; font-weight: 800; color: #064e3b; margin: 0;">كشف حضور الموظفين</h3>
+                                <p style="font-size: 12px; color: #047857; margin: 0; font-weight: 600;">تسجيل حضور كوادر وموظفي الشركة بالبرنامج التدريبي</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                <i class="fas fa-id-badge ml-1.5 text-emerald-600"></i> موظفو الشركة فقط
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 11px; font-weight: 700; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; border-radius: 9999px; padding: 4px 12px; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-id-badge" style="color: #16a34a;"></i> موظفو الشركة فقط
                             </span>
-                            <span class="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-bold bg-white text-emerald-900 border border-emerald-300 shadow-sm" id="participants-count-display">
-                                إجمالي الحضور: <strong id="participants-count-number" class="text-emerald-700 text-sm mr-1">0</strong>
+                            <span style="font-size: 12px; font-weight: 700; background: #ffffff; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 9999px; padding: 4px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" id="participants-count-display">
+                                إجمالي الحضور: <strong id="participants-count-number" style="color: #059669; font-size: 14px; margin-right: 4px;">0</strong>
                             </span>
                         </div>
                     </div>
 
                     <input type="hidden" id="training-participant-type" value="employee">
 
-                    <div class="space-y-4">
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <!-- صف إدخال بيانات الموظف -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-white p-4 rounded-xl border border-emerald-200 shadow-xs">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #d1fae5; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
                             <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1">
-                                    <i class="fas fa-barcode ml-1 text-emerald-600"></i> الكود الوظيفي (SAP / ID)
+                                <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                                    <i class="fas fa-barcode" style="color: #059669; margin-left: 4px;"></i> الكود الوظيفي (SAP / ID)
                                 </label>
-                                <div class="relative">
-                                    <input type="text" id="training-participant-code" class="form-input text-sm font-semibold pr-9" placeholder="أدخل الكود أو امسح" autocomplete="off">
-                                    <button type="button" id="training-participant-search-btn" class="absolute inset-y-0 left-0 flex items-center justify-center w-8 text-emerald-600 hover:text-emerald-800" title="بحث فوري">
-                                        <i class="fas fa-search text-xs"></i>
+                                <div style="position: relative;">
+                                    <input type="text" id="training-participant-code" style="${inputStyle} padding-left: 36px;" placeholder="أدخل الكود أو امسح" autocomplete="off">
+                                    <button type="button" id="training-participant-search-btn" style="position: absolute; inset-block: 0; left: 0; width: 34px; display: flex; align-items: center; justify-content: center; color: #059669; background: transparent; border: none; cursor: pointer;" title="بحث فوري">
+                                        <i class="fas fa-search" style="font-size: 13px;"></i>
                                     </button>
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1">
-                                    <i class="fas fa-user ml-1 text-emerald-600"></i> اسم الموظف *
+                                <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                                    <i class="fas fa-user" style="color: #059669; margin-left: 4px;"></i> اسم الموظف *
                                 </label>
-                                <input type="text" id="training-participant-name" class="form-input text-sm font-bold" placeholder="الاسم ثلاثي أو رباعي" autocomplete="off">
+                                <input type="text" id="training-participant-name" style="${inputStyle}" placeholder="الاسم ثلاثي أو رباعي" autocomplete="off">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1">
-                                    <i class="fas fa-briefcase ml-1 text-emerald-600"></i> المسمى الوظيفي
+                                <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                                    <i class="fas fa-briefcase" style="color: #059669; margin-left: 4px;"></i> المسمى الوظيفي
                                 </label>
-                                <input type="text" id="training-participant-position" class="form-input text-sm" placeholder="الوظيفة">
+                                <input type="text" id="training-participant-position" style="${inputStyle}" placeholder="الوظيفة">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-gray-700 mb-1">
-                                    <i class="fas fa-building ml-1 text-emerald-600"></i> الإدارة / القسم
+                                <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                                    <i class="fas fa-building" style="color: #059669; margin-left: 4px;"></i> الإدارة / القسم
                                 </label>
-                                <input type="text" id="training-participant-department" class="form-input text-sm" placeholder="القسم أو الوحدة">
+                                <input type="text" id="training-participant-department" style="${inputStyle}" placeholder="القسم أو الوحدة">
                             </div>
                         </div>
 
                         <!-- أزرار الإضافة السريعة والتفريغ -->
-                        <div class="flex items-center justify-between gap-2 flex-wrap">
-                            <div class="flex items-center gap-2">
-                                <button type="button" id="add-participant-btn" class="btn-primary" style="padding: 0.55rem 1.3rem; font-size: 0.88rem; font-weight: 700; border-radius: 9px; background: linear-gradient(135deg, #059669 0%, #047857 100%); box-shadow: 0 3px 6px -1px rgba(5, 150, 105, 0.3);">
-                                    <i class="fas fa-user-plus ml-1.5"></i> إضافة للكشف
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button type="button" id="add-participant-btn" style="padding: 0.6rem 1.4rem; font-size: 0.88rem; font-weight: 700; border-radius: 10px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; border: none; cursor: pointer; box-shadow: 0 3px 6px rgba(5, 150, 105, 0.3); display: inline-flex; align-items: center; gap: 6px;">
+                                    <i class="fas fa-user-plus"></i> إضافة للكشف
                                 </button>
-                                <button type="button" id="clear-participant-btn" class="btn-secondary" style="padding: 0.55rem 1rem; font-size: 0.85rem; border-radius: 9px;">
-                                    <i class="fas fa-eraser ml-1.5"></i> مسح الحقول
+                                <button type="button" id="clear-participant-btn" style="padding: 0.6rem 1.1rem; font-size: 0.85rem; font-weight: 700; border-radius: 10px; background: #ffffff; color: #475569; border: 1.5px solid #cbd5e1; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i class="fas fa-eraser"></i> مسح الحقول
                                 </button>
                             </div>
-                            <span class="text-xs text-gray-500 font-medium">
-                                <i class="fas fa-info-circle ml-1 text-emerald-600"></i> يدعم الإدخال بالباركود، والبحث التلقائي بالاسم والكود
+                            <span style="font-size: 11px; color: #047857; font-weight: 600;">
+                                <i class="fas fa-info-circle" style="color: #059669; margin-left: 4px;"></i> يدعم الإدخال بالباركود، والبحث التلقائي بالاسم والكود
                             </span>
                         </div>
 
                         <!-- جدول الحضور -->
-                        <div class="overflow-x-auto rounded-xl border border-emerald-200 bg-white shadow-xs" style="max-height: 280px;">
-                            <table class="data-table w-full text-sm">
+                        <div style="overflow-x: auto; border-radius: 12px; border: 1.5px solid #a7f3d0; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.03); max-height: 280px;">
+                            <table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
                                 <thead>
                                     <tr style="background: #f0fdf4; border-bottom: 2px solid #bbf7d0;">
-                                        <th style="width: 40px; text-align: center; color: #166534; font-weight: 700;">م</th>
-                                        <th style="color: #166534; font-weight: 700;">الكود الوظيفي</th>
-                                        <th style="color: #166534; font-weight: 700;">اسم الموظف</th>
-                                        <th style="color: #166534; font-weight: 700;">المسمى الوظيفي</th>
-                                        <th style="color: #166534; font-weight: 700;">الإدارة / القسم</th>
-                                        <th style="width: 70px; text-align: center; color: #166534; font-weight: 700;">حذف</th>
+                                        <th style="width: 45px; text-align: center; color: #166534; font-weight: 800; padding: 10px 8px;">م</th>
+                                        <th style="color: #166534; font-weight: 800; padding: 10px 12px; text-align: right;">الكود الوظيفي</th>
+                                        <th style="color: #166534; font-weight: 800; padding: 10px 12px; text-align: right;">اسم الموظف</th>
+                                        <th style="color: #166534; font-weight: 800; padding: 10px 12px; text-align: right;">المسمى الوظيفي</th>
+                                        <th style="color: #166534; font-weight: 800; padding: 10px 12px; text-align: right;">الإدارة / القسم</th>
+                                        <th style="width: 70px; text-align: center; color: #166534; font-weight: 800; padding: 10px 8px;">حذف</th>
                                     </tr>
                                 </thead>
                                 <tbody id="training-participants-table-body">
                                     <tr class="participants-empty-row">
-                                        <td colspan="6" class="text-center text-gray-400 py-6">
-                                            <i class="fas fa-user-clock text-2xl mb-1 text-gray-300 block"></i>
+                                        <td colspan="6" style="text-align: center; color: #94a3b8; padding: 2rem 1rem;">
+                                            <i class="fas fa-user-clock" style="font-size: 28px; color: #cbd5e1; display: block; margin-bottom: 6px;"></i>
                                             لا يوجد موظفون مضافون حتى الآن — ابحث بالكود أو الاسم لإضافة الموظفين
                                         </td>
                                     </tr>
@@ -8647,19 +8649,16 @@ const Training = {
                     </div>
                 </div>
                 
-                <!-- 3. أزرار الإجراءات -->
-                <div class="flex items-center justify-end gap-3 pt-4 border-t-2 border-gray-200 flex-wrap">
-                    <button type="button" id="training-form-print-btn" class="btn-secondary" style="padding: 0.75rem 1.5rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #6366f1; color: #4338ca;">
-                        <i class="fas fa-print ml-2"></i>
-                        طباعة كشف الحضور
+                <!-- 4. أزرار الإجراءات -->
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 1rem; border-top: 1.5px solid #e2e8f0; flex-wrap: wrap;">
+                    <button type="button" id="training-form-print-btn" style="padding: 0.75rem 1.5rem; font-weight: 700; font-size: 0.9rem; border-radius: 10px; border: 1.5px solid #6366f1; background: #ffffff; color: #4338ca; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-print"></i> طباعة كشف الحضور
                     </button>
-                    <button type="button" onclick="Training.closeFormModal()" class="btn-secondary" style="padding: 0.75rem 1.5rem; font-weight: 700; border-radius: 10px;">
-                        <i class="fas fa-times ml-2"></i>
-                        إلغاء
+                    <button type="button" onclick="Training.closeFormModal()" style="padding: 0.75rem 1.5rem; font-weight: 700; font-size: 0.9rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-times"></i> إلغاء
                     </button>
-                    <button type="submit" class="btn-primary" style="padding: 0.75rem 1.8rem; font-weight: 700; border-radius: 10px; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);">
-                        <i class="fas fa-save ml-2"></i>
-                        ${data ? 'حفظ التعديلات' : 'حفظ وتسجيل التدريب'}
+                    <button type="submit" style="padding: 0.75rem 2rem; font-weight: 800; font-size: 0.95rem; border-radius: 10px; background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35); border: none; color: #ffffff; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-save"></i> ${data ? 'حفظ التعديلات' : 'حفظ وتسجيل التدريب'}
                     </button>
                 </div>
             </form>
