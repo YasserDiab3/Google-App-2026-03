@@ -1208,9 +1208,9 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                     </div>
                 </div>
                 <div class="content-card" style="border-radius: 16px; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.04); overflow: hidden; background: #ffffff;">
-                    <div class="card-header" style="padding: 1.25rem 1.5rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0;">
-                        <!-- \u0627\u0644\u0633\u0637\u0631 \u0627\u0644\u0639\u0644\u0648\u064A: \u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0634\u0627\u0631\u0629 \u0648\u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 -->
-                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <div class="card-header" style="padding: 1.25rem 1.5rem 1rem 1.5rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1.5px solid #e2e8f0;">
+                        <!-- \u0627\u0644\u0633\u0637\u0631 \u0627\u0644\u0639\u0644\u0648\u064A: \u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0634\u0627\u0631\u0629 \u0648\u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(99,102,241,0.25);">
                                     <i class="fas fa-list-check"></i>
@@ -1228,29 +1228,29 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                             
                             <!-- \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u0648\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0636\u0628\u0637 -->
                             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <button id="export-training-pdf-btn" style="padding: 7px 15px; font-size: 12px; font-weight: 700; border-radius: 9px; background: #ffffff; color: #4338ca; border: 1.5px solid #c7d2fe; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: all 0.2s;" onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='#ffffff'">
+                                <button id="export-training-pdf-btn" style="padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 8px; background: #ffffff; color: #4338ca; border: 1.5px solid #c7d2fe; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: all 0.2s;" onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='#ffffff'">
                                     <i class="fas fa-file-pdf" style="color: #6366f1;"></i> \u062A\u0642\u0631\u064A\u0631 PDF
                                 </button>
-                                <button id="export-training-excel-btn" style="padding: 7px 15px; font-size: 12px; font-weight: 700; border-radius: 9px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(5,150,105,0.25);">
+                                <button id="export-training-excel-btn" style="padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(5,150,105,0.25);">
                                     <i class="fas fa-file-excel"></i> \u062A\u0635\u062F\u064A\u0631 Excel
                                 </button>
-                                <button id="training-filter-reset-btn" onclick="Training.resetFilters()" style="padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 9px; background: #ffffff; color: #e11d48; border: 1.5px solid #fecdd3; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="\u0625\u0639\u0627\u062F\u0629 \u0636\u0628\u0637 \u0627\u0644\u0641\u0644\u0627\u062A\u0631">
-                                    <i class="fas fa-rotate-left"></i> \u0625\u0639\u0627\u062F\u0629 \u0636\u0628\u0637
+                                <button id="training-filter-reset-btn" onclick="Training.resetFilters()" style="padding: 7px 12px; font-size: 12px; font-weight: 700; border-radius: 8px; background: #ffffff; color: #e11d48; border: 1.5px solid #fecdd3; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="\u0625\u0639\u0627\u062F\u0629 \u0636\u0628\u0637 \u0627\u0644\u0641\u0644\u0627\u062A\u0631">
+                                    <i class="fas fa-rotate-left"></i> \u0645\u0633\u062D \u0627\u0644\u0641\u0644\u0627\u062A\u0631
                                 </button>
                             </div>
                         </div>
 
-                        <!-- \u0634\u0631\u064A\u0637 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0629 \u0627\u0644\u062D\u062F\u064A\u062B -->
-                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                        <!-- \u0634\u0631\u064A\u0637 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u0623\u0641\u0642\u064A \u0628\u062C\u0627\u0646\u0628 \u0628\u0639\u0636\u0647\u0627 \u0645\u0628\u0627\u0634\u0631\u0629 \u0623\u0639\u0644\u0649 \u0631\u0623\u0633 \u0627\u0644\u062C\u062F\u0648\u0644 -->
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 1rem; padding-top: 0.85rem; border-top: 1px dashed #cbd5e1; width: 100%;">
                             <!-- \u0627\u0644\u0628\u062D\u062B \u0627\u0644\u0634\u0627\u0645\u0644 -->
-                            <div style="position: relative; grid-column: span 2; min-width: 240px;">
-                                <input type="text" id="training-search" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 12px 8px 32px; font-size: 12px; font-weight: 600; color: #1e293b; background: #f8fafc; outline: none; transition: all 0.2s;" placeholder="\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C\u060C \u0627\u0644\u0645\u062F\u0631\u0628\u060C \u0627\u0644\u0645\u0634\u0627\u0631\u0643\u064A\u0646 \u0623\u0648 \u0627\u0644\u0645\u0648\u0642\u0639..." autocomplete="off" onfocus="this.style.borderColor='#6366f1'; this.style.background='#ffffff'" onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc'">
+                            <div style="position: relative; flex: 2; min-width: 220px;">
+                                <input type="text" id="training-search" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 12px 7px 32px; font-size: 12px; font-weight: 600; color: #1e293b; background: #ffffff; outline: none; transition: all 0.2s;" placeholder="\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C\u060C \u0627\u0644\u0645\u062F\u0631\u0628\u060C \u0627\u0644\u0645\u0634\u0627\u0631\u0643\u064A\u0646 \u0623\u0648 \u0627\u0644\u0645\u0648\u0642\u0639..." autocomplete="off" onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 2px rgba(99,102,241,0.15)'" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none'">
                                 <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 12px; pointer-events: none;"></i>
                             </div>
 
                             <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u062D\u0627\u0644\u0629 -->
-                            <div>
-                                <select id="training-filter-status" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
+                            <div style="flex: 1; min-width: 135px;">
+                                <select id="training-filter-status" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
                                     <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0627\u0644\u0627\u062A</option>
                                     <option value="\u0645\u062E\u0637\u0637">\u0645\u062E\u0637\u0637</option>
                                     <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630">\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630</option>
@@ -1260,32 +1260,32 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                             </div>
 
                             <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0641\u062A\u0631\u0629 / \u0627\u0644\u0634\u0647\u0631 -->
-                            <div>
-                                <select id="training-filter-month" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
-                                    <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0641\u062A\u0631\u0627\u062A \u0648\u0627\u0644\u0634\u0647\u0648\u0631</option>
+                            <div style="flex: 1; min-width: 145px;">
+                                <select id="training-filter-month" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
+                                    <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0634\u0647\u0648\u0631</option>
                                     ${this.getEmployeeMonthOptions()}
                                 </select>
                             </div>
 
                             <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0645\u0635\u0646\u0639 / \u0627\u0644\u0645\u0646\u0634\u0623\u0629 -->
-                            <div>
-                                <select id="training-filter-factory" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
+                            <div style="flex: 1; min-width: 135px;">
+                                <select id="training-filter-factory" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
                                     <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0635\u0627\u0646\u0639</option>
                                     ${this.getSiteOptions().map(i=>`<option value="${Utils.escapeHTML(i.id)}">${Utils.escapeHTML(i.name)}</option>`).join("")}
                                 </select>
                             </div>
 
                             <!-- \u0641\u0644\u062A\u0631 \u0646\u0648\u0639 \u0627\u0644\u062A\u062F\u0631\u064A\u0628 -->
-                            <div>
-                                <select id="training-filter-type" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
-                                    <option value="">\u062C\u0645\u064A\u0639 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u062A\u062F\u0631\u064A\u0628</option>
+                            <div style="flex: 1; min-width: 125px;">
+                                <select id="training-filter-type" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
+                                    <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0646\u0648\u0627\u0639</option>
                                     <option value="\u062F\u0627\u062E\u0644\u064A">\u062A\u062F\u0631\u064A\u0628 \u062F\u0627\u062E\u0644\u064A</option>
                                     <option value="\u062E\u0627\u0631\u062C\u064A">\u062A\u062F\u0631\u064A\u0628 \u062E\u0627\u0631\u062C\u064A</option>
                                 </select>
                             </div>
                         </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body" style="padding: 0;">
                         <div id="training-table-container">
                             <div class="table-wrapper" style="overflow-x: auto;">
                                 <table class="data-table table-header-purple">
@@ -1294,7 +1294,7 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                                             <th>\u0627\u0633\u0645 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C</th>
                                             <th>\u0646\u0648\u0639 \u0627\u0644\u062A\u062F\u0631\u064A\u0628</th>
                                             <th>\u0627\u0644\u0645\u062F\u0631\u0628</th>
-                                            <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0621</th>
+                                            <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062F\u0631\u064A\u0628</th>
                                             <th>\u0639\u062F\u062F \u0627\u0644\u0645\u0634\u0627\u0631\u0643\u064A\u0646</th>
                                             <th>\u0627\u0644\u062D\u0627\u0644\u0629</th>
                                             <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
@@ -1315,7 +1315,6 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                                 </table>
                             </div>
                         </div>
-                    </div>
                 </div>
             `},async renderTabContent(t){return t==="programs"?this.buildProgramsTabMarkup():t==="contractors"?this.buildContractorsTabMarkup():t==="attendance"?this.buildAttendanceTabMarkup():t==="legalTraining"?this.renderLegalTrainingTab():t==="analysis"?await this.renderAnalysisTab():""},async switchTab(t){if(t==="legalTraining"&&!this.canViewLegalTrainingTab())return this.switchTab("programs");document.querySelectorAll(".tab-btn").forEach(s=>{s.classList.remove("active")});const e=document.querySelector(`.tab-btn[data-tab="${t}"]`);e&&e.classList.add("active");const a=document.getElementById("training-tab-content");if(!a)return;this._currentActiveTab=t;const i=this._tabCache[t],n=this._tabDirty[t]!==!1;i&&!n?a.innerHTML=i:(a.innerHTML=await this.renderTabContent(t),this._tabCache[t]=a.innerHTML,this._tabDirty[t]=!1),this._hydrateTab(t),t==="contractors"?this.loadContractorTrainingsPriority().catch(()=>{}):t==="attendance"||t==="legalTraining"?this._fetchTrainingTabFromBackend(t).catch(()=>{}):t==="analysis"&&this._trainingTabFetchOk?.programs!==!0&&this._fetchTrainingTabFromBackend("programs").catch(()=>{}),this.setupEventListeners()},_hydrateTab(t){t==="programs"?this.loadTrainingList():t==="contractors"?(this.refreshContractorTrainingList().catch(()=>{}),this.updateContractorStatsWithFilter(document.getElementById("contractor-month-filter")?.value||"")):t==="attendance"?this.loadAttendanceRegistry():t==="legalTraining"?this.loadLegalTrainingList():t==="analysis"&&setTimeout(()=>{this.updateTrainingAnalyticsDashboard(),this._tBindAnalyticsEvents()},80)},_markAllTabsDirty(){this._tabDirty.programs=!0,this._tabDirty.contractors=!0,this._tabDirty.attendance=!0,this._tabDirty.analysis=!0,this._tabDirty.legalTraining=!0,this._tabCache.programs=null,this._tabCache.contractors=null,this._tabCache.attendance=null,this._tabCache.analysis=null,this._tabCache.legalTraining=null},async renderList(){return await this.renderTabContent("programs")},async loadTrainingList(){this.ensureData();const t=document.getElementById("training-table-container");if(!t)return;this.refreshProgramsTabKpiCards();const e=AppState.appData.training||[];if(e.length===0){t.innerHTML=`
                 <div class="empty-state">

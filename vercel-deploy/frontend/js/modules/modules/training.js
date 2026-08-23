@@ -3045,9 +3045,9 @@ const Training = {
                     </div>
                 </div>
                 <div class="content-card" style="border-radius: 16px; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.04); overflow: hidden; background: #ffffff;">
-                    <div class="card-header" style="padding: 1.25rem 1.5rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0;">
-                        <!-- السطر العلوي: العنوان والشارة والأزرار الرئيسية -->
-                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <div class="card-header" style="padding: 1.25rem 1.5rem 1rem 1.5rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1.5px solid #e2e8f0;">
+                        <!-- السطر العلوي: العنوان والشارة وأزرار التصدير -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(99,102,241,0.25);">
                                     <i class="fas fa-list-check"></i>
@@ -3065,29 +3065,29 @@ const Training = {
                             
                             <!-- أزرار التصدير وإعادة الضبط -->
                             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <button id="export-training-pdf-btn" style="padding: 7px 15px; font-size: 12px; font-weight: 700; border-radius: 9px; background: #ffffff; color: #4338ca; border: 1.5px solid #c7d2fe; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: all 0.2s;" onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='#ffffff'">
+                                <button id="export-training-pdf-btn" style="padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 8px; background: #ffffff; color: #4338ca; border: 1.5px solid #c7d2fe; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: all 0.2s;" onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='#ffffff'">
                                     <i class="fas fa-file-pdf" style="color: #6366f1;"></i> تقرير PDF
                                 </button>
-                                <button id="export-training-excel-btn" style="padding: 7px 15px; font-size: 12px; font-weight: 700; border-radius: 9px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(5,150,105,0.25);">
+                                <button id="export-training-excel-btn" style="padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(5,150,105,0.25);">
                                     <i class="fas fa-file-excel"></i> تصدير Excel
                                 </button>
-                                <button id="training-filter-reset-btn" onclick="Training.resetFilters()" style="padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 9px; background: #ffffff; color: #e11d48; border: 1.5px solid #fecdd3; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="إعادة ضبط الفلاتر">
-                                    <i class="fas fa-rotate-left"></i> إعادة ضبط
+                                <button id="training-filter-reset-btn" onclick="Training.resetFilters()" style="padding: 7px 12px; font-size: 12px; font-weight: 700; border-radius: 8px; background: #ffffff; color: #e11d48; border: 1.5px solid #fecdd3; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="إعادة ضبط الفلاتر">
+                                    <i class="fas fa-rotate-left"></i> مسح الفلاتر
                                 </button>
                             </div>
                         </div>
 
-                        <!-- شريط الفلاتر الديناميكية الحديث -->
-                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                        <!-- شريط الفلاتر الأفقي بجانب بعضها مباشرة أعلى رأس الجدول -->
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 1rem; padding-top: 0.85rem; border-top: 1px dashed #cbd5e1; width: 100%;">
                             <!-- البحث الشامل -->
-                            <div style="position: relative; grid-column: span 2; min-width: 240px;">
-                                <input type="text" id="training-search" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 12px 8px 32px; font-size: 12px; font-weight: 600; color: #1e293b; background: #f8fafc; outline: none; transition: all 0.2s;" placeholder="بحث باسم البرنامج، المدرب، المشاركين أو الموقع..." autocomplete="off" onfocus="this.style.borderColor='#6366f1'; this.style.background='#ffffff'" onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc'">
+                            <div style="position: relative; flex: 2; min-width: 220px;">
+                                <input type="text" id="training-search" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 12px 7px 32px; font-size: 12px; font-weight: 600; color: #1e293b; background: #ffffff; outline: none; transition: all 0.2s;" placeholder="بحث باسم البرنامج، المدرب، المشاركين أو الموقع..." autocomplete="off" onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 2px rgba(99,102,241,0.15)'" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none'">
                                 <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 12px; pointer-events: none;"></i>
                             </div>
 
                             <!-- فلتر الحالة -->
-                            <div>
-                                <select id="training-filter-status" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
+                            <div style="flex: 1; min-width: 135px;">
+                                <select id="training-filter-status" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
                                     <option value="">جميع الحالات</option>
                                     <option value="مخطط">مخطط</option>
                                     <option value="قيد التنفيذ">قيد التنفيذ</option>
@@ -3097,32 +3097,32 @@ const Training = {
                             </div>
 
                             <!-- فلتر الفترة / الشهر -->
-                            <div>
-                                <select id="training-filter-month" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
-                                    <option value="">جميع الفترات والشهور</option>
+                            <div style="flex: 1; min-width: 145px;">
+                                <select id="training-filter-month" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
+                                    <option value="">جميع الشهور</option>
                                     ${this.getEmployeeMonthOptions()}
                                 </select>
                             </div>
 
                             <!-- فلتر المصنع / المنشأة -->
-                            <div>
-                                <select id="training-filter-factory" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
+                            <div style="flex: 1; min-width: 135px;">
+                                <select id="training-filter-factory" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
                                     <option value="">جميع المصانع</option>
                                     ${this.getSiteOptions().map(s => `<option value="${Utils.escapeHTML(s.id)}">${Utils.escapeHTML(s.name)}</option>`).join('')}
                                 </select>
                             </div>
 
                             <!-- فلتر نوع التدريب -->
-                            <div>
-                                <select id="training-filter-type" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
-                                    <option value="">جميع أنواع التدريب</option>
+                            <div style="flex: 1; min-width: 125px;">
+                                <select id="training-filter-type" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
+                                    <option value="">جميع الأنواع</option>
                                     <option value="داخلي">تدريب داخلي</option>
                                     <option value="خارجي">تدريب خارجي</option>
                                 </select>
                             </div>
                         </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body" style="padding: 0;">
                         <div id="training-table-container">
                             <div class="table-wrapper" style="overflow-x: auto;">
                                 <table class="data-table table-header-purple">
@@ -3131,7 +3131,7 @@ const Training = {
                                             <th>اسم البرنامج</th>
                                             <th>نوع التدريب</th>
                                             <th>المدرب</th>
-                                            <th>تاريخ البدء</th>
+                                            <th>تاريخ التدريب</th>
                                             <th>عدد المشاركين</th>
                                             <th>الحالة</th>
                                             <th>الإجراءات</th>
@@ -3152,7 +3152,6 @@ const Training = {
                                 </table>
                             </div>
                         </div>
-                    </div>
                 </div>
             `;
     },
