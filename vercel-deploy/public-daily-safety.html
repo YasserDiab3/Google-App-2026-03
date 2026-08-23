@@ -572,10 +572,10 @@
                         </label>
                         <select id="inspectorSelect" class="form-select" required>
                             <option value="">— اختر مسؤول السلامة —</option>
-                            <option value="م/ أحمد عبد السلام">م/ أحمد عبد السلام (مدير السلامة)</option>
-                            <option value="م/ ممدوح أحمد">م/ ممدوح أحمد (مهندس سلامة)</option>
-                            <option value="أ/ كريم محمد">أ/ كريم محمد (أخصائي سلامة)</option>
-                            <option value="أ/ سامح عبد الرحمن">أ/ سامح عبد الرحمن (مشرف وردية)</option>
+                            <option value="م/ أحمد عبد السلام">م/ أحمد عبد السلام</option>
+                            <option value="م/ ممدوح أحمد">م/ ممدوح أحمد</option>
+                            <option value="أ/ كريم محمد">أ/ كريم محمد</option>
+                            <option value="أ/ سامح عبد الرحمن">أ/ سامح عبد الرحمن</option>
                         </select>
                     </div>
                 </div>
@@ -828,7 +828,7 @@
                         if (name) {
                             const opt = document.createElement('option');
                             opt.value = name;
-                            opt.textContent = name + (m.role ? ` (${m.role})` : '');
+                            opt.textContent = name;
                             inspSelect.appendChild(opt);
                         }
                     });
