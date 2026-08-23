@@ -228,27 +228,41 @@
             border-radius: 4px;
         }
 
-        /* شريط بيانات ضبط وتوثيق الوثيقة أسفل تسجيل الملاحظة في صف واحد */
+        /* شريط بيانات ضبط وتوثيق الوثيقة أسفل تسجيل الملاحظة موزعة بانتظام */
         .iso-footer-meta-strip {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 16px;
-            flex-wrap: wrap;
+            justify-content: space-between;
             background: #ffffff;
             border: 1.5px solid #dbeafe;
             border-radius: 12px;
-            padding: 8px 16px;
-            margin-top: 14px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.05);
+            padding: 10px 20px;
+            margin-top: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 3px 10px rgba(37, 99, 235, 0.05);
         }
 
         .iso-footer-meta-item {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.78rem;
+            gap: 8px;
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        .iso-footer-meta-item:first-child {
+            justify-content: flex-start;
+            text-align: right;
+        }
+
+        .iso-footer-meta-item:nth-child(2) {
+            justify-content: center;
+            text-align: center;
+        }
+
+        .iso-footer-meta-item:last-child {
+            justify-content: flex-end;
+            text-align: left;
         }
 
         .iso-footer-meta-key {
@@ -258,10 +272,10 @@
 
         .iso-footer-meta-val {
             font-weight: 800;
-            padding: 2px 8px;
+            padding: 2px 10px;
             border-radius: 6px;
             font-family: monospace, system-ui;
-            font-size: 0.78rem;
+            font-size: 0.82rem;
             white-space: nowrap;
         }
 
@@ -376,19 +390,23 @@
             }
 
             .iso-footer-meta-strip {
-                gap: 6px;
-                padding: 6px 8px;
-                justify-content: space-around;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 10px;
+                gap: 4px;
+                margin-top: 14px;
+                margin-bottom: 10px;
             }
 
             .iso-footer-meta-item {
-                font-size: 0.62rem;
+                font-size: 0.58rem;
                 gap: 3px;
             }
 
             .iso-footer-meta-val {
-                font-size: 0.62rem;
-                padding: 1px 4px;
+                font-size: 0.58rem;
+                padding: 1px 5px;
             }
         }
 
@@ -2700,7 +2718,7 @@
             <!-- زر الإرسال -->
             <button type="submit" id="submitBtn" class="btn-submit">
                 <i class="fas fa-paper-plane"></i>
-                <span>تسجيل الملاحظة اليومية الآن</span>
+                <span>تسجيل الملاحظة</span>
             </button>
         </form>
 
@@ -5586,7 +5604,7 @@
                 const submitBtn = document.getElementById('submitBtn');
                 if (submitBtn) {
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span>تسجيل الملاحظة اليومية الآن</span>';
+                    submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span>تسجيل الملاحظة</span>';
                 }
 
                 // استرجاع البروفايل المحفوظ إذا وُجد
