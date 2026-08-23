@@ -151,22 +151,39 @@
             gap: 8px;
         }
 
-        /* Theme Toggle Button */
-        .theme-toggle-btn {
+        /* Theme & Language Toggle Buttons */
+        .theme-toggle-btn, .lang-toggle-btn {
             background: var(--theme-btn-bg);
             color: var(--theme-btn-color);
             border: 1px solid var(--theme-btn-border);
-            width: 36px;
             height: 36px;
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle-btn {
+            width: 36px;
             font-size: 14px;
         }
 
-        .theme-toggle-btn:active {
+        .lang-toggle-btn {
+            padding: 0 10px;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .theme-toggle-btn:hover, .lang-toggle-btn:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+
+        .theme-toggle-btn:active, .lang-toggle-btn:active {
             transform: scale(0.92);
         }
 
@@ -655,6 +672,12 @@
             </div>
 
             <div class="header-actions">
+                <!-- زر تبديل اللغة (AR / EN) -->
+                <button id="langToggleBtn" class="lang-toggle-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()">
+                    <i class="fas fa-globe"></i>
+                    <span id="langBtnText">EN</span>
+                </button>
+
                 <!-- زر تبديل الوضع الليلي / العادي -->
                 <button id="themeToggleBtn" class="theme-toggle-btn" title="تبديل المظهر (فاتح / ليلي)" onclick="toggleHubTheme()">
                     <i class="fas fa-moon" id="themeIcon"></i>
@@ -662,12 +685,12 @@
 
                 <span id="onlineStatus" class="status-pill">
                     <i class="fas fa-circle text-xs"></i>
-                    <span>متصل</span>
+                    <span id="onlineStatusText">متصل</span>
                 </span>
 
                 <button id="pwaInstallBtn" class="install-btn" style="display: none;">
                     <i class="fas fa-download"></i>
-                    <span>تثبيت</span>
+                    <span id="pwaInstallText">تثبيت</span>
                 </button>
             </div>
         </div>
@@ -828,17 +851,234 @@
     </div>
 
     <script>
+        // ==========================================
+        // Full Bilingual Translation Dictionary (i18n)
+        // ==========================================
+        const HUB_I18N = {
+            ar: {
+                dir: 'rtl',
+                langBtn: 'EN',
+                pageTitle: 'بوابة النماذج الميدانية | ICAPP HSE Hub',
+                headerTitle: 'بوابة النماذج الميدانية',
+                headerSubtitle: 'إدارة السلامة والصحة المهنية - ICAPP',
+                online: 'متصل',
+                offline: 'أوفلاين',
+                install: 'تثبيت',
+                heroTitle: 'تسجيل ميداني فوري وموحد',
+                heroDesc: 'اختر النموذج المطلوب لبدء التسجيل المباشر بدون تسجيل دخول. يعمل بكفاءة تامة أثناء الاتصال أو بدون إنترنت.',
+                searchPlaceholder: 'ابحث عن نموذج (ملاحظة، حادث، حريق، معدات...)',
+                availableForms: 'النماذج المتاحة',
+                formsCountBadge: '4 نماذج',
+                // Card 1
+                c1_b1: '<i class="fas fa-shield-check ml-1"></i>مسؤولي السلامة',
+                c1_b2: 'يومي شامل',
+                c1_title: 'المرور اليومي لمسؤولي السلامة',
+                c1_desc: 'جولة التفتيش الميدانية وقائمة التحقق الشاملة (18 بنداً وقراءة الطلمبات)',
+                // Card 2
+                c2_b1: '<i class="fas fa-bolt ml-1"></i>سريع',
+                c2_b2: 'يومي',
+                c2_title: 'تسجيل الملاحظات اليومية',
+                c2_desc: 'رصد السلوكيات والظروف غير الآمنة والإجراءات الفورية',
+                // Card 3
+                c3_b1: '<i class="fas fa-fire ml-1"></i>عالي الأهمية',
+                c3_b2: 'فوري',
+                c3_title: 'تسجيل حادث وشيك (Near Miss)',
+                c3_desc: 'الإبلاغ عن الوقائع التي كادت تؤدي إلى إصابة أو خسائر',
+                // Card 4
+                c4_b1: '<i class="fas fa-calendar-check ml-1"></i>فحص دوري',
+                c4_b2: 'شهري',
+                c4_title: 'فحص طفايات ومعدات الحريق',
+                c4_desc: 'الفحص الميداني الشهري لجاهزية معدات وأجهزة مكافحة الحريق',
+                // Offline bar
+                syncBtn: 'مزامنة الآن',
+                syncing: 'جاري المزامنة...',
+                synced: 'تم التحديث',
+                // Footer
+                footer1: 'منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP',
+                footer2: 'الإصدار الميداني الموحد PWA',
+                // iOS
+                iosTitle: 'تثبيت النماذج على الآيفون (iOS)',
+                iosStep1: '1. اضغط على زر <strong>مشاركة (Share)</strong> في أسفل متصفح Safari.',
+                iosStep2: '2. مرر للأسفل واختر <strong>إضافة إلى الصفحة الرئيسية (Add to Home Screen)</strong>.',
+                iosStep3: '3. اضغط على <strong>إضافة (Add)</strong> في أعلى الزاوية.',
+                iosClose: 'حسناً، فهمت'
+            },
+            en: {
+                dir: 'ltr',
+                langBtn: 'AR',
+                pageTitle: 'Field Forms Portal | ICAPP HSE Hub',
+                headerTitle: 'Field Forms Portal',
+                headerSubtitle: 'HSE Management System - ICAPP',
+                online: 'Online',
+                offline: 'Offline',
+                install: 'Install',
+                heroTitle: 'Instant Unified Field Reporting',
+                heroDesc: 'Select a form for zero-login direct submission. Fully functional both online and offline.',
+                searchPlaceholder: 'Search forms (observation, near miss, fire, inspection...)',
+                availableForms: 'Available Forms',
+                formsCountBadge: '4 Forms',
+                // Card 1
+                c1_b1: '<i class="fas fa-shield-check mr-1"></i>Safety Officers',
+                c1_b2: 'Comprehensive Daily',
+                c1_title: 'Safety Officer Daily Checklist',
+                c1_desc: 'Field patrol checklist (18 safety checkpoints & pump room pressure reading)',
+                // Card 2
+                c2_b1: '<i class="fas fa-bolt mr-1"></i>Fast',
+                c2_b2: 'Daily',
+                c2_title: 'Daily Safety Observations',
+                c2_desc: 'Record unsafe acts, conditions, and immediate corrective actions',
+                // Card 3
+                c3_b1: '<i class="fas fa-fire mr-1"></i>High Priority',
+                c3_b2: 'Instant',
+                c3_title: 'Near Miss Incident Report',
+                c3_desc: 'Report incidents with potential to cause injury, damage, or loss',
+                // Card 4
+                c4_b1: '<i class="fas fa-calendar-check mr-1"></i>Periodic Check',
+                c4_b2: 'Monthly',
+                c4_title: 'Fire Equipment & Extinguishers',
+                c4_desc: 'Monthly field inspection of fire extinguishers & firefighting readiness',
+                // Offline bar
+                syncBtn: 'Sync Now',
+                syncing: 'Syncing...',
+                synced: 'Updated',
+                // Footer
+                footer1: 'Integrated Health, Safety & Environment System © 2026 ICAPP',
+                footer2: 'Unified Field Edition PWA',
+                // iOS
+                iosTitle: 'Install Forms on iPhone (iOS)',
+                iosStep1: '1. Tap the <strong>Share</strong> button at the bottom of Safari.',
+                iosStep2: '2. Scroll down and tap <strong>Add to Home Screen</strong>.',
+                iosStep3: '3. Tap <strong>Add</strong> in the top right corner.',
+                iosClose: 'Got it, thanks'
+            }
+        };
+
+        let currentLang = 'ar';
+
+        function applyLanguage(lang) {
+            currentLang = lang;
+            const t = HUB_I18N[lang] || HUB_I18N.ar;
+            document.documentElement.lang = lang;
+            document.documentElement.dir = t.dir;
+            document.title = t.pageTitle;
+
+            const langBtnText = document.getElementById('langBtnText');
+            if (langBtnText) langBtnText.textContent = t.langBtn;
+            
+            // Header
+            const h1 = document.querySelector('.brand-info h1');
+            if (h1) h1.textContent = t.headerTitle;
+            const hp = document.querySelector('.brand-info p');
+            if (hp) hp.textContent = t.headerSubtitle;
+            
+            // Online / Install
+            const ost = document.getElementById('onlineStatusText');
+            if (ost) ost.textContent = navigator.onLine ? t.online : t.offline;
+            const inst = document.getElementById('pwaInstallText');
+            if (inst) inst.textContent = t.install;
+
+            // Hero
+            const ht = document.querySelector('.hero-title span');
+            if (ht) ht.textContent = t.heroTitle;
+            const hd = document.querySelector('.hero-desc');
+            if (hd) hd.textContent = t.heroDesc;
+
+            // Search
+            const searchInp = document.getElementById('formSearchInput');
+            if (searchInp) searchInp.placeholder = t.searchPlaceholder;
+
+            // Section title
+            const st = document.querySelector('.section-title span');
+            if (st) st.textContent = t.availableForms;
+            const fcb = document.getElementById('formsCountBadge');
+            if (fcb) fcb.textContent = t.formsCountBadge;
+
+            // Card 1
+            const c1Title = document.querySelector('.card-daily-safety .form-card-title');
+            if (c1Title) c1Title.textContent = t.c1_title;
+            const c1Desc = document.querySelector('.card-daily-safety .form-card-desc');
+            if (c1Desc) c1Desc.textContent = t.c1_desc;
+            const c1Badges = document.querySelectorAll('.card-daily-safety .badge-tag');
+            if (c1Badges[0]) c1Badges[0].innerHTML = t.c1_b1;
+            if (c1Badges[1]) c1Badges[1].textContent = t.c1_b2;
+
+            // Card 2
+            const c2Title = document.querySelector('.card-obs .form-card-title');
+            if (c2Title) c2Title.textContent = t.c2_title;
+            const c2Desc = document.querySelector('.card-obs .form-card-desc');
+            if (c2Desc) c2Desc.textContent = t.c2_desc;
+            const c2Badges = document.querySelectorAll('.card-obs .badge-tag');
+            if (c2Badges[0]) c2Badges[0].innerHTML = t.c2_b1;
+            if (c2Badges[1]) c2Badges[1].textContent = t.c2_b2;
+
+            // Card 3
+            const c3Title = document.querySelector('.card-near-miss .form-card-title');
+            if (c3Title) c3Title.textContent = t.c3_title;
+            const c3Desc = document.querySelector('.card-near-miss .form-card-desc');
+            if (c3Desc) c3Desc.textContent = t.c3_desc;
+            const c3Badges = document.querySelectorAll('.card-near-miss .badge-tag');
+            if (c3Badges[0]) c3Badges[0].innerHTML = t.c3_b1;
+            if (c3Badges[1]) c3Badges[1].textContent = t.c3_b2;
+
+            // Card 4
+            const c4Title = document.querySelector('.card-fire .form-card-title');
+            if (c4Title) c4Title.textContent = t.c4_title;
+            const c4Desc = document.querySelector('.card-fire .form-card-desc');
+            if (c4Desc) c4Desc.textContent = t.c4_desc;
+            const c4Badges = document.querySelectorAll('.card-fire .badge-tag');
+            if (c4Badges[0]) c4Badges[0].innerHTML = t.c4_b1;
+            if (c4Badges[1]) c4Badges[1].textContent = t.c4_b2;
+
+            // Arrow icons direction
+            const arrowIcons = document.querySelectorAll('.form-action-btn i');
+            arrowIcons.forEach(icon => {
+                icon.className = (lang === 'ar') ? 'fas fa-arrow-left' : 'fas fa-arrow-right';
+            });
+
+            // Offline btn
+            const offBtn = document.querySelector('.offline-queue-btn');
+            if (offBtn && !offBtn.disabled) offBtn.textContent = t.syncBtn;
+
+            // Footer
+            const footerPs = document.querySelectorAll('.hub-footer p');
+            if (footerPs[0]) footerPs[0].textContent = t.footer1;
+            if (footerPs[1]) footerPs[1].textContent = t.footer2;
+
+            // iOS Modal
+            const iosTitle = document.querySelector('.ios-guide-title');
+            if (iosTitle) iosTitle.innerHTML = `<i class="fab fa-apple text-blue-500 mr-1"></i> ${t.iosTitle}`;
+            const iosSteps = document.querySelectorAll('.ios-step span');
+            if (iosSteps[0]) iosSteps[0].innerHTML = t.iosStep1;
+            if (iosSteps[1]) iosSteps[1].innerHTML = t.iosStep2;
+            if (iosSteps[2]) iosSteps[2].innerHTML = t.iosStep3;
+            const iosClose = document.querySelector('.close-guide-btn');
+            if (iosClose) iosClose.textContent = t.iosClose;
+
+            try {
+                localStorage.setItem('HSE_PORTAL_LANG', lang);
+                localStorage.setItem('language', lang);
+            } catch(e) {}
+        }
+
+        function toggleLanguage() {
+            const next = currentLang === 'ar' ? 'en' : 'ar';
+            applyLanguage(next);
+        }
+
         // Reliable dynamic navigation across all deployment paths & URL rewrites
         function navigateToForm(targetFile) {
             const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
             let path = window.location.pathname;
+            const langParam = (currentLang === 'en') ? '?lang=en' : '';
+            const sep = targetFile.includes('?') ? '&' : '?';
+            const finalTarget = (currentLang === 'en' && !targetFile.includes('lang=')) ? (targetFile + (targetFile.includes('?') ? '&lang=en' : '?lang=en')) : targetFile;
             
             if (path.includes('/Frontend/')) {
-                window.location.href = `${origin}/Frontend/${targetFile}`;
+                window.location.href = `${origin}/Frontend/${finalTarget}`;
             } else if (path.includes('/dist/')) {
-                window.location.href = `${origin}/dist/${targetFile}`;
+                window.location.href = `${origin}/dist/${finalTarget}`;
             } else {
-                window.location.href = `${origin}/${targetFile}`;
+                window.location.href = `${origin}/${finalTarget}`;
             }
         }
 
@@ -865,29 +1105,33 @@
             applyHubTheme(next);
         }
 
-        // Initialize Theme
-        (function initTheme() {
+        // Initialize Theme & Language
+        (function initHub() {
             try {
-                const saved = localStorage.getItem('HSE_HUB_THEME');
-                if (saved) {
-                    applyHubTheme(saved);
-                } else {
-                    applyHubTheme('light');
-                }
+                const savedTheme = localStorage.getItem('HSE_HUB_THEME');
+                applyHubTheme(savedTheme || 'light');
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const queryLang = urlParams.get('lang');
+                const savedLang = queryLang || localStorage.getItem('HSE_PORTAL_LANG') || localStorage.getItem('language') || 'ar';
+                applyLanguage(savedLang);
             } catch(e) {
                 applyHubTheme('light');
+                applyLanguage('ar');
             }
         })();
 
         // Check online status
         function updateOnlineStatus() {
             const statusPill = document.getElementById('onlineStatus');
+            const statusText = document.getElementById('onlineStatusText');
+            const t = HUB_I18N[currentLang] || HUB_I18N.ar;
             if (navigator.onLine) {
                 statusPill.className = 'status-pill';
-                statusPill.innerHTML = '<i class="fas fa-circle text-xs"></i><span>متصل</span>';
+                statusPill.innerHTML = `<i class="fas fa-circle text-xs"></i><span id="onlineStatusText">${t.online}</span>`;
             } else {
                 statusPill.className = 'status-pill offline';
-                statusPill.innerHTML = '<i class="fas fa-circle-exclamation text-xs"></i><span>أوفلاين</span>';
+                statusPill.innerHTML = `<i class="fas fa-circle-exclamation text-xs"></i><span id="onlineStatusText">${t.offline}</span>`;
             }
         }
         window.addEventListener('online', updateOnlineStatus);
@@ -955,7 +1199,10 @@
                 card.style.display = match ? 'flex' : 'none';
                 if (match) visibleCount++;
             });
-            document.getElementById('formsCountBadge').textContent = `${visibleCount} نماذج`;
+            const badge = document.getElementById('formsCountBadge');
+            if (badge) {
+                badge.textContent = (currentLang === 'en') ? `${visibleCount} Forms` : `${visibleCount} نماذج`;
+            }
         }
 
         // PWA Install Prompt
@@ -1005,12 +1252,15 @@
                 const text = document.getElementById('offlineQueueText');
                 if (total > 0) {
                     bar.style.display = 'flex';
+                    const isEn = (currentLang === 'en');
                     const parts = [];
-                    if (obsQueue.length) parts.push(`${obsQueue.length} ملاحظات`);
-                    if (nmQueue.length) parts.push(`${nmQueue.length} وشيك`);
-                    if (dsQueue.length) parts.push(`${dsQueue.length} مرور`);
-                    if (feQueue.length) parts.push(`${feQueue.length} إطفاء`);
-                    text.textContent = `يوجد (${total}) سجلات محفوظة محلياً (${parts.join('، ')}) بانتظار المزامنة`;
+                    if (obsQueue.length) parts.push(isEn ? `${obsQueue.length} Obs` : `${obsQueue.length} ملاحظات`);
+                    if (nmQueue.length) parts.push(isEn ? `${nmQueue.length} Near Miss` : `${nmQueue.length} وشيك`);
+                    if (dsQueue.length) parts.push(isEn ? `${dsQueue.length} Daily Safety` : `${dsQueue.length} مرور`);
+                    if (feQueue.length) parts.push(isEn ? `${feQueue.length} Fire` : `${feQueue.length} إطفاء`);
+                    text.textContent = isEn
+                        ? `(${total}) offline records (${parts.join(', ')}) awaiting sync`
+                        : `يوجد (${total}) سجلات محفوظة محلياً (${parts.join('، ')}) بانتظار المزامنة`;
                 } else {
                     bar.style.display = 'none';
                 }
