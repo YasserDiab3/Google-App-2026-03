@@ -293,7 +293,7 @@
         @media (max-width: 768px) {
             .iso-header-table {
                 display: grid;
-                grid-template-columns: 1.25fr 1.35fr 46px;
+                grid-template-columns: minmax(115px, 1.25fr) minmax(130px, 1.35fr) 46px;
                 border-radius: 12px;
                 margin-bottom: 12px;
                 border: 2px solid #bfdbfe;
@@ -321,16 +321,23 @@
                 text-align: center;
                 width: 100%;
                 line-height: 1.2;
+                letter-spacing: -0.1px;
             }
 
             .iso-dept-name {
                 font-size: 0.40rem;
                 font-weight: 700;
-                padding: 1px 4px;
+                color: #1e40af;
+                background: #eff6ff;
+                border: 1px solid #bfdbfe;
+                padding: 1px 5px;
                 border-radius: 6px;
                 white-space: nowrap;
                 text-align: center;
                 margin: 0 auto;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
             }
 
             .iso-col-title {
@@ -355,13 +362,22 @@
 
             .iso-doc-subtitle {
                 font-size: 0.38rem;
-                padding: 1px 4px;
+                font-weight: 800;
+                color: #1e40af;
+                background: #f0f7ff;
+                border: 1px solid #dbeafe;
+                padding: 1px 5px;
+                border-radius: 6px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 3px;
                 text-align: center;
                 white-space: nowrap;
             }
 
             .iso-col-logo {
-                padding: 4px 2px;
+                padding: 3px 2px;
                 border-right: 1px solid #dbeafe;
                 display: flex;
                 align-items: center;
@@ -372,7 +388,7 @@
             .iso-logo-wrap {
                 max-width: 44px;
                 min-height: 26px;
-                max-height: 30px;
+                max-height: 28px;
                 padding: 2px;
                 border-radius: 6px;
             }
@@ -380,7 +396,36 @@
             .iso-logo-img {
                 max-height: 22px;
                 max-width: 38px;
+                object-fit: contain;
             }
+        }
+
+        @media (max-width: 380px) {
+            .iso-header-table {
+                grid-template-columns: 1.2fr 1.3fr 40px;
+            }
+            .iso-company-name {
+                font-size: 0.40rem;
+            }
+            .iso-dept-name {
+                font-size: 0.36rem;
+                padding: 1px 3px;
+            }
+            .iso-doc-title {
+                font-size: 0.52rem;
+            }
+            .iso-doc-subtitle {
+                font-size: 0.34rem;
+                padding: 1px 3px;
+            }
+            .iso-logo-wrap {
+                max-width: 38px;
+            }
+            .iso-logo-img {
+                max-height: 18px;
+                max-width: 32px;
+            }
+        }
 
             .iso-footer-meta-strip {
                 display: flex;
