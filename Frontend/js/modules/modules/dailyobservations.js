@@ -7684,6 +7684,24 @@ const DailyObservations = {
             if (!raw) return '';
             if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
 
+            // ISO string or date with time: "2026-08-23T..." or "2026-08-23 ..."
+            const isoMatch = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+            if (isoMatch) {
+                const y = isoMatch[1];
+                const m = isoMatch[2].padStart(2, '0');
+                const d = isoMatch[3].padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+
+            // DD/MM/YYYY: "23/08/2026" or "23-08-2026"
+            const dmyMatch = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+            if (dmyMatch) {
+                const d = dmyMatch[1].padStart(2, '0');
+                const m = dmyMatch[2].padStart(2, '0');
+                const y = dmyMatch[3];
+                return `${y}-${m}-${d}`;
+            }
+
             const parsed = new Date(raw);
             if (!Number.isNaN(parsed.getTime())) {
                 const year = parsed.getFullYear();
@@ -7692,9 +7710,11 @@ const DailyObservations = {
                 return `${year}-${month}-${day}`;
             }
 
-            const match = raw.match(/(\d{4}-\d{2}-\d{2})/);
-            return match ? match[1] : '';
+            return '';
         };
+
+        const fromStr = normalizeDateForFilter(filters.dateFrom);
+        const toStr = normalizeDateForFilter(filters.dateTo);
 
         return items.filter(obs => {
             // البحث النصي
@@ -7717,11 +7737,18 @@ const DailyObservations = {
             const matchesObserver = !filters.observer || String(obs.observerName || '').trim() === String(filters.observer || '').trim();
             const matchesResponsible = !filters.responsible || String(obs.responsibleDepartment || '').trim() === String(filters.responsible || '').trim();
 
-            // ✅ فلتر التاريخ (نطاق زمني)
-            const obsDate = normalizeDateForFilter(obs.date);
-            const matchesDateFrom = !filters.dateFrom || !obsDate || obsDate >= normalizeDateForFilter(filters.dateFrom);
-            const matchesDateTo = !filters.dateTo || !obsDate || obsDate <= normalizeDateForFilter(filters.dateTo);
-            const matchesDateRange = matchesDateFrom && matchesDateTo;
+            // ✅ فلتر التاريخ (نطاق زمني صارم)
+            let matchesDateRange = true;
+            if (fromStr || toStr) {
+                const obsDate = normalizeDateForFilter(obs.date || obs.dateTime || obs.observationDate || obs.createdAt);
+                if (fromStr && toStr) {
+                    matchesDateRange = (obsDate >= fromStr && obsDate <= toStr);
+                } else if (fromStr) {
+                    matchesDateRange = (obsDate >= fromStr);
+                } else if (toStr) {
+                    matchesDateRange = (obsDate <= toStr);
+                }
+            }
 
             return matchesSearch && matchesSite && matchesLocation && matchesType &&
                 matchesShift && matchesRisk && matchesStatus && matchesObserver && matchesResponsible && matchesDateRange;
@@ -7818,10 +7845,14 @@ const DailyObservations = {
         const observations = observationsRaw
             .map((item) => this.normalizeRecord(item))
             .sort((a, b) => {
-                // الترتيب حسب رقم الملاحظة من الأقدم للأحدث
-                const numA = extractObservationNumber(a.isoCode);
-                const numB = extractObservationNumber(b.isoCode);
-                return numA - numB;
+                // الترتيب رقمياً وتاريخياً: الأحدث بالأعلى والأقدم بالأسفل (تنازلي)
+                const numA = extractObservationNumber(a.isoCode || a.id);
+                const numB = extractObservationNumber(b.isoCode || b.id);
+                if (numB !== numA) return numB - numA;
+
+                const timeA = new Date(a.date || a.dateTime || a.createdAt || 0).getTime() || 0;
+                const timeB = new Date(b.date || b.dateTime || b.createdAt || 0).getTime() || 0;
+                return timeB - timeA;
             });
 
         // تطبيق الفلاتر
@@ -7956,7 +7987,7 @@ const DailyObservations = {
                 });
             }
 
-            // ربط جميع الفلاتر
+            // ربط جميع الفلاتر بما فيها نطاق التاريخ
             const filterIds = [
                 'observation-filter-site',
                 'observation-filter-location',
@@ -7965,7 +7996,9 @@ const DailyObservations = {
                 'observation-filter-risk',
                 'observation-filter-status',
                 'observation-filter-observer',
-                'observation-filter-responsible'
+                'observation-filter-responsible',
+                'observation-date-from',
+                'observation-date-to'
             ];
 
             filterIds.forEach(filterId => {
@@ -7976,6 +8009,12 @@ const DailyObservations = {
                     newFilter.addEventListener('change', () => {
                         this.loadObservationsList();
                     });
+                    if (filterId.startsWith('observation-date-')) {
+                        newFilter.addEventListener('input', () => {
+                            clearTimeout(this._dateFilterTimeout);
+                            this._dateFilterTimeout = setTimeout(() => this.loadObservationsList(), 300);
+                        });
+                    }
                 }
             });
             // ✅ ربط أزرار فلتر الفترة الزمنية في لوحة التحليل
