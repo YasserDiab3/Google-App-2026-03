@@ -390,6 +390,39 @@
             font-size: 2rem;
             margin: 0 auto 14px;
         }
+
+        .floating-hub-btn {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            z-index: 999;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            color: #ffffff !important;
+            padding: 9px 15px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            font-weight: 800;
+            text-decoration: none !important;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.25s ease;
+            backdrop-filter: blur(8px);
+        }
+        .floating-hub-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55);
+        }
+        @media (max-width: 640px) {
+            .floating-hub-btn {
+                bottom: 14px;
+                right: 14px;
+                padding: 8px 12px;
+                font-size: 11px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1048,6 +1081,10 @@
     });
 
     async function syncNearMissToCloud(payload, refCode) {
+        if (!navigator.onLine) {
+            saveToNearMissOfflineQueue(payload, refCode);
+            return;
+        }
         const targetApiUrl = getEffectiveApiUrl();
         for (let attempt = 1; attempt <= 3; attempt++) {
             try {
@@ -1064,7 +1101,7 @@
                     if (result.isoCode) {
                         document.getElementById('resIsoCode').textContent = result.isoCode;
                     }
-                    break;
+                    return;
                 }
             } catch (err) {
                 console.warn(`Cloud sync attempt ${attempt} failed:`, err);
@@ -1073,6 +1110,50 @@
                 }
             }
         }
+        // If all attempts failed, save to offline queue
+        saveToNearMissOfflineQueue(payload, refCode);
+    }
+
+    // Offline Queue
+    function saveToNearMissOfflineQueue(payload, refCode) {
+        try {
+            const q = JSON.parse(localStorage.getItem('HSE_OFFLINE_NEARMISS_QUEUE') || '[]');
+            q.push({ payload, refCode, timestamp: Date.now() });
+            localStorage.setItem('HSE_OFFLINE_NEARMISS_QUEUE', JSON.stringify(q));
+            console.log('Saved Near Miss to offline queue:', refCode);
+        } catch(e) {}
+    }
+
+    async function syncNearMissOfflineQueue() {
+        try {
+            const q = JSON.parse(localStorage.getItem('HSE_OFFLINE_NEARMISS_QUEUE') || '[]');
+            if (q.length === 0 || !navigator.onLine) return;
+            const targetApiUrl = getEffectiveApiUrl();
+            const remaining = [];
+            for (const item of q) {
+                try {
+                    const res = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(item.payload)
+                    });
+                    const data = await res.json();
+                    if (!data || !data.success) remaining.push(item);
+                } catch(e) {
+                    remaining.push(item);
+                }
+            }
+            localStorage.setItem('HSE_OFFLINE_NEARMISS_QUEUE', JSON.stringify(remaining));
+        } catch(e) {}
+    }
+
+    window.addEventListener('online', () => {
+        console.log('Network restored — syncing Near Miss offline queue...');
+        syncNearMissOfflineQueue();
+    });
+    if (navigator.onLine) {
+        setTimeout(syncNearMissOfflineQueue, 2500);
     }
 
     if ('serviceWorker' in navigator) {
@@ -1081,5 +1162,11 @@
         });
     }
 </script>
+
+<!-- زر الرجوع العائم للبوابة أثناء التمرير في الجوال -->
+<a href="forms-hub.html" class="floating-hub-btn" title="الرجوع لبوابة النماذج">
+    <i class="fas fa-layer-group"></i>
+    <span>بوابة النماذج</span>
+</a>
 </body>
 </html>

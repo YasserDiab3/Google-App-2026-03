@@ -445,6 +445,39 @@
             font-size: 32px;
             margin: 0 auto 16px auto;
         }
+
+        .floating-hub-btn {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            z-index: 999;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            color: #ffffff !important;
+            padding: 9px 15px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            font-weight: 800;
+            text-decoration: none !important;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.25s ease;
+            backdrop-filter: blur(8px);
+        }
+        .floating-hub-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55);
+        }
+        @media (max-width: 640px) {
+            .floating-hub-btn {
+                bottom: 14px;
+                right: 14px;
+                padding: 8px 12px;
+                font-size: 11px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -608,6 +641,12 @@
             </div>
         </div>
     </div>
+
+    <!-- زر الرجوع العائم للبوابة أثناء التمرير في الجوال -->
+    <a href="forms-hub.html" class="floating-hub-btn" title="الرجوع لبوابة النماذج">
+        <i class="fas fa-layer-group"></i>
+        <span>بوابة النماذج</span>
+    </a>
 
     <script>
         // Questions Definition
@@ -915,6 +954,15 @@
             if (reading) reading.value = '';
             renderQuestions();
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Automatic Background Sync on network restoration
+        window.addEventListener('online', () => {
+            console.log('Network restored — syncing Daily Safety offline queue...');
+            syncOfflineQueue();
+        });
+        if (navigator.onLine) {
+            setTimeout(syncOfflineQueue, 2000);
         }
     </script>
 </body>

@@ -970,31 +970,138 @@
             }
         }
 
-        // Check Offline Queues across forms
+        // Check Offline Queues across all 4 public forms
         function checkOfflineQueues() {
             try {
-                const obsQueue = JSON.parse(localStorage.getItem('HSE_OFFLINE_OBSERVATIONS_QUEUE') || '[]');
-                const nmQueue = JSON.parse(localStorage.getItem('HSE_OFFLINE_NEAR_MISS_QUEUE') || '[]');
-                const total = obsQueue.length + nmQueue.length;
+                const obsQueue = JSON.parse(localStorage.getItem('HSE_OFFLINE_OBS_QUEUE') || localStorage.getItem('HSE_OFFLINE_OBSERVATIONS_QUEUE') || '[]');
+                const nmQueue = JSON.parse(localStorage.getItem('HSE_OFFLINE_NEARMISS_QUEUE') || localStorage.getItem('HSE_OFFLINE_NEAR_MISS_QUEUE') || '[]');
+                const dsQueue = JSON.parse(localStorage.getItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE') || '[]');
+                const feQueue = JSON.parse(localStorage.getItem('HSE_OFFLINE_FIRE_INSPECTION_QUEUE') || '[]');
+
+                const total = obsQueue.length + nmQueue.length + dsQueue.length + feQueue.length;
                 const bar = document.getElementById('offlineQueueBar');
                 const text = document.getElementById('offlineQueueText');
                 if (total > 0) {
                     bar.style.display = 'flex';
-                    text.textContent = `يوجد ${total} سجلات محفوظة محلياً بانتظار المزامنة`;
+                    const parts = [];
+                    if (obsQueue.length) parts.push(`${obsQueue.length} ملاحظات`);
+                    if (nmQueue.length) parts.push(`${nmQueue.length} وشيك`);
+                    if (dsQueue.length) parts.push(`${dsQueue.length} مرور`);
+                    if (feQueue.length) parts.push(`${feQueue.length} إطفاء`);
+                    text.textContent = `يوجد (${total}) سجلات محفوظة محلياً (${parts.join('، ')}) بانتظار المزامنة`;
                 } else {
                     bar.style.display = 'none';
                 }
             } catch(e) {}
         }
-        setInterval(checkOfflineQueues, 5000);
+        setInterval(checkOfflineQueues, 4000);
         checkOfflineQueues();
 
-        function syncAllOfflineData() {
+        async function syncAllOfflineData() {
             if (!navigator.onLine) {
                 alert('يرجى التأكد من الاتصال بالإنترنت أولاً للبدء بالمزامنة.');
                 return;
             }
-            navigateToForm('public-observation.html?auto_sync=1');
+            const btn = document.querySelector('.offline-queue-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري المزامنة...';
+            }
+
+            const GAS_URL = 'https://script.google.com/macros/s/AKfycbz_9l3iNn-n8V77p6h-w5JmZ7N4T-J4o8w-8s5q/exec';
+            
+            // 1. Sync Daily Safety
+            try {
+                const dsQueue = JSON.parse(localStorage.getItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE') || '[]');
+                if (dsQueue.length) {
+                    const remainingDs = [];
+                    for (const item of dsQueue) {
+                        try {
+                            const res = await fetch(GAS_URL, {
+                                method: 'POST',
+                                mode: 'cors',
+                                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                body: JSON.stringify({ action: 'submitPublicDailySafetyChecklist', ...item })
+                            });
+                            const data = await res.json();
+                            if (!data || !data.success) remainingDs.push(item);
+                        } catch(e) { remainingDs.push(item); }
+                    }
+                    localStorage.setItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE', JSON.stringify(remainingDs));
+                }
+            } catch(e) {}
+
+            // 2. Sync Fire Inspection
+            try {
+                const feQueue = JSON.parse(localStorage.getItem('HSE_OFFLINE_FIRE_INSPECTION_QUEUE') || '[]');
+                if (feQueue.length) {
+                    const remainingFe = [];
+                    for (const item of feQueue) {
+                        try {
+                            const res = await fetch(GAS_URL, {
+                                method: 'POST',
+                                mode: 'cors',
+                                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                body: JSON.stringify({ action: 'submitFireInspection', ...item.payload })
+                            });
+                            const data = await res.json();
+                            if (!data || !data.success) remainingFe.push(item);
+                        } catch(e) { remainingFe.push(item); }
+                    }
+                    localStorage.setItem('HSE_OFFLINE_FIRE_INSPECTION_QUEUE', JSON.stringify(remainingFe));
+                }
+            } catch(e) {}
+
+            // 3. Sync Near Miss
+            try {
+                const nmQueue = JSON.parse(localStorage.getItem('HSE_OFFLINE_NEARMISS_QUEUE') || localStorage.getItem('HSE_OFFLINE_NEAR_MISS_QUEUE') || '[]');
+                if (nmQueue.length) {
+                    const remainingNm = [];
+                    for (const item of nmQueue) {
+                        try {
+                            const res = await fetch(GAS_URL, {
+                                method: 'POST',
+                                mode: 'cors',
+                                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                body: JSON.stringify(item.payload)
+                            });
+                            const data = await res.json();
+                            if (!data || !data.success) remainingNm.push(item);
+                        } catch(e) { remainingNm.push(item); }
+                    }
+                    localStorage.setItem('HSE_OFFLINE_NEARMISS_QUEUE', JSON.stringify(remainingNm));
+                    localStorage.removeItem('HSE_OFFLINE_NEAR_MISS_QUEUE');
+                }
+            } catch(e) {}
+
+            // 4. Sync Observations
+            try {
+                const obsQueue = JSON.parse(localStorage.getItem('HSE_OFFLINE_OBS_QUEUE') || localStorage.getItem('HSE_OFFLINE_OBSERVATIONS_QUEUE') || '[]');
+                if (obsQueue.length) {
+                    const remainingObs = [];
+                    for (const item of obsQueue) {
+                        try {
+                            const res = await fetch(GAS_URL, {
+                                method: 'POST',
+                                mode: 'cors',
+                                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                body: JSON.stringify(item.payload || item)
+                            });
+                            const data = await res.json();
+                            if (!data || !data.success) remainingObs.push(item);
+                        } catch(e) { remainingObs.push(item); }
+                    }
+                    localStorage.setItem('HSE_OFFLINE_OBS_QUEUE', JSON.stringify(remainingObs));
+                    localStorage.removeItem('HSE_OFFLINE_OBSERVATIONS_QUEUE');
+                }
+            } catch(e) {}
+
+            checkOfflineQueues();
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> تم التحديث';
+                setTimeout(() => { btn.innerHTML = 'مزامنة الآن'; }, 2500);
+            }
         }
 
         // Service Worker Registration
