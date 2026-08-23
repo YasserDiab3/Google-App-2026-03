@@ -6124,6 +6124,16 @@ window.UI = {
                         }
                     }
                     break;
+                case 'forms-hub':
+                    try {
+                        if (typeof DailyObservations !== 'undefined' && DailyObservations.exportPublicConfigToLocalStorage) {
+                            DailyObservations.exportPublicConfigToLocalStorage();
+                        }
+                        this.renderFormsHubSection(document.getElementById('forms-hub-section'));
+                    } catch (e) {
+                        Utils.safeError('خطأ في عرض بوابة النماذج:', e);
+                    }
+                    break;
                 case 'safety-calendar':
                     if (typeof SafetyCalendar !== 'undefined' && SafetyCalendar.load) {
                         try {
@@ -6598,6 +6608,135 @@ window.UI = {
                 i18nCore.applyLiteralTranslations(sectionRoot);
             }
         }
+    },
+
+    /**
+     * عرض قسم بوابة النماذج الميدانية الموحدة داخل الداشبورد
+     */
+    renderFormsHubSection(container) {
+        if (!container) return;
+        const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
+        let basePath = window.location.pathname.replace(/\/index\.html$/i, '').replace(/\/$/, '');
+        const hubUrl = `${origin}${basePath}/forms-hub.html`;
+
+        container.innerHTML = `
+            <div class="content-header" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); color: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div style="width: 56px; height: 56px; border-radius: 14px; background: rgba(59, 130, 246, 0.2); border: 1.5px solid rgba(59, 130, 246, 0.4); display: flex; align-items: center; justify-content: center; font-size: 26px; color: #60a5fa;">
+                            <i class="fas fa-mobile-screen-button"></i>
+                        </div>
+                        <div>
+                            <h1 style="font-size: 20px; font-weight: 800; margin: 0 0 4px 0; color: #ffffff;">بوابة النماذج الميدانية الموحدة (HSE Field Forms Hub)</h1>
+                            <p style="font-size: 13px; color: #94a3b8; margin: 0;">تثبيت واستخدام موحد لكافة النماذج الميدانية على الهواتف الذكية بدون تسجيل دخول</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('forms-hub.html', '_blank')" style="background: #2563eb; padding: 10px 20px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-arrow-up-right-from-square"></i> فتح البوابة في نافذة كاملة
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px;">
+                <!-- 1. نموذج الملاحظات اليومية -->
+                <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div style="width: 46px; height: 46px; border-radius: 12px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            <div>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">تسجيل الملاحظات اليومية</h3>
+                                <span style="font-size: 11px; background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 6px; font-weight: 700;">يومي وسريع</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
+                            رصد وتوثيق السلوكيات والظروف غير الآمنة والإجراءات الفورية بالصور والتصنيفات الدقيقة.
+                        </p>
+                    </div>
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('public-observation.html', '_blank')" style="width: 100%; justify-content: center; background: #2563eb;">
+                        <i class="fas fa-external-link-alt ml-2"></i> فتح النموذج المباشر
+                    </button>
+                </div>
+
+                <!-- 2. نموذج الحوادث الوشيكة -->
+                <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div style="width: 46px; height: 46px; border-radius: 12px; background: #fffbeb; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                                <i class="fas fa-triangle-exclamation"></i>
+                            </div>
+                            <div>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">تسجيل حادث وشيك (Near Miss)</h3>
+                                <span style="font-size: 11px; background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 6px; font-weight: 700;">فوري وعالي الأهمية</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
+                            الإبلاغ الفوري عن الوقائع التي كادت تؤدي إلى حوادث أو إصابات لمنع تكرارها.
+                        </p>
+                    </div>
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('public-near-miss.html', '_blank')" style="width: 100%; justify-content: center; background: #d97706;">
+                        <i class="fas fa-external-link-alt ml-2"></i> فتح نموذج الحادث الوشيك
+                    </button>
+                </div>
+
+                <!-- 3. نموذج فحص الحريق -->
+                <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div style="width: 46px; height: 46px; border-radius: 12px; background: #fef2f2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                                <i class="fas fa-fire-extinguisher"></i>
+                            </div>
+                            <div>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">فحص طفايات ومعدات الحريق</h3>
+                                <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 700;">فحص دوري شهري</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
+                            الفحص الميداني الشهري لجاهزية معدات وأجهزة مكافحة الحريق والإنذار.
+                        </p>
+                    </div>
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('public-fire-inspection.html', '_blank')" style="width: 100%; justify-content: center; background: #dc2626;">
+                        <i class="fas fa-external-link-alt ml-2"></i> فتح نموذج فحص الحريق
+                    </button>
+                </div>
+            </div>
+
+            <!-- كود الـ QR والرابط المباشر -->
+            <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+                    <div>
+                        <h2 style="font-size: 17px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">رمز QR ورابط البوابة الموحدة لمشاركته مع العاملين</h2>
+                        <p style="font-size: 13px; color: #64748b; margin: 0;">امسح الكود بكاميرا الموبايل لفتح وتثبيت البوابة الموحدة مباشرة دون تسجيل دخول</p>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="dashboard-hub-url-input" readonly value="${hubUrl}" style="padding: 8px 14px; border-radius: 8px; border: 1.5px solid #cbd5e1; direction: ltr; font-size: 13px; min-width: 260px;">
+                        <button class="btn-secondary" onclick="navigator.clipboard.writeText ? navigator.clipboard.writeText('${hubUrl}') : prompt('انسخ الرابط:', '${hubUrl}'); if(typeof Notification!=='undefined'&&Notification.success)Notification.success('تم نسخ الرابط بنجاح')">
+                            <i class="fas fa-copy ml-1"></i> نسخ
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; justify-content: center; gap: 30px; flex-wrap: wrap; background: #f8fafc; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <div style="padding: 12px; background: white; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(hubUrl)}" alt="QR Code" style="width: 160px; height: 160px; display: block;">
+                    </div>
+                    <div style="max-width: 360px;">
+                        <h4 style="font-size: 15px; font-weight: 800; color: #1e293b; margin-bottom: 8px;">
+                            <i class="fas fa-qrcode text-blue-600 ml-1"></i> مسح وتثبيت البوابة على الهاتف
+                        </h4>
+                        <p style="font-size: 12.5px; color: #475569; line-height: 1.6; margin-bottom: 12px;">
+                            يتيح هذا الرمز الوصول لكافة النماذج الميدانية في صفحة واحدة، وتثبيتها كتطبيق سريع (PWA) على الهواتف دون الحاجة لأي تسجيل دخول.
+                        </p>
+                        <button class="btn-secondary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.openPublicQrModal)DailyObservations.openPublicQrModal()" style="font-size: 12px;">
+                            <i class="fas fa-expand ml-1"></i> تخصيص الرمز وطباعته
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
     },
 
     /**
