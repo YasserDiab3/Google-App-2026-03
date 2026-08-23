@@ -3100,7 +3100,7 @@ const Training = {
                             <div>
                                 <select id="training-filter-month" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
                                     <option value="">جميع الفترات والشهور</option>
-                                    ${this.getMonthOptions().map(m => `<option value="${Utils.escapeHTML(m.value)}">${Utils.escapeHTML(m.label)}</option>`).join('')}
+                                    ${this.getEmployeeMonthOptions()}
                                 </select>
                             </div>
 

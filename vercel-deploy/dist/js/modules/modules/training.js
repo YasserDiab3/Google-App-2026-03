@@ -1263,7 +1263,7 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                             <div>
                                 <select id="training-filter-month" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
                                     <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0641\u062A\u0631\u0627\u062A \u0648\u0627\u0644\u0634\u0647\u0648\u0631</option>
-                                    ${this.getMonthOptions().map(i=>`<option value="${Utils.escapeHTML(i.value)}">${Utils.escapeHTML(i.label)}</option>`).join("")}
+                                    ${this.getEmployeeMonthOptions()}
                                 </select>
                             </div>
 
