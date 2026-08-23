@@ -1019,6 +1019,21 @@
         setInterval(checkOfflineQueues, 4000);
         checkOfflineQueues();
 
+        function generateClientCsrfToken() {
+            try {
+                if (window.crypto && window.crypto.getRandomValues) {
+                    const arr = new Uint8Array(32);
+                    window.crypto.getRandomValues(arr);
+                    return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+                }
+            } catch(e) {}
+            let s = '';
+            for (let i = 0; i < 64; i++) {
+                s += Math.floor(Math.random() * 16).toString(16);
+            }
+            return s;
+        }
+
         async function syncAllOfflineData() {
             if (!navigator.onLine) {
                 alert('يرجى التأكد من الاتصال بالإنترنت أولاً للبدء بالمزامنة.');
@@ -1042,7 +1057,7 @@
                                 method: 'POST',
                                 mode: 'cors',
                                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                                body: JSON.stringify({ action: 'submitPublicDailySafetyChecklist', ...item })
+                                body: JSON.stringify({ action: 'submitPublicDailySafetyChecklist', csrfToken: generateClientCsrfToken(), ...item })
                             });
                             const data = await res.json();
                             if (!data || !data.success) remainingDs.push(item);
@@ -1063,7 +1078,7 @@
                                 method: 'POST',
                                 mode: 'cors',
                                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                                body: JSON.stringify({ action: 'submitFireInspection', ...item.payload })
+                                body: JSON.stringify({ action: 'submitFireInspection', csrfToken: generateClientCsrfToken(), ...item.payload })
                             });
                             const data = await res.json();
                             if (!data || !data.success) remainingFe.push(item);
@@ -1084,7 +1099,7 @@
                                 method: 'POST',
                                 mode: 'cors',
                                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                                body: JSON.stringify(item.payload)
+                                body: JSON.stringify({ action: 'submitPublicNearMiss', csrfToken: generateClientCsrfToken(), ...item.payload })
                             });
                             const data = await res.json();
                             if (!data || !data.success) remainingNm.push(item);
@@ -1106,7 +1121,7 @@
                                 method: 'POST',
                                 mode: 'cors',
                                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                                body: JSON.stringify(item.payload || item)
+                                body: JSON.stringify({ action: 'submitPublicObservation', csrfToken: generateClientCsrfToken(), ...(item.payload || item) })
                             });
                             const data = await res.json();
                             if (!data || !data.success) remainingObs.push(item);

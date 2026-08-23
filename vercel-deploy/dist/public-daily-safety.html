@@ -857,6 +857,21 @@
             return DEFAULT_API_URL;
         }
 
+        function generateClientCsrfToken() {
+            try {
+                if (window.crypto && window.crypto.getRandomValues) {
+                    const arr = new Uint8Array(32);
+                    window.crypto.getRandomValues(arr);
+                    return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+                }
+            } catch(e) {}
+            let s = '';
+            for (let i = 0; i < 64; i++) {
+                s += Math.floor(Math.random() * 16).toString(16);
+            }
+            return s;
+        }
+
         async function fetchServerConfig() {
             try {
                 const GAS_URL = getEffectiveApiUrl();
@@ -867,7 +882,7 @@
                     mode: 'cors',
                     redirect: 'follow',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'getPublicDailySafetyConfig' }),
+                    body: JSON.stringify({ action: 'getPublicDailySafetyConfig', csrfToken: generateClientCsrfToken() }),
                     signal: controller.signal
                 });
                 const data = await res.json();
@@ -911,7 +926,8 @@
                 q15Reading: document.getElementById('input_q16')?.value || '',
                 q16: formAnswers.q17 || 'مطابق',
                 q17: formAnswers.q18 || 'مطابق',
-                signature: getSignatureBase64()
+                signature: getSignatureBase64(),
+                csrfToken: generateClientCsrfToken()
             };
 
             if (!navigator.onLine) {
@@ -980,7 +996,7 @@
                             method: 'POST',
                             mode: 'cors',
                             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify({ action: 'submitPublicDailySafetyChecklist', ...item })
+                            body: JSON.stringify({ action: 'submitPublicDailySafetyChecklist', csrfToken: generateClientCsrfToken(), ...item })
                         });
                         const data = await res.json();
                         if (!data || !data.success) remaining.push(item);
