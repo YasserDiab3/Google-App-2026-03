@@ -1761,7 +1761,7 @@
                         const img = new Image();
                         img.onload = function() {
                             const canvas = document.createElement('canvas');
-                            const maxDim = 800;
+                            const maxDim = 1100;
                             let w = img.width;
                             let h = img.height;
                             if (w > maxDim || h > maxDim) {
@@ -1772,7 +1772,26 @@
                             canvas.height = h;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, w, h);
-                            currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.65);
+
+                            // Stamp official inspection watermark
+                            const devId = document.getElementById('deviceSelect')?.value || 'طفاية حريق';
+                            const bannerHeight = Math.max(36, Math.round(h * 0.08));
+                            ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+                            ctx.fillRect(0, h - bannerHeight, w, bannerHeight);
+                            ctx.fillStyle = '#dc2626';
+                            ctx.fillRect(0, h - bannerHeight, w, 3);
+                            
+                            ctx.fillStyle = '#ffffff';
+                            ctx.font = `bold ${Math.max(11, Math.round(bannerHeight * 0.32))}px 'Cairo', sans-serif`;
+                            ctx.textAlign = 'right';
+                            const now = new Date();
+                            const dateStr = now.toLocaleDateString('ar-EG') + ' ' + now.toLocaleTimeString('ar-EG');
+                            ctx.fillText(`🧯 ICAPP HSE | فحص معدات الإطفاء (${devId})`, w - 12, h - bannerHeight + (bannerHeight * 0.42));
+                            ctx.fillStyle = '#cbd5e1';
+                            ctx.font = `${Math.max(10, Math.round(bannerHeight * 0.28))}px 'Cairo', sans-serif`;
+                            ctx.fillText(`📅 ${dateStr} | تم الفحص والتوثيق الميداني المعتمد`, w - 12, h - (bannerHeight * 0.22));
+
+                            currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.72);
                             
                             document.getElementById('photoPreview').src = currentPhotoBase64;
                             document.getElementById('photoPreviewWrap').style.display = 'inline-block';

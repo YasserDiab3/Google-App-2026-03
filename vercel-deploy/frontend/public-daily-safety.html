@@ -611,6 +611,28 @@
                 </div>
             </div>
 
+            <!-- 4. التوقيع الرقمي المعتمد لمسؤول السلامة -->
+            <div class="section-card">
+                <div class="section-header" style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="section-icon">
+                            <i class="fas fa-signature"></i>
+                        </div>
+                        <div class="section-title">التوقيع الرقمي لمسؤول السلامة</div>
+                    </div>
+                    <button type="button" onclick="clearSignature()" style="background: none; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 700; color: #dc2626; cursor: pointer;">
+                        <i class="fas fa-eraser"></i> مسح التوقيع
+                    </button>
+                </div>
+
+                <div style="background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 10px; overflow: hidden; position: relative; height: 130px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                    <canvas id="signatureCanvas" style="width: 100%; height: 100%; touch-action: none; cursor: crosshair; display: block;"></canvas>
+                    <span id="sigPlaceholder" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 12px; pointer-events: none; font-weight: 700;">
+                        ✍️ وقّع باللمس هنا
+                    </span>
+                </div>
+            </div>
+
             <!-- زر الإرسال -->
             <button type="submit" id="submitBtn" class="submit-btn">
                 <i class="fas fa-paper-plane"></i>
@@ -866,7 +888,8 @@
                 q15: formAnswers.q15 || 'مطابق',
                 q15Reading: document.getElementById('input_q16')?.value || '',
                 q16: formAnswers.q17 || 'مطابق',
-                q17: formAnswers.q18 || 'مطابق'
+                q17: formAnswers.q18 || 'مطابق',
+                signature: getSignatureBase64()
             };
 
             if (!navigator.onLine) {
@@ -952,9 +975,93 @@
             document.getElementById('notesInput').value = '';
             const reading = document.getElementById('input_q16');
             if (reading) reading.value = '';
+            clearSignature();
             renderQuestions();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        // ==========================================
+        // Digital Signature Canvas
+        // ==========================================
+        let sigCanvas, sigCtx;
+        let isSigning = false;
+        let hasSignature = false;
+
+        function initSignaturePad() {
+            sigCanvas = document.getElementById('signatureCanvas');
+            if (!sigCanvas) return;
+            sigCtx = sigCanvas.getContext('2d');
+
+            function resize() {
+                const rect = sigCanvas.getBoundingClientRect();
+                sigCanvas.width = rect.width;
+                sigCanvas.height = rect.height;
+                sigCtx.strokeStyle = '#1e3a8a';
+                sigCtx.lineWidth = 2.5;
+                sigCtx.lineCap = 'round';
+                sigCtx.lineJoin = 'round';
+            }
+            setTimeout(resize, 100);
+            window.addEventListener('resize', resize);
+
+            function getPos(e) {
+                const rect = sigCanvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            }
+            function start(e) {
+                isSigning = true;
+                hasSignature = true;
+                const ph = document.getElementById('sigPlaceholder');
+                if (ph) ph.style.display = 'none';
+                const pos = getPos(e);
+                sigCtx.beginPath();
+                sigCtx.moveTo(pos.x, pos.y);
+            }
+            function move(e) {
+                if (!isSigning) return;
+                const pos = getPos(e);
+                sigCtx.lineTo(pos.x, pos.y);
+                sigCtx.stroke();
+            }
+            function stop() { isSigning = false; }
+
+            sigCanvas.addEventListener('mousedown', start);
+            sigCanvas.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', stop);
+
+            sigCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); start(e); }, { passive: false });
+            sigCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); move(e); }, { passive: false });
+            window.addEventListener('touchend', stop);
+        }
+
+        function clearSignature() {
+            if (!sigCanvas || !sigCtx) return;
+            sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+            hasSignature = false;
+            const ph = document.getElementById('sigPlaceholder');
+            if (ph) ph.style.display = 'block';
+        }
+
+        function getSignatureBase64() {
+            if (!hasSignature || !sigCanvas) return '';
+            return sigCanvas.toDataURL('image/png');
+        }
+
+        // Auto Storage Cleanup (Retention Policy > 14 days)
+        function performStorageCleanup() {
+            try {
+                const now = Date.now();
+                const MAX_AGE = 14 * 24 * 60 * 60 * 1000;
+                const q = JSON.parse(localStorage.getItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE') || '[]');
+                const fresh = q.filter(item => (now - (item.timestamp || now)) < MAX_AGE);
+                if (fresh.length !== q.length) {
+                    localStorage.setItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE', JSON.stringify(fresh));
+                }
+            } catch(e) {}
+        }
+        performStorageCleanup();
 
         // Automatic Background Sync on network restoration
         window.addEventListener('online', () => {
@@ -964,6 +1071,8 @@
         if (navigator.onLine) {
             setTimeout(syncOfflineQueue, 2000);
         }
+
+        window.addEventListener('DOMContentLoaded', initSignaturePad);
     </script>
 </body>
 </html>

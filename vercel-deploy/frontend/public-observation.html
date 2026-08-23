@@ -3719,7 +3719,27 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
 
-                        const compressed = canvas.toDataURL('image/jpeg', 0.70);
+                        // Stamp official observation watermark
+                        const site = document.getElementById('siteSelect')?.value || '';
+                        const place = document.getElementById('locationName')?.value || '';
+                        const loc = (site && place) ? `${site} - ${place}` : (site || place || 'الموقع العام');
+                        const bannerHeight = Math.max(36, Math.round(height * 0.08));
+                        ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+                        ctx.fillRect(0, height - bannerHeight, width, bannerHeight);
+                        ctx.fillStyle = '#2563eb';
+                        ctx.fillRect(0, height - bannerHeight, width, 3);
+                        
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = `bold ${Math.max(11, Math.round(bannerHeight * 0.32))}px 'Cairo', sans-serif`;
+                        ctx.textAlign = 'right';
+                        const now = new Date();
+                        const dateStr = now.toLocaleDateString('ar-EG') + ' ' + now.toLocaleTimeString('ar-EG');
+                        ctx.fillText(`📋 ICAPP HSE | توثيق ملاحظة ميدانية`, width - 12, height - bannerHeight + (bannerHeight * 0.42));
+                        ctx.fillStyle = '#cbd5e1';
+                        ctx.font = `${Math.max(10, Math.round(bannerHeight * 0.28))}px 'Cairo', sans-serif`;
+                        ctx.fillText(`📅 ${dateStr} | 📍 ${loc}`, width - 12, height - (bannerHeight * 0.22));
+
+                        const compressed = canvas.toDataURL('image/jpeg', 0.72);
                         if (uploadedPhotos.length < 3) {
                             uploadedPhotos.push(compressed);
                         }

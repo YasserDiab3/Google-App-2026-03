@@ -994,13 +994,52 @@
 
     function previewPhoto(input) {
         if (input.files && input.files[0]) {
+            const file = input.files[0];
             const reader = new FileReader();
             reader.onload = function(e) {
-                photoBase64 = e.target.result;
-                document.getElementById('photoPreviewImg').src = photoBase64;
-                document.getElementById('photoPreviewWrap').style.display = 'block';
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxDim = 1200;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                        else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+
+                    // Stamp official tamper-evident watermark
+                    const factory = document.getElementById('factorySelect')?.value || '';
+                    const place = document.getElementById('subLocationInput')?.value || '';
+                    const loc = (factory && place) ? `${factory} - ${place}` : (factory || place || 'الموقع العام');
+                    
+                    const bannerHeight = Math.max(38, Math.round(h * 0.08));
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+                    ctx.fillRect(0, h - bannerHeight, w, bannerHeight);
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(0, h - bannerHeight, w, 3);
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = `bold ${Math.max(11, Math.round(bannerHeight * 0.32))}px 'Cairo', sans-serif`;
+                    ctx.textAlign = 'right';
+                    const now = new Date();
+                    const dateStr = now.toLocaleDateString('ar-EG') + ' ' + now.toLocaleTimeString('ar-EG');
+                    ctx.fillText(`🚨 ICAPP HSE | بلاغ حادث وشيك`, w - 12, h - bannerHeight + (bannerHeight * 0.42));
+                    ctx.fillStyle = '#cbd5e1';
+                    ctx.font = `${Math.max(10, Math.round(bannerHeight * 0.28))}px 'Cairo', sans-serif`;
+                    ctx.fillText(`📅 ${dateStr} | 📍 ${loc}`, w - 12, h - (bannerHeight * 0.22));
+
+                    photoBase64 = canvas.toDataURL('image/jpeg', 0.75);
+                    document.getElementById('photoPreviewImg').src = photoBase64;
+                    document.getElementById('photoPreviewWrap').style.display = 'block';
+                };
+                img.src = e.target.result;
             };
-            reader.readAsDataURL(input.files[0]);
+            reader.readAsDataURL(file);
         }
     }
 
