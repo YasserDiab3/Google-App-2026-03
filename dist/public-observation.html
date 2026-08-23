@@ -1196,6 +1196,25 @@
             border-color: #1d4ed8;
             box-shadow: 0 2px 8px rgba(37,99,235,0.3);
         }
+        .suggestion-chip.corrective-chip {
+            background: #f0fdf4;
+            color: #065f46;
+            border-color: #a7f3d0;
+        }
+        .suggestion-chip.corrective-chip:hover {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #047857;
+        }
+        .suggestion-chip.corrective-chip.active {
+            background: #059669 !important;
+            color: #ffffff !important;
+            border-color: #047857 !important;
+            box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3) !important;
+        }
+        .suggestion-chip.corrective-chip.active i {
+            color: #ffffff !important;
+        }
         .autocomplete-dropdown {
             position: absolute;
             z-index: 50;
@@ -2434,23 +2453,10 @@
                         </div>
                     </div>
 
-                    <!-- أزرار الإجراءات الفورية السريعة بنقرة واحدة بالألوان المميزة -->
-                    <div class="quick-action-pills">
-                        <button type="button" class="btn-quick-pill pill-green" onclick="applyQuickActionText('تم التصحيح الفوري وإزالة الخطر بالموقع والتأكد من أمان بيئة العمل ✅')">
-                            ⚡ تم التصحيح الفوري بالموقع
-                        </button>
-                        <button type="button" class="btn-quick-pill pill-red" onclick="applyQuickActionText('تم إيقاف العمل مؤقتاً وتأمين المكان واستدعاء قسم الصيانة والمسؤولين 🛑')">
-                            🛑 إيقاف العمل واستدعاء الصيانة
-                        </button>
-                        <button type="button" class="btn-quick-pill pill-amber" onclick="applyQuickActionText('تم توجيه وتدريب العامل على إجراءات العمل الآمنة والالتزام فوراً 🦺')">
-                            🦺 توجيه وتدريب العامل
-                        </button>
-                    </div>
-
-                    <!-- حاوية الوسوم السريعة للإجراء التصحيحي -->
-                    <div class="suggestions-container" id="correctiveSuggestionsWrap">
+                    <!-- حاوية وسوم ومقترحات الإجراءات التصحيحية المتغيرة ديناميكياً حسب نوع الخطر والتصنيف المحدد -->
+                    <div class="suggestions-container" id="correctiveSuggestionsWrap" style="margin-bottom: 8px;">
                         <div class="suggestions-chips" id="correctiveQuickChips">
-                            <!-- سيتم تعبئتها ديناميكياً -->
+                            <!-- سيتم تعبئتها ديناميكياً فوراً حسب نوع الخطر والتصنيف الفرعي -->
                         </div>
                     </div>
 
@@ -4346,14 +4352,14 @@
             // حفظ القائمة الحالية لسهولة الاستدعاء
             window._currentSuggestionItems = items;
 
-            // رسم وسوم الإجراءات التصحيحية المتوافقة
+            // رسم وسوم الإجراءات التصحيحية المتوافقة تخصصياً مع الخطر
             if (correctiveContainer) {
                 const specificCorrectives = items.map(i => i.corrective).filter(Boolean);
-                const allActions = Array.from(new Set(specificCorrectives.concat(COMMON_CORRECTIVE_ACTIONS))).slice(0, 5);
+                const uniqueActions = Array.from(new Set(specificCorrectives));
                 
-                correctiveContainer.innerHTML = allActions.map(action => `
-                    <div class="suggestion-chip" onclick="applyCorrectiveChip(this, '${action.replace(/'/g, "\\'")}')">
-                        <i class="fas fa-check text-emerald-500"></i>
+                correctiveContainer.innerHTML = uniqueActions.map((action, aIdx) => `
+                    <div class="suggestion-chip corrective-chip ${aIdx === 0 ? 'active' : ''}" onclick="applyCorrectiveChip(this, '${action.replace(/'/g, "\\'")}')">
+                        <i class="fas fa-shield-halved text-emerald-600"></i>
                         <span>${action}</span>
                     </div>
                 `).join('');
@@ -4376,7 +4382,6 @@
             if (detailsInput) {
                 detailsInput.value = item.detail || '';
                 handleDetailsInputQuality(detailsInput.value);
-                detailsInput.focus();
             }
 
             // تحديث الإجراء التصحيحي فوراً بما يطابق الملاحظة
@@ -4395,9 +4400,15 @@
                 applyDatePreset(item.expected);
             }
 
-            // تظليل الوسم المختار
+            // تظليل وسم تفاصيل الملاحظة المختار
             document.querySelectorAll('#detailsQuickChips .suggestion-chip').forEach((c, i) => {
                 c.classList.toggle('active', i === idx);
+            });
+
+            // تظليل وسم الإجراء التصحيحي المطابق
+            document.querySelectorAll('#correctiveQuickChips .suggestion-chip').forEach((c) => {
+                const text = c.querySelector('span')?.textContent || '';
+                c.classList.toggle('active', text.trim() === (item.corrective || '').trim());
             });
         }
 
