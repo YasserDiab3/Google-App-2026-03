@@ -5138,34 +5138,72 @@
 
         
         // ==========================================
-        // 1. أداة الرسم والتأشير الميداني على الصورة
+        // 1. أداة الرسم والتأشير الميداني على الصورة (Ultra-Fast 60fps Native Canvas)
         // ==========================================
-        let markupCanvas, markupCtx;
-        let markupImg = new Image();
-        let currentMarkupTool = 'circle';
-        let isDrawing = false;
-        let startX = 0, startY = 0;
-        let markupHistory = [];
+        var markupCanvas = null;
+        var markupCtx = null;
+        var markupImg = new Image();
+        var currentMarkupTool = 'circle';
+        var isDrawing = false;
+        var startX = 0, startY = 0;
+        var markupSnapshot = null;
+        var markupHistory = [];
+        var markupInitialImageData = null;
 
         function openMarkupModalWithImage(base64Img) {
-            if (!base64Img) return;
+            if (!base64Img) {
+                showToast('الصورة غير صالحة للتأشير', 'warning', 2500);
+                return;
+            }
             const modal = document.getElementById('markupModal');
-            markupCanvas = document.getElementById('markupCanvas');
-            markupCtx = markupCanvas.getContext('2d');
+            if (modal) modal.style.display = 'flex';
 
+            markupCanvas = document.getElementById('markupCanvas');
+            if (!markupCanvas) return;
+            markupCtx = markupCanvas.getContext('2d', { willReadFrequently: true });
+
+            markupImg = new Image();
             markupImg.onload = function() {
-                markupCanvas.width = markupImg.width;
-                markupCanvas.height = markupImg.height;
-                markupCtx.drawImage(markupImg, 0, 0);
-                markupHistory = [markupCanvas.toDataURL()];
-                modal.style.display = 'flex';
+                // ضبط أبعاد الكانفاس لتطابق الصورة الأصلية بدقة
+                const maxDim = 1280;
+                let w = markupImg.naturalWidth || markupImg.width || 800;
+                let h = markupImg.naturalHeight || markupImg.height || 600;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) {
+                        h = Math.round((h * maxDim) / w);
+                        w = maxDim;
+                    } else {
+                        w = Math.round((w * maxDim) / h);
+                        h = maxDim;
+                    }
+                }
+                markupCanvas.width = w;
+                markupCanvas.height = h;
+
+                markupCtx.clearRect(0, 0, w, h);
+                markupCtx.drawImage(markupImg, 0, 0, w, h);
+
+                try {
+                    markupInitialImageData = markupCtx.getImageData(0, 0, w, h);
+                    markupHistory = [markupCtx.getImageData(0, 0, w, h)];
+                } catch(e) {
+                    console.warn('Canvas getImageData init:', e);
+                }
+
+                setMarkupTool('circle');
                 initCanvasEvents();
+            };
+            markupImg.onerror = function() {
+                showToast('تعذر تحميل الصورة في محرر التأشير', 'error', 3000);
             };
             markupImg.src = base64Img;
         }
 
         function closeMarkupModal() {
-            document.getElementById('markupModal').style.display = 'none';
+            const modal = document.getElementById('markupModal');
+            if (modal) modal.style.display = 'none';
+            isDrawing = false;
+            markupSnapshot = null;
         }
 
         function setMarkupTool(tool) {
@@ -5176,125 +5214,185 @@
             if (tool === 'pen') document.getElementById('toolPenBtn')?.classList.add('active');
         }
 
-        function initCanvasEvents() {
-            markupCanvas.onmousedown = startDrawing;
-            markupCanvas.onmousemove = drawMove;
-            markupCanvas.onmouseup = stopDrawing;
+        function getCanvasCoords(e) {
+            if (!markupCanvas) return { x: 0, y: 0 };
+            const rect = markupCanvas.getBoundingClientRect();
+            const scaleX = markupCanvas.width / rect.width;
+            const scaleY = markupCanvas.height / rect.height;
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else if (e.changedTouches && e.changedTouches.length > 0) {
+                clientX = e.changedTouches[0].clientX;
+                clientY = e.changedTouches[0].clientY;
+            }
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
 
+        function initCanvasEvents() {
+            if (!markupCanvas) return;
+
+            // Mouse events
+            markupCanvas.onmousedown = (e) => {
+                const pos = getCanvasCoords(e);
+                startDrawing(pos.x, pos.y);
+            };
+            markupCanvas.onmousemove = (e) => {
+                if (!isDrawing) return;
+                const pos = getCanvasCoords(e);
+                drawMove(pos.x, pos.y);
+            };
+            markupCanvas.onmouseup = stopDrawing;
+            markupCanvas.onmouseleave = stopDrawing;
+
+            // Touch events (Mobile & iPad)
             markupCanvas.ontouchstart = (e) => {
                 e.preventDefault();
-                const touch = e.touches[0];
-                const rect = markupCanvas.getBoundingClientRect();
-                const scaleX = markupCanvas.width / rect.width;
-                const scaleY = markupCanvas.height / rect.height;
-                startDrawing({ offsetX: (touch.clientX - rect.left) * scaleX, offsetY: (touch.clientY - rect.top) * scaleY });
+                e.stopPropagation();
+                const pos = getCanvasCoords(e);
+                startDrawing(pos.x, pos.y);
             };
             markupCanvas.ontouchmove = (e) => {
                 e.preventDefault();
-                const touch = e.touches[0];
-                const rect = markupCanvas.getBoundingClientRect();
-                const scaleX = markupCanvas.width / rect.width;
-                const scaleY = markupCanvas.height / rect.height;
-                drawMove({ offsetX: (touch.clientX - rect.left) * scaleX, offsetY: (touch.clientY - rect.top) * scaleY });
+                e.stopPropagation();
+                if (!isDrawing) return;
+                const pos = getCanvasCoords(e);
+                drawMove(pos.x, pos.y);
             };
             markupCanvas.ontouchend = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                stopDrawing();
+            };
+            markupCanvas.ontouchcancel = (e) => {
                 e.preventDefault();
                 stopDrawing();
             };
         }
 
-        function startDrawing(e) {
+        function startDrawing(x, y) {
+            if (!markupCtx || !markupCanvas) return;
             isDrawing = true;
-            startX = e.offsetX;
-            startY = e.offsetY;
+            startX = x;
+            startY = y;
+            try {
+                markupSnapshot = markupCtx.getImageData(0, 0, markupCanvas.width, markupCanvas.height);
+            } catch(e) {
+                markupSnapshot = null;
+            }
+
             if (currentMarkupTool === 'pen') {
                 markupCtx.beginPath();
                 markupCtx.moveTo(startX, startY);
-            }
-        }
-
-        function drawMove(e) {
-            if (!isDrawing) return;
-            const curX = e.offsetX;
-            const curY = e.offsetY;
-
-            if (currentMarkupTool === 'pen') {
                 markupCtx.strokeStyle = '#ef4444';
                 markupCtx.lineWidth = Math.max(4, markupCanvas.width * 0.008);
                 markupCtx.lineCap = 'round';
+                markupCtx.lineJoin = 'round';
+            }
+        }
+
+        function drawMove(curX, curY) {
+            if (!isDrawing || !markupCtx || !markupCanvas) return;
+
+            if (currentMarkupTool === 'pen') {
                 markupCtx.lineTo(curX, curY);
                 markupCtx.stroke();
             } else {
-                const lastState = new Image();
-                lastState.onload = () => {
-                    markupCtx.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
-                    markupCtx.drawImage(lastState, 0, 0);
+                if (markupSnapshot) {
+                    markupCtx.putImageData(markupSnapshot, 0, 0);
+                }
 
-                    markupCtx.strokeStyle = '#ef4444';
-                    markupCtx.lineWidth = Math.max(4, markupCanvas.width * 0.008);
+                markupCtx.strokeStyle = '#ef4444';
+                markupCtx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+                markupCtx.lineWidth = Math.max(4, markupCanvas.width * 0.008);
+                markupCtx.lineCap = 'round';
+                markupCtx.lineJoin = 'round';
 
-                    if (currentMarkupTool === 'circle') {
-                        const radiusX = Math.abs(curX - startX) / 2;
-                        const radiusY = Math.abs(curY - startY) / 2;
-                        const centerX = Math.min(startX, curX) + radiusX;
-                        const centerY = Math.min(startY, curY) + radiusY;
-                        markupCtx.beginPath();
-                        markupCtx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
-                        markupCtx.stroke();
-                    } else if (currentMarkupTool === 'arrow') {
-                        drawArrow(markupCtx, startX, startY, curX, curY);
-                    }
-                };
-                lastState.src = markupHistory[markupHistory.length - 1];
+                if (currentMarkupTool === 'circle') {
+                    const radiusX = Math.abs(curX - startX) / 2;
+                    const radiusY = Math.abs(curY - startY) / 2;
+                    const centerX = Math.min(startX, curX) + radiusX;
+                    const centerY = Math.min(startY, curY) + radiusY;
+                    markupCtx.beginPath();
+                    markupCtx.ellipse(centerX, centerY, Math.max(1, radiusX), Math.max(1, radiusY), 0, 0, 2 * Math.PI);
+                    markupCtx.fill();
+                    markupCtx.stroke();
+                } else if (currentMarkupTool === 'arrow') {
+                    drawArrow(markupCtx, startX, startY, curX, curY);
+                }
             }
         }
 
         function stopDrawing() {
-            if (!isDrawing) return;
+            if (!isDrawing || !markupCtx || !markupCanvas) return;
             isDrawing = false;
-            markupHistory.push(markupCanvas.toDataURL());
+            try {
+                const currentImgData = markupCtx.getImageData(0, 0, markupCanvas.width, markupCanvas.height);
+                markupHistory.push(currentImgData);
+                if (markupHistory.length > 20) markupHistory.shift();
+            } catch(e) {}
         }
 
         function drawArrow(ctx, fromx, fromy, tox, toy) {
-            const headlen = Math.max(14, markupCanvas.width * 0.02);
+            const headlen = Math.max(16, markupCanvas.width * 0.022);
             const dx = tox - fromx;
             const dy = toy - fromy;
             const angle = Math.atan2(dy, dx);
             ctx.beginPath();
             ctx.moveTo(fromx, fromy);
             ctx.lineTo(tox, toy);
-            ctx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.stroke();
+
+            ctx.beginPath();
             ctx.moveTo(tox, toy);
+            ctx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
             ctx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fillStyle = '#ef4444';
+            ctx.fill();
             ctx.stroke();
         }
 
         function undoMarkup() {
+            if (!markupCtx || !markupCanvas) return;
             if (markupHistory.length > 1) {
                 markupHistory.pop();
-                const prevState = new Image();
-                prevState.onload = () => {
-                    markupCtx.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
-                    markupCtx.drawImage(prevState, 0, 0);
-                };
-                prevState.src = markupHistory[markupHistory.length - 1];
+                const prevState = markupHistory[markupHistory.length - 1];
+                if (prevState) markupCtx.putImageData(prevState, 0, 0);
+            } else if (markupInitialImageData) {
+                markupCtx.putImageData(markupInitialImageData, 0, 0);
             }
         }
 
         function clearMarkup() {
-            markupCtx.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
-            markupCtx.drawImage(markupImg, 0, 0);
-            markupHistory = [markupCanvas.toDataURL()];
+            if (!markupCtx || !markupCanvas) return;
+            if (markupInitialImageData) {
+                markupCtx.putImageData(markupInitialImageData, 0, 0);
+                markupHistory = [markupInitialImageData];
+            } else if (markupImg && markupImg.complete) {
+                markupCtx.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
+                markupCtx.drawImage(markupImg, 0, 0, markupCanvas.width, markupCanvas.height);
+            }
         }
 
         function saveMarkupAndApply() {
-            const dataUrl = markupCanvas.toDataURL('image/jpeg', 0.85);
-            if (uploadedPhotos[currentMarkupIndex] !== undefined) {
-                uploadedPhotos[currentMarkupIndex] = dataUrl;
-                renderPhotosGallery();
+            if (!markupCanvas) return;
+            try {
+                const dataUrl = markupCanvas.toDataURL('image/jpeg', 0.85);
+                if (uploadedPhotos[currentMarkupIndex] !== undefined) {
+                    uploadedPhotos[currentMarkupIndex] = dataUrl;
+                    renderPhotosGallery();
+                }
+                closeMarkupModal();
+                showToast('تم حفظ التأشير وتطبيقه على الصورة بنجاح! ✅', 'success', 2500);
+            } catch(e) {
+                showToast('تعذر حفظ التعديل، يرجى المحاولة ثانية', 'error', 3000);
             }
-            closeMarkupModal();
-            showToast('تم تطبيق التأشير على الصورة بنجاح! ✅', 'success', 2500);
         }
 
         // ==========================================
