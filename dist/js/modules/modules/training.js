@@ -1207,80 +1207,77 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                         <span class="pinsp-stat__pct">${a(t.totalParticipants)}%</span>
                     </div>
                 </div>
-                <div class="content-card" style="border-radius: 16px; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.04); overflow: hidden; background: #ffffff;">
-                    <div class="card-header" style="padding: 1.25rem 1.5rem 1rem 1.5rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1.5px solid #e2e8f0;">
-                        <!-- \u0627\u0644\u0633\u0637\u0631 \u0627\u0644\u0639\u0644\u0648\u064A: \u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0634\u0627\u0631\u0629 \u0648\u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 -->
-                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(99,102,241,0.25);">
+                <div class="content-card" style="border-radius: 14px; border: 1.5px solid #e2e8f0; box-shadow: 0 2px 10px rgba(0,0,0,0.03); overflow: hidden; background: #ffffff;">
+                    <div class="card-header" style="padding: 0.65rem 1rem; background: #ffffff; border-bottom: 1px solid #e2e8f0;">
+                        <!-- \u0627\u0644\u0633\u0637\u0631 \u0627\u0644\u0639\u0644\u0648\u064A \u0627\u0644\u0645\u0631\u0641\u0648\u0639 \u0648\u0627\u0644\u0645\u0646\u0645\u0642: \u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0634\u0627\u0631\u0629 \u0648\u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(99,102,241,0.2);">
                                     <i class="fas fa-list-check"></i>
                                 </div>
-                                <div>
-                                    <h2 style="font-size: 16px; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
-                                        \u0642\u0627\u0626\u0645\u0629 \u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628
-                                        <span id="training-filtered-count-badge" style="font-size: 11px; font-weight: 700; background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; border-radius: 9999px; padding: 2px 10px;">
-                                            ${AppState.appData.training?.length||0} \u0628\u0631\u0627\u0645\u062C
-                                        </span>
-                                    </h2>
-                                    <p style="font-size: 12px; color: #64748b; margin: 2px 0 0 0; font-weight: 500;">\u0627\u0633\u062A\u0639\u0631\u0627\u0636 \u0648\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628\u064A\u0629 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 \u0648\u0627\u0644\u062A\u0633\u062C\u064A\u0644\u0627\u062A</p>
-                                </div>
+                                <h2 style="font-size: 15px; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                    \u0642\u0627\u0626\u0645\u0629 \u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628
+                                    <span id="training-filtered-count-badge" style="font-size: 11px; font-weight: 700; background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; border-radius: 9999px; padding: 2px 8px;">
+                                        ${AppState.appData.training?.length||0} \u0628\u0631\u0627\u0645\u062C
+                                    </span>
+                                </h2>
                             </div>
                             
                             <!-- \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u0648\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0636\u0628\u0637 -->
-                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <button id="export-training-pdf-btn" style="padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 8px; background: #ffffff; color: #4338ca; border: 1.5px solid #c7d2fe; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: all 0.2s;" onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='#ffffff'">
+                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                <button id="export-training-pdf-btn" style="padding: 5px 12px; font-size: 11.5px; font-weight: 700; border-radius: 7px; background: #ffffff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;" onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='#ffffff'">
                                     <i class="fas fa-file-pdf" style="color: #6366f1;"></i> \u062A\u0642\u0631\u064A\u0631 PDF
                                 </button>
-                                <button id="export-training-excel-btn" style="padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(5,150,105,0.25);">
+                                <button id="export-training-excel-btn" style="padding: 5px 12px; font-size: 11.5px; font-weight: 700; border-radius: 7px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 3px rgba(5,150,105,0.2);">
                                     <i class="fas fa-file-excel"></i> \u062A\u0635\u062F\u064A\u0631 Excel
                                 </button>
-                                <button id="training-filter-reset-btn" onclick="Training.resetFilters()" style="padding: 7px 12px; font-size: 12px; font-weight: 700; border-radius: 8px; background: #ffffff; color: #e11d48; border: 1.5px solid #fecdd3; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="\u0625\u0639\u0627\u062F\u0629 \u0636\u0628\u0637 \u0627\u0644\u0641\u0644\u0627\u062A\u0631">
-                                    <i class="fas fa-rotate-left"></i> \u0645\u0633\u062D \u0627\u0644\u0641\u0644\u0627\u062A\u0631
+                                <button id="training-filter-reset-btn" onclick="Training.resetFilters()" style="padding: 5px 10px; font-size: 11.5px; font-weight: 700; border-radius: 7px; background: #ffffff; color: #e11d48; border: 1px solid #fecdd3; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="\u0625\u0639\u0627\u062F\u0629 \u0636\u0628\u0637 \u0627\u0644\u0641\u0644\u0627\u062A\u0631">
+                                    <i class="fas fa-rotate-left"></i> \u0645\u0633\u062D
                                 </button>
                             </div>
                         </div>
 
-                        <!-- \u0634\u0631\u064A\u0637 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u0623\u0641\u0642\u064A \u0628\u062C\u0627\u0646\u0628 \u0628\u0639\u0636\u0647\u0627 \u0645\u0628\u0627\u0634\u0631\u0629 \u0623\u0639\u0644\u0649 \u0631\u0623\u0633 \u0627\u0644\u062C\u062F\u0648\u0644 -->
-                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 1rem; padding-top: 0.85rem; border-top: 1px dashed #cbd5e1; width: 100%;">
-                            <!-- \u0627\u0644\u0628\u062D\u062B \u0627\u0644\u0634\u0627\u0645\u0644 -->
-                            <div style="position: relative; flex: 2; min-width: 220px;">
-                                <input type="text" id="training-search" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 12px 7px 32px; font-size: 12px; font-weight: 600; color: #1e293b; background: #ffffff; outline: none; transition: all 0.2s;" placeholder="\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C\u060C \u0627\u0644\u0645\u062F\u0631\u0628\u060C \u0627\u0644\u0645\u0634\u0627\u0631\u0643\u064A\u0646 \u0623\u0648 \u0627\u0644\u0645\u0648\u0642\u0639..." autocomplete="off" onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 2px rgba(99,102,241,0.15)'" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none'">
-                                <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 12px; pointer-events: none;"></i>
+                        <!-- \u0634\u0631\u064A\u0637 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u0645\u0646\u0633\u0642 \u0647\u0646\u062F\u0633\u064A\u0627\u064B \u0623\u0639\u0644\u0649 \u0631\u0623\u0633 \u0627\u0644\u062C\u062F\u0648\u0644 \u0645\u0628\u0627\u0634\u0631\u0629: \u0627\u0644\u0628\u062D\u062B \u0641\u0648\u0642 \u0627\u0633\u0645 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0648\u0628\u0642\u064A\u0629 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0645\u062A\u0646\u0627\u0633\u0642\u0629 -->
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid #f1f5f9; width: 100%;">
+                            <!-- 1. \u0627\u0644\u0628\u062D\u062B \u0627\u0644\u0634\u0627\u0645\u0644 (\u0623\u0639\u0644\u0649 \u0639\u0645\u0648\u062F \u0627\u0633\u0645 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C) -->
+                            <div style="position: relative; flex: 2.2; min-width: 230px;">
+                                <input type="text" id="training-search" style="width: 100%; height: 34px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 10px 0 28px; font-size: 12px; font-weight: 600; color: #1e293b; background: #f8fafc; outline: none; transition: all 0.2s;" placeholder="\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C\u060C \u0627\u0644\u0645\u062F\u0631\u0628\u060C \u0627\u0644\u0643\u0648\u062F \u0623\u0648 \u0627\u0644\u0645\u0634\u0627\u0631\u0643\u064A\u0646..." autocomplete="off" onfocus="this.style.borderColor='#6366f1'; this.style.background='#ffffff'" onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc'">
+                                <i class="fas fa-search" style="position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 11px; pointer-events: none;"></i>
                             </div>
 
-                            <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u062D\u0627\u0644\u0629 -->
-                            <div style="flex: 1; min-width: 135px;">
-                                <select id="training-filter-status" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
-                                    <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0627\u0644\u0627\u062A</option>
-                                    <option value="\u0645\u062E\u0637\u0637">\u0645\u062E\u0637\u0637</option>
-                                    <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630">\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630</option>
-                                    <option value="\u0645\u0643\u062A\u0645\u0644">\u0645\u0643\u062A\u0645\u0644</option>
-                                    <option value="\u0645\u0644\u063A\u064A">\u0645\u0644\u063A\u064A</option>
+                            <!-- 2. \u0646\u0648\u0639 \u0627\u0644\u062A\u062F\u0631\u064A\u0628 (\u0623\u0639\u0644\u0649 \u0639\u0645\u0648\u062F \u0646\u0648\u0639 \u0627\u0644\u062A\u062F\u0631\u064A\u0628) -->
+                            <div style="flex: 1; min-width: 120px;">
+                                <select id="training-filter-type" style="width: 100%; height: 34px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 8px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none; cursor: pointer;">
+                                    <option value="">\u0646\u0648\u0639 \u0627\u0644\u062A\u062F\u0631\u064A\u0628 (\u0627\u0644\u0643\u0644)</option>
+                                    <option value="\u062F\u0627\u062E\u0644\u064A">\u062F\u0627\u062E\u0644\u064A</option>
+                                    <option value="\u062E\u0627\u0631\u062C\u064A">\u062E\u0627\u0631\u062C\u064A</option>
                                 </select>
                             </div>
 
-                            <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0641\u062A\u0631\u0629 / \u0627\u0644\u0634\u0647\u0631 -->
-                            <div style="flex: 1; min-width: 145px;">
-                                <select id="training-filter-month" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
-                                    <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0634\u0647\u0648\u0631</option>
-                                    ${this.getEmployeeMonthOptions()}
-                                </select>
-                            </div>
-
-                            <!-- \u0641\u0644\u062A\u0631 \u0627\u0644\u0645\u0635\u0646\u0639 / \u0627\u0644\u0645\u0646\u0634\u0623\u0629 -->
-                            <div style="flex: 1; min-width: 135px;">
-                                <select id="training-filter-factory" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
+                            <!-- 3. \u0627\u0644\u0645\u0635\u0646\u0639 / \u0627\u0644\u0645\u0648\u0642\u0639 -->
+                            <div style="flex: 1.1; min-width: 130px;">
+                                <select id="training-filter-factory" style="width: 100%; height: 34px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 8px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none; cursor: pointer;">
                                     <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0635\u0627\u0646\u0639</option>
                                     ${this.getSiteOptions().map(i=>`<option value="${Utils.escapeHTML(i.id)}">${Utils.escapeHTML(i.name)}</option>`).join("")}
                                 </select>
                             </div>
 
-                            <!-- \u0641\u0644\u062A\u0631 \u0646\u0648\u0639 \u0627\u0644\u062A\u062F\u0631\u064A\u0628 -->
-                            <div style="flex: 1; min-width: 125px;">
-                                <select id="training-filter-type" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
-                                    <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0646\u0648\u0627\u0639</option>
-                                    <option value="\u062F\u0627\u062E\u0644\u064A">\u062A\u062F\u0631\u064A\u0628 \u062F\u0627\u062E\u0644\u064A</option>
-                                    <option value="\u062E\u0627\u0631\u062C\u064A">\u062A\u062F\u0631\u064A\u0628 \u062E\u0627\u0631\u062C\u064A</option>
+                            <!-- 4. \u0627\u0644\u0641\u062A\u0631\u0629 / \u0627\u0644\u0634\u0647\u0631 (\u0623\u0639\u0644\u0649 \u0639\u0645\u0648\u062F \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062F\u0631\u064A\u0628) -->
+                            <div style="flex: 1.1; min-width: 135px;">
+                                <select id="training-filter-month" style="width: 100%; height: 34px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 8px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none; cursor: pointer;">
+                                    <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0634\u0647\u0648\u0631</option>
+                                    ${this.getEmployeeMonthOptions()}
+                                </select>
+                            </div>
+
+                            <!-- 5. \u0627\u0644\u062D\u0627\u0644\u0629 (\u0623\u0639\u0644\u0649 \u0639\u0645\u0648\u062F \u0627\u0644\u062D\u0627\u0644\u0629) -->
+                            <div style="flex: 1; min-width: 115px;">
+                                <select id="training-filter-status" style="width: 100%; height: 34px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 8px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none; cursor: pointer;">
+                                    <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0627\u0644\u0627\u062A</option>
+                                    <option value="\u0645\u062E\u0637\u0637">\u0645\u062E\u0637\u0637</option>
+                                    <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630">\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630</option>
+                                    <option value="\u0645\u0643\u062A\u0645\u0644">\u0645\u0643\u062A\u0645\u0644</option>
+                                    <option value="\u0645\u0644\u063A\u064A">\u0645\u0644\u063A\u064A</option>
                                 </select>
                             </div>
                         </div>

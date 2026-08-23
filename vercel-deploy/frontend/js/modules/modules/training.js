@@ -3044,80 +3044,77 @@ const Training = {
                         <span class="pinsp-stat__pct">${_trPct(stats.totalParticipants)}%</span>
                     </div>
                 </div>
-                <div class="content-card" style="border-radius: 16px; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.04); overflow: hidden; background: #ffffff;">
-                    <div class="card-header" style="padding: 1.25rem 1.5rem 1rem 1.5rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1.5px solid #e2e8f0;">
-                        <!-- السطر العلوي: العنوان والشارة وأزرار التصدير -->
-                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(99,102,241,0.25);">
+                <div class="content-card" style="border-radius: 14px; border: 1.5px solid #e2e8f0; box-shadow: 0 2px 10px rgba(0,0,0,0.03); overflow: hidden; background: #ffffff;">
+                    <div class="card-header" style="padding: 0.65rem 1rem; background: #ffffff; border-bottom: 1px solid #e2e8f0;">
+                        <!-- السطر العلوي المرفوع والمنمق: العنوان والشارة وأزرار التصدير -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(99,102,241,0.2);">
                                     <i class="fas fa-list-check"></i>
                                 </div>
-                                <div>
-                                    <h2 style="font-size: 16px; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
-                                        قائمة برامج التدريب
-                                        <span id="training-filtered-count-badge" style="font-size: 11px; font-weight: 700; background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; border-radius: 9999px; padding: 2px 10px;">
-                                            ${AppState.appData.training?.length || 0} برامج
-                                        </span>
-                                    </h2>
-                                    <p style="font-size: 12px; color: #64748b; margin: 2px 0 0 0; font-weight: 500;">استعراض وتصفية البرامج التدريبية المعتمدة والتسجيلات</p>
-                                </div>
+                                <h2 style="font-size: 15px; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                    قائمة برامج التدريب
+                                    <span id="training-filtered-count-badge" style="font-size: 11px; font-weight: 700; background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; border-radius: 9999px; padding: 2px 8px;">
+                                        ${AppState.appData.training?.length || 0} برامج
+                                    </span>
+                                </h2>
                             </div>
                             
                             <!-- أزرار التصدير وإعادة الضبط -->
-                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <button id="export-training-pdf-btn" style="padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 8px; background: #ffffff; color: #4338ca; border: 1.5px solid #c7d2fe; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: all 0.2s;" onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='#ffffff'">
+                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                <button id="export-training-pdf-btn" style="padding: 5px 12px; font-size: 11.5px; font-weight: 700; border-radius: 7px; background: #ffffff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;" onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='#ffffff'">
                                     <i class="fas fa-file-pdf" style="color: #6366f1;"></i> تقرير PDF
                                 </button>
-                                <button id="export-training-excel-btn" style="padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(5,150,105,0.25);">
+                                <button id="export-training-excel-btn" style="padding: 5px 12px; font-size: 11.5px; font-weight: 700; border-radius: 7px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 3px rgba(5,150,105,0.2);">
                                     <i class="fas fa-file-excel"></i> تصدير Excel
                                 </button>
-                                <button id="training-filter-reset-btn" onclick="Training.resetFilters()" style="padding: 7px 12px; font-size: 12px; font-weight: 700; border-radius: 8px; background: #ffffff; color: #e11d48; border: 1.5px solid #fecdd3; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="إعادة ضبط الفلاتر">
-                                    <i class="fas fa-rotate-left"></i> مسح الفلاتر
+                                <button id="training-filter-reset-btn" onclick="Training.resetFilters()" style="padding: 5px 10px; font-size: 11.5px; font-weight: 700; border-radius: 7px; background: #ffffff; color: #e11d48; border: 1px solid #fecdd3; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="إعادة ضبط الفلاتر">
+                                    <i class="fas fa-rotate-left"></i> مسح
                                 </button>
                             </div>
                         </div>
 
-                        <!-- شريط الفلاتر الأفقي بجانب بعضها مباشرة أعلى رأس الجدول -->
-                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 1rem; padding-top: 0.85rem; border-top: 1px dashed #cbd5e1; width: 100%;">
-                            <!-- البحث الشامل -->
-                            <div style="position: relative; flex: 2; min-width: 220px;">
-                                <input type="text" id="training-search" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 12px 7px 32px; font-size: 12px; font-weight: 600; color: #1e293b; background: #ffffff; outline: none; transition: all 0.2s;" placeholder="بحث باسم البرنامج، المدرب، المشاركين أو الموقع..." autocomplete="off" onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 2px rgba(99,102,241,0.15)'" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none'">
-                                <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 12px; pointer-events: none;"></i>
+                        <!-- شريط الفلاتر المنسق هندسياً أعلى رأس الجدول مباشرة: البحث فوق اسم البرنامج وبقية الفلاتر متناسقة -->
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid #f1f5f9; width: 100%;">
+                            <!-- 1. البحث الشامل (أعلى عمود اسم البرنامج) -->
+                            <div style="position: relative; flex: 2.2; min-width: 230px;">
+                                <input type="text" id="training-search" style="width: 100%; height: 34px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 10px 0 28px; font-size: 12px; font-weight: 600; color: #1e293b; background: #f8fafc; outline: none; transition: all 0.2s;" placeholder="بحث باسم البرنامج، المدرب، الكود أو المشاركين..." autocomplete="off" onfocus="this.style.borderColor='#6366f1'; this.style.background='#ffffff'" onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc'">
+                                <i class="fas fa-search" style="position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 11px; pointer-events: none;"></i>
                             </div>
 
-                            <!-- فلتر الحالة -->
-                            <div style="flex: 1; min-width: 135px;">
-                                <select id="training-filter-status" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
-                                    <option value="">جميع الحالات</option>
-                                    <option value="مخطط">مخطط</option>
-                                    <option value="قيد التنفيذ">قيد التنفيذ</option>
-                                    <option value="مكتمل">مكتمل</option>
-                                    <option value="ملغي">ملغي</option>
+                            <!-- 2. نوع التدريب (أعلى عمود نوع التدريب) -->
+                            <div style="flex: 1; min-width: 120px;">
+                                <select id="training-filter-type" style="width: 100%; height: 34px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 8px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none; cursor: pointer;">
+                                    <option value="">نوع التدريب (الكل)</option>
+                                    <option value="داخلي">داخلي</option>
+                                    <option value="خارجي">خارجي</option>
                                 </select>
                             </div>
 
-                            <!-- فلتر الفترة / الشهر -->
-                            <div style="flex: 1; min-width: 145px;">
-                                <select id="training-filter-month" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
-                                    <option value="">جميع الشهور</option>
-                                    ${this.getEmployeeMonthOptions()}
-                                </select>
-                            </div>
-
-                            <!-- فلتر المصنع / المنشأة -->
-                            <div style="flex: 1; min-width: 135px;">
-                                <select id="training-filter-factory" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
+                            <!-- 3. المصنع / الموقع -->
+                            <div style="flex: 1.1; min-width: 130px;">
+                                <select id="training-filter-factory" style="width: 100%; height: 34px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 8px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none; cursor: pointer;">
                                     <option value="">جميع المصانع</option>
                                     ${this.getSiteOptions().map(s => `<option value="${Utils.escapeHTML(s.id)}">${Utils.escapeHTML(s.name)}</option>`).join('')}
                                 </select>
                             </div>
 
-                            <!-- فلتر نوع التدريب -->
-                            <div style="flex: 1; min-width: 125px;">
-                                <select id="training-filter-type" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;">
-                                    <option value="">جميع الأنواع</option>
-                                    <option value="داخلي">تدريب داخلي</option>
-                                    <option value="خارجي">تدريب خارجي</option>
+                            <!-- 4. الفترة / الشهر (أعلى عمود تاريخ التدريب) -->
+                            <div style="flex: 1.1; min-width: 135px;">
+                                <select id="training-filter-month" style="width: 100%; height: 34px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 8px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none; cursor: pointer;">
+                                    <option value="">جميع الشهور</option>
+                                    ${this.getEmployeeMonthOptions()}
+                                </select>
+                            </div>
+
+                            <!-- 5. الحالة (أعلى عمود الحالة) -->
+                            <div style="flex: 1; min-width: 115px;">
+                                <select id="training-filter-status" style="width: 100%; height: 34px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 8px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none; cursor: pointer;">
+                                    <option value="">جميع الحالات</option>
+                                    <option value="مخطط">مخطط</option>
+                                    <option value="قيد التنفيذ">قيد التنفيذ</option>
+                                    <option value="مكتمل">مكتمل</option>
+                                    <option value="ملغي">ملغي</option>
                                 </select>
                             </div>
                         </div>
