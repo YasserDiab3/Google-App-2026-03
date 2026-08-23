@@ -1295,12 +1295,12 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                     <thead>
                         <tr>
                             <th style="min-width: 220px;">\u0627\u0633\u0645 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C</th>
-                            <th style="min-width: 110px;">\u0646\u0648\u0639 \u0627\u0644\u062A\u062F\u0631\u064A\u0628</th>
+                            <th style="min-width: 100px; text-align: center;">\u0646\u0648\u0639 \u0627\u0644\u062A\u062F\u0631\u064A\u0628</th>
                             <th style="min-width: 140px;">\u0627\u0644\u0645\u062F\u0631\u0628</th>
-                            <th style="min-width: 120px;">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0621</th>
-                            <th style="min-width: 110px;text-align:center;">\u0639\u062F\u062F \u0627\u0644\u0645\u0634\u0627\u0631\u0643\u064A\u0646</th>
-                            <th style="min-width: 120px;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
-                            <th style="min-width: 200px;text-align:center;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                            <th style="min-width: 130px;">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062F\u0631\u064A\u0628</th>
+                            <th style="min-width: 100px; text-align: center;">\u0639\u062F\u062F \u0627\u0644\u0645\u0634\u0627\u0631\u0643\u064A\u0646</th>
+                            <th style="min-width: 100px; text-align: center;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                            <th style="min-width: 180px; text-align: center;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1310,13 +1310,16 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                                         <div class="font-semibold text-gray-900" style="line-height: 1.4;">${Utils.escapeHTML(i.name||"")}</div>
                                         ${p?`<div class="text-xs text-gray-500" style="margin-top: 4px; line-height: 1.3;"><i class="fas fa-map-marker-alt ml-1"></i>${Utils.escapeHTML(p)}</div>`:""}
                                     </td>
-                                    <td><span class="badge ${d}">${l}</span></td>
+                                    <td style="text-align: center;"><span class="badge ${d}">${l}</span></td>
+                                    <td class="training-text-cell" title="${Utils.escapeHTML(i.trainer||"")}">
+                                        <div class="font-medium text-gray-800">${Utils.escapeHTML(i.trainer||"-")}</div>
+                                    </td>
                                     <td style="white-space: nowrap;">
-                                        <div class="font-medium">${o}</div>
+                                        <div class="font-medium text-gray-900">${o}</div>
                                         ${i.expiryDate?`<div class="text-xs text-indigo-600 font-semibold" style="margin-top: 2px;" title="\u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u062A\u062F\u0631\u064A\u0628"><i class="fas fa-hourglass-half ml-1"></i>\u064A\u0646\u062A\u0647\u064A: ${Utils.formatDate(i.expiryDate)}</div>`:""}
                                     </td>
-                                    <td style="text-align: center;"><span class="badge badge-info">${n}</span></td>
-                                    <td><span class="badge badge-${r}">${Utils.escapeHTML(c)}</span></td>
+                                    <td style="text-align: center;"><span class="badge badge-info font-bold">${n}</span></td>
+                                    <td style="text-align: center;"><span class="badge badge-${r}">${Utils.escapeHTML(c)}</span></td>
                                     <td class="training-actions-cell">
                                         <div class="flex items-center" style="justify-content: center;">
                                             <button onclick="Training.viewTraining('${i.id}')" class="btn-icon btn-icon-info" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">

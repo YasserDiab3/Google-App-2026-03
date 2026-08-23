@@ -3248,12 +3248,12 @@ const Training = {
                     <thead>
                         <tr>
                             <th style="min-width: 220px;">اسم البرنامج</th>
-                            <th style="min-width: 110px;">نوع التدريب</th>
+                            <th style="min-width: 100px; text-align: center;">نوع التدريب</th>
                             <th style="min-width: 140px;">المدرب</th>
-                            <th style="min-width: 120px;">تاريخ البدء</th>
-                            <th style="min-width: 110px;text-align:center;">عدد المشاركين</th>
-                            <th style="min-width: 120px;">الحالة</th>
-                            <th style="min-width: 200px;text-align:center;">الإجراءات</th>
+                            <th style="min-width: 130px;">تاريخ التدريب</th>
+                            <th style="min-width: 100px; text-align: center;">عدد المشاركين</th>
+                            <th style="min-width: 100px; text-align: center;">الحالة</th>
+                            <th style="min-width: 180px; text-align: center;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -3291,13 +3291,16 @@ const Training = {
                                         <div class="font-semibold text-gray-900" style="line-height: 1.4;">${Utils.escapeHTML(item.name || '')}</div>
                                         ${locationDisplay ? `<div class="text-xs text-gray-500" style="margin-top: 4px; line-height: 1.3;"><i class="fas fa-map-marker-alt ml-1"></i>${Utils.escapeHTML(locationDisplay)}</div>` : ''}
                                     </td>
-                                    <td><span class="badge ${trainingTypeBadge}">${trainingTypeLabel}</span></td>
+                                    <td style="text-align: center;"><span class="badge ${trainingTypeBadge}">${trainingTypeLabel}</span></td>
+                                    <td class="training-text-cell" title="${Utils.escapeHTML(item.trainer || '')}">
+                                        <div class="font-medium text-gray-800">${Utils.escapeHTML(item.trainer || '-')}</div>
+                                    </td>
                                     <td style="white-space: nowrap;">
-                                        <div class="font-medium">${startDateDisplay}</div>
+                                        <div class="font-medium text-gray-900">${startDateDisplay}</div>
                                         ${item.expiryDate ? `<div class="text-xs text-indigo-600 font-semibold" style="margin-top: 2px;" title="تاريخ انتهاء التدريب"><i class="fas fa-hourglass-half ml-1"></i>ينتهي: ${Utils.formatDate(item.expiryDate)}</div>` : ''}
                                     </td>
-                                    <td style="text-align: center;"><span class="badge badge-info">${participantsCount}</span></td>
-                                    <td><span class="badge badge-${badgeClass}">${Utils.escapeHTML(displayStatus)}</span></td>
+                                    <td style="text-align: center;"><span class="badge badge-info font-bold">${participantsCount}</span></td>
+                                    <td style="text-align: center;"><span class="badge badge-${badgeClass}">${Utils.escapeHTML(displayStatus)}</span></td>
                                     <td class="training-actions-cell">
                                         <div class="flex items-center" style="justify-content: center;">
                                             <button onclick="Training.viewTraining('${item.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
