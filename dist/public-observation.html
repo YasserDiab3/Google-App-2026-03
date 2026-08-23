@@ -4519,11 +4519,45 @@
             }
         }
 
-        // اقتراح الإجراء التصحيحي بالذكاء الاصطناعي بناءً على الكلمات المفتاحية بالوصف
+        // اقتراح الإجراء التصحيحي بالذكاء الاصطناعي بناءً على التصنيف المختار والكلمات المفتاحية بدقة
         function autoSuggestCorrectiveAction() {
             const details = (document.getElementById('detailsInput')?.value || '').trim();
             const correctiveInput = document.getElementById('correctiveInput');
             if (!correctiveInput) return;
+
+            const selectedSub = document.getElementById('subCategorySelect')?.value || '';
+
+            // 1. الأولوية الأولى: الاستناد إلى التصنيف الفرعي المختار وقوالبه التخصصية
+            if (selectedSub && DETAILED_SUBCATEGORY_TEMPLATES[selectedSub]) {
+                const subItems = DETAILED_SUBCATEGORY_TEMPLATES[selectedSub];
+                let bestMatch = null;
+                if (details) {
+                    bestMatch = subItems.find(item => {
+                        const words = item.title.split(' ').concat((item.detail || '').split(' '));
+                        return words.some(w => w.length > 3 && details.includes(w));
+                    });
+                }
+                if (!bestMatch) bestMatch = subItems[0];
+
+                if (bestMatch && bestMatch.corrective) {
+                    correctiveInput.value = bestMatch.corrective;
+                    correctiveInput.focus();
+                    if (bestMatch.risk) {
+                        const targetRiskChip = document.querySelector(`.risk-chip[data-risk="${bestMatch.risk}"]`);
+                        if (targetRiskChip) selectRisk(targetRiskChip);
+                    }
+                    if (bestMatch.expected) applyDatePreset(bestMatch.expected);
+
+                    // تظليل وسم الإجراء المطابق
+                    document.querySelectorAll('#correctiveQuickChips .suggestion-chip').forEach((c) => {
+                        const text = c.querySelector('span')?.textContent || '';
+                        c.classList.toggle('active', text.trim() === bestMatch.corrective.trim());
+                    });
+
+                    showToast('تم اقتراح الإجراء التصحيحي المناسب للتصنيف بنجاح ✨', 'success', 3000);
+                    return;
+                }
+            }
 
             if (!details || details.length < 3) {
                 showToast('يرجى كتابة أو تسجيل تفاصيل الخطر أولاً لاقتراح الإجراء المناسب', 'info', 3000);
@@ -4536,11 +4570,16 @@
             let detectedRisk = 'متوسط';
             let detectedDate = '24h';
 
-            if (lower.includes('سلك') || lower.includes('كابل') || lower.includes('كهربا') || lower.includes('لوحة') || lower.includes('قاطع') || lower.includes('فيشة') || lower.includes('صعق') || lower.includes('loto')) {
+            // 2. تحليل الكلمات المفتاحية بالترتيب الصحيح (الانزلاق والأرضيات أولاً قبل السقوط من ارتفاع)
+            if (lower.includes('انزلاق') || lower.includes('مبلل') || lower.includes('تعثر') || lower.includes('ارضية') || lower.includes('أرضية') || lower.includes('مياه راكدة') || lower.includes('ممر') || lower.includes('عائق')) {
+                suggestedAction = 'تنظيف وتجفيف الأرضية فوراً ووضع لافتة تحذيرية (أرضية زلقة) وإزالة كافة العوائق والمخلفات عن مسارات المشاة.';
+                detectedRisk = 'متوسط';
+                detectedDate = 'today';
+            } else if (lower.includes('سلك') || lower.includes('كابل') || lower.includes('كهربا') || lower.includes('لوحة') || lower.includes('قاطع') || lower.includes('فيشة') || lower.includes('صعق') || lower.includes('loto')) {
                 suggestedAction = 'عزل وتأمين مصدر التيار الكهربائي فوراً، وإصلاح العطل والتوصيل بمعرفة فني الكهرباء المختص مع وضع قفل وعلامة أمان (LOTO).';
                 detectedRisk = 'عالي';
                 detectedDate = 'today';
-            } else if (lower.includes('سقال') || lower.includes('حزام') || lower.includes('ارتفاع') || lower.includes('سلم') || lower.includes('سقوط') || lower.includes('فتحة')) {
+            } else if (lower.includes('سقال') || lower.includes('حزام') || lower.includes('ارتفاع') || lower.includes('سلم') || lower.includes('سقوط من') || lower.includes('سقوط افراد') || lower.includes('سقوط أفراد') || lower.includes('فتحة')) {
                 suggestedAction = 'إيقاف العمل العالي فوراً، وتأمين السقالة وتثبيت حزام الأمان بنقطة ارتكاز معتمدة وتغطية أي فتحات أرضية بحواجز مطابقة.';
                 detectedRisk = 'عالي';
                 detectedDate = 'today';
@@ -4552,13 +4591,9 @@
                 suggestedAction = 'إيقاف الماكينة وتركيب حوافظ وسيور الأمان اللازمة والتأكد من فاعلية زر التوقف في الطوارئ (E-Stop) قبل إعادة التشغيل.';
                 detectedRisk = 'عالي';
                 detectedDate = 'today';
-            } else if (lower.includes('كيميا') || lower.includes('غاز') || lower.includes('امونيا') || lower.includes('أمونيا') || lower.includes('فريون') || lower.includes('تسريب') || lower.includes('برميل') || lower.includes('زيت') || lower.includes('حمض')) {
+            } else if (lower.includes('كيميا') || lower.includes('غاز') || lower.includes('امونيا') || lower.includes('أمونيا') || lower.includes('فريون') || lower.includes('تسريب') || lower.includes('برميل') || lower.includes('حمض')) {
                 suggestedAction = 'إيقاف مصدر التسريب فوراً، واستخدام مهمات احتواء الانسكابات (Spill Kit)، وارتداء مهمات الوقاية المناسبة، وتثبيت بطاقة التحذير (SDS).';
                 detectedRisk = 'عالي';
-                detectedDate = 'today';
-            } else if (lower.includes('انزلاق') || lower.includes('مبلل') || lower.includes('عائق') || lower.includes('ممر') || lower.includes('تعثر') || lower.includes('مخلفات') || lower.includes('ارضية') || lower.includes('أرضية')) {
-                suggestedAction = 'تنظيف وتجفيف الأرضية فوراً ووضع لافتة تحذيرية (أرضية زلقة) وإزالة كافة العوائق والمخلفات عن مسارات المشاة.';
-                detectedRisk = 'متوسط';
                 detectedDate = 'today';
             } else if (lower.includes('باليت') || lower.includes('تخزين') || lower.includes('رص') || lower.includes('كرتون') || lower.includes('سقوط احمال') || lower.includes('سقوط أحمال') || lower.includes('رفع')) {
                 suggestedAction = 'إعادة رص وتثبيت الباليتات بشكل مستقر ومطابق للارتفاع المسموح، وتأمين الممرات والالتزام بطرق الرفع الميكانيكي الآمن.';
@@ -4586,6 +4621,12 @@
             const targetRiskChip = document.querySelector(`.risk-chip[data-risk="${detectedRisk}"]`);
             if (targetRiskChip) selectRisk(targetRiskChip);
             applyDatePreset(detectedDate);
+
+            // تظليل وسم الإجراء المطابق
+            document.querySelectorAll('#correctiveQuickChips .suggestion-chip').forEach((c) => {
+                const text = c.querySelector('span')?.textContent || '';
+                c.classList.toggle('active', text.trim() === suggestedAction.trim());
+            });
 
             showToast('تم استنتاج واقتراح الإجراء التصحيحي المناسب بنجاح ✨', 'success', 3000);
         }
