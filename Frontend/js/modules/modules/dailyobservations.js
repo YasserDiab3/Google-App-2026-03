@@ -1028,13 +1028,10 @@ const DailyObservations = {
     },
 
     /**
-     * ✅ الحصول على الإدارات
+     * ✅ الحصول على الإدارات المعتمدة بالنظام
      */
     getDepartments() {
-        const depts = (AppState.appData?.users || [])
-            .map(u => u.department)
-            .filter(Boolean);
-        return [...new Set(depts)].sort();
+        return this.getDepartmentOptions();
     },
 
     /**
@@ -10253,49 +10250,57 @@ const DailyObservations = {
     
 
     getDepartmentOptions() {
+        const ALL_OFFICIAL_DEPTS = [
+            'إدارة السلامة والصحة المهنية',
+            'إدارة الصيانة والورش',
+            'إدارة الإنتاج والتشغيل',
+            'إدارة الجودة وسلامة الغذاء',
+            'إدارة المستودعات والمخازن',
+            'إدارة الخدمات اللوجستية والنقل',
+            'إدارة الموارد البشرية والشؤون الإدارية',
+            'إدارة الأمن والحراسة',
+            'إدارة المشروعات والهندسة',
+            'إدارة المشتريات والتوريدات',
+            'إدارة تكنولوجيا المعلومات (IT)',
+            'إدارة البيئة والاستدامة',
+            'إدارة الزراعة والمزارع',
+            'إدارة الخدمات العامة والمرافق',
+            'إدارة المالية والمحاسبة',
+            'إدارة التصدير وسلاسل الإمداد'
+        ];
+
         const normalizedMap = new Map();
 
-        const addDepartment = (raw) => {
-            if (!raw) return;
-            const str = String(raw).trim().replace(/\s+/g, ' ');
-            if (!str) return;
-            // مفتاح تطبيع للدمج الذكي (تجاهل الهمزات والمسافات الزائدة والحركات)
-            const normKey = str
-                .toLowerCase()
+        const normalizeKey = (str) => {
+            return String(str || '').toLowerCase()
                 .replace(/[أإآ]/g, 'ا')
                 .replace(/ة/g, 'ه')
                 .replace(/ى/g, 'ي')
                 .replace(/[^\w\u0600-\u06FF]/g, '');
-
-            if (normKey && !normalizedMap.has(normKey)) {
-                normalizedMap.set(normKey, str);
-            }
         };
 
-        const companySettings = AppState.companySettings || {};
+        // إضافة الإدارات الرسمية أولاً
+        ALL_OFFICIAL_DEPTS.forEach(dept => {
+            const k = normalizeKey(dept);
+            if (k) normalizedMap.set(k, dept);
+        });
 
+        const companySettings = AppState.companySettings || {};
         const formDepartments = Array.isArray(companySettings.formDepartments)
             ? companySettings.formDepartments
             : (typeof companySettings.formDepartments === 'string'
                 ? companySettings.formDepartments.split(/\n|,/).map((item) => item.trim()).filter(Boolean)
                 : []);
-        formDepartments.forEach(addDepartment);
 
-        const legacyDepartments = Array.isArray(companySettings.departments)
-            ? companySettings.departments
-            : (typeof companySettings.departments === 'string'
-                ? companySettings.departments.split(/\n|,/).map((item) => item.trim()).filter(Boolean)
-                : []);
-        legacyDepartments.forEach(addDepartment);
-
-        if (Array.isArray(AppState.companySettings?.departments)) {
-            AppState.companySettings.departments.forEach(addDepartment);
-        }
-
-        (AppState.appData.employees || []).forEach((employee) => addDepartment(employee.department));
-        (AppState.appData.nearmiss || []).forEach((record) => addDepartment(record.department || record.responsibleDepartment));
-        (AppState.appData.incidents || []).forEach((record) => addDepartment(record.affectedDepartment || record.department));
-        (AppState.appData.dailyObservations || []).forEach((record) => addDepartment(record.responsibleDepartment));
+        formDepartments.forEach(d => {
+            const clean = String(d || '').trim();
+            if (clean && clean.length >= 2) {
+                const k = normalizeKey(clean);
+                if (k && !normalizedMap.has(k)) {
+                    normalizedMap.set(k, clean);
+                }
+            }
+        });
 
         return Array.from(normalizedMap.values()).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ar'));
     },
@@ -11796,7 +11801,18 @@ const DailyObservations = {
                                 ${this.canEditObservationFieldsInDetail(observation) ? `
                                 <select id="observation-responsible-select" class="form-input" style="width: 100%; margin-top: 4px;" onchange="DailyObservations.handleFieldChange('${observation.id}', 'responsibleDepartment', this.value, this)">
                                     <option value="">-- اختر المسؤول --</option>
-                                    ${this.getDepartments().map(dept => `<option value="${dept}" ${observation.responsibleDepartment === dept ? 'selected' : ''}>${dept}</option>`).join('')}
+                                    ${this.getDepartments().map(dept => {
+                                        const cur = String(observation.responsibleDepartment || '').trim().toLowerCase();
+                                        const dLower = dept.toLowerCase();
+                                        const isSelected = (cur === dLower) ||
+                                            (dept.includes('مستودع') && (cur.includes('مخازن') || cur.includes('مستودع'))) ||
+                                            (dept.includes('صيانة') && cur.includes('صيانة')) ||
+                                            (dept.includes('سلامة') && (cur.includes('سلامة') || cur === 'hse' || cur.includes('quality, health'))) ||
+                                            (dept.includes('إنتاج') && (cur.includes('انتاج') || cur.includes('إنتاج') || cur.includes('تصنيع') || cur.includes('تعبئة'))) ||
+                                            (dept.includes('جودة') && cur.includes('جودة')) ||
+                                            (dept.includes('مشروعات') && (cur.includes('project') || cur.includes('مشاريع') || cur.includes('هندس')));
+                                        return `<option value="${dept}" ${isSelected ? 'selected' : ''}>${dept}</option>`;
+                                    }).join('')}
                                 </select>
                                 ` : `<span class="text-gray-900">${Utils.escapeHTML(observation.responsibleDepartment || '-')}</span>`}
                             </div>
