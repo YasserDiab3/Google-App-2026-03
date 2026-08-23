@@ -4867,11 +4867,45 @@ const Training = {
                                     </label>
                                     <input type="date" id="contractor-training-date" class="form-input" required value="${defaultDate}" style="border: 2px solid #e0e7ff; border-radius: 10px; transition: all 0.3s; padding: 10px 12px;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102,126,234,0.15)'" onblur="this.style.borderColor='#e0e7ff'; this.style.boxShadow='none'">
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-semibold mb-2" style="color: #4c5c96; display: flex; align-items: center; gap: 5px;">
-                                        <i class="fas fa-book" style="color: #667eea;"></i> الموضوع التدريبي <span style="color: #ef4444;">*</span>
-                                    </label>
-                                    <input type="text" id="contractor-training-topic" class="form-input" required placeholder="مثال: تدريب السلامة" value="${Utils.escapeHTML(existing?.topic || existing?.subject || '')}" style="border: 2px solid #e0e7ff; border-radius: 10px; transition: all 0.3s; padding: 10px 12px;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102,126,234,0.15)'" onblur="this.style.borderColor='#e0e7ff'; this.style.boxShadow='none'">
+                                <div style="position: relative;" id="contractor-training-topic-wrapper">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                        <label class="block text-sm font-semibold mb-0" style="color: #4c5c96; display: flex; align-items: center; gap: 5px;">
+                                            <i class="fas fa-book" style="color: #667eea;"></i> الموضوع التدريبي <span style="color: #ef4444;">*</span>
+                                        </label>
+                                        <button type="button" onclick="Training.toggleContractorTopicSuggestions()" style="font-size: 11px; font-weight: 700; background: #f3f4f6; color: #4f46e5; border: 1px solid #c7d2fe; border-radius: 6px; padding: 2px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onmouseover="this.style.background='#e0e7ff'" onmouseout="this.style.background='#f3f4f6'">
+                                            <i class="fas fa-list-check"></i> استعراض الموضوعات (${this.getPreviousTrainingTopics().length})
+                                        </button>
+                                    </div>
+                                    <div style="position: relative; display: flex; align-items: center;">
+                                        <input type="text" id="contractor-training-topic" class="form-input" required list="contractor-training-topic-datalist" placeholder="اكتب الموضوع أو اختر من المقترحات السابقة..." value="${Utils.escapeHTML(existing?.topic || existing?.subject || '')}" style="border: 2px solid #e0e7ff; border-radius: 10px; transition: all 0.3s; padding: 10px 12px; padding-left: 36px; width: 100%; font-weight: 600;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102,126,234,0.15)'" onblur="this.style.borderColor='#e0e7ff'; this.style.boxShadow='none'" autocomplete="off">
+                                        <button type="button" id="contractor-topic-toggle-btn" onclick="Training.toggleContractorTopicSuggestions()" style="position: absolute; left: 4px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #667eea; background: transparent; border: none; cursor: pointer;" title="عرض قائمة التدريبات السابقة">
+                                            <i class="fas fa-chevron-down" style="font-size: 11px; transition: transform 0.2s;" id="contractor-topic-chevron"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Datalist لمتصفحات الجوال -->
+                                    <datalist id="contractor-training-topic-datalist">
+                                        ${this.getPreviousTrainingTopics().map(t => `<option value="${Utils.escapeHTML(t)}">`).join('')}
+                                    </datalist>
+
+                                    <!-- قائمة مقترحات التدريبات السابقة المنسدلة -->
+                                    <div id="contractor-training-topic-suggestions-popup" style="position: absolute; right: 0; left: 0; margin-top: 6px; background: #ffffff; border: 2px solid #c7d2fe; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 50; overflow: hidden; max-height: 280px; display: none;">
+                                        <div style="padding: 8px 12px; background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-bottom: 1px solid #ddd6fe; display: flex; align-items: center; justify-content: space-between;">
+                                            <span style="font-size: 12px; font-weight: 700; color: #4c1d95;"><i class="fas fa-history" style="color: #7c3aed; margin-left: 4px;"></i> موضوعات وتدريبات سابقة معتمدة</span>
+                                            <span style="font-size: 11px; font-weight: 800; color: #6d28d9;" id="contractor-topics-count">${this.getPreviousTrainingTopics().length} موضوع</span>
+                                        </div>
+                                        <div style="overflow-y: auto; max-height: 220px;" id="contractor-topics-list-items">
+                                            ${this.getPreviousTrainingTopics().map(t => `
+                                                <div class="contractor-topic-option" style="padding: 9px 12px; border-bottom: 1px solid #f1f5f9; font-size: 12px; font-weight: 600; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.15s;" data-topic-text="${Utils.escapeHTML(t)}" onclick="Training.selectContractorTopicOption('${Utils.escapeHTML(t).replace(/'/g, "\\'")}')" onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='#ffffff'">
+                                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                                        <i class="fas fa-check-circle" style="color: #8b5cf6; font-size: 12px; flex-shrink: 0;"></i>
+                                                        <span>${Utils.escapeHTML(t)}</span>
+                                                    </div>
+                                                    <span style="font-size: 11px; font-weight: 700; color: #7c3aed;"><i class="fas fa-arrow-left"></i> اختيار</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold mb-2" style="color: #4c5c96; display: flex; align-items: center; gap: 5px;">
@@ -5177,6 +5211,28 @@ const Training = {
             formBody.addEventListener('scroll', checkScroll);
             window.addEventListener('resize', checkScroll);
         }
+
+        // تفعيل استكمال وتصفية مقترحات الموضوع التدريبي للمقاولين
+        const contractorTopicInput = modal.querySelector('#contractor-training-topic');
+        if (contractorTopicInput) {
+            contractorTopicInput.addEventListener('input', (e) => {
+                this.filterContractorTopicSuggestions(e.target.value);
+                const popup = modal.querySelector('#contractor-training-topic-suggestions-popup');
+                if (popup && popup.style.display !== 'block') {
+                    this.toggleContractorTopicSuggestions(true);
+                }
+            });
+        }
+        
+        modal.addEventListener('click', (e) => {
+            const wrapper = modal.querySelector('#contractor-training-topic-wrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                const popup = modal.querySelector('#contractor-training-topic-suggestions-popup');
+                if (popup && popup.style.display === 'block') {
+                    this.toggleContractorTopicSuggestions(false);
+                }
+            }
+        });
 
         // معالج تحديث الأماكن الفرعية عند تغيير الموقع
         const locationSelect = modal.querySelector('#contractor-training-location');
@@ -8226,6 +8282,57 @@ const Training = {
 
         const cleanQuery = String(query || '').trim().toLowerCase();
         const items = container.querySelectorAll('.training-topic-option');
+        let matchCount = 0;
+
+        items.forEach(item => {
+            const text = (item.getAttribute('data-topic-text') || item.textContent || '').toLowerCase();
+            if (!cleanQuery || text.includes(cleanQuery)) {
+                item.style.display = 'flex';
+                matchCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        if (countDisplay) {
+            countDisplay.textContent = `${matchCount} موضوع`;
+        }
+    },
+
+    toggleContractorTopicSuggestions(force) {
+        const popup = document.getElementById('contractor-training-topic-suggestions-popup');
+        const chevron = document.getElementById('contractor-topic-chevron');
+        if (!popup) return;
+        
+        const isVisible = popup.style.display === 'block';
+        const shouldShow = typeof force === 'boolean' ? force : !isVisible;
+        
+        if (shouldShow) {
+            popup.style.display = 'block';
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+            this.filterContractorTopicSuggestions(document.getElementById('contractor-training-topic')?.value || '');
+        } else {
+            popup.style.display = 'none';
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+        }
+    },
+
+    selectContractorTopicOption(topicName) {
+        const input = document.getElementById('contractor-training-topic');
+        if (input) {
+            input.value = topicName;
+            input.focus();
+        }
+        this.toggleContractorTopicSuggestions(false);
+    },
+
+    filterContractorTopicSuggestions(query) {
+        const container = document.getElementById('contractor-topics-list-items');
+        const countDisplay = document.getElementById('contractor-topics-count');
+        if (!container) return;
+
+        const cleanQuery = String(query || '').trim().toLowerCase();
+        const items = container.querySelectorAll('.contractor-topic-option');
         let matchCount = 0;
 
         items.forEach(item => {
