@@ -8,6 +8,7 @@
     <!-- PWA Settings -->
     <link rel="manifest" href="manifest-hub.json">
     <meta name="theme-color" id="metaThemeColor" content="#f8fafc">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="نماذج السلامة">
@@ -893,10 +894,31 @@
         window.addEventListener('offline', updateOnlineStatus);
         updateOnlineStatus();
 
+        const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+
+        function getEffectiveApiUrl() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const p = urlParams.get('apiUrl') || urlParams.get('api');
+                if (p && p.includes('script.google.com')) return p;
+                const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
+                if (s1) {
+                    const parsed = JSON.parse(s1);
+                    if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+                }
+                const s2 = localStorage.getItem('hse_app_settings');
+                if (s2) {
+                    const parsed = JSON.parse(s2);
+                    if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+                }
+            } catch(e) {}
+            return DEFAULT_API_URL;
+        }
+
         // Background config sync for instant forms performance
         async function preloadFormsConfig() {
             try {
-                const GAS_URL = 'https://script.google.com/macros/s/AKfycbz_9l3iNn-n8V77p6h-w5JmZ7N4T-J4o8w-8s5q/exec';
+                const GAS_URL = getEffectiveApiUrl();
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -1007,8 +1029,7 @@
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري المزامنة...';
             }
-
-            const GAS_URL = 'https://script.google.com/macros/s/AKfycbz_9l3iNn-n8V77p6h-w5JmZ7N4T-J4o8w-8s5q/exec';
+            const GAS_URL = getEffectiveApiUrl();
             
             // 1. Sync Daily Safety
             try {
