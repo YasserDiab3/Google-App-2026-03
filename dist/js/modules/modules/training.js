@@ -2872,21 +2872,24 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
         `,e.innerHTML=`
             <div class="training-modal-dialog" style="background: #ffffff; border-radius: 20px; max-width: 980px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.15);">
                 <!-- Modal Header -->
-                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #ffffff;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 20px;">
-                            <i class="fas fa-${t?"edit":"user-plus"}"></i>
-                        </div>
-                        <div>
-                            <h2 style="font-size: 18px; font-weight: 800; margin: 0; color: #ffffff; line-height: 1.3;">
-                                ${t?"\u062A\u0639\u062F\u064A\u0644 \u062A\u062F\u0631\u064A\u0628 \u0645\u0648\u0638\u0641":"\u0625\u0636\u0627\u0641\u0629 \u062A\u062F\u0631\u064A\u0628 \u0645\u0648\u0638\u0641"}
-                            </h2>
-                            <div style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
-                                <span style="font-size: 11px; background: rgba(255,255,255,0.25); padding: 1px 8px; border-radius: 12px; font-weight: 700;">\u0645\u0646\u0638\u0648\u0645\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 - ICAPP</span>
-                                ${t?.id?`<span style="font-size: 11px; opacity: 0.9;">#${t.id}</span>`:""}
-                            </div>
+                <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; position: relative; color: #ffffff;">
+                    <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+                        <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                            <i class="fas fa-${t?"edit":"user-check"}"></i>
                         </div>
                     </div>
+
+                    <!-- Centered Title & Subtitle -->
+                    <div style="flex: 1; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <h2 style="font-size: 19px; font-weight: 800; margin: 0; color: #ffffff; line-height: 1.3;">
+                            ${t?"\u062A\u0639\u062F\u064A\u0644 \u062A\u062F\u0631\u064A\u0628 \u0645\u0648\u0638\u0641":"\u062A\u0633\u062C\u064A\u0644 \u062A\u062F\u0631\u064A\u0628 \u0645\u0648\u0638\u0641"}
+                        </h2>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px;">
+                            <span style="font-size: 11px; background: rgba(255,255,255,0.22); padding: 2px 10px; border-radius: 12px; font-weight: 700;">\u0645\u0646\u0638\u0648\u0645\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 - ICAPP</span>
+                            ${t?.id?`<span style="font-size: 11px; background: rgba(255,255,255,0.15); padding: 2px 8px; border-radius: 12px; font-weight: 600;">#${t.id}</span>`:""}
+                        </div>
+                    </div>
+
                     <button type="button" onclick="Training.closeFormModal()" title="\u0625\u063A\u0644\u0627\u0642" style="background: rgba(255,255,255,0.15); border: none; width: 36px; height: 36px; border-radius: 10px; color: #ffffff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
                         <i class="fas fa-times"></i>
                     </button>
