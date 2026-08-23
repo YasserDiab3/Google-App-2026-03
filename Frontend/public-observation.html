@@ -17,11 +17,11 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="SafetyHub">
-    <meta name="application-name" content="SafetyHub">
+    <meta name="apple-mobile-web-app-title" content="الملاحظات اليومية">
+    <meta name="application-name" content="الملاحظات اليومية">
     <meta name="msapplication-TileColor" content="#0f172a">
     <meta name="msapplication-TileImage" content="./icons/icon-144x144.png">
-    <link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="./manifest-observation.json">
 
     <!-- Favicon & Touch Icons (All Sizes for Mobile & Desktop) -->
     <link rel="icon" type="image/x-icon" href="./favicon.ico">
@@ -5846,5 +5846,13 @@
         </div>
     </div>
     
+    <!-- تسجيل Service Worker لضمان عمل التطبيق بدون إنترنت وبأعلى سرعة -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+            });
+        }
+    </script>
 </body>
 </html>

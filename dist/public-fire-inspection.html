@@ -12,11 +12,11 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="SafetyHub">
-    <meta name="application-name" content="SafetyHub">
+    <meta name="apple-mobile-web-app-title" content="فحص مهمات الحريق">
+    <meta name="application-name" content="فحص مهمات الحريق">
     <meta name="msapplication-TileColor" content="#0f172a">
     <meta name="msapplication-TileImage" content="./icons/icon-144x144.png">
-    <link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="./manifest-fire-inspection.json">
 
     <!-- Favicon & Touch Icons (All Sizes for Mobile & Desktop) -->
     <link rel="icon" type="image/x-icon" href="./favicon.ico">
@@ -1986,5 +1986,13 @@
         </div>
     </div>
 
+    <!-- تسجيل Service Worker لضمان استقرار التطبيق وعمله أوفلاين -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+            });
+        }
+    </script>
 </body>
 </html>

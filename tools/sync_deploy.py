@@ -38,18 +38,27 @@ def sync_directories():
         shutil.copyfile(os.path.join(base_dir, 'vercel.json'), os.path.join(deploy_dir, 'vercel.json'))
         print("Successfully synced vercel.json.")
 
-    pub_src = os.path.join(base_dir, 'Frontend', 'public-observation.html')
-    if os.path.exists(pub_src):
-        for target in [
-            os.path.join(deploy_dir, 'public-observation.html'),
-            os.path.join(deploy_dir, 'dist', 'public-observation.html'),
-            os.path.join(deploy_dir, 'frontend', 'public-observation.html'),
-            os.path.join(deploy_dir, 'frontend', 'dist', 'public-observation.html'),
-            os.path.join(base_dir, 'dist', 'public-observation.html')
-        ]:
-            os.makedirs(os.path.dirname(target), exist_ok=True)
-            shutil.copyfile(pub_src, target)
-        print("Successfully synced public-observation.html across all deploy targets.")
+    public_files = [
+        'public-observation.html',
+        'public-near-miss.html',
+        'public-fire-inspection.html',
+        'manifest-observation.json',
+        'manifest-near-miss.json',
+        'manifest-fire-inspection.json'
+    ]
+    for pfile in public_files:
+        pub_src = os.path.join(base_dir, 'Frontend', pfile)
+        if os.path.exists(pub_src):
+            for target in [
+                os.path.join(deploy_dir, pfile),
+                os.path.join(deploy_dir, 'dist', pfile),
+                os.path.join(deploy_dir, 'frontend', pfile),
+                os.path.join(deploy_dir, 'frontend', 'dist', pfile),
+                os.path.join(base_dir, 'dist', pfile)
+            ]:
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                shutil.copyfile(pub_src, target)
+            print(f"Successfully synced {pfile} across all deploy targets.")
 
 if __name__ == "__main__":
     sync_directories()

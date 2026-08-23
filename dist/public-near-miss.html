@@ -10,9 +10,10 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="application-name" content="SafetyHub">
+    <meta name="apple-mobile-web-app-title" content="الإبلاغ عن وشيكة">
+    <meta name="application-name" content="الإبلاغ عن وشيكة">
     <link rel="icon" type="image/x-icon" href="./favicon.ico">
-    <link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="./manifest-near-miss.json">
 
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1061,6 +1062,12 @@
                 }
             }
         }
+    }
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+        });
     }
 </script>
 </body>
