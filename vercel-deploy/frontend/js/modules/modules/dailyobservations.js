@@ -1028,10 +1028,35 @@ const DailyObservations = {
     },
 
     /**
-     * ✅ الحصول على الإدارات المعتمدة بالنظام
+     * ✅ الحصول على قائمة الإدارات المطابقة تماماً لفلتر وسجلات النظام
      */
     getDepartments() {
-        return this.getDepartmentOptions();
+        const obs = Array.isArray(AppState.appData?.dailyObservations) ? AppState.appData.dailyObservations : [];
+        const fromObs = obs.map(o => o.responsibleDepartment).filter(Boolean);
+        const fromUsers = (AppState.appData?.users || []).map(u => u.department).filter(Boolean);
+        const fromEmployees = (AppState.appData?.employees || []).map(e => e.department).filter(Boolean);
+        const fromSettings = (Array.isArray(AppState.companySettings?.formDepartments) 
+            ? AppState.companySettings.formDepartments 
+            : (typeof AppState.companySettings?.formDepartments === 'string' ? AppState.companySettings.formDepartments.split(/\n|,/) : []))
+            .map(s => s.trim()).filter(Boolean);
+
+        const all = [...new Set([...fromObs, ...fromUsers, ...fromEmployees, ...fromSettings])].filter(Boolean);
+        if (all.length === 0) {
+            return [
+                'CI & Projects Lead',
+                'HSE',
+                'Quality, Health, Safety and Environment',
+                'Top Managament',
+                'إدارة السلامة والصحة المهنية',
+                'ادارة الانتاج',
+                'ادارة التصنيع',
+                'ادارة التعبئة',
+                'ادارة الجودة',
+                'ادارة الصيانة',
+                'ادارة المخازن'
+            ];
+        }
+        return all.sort((a, b) => a.localeCompare(b, 'ar'));
     },
 
     /**
@@ -10250,59 +10275,7 @@ const DailyObservations = {
     
 
     getDepartmentOptions() {
-        const ALL_OFFICIAL_DEPTS = [
-            'إدارة السلامة والصحة المهنية',
-            'إدارة الصيانة والورش',
-            'إدارة الإنتاج والتشغيل',
-            'إدارة الجودة وسلامة الغذاء',
-            'إدارة المستودعات والمخازن',
-            'إدارة الخدمات اللوجستية والنقل',
-            'إدارة الموارد البشرية والشؤون الإدارية',
-            'إدارة الأمن والحراسة',
-            'إدارة المشروعات والهندسة',
-            'إدارة المشتريات والتوريدات',
-            'إدارة تكنولوجيا المعلومات (IT)',
-            'إدارة البيئة والاستدامة',
-            'إدارة الزراعة والمزارع',
-            'إدارة الخدمات العامة والمرافق',
-            'إدارة المالية والمحاسبة',
-            'إدارة التصدير وسلاسل الإمداد'
-        ];
-
-        const normalizedMap = new Map();
-
-        const normalizeKey = (str) => {
-            return String(str || '').toLowerCase()
-                .replace(/[أإآ]/g, 'ا')
-                .replace(/ة/g, 'ه')
-                .replace(/ى/g, 'ي')
-                .replace(/[^\w\u0600-\u06FF]/g, '');
-        };
-
-        // إضافة الإدارات الرسمية أولاً
-        ALL_OFFICIAL_DEPTS.forEach(dept => {
-            const k = normalizeKey(dept);
-            if (k) normalizedMap.set(k, dept);
-        });
-
-        const companySettings = AppState.companySettings || {};
-        const formDepartments = Array.isArray(companySettings.formDepartments)
-            ? companySettings.formDepartments
-            : (typeof companySettings.formDepartments === 'string'
-                ? companySettings.formDepartments.split(/\n|,/).map((item) => item.trim()).filter(Boolean)
-                : []);
-
-        formDepartments.forEach(d => {
-            const clean = String(d || '').trim();
-            if (clean && clean.length >= 2) {
-                const k = normalizeKey(clean);
-                if (k && !normalizedMap.has(k)) {
-                    normalizedMap.set(k, clean);
-                }
-            }
-        });
-
-        return Array.from(normalizedMap.values()).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ar'));
+        return this.getDepartments();
     },
 
     /** مصدر واحد: Training.getSafetyTeamMembers (يُحمَّل training.js قبل dailyobservations.js في index.html) */
