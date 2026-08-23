@@ -271,63 +271,64 @@
         @media (max-width: 768px) {
             .iso-header-table {
                 display: grid;
-                grid-template-columns: auto 1fr;
-                grid-template-areas:
-                    "brand title"
-                    "meta  meta";
-                padding: 10px 12px;
-                gap: 8px;
-                border-radius: 14px;
-                margin-bottom: 14px;
+                grid-template-columns: 66px 1fr 98px;
+                border-radius: 12px;
+                margin-bottom: 12px;
                 border: 2px solid #bfdbfe;
                 border-top: 4px solid #2563eb;
                 background: #ffffff;
-                box-shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
+                overflow: hidden;
             }
 
+            /* 1. العمود الأيمن: الشعار والاسم */
             .iso-col-brand {
-                grid-area: brand;
-                border: none;
-                padding: 0;
+                padding: 6px 2px;
+                gap: 3px;
+                border-left: 1px solid #dbeafe;
+                border-bottom: none;
                 display: flex;
-                flex-direction: row;
+                flex-direction: column;
+                justify-content: center;
                 align-items: center;
-                justify-content: flex-start;
-                gap: 6px;
+                background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+                min-width: 0;
             }
 
             .iso-logo-wrap {
-                max-width: 46px;
-                min-height: 32px;
-                max-height: 36px;
+                max-width: 50px;
+                min-height: 28px;
+                max-height: 32px;
                 padding: 2px 4px;
-                border-radius: 8px;
+                border-radius: 6px;
             }
 
             .iso-logo-img {
-                max-height: 28px;
-                max-width: 40px;
+                max-height: 24px;
+                max-width: 42px;
             }
 
             .iso-dept-name {
-                font-size: 0.62rem;
+                font-size: 0.46rem;
                 font-weight: 800;
-                color: #1e3a8a;
-                white-space: nowrap;
-                line-height: 1.2;
-                text-align: right;
+                color: #1e40af;
+                text-align: center;
+                white-space: normal;
+                line-height: 1.15;
             }
 
+            /* 2. العمود الأوسط: عنوان النموذج */
             .iso-col-title {
-                grid-area: title;
-                border: none;
-                padding: 0;
+                padding: 6px 3px;
+                border-bottom: none;
+                gap: 3px;
                 display: flex;
                 flex-direction: column;
-                align-items: flex-end;
                 justify-content: center;
-                text-align: left;
-                gap: 2px;
+                align-items: center;
+                text-align: center;
+                min-width: 0;
+                background: #ffffff;
             }
 
             .iso-doc-title {
@@ -337,37 +338,36 @@
                 white-space: nowrap;
                 line-height: 1.2;
                 letter-spacing: -0.2px;
+                text-align: center;
             }
 
             .iso-doc-subtitle {
-                font-size: 0.52rem;
+                font-size: 0.48rem;
                 line-height: 1.2;
-                text-align: left;
+                text-align: center;
                 padding: 1px 6px;
                 white-space: nowrap;
             }
 
+            /* 3. العمود الأيسر: بيانات الوثيقة */
             .iso-col-meta {
-                grid-area: meta;
-                border: none;
-                border-top: 1px dashed #cbd5e1;
-                padding: 6px 2px 0 2px;
-                background: transparent;
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 4px;
-                width: 100%;
+                padding: 4px 4px;
+                border-right: 1px solid #dbeafe;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                gap: 2px;
+                background: linear-gradient(180deg, #f0f7ff 0%, #f8fafc 100%);
+                min-width: 0;
             }
 
             .iso-meta-row {
-                border: none;
-                padding: 0;
                 display: flex;
-                flex-direction: column;
+                justify-content: space-between;
                 align-items: center;
-                justify-content: center;
                 gap: 2px;
-                text-align: center;
+                border-bottom: 1px dashed #e2e8f0;
+                padding-bottom: 1px;
             }
 
             .iso-meta-row:last-child {
@@ -376,20 +376,18 @@
             }
 
             .iso-meta-key {
-                font-size: 0.56rem;
-                color: #64748b;
+                font-size: 0.46rem;
                 font-weight: 700;
+                color: #64748b;
                 white-space: nowrap;
             }
 
             .iso-meta-val {
-                font-size: 0.62rem;
+                font-size: 0.46rem;
                 font-weight: 800;
-                padding: 1px 4px;
-                border-radius: 4px;
+                padding: 0 2px;
+                border-radius: 3px;
                 white-space: nowrap;
-                text-align: center;
-                width: 100%;
             }
         }
 
