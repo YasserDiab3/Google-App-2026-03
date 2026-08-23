@@ -2793,6 +2793,11 @@
     </div>
 
     <script>
+        var qrStream = null;
+        var qrScanning = false;
+        window._qrStream = null;
+        window._qrScanning = false;
+
         const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
         
         function getEffectiveApiUrl() {
@@ -5295,9 +5300,6 @@
         // ==========================================
         // 2. ماسح QR الموقع السريع مع فك التشفير الآمن
         // ==========================================
-        let qrStream = null;
-        let qrScanning = false;
-
         function safeB64DecodeUnicode(str) {
             try {
                 return decodeURIComponent(atob(str).split('').map(function(c) {
@@ -5315,30 +5317,103 @@
         async function openQrScannerModal() {
             const modal = document.getElementById('qrScannerModal');
             const video = document.getElementById('qrVideo');
-            modal.style.display = 'flex';
+            if (modal) modal.style.display = 'flex';
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showToast('المتصفح لا يدعم الوصول المباشر للكاميرا، يرجى اختيار صورة QR', 'warning', 4000);
+                return;
+            }
 
             try {
-                qrStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }
-                });
-                video.srcObject = qrStream;
-                video.setAttribute('playsinline', true);
-                video.play();
+                closeQrScannerStream_();
+
+                let stream = null;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: 'environment' } }
+                    });
+                } catch (eEnv) {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: true
+                    });
+                }
+
+                window._qrStream = stream;
+                qrStream = stream;
+
+                if (video) {
+                    video.srcObject = stream;
+                    video.setAttribute('playsinline', 'true');
+                    video.setAttribute('webkit-playsinline', 'true');
+                    video.muted = true;
+                    await video.play();
+                }
+
+                window._qrScanning = true;
                 qrScanning = true;
                 requestAnimationFrame(scanQrTick);
             } catch (err) {
-                alert('تعذر فتح الكاميرا لمسح الـ QR: ' + (err.message || err));
-                closeQrScannerModal();
+                console.warn('QR camera open error:', err);
+                const msg = (err && (err.message || err.name)) ? String(err.message || err.name) : 'يرجى السماح بالوصول للكاميرا';
+                showToast('تعذر فتح الكاميرا: ' + msg, 'error', 4000);
             }
         }
 
+        function closeQrScannerStream_() {
+            try {
+                if (window._qrStream) {
+                    window._qrStream.getTracks().forEach(track => track.stop());
+                    window._qrStream = null;
+                }
+                if (typeof qrStream !== 'undefined' && qrStream) {
+                    qrStream.getTracks().forEach(track => track.stop());
+                    qrStream = null;
+                }
+            } catch(e) {}
+        }
+
         function closeQrScannerModal() {
+            window._qrScanning = false;
             qrScanning = false;
-            if (qrStream) {
-                qrStream.getTracks().forEach(track => track.stop());
-                qrStream = null;
-            }
-            document.getElementById('qrScannerModal').style.display = 'none';
+            closeQrScannerStream_();
+            const modal = document.getElementById('qrScannerModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function triggerQrFileInput() {
+            const fileInput = document.getElementById('qrFileInput');
+            if (fileInput) fileInput.click();
+        }
+
+        function handleQrFileSelected(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    if (typeof jsQR !== 'undefined') {
+                        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+                        if (code && code.data) {
+                            handleQrDetectedData(code.data);
+                        } else {
+                            showToast('لم يتم التعرف على رمز QR واضح في الصورة المختارة', 'warning', 3000);
+                        }
+                    } else {
+                        showToast('مكتبة مسح الرموز قيد التحميل، يرجى المحاولة ثانية', 'info', 2500);
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
         }
 
         function scanQrTick() {
@@ -5840,8 +5915,12 @@
                 <div style="position: absolute; width: 180px; height: 180px; border: 2px dashed #38bdf8; border-radius: 12px; pointer-events: none;"></div>
             </div>
 
-            <div style="padding: 12px 16px; background: #f8fafc; text-align: center; font-size: 0.8rem; color: #64748b;">
-                وجّه الكاميرا نحو ملصق الـ QR الخاص بالموقع لتحديده تلقائياً
+            <div style="padding: 12px 16px; background: #f8fafc; text-align: center; font-size: 0.8rem; color: #64748b; display: flex; flex-direction: column; gap: 8px; align-items: center;">
+                <div>وجّه الكاميرا نحو ملصق الـ QR الخاص بالموقع لتحديده تلقائياً</div>
+                <input type="file" id="qrFileInput" accept="image/*" onchange="handleQrFileSelected(event)" style="display: none;">
+                <button type="button" onclick="triggerQrFileInput()" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 8px; padding: 6px 14px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-image"></i> أو اختر صورة QR من المعرض / الكاميرا
+                </button>
             </div>
         </div>
     </div>
