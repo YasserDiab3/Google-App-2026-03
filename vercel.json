@@ -81,6 +81,8 @@
     { "source": "/hub", "destination": "/forms-hub.html" },
     { "source": "/obs", "destination": "/public-observation.html" },
     { "source": "/near-miss", "destination": "/public-near-miss.html" },
-    { "source": "/fire", "destination": "/public-fire-inspection.html" }
+    { "source": "/fire", "destination": "/public-fire-inspection.html" },
+    { "source": "/daily-safety", "destination": "/public-daily-safety.html" },
+    { "source": "/patrol", "destination": "/public-daily-safety.html" }
   ]
 }

@@ -915,7 +915,28 @@
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px;">
-                <!-- 1. \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629 -->
+                <!-- 1. \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u064A\u0648\u0645\u064A \u0644\u0645\u0633\u0624\u0648\u0644\u064A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 -->
+                <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div style="width: 46px; height: 46px; border-radius: 12px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                                <i class="fas fa-clipboard-user"></i>
+                            </div>
+                            <div>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">\u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u064A\u0648\u0645\u064A \u0644\u0645\u0633\u0624\u0648\u0644\u064A \u0627\u0644\u0633\u0644\u0627\u0645\u0629</h3>
+                                <span style="font-size: 11px; background: #dcfce7; color: #059669; padding: 2px 8px; border-radius: 6px; font-weight: 700;">18 \u0628\u0646\u062F\u0627\u064B \u0648\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0637\u0644\u0645\u0628\u0627\u062A</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
+                            \u062C\u0648\u0644\u0629 \u0627\u0644\u062A\u0641\u062A\u064A\u0634 \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A\u0629 \u0627\u0644\u0634\u0627\u0645\u0644\u0629 \u0644\u0645\u0633\u0624\u0648\u0644\u064A \u0648\u0645\u0634\u0631\u0641\u064A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0639\u0627\u064A\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0641\u064A \u0643\u0627\u0641\u0629 \u0627\u0644\u0639\u0646\u0627\u0628\u0631 \u0648\u0627\u0644\u0645\u062E\u0627\u0632\u0646.
+                        </p>
+                    </div>
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('public-daily-safety.html', '_blank')" style="width: 100%; justify-content: center; background: #059669;">
+                        <i class="fas fa-external-link-alt ml-2"></i> \u0641\u062A\u062D \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u064A\u0648\u0645\u064A
+                    </button>
+                </div>
+
+                <!-- 2. \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629 -->
                 <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">

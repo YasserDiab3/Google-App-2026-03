@@ -338,7 +338,7 @@ function doPost(e) {
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -407,7 +407,8 @@ function doPost(e) {
             'getAuthBootstrapPolicy', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke',
             'submitPublicObservation', 'getPublicObservationConfig',
             'submitPublicNearMiss', 'getPublicNearMissConfig',
-            'submitPublicFireInspection', 'getPublicFireInspectionConfig'
+            'submitPublicFireInspection', 'getPublicFireInspectionConfig',
+            'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
         var needsSessionForWrite = !isReadOnlyAction;
@@ -531,6 +532,10 @@ function doPost(e) {
                 result = submitPublicFireInspection(payload || postData.data || postData || {});
             } else if (action === 'getPublicFireInspectionConfig' && typeof getPublicFireInspectionConfig === 'function') {
                 result = getPublicFireInspectionConfig(payload || postData.data || postData || {});
+            } else if (action === 'submitPublicDailySafetyChecklist' && typeof submitPublicDailySafetyChecklist === 'function') {
+                result = submitPublicDailySafetyChecklist(payload || postData.data || postData || {});
+            } else if (action === 'getPublicDailySafetyConfig' && typeof getPublicDailySafetyConfig === 'function') {
+                result = getPublicDailySafetyConfig();
             } else if (typeof ActionHandlers[action] === 'function') {
                 const spreadsheetId = getSpreadsheetId() || postData.spreadsheetId || '';
                 result = ActionHandlers[action](payload, postData, action, actorUserData, spreadsheetId);

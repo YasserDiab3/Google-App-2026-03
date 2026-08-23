@@ -44,6 +44,13 @@
       "description": "فتح نموذج الفحص الشهري لمعدات الإطفاء",
       "url": "./public-fire-inspection.html?source=pwa_shortcut",
       "icons": [{ "src": "icons/icapp-logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "المرور اليومي لمسؤولي السلامة",
+      "short_name": "المرور اليومي",
+      "description": "فتح نموذج المرور اليومي وقائمة التحقق الميدانية",
+      "url": "./public-daily-safety.html?source=pwa_shortcut",
+      "icons": [{ "src": "icons/icapp-logo.png", "sizes": "192x192" }]
     }
   ]
 }

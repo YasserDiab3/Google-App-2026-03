@@ -511,6 +511,19 @@
             --icon-border: rgba(239, 68, 68, 0.3);
         }
 
+        .card-daily-safety {
+            --card-accent: #059669;
+            --icon-bg: #ecfdf5;
+            --icon-color: #059669;
+            --icon-border: #a7f3d0;
+        }
+        [data-theme="dark"] .card-daily-safety {
+            --card-accent: #10b981;
+            --icon-bg: rgba(16, 185, 129, 0.15);
+            --icon-color: #34d399;
+            --icon-border: rgba(16, 185, 129, 0.3);
+        }
+
         /* Offline Sync Notice */
         .offline-queue-bar {
             background: #fffbeb;
@@ -685,13 +698,33 @@
                 <i class="fas fa-layer-group text-blue-500"></i>
                 <span>النماذج المتاحة</span>
             </div>
-            <span class="forms-count" id="formsCountBadge">3 نماذج</span>
+            <span class="forms-count" id="formsCountBadge">4 نماذج</span>
         </div>
 
         <!-- Forms Grid -->
         <div class="forms-grid" id="formsGrid">
             
-            <!-- 1. نموذج الملاحظات اليومية -->
+            <!-- 1. نموذج المرور اليومي لمسؤولي السلامة -->
+            <div class="form-card card-daily-safety" onclick="navigateToForm('public-daily-safety.html')" data-keywords="مرور يومي جولة تفتيش قائمة تحقق سلامة وردية daily safety checklist patrol">
+                <div class="form-card-left">
+                    <div class="form-icon-wrap">
+                        <i class="fas fa-clipboard-user"></i>
+                    </div>
+                    <div class="form-text">
+                        <div class="form-badges">
+                            <span class="badge-tag fast" style="color: #059669; background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.3);"><i class="fas fa-shield-check ml-1"></i>مسؤولي السلامة</span>
+                            <span class="badge-tag">يومي شامل</span>
+                        </div>
+                        <div class="form-card-title">المرور اليومي لمسؤولي السلامة</div>
+                        <div class="form-card-desc">جولة التفتيش الميدانية وقائمة التحقق الشاملة (18 بنداً وقراءة الطلمبات)</div>
+                    </div>
+                </div>
+                <div class="form-action-btn" style="background: rgba(5, 150, 105, 0.1); color: #059669; border-color: rgba(5, 150, 105, 0.2);">
+                    <i class="fas fa-arrow-left"></i>
+                </div>
+            </div>
+
+            <!-- 2. نموذج الملاحظات اليومية -->
             <div class="form-card card-obs" onclick="navigateToForm('public-observation.html')" data-keywords="ملاحظة ملاحظات يومية سلوك خطر تدقيق unsafe act condition">
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
@@ -711,7 +744,7 @@
                 </div>
             </div>
 
-            <!-- 2. نموذج الحوادث الوشيكة -->
+            <!-- 3. نموذج الحوادث الوشيكة -->
             <div class="form-card card-near-miss" onclick="navigateToForm('public-near-miss.html')" data-keywords="حادث وشيك حوادث وشيكة كاد يقع خطر داهم near miss incident">
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
@@ -731,7 +764,7 @@
                 </div>
             </div>
 
-            <!-- 3. نموذج فحص الحريق -->
+            <!-- 4. نموذج فحص الحريق -->
             <div class="form-card card-fire" onclick="navigateToForm('public-fire-inspection.html')" data-keywords="حريق اطفاء طفاية طفايات مضخات فحص شهري معدات fire extinguisher">
                 <div class="form-card-left">
                     <div class="form-icon-wrap">

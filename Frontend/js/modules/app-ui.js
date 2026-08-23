@@ -6640,7 +6640,28 @@ window.UI = {
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px;">
-                <!-- 1. نموذج الملاحظات اليومية -->
+                <!-- 1. نموذج المرور اليومي لمسؤولي السلامة -->
+                <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div style="width: 46px; height: 46px; border-radius: 12px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                                <i class="fas fa-clipboard-user"></i>
+                            </div>
+                            <div>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">المرور اليومي لمسؤولي السلامة</h3>
+                                <span style="font-size: 11px; background: #dcfce7; color: #059669; padding: 2px 8px; border-radius: 6px; font-weight: 700;">18 بنداً وقراءة الطلمبات</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
+                            جولة التفتيش الميدانية الشاملة لمسؤولي ومشرفي السلامة ومطابقة معايير السلامة في كافة العنابر والمخازن.
+                        </p>
+                    </div>
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('public-daily-safety.html', '_blank')" style="width: 100%; justify-content: center; background: #059669;">
+                        <i class="fas fa-external-link-alt ml-2"></i> فتح نموذج المرور اليومي
+                    </button>
+                </div>
+
+                <!-- 2. نموذج الملاحظات اليومية -->
                 <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">

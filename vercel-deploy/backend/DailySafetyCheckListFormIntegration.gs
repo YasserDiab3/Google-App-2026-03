@@ -1419,3 +1419,99 @@ function dscFixReportNumberColumn() {
     return { success: false, message: 'dscFixReportNumberColumn: ' + error.toString() };
   }
 }
+
+/**
+ * استقبال وحفظ تقرير المرور اليومي للسلامة العام (Public Web / Zero-Login)
+ */
+function submitPublicDailySafetyChecklist(payload) {
+  try {
+    if (!payload || typeof payload !== 'object') {
+      return { success: false, message: 'بيانات المرور اليومي غير صالحة' };
+    }
+
+    // Honeypot spam protection
+    if (payload._hp_field || payload.website || payload.hp) {
+      return { success: true, message: 'تم إرسال تقرير المرور اليومي بنجاح' };
+    }
+
+    var siteName = String(payload.siteName || payload.siteId || '').trim();
+    if (!siteName) {
+      return { success: false, message: 'يرجى اختيار المصنع / الموقع' };
+    }
+
+    var inspectorName = String(payload.inspectorName || payload.inspector || '').trim();
+    if (!inspectorName) {
+      return { success: false, message: 'يرجى اختيار اسم مسؤول السلامة القائم بالمرور' };
+    }
+
+    var shift = String(payload.shift || '').trim() || 'الأولى';
+    var date = payload.date ? formatDateOnly(payload.date) : formatDateOnly(new Date());
+
+    var recordData = {
+      siteId: siteName,
+      siteName: siteName,
+      inspectorName: inspectorName,
+      shift: shift,
+      date: date,
+      notes: payload.notes || '',
+      q1: payload.q1 || '',
+      q2: payload.q2 || '',
+      q3: payload.q3 || '',
+      q4: payload.q4 || '',
+      q5: payload.q5 || '',
+      q6: payload.q6 || '',
+      q7: payload.q7 || '',
+      q8: payload.q8 || '',
+      q9: payload.q9 || '',
+      q10: payload.q10 || '',
+      q11: payload.q11 || '',
+      q12: payload.q12 || '',
+      q13: payload.q13 || '',
+      q14: payload.q14 || '',
+      q15: payload.q15 || '',
+      q15Reading: payload.q15Reading || payload.q16 || '',
+      q16: payload.q16 || payload.q17 || '',
+      q17: payload.q17 || payload.q18 || '',
+      formSubmittedAt: new Date().toISOString()
+    };
+
+    var res = saveDailySafetyCheckListToAppSheet(recordData);
+    return res;
+  } catch (e) {
+    Logger.log('Error in submitPublicDailySafetyChecklist: ' + e.toString());
+    return { success: false, message: 'حدث خطأ أثناء معالجة تقرير المرور اليومي: ' + e.message };
+  }
+}
+
+/**
+ * جلب إعدادات نموذج المرور اليومي العام (المصانع والمفتشين والورديات)
+ */
+function getPublicDailySafetyConfig() {
+  try {
+    var sites = [];
+    var safetyMembers = [];
+
+    if (typeof getPublicObservationConfig === 'function') {
+      var obsCfg = getPublicObservationConfig();
+      if (obsCfg && Array.isArray(obsCfg.sites) && obsCfg.sites.length > 0) sites = obsCfg.sites;
+      if (obsCfg && Array.isArray(obsCfg.safetyMembers) && obsCfg.safetyMembers.length > 0) safetyMembers = obsCfg.safetyMembers;
+    }
+
+    return {
+      success: true,
+      sites: sites.length > 0 ? sites : [
+        { name: 'ICAPP-1', id: 'ICAPP-1' },
+        { name: 'ICAPP-2', id: 'ICAPP-2' }
+      ],
+      safetyMembers: safetyMembers.length > 0 ? safetyMembers : [
+        { name: 'م/ أحمد عبد السلام', role: 'مدير السلامة والصحة المهنية' },
+        { name: 'م/ ممدوح أحمد', role: 'مهندس سلامة أول' },
+        { name: 'أ/ كريم محمد', role: 'أخصائي سلامة وصحة مهنية' },
+        { name: 'أ/ سامح عبد الرحمن', role: 'مشرف سلامة وردية' }
+      ],
+      shifts: ['الأولى', 'الثانية', 'الثالثة']
+    };
+  } catch (e) {
+    return { success: false, message: e.message };
+  }
+}
