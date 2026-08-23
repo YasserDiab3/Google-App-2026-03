@@ -3299,16 +3299,23 @@
             'إدارة الزراعة'
         ];
 
-        const ALL_SYSTEM_SAFETY_MEMBERS = [
-            { name: 'م/ ياسر دياب', role: 'مدير إدارة السلامة والصحة المهنية', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
-            { name: 'أ/ محمد إبراهيم', role: 'أخصائي سلامة وصحة مهنية أول', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
-            { name: 'أ/ أحمد حسن', role: 'مفتش سلامة ميداني', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
-            { name: 'أ/ محمود علي', role: 'مشرف سلامة وصحة مهنية', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
-            { name: 'أ/ إبراهيم عبد الله', role: 'مسؤول بيئة واستدامة', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
-            { name: 'أ/ مصطفى كمال', role: 'مفتش حماية مدنية ومكافحة حريق', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
-            { name: 'أ/ طارق سعيد', role: 'أخصائي تصاريح عمل وتقييم مخاطر', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
-            { name: 'أ/ سامح عبد الرحمن', role: 'مشرف سلامة وردية', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true }
-        ];
+        const ALL_SYSTEM_SAFETY_MEMBERS = [];
+        
+        function getLiveCachedSafetyMembers() {
+            try {
+                const s1 = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
+                if (s1) {
+                    const p1 = JSON.parse(s1);
+                    if (p1 && Array.isArray(p1.safetyMembers) && p1.safetyMembers.length > 0) return p1.safetyMembers;
+                }
+                const s2 = localStorage.getItem('HSE_DAILY_SAFETY_MEMBERS');
+                if (s2) {
+                    const p2 = JSON.parse(s2);
+                    if (Array.isArray(p2) && p2.length > 0) return p2;
+                }
+            } catch(e) {}
+            return [];
+        }
 
         function renderDefaultFields() {
             let defaultDepts = [...ALL_SYSTEM_DEPARTMENTS];
@@ -3334,7 +3341,7 @@
             loadedConfig = {
                 sites: defaultSites,
                 departments: defaultDepts,
-                safetyMembers: ALL_SYSTEM_SAFETY_MEMBERS
+                safetyMembers: getLiveCachedSafetyMembers()
             };
             renderConfigData(loadedConfig);
         }
@@ -3421,20 +3428,14 @@
                 deptSelect.appendChild(opt);
             });
 
-            // 3. مسؤولو فريق السلامة والصحة المهنية (بدون أي تكرار)
+            // 3. مسؤولو فريق السلامة والصحة المهنية (من قاعدة البيانات الفعلية حصراً)
             const ownerSelect = document.getElementById('ownerSelect');
             const previousOwner = ownerSelect.value;
             ownerSelect.innerHTML = '<option value="">— اختر اسمك من فريق السلامة —</option>';
             
-            const combinedMembers = [...ALL_SYSTEM_SAFETY_MEMBERS];
-            if (Array.isArray(cfg.safetyMembers) && cfg.safetyMembers.length > 0) {
-                cfg.safetyMembers.forEach(m => {
-                    const mName = typeof m === 'string' ? m.trim() : String(m.name || '').trim();
-                    if (mName && !combinedMembers.some(cm => cm.name === mName)) {
-                        combinedMembers.push(typeof m === 'string' ? { name: mName, role: 'فريق السلامة والصحة المهنية' } : m);
-                    }
-                });
-            }
+            const realMembers = (Array.isArray(cfg.safetyMembers) && cfg.safetyMembers.length > 0)
+                ? cfg.safetyMembers
+                : getLiveCachedSafetyMembers();
 
             const seenKeys = new Set();
             function normalizeKey(str) {
@@ -3448,7 +3449,7 @@
                     .replace(/\s+/g, ' ');
             }
 
-            combinedMembers.forEach(mem => {
+            realMembers.forEach(mem => {
                 const mName = typeof mem === 'string' ? mem.trim() : String(mem.name || '').trim();
                 if (!mName || mName.includes('مجهول') || mName.includes('عامة') || mName.length < 3) return;
                 const key = normalizeKey(mName);

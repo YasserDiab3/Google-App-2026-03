@@ -572,10 +572,6 @@
                         </label>
                         <select id="inspectorSelect" class="form-select" required>
                             <option value="">— اختر مسؤول السلامة —</option>
-                            <option value="م/ أحمد عبد السلام">م/ أحمد عبد السلام</option>
-                            <option value="م/ ممدوح أحمد">م/ ممدوح أحمد</option>
-                            <option value="أ/ كريم محمد">أ/ كريم محمد</option>
-                            <option value="أ/ سامح عبد الرحمن">أ/ سامح عبد الرحمن</option>
                         </select>
                     </div>
                 </div>
@@ -814,11 +810,15 @@
         // Cached Config
         function loadCachedConfig() {
             try {
-                const cached = JSON.parse(localStorage.getItem('HSE_PUBLIC_OBS_CONFIG') || '{}');
-                if (cached.sites && Array.isArray(cached.sites)) {
+                const obsCfg = JSON.parse(localStorage.getItem('HSE_PUBLIC_OBS_CONFIG') || '{}');
+                const rawSites = JSON.parse(localStorage.getItem('HSE_DAILY_SAFETY_SITES') || 'null') || obsCfg.sites;
+                const rawMembers = JSON.parse(localStorage.getItem('HSE_DAILY_SAFETY_MEMBERS') || 'null') || obsCfg.safetyMembers;
+
+                if (rawSites && Array.isArray(rawSites) && rawSites.length > 0) {
                     const siteSelect = document.getElementById('siteSelect');
+                    const prevSite = siteSelect.value;
                     siteSelect.innerHTML = '<option value="">— اختر المصنع —</option>';
-                    cached.sites.forEach(s => {
+                    rawSites.forEach(s => {
                         const name = typeof s === 'string' ? s : (s.name || s.id);
                         if (name) {
                             const opt = document.createElement('option');
@@ -827,12 +827,14 @@
                             siteSelect.appendChild(opt);
                         }
                     });
+                    if (prevSite) siteSelect.value = prevSite;
                 }
 
-                if (cached.safetyMembers && Array.isArray(cached.safetyMembers)) {
+                if (rawMembers && Array.isArray(rawMembers) && rawMembers.length > 0) {
                     const inspSelect = document.getElementById('inspectorSelect');
+                    const prevInsp = inspSelect.value;
                     inspSelect.innerHTML = '<option value="">— اختر مسؤول السلامة —</option>';
-                    cached.safetyMembers.forEach(m => {
+                    rawMembers.forEach(m => {
                         const name = typeof m === 'string' ? m : m.name;
                         if (name) {
                             const opt = document.createElement('option');
@@ -841,6 +843,7 @@
                             inspSelect.appendChild(opt);
                         }
                     });
+                    if (prevInsp) inspSelect.value = prevInsp;
                 }
             } catch(e) {}
         }
