@@ -1028,7 +1028,7 @@ const DailyObservations = {
     },
 
     /**
-     * ✅ الحصول على قائمة إدارات النظام الرسمية المعتمدة (بدون أي مسميات إنجليزية أو افتراضية)
+     * ✅ الحصول على قائمة كافة الإدارات الفعلية من قاعدة البيانات (مطابقة لنموذج تسجيل الملاحظات)
      */
     getDepartments() {
         const rawDepts = [];
@@ -1045,28 +1045,36 @@ const DailyObservations = {
             : (typeof compSettings.departments === 'string' ? compSettings.departments.split(/\n|,/) : []);
         legacyDepts.forEach(d => rawDepts.push(d));
 
-        // 2. من سجلات الموظفين والمستخدمين الفعلية بالنظام
+        // 2. من سجلات الموظفين والمستخدمين والملاحظات الفعلية بالنظام
         (AppState.appData?.employees || []).forEach(e => rawDepts.push(e.department));
         (AppState.appData?.users || []).forEach(u => rawDepts.push(u.department));
+        (AppState.appData?.dailyObservations || []).forEach(o => rawDepts.push(o.responsibleDepartment || o.department));
+        (AppState.appData?.departments || []).forEach(d => rawDepts.push(typeof d === 'string' ? d : (d.name || d.departmentName)));
 
-        // 3. تطبيع وتوحيد المسميات الرسمية واستبعاد أي نصوص إنجليزية
-        const normalizedMap = new Map();
+        // 3. من التكوين المحفوظ لنموذج الملاحظات
+        try {
+            const cachedPublic = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
+            if (cachedPublic) {
+                const parsed = JSON.parse(cachedPublic);
+                if (Array.isArray(parsed.departments)) {
+                    parsed.departments.forEach(d => rawDepts.push(d));
+                }
+            }
+        } catch(e) {}
 
-        const ALIAS_MAP = {
-            'hse': 'إدارة السلامة والصحة المهنية',
-            'quality health safety and environment': 'إدارة السلامة والصحة المهنية',
-            'ci projects lead': 'إدارة المشروعات',
-            'projects': 'إدارة المشروعات',
-            'top managament': 'إدارة الموارد البشرية',
-            'top management': 'إدارة الموارد البشرية',
-            'ادارة الانتاج': 'إدارة الإنتاج',
-            'ادارة التصنيع': 'إدارة الإنتاج',
-            'ادارة التعبئة': 'إدارة الإنتاج',
-            'ادارة الجودة': 'إدارة الجودة',
-            'ادارة الصيانة': 'إدارة الصيانة',
-            'ادارة المخازن': 'إدارة المخازن'
-        };
+        try {
+            const settingsCache = localStorage.getItem('HSE_SETTINGS_CACHE') || localStorage.getItem('appData');
+            if (settingsCache) {
+                const parsed = JSON.parse(settingsCache);
+                if (parsed.companySettings && (parsed.companySettings.formDepartments || parsed.companySettings.departments)) {
+                    const raw = parsed.companySettings.formDepartments || parsed.companySettings.departments;
+                    const list = Array.isArray(raw) ? raw : String(raw).split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+                    list.forEach(d => rawDepts.push(d));
+                }
+            }
+        } catch(e) {}
 
+        const seenMap = new Map();
         const normalizeKey = (str) => {
             return String(str || '').toLowerCase()
                 .replace(/[أإآ]/g, 'ا')
@@ -1075,62 +1083,17 @@ const DailyObservations = {
                 .replace(/[^\w\u0600-\u06FF]/g, '');
         };
 
-        const addCleanDept = (deptName) => {
-            if (!deptName) return;
-            const str = String(deptName).trim().replace(/\s+/g, ' ');
-            if (!str || str.length < 2) return;
-
-            const lowerKey = str.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-            if (ALIAS_MAP[lowerKey]) {
-                const mapped = ALIAS_MAP[lowerKey];
-                normalizedMap.set(normalizeKey(mapped), mapped);
-                return;
+        rawDepts.forEach(raw => {
+            if (!raw) return;
+            const clean = String(raw).trim().replace(/\s+/g, ' ');
+            if (!clean || clean.length < 2) return;
+            const normKey = normalizeKey(clean);
+            if (normKey && !seenMap.has(normKey)) {
+                seenMap.set(normKey, clean);
             }
+        });
 
-            const arKey = normalizeKey(str);
-            if (ALIAS_MAP[arKey]) {
-                const mapped = ALIAS_MAP[arKey];
-                normalizedMap.set(normalizeKey(mapped), mapped);
-                return;
-            }
-
-            // استبعاد أي نص بالإنجليزية فقط
-            if (!/[\u0600-\u06FF]/.test(str)) return;
-
-            // توحيد بداية اسم الإدارة لتكون رسمية (إدارة ...)
-            let cleanName = str;
-            if (cleanName.startsWith('ادارة ')) {
-                cleanName = 'إدارة ' + cleanName.substring(6).trim();
-            } else if (!cleanName.startsWith('إدارة ')) {
-                cleanName = 'إدارة ' + cleanName;
-            }
-
-            const finalKey = normalizeKey(cleanName);
-            if (finalKey && !normalizedMap.has(finalKey)) {
-                normalizedMap.set(finalKey, cleanName);
-            }
-        };
-
-        rawDepts.forEach(addCleanDept);
-
-        // إذا لم تتوفر بعد أي إدارات من السجلات، استخدام الإدارات الأساسية للنظام
-        if (normalizedMap.size === 0) {
-            [
-                'إدارة السلامة والصحة المهنية',
-                'إدارة الصيانة',
-                'إدارة الإنتاج',
-                'إدارة الجودة',
-                'إدارة المخازن',
-                'إدارة الموارد البشرية',
-                'إدارة الأمن والحراسة',
-                'إدارة المشروعات',
-                'إدارة المشتريات',
-                'إدارة الخدمات اللوجستية',
-                'إدارة الزراعة'
-            ].forEach(addCleanDept);
-        }
-
-        return Array.from(normalizedMap.values()).sort((a, b) => a.localeCompare(b, 'ar'));
+        return Array.from(seenMap.values()).sort((a, b) => a.localeCompare(b, 'ar'));
     },
 
     /**
