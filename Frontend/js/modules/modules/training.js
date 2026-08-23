@@ -456,7 +456,7 @@ const Training = {
                         مصفوفة التدريب
                     </button>
                     ` : ''}
-                    <button id="add-training-btn" class="btn-primary">
+                    <button id="add-training-btn" onclick="Training.showForm()" class="btn-primary">
                         <i class="fas fa-plus ml-2"></i>
                         نموذج حضور تدريب
                     </button>
@@ -3207,7 +3207,7 @@ const Training = {
                 <div class="empty-state">
                     <i class="fas fa-graduation-cap text-4xl text-gray-300 mb-4"></i>
                     <p class="text-gray-500">لا توجد برامج تدريبية</p>
-                    <button id="add-training-empty-btn" class="btn-primary mt-4">
+                    <button id="add-training-empty-btn" onclick="Training.showForm()" class="btn-primary mt-4">
                         <i class="fas fa-plus ml-2"></i>
                         إضافة برنامج تدريبي
                     </button>
@@ -8196,8 +8196,17 @@ const Training = {
             if (e.target === modalOverlay) this.closeFormModal();
         });
 
+        // ربط مباشر لأحداث المودال لضمان الاستجابة الفورية
+        const formEl = modalOverlay.querySelector('#training-form');
+        if (formEl) {
+            formEl.onsubmit = (e) => this.handleSubmit(e);
+        }
+        const printBtn = modalOverlay.querySelector('#training-form-print-btn');
+        if (printBtn) {
+            printBtn.onclick = () => this.printAttendanceFormFromScreen();
+        }
+
         this.initializeFormInteractions();
-        this.setupEventListeners();
         const participants = Array.isArray(data?.participants) ? data.participants : [];
         this.loadExistingParticipants(participants);
     },
@@ -16989,6 +16998,17 @@ if (typeof window !== 'undefined') {
                     try { if (typeof Training !== 'undefined' && Training.refreshSiteDropdowns) Training.refreshSiteDropdowns(); } catch (e) {}
                 });
             }
+
+            // تفويض النقر الشامل لزر نموذج حضور تدريب لضمان الفتح في كل الحالات
+            document.addEventListener('click', function (e) {
+                var btn = e.target && e.target.closest ? e.target.closest('#add-training-btn, #add-training-empty-btn, [data-action="open-training-form"]') : null;
+                if (btn) {
+                    e.preventDefault();
+                    if (typeof Training !== 'undefined' && typeof Training.showForm === 'function') {
+                        Training.showForm();
+                    }
+                }
+            });
 
             // إشعار عند تحميل الموديول بنجاح
             if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
