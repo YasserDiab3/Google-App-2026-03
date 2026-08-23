@@ -346,6 +346,7 @@
             position: relative;
             overflow: hidden;
             box-shadow: var(--card-shadow);
+            cursor: pointer;
         }
 
         .form-card::after {
@@ -691,7 +692,7 @@
         <div class="forms-grid" id="formsGrid">
             
             <!-- 1. نموذج الملاحظات اليومية -->
-            <a href="public-observation.html" class="form-card card-obs" data-keywords="ملاحظة ملاحظات يومية سلوك خطر تدقيق unsafe act condition">
+            <div class="form-card card-obs" onclick="navigateToForm('public-observation.html')" data-keywords="ملاحظة ملاحظات يومية سلوك خطر تدقيق unsafe act condition">
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
                         <i class="fas fa-clipboard-check"></i>
@@ -708,10 +709,10 @@
                 <div class="form-action-btn">
                     <i class="fas fa-arrow-left"></i>
                 </div>
-            </a>
+            </div>
 
             <!-- 2. نموذج الحوادث الوشيكة -->
-            <a href="public-near-miss.html" class="form-card card-near-miss" data-keywords="حادث وشيك حوادث وشيكة كاد يقع خطر داهم near miss incident">
+            <div class="form-card card-near-miss" onclick="navigateToForm('public-near-miss.html')" data-keywords="حادث وشيك حوادث وشيكة كاد يقع خطر داهم near miss incident">
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
                         <i class="fas fa-triangle-exclamation"></i>
@@ -728,10 +729,10 @@
                 <div class="form-action-btn">
                     <i class="fas fa-arrow-left"></i>
                 </div>
-            </a>
+            </div>
 
             <!-- 3. نموذج فحص الحريق -->
-            <a href="public-fire-inspection.html" class="form-card card-fire" data-keywords="حريق اطفاء طفاية طفايات مضخات فحص شهري معدات fire extinguisher">
+            <div class="form-card card-fire" onclick="navigateToForm('public-fire-inspection.html')" data-keywords="حريق اطفاء طفاية طفايات مضخات فحص شهري معدات fire extinguisher">
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
                         <i class="fas fa-fire-extinguisher"></i>
@@ -748,7 +749,7 @@
                 <div class="form-action-btn">
                     <i class="fas fa-arrow-left"></i>
                 </div>
-            </a>
+            </div>
 
         </div>
 
@@ -793,6 +794,20 @@
     </div>
 
     <script>
+        // Reliable dynamic navigation across all deployment paths & URL rewrites
+        function navigateToForm(targetFile) {
+            const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
+            let path = window.location.pathname;
+            
+            if (path.includes('/Frontend/')) {
+                window.location.href = `${origin}/Frontend/${targetFile}`;
+            } else if (path.includes('/dist/')) {
+                window.location.href = `${origin}/dist/${targetFile}`;
+            } else {
+                window.location.href = `${origin}/${targetFile}`;
+            }
+        }
+
         // Theme Management
         function applyHubTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
@@ -816,14 +831,12 @@
             applyHubTheme(next);
         }
 
-        // Initialize Theme from localStorage or system preference
+        // Initialize Theme
         (function initTheme() {
             try {
                 const saved = localStorage.getItem('HSE_HUB_THEME');
                 if (saved) {
                     applyHubTheme(saved);
-                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    applyHubTheme('light'); // default to pleasant light mode
                 } else {
                     applyHubTheme('light');
                 }
@@ -846,6 +859,33 @@
         window.addEventListener('online', updateOnlineStatus);
         window.addEventListener('offline', updateOnlineStatus);
         updateOnlineStatus();
+
+        // Background config sync for instant forms performance
+        async function preloadFormsConfig() {
+            try {
+                const GAS_URL = 'https://script.google.com/macros/s/AKfycbz_9l3iNn-n8V77p6h-w5JmZ7N4T-J4o8w-8s5q/exec';
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'getPublicObservationConfig' }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                const data = await res.json();
+                if (data && data.success) {
+                    localStorage.setItem('HSE_PUBLIC_OBS_CONFIG', JSON.stringify(data));
+                }
+            } catch(e) {}
+        }
+        if (navigator.onLine) {
+            setTimeout(preloadFormsConfig, 200);
+        }
 
         // Search / Filter
         function filterForms() {
@@ -921,7 +961,7 @@
                 alert('يرجى التأكد من الاتصال بالإنترنت أولاً للبدء بالمزامنة.');
                 return;
             }
-            window.location.href = 'public-observation.html?auto_sync=1';
+            navigateToForm('public-observation.html?auto_sync=1');
         }
 
         // Service Worker Registration

@@ -162,7 +162,7 @@ function generateDailyObservationId(e){const t=/^DOB-(\d+)$/i,i=/^OBS-\d{6}-(\d+
                                 <i class="fas fa-file-powerpoint ml-2"></i>
                                 <span data-i18n="module.dailyobs.btn.exportPpt">\u062A\u0635\u062F\u064A\u0631 PPT</span>
                             </button>
-                            <a href="forms-hub.html" target="_blank" class="btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #059669; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
+                            <a href="forms-hub.html" target="_blank" onclick="DailyObservations.exportPublicConfigToLocalStorage()" class="btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #059669; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
                                 <i class="fas fa-mobile-screen-button ml-2"></i>
                                 <span>\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0645\u0648\u062D\u062F\u0629 (Hub)</span>
                             </a>
@@ -3429,7 +3429,7 @@ ${o}${s.length>5?`
                                 <div style="font-size: 0.78rem; color: #15803d;">\u062A\u0637\u0628\u064A\u0642 \u0648\u062A\u062B\u0628\u064A\u062A \u0648\u0627\u062D\u062F \u0639\u0644\u0649 \u0627\u0644\u0645\u0648\u0628\u0627\u064A\u0644 \u064A\u0634\u0645\u0644 \u0643\u0627\u0641\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C</div>
                             </div>
                         </div>
-                        <a href="forms-hub.html" target="_blank" class="btn-primary" style="padding: 7px 14px; font-size: 0.82rem; background: #16a34a; border-radius: 8px; text-decoration: none; font-weight: 700; white-space: nowrap;">
+                        <a href="forms-hub.html" target="_blank" onclick="DailyObservations.exportPublicConfigToLocalStorage()" class="btn-primary" style="padding: 7px 14px; font-size: 0.82rem; background: #16a34a; border-radius: 8px; text-decoration: none; font-weight: 700; white-space: nowrap;">
                             \u0641\u062A\u062D \u0627\u0644\u0628\u0648\u0627\u0628\u0629 <i class="fas fa-external-link-alt mr-1"></i>
                         </a>
                     </div>

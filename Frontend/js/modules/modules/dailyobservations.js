@@ -2103,7 +2103,7 @@ const DailyObservations = {
                                 <i class="fas fa-file-powerpoint ml-2"></i>
                                 <span data-i18n="module.dailyobs.btn.exportPpt">تصدير PPT</span>
                             </button>
-                            <a href="forms-hub.html" target="_blank" class="btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #059669; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
+                            <a href="forms-hub.html" target="_blank" onclick="DailyObservations.exportPublicConfigToLocalStorage()" class="btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #059669; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
                                 <i class="fas fa-mobile-screen-button ml-2"></i>
                                 <span>بوابة النماذج الموحدة (Hub)</span>
                             </a>
@@ -14191,7 +14191,7 @@ const DailyObservations = {
                                 <div style="font-size: 0.78rem; color: #15803d;">تطبيق وتثبيت واحد على الموبايل يشمل كافة النماذج</div>
                             </div>
                         </div>
-                        <a href="forms-hub.html" target="_blank" class="btn-primary" style="padding: 7px 14px; font-size: 0.82rem; background: #16a34a; border-radius: 8px; text-decoration: none; font-weight: 700; white-space: nowrap;">
+                        <a href="forms-hub.html" target="_blank" onclick="DailyObservations.exportPublicConfigToLocalStorage()" class="btn-primary" style="padding: 7px 14px; font-size: 0.82rem; background: #16a34a; border-radius: 8px; text-decoration: none; font-weight: 700; white-space: nowrap;">
                             فتح البوابة <i class="fas fa-external-link-alt mr-1"></i>
                         </a>
                     </div>
