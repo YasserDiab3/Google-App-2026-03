@@ -8181,7 +8181,7 @@ const Training = {
     },
 
     setExpiryFromStart(months) {
-        const startInput = document.getElementById('training-startDate');
+        const startInput = document.getElementById('training-startDateTime') || document.getElementById('training-startDate');
         const expiryInput = document.getElementById('training-expiryDate');
         if (!expiryInput) return;
         const baseDate = startInput && startInput.value ? new Date(startInput.value) : new Date();
@@ -8454,6 +8454,34 @@ const Training = {
         const previousTopics = this.getPreviousTrainingTopics();
         const inputStyle = `width: 100%; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 9px 12px; font-size: 13px; font-weight: 600; color: #1e293b; background: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.03); outline: none; transition: border-color 0.2s, box-shadow 0.2s;`;
         
+        let startDateTimeFormatted = '';
+        if (data?.startDateTime) {
+            startDateTimeFormatted = data.startDateTime.slice(0, 16);
+        } else if (data?.startDate) {
+            try {
+                const d = new Date(data.startDate).toISOString().slice(0, 10);
+                const t = data.startTime ? this.cleanTime(data.startTime) : '09:00';
+                startDateTimeFormatted = `${d}T${t}`;
+            } catch(e) {}
+        } else if (!data) {
+            const today = new Date().toISOString().slice(0, 10);
+            startDateTimeFormatted = `${today}T09:00`;
+        }
+
+        let endDateTimeFormatted = '';
+        if (data?.endDateTime) {
+            endDateTimeFormatted = data.endDateTime.slice(0, 16);
+        } else if (data?.startDate || data?.endDate) {
+            try {
+                const d = new Date(data.endDate || data.startDate).toISOString().slice(0, 10);
+                const t = data.endTime ? this.cleanTime(data.endTime) : '10:00';
+                endDateTimeFormatted = `${d}T${t}`;
+            } catch(e) {}
+        } else if (!data) {
+            const today = new Date().toISOString().slice(0, 10);
+            endDateTimeFormatted = `${today}T10:00`;
+        }
+
         return `
             <form id="training-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
                 <!-- 1. بيانات البرنامج التدريبي الأساسية -->
@@ -8583,7 +8611,7 @@ const Training = {
                             </div>
                             <div>
                                 <h3 style="font-size: 15px; font-weight: 800; color: #0f172a; margin: 0;">الجدولة الزمنية، التوقيت والصلاحية</h3>
-                                <p style="font-size: 12px; color: #4338ca; margin: 0; font-weight: 600;">تحديد تواريخ وأوقات الانعقاد والانتهاء واحتساب الساعات وتاريخ تجديد الشهادة</p>
+                                <p style="font-size: 12px; color: #4338ca; margin: 0; font-weight: 600;">تاريخ ووقت بدء وانتهاء التدريب في حقول موحدة، احتساب الساعات وتاريخ تجديد الشهادة</p>
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -8593,69 +8621,56 @@ const Training = {
                         </div>
                     </div>
 
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        <!-- السطر 1: تاريخ البدء وتاريخ الانتهاء بجانب بعضهما تماماً (50% / 50%) -->
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                            <!-- تاريخ البدء / الانعقاد -->
-                            <div>
-                                <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
-                                    <i class="fas fa-calendar-day" style="color: #4f46e5; margin-left: 4px;"></i> تاريخ بدء / انعقاد التدريب *
-                                </label>
-                                <input type="date" id="training-startDate" required style="${inputStyle}"
-                                    value="${data?.startDate ? new Date(data.startDate).toISOString().slice(0, 10) : ''}">
-                                <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0; font-weight: 500;">تاريخ تنفيذ الجلسة التدريبية</p>
-                            </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                        <!-- تاريخ ووقت بدء التدريب (موحد في حقل واحد) -->
+                        <div style="background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
+                                <i class="fas fa-calendar-plus" style="color: #4f46e5; margin-left: 4px;"></i> تاريخ ووقت بدء التدريب *
+                            </label>
+                            <input type="datetime-local" id="training-startDateTime" required style="${inputStyle}"
+                                value="${startDateTimeFormatted}">
+                            <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0; font-weight: 500;">تاريخ وساعة انطلاق الجلسة التدريبية</p>
+                        </div>
 
-                            <!-- تاريخ انتهاء التدريب (الصلاحية) مع أزرار التحديد السريع -->
-                            <div>
-                                <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
-                                    <i class="fas fa-calendar-check" style="color: #4f46e5; margin-left: 4px;"></i> تاريخ انتهاء التدريب (صلاحية الشهادة)
-                                </label>
-                                <input type="date" id="training-expiryDate" style="${inputStyle}"
-                                    value="${data?.expiryDate ? new Date(data.expiryDate).toISOString().slice(0, 10) : ''}">
-                                <div style="display: flex; align-items: center; gap: 5px; margin-top: 6px; flex-wrap: wrap;">
-                                    <span style="font-size: 11px; color: #64748b; font-weight: 700; margin-left: 4px;">تحديد سريع:</span>
-                                    <button type="button" onclick="Training.setExpiryFromStart(6)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+6 أشهر</button>
-                                    <button type="button" onclick="Training.setExpiryFromStart(12)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+سنة</button>
-                                    <button type="button" onclick="Training.setExpiryFromStart(24)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+سنتين</button>
-                                    <button type="button" onclick="Training.setExpiryFromStart(36)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+3 سنوات</button>
-                                    <button type="button" onclick="document.getElementById('training-expiryDate').value=''" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; cursor: pointer;">مسح</button>
-                                </div>
+                        <!-- تاريخ ووقت انتهاء التدريب (موحد في حقل واحد) -->
+                        <div style="background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
+                                <i class="fas fa-calendar-check" style="color: #4f46e5; margin-left: 4px;"></i> تاريخ ووقت انتهاء التدريب *
+                            </label>
+                            <input type="datetime-local" id="training-endDateTime" required style="${inputStyle}"
+                                value="${endDateTimeFormatted}">
+                            <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0; font-weight: 500;">تاريخ وساعة اختتام الجلسة لاحتساب الساعات</p>
+                        </div>
+
+                        <!-- تاريخ انتهاء التدريب (صلاحية الشهادة) -->
+                        <div style="background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
+                                <i class="fas fa-certificate" style="color: #4f46e5; margin-left: 4px;"></i> تاريخ انتهاء التدريب (صلاحية الشهادة)
+                            </label>
+                            <input type="date" id="training-expiryDate" style="${inputStyle}"
+                                value="${data?.expiryDate ? new Date(data.expiryDate).toISOString().slice(0, 10) : ''}">
+                            <div style="display: flex; align-items: center; gap: 5px; margin-top: 6px; flex-wrap: wrap;">
+                                <span style="font-size: 11px; color: #64748b; font-weight: 700; margin-left: 4px;">تحديد سريع:</span>
+                                <button type="button" onclick="Training.setExpiryFromStart(6)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+6 أشهر</button>
+                                <button type="button" onclick="Training.setExpiryFromStart(12)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+سنة</button>
+                                <button type="button" onclick="Training.setExpiryFromStart(24)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+سنتين</button>
+                                <button type="button" onclick="Training.setExpiryFromStart(36)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+3 سنوات</button>
+                                <button type="button" onclick="document.getElementById('training-expiryDate').value=''" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; cursor: pointer;">مسح</button>
                             </div>
                         </div>
 
-                        <!-- السطر 2: أوقات التدريب (البدء والانتهاء) وحالة البرنامج بجانب بعضهم -->
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                            <!-- وقت البدء -->
-                            <div>
-                                <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
-                                    <i class="fas fa-clock" style="color: #4f46e5; margin-left: 4px;"></i> وقت البدء *
-                                </label>
-                                <input type="time" id="training-startTime" required style="${inputStyle} text-align: center;"
-                                    value="${data?.startTime ? this.cleanTime(data.startTime) : ''}">
-                            </div>
-
-                            <!-- وقت الانتهاء -->
-                            <div>
-                                <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
-                                    <i class="fas fa-clock" style="color: #4f46e5; margin-left: 4px;"></i> وقت الانتهاء *
-                                </label>
-                                <input type="time" id="training-endTime" required style="${inputStyle} text-align: center;"
-                                    value="${data?.endTime ? this.cleanTime(data.endTime) : ''}">
-                            </div>
-
-                            <!-- حالة البرنامج -->
-                            <div>
-                                <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
-                                    <i class="fas fa-circle-check" style="color: #4f46e5; margin-left: 4px;"></i> حالة البرنامج *
-                                </label>
-                                <select id="training-status" required style="${inputStyle}">
-                                    <option value="مخطط" ${data?.status === 'مخطط' || !data?.status ? 'selected' : ''}>مخطط</option>
-                                    <option value="قيد التنفيذ" ${data?.status === 'قيد التنفيذ' ? 'selected' : ''}>قيد التنفيذ</option>
-                                    <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
-                                    <option value="ملغي" ${data?.status === 'ملغي' ? 'selected' : ''}>ملغي</option>
-                                </select>
-                            </div>
+                        <!-- حالة البرنامج -->
+                        <div style="background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
+                                <i class="fas fa-circle-check" style="color: #4f46e5; margin-left: 4px;"></i> حالة البرنامج *
+                            </label>
+                            <select id="training-status" required style="${inputStyle}">
+                                <option value="مخطط" ${data?.status === 'مخطط' || !data?.status ? 'selected' : ''}>مخطط</option>
+                                <option value="قيد التنفيذ" ${data?.status === 'قيد التنفيذ' ? 'selected' : ''}>قيد التنفيذ</option>
+                                <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
+                                <option value="ملغي" ${data?.status === 'ملغي' ? 'selected' : ''}>ملغي</option>
+                            </select>
+                            <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0; font-weight: 500;">المرحلة الحالية للبرنامج التدريبي</p>
                         </div>
                     </div>
                 </div>
@@ -8811,18 +8826,20 @@ const Training = {
             });
         }
 
-        // حساب ساعات التدريب ديناميكياً وتحديث الشارة التفاعلية فوراً
+        // حساب ساعات التدريب ديناميكياً وتحديث الشارة التفاعلية فوراً من حقول التاريخ والوقت الموحدة
+        const startDateTimeInput = document.getElementById('training-startDateTime');
+        const endDateTimeInput = document.getElementById('training-endDateTime');
         const startTimeInput = document.getElementById('training-startTime');
         const endTimeInput = document.getElementById('training-endTime');
         const hoursDisplay = document.getElementById('training-hours-number');
         
         const updateCalculatedHours = () => {
-            const startVal = startTimeInput?.value;
-            const endVal = endTimeInput?.value;
+            const startVal = startDateTimeInput?.value || startTimeInput?.value;
+            const endVal = endDateTimeInput?.value || endTimeInput?.value;
             if (startVal && endVal) {
                 try {
-                    const start = new Date(`2000-01-01T${startVal}:00`);
-                    const end = new Date(`2000-01-01T${endVal}:00`);
+                    const start = new Date(startVal.includes('T') ? startVal : `2000-01-01T${startVal}:00`);
+                    const end = new Date(endVal.includes('T') ? endVal : `2000-01-01T${endVal}:00`);
                     if (end > start) {
                         const diffHours = (end - start) / (1000 * 60 * 60);
                         if (hoursDisplay) hoursDisplay.textContent = diffHours.toFixed(2);
@@ -8835,6 +8852,14 @@ const Training = {
             }
         };
 
+        if (startDateTimeInput) {
+            startDateTimeInput.addEventListener('input', updateCalculatedHours);
+            startDateTimeInput.addEventListener('change', updateCalculatedHours);
+        }
+        if (endDateTimeInput) {
+            endDateTimeInput.addEventListener('input', updateCalculatedHours);
+            endDateTimeInput.addEventListener('change', updateCalculatedHours);
+        }
         if (startTimeInput) {
             startTimeInput.addEventListener('input', updateCalculatedHours);
             startTimeInput.addEventListener('change', updateCalculatedHours);
@@ -8843,6 +8868,7 @@ const Training = {
             endTimeInput.addEventListener('input', updateCalculatedHours);
             endTimeInput.addEventListener('change', updateCalculatedHours);
         }
+        updateCalculatedHours();
         updateCalculatedHours();
 
         // تفعيل استكمال وتصفية مقترحات موضوع التدريب فورياً
@@ -9377,27 +9403,47 @@ const Training = {
             return;
         }
 
-        // حساب ساعات التدريب من الوقت
+        // حساب ساعات التدريب من حقول التاريخ والوقت الموحدة
         let trainingHours = 0;
-        const startTime = document.getElementById('training-startTime')?.value;
-        const endTime = document.getElementById('training-endTime')?.value;
-        if (startTime && endTime) {
+        const startDateTimeVal = document.getElementById('training-startDateTime')?.value || document.getElementById('training-startDate')?.value || '';
+        const endDateTimeVal = document.getElementById('training-endDateTime')?.value || '';
+        let startTime = document.getElementById('training-startTime')?.value || '';
+        let endTime = document.getElementById('training-endTime')?.value || '';
+        let validStartDate = new Date().toISOString();
+
+        if (startDateTimeVal) {
             try {
-                const start = new Date(`2000-01-01T${startTime}:00`);
-                const end = new Date(`2000-01-01T${endTime}:00`);
+                const sDate = new Date(startDateTimeVal);
+                if (!isNaN(sDate.getTime())) {
+                    validStartDate = sDate.toISOString();
+                }
+                const parts = startDateTimeVal.split('T');
+                if (parts[1]) startTime = parts[1].slice(0, 5);
+            } catch(e) {}
+        }
+
+        if (endDateTimeVal) {
+            try {
+                const parts = endDateTimeVal.split('T');
+                if (parts[1]) endTime = parts[1].slice(0, 5);
+            } catch(e) {}
+        }
+
+        if (startDateTimeVal && endDateTimeVal) {
+            try {
+                const start = new Date(startDateTimeVal.includes('T') ? startDateTimeVal : `2000-01-01T${startDateTimeVal}:00`);
+                const end = new Date(endDateTimeVal.includes('T') ? endDateTimeVal : `2000-01-01T${endDateTimeVal}:00`);
                 if (end <= start) {
-                    Notification.error('وقت نهاية التدريب يجب أن يكون بعد وقت البداية');
-                    // استعادة الزر عند فشل التحقق
+                    Notification.error('تاريخ ووقت نهاية التدريب يجب أن يكون بعد تاريخ ووقت البداية');
                     if (submitBtn) {
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = originalText;
                     }
                     return;
                 }
-                trainingHours = (end - start) / (1000 * 60 * 60); // تحويل إلى ساعات
+                trainingHours = (end - start) / (1000 * 60 * 60);
             } catch (e) {
-                Notification.error('تعذر حساب مدة التدريب. يرجى التحقق من الأوقات المدخلة');
-                // استعادة الزر عند فشل التحقق
+                Notification.error('تعذر حساب مدة التدريب. يرجى التحقق من التاريخ والوقت المدخل');
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalText;
@@ -9411,12 +9457,15 @@ const Training = {
         const trainerEl = document.getElementById('training-trainer');
         const typeEl = document.getElementById('training-type');
         const statusEl = document.getElementById('training-status');
-        const startDateEl = document.getElementById('training-startDate');
         const locationEl = document.getElementById('training-location');
         const factoryEl = document.getElementById('training-factory');
         
-        if (!nameEl || !trainerEl || !typeEl || !statusEl || !startDateEl || !locationEl || !factoryEl) {
+        if (!nameEl || !trainerEl || !typeEl || !statusEl || !locationEl || !factoryEl || (!startDateTimeVal && !document.getElementById('training-startDate'))) {
             Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
             return;
         }
         
@@ -9428,14 +9477,6 @@ const Training = {
         
         const getFallbackText = (el) => el && el.options && el.selectedIndex >= 0 ? el.options[el.selectedIndex].text : '';
 
-        let validStartDate = new Date().toISOString();
-        if (startDateEl.value) {
-            const d = new Date(startDateEl.value);
-            if (!isNaN(d.getTime())) {
-                validStartDate = d.toISOString();
-            }
-        }
-
         const expiryDateEl = document.getElementById('training-expiryDate');
         const expiryDate = expiryDateEl?.value || '';
 
@@ -9444,7 +9485,9 @@ const Training = {
             name: nameEl.value.trim(),
             trainer: trainerEl.value.trim(),
             trainingType: typeEl.value || 'داخلي', // نوع التدريب (داخلي/خارجي)
-            date: document.getElementById('training-date')?.value || startDateEl.value || validStartDate.split('T')[0],
+            date: startDateTimeVal ? startDateTimeVal.split('T')[0] : validStartDate.split('T')[0],
+            startDateTime: startDateTimeVal,
+            endDateTime: endDateTimeVal,
             expiryDate: expiryDate,
             factory: factoryEl.value,
             factoryName: selectedFactory ? selectedFactory.name : getFallbackText(factoryEl),
