@@ -8234,108 +8234,78 @@ const Training = {
             ? `<option value="${Utils.escapeHTML(selectedTrainerName)}" selected>${Utils.escapeHTML(selectedTrainerName)}</option>`
             : '';
         return `
-            <form id="training-form" class="space-y-6">
-                <!-- 1. بيانات التدريب الأساسية -->
-                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-5 mb-5 shadow-sm">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-clipboard-list text-white text-lg"></i>
-                        </div>
-                        <h3 class="text-lg font-bold text-gray-800" style="margin: 0;">
-                            بيانات التدريب وتاريخ الصلاحية
-                        </h3>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                                <i class="fas fa-tag ml-2 text-blue-600"></i>
-                                نوع التدريب *
-                            </label>
-                            <select id="training-type" required class="form-input" style="border: 2px solid #e5e7eb; transition: all 0.3s;"
-                                onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                                onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';">
-                                <option value="">اختر نوع التدريب</option>
-                                <option value="داخلي" ${data?.trainingType === 'داخلي' || (!data?.trainingType && !data) ? 'selected' : ''}>داخلي</option>
-                                <option value="خارجي" ${data?.trainingType === 'خارجي' ? 'selected' : ''}>خارجي</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                                <i class="fas fa-calendar ml-2 text-blue-600"></i>
-                                تاريخ الانعقاد *
-                            </label>
-                            <input type="date" id="training-startDate" required class="form-input" style="border: 2px solid #e5e7eb; transition: all 0.3s;"
-                                value="${data?.startDate ? new Date(data.startDate).toISOString().slice(0, 10) : ''}"
-                                onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                                onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';">
-                        </div>
-
-                        <!-- تاريخ انتهاء التدريب (الصلاحية) -->
-                        <div class="md:col-span-2 p-3 bg-white rounded-lg border border-indigo-200">
-                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                                <i class="fas fa-calendar-check ml-2 text-indigo-600"></i>
-                                تاريخ انتهاء التدريب (صلاحية الشهادة / إعادة التدريب الدوري)
-                            </label>
-                            <input type="date" id="training-expiryDate" class="form-input" style="border: 2px solid #e5e7eb; transition: all 0.3s;"
-                                value="${data?.expiryDate ? new Date(data.expiryDate).toISOString().slice(0, 10) : ''}"
-                                onfocus="this.style.borderColor='#4f46e5'; this.style.boxShadow='0 0 0 3px rgba(79, 70, 229, 0.1)';"
-                                onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';">
-                            <div class="flex items-center gap-1.5 mt-2 flex-wrap">
-                                <span class="text-xs text-gray-500 font-bold ml-1">تحديد سريع من تاريخ البدء:</span>
-                                <button type="button" onclick="Training.setExpiryFromStart(6)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 6px; cursor: pointer;">+6 أشهر</button>
-                                <button type="button" onclick="Training.setExpiryFromStart(12)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 6px; cursor: pointer;">+سنة واحدة</button>
-                                <button type="button" onclick="Training.setExpiryFromStart(24)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 6px; cursor: pointer;">+سنتين</button>
-                                <button type="button" onclick="Training.setExpiryFromStart(36)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 6px; cursor: pointer;">+3 سنوات</button>
-                                <button type="button" onclick="document.getElementById('training-expiryDate').value=''" style="font-size: 11px; font-weight: 700; padding: 3px 8px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer;">إلغاء التحديد</button>
+            <form id="training-form" class="space-y-5">
+                <!-- 1. بيانات البرنامج التدريبي الأساسية -->
+                <div class="bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/40 border border-blue-200/80 rounded-2xl p-5 shadow-xs">
+                    <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-blue-200/70">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md">
+                                <i class="fas fa-graduation-cap text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-gray-900 m-0">بيانات البرنامج التدريبي</h3>
+                                <p class="text-xs text-blue-800 m-0 font-medium">المعلومات والموضوع الأساسي للتدريب والموقع</p>
                             </div>
                         </div>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100/80 text-blue-900 border border-blue-200">
+                            <i class="fas fa-shield-alt ml-1.5 text-blue-600"></i> منظومة السلامة والصحة المهنية
+                        </span>
+                    </div>
 
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                                <i class="fas fa-industry ml-2 text-blue-600"></i>
-                                المصنع *
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- موضوع المحاضرة -->
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-gray-700 mb-1.5">
+                                <i class="fas fa-book-bookmark ml-1.5 text-blue-600"></i> موضوع المحاضرة / البرنامج التدريبي *
                             </label>
-                            <select id="training-factory" required class="form-input" style="border: 2px solid #e5e7eb; transition: all 0.3s;"
-                                onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                                onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';">
+                            <input type="text" id="training-name" required class="form-input text-sm font-semibold"
+                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="أدخل موضوع التدريب بوضوح (مثال: مخاطر العمل على ارتفاعات)">
+                        </div>
+
+                        <!-- نوع التدريب -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1.5">
+                                <i class="fas fa-tag ml-1.5 text-blue-600"></i> نوع التدريب *
+                            </label>
+                            <select id="training-type" required class="form-input text-sm font-medium">
+                                <option value="">اختر نوع التدريب</option>
+                                <option value="داخلي" ${data?.trainingType === 'داخلي' || (!data?.trainingType && !data) ? 'selected' : ''}>داخلي (داخل المنشأة)</option>
+                                <option value="خارجي" ${data?.trainingType === 'خارجي' ? 'selected' : ''}>خارجي (جهة معتمدة)</option>
+                            </select>
+                        </div>
+
+                        <!-- المصنع -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1.5">
+                                <i class="fas fa-industry ml-1.5 text-blue-600"></i> المصنع / المنشأة *
+                            </label>
+                            <select id="training-factory" required class="form-input text-sm font-medium">
                                 <option value="">اختر المصنع</option>
                                 ${this.getSiteOptions().map(site => `
                                     <option value="${Utils.escapeHTML(site.id)}" ${data?.factory === site.id || data?.factory === site.name ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>
                                 `).join('')}
                             </select>
                         </div>
+
+                        <!-- مكان التدريب -->
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                                <i class="fas fa-map-marker-alt ml-2 text-blue-600"></i>
-                                مكان التدريب *
+                            <label class="block text-xs font-bold text-gray-700 mb-1.5">
+                                <i class="fas fa-map-pin ml-1.5 text-blue-600"></i> مكان / قاعة التدريب *
                             </label>
-                            <select id="training-location" required class="form-input" style="border: 2px solid #e5e7eb; transition: all 0.3s;"
-                                onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                                onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';">
+                            <select id="training-location" required class="form-input text-sm font-medium">
                                 <option value="">اختر مكان التدريب</option>
                                 ${this.getPlaceOptions(data?.factory || '').map(place => `
                                     <option value="${Utils.escapeHTML(place.id)}" ${data?.location === place.id || data?.location === place.name ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>
                                 `).join('')}
                             </select>
                         </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                                <i class="fas fa-book-open ml-2 text-blue-600"></i>
-                                موضوع المحاضرة *
-                            </label>
-                            <input type="text" id="training-name" required class="form-input" style="border: 2px solid #e5e7eb; transition: all 0.3s;"
-                                value="${data?.name || ''}" placeholder="أدخل موضوع المحاضرة"
-                                onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                                onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';">
-                        </div>
+
+                        <!-- اسم المحاضر -->
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                                <i class="fas fa-chalkboard-teacher ml-2 text-blue-600"></i>
-                                اسم المحاضر *
+                            <label class="block text-xs font-bold text-gray-700 mb-1.5">
+                                <i class="fas fa-chalkboard-user ml-1.5 text-blue-600"></i> اسم المحاضر / المدرب *
                             </label>
-                            <select id="training-trainer" required class="form-input" style="border: 2px solid #e5e7eb; transition: all 0.3s;"
-                                onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
-                                onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';">
+                            <select id="training-trainer" required class="form-input text-sm font-medium">
                                 <option value="">اختر اسم المحاضر</option>
                                 ${selectedTrainerLegacyOption}
                                 ${safetyTeamTrainers.map(member => `
@@ -8345,33 +8315,99 @@ const Training = {
                                 `).join('')}
                             </select>
                         </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-700 mb-1">
-                                    <i class="fas fa-clock text-blue-600"></i> وقت البدء *
-                                </label>
-                                <input type="time" id="training-startTime" required class="form-input"
-                                    value="${data?.startTime ? this.cleanTime(data.startTime) : ''}">
+                    </div>
+                </div>
+
+                <!-- 2. الجدولة الزمنية، التوقيت، وحساب الساعات والصلاحية -->
+                <div class="bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-slate-50 border border-indigo-200/80 rounded-2xl p-5 shadow-xs">
+                    <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-indigo-200/70 flex-wrap">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-md">
+                                <i class="fas fa-business-time text-lg"></i>
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-gray-700 mb-1">
-                                    <i class="fas fa-clock text-blue-600"></i> وقت الانتهاء *
-                                </label>
-                                <input type="time" id="training-endTime" required class="form-input"
-                                    value="${data?.endTime ? this.cleanTime(data.endTime) : ''}">
+                                <h3 class="text-base font-bold text-gray-900 m-0">الجدولة الزمنية، التوقيت والصلاحية</h3>
+                                <p class="text-xs text-indigo-800 m-0 font-medium">تحديد أوقات الانعقاد والانتهاء واحتساب الساعات وتاريخ تجديد الشهادة</p>
                             </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                                <i class="fas fa-check-circle ml-2 text-blue-600"></i>
-                                حالة البرنامج *
-                            </label>
-                            <select id="training-status" required class="form-input" style="border: 2px solid #e5e7eb;">
-                                <option value="مخطط" ${data?.status === 'مخطط' || !data?.status ? 'selected' : ''}>مخطط</option>
-                                <option value="قيد التنفيذ" ${data?.status === 'قيد التنفيذ' ? 'selected' : ''}>قيد التنفيذ</option>
-                                <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
-                                <option value="ملغي" ${data?.status === 'ملغي' ? 'selected' : ''}>ملغي</option>
-                            </select>
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-white text-indigo-900 border border-indigo-200 shadow-xs" id="training-calculated-hours-pill">
+                                <i class="fas fa-hourglass-half ml-1.5 text-indigo-600"></i> مدة التدريب: <strong id="training-hours-number" class="mr-1 text-indigo-700 font-bold">${data?.hours || '0.00'}</strong> ساعة
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                        <!-- تاريخ الانعقاد والحالة -->
+                        <div class="lg:col-span-5 space-y-3 bg-white p-4 rounded-xl border border-indigo-100 shadow-xs">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1.5">
+                                    <i class="fas fa-calendar-day ml-1.5 text-indigo-600"></i> تاريخ الانعقاد *
+                                </label>
+                                <input type="date" id="training-startDate" required class="form-input text-sm font-semibold"
+                                    value="${data?.startDate ? new Date(data.startDate).toISOString().slice(0, 10) : ''}">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1.5">
+                                    <i class="fas fa-circle-check ml-1.5 text-indigo-600"></i> حالة البرنامج *
+                                </label>
+                                <select id="training-status" required class="form-input text-sm font-semibold">
+                                    <option value="مخطط" ${data?.status === 'مخطط' || !data?.status ? 'selected' : ''}>مخطط</option>
+                                    <option value="قيد التنفيذ" ${data?.status === 'قيد التنفيذ' ? 'selected' : ''}>قيد التنفيذ</option>
+                                    <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
+                                    <option value="ملغي" ${data?.status === 'ملغي' ? 'selected' : ''}>ملغي</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- توقيت البداية والنهاية جنباً إلى جنب + الصلاحية -->
+                        <div class="lg:col-span-7 space-y-3">
+                            <!-- صف وقت البدء ووقت الانتهاء جنباً إلى جنب بشكل أنيق -->
+                            <div class="bg-white p-4 rounded-xl border border-indigo-100 shadow-xs">
+                                <label class="block text-xs font-bold text-gray-800 mb-2">
+                                    <i class="fas fa-clock ml-1.5 text-indigo-600"></i> توقيت الانعقاد وساعات البرنامج التدريبي *
+                                </label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-xs font-semibold text-gray-600">وقت البدء:</span>
+                                        </div>
+                                        <div class="relative">
+                                            <input type="time" id="training-startTime" required class="form-input text-sm font-bold text-center pr-3"
+                                                value="${data?.startTime ? this.cleanTime(data.startTime) : ''}">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-xs font-semibold text-gray-600">وقت الانتهاء:</span>
+                                        </div>
+                                        <div class="relative">
+                                            <input type="time" id="training-endTime" required class="form-input text-sm font-bold text-center pr-3"
+                                                value="${data?.endTime ? this.cleanTime(data.endTime) : ''}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- تاريخ انتهاء الصلاحية وأزرار التحديد السريع -->
+                            <div class="bg-white p-4 rounded-xl border border-indigo-100 shadow-xs">
+                                <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                                    <label class="text-xs font-bold text-gray-700 m-0">
+                                        <i class="fas fa-calendar-check ml-1.5 text-indigo-600"></i> تاريخ انتهاء التدريب (صلاحية الشهادة / إعادة التدريب الدوري)
+                                    </label>
+                                </div>
+                                <input type="date" id="training-expiryDate" class="form-input text-sm font-semibold"
+                                    value="${data?.expiryDate ? new Date(data.expiryDate).toISOString().slice(0, 10) : ''}">
+                                <div class="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                                    <span class="text-xs text-gray-500 font-bold ml-1">تحديد سريع:</span>
+                                    <button type="button" onclick="Training.setExpiryFromStart(6)" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+6 أشهر</button>
+                                    <button type="button" onclick="Training.setExpiryFromStart(12)" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+سنة واحدة</button>
+                                    <button type="button" onclick="Training.setExpiryFromStart(24)" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+سنتين</button>
+                                    <button type="button" onclick="Training.setExpiryFromStart(36)" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">+3 سنوات</button>
+                                    <button type="button" onclick="document.getElementById('training-expiryDate').value=''" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-all cursor-pointer">مسح</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -8529,6 +8565,40 @@ const Training = {
                 });
             });
         }
+
+        // حساب ساعات التدريب ديناميكياً وتحديث الشارة التفاعلية فوراً
+        const startTimeInput = document.getElementById('training-startTime');
+        const endTimeInput = document.getElementById('training-endTime');
+        const hoursDisplay = document.getElementById('training-hours-number');
+        
+        const updateCalculatedHours = () => {
+            const startVal = startTimeInput?.value;
+            const endVal = endTimeInput?.value;
+            if (startVal && endVal) {
+                try {
+                    const start = new Date(`2000-01-01T${startVal}:00`);
+                    const end = new Date(`2000-01-01T${endVal}:00`);
+                    if (end > start) {
+                        const diffHours = (end - start) / (1000 * 60 * 60);
+                        if (hoursDisplay) hoursDisplay.textContent = diffHours.toFixed(2);
+                        return;
+                    }
+                } catch(e) {}
+            }
+            if (hoursDisplay && (!startVal || !endVal)) {
+                hoursDisplay.textContent = '0.00';
+            }
+        };
+
+        if (startTimeInput) {
+            startTimeInput.addEventListener('input', updateCalculatedHours);
+            startTimeInput.addEventListener('change', updateCalculatedHours);
+        }
+        if (endTimeInput) {
+            endTimeInput.addEventListener('input', updateCalculatedHours);
+            endTimeInput.addEventListener('change', updateCalculatedHours);
+        }
+        updateCalculatedHours();
 
         const updateTypeUI = (focusCompany = false) => {
             const typeValue = typeSelect?.value || 'employee';
