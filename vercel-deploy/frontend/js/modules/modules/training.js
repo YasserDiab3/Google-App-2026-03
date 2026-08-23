@@ -8373,93 +8373,101 @@ const Training = {
                     </div>
                 </div>
                 
-                <!-- 2. جدول المشاركين وكشف الحضور -->
-                <div class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-5 shadow-sm">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-users text-white text-lg"></i>
-                        </div>
-                        <h3 class="text-lg font-bold text-gray-800" style="margin: 0;">
-                            إدارة المشاركين وكشف الحضور
-                        </h3>
-                    </div>
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1.5">نوع المشارك *</label>
-                                <select id="training-participant-type" class="form-input">
-                                    <option value="employee" selected>موظف</option>
-                                    <option value="contractor">مقاول / عمالة خارجية</option>
-                                </select>
+                <!-- 2. كشف حضور الموظفين (المشاركون من كوادر الشركة) -->
+                <div class="bg-gradient-to-br from-emerald-50 via-teal-50 to-green-50 border-2 border-emerald-300 rounded-2xl p-5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-emerald-200 flex-wrap">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center shadow-md">
+                                <i class="fas fa-user-check text-lg"></i>
                             </div>
-                            <div id="training-participant-code-wrapper" class="md:col-span-2">
-                                <label class="block text-sm font-semibold text-gray-700 mb-1.5">الكود الوظيفي</label>
+                            <div>
+                                <h3 class="text-base font-bold text-gray-900 m-0">كشف حضور الموظفين</h3>
+                                <p class="text-xs text-emerald-800 m-0 font-medium">تسجيل حضور كوادر وموظفي الشركة بالبرنامج التدريبي</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                <i class="fas fa-id-badge ml-1.5 text-emerald-600"></i> موظفو الشركة فقط
+                            </span>
+                            <span class="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-bold bg-white text-emerald-900 border border-emerald-300 shadow-sm" id="participants-count-display">
+                                إجمالي الحضور: <strong id="participants-count-number" class="text-emerald-700 text-sm mr-1">0</strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="training-participant-type" value="employee">
+
+                    <div class="space-y-4">
+                        <!-- صف إدخال بيانات الموظف -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-white p-4 rounded-xl border border-emerald-200 shadow-xs">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">
+                                    <i class="fas fa-barcode ml-1 text-emerald-600"></i> الكود الوظيفي (SAP / ID)
+                                </label>
                                 <div class="relative">
-                                    <input type="text" id="training-participant-code" class="form-input pr-10" placeholder="أدخل الكود أو امسح الباركود" autocomplete="off">
-                                    <button type="button" id="training-participant-search-btn" class="absolute inset-y-0 left-0 flex items-center justify-center w-10 text-gray-500 hover:text-gray-700" title="بحث">
-                                        <i class="fas fa-search"></i>
+                                    <input type="text" id="training-participant-code" class="form-input text-sm font-semibold pr-9" placeholder="أدخل الكود أو امسح" autocomplete="off">
+                                    <button type="button" id="training-participant-search-btn" class="absolute inset-y-0 left-0 flex items-center justify-center w-8 text-emerald-600 hover:text-emerald-800" title="بحث فوري">
+                                        <i class="fas fa-search text-xs"></i>
                                     </button>
                                 </div>
-                                <p class="text-xs text-gray-500 mt-1" id="training-participant-code-hint">
-                                    سيتم تعبئة بيانات الموظف تلقائياً في حال وجوده بقاعدة البيانات.
-                                </p>
                             </div>
-                            <div id="training-participant-company-container" style="display: none;">
-                                <label class="block text-sm font-semibold text-gray-700 mb-1.5">اسم الشركة / الجهة *</label>
-                                <input type="text" id="training-participant-company" class="form-input" placeholder="أدخل اسم الشركة أو المقاول">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">
+                                    <i class="fas fa-user ml-1 text-emerald-600"></i> اسم الموظف *
+                                </label>
+                                <input type="text" id="training-participant-name" class="form-input text-sm font-bold" placeholder="الاسم ثلاثي أو رباعي" autocomplete="off">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">
+                                    <i class="fas fa-briefcase ml-1 text-emerald-600"></i> المسمى الوظيفي
+                                </label>
+                                <input type="text" id="training-participant-position" class="form-input text-sm" placeholder="الوظيفة">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">
+                                    <i class="fas fa-building ml-1 text-emerald-600"></i> الإدارة / القسم
+                                </label>
+                                <input type="text" id="training-participant-department" class="form-input text-sm" placeholder="القسم أو الوحدة">
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1.5">اسم المشارك *</label>
-                                <input type="text" id="training-participant-name" class="form-input" placeholder="أدخل الاسم بالكامل" autocomplete="off">
+
+                        <!-- أزرار الإضافة السريعة والتفريغ -->
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <div class="flex items-center gap-2">
+                                <button type="button" id="add-participant-btn" class="btn-primary" style="padding: 0.55rem 1.3rem; font-size: 0.88rem; font-weight: 700; border-radius: 9px; background: linear-gradient(135deg, #059669 0%, #047857 100%); box-shadow: 0 3px 6px -1px rgba(5, 150, 105, 0.3);">
+                                    <i class="fas fa-user-plus ml-1.5"></i> إضافة للكشف
+                                </button>
+                                <button type="button" id="clear-participant-btn" class="btn-secondary" style="padding: 0.55rem 1rem; font-size: 0.85rem; border-radius: 9px;">
+                                    <i class="fas fa-eraser ml-1.5"></i> مسح الحقول
+                                </button>
                             </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1.5">الوظيفة</label>
-                                <input type="text" id="training-participant-position" class="form-input" placeholder="يتم تعبئتها تلقائياً عند اختيار الموظف">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1.5">القسم/الإدارة</label>
-                                <input type="text" id="training-participant-department" class="form-input" placeholder="يتم تعبئتها تلقائياً عند اختيار الموظف">
-                            </div>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2 mb-3">
-                            <button type="button" id="clear-participant-btn" class="btn-secondary">
-                                <i class="fas fa-eraser ml-2"></i>مسح الحقول
-                            </button>
-                            <span class="text-xs text-gray-500">
-                                يمكن تعديل البيانات قبل الإضافة. لن يتم تكرار نفس المشارك أكثر من مرة.
+                            <span class="text-xs text-gray-500 font-medium">
+                                <i class="fas fa-info-circle ml-1 text-emerald-600"></i> يدعم الإدخال بالباركود، والبحث التلقائي بالاسم والكود
                             </span>
                         </div>
 
-                        <div class="overflow-x-auto mb-4" style="max-height: 260px;">
-                            <table class="data-table w-full">
+                        <!-- جدول الحضور -->
+                        <div class="overflow-x-auto rounded-xl border border-emerald-200 bg-white shadow-xs" style="max-height: 280px;">
+                            <table class="data-table w-full text-sm">
                                 <thead>
-                                    <tr>
-                                        <th>الكود</th>
-                                        <th>اسم المشارك</th>
-                                        <th>النوع</th>
-                                        <th>الشركة</th>
-                                        <th>الوظيفة</th>
-                                        <th>القسم</th>
-                                        <th>الإجراءات</th>
+                                    <tr style="background: #f0fdf4; border-bottom: 2px solid #bbf7d0;">
+                                        <th style="width: 40px; text-align: center; color: #166534; font-weight: 700;">م</th>
+                                        <th style="color: #166534; font-weight: 700;">الكود الوظيفي</th>
+                                        <th style="color: #166534; font-weight: 700;">اسم الموظف</th>
+                                        <th style="color: #166534; font-weight: 700;">المسمى الوظيفي</th>
+                                        <th style="color: #166534; font-weight: 700;">الإدارة / القسم</th>
+                                        <th style="width: 70px; text-align: center; color: #166534; font-weight: 700;">حذف</th>
                                     </tr>
                                 </thead>
                                 <tbody id="training-participants-table-body">
                                     <tr class="participants-empty-row">
-                                        <td colspan="7" class="text-center text-gray-500 py-4">لا يوجد مشاركين</td>
+                                        <td colspan="6" class="text-center text-gray-400 py-6">
+                                            <i class="fas fa-user-clock text-2xl mb-1 text-gray-300 block"></i>
+                                            لا يوجد موظفون مضافون حتى الآن — ابحث بالكود أو الاسم لإضافة الموظفين
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
-                        </div>
-                        
-                        <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-green-200">
-                            <button type="button" id="add-participant-btn" class="btn-primary" style="padding: 0.65rem 1.4rem; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);">
-                                <i class="fas fa-user-plus ml-2"></i>إضافة للمشاركين
-                            </button>
-                            <span class="text-sm text-gray-700 font-bold" id="participants-count-display">
-                                إجمالي الحضور: <span id="participants-count-number" style="color: #059669; font-size: 16px;">0</span> مشارك
-                            </span>
                         </div>
                     </div>
                 </div>
@@ -8626,7 +8634,7 @@ const Training = {
         if (!Array.isArray(participants) || participants.length === 0) {
             tableBody.innerHTML = `
                 <tr class="participants-empty-row">
-                    <td colspan="7" class="text-center text-gray-500 py-4">لا يوجد مشاركين</td>
+                    <td colspan="6" class="text-center text-gray-400 py-6"><i class="fas fa-user-clock text-2xl mb-1 text-gray-300 block"></i>لا يوجد موظفون مضافون حتى الآن — ابحث بالكود أو الاسم لإضافة الموظفين</td>
                 </tr>
             `;
             this.updateParticipantsCount();
@@ -8635,21 +8643,17 @@ const Training = {
 
         tableBody.innerHTML = '';
         participants.forEach(participant => {
-            const rawCode = participant.code || participant.employeeNumber || '';
-            const code = rawCode || this.generateParticipantCode(participant.name || participant.company || '');
+            const rawCode = participant.code || participant.employeeCode || participant.employeeNumber || '';
+            const code = rawCode || this.generateParticipantCode(participant.name || '');
             const employees = AppState.appData.employees || [];
             const employeeRecord = employees.find(e => (e.employeeNumber || e.sapId) === code);
-            const participantType = participant.type === 'contractor' || participant.personType === 'contractor'
-                ? 'contractor'
-                : 'employee';
-            const companyValue = participant.company || participant.contractorCompany || participant.contractorName || '';
             this.appendParticipantRow({
                 code,
                 name: participant.name || employeeRecord?.name || '',
                 position: participant.position || employeeRecord?.position || '',
                 department: participant.department || employeeRecord?.department || '',
-                type: participantType,
-                company: participantType === 'contractor' ? companyValue : ''
+                type: 'employee',
+                company: ''
             }, { updateCount: false, silent: true });
         });
         this.updateParticipantsCount();
@@ -8815,47 +8819,39 @@ const Training = {
         const updateCount = options.updateCount !== false;
         const silent = options.silent === true;
 
-        const code = String(participant.code || '').trim();
+        const code = String(participant.code || participant.employeeCode || participant.employeeNumber || '').trim();
         const name = String(participant.name || '').trim();
         const position = String(participant.position || '').trim();
         const department = String(participant.department || '').trim();
-        const type = participant.type === 'contractor' ? 'contractor' : 'employee';
-        const company = type === 'contractor' ? String(participant.company || '').trim() : '';
-        const typeLabel = type === 'contractor' ? 'مقاول / عمالة خارجية' : 'موظف';
-        const typeBadge = type === 'contractor' ? 'badge-warning' : 'badge-info';
 
         const exists = Array.from(tableBody.querySelectorAll('tr[data-code]'))
             .some(row => row.dataset.code === code);
         if (exists) {
             if (!silent) {
-                Notification.warning('تمت إضافة هذا المشارك مسبقاً');
+                Notification.warning('تمت إضافة هذا الموظف مسبقاً');
             }
             return false;
         }
 
+        const count = tableBody.querySelectorAll('tr[data-code]').length + 1;
         const row = document.createElement('tr');
         row.dataset.code = code;
         row.dataset.name = name;
         row.dataset.position = position;
         row.dataset.department = department;
-        row.dataset.type = type;
-        row.dataset.company = company;
+        row.dataset.type = 'employee';
+        row.dataset.company = '';
+        row.style.borderBottom = '1px solid #e2e8f0';
         row.innerHTML = `
-            <td>${Utils.escapeHTML(code)}</td>
-            <td>${Utils.escapeHTML(name || '-')}</td>
-            <td><span class="badge ${typeBadge}">${typeLabel}</span></td>
-            <td>${Utils.escapeHTML(type === 'contractor' ? (company || '-') : '-')}</td>
-            <td>${Utils.escapeHTML(position || '-')}</td>
-            <td>${Utils.escapeHTML(department || '-')}</td>
-            <td>
-                <div class="flex items-center gap-2 justify-center">
-                    <button type="button" onclick="Training.editParticipantFromRow(this)" class="btn-icon btn-icon-warning" title="تعديل">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button type="button" onclick="Training.removeParticipantRow(this)" class="btn-icon btn-icon-danger" title="حذف">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+            <td style="text-align: center; font-weight: 700; color: #64748b;" class="participant-row-index">${count}</td>
+            <td style="font-weight: 700; color: #1e40af; font-family: monospace; font-size: 13px;">${Utils.escapeHTML(code)}</td>
+            <td style="font-weight: 700; color: #0f172a;">${Utils.escapeHTML(name || '-')}</td>
+            <td style="color: #334155;">${Utils.escapeHTML(position || '-')}</td>
+            <td><span class="badge badge-info" style="font-size: 11px;">${Utils.escapeHTML(department || '-')}</span></td>
+            <td style="text-align: center;">
+                <button type="button" onclick="Training.removeParticipantRow(this)" class="btn-icon btn-icon-danger" title="حذف من الكشف" style="width: 28px; height: 28px;">
+                    <i class="fas fa-trash-alt" style="font-size: 11px;"></i>
+                </button>
             </td>
         `;
 
@@ -8879,24 +8875,14 @@ const Training = {
         const nameInput = document.getElementById('training-participant-name');
         const positionInput = document.getElementById('training-participant-position');
         const departmentInput = document.getElementById('training-participant-department');
-        const typeSelect = document.getElementById('training-participant-type');
-        const companyInput = document.getElementById('training-participant-company');
 
         if (codeInput) codeInput.value = row.dataset.code || '';
         if (nameInput) nameInput.value = row.dataset.name || '';
         if (positionInput) positionInput.value = row.dataset.position || '';
         if (departmentInput) departmentInput.value = row.dataset.department || '';
-        if (typeSelect) {
-            typeSelect.value = row.dataset.type === 'contractor' ? 'contractor' : 'employee';
-            this.updateParticipantTypeUI?.(typeSelect.value === 'contractor');
-        }
-        if (companyInput) {
-            companyInput.value = row.dataset.type === 'contractor' ? (row.dataset.company || '') : '';
-        }
 
         row.remove();
         this.updateParticipantsCount();
-
         codeInput?.focus();
     },
 
@@ -8917,6 +8903,12 @@ const Training = {
 
         const rows = tableBody.querySelectorAll('tr[data-code]');
         const count = rows.length;
+
+        // إعادة ترقيم الصفوف
+        rows.forEach((row, idx) => {
+            const indexCell = row.querySelector('.participant-row-index');
+            if (indexCell) indexCell.textContent = idx + 1;
+        });
         
         if (countInput) {
             countInput.value = count;
@@ -8931,7 +8923,7 @@ const Training = {
             if (!emptyRow) {
                 emptyRow = document.createElement('tr');
                 emptyRow.className = 'participants-empty-row';
-                emptyRow.innerHTML = `<td colspan="7" class="text-center text-gray-500 py-4">لا يوجد مشاركين</td>`;
+                emptyRow.innerHTML = `<td colspan="6" class="text-center text-gray-400 py-6"><i class="fas fa-user-clock text-2xl mb-1 text-gray-300 block"></i>لا يوجد موظفون مضافون حتى الآن — ابحث بالكود أو الاسم لإضافة الموظفين</td>`;
                 tableBody.appendChild(emptyRow);
             }
         } else if (emptyRow) {
@@ -9478,15 +9470,13 @@ const Training = {
             ? payload.participants.map((p, i) => `
                 <tr>
                     <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:center;font-size:0.85rem">${i + 1}</td>
-                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:center;font-size:0.85rem">${esc(p.code)}</td>
-                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem">${esc(p.name)}</td>
-                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem">${esc(p.typeLabel)}</td>
-                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem">${esc(p.company)}</td>
+                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:center;font-size:0.85rem;font-weight:700;color:#1e40af">${esc(p.code)}</td>
+                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem;font-weight:700">${esc(p.name)}</td>
                     <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem">${esc(p.position)}</td>
                     <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem">${esc(p.department)}</td>
-                    <td style="border:1px solid #d1d5db;padding:10px 8px;min-width:72px">&nbsp;</td>
+                    <td style="border:1px solid #d1d5db;padding:10px 8px;min-width:80px">&nbsp;</td>
                 </tr>`).join('')
-            : '<tr><td colspan="8" style="border:1px solid #d1d5db;padding:16px;text-align:center;color:#6b7280">لا يوجد مشاركين في القائمة</td></tr>';
+            : '<tr><td colspan="6" style="border:1px solid #d1d5db;padding:16px;text-align:center;color:#6b7280">لا يوجد مشاركون في القائمة</td></tr>';
 
         const scientificBlock = payload.topicsScientific
             ? `<div style="grid-column:1/-1;margin-top:4px"><p style="${fieldLabel}">المادة العلمية / الموضوعات</p><div style="${fieldBox}">${esc(payload.topicsScientific)}</div></div>`
@@ -9524,17 +9514,15 @@ const Training = {
       <div style="background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);border:2px solid #a7f3d0;border-radius:14px;padding:1.35rem 1.25rem">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;padding-bottom:0.65rem;border-bottom:2px solid rgba(167,243,208,0.8)">
           <div style="${iconBox('#059669')}"><span style="display:block;width:10px;height:10px;background:#fff;border-radius:2px;opacity:0.95"></span></div>
-          <h2 style="${sectionTitleStyle}">قائمة المشاركين (${esc(String((payload.participants || []).length))})</h2>
+          <h2 style="${sectionTitleStyle}">قائمة حضور الموظفين (${esc(String((payload.participants || []).length))})</h2>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:0.88rem">
           <thead>
             <tr style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:#fff">
               <th style="border:1px solid #047857;padding:10px 6px;text-align:center;font-weight:600;width:40px">م</th>
               <th style="border:1px solid #047857;padding:10px 6px;text-align:center;font-weight:600">الكود الوظيفي</th>
-              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">اسم المشارك</th>
-              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">النوع</th>
-              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">الشركة / الجهة</th>
-              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">الوظيفة</th>
+              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">اسم الموظف</th>
+              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">المسمى الوظيفي</th>
               <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">القسم/الإدارة</th>
               <th style="border:1px solid #047857;padding:10px 6px;text-align:center;font-weight:600;width:80px">التوقيع</th>
             </tr>
