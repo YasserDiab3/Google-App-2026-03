@@ -3142,8 +3142,9 @@
                 });
             }
 
-            // 4. تهيئة المقترحات الذكية والإكمال التلقائي
-            renderSmartSuggestions();
+            // 4. تهيئة المقترحات الذكية وتعبئة تفاصيل النموذج الأولية فوراً
+            const initialSub = document.getElementById('subCategorySelect')?.value || '';
+            renderSmartSuggestions(selectedObservationType, initialSub, true);
             setupObservationAutocomplete();
 
             // 5. استرجاع البروفايل المحفوظ وطابور عدم الاتصال
@@ -3234,34 +3235,61 @@
             }
         }
 
+        const ALL_SYSTEM_DEPARTMENTS = [
+            'إدارة السلامة والصحة المهنية',
+            'إدارة الصيانة والورش',
+            'إدارة الإنتاج والتشغيل',
+            'إدارة الجودة وسلامة الغذاء',
+            'إدارة المستودعات والمخازن',
+            'إدارة الخدمات اللوجستية والنقل',
+            'إدارة الموارد البشرية والشؤون الإدارية',
+            'إدارة الأمن والحراسة',
+            'إدارة المشروعات والهندسة',
+            'إدارة المشتريات والتوريدات',
+            'إدارة تكنولوجيا المعلومات (IT)',
+            'إدارة البيئة والاستدامة',
+            'إدارة الزراعة والمزارع',
+            'إدارة الخدمات العامة والمرافق',
+            'إدارة المالية والمحاسبة',
+            'إدارة التصدير وسلاسل الإمداد'
+        ];
+
+        const ALL_SYSTEM_SAFETY_MEMBERS = [
+            { name: 'م/ ياسر دياب', role: 'مدير إدارة السلامة والصحة المهنية', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
+            { name: 'أ/ محمد إبراهيم', role: 'أخصائي سلامة وصحة مهنية أول', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
+            { name: 'أ/ أحمد حسن', role: 'مفتش سلامة ميداني', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
+            { name: 'أ/ محمود علي', role: 'مشرف سلامة وصحة مهنية', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
+            { name: 'أ/ إبراهيم عبد الله', role: 'مسؤول بيئة واستدامة', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
+            { name: 'أ/ مصطفى كمال', role: 'مفتش حماية مدنية ومكافحة حريق', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
+            { name: 'أ/ طارق سعيد', role: 'أخصائي تصاريح عمل وتقييم مخاطر', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true },
+            { name: 'أ/ سامح عبد الرحمن', role: 'مشرف سلامة وردية', department: 'إدارة السلامة والصحة المهنية', isSafetyTeam: true }
+        ];
+
         function renderDefaultFields() {
-            let defaultDepts = [];
+            let defaultDepts = [...ALL_SYSTEM_DEPARTMENTS];
             try {
                 const sCache = localStorage.getItem('HSE_SETTINGS_CACHE') || localStorage.getItem('appData');
                 if (sCache) {
                     const parsed = JSON.parse(sCache);
                     if (parsed.companySettings && (parsed.companySettings.formDepartments || parsed.companySettings.departments)) {
                         const raw = parsed.companySettings.formDepartments || parsed.companySettings.departments;
-                        defaultDepts = Array.isArray(raw) ? raw : String(raw).split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+                        const customDepts = Array.isArray(raw) ? raw : String(raw).split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+                        customDepts.forEach(cd => {
+                            if (cd && !defaultDepts.includes(cd)) defaultDepts.push(cd);
+                        });
                     }
                 }
             } catch(e) {}
+
             const defaultSites = [
                 { name: 'ICAPP-1', places: ['منظومة طلمبات الحريق', 'عنبر الإنتاج الرئيسي', 'منطقة التعبئة والتغليف', 'مستودع المواد الخام', 'مستودع المنتج التام', 'غرفة المحولات واللوحات الكهربائية', 'ورشة الصيانة الميكانيكية', 'محطة معالجة المياه', 'منطقة التحميل والتعتيق'] },
                 { name: 'ICAPP-2', places: ['عنبر المعالجة والفرز', 'خطوط الإنتاج والتعبئة', 'ثلاجات التبريد والتجميد', 'مخزن قطع الغيار', 'المكاتب الإدارية', 'منطقة الشحن والتفريغ'] }
             ];
-            const defaultMembers = [
-                { name: 'م/ ياسر دياب', role: 'مدير السلامة والصحة المهنية', department: 'السلامة والصحة المهنية', isSafetyTeam: true },
-                { name: 'أ/ محمد إبراهيم', role: 'أخصائي سلامة وصحة مهنية', department: 'السلامة والصحة المهنية', isSafetyTeam: true },
-                { name: 'أ/ أحمد حسن', role: 'مفتش سلامة ميداني', department: 'السلامة والصحة المهنية', isSafetyTeam: true },
-                { name: 'أ/ محمود علي', role: 'مشرف سلامة وصحة مهنية', department: 'السلامة والصحة المهنية', isSafetyTeam: true },
-                { name: 'أ/ إبراهيم عبد الله', role: 'مسؤول بيئة واستدامة', department: 'السلامة والصحة المهنية', isSafetyTeam: true },
-                { name: 'أ/ مصطفى كمال', role: 'مفتش حماية مدنية وحريق', department: 'السلامة والصحة المهنية', isSafetyTeam: true }
-            ];
+
             loadedConfig = {
                 sites: defaultSites,
                 departments: defaultDepts,
-                safetyMembers: defaultMembers
+                safetyMembers: ALL_SYSTEM_SAFETY_MEMBERS
             };
             renderConfigData(loadedConfig);
         }
@@ -3288,8 +3316,6 @@
                 });
             }
 
-
-
             // قراءة query param للمصنع المحدد
             const urlParams = new URLSearchParams(window.location.search);
             const factoryParam = urlParams.get('factory') || urlParams.get('factoryName') || urlParams.get('site');
@@ -3310,29 +3336,18 @@
                 handleSiteChange(siteSelect.value);
             }
 
-            // 2. الإدارات الفعلية الشاملة من النظام
+            // 2. الإدارات الفعلية الشاملة المطابقة للنظام بالكامل
             const deptSelect = document.getElementById('responsibleDeptSelect');
             const previousDept = deptSelect.value;
             deptSelect.innerHTML = '<option value="">— اختر الإدارة المسؤولة عن التنفيذ —</option>';
             
-            let deptsList = (Array.isArray(cfg.departments) && cfg.departments.length > 0) ? cfg.departments : [];
-            if (deptsList.length === 0) {
-                try {
-                    const localCache = localStorage.getItem('HSE_SETTINGS_CACHE') || localStorage.getItem('appData');
-                    if (localCache) {
-                        const parsed = JSON.parse(localCache);
-                        if (parsed.companySettings && (parsed.companySettings.formDepartments || parsed.companySettings.departments)) {
-                            const raw = parsed.companySettings.formDepartments || parsed.companySettings.departments;
-                            deptsList = Array.isArray(raw) ? raw : String(raw).split(/[\n,]/).map(s => s.trim()).filter(Boolean);
-                        }
-                    }
-                } catch(e) {}
-            }
-            if (deptsList.length === 0) {
-                deptsList = [
-                    'إدارة السلامة والصحة المهنية', 'إدارة الصيانة', 'إدارة الإنتاج والتشغيل', 'إدارة الجودة وسلامة الغذاء',
-                    'إدارة المستودعات والخدمات اللوجستية', 'إدارة الموارد البشرية', 'إدارة الأمن والحراسة', 'إدارة الهندسة والمشاريع'
-                ];
+            // دمج الإدارات الافتراضية مع ما جاء من الخادم لضمان عدم نقص أي إدارة
+            const combinedDepts = [...ALL_SYSTEM_DEPARTMENTS];
+            if (Array.isArray(cfg.departments) && cfg.departments.length > 0) {
+                cfg.departments.forEach(d => {
+                    const dStr = String(d || '').trim();
+                    if (dStr && !combinedDepts.includes(dStr)) combinedDepts.push(dStr);
+                });
             }
 
             const seenDepts = new Set();
@@ -3341,7 +3356,7 @@
                     .replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[^\w\u0600-\u06FF]/g, '');
             }
 
-            deptsList.forEach(rawD => {
+            combinedDepts.forEach(rawD => {
                 const d = String(rawD || '').trim();
                 if (!d || d.length < 2) return;
                 const normKey = normalizeD(d);
@@ -3357,13 +3372,21 @@
                 deptSelect.appendChild(opt);
             });
 
-
-
-            // 3. مسؤولو فريق السلامة والصحة المهنية فقط (بدون أي تكرار)
+            // 3. مسؤولو فريق السلامة والصحة المهنية (بدون أي تكرار)
             const ownerSelect = document.getElementById('ownerSelect');
             const previousOwner = ownerSelect.value;
             ownerSelect.innerHTML = '<option value="">— اختر اسمك من فريق السلامة —</option>';
             
+            const combinedMembers = [...ALL_SYSTEM_SAFETY_MEMBERS];
+            if (Array.isArray(cfg.safetyMembers) && cfg.safetyMembers.length > 0) {
+                cfg.safetyMembers.forEach(m => {
+                    const mName = typeof m === 'string' ? m.trim() : String(m.name || '').trim();
+                    if (mName && !combinedMembers.some(cm => cm.name === mName)) {
+                        combinedMembers.push(typeof m === 'string' ? { name: mName, role: 'فريق السلامة والصحة المهنية' } : m);
+                    }
+                });
+            }
+
             const seenKeys = new Set();
             function normalizeKey(str) {
                 return String(str || '')
@@ -3376,20 +3399,19 @@
                     .replace(/\s+/g, ' ');
             }
 
-            if (Array.isArray(cfg.safetyMembers) && cfg.safetyMembers.length > 0) {
-                cfg.safetyMembers.forEach(mem => {
-                    const mName = typeof mem === 'string' ? mem.trim() : String(mem.name || '').trim();
-                    if (!mName || mName.includes('مجهول') || mName.includes('عامة') || mName.length < 3) return;
-                    const key = normalizeKey(mName);
-                    if (seenKeys.has(key)) return;
-                    seenKeys.add(key);
+            combinedMembers.forEach(mem => {
+                const mName = typeof mem === 'string' ? mem.trim() : String(mem.name || '').trim();
+                if (!mName || mName.includes('مجهول') || mName.includes('عامة') || mName.length < 3) return;
+                const key = normalizeKey(mName);
+                if (seenKeys.has(key)) return;
+                seenKeys.add(key);
 
-                    const opt = document.createElement('option');
-                    opt.value = mName;
-                    opt.textContent = mName;
-                    ownerSelect.appendChild(opt);
-                });
-            }
+                const opt = document.createElement('option');
+                opt.value = mName;
+                opt.textContent = mName;
+                ownerSelect.appendChild(opt);
+            });
+
             const otherOwnerOpt = document.createElement('option');
             otherOwnerOpt.value = '__OTHER_OWNER__';
             otherOwnerOpt.textContent = '➕ اسم آخر (إدخال يدوي)...';
