@@ -619,7 +619,7 @@
                         <div class="section-icon">
                             <i class="fas fa-signature"></i>
                         </div>
-                        <div class="section-title">التوقيع الرقمي لمسؤول السلامة</div>
+                        <div class="section-title">التوقيع الرقمي لمسؤول السلامة <span class="req" style="color: #ef4444; font-weight: 800;">*</span></div>
                     </div>
                     <button type="button" onclick="clearSignature()" style="background: none; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 700; color: #dc2626; cursor: pointer;">
                         <i class="fas fa-eraser"></i> مسح التوقيع
@@ -629,7 +629,7 @@
                 <div style="background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 10px; overflow: hidden; position: relative; height: 130px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
                     <canvas id="signatureCanvas" style="width: 100%; height: 100%; touch-action: none; cursor: crosshair; display: block;"></canvas>
                     <span id="sigPlaceholder" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 12px; pointer-events: none; font-weight: 700;">
-                        ✍️ وقّع باللمس هنا
+                        ✍️ وقّع باللمس هنا (إلزامي *)
                     </span>
                 </div>
             </div>
@@ -711,9 +711,10 @@
                         <div class="checklist-title">
                             <span class="q-number">${idx + 1}</span>
                             <span>${q.text}</span>
+                            <span class="req" style="color: #ef4444; font-weight: 800; margin-right: 4px;">*</span>
                         </div>
                         <div>
-                            <input type="text" id="input_${q.key}" class="form-input" placeholder="أدخل قراءة الضغط (مثال: 7.5 Bar)" oninput="formAnswers['${q.key}'] = this.value">
+                            <input type="text" id="input_${q.key}" class="form-input" required placeholder="أدخل قراءة الضغط (مثال: 7.5 Bar) — إلزامي *" oninput="formAnswers['${q.key}'] = this.value">
                         </div>
                     `;
                 } else {
@@ -897,16 +898,72 @@
         // Form Submission
         async function handleSubmit(e) {
             e.preventDefault();
+
+            // 1. التحقق الإلزامي من الحقول الأساسية
+            const dateVal = document.getElementById('dateInput').value;
+            if (!dateVal) {
+                alert('⚠️ حقل إلزامي: يرجى تحديد تاريخ المرور اليومي *');
+                document.getElementById('dateInput').focus();
+                return;
+            }
+
+            const shiftVal = document.getElementById('shiftSelect').value;
+            if (!shiftVal) {
+                alert('⚠️ حقل إلزامي: يرجى اختيار الوردية *');
+                document.getElementById('shiftSelect').focus();
+                return;
+            }
+
+            const siteVal = document.getElementById('siteSelect').value;
+            if (!siteVal) {
+                alert('⚠️ حقل إلزامي: يرجى اختيار المصنع / الموقع *');
+                const s = document.getElementById('siteSelect');
+                s.focus();
+                s.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            const inspectorVal = document.getElementById('inspectorSelect').value;
+            if (!inspectorVal) {
+                alert('⚠️ حقل إلزامي: يرجى اختيار اسم القائم بالمرور (مسؤول السلامة) *');
+                const insp = document.getElementById('inspectorSelect');
+                insp.focus();
+                insp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            // 2. التحقق الإلزامي من قراءة ضغط غرفة الطلمبات (البند 16)
+            const pressureReading = (document.getElementById('input_q16')?.value || '').trim();
+            if (!pressureReading) {
+                alert('⚠️ حقل إلزامي: يرجى إدخال قراءة ضغط غرفة الطلمبات (البند رقم 16) *');
+                const inp = document.getElementById('input_q16');
+                if (inp) {
+                    inp.focus();
+                    inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+            }
+
+            // 3. التحقق الإلزامي من التوقيع الرقمي باللمس
+            if (!hasSignature) {
+                alert('⚠️ حقل إلزامي: يرجى التوقيع باللمس في خانة التوقيع الرقمي المعتمد لمسؤول السلامة *');
+                const sigBox = document.getElementById('signatureCanvas');
+                if (sigBox) {
+                    sigBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+            }
+
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري حفظ التقرير...';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري حفظ وتوثيق التقرير...';
 
             const payload = {
-                date: document.getElementById('dateInput').value,
-                shift: document.getElementById('shiftSelect').value,
-                siteName: document.getElementById('siteSelect').value,
-                siteId: document.getElementById('siteSelect').value,
-                inspectorName: document.getElementById('inspectorSelect').value,
+                date: dateVal,
+                shift: shiftVal,
+                siteName: siteVal,
+                siteId: siteVal,
+                inspectorName: inspectorVal,
                 notes: document.getElementById('notesInput').value,
                 q1: formAnswers.q1 || 'مطابق',
                 q2: formAnswers.q2 || 'مطابق',
