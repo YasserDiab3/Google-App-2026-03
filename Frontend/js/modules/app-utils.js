@@ -294,6 +294,7 @@ const MODULE_PERMISSIONS_CONFIG = [
     { key: 'behavior-monitoring', label: 'مراقبة السلوكيات', icon: 'fa-user-check' },
     { key: 'chemical-safety', label: 'السلامة الكيميائية', icon: 'fa-flask' },
     { key: 'daily-observations', label: 'الملاحظات اليومية', icon: 'fa-eye', hasDetailedPermissions: true },
+    { key: 'forms-hub', label: 'بوابة النماذج الميدانية (Hub)', icon: 'fa-mobile-screen-button' },
     { key: 'safety-calendar', label: 'تقويم السلامة', icon: 'fa-calendar-days' },
     { key: 'iso', label: 'نظام ISO', icon: 'fa-certificate' },
     { key: 'emergency', label: 'تنبيهات الطوارئ', icon: 'fa-bell' },
@@ -3072,8 +3073,8 @@ const Permissions = {
             return false;
         }
 
-        // ملفي الشخصي والمساعدة وبوابة النماذج متاحة دائماً لأي مستخدم مسجل الدخول
-        if (moduleName === 'profile' || moduleName === 'help' || moduleName === 'forms-hub') {
+        // ملفي الشخصي والمساعدة متاحان دائماً لأي مستخدم مسجل الدخول
+        if (moduleName === 'profile' || moduleName === 'help') {
             return true;
         }
 
