@@ -3044,24 +3044,80 @@ const Training = {
                         <span class="pinsp-stat__pct">${_trPct(stats.totalParticipants)}%</span>
                     </div>
                 </div>
-                <div class="content-card">
-                    <div class="card-header">
-                        <div class="flex items-center justify-between">
-                            <h2 class="card-title"><i class="fas fa-list ml-2"></i>قائمة برامج التدريب</h2>
-                            <div class="flex items-center gap-4">
-                                <button id="export-training-pdf-btn" class="btn-secondary">
-                                    <i class="fas fa-file-pdf ml-2" style="font-size: 14px;"></i>تقرير PDF
+                <div class="content-card" style="border-radius: 16px; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.04); overflow: hidden; background: #ffffff;">
+                    <div class="card-header" style="padding: 1.25rem 1.5rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0;">
+                        <!-- السطر العلوي: العنوان والشارة والأزرار الرئيسية -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(99,102,241,0.25);">
+                                    <i class="fas fa-list-check"></i>
+                                </div>
+                                <div>
+                                    <h2 style="font-size: 16px; font-weight: 800; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                        قائمة برامج التدريب
+                                        <span id="training-filtered-count-badge" style="font-size: 11px; font-weight: 700; background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; border-radius: 9999px; padding: 2px 10px;">
+                                            ${AppState.appData.training?.length || 0} برامج
+                                        </span>
+                                    </h2>
+                                    <p style="font-size: 12px; color: #64748b; margin: 2px 0 0 0; font-weight: 500;">استعراض وتصفية البرامج التدريبية المعتمدة والتسجيلات</p>
+                                </div>
+                            </div>
+                            
+                            <!-- أزرار التصدير وإعادة الضبط -->
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <button id="export-training-pdf-btn" style="padding: 7px 15px; font-size: 12px; font-weight: 700; border-radius: 9px; background: #ffffff; color: #4338ca; border: 1.5px solid #c7d2fe; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: all 0.2s;" onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='#ffffff'">
+                                    <i class="fas fa-file-pdf" style="color: #6366f1;"></i> تقرير PDF
                                 </button>
-                                <button id="export-training-excel-btn" class="btn-success">
-                                    <i class="fas fa-file-excel ml-2" style="font-size: 14px;"></i>تصدير Excel
+                                <button id="export-training-excel-btn" style="padding: 7px 15px; font-size: 12px; font-weight: 700; border-radius: 9px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(5,150,105,0.25);">
+                                    <i class="fas fa-file-excel"></i> تصدير Excel
                                 </button>
-                                <input type="text" id="training-search" class="form-input" style="max-width: 300px;" placeholder="البحث...">
-                                <select id="training-filter-status" class="form-input" style="max-width: 200px;">
+                                <button id="training-filter-reset-btn" onclick="Training.resetFilters()" style="padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 9px; background: #ffffff; color: #e11d48; border: 1.5px solid #fecdd3; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="إعادة ضبط الفلاتر">
+                                    <i class="fas fa-rotate-left"></i> إعادة ضبط
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- شريط الفلاتر الديناميكية الحديث -->
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                            <!-- البحث الشامل -->
+                            <div style="position: relative; grid-column: span 2; min-width: 240px;">
+                                <input type="text" id="training-search" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 12px 8px 32px; font-size: 12px; font-weight: 600; color: #1e293b; background: #f8fafc; outline: none; transition: all 0.2s;" placeholder="بحث باسم البرنامج، المدرب، المشاركين أو الموقع..." autocomplete="off" onfocus="this.style.borderColor='#6366f1'; this.style.background='#ffffff'" onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc'">
+                                <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 12px; pointer-events: none;"></i>
+                            </div>
+
+                            <!-- فلتر الحالة -->
+                            <div>
+                                <select id="training-filter-status" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
                                     <option value="">جميع الحالات</option>
                                     <option value="مخطط">مخطط</option>
                                     <option value="قيد التنفيذ">قيد التنفيذ</option>
                                     <option value="مكتمل">مكتمل</option>
                                     <option value="ملغي">ملغي</option>
+                                </select>
+                            </div>
+
+                            <!-- فلتر الفترة / الشهر -->
+                            <div>
+                                <select id="training-filter-month" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
+                                    <option value="">جميع الفترات والشهور</option>
+                                    ${this.getMonthOptions().map(m => `<option value="${Utils.escapeHTML(m.value)}">${Utils.escapeHTML(m.label)}</option>`).join('')}
+                                </select>
+                            </div>
+
+                            <!-- فلتر المصنع / المنشأة -->
+                            <div>
+                                <select id="training-filter-factory" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
+                                    <option value="">جميع المصانع</option>
+                                    ${this.getSiteOptions().map(s => `<option value="${Utils.escapeHTML(s.id)}">${Utils.escapeHTML(s.name)}</option>`).join('')}
+                                </select>
+                            </div>
+
+                            <!-- فلتر نوع التدريب -->
+                            <div>
+                                <select id="training-filter-type" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; color: #334155; background: #f8fafc; outline: none;">
+                                    <option value="">جميع أنواع التدريب</option>
+                                    <option value="داخلي">تدريب داخلي</option>
+                                    <option value="خارجي">تدريب خارجي</option>
                                 </select>
                             </div>
                         </div>
@@ -3257,77 +3313,79 @@ const Training = {
                         </tr>
                     </thead>
                     <tbody>
-                        ${items.map(item => {
-            const statusText = item.status || '';
-            const participantsCount = this.getParticipantsCount(item);
-            const isInProgress = /تنفي/.test(statusText);
-            const badgeClass = statusText === 'مكتمل'
-                ? 'success'
-                : isInProgress
-                    ? 'info'
-                    : statusText === 'ملغي'
-                        ? 'danger'
-                        : 'warning';
-            const startDateDisplay = item.startDate
-                ? Utils.formatDate(item.startDate)
-                : (item.date ? Utils.formatDate(item.date) : '-');
-            const trainingTypeLabel = Utils.escapeHTML(item.trainingType || 'داخلي');
-            const trainingTypeBadge = item.trainingType === 'خارجي' ? 'badge-warning' : 'badge-info';
-            const displayStatus = statusText === 'قيد التنيذ' ? 'قيد التنفيذ' : (statusText || '-');
-
-            // الحصول على اسم المكان بدلاً من المعرف
-            let locationDisplay = '';
-            if (item.location) {
-                if (item.locationName) {
-                    locationDisplay = item.locationName;
-                } else {
-                    locationDisplay = this.getPlaceName(item.location, item.factory);
-                }
-            }
-
-            return `
-                                <tr>
-                                    <td class="training-name-cell">
-                                        <div class="font-semibold text-gray-900" style="line-height: 1.4;">${Utils.escapeHTML(item.name || '')}</div>
-                                        ${locationDisplay ? `<div class="text-xs text-gray-500" style="margin-top: 4px; line-height: 1.3;"><i class="fas fa-map-marker-alt ml-1"></i>${Utils.escapeHTML(locationDisplay)}</div>` : ''}
-                                    </td>
-                                    <td style="text-align: center;"><span class="badge ${trainingTypeBadge}">${trainingTypeLabel}</span></td>
-                                    <td class="training-text-cell" title="${Utils.escapeHTML(item.trainer || '')}">
-                                        <div class="font-medium text-gray-800">${Utils.escapeHTML(item.trainer || '-')}</div>
-                                    </td>
-                                    <td style="white-space: nowrap;">
-                                        <div class="font-medium text-gray-900">${startDateDisplay}</div>
-                                        ${item.expiryDate ? `<div class="text-xs text-indigo-600 font-semibold" style="margin-top: 2px;" title="تاريخ انتهاء التدريب"><i class="fas fa-hourglass-half ml-1"></i>ينتهي: ${Utils.formatDate(item.expiryDate)}</div>` : ''}
-                                    </td>
-                                    <td style="text-align: center;"><span class="badge badge-info font-bold">${participantsCount}</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-${badgeClass}">${Utils.escapeHTML(displayStatus)}</span></td>
-                                    <td class="training-actions-cell">
-                                        <div class="flex items-center" style="justify-content: center;">
-                                            <button onclick="Training.viewTraining('${item.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
-                                                <i class="fas fa-eye" style="font-size: 13px;"></i>
-                                            </button>
-                                            <button onclick="Training.editTraining('${item.id}')" class="btn-icon btn-icon-primary" title="تعديل">
-                                                <i class="fas fa-edit" style="font-size: 13px;"></i>
-                                            </button>
-                                            <button onclick="Training.printTraining('${item.id}')" class="btn-icon btn-icon-secondary" title="طباعة">
-                                                <i class="fas fa-print" style="font-size: 13px;"></i>
-                                            </button>
-                                            <button onclick="Training.exportTraining('${item.id}')" class="btn-icon btn-icon-success" title="تصدير">
-                                                <i class="fas fa-file-export" style="font-size: 13px;"></i>
-                                            </button>
-                                            <button onclick="Training.deleteTraining('${item.id}')" class="btn-icon btn-icon-danger" title="حذف">
-                                                <i class="fas fa-trash" style="font-size: 13px;"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
-        }).join('')}
+                        ${items.map(item => this._buildTrainingTableRowHtml(item)).join('')}
                     </tbody>
                 </table>
             </div>
         `;
         this.applyModuleI18n(container);
+    },
+
+    _buildTrainingTableRowHtml(item) {
+        const statusText = item.status || '';
+        const participantsCount = this.getParticipantsCount(item);
+        const isInProgress = /تنفي/.test(statusText);
+        const badgeClass = statusText === 'مكتمل'
+            ? 'success'
+            : isInProgress
+                ? 'info'
+                : statusText === 'ملغي'
+                    ? 'danger'
+                    : 'warning';
+        const startDateDisplay = item.startDate
+            ? Utils.formatDate(item.startDate)
+            : (item.date ? Utils.formatDate(item.date) : '-');
+        const trainingTypeLabel = Utils.escapeHTML(item.trainingType || 'داخلي');
+        const trainingTypeBadge = item.trainingType === 'خارجي' ? 'badge-warning' : 'badge-info';
+        const displayStatus = statusText === 'قيد التنيذ' ? 'قيد التنفيذ' : (statusText || '-');
+
+        // الحصول على اسم المكان بدلاً من المعرف
+        let locationDisplay = '';
+        if (item.location) {
+            if (item.locationName) {
+                locationDisplay = item.locationName;
+            } else {
+                locationDisplay = this.getPlaceName(item.location, item.factory);
+            }
+        }
+
+        return `
+            <tr>
+                <td class="training-name-cell">
+                    <div class="font-semibold text-gray-900" style="line-height: 1.4;">${Utils.escapeHTML(item.name || '')}</div>
+                    ${locationDisplay ? `<div class="text-xs text-gray-500" style="margin-top: 4px; line-height: 1.3;"><i class="fas fa-map-marker-alt ml-1"></i>${Utils.escapeHTML(locationDisplay)}</div>` : ''}
+                </td>
+                <td style="text-align: center;"><span class="badge ${trainingTypeBadge}">${trainingTypeLabel}</span></td>
+                <td class="training-text-cell" title="${Utils.escapeHTML(item.trainer || '')}">
+                    <div class="font-medium text-gray-800">${Utils.escapeHTML(item.trainer || '-')}</div>
+                </td>
+                <td style="white-space: nowrap;">
+                    <div class="font-medium text-gray-900">${startDateDisplay}</div>
+                    ${item.expiryDate ? `<div class="text-xs text-indigo-600 font-semibold" style="margin-top: 2px;" title="تاريخ انتهاء التدريب"><i class="fas fa-hourglass-half ml-1"></i>ينتهي: ${Utils.formatDate(item.expiryDate)}</div>` : ''}
+                </td>
+                <td style="text-align: center;"><span class="badge badge-info font-bold">${participantsCount}</span></td>
+                <td style="text-align: center;"><span class="badge badge-${badgeClass}">${Utils.escapeHTML(displayStatus)}</span></td>
+                <td class="training-actions-cell">
+                    <div class="flex items-center" style="justify-content: center;">
+                        <button onclick="Training.viewTraining('${item.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
+                            <i class="fas fa-eye" style="font-size: 13px;"></i>
+                        </button>
+                        <button onclick="Training.editTraining('${item.id}')" class="btn-icon btn-icon-primary" title="تعديل">
+                            <i class="fas fa-edit" style="font-size: 13px;"></i>
+                        </button>
+                        <button onclick="Training.printTraining('${item.id}')" class="btn-icon btn-icon-secondary" title="طباعة">
+                            <i class="fas fa-print" style="font-size: 13px;"></i>
+                        </button>
+                        <button onclick="Training.exportTraining('${item.id}')" class="btn-icon btn-icon-success" title="تصدير">
+                            <i class="fas fa-file-export" style="font-size: 13px;"></i>
+                        </button>
+                        <button onclick="Training.deleteTraining('${item.id}')" class="btn-icon btn-icon-danger" title="حذف">
+                            <i class="fas fa-trash" style="font-size: 13px;"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
     },
 
     setupEventListeners() {
@@ -3350,8 +3408,17 @@ const Training = {
 
         const searchInput = document.getElementById('training-search');
         const statusFilter = document.getElementById('training-filter-status');
-        bindOnce(searchInput, 'input', (e) => this.filterItems(e.target.value, statusFilter?.value || ''));
-        bindOnce(statusFilter, 'change', (e) => this.filterItems(searchInput?.value || '', e.target.value));
+        const monthFilter = document.getElementById('training-filter-month');
+        const factoryFilter = document.getElementById('training-filter-factory');
+        const typeFilter = document.getElementById('training-filter-type');
+
+        const triggerFilter = () => this.filterItems();
+        bindOnce(searchInput, 'input', triggerFilter);
+        bindOnce(statusFilter, 'change', triggerFilter);
+        bindOnce(monthFilter, 'change', triggerFilter);
+        bindOnce(factoryFilter, 'change', triggerFilter);
+        bindOnce(typeFilter, 'change', triggerFilter);
+        bindOnce(document.getElementById('training-filter-reset-btn'), 'click', () => this.resetFilters());
 
         bindOnce(document.getElementById('view-training-matrix-btn'), 'click', () => this.showTrainingMatrix());
         bindOnce(document.getElementById('view-annual-training-plan-btn'), 'click', () => this.showAnnualPlanModal());
@@ -7497,56 +7564,112 @@ const Training = {
         }
     },
 
-    filterItems(searchTerm = '', statusFilter = '') {
+    filterItems(searchTermParam = null, statusFilterParam = null) {
         this.ensureData();
+        const searchInput = document.getElementById('training-search');
+        const statusSelect = document.getElementById('training-filter-status');
+        const monthSelect = document.getElementById('training-filter-month');
+        const factorySelect = document.getElementById('training-filter-factory');
+        const typeSelect = document.getElementById('training-filter-type');
+
+        const searchTerm = (typeof searchTermParam === 'string' ? searchTermParam : (searchInput?.value || '')).trim().toLowerCase();
+        const statusFilter = typeof statusFilterParam === 'string' ? statusFilterParam : (statusSelect?.value || '');
+        const monthFilter = monthSelect?.value || '';
+        const factoryFilter = factorySelect?.value || '';
+        const typeFilter = typeSelect?.value || '';
+
         const items = AppState.appData.training || [];
-        let filtered = items;
+        const filtered = items.filter(item => {
+            // 1. تصفية بالبحث النصي الشامل
+            if (searchTerm) {
+                const nameMatch = (item.name && item.name.toLowerCase().includes(searchTerm));
+                const trainerMatch = (item.trainer && item.trainer.toLowerCase().includes(searchTerm));
+                const factoryMatch = (item.factoryName && item.factoryName.toLowerCase().includes(searchTerm)) || 
+                                     (item.factory && String(item.factory).toLowerCase().includes(searchTerm));
+                const locationMatch = (item.locationName && item.locationName.toLowerCase().includes(searchTerm)) ||
+                                      (item.location && String(item.location).toLowerCase().includes(searchTerm));
+                const participantMatch = Array.isArray(item.participants) && item.participants.some(p =>
+                    (p.name && p.name.toLowerCase().includes(searchTerm)) ||
+                    (p.code && String(p.code).toLowerCase().includes(searchTerm)) ||
+                    (p.employeeNumber && String(p.employeeNumber).toLowerCase().includes(searchTerm)) ||
+                    (p.department && p.department.toLowerCase().includes(searchTerm)) ||
+                    (p.position && p.position.toLowerCase().includes(searchTerm))
+                );
+                if (!nameMatch && !trainerMatch && !factoryMatch && !locationMatch && !participantMatch) {
+                    return false;
+                }
+            }
 
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            filtered = filtered.filter(item =>
-                (item.name && item.name.toLowerCase().includes(term)) ||
-                (item.trainer && item.trainer.toLowerCase().includes(term)) ||
-                (Array.isArray(item.participants) && item.participants.some(p =>
-                    (p.name && p.name.toLowerCase().includes(term)) ||
-                    (p.code && p.code.includes(term))
-                ))
-            );
-        }
+            // 2. تصفية بالحالة
+            if (statusFilter && item.status !== statusFilter) {
+                return false;
+            }
 
-        if (statusFilter) {
-            filtered = filtered.filter(item => item.status === statusFilter);
+            // 3. تصفية بالشهر / الفترة
+            if (monthFilter) {
+                const itemDate = item.startDate || item.date || '';
+                if (!itemDate.startsWith(monthFilter)) {
+                    return false;
+                }
+            }
+
+            // 4. تصفية بالمصنع / المنشأة
+            if (factoryFilter) {
+                const itemFactory = String(item.factory || item.factoryName || '');
+                if (itemFactory !== factoryFilter && item.factoryName !== factoryFilter) {
+                    return false;
+                }
+            }
+
+            // 5. تصفية بنوع التدريب
+            if (typeFilter) {
+                const itemType = item.trainingType || 'داخلي';
+                if (itemType !== typeFilter) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
+        // تحديث شارة العداد
+        const countBadge = document.getElementById('training-filtered-count-badge');
+        if (countBadge) {
+            countBadge.textContent = `${filtered.length} من ${items.length} برامج`;
         }
 
         const tbody = document.querySelector('#training-table-container tbody');
-        if (tbody && filtered.length > 0) {
-            tbody.innerHTML = filtered.map(item => `
+        if (!tbody) return;
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `
                 <tr>
-                    <td>${Utils.escapeHTML(item.name || '')}</td>
-                    <td>${Utils.escapeHTML(item.trainer || '')}</td>
-                    <td>${item.startDate ? Utils.formatDate(item.startDate) : '-'}</td>
-                    <td>${this.getParticipantsCount(item)}</td>
-                    <td>
-                        <span class="badge badge-${item.status === 'مكتمل' ? 'success' : item.status === 'قيد التنيذ' ? 'info' : item.status === 'ملغي' ? 'danger' : 'warning'}">
-                            ${item.status || '-'}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="flex items-center gap-2">
-                            <button onclick="Training.viewTraining('${item.id}')" class="btn-icon btn-icon-info">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button onclick="Training.editTraining('${item.id}')" class="btn-icon btn-icon-primary">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="Training.deleteTraining('${item.id}')" class="btn-icon btn-icon-danger">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
+                    <td colspan="7" style="text-align: center; color: #94a3b8; padding: 2.5rem 1rem;">
+                        <i class="fas fa-filter-circle-xmark" style="font-size: 32px; color: #cbd5e1; display: block; margin-bottom: 8px;"></i>
+                        لا توجد برامج تدريبية مطابقة لمعايير البحث والتصفية المحددة
                     </td>
                 </tr>
-            `).join('');
+            `;
+            return;
         }
+
+        tbody.innerHTML = filtered.map(item => this._buildTrainingTableRowHtml(item)).join('');
+    },
+
+    resetFilters() {
+        const searchInput = document.getElementById('training-search');
+        const statusSelect = document.getElementById('training-filter-status');
+        const monthSelect = document.getElementById('training-filter-month');
+        const factorySelect = document.getElementById('training-filter-factory');
+        const typeSelect = document.getElementById('training-filter-type');
+
+        if (searchInput) searchInput.value = '';
+        if (statusSelect) statusSelect.value = '';
+        if (monthSelect) monthSelect.value = '';
+        if (factorySelect) factorySelect.value = '';
+        if (typeSelect) typeSelect.value = '';
+
+        this.filterItems();
     },
 
     async exportToExcel() {
