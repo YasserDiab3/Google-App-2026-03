@@ -8602,7 +8602,7 @@ const Training = {
                     </div>
                 </div>
 
-                <!-- 2. الجدولة الزمنية، التوقيت، وحساب الساعات والصلاحية -->
+                <!-- 2. الجدولة الزمنية، التوقيت، وحساب الساعات -->
                 <div style="background: linear-gradient(135deg, #faf5ff 0%, #eef2ff 100%); border: 1.5px solid #c7d2fe; border-radius: 16px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e0e7ff; flex-wrap: wrap;">
                         <div style="display: flex; align-items: center; gap: 12px;">
@@ -8610,8 +8610,8 @@ const Training = {
                                 <i class="fas fa-business-time"></i>
                             </div>
                             <div>
-                                <h3 style="font-size: 15px; font-weight: 800; color: #0f172a; margin: 0;">الجدولة الزمنية، التوقيت والصلاحية</h3>
-                                <p style="font-size: 12px; color: #4338ca; margin: 0; font-weight: 600;">تاريخ ووقت بدء وانتهاء التدريب في حقول موحدة، احتساب الساعات وتاريخ تجديد الشهادة</p>
+                                <h3 style="font-size: 15px; font-weight: 800; color: #0f172a; margin: 0;">الجدولة الزمنية والتوقيت</h3>
+                                <p style="font-size: 12px; color: #4338ca; margin: 0; font-weight: 600;">تاريخ ووقت بدء وانتهاء التدريب، احتساب الساعات التدريبية وحالة البرنامج</p>
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -8621,7 +8621,7 @@ const Training = {
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
                         <!-- تاريخ ووقت بدء التدريب (موحد في حقل واحد) -->
                         <div style="background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
                             <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
@@ -8640,23 +8640,6 @@ const Training = {
                             <input type="datetime-local" id="training-endDateTime" required style="${inputStyle}"
                                 value="${endDateTimeFormatted}">
                             <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0; font-weight: 500;">تاريخ وساعة اختتام الجلسة لاحتساب الساعات</p>
-                        </div>
-
-                        <!-- تاريخ انتهاء التدريب (صلاحية الشهادة) -->
-                        <div style="background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                            <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
-                                <i class="fas fa-certificate" style="color: #4f46e5; margin-left: 4px;"></i> تاريخ انتهاء التدريب (صلاحية الشهادة)
-                            </label>
-                            <input type="date" id="training-expiryDate" style="${inputStyle}"
-                                value="${data?.expiryDate ? new Date(data.expiryDate).toISOString().slice(0, 10) : ''}">
-                            <div style="display: flex; align-items: center; gap: 5px; margin-top: 6px; flex-wrap: wrap;">
-                                <span style="font-size: 11px; color: #64748b; font-weight: 700; margin-left: 4px;">تحديد سريع:</span>
-                                <button type="button" onclick="Training.setExpiryFromStart(6)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+6 أشهر</button>
-                                <button type="button" onclick="Training.setExpiryFromStart(12)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+سنة</button>
-                                <button type="button" onclick="Training.setExpiryFromStart(24)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+سنتين</button>
-                                <button type="button" onclick="Training.setExpiryFromStart(36)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+3 سنوات</button>
-                                <button type="button" onclick="document.getElementById('training-expiryDate').value=''" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; cursor: pointer;">مسح</button>
-                            </div>
                         </div>
 
                         <!-- حالة البرنامج -->

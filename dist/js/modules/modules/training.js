@@ -3054,7 +3054,7 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                     </div>
                 </div>
 
-                <!-- 2. \u0627\u0644\u062C\u062F\u0648\u0644\u0629 \u0627\u0644\u0632\u0645\u0646\u064A\u0629\u060C \u0627\u0644\u062A\u0648\u0642\u064A\u062A\u060C \u0648\u062D\u0633\u0627\u0628 \u0627\u0644\u0633\u0627\u0639\u0627\u062A \u0648\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0629 -->
+                <!-- 2. \u0627\u0644\u062C\u062F\u0648\u0644\u0629 \u0627\u0644\u0632\u0645\u0646\u064A\u0629\u060C \u0627\u0644\u062A\u0648\u0642\u064A\u062A\u060C \u0648\u062D\u0633\u0627\u0628 \u0627\u0644\u0633\u0627\u0639\u0627\u062A -->
                 <div style="background: linear-gradient(135deg, #faf5ff 0%, #eef2ff 100%); border: 1.5px solid #c7d2fe; border-radius: 16px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e0e7ff; flex-wrap: wrap;">
                         <div style="display: flex; align-items: center; gap: 12px;">
@@ -3062,8 +3062,8 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                                 <i class="fas fa-business-time"></i>
                             </div>
                             <div>
-                                <h3 style="font-size: 15px; font-weight: 800; color: #0f172a; margin: 0;">\u0627\u0644\u062C\u062F\u0648\u0644\u0629 \u0627\u0644\u0632\u0645\u0646\u064A\u0629\u060C \u0627\u0644\u062A\u0648\u0642\u064A\u062A \u0648\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0629</h3>
-                                <p style="font-size: 12px; color: #4338ca; margin: 0; font-weight: 600;">\u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A \u0628\u062F\u0621 \u0648\u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u062A\u062F\u0631\u064A\u0628 \u0641\u064A \u062D\u0642\u0648\u0644 \u0645\u0648\u062D\u062F\u0629\u060C \u0627\u062D\u062A\u0633\u0627\u0628 \u0627\u0644\u0633\u0627\u0639\u0627\u062A \u0648\u062A\u0627\u0631\u064A\u062E \u062A\u062C\u062F\u064A\u062F \u0627\u0644\u0634\u0647\u0627\u062F\u0629</p>
+                                <h3 style="font-size: 15px; font-weight: 800; color: #0f172a; margin: 0;">\u0627\u0644\u062C\u062F\u0648\u0644\u0629 \u0627\u0644\u0632\u0645\u0646\u064A\u0629 \u0648\u0627\u0644\u062A\u0648\u0642\u064A\u062A</h3>
+                                <p style="font-size: 12px; color: #4338ca; margin: 0; font-weight: 600;">\u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A \u0628\u062F\u0621 \u0648\u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u062A\u062F\u0631\u064A\u0628\u060C \u0627\u062D\u062A\u0633\u0627\u0628 \u0627\u0644\u0633\u0627\u0639\u0627\u062A \u0627\u0644\u062A\u062F\u0631\u064A\u0628\u064A\u0629 \u0648\u062D\u0627\u0644\u0629 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C</p>
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -3073,7 +3073,7 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
                         <!-- \u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A \u0628\u062F\u0621 \u0627\u0644\u062A\u062F\u0631\u064A\u0628 (\u0645\u0648\u062D\u062F \u0641\u064A \u062D\u0642\u0644 \u0648\u0627\u062D\u062F) -->
                         <div style="background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
                             <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
@@ -3092,23 +3092,6 @@ const Training={applyModuleI18n(t){const e=window.AppI18n&&typeof window.AppI18n
                             <input type="datetime-local" id="training-endDateTime" required style="${o}"
                                 value="${l}">
                             <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0; font-weight: 500;">\u062A\u0627\u0631\u064A\u062E \u0648\u0633\u0627\u0639\u0629 \u0627\u062E\u062A\u062A\u0627\u0645 \u0627\u0644\u062C\u0644\u0633\u0629 \u0644\u0627\u062D\u062A\u0633\u0627\u0628 \u0627\u0644\u0633\u0627\u0639\u0627\u062A</p>
-                        </div>
-
-                        <!-- \u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u062A\u062F\u0631\u064A\u0628 (\u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0634\u0647\u0627\u062F\u0629) -->
-                        <div style="background: #ffffff; padding: 1rem; border-radius: 12px; border: 1px solid #e0e7ff; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                            <label style="display: block; font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 0.35rem;">
-                                <i class="fas fa-certificate" style="color: #4f46e5; margin-left: 4px;"></i> \u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u062A\u062F\u0631\u064A\u0628 (\u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0634\u0647\u0627\u062F\u0629)
-                            </label>
-                            <input type="date" id="training-expiryDate" style="${o}"
-                                value="${t?.expiryDate?new Date(t.expiryDate).toISOString().slice(0,10):""}">
-                            <div style="display: flex; align-items: center; gap: 5px; margin-top: 6px; flex-wrap: wrap;">
-                                <span style="font-size: 11px; color: #64748b; font-weight: 700; margin-left: 4px;">\u062A\u062D\u062F\u064A\u062F \u0633\u0631\u064A\u0639:</span>
-                                <button type="button" onclick="Training.setExpiryFromStart(6)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+6 \u0623\u0634\u0647\u0631</button>
-                                <button type="button" onclick="Training.setExpiryFromStart(12)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+\u0633\u0646\u0629</button>
-                                <button type="button" onclick="Training.setExpiryFromStart(24)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+\u0633\u0646\u062A\u064A\u0646</button>
-                                <button type="button" onclick="Training.setExpiryFromStart(36)" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; cursor: pointer;">+3 \u0633\u0646\u0648\u0627\u062A</button>
-                                <button type="button" onclick="document.getElementById('training-expiryDate').value=''" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; cursor: pointer;">\u0645\u0633\u062D</button>
-                            </div>
                         </div>
 
                         <!-- \u062D\u0627\u0644\u0629 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C -->
