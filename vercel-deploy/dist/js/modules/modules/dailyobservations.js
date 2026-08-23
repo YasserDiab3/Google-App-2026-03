@@ -162,6 +162,10 @@ function generateDailyObservationId(e){const t=/^DOB-(\d+)$/i,i=/^OBS-\d{6}-(\d+
                                 <i class="fas fa-file-powerpoint ml-2"></i>
                                 <span data-i18n="module.dailyobs.btn.exportPpt">\u062A\u0635\u062F\u064A\u0631 PPT</span>
                             </button>
+                            <a href="forms-hub.html" target="_blank" class="btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #059669; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
+                                <i class="fas fa-mobile-screen-button ml-2"></i>
+                                <span>\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0645\u0648\u062D\u062F\u0629 (Hub)</span>
+                            </a>
                             <button id="public-qr-observations-btn" class="btn-secondary" onclick="DailyObservations.openPublicQrModal()" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); color: #2563eb; font-weight: 700;">
                                 <i class="fas fa-qrcode ml-2"></i>
                                 <span data-i18n="module.dailyobs.btn.publicQr">\u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0639\u0627\u0645 \u0648\u0631\u0645\u0632 QR</span>
@@ -3414,6 +3418,22 @@ ${o}${s.length>5?`
                     <button class="modal-close" style="color: #94a3b8; font-size: 1.25rem;" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body" style="padding: 24px; background: #f8fafc;">
+                    <!-- \u0634\u0631\u064A\u0637 \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0648\u062D\u062F \u0644\u0643\u0627\u0641\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C -->
+                    <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 36px; height: 36px; border-radius: 8px; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                                <i class="fas fa-layer-group"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 800; font-size: 0.88rem; color: #166534;">\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0645\u0648\u062D\u062F\u0629 (HSE Hub)</div>
+                                <div style="font-size: 0.78rem; color: #15803d;">\u062A\u0637\u0628\u064A\u0642 \u0648\u062A\u062B\u0628\u064A\u062A \u0648\u0627\u062D\u062F \u0639\u0644\u0649 \u0627\u0644\u0645\u0648\u0628\u0627\u064A\u0644 \u064A\u0634\u0645\u0644 \u0643\u0627\u0641\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C</div>
+                            </div>
+                        </div>
+                        <a href="forms-hub.html" target="_blank" class="btn-primary" style="padding: 7px 14px; font-size: 0.82rem; background: #16a34a; border-radius: 8px; text-decoration: none; font-weight: 700; white-space: nowrap;">
+                            \u0641\u062A\u062D \u0627\u0644\u0628\u0648\u0627\u0628\u0629 <i class="fas fa-external-link-alt mr-1"></i>
+                        </a>
+                    </div>
+
                     <!-- \u0623\u062F\u0648\u0627\u062A \u0627\u0644\u062A\u062E\u0635\u064A\u0635: \u0627\u0644\u0645\u0635\u0646\u0639 + \u0627\u0644\u0645\u0641\u062A\u0634 -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
                         <div>

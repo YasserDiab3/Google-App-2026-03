@@ -2103,6 +2103,10 @@ const DailyObservations = {
                                 <i class="fas fa-file-powerpoint ml-2"></i>
                                 <span data-i18n="module.dailyobs.btn.exportPpt">تصدير PPT</span>
                             </button>
+                            <a href="forms-hub.html" target="_blank" class="btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #059669; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
+                                <i class="fas fa-mobile-screen-button ml-2"></i>
+                                <span>بوابة النماذج الموحدة (Hub)</span>
+                            </a>
                             <button id="public-qr-observations-btn" class="btn-secondary" onclick="DailyObservations.openPublicQrModal()" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); color: #2563eb; font-weight: 700;">
                                 <i class="fas fa-qrcode ml-2"></i>
                                 <span data-i18n="module.dailyobs.btn.publicQr">النموذج العام ورمز QR</span>
@@ -14176,6 +14180,22 @@ const DailyObservations = {
                     <button class="modal-close" style="color: #94a3b8; font-size: 1.25rem;" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body" style="padding: 24px; background: #f8fafc;">
+                    <!-- شريط الرابط الموحد لكافة النماذج -->
+                    <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 36px; height: 36px; border-radius: 8px; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                                <i class="fas fa-layer-group"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 800; font-size: 0.88rem; color: #166534;">بوابة النماذج الموحدة (HSE Hub)</div>
+                                <div style="font-size: 0.78rem; color: #15803d;">تطبيق وتثبيت واحد على الموبايل يشمل كافة النماذج</div>
+                            </div>
+                        </div>
+                        <a href="forms-hub.html" target="_blank" class="btn-primary" style="padding: 7px 14px; font-size: 0.82rem; background: #16a34a; border-radius: 8px; text-decoration: none; font-weight: 700; white-space: nowrap;">
+                            فتح البوابة <i class="fas fa-external-link-alt mr-1"></i>
+                        </a>
+                    </div>
+
                     <!-- أدوات التخصيص: المصنع + المفتش -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
                         <div>
