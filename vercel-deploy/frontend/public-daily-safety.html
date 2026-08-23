@@ -644,16 +644,24 @@
 
     </main>
 
-    <!-- Success Modal -->
+    <!-- Success Modal (Optimistic UI Instant Response) -->
     <div id="successOverlay" class="success-overlay">
         <div class="success-modal">
             <div class="success-icon-wrap">
                 <i class="fas fa-check"></i>
             </div>
-            <h2 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">تم حفظ تقرير المرور بنجاح!</h2>
-            <p id="successMsgText" style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px;">
-                تم تسجيل تقرير المرور اليومي للسلامة وتحديث سجلات المنظومة تلقائياً.
+            <div id="successRefBadge" style="display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 9999px; padding: 4px 14px; font-size: 0.82rem; font-weight: 700; margin-bottom: 8px;">
+                رقم التقرير: DSR-202608-0000
+            </div>
+            <h2 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">تم حفظ تقرير المرور فورياً!</h2>
+            <p id="successMsgText" style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
+                تم تسجيل جولة المرور بنجاح ويتم التوثيق والمزامنة السحابية في الخلفية.
             </p>
+
+            <div id="successSummaryBox" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 12px; text-align: right; margin-bottom: 16px; display: flex; flex-direction: column; gap: 4px;">
+                <!-- Filled dynamically -->
+            </div>
+
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <button onclick="resetAndNewForm()" class="submit-btn" style="padding: 10px;">
                     <i class="fas fa-plus ml-1"></i> تسجيل جولة مرور جديدة
@@ -954,11 +962,14 @@
                 return;
             }
 
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري حفظ وتوثيق التقرير...';
+            const now = new Date();
+            const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
+            const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
+            const instantRefCode = 'DSR-' + yearMonth + '-' + randomSuffix;
 
             const payload = {
+                action: 'submitPublicDailySafetyChecklist',
+                refCode: instantRefCode,
                 date: dateVal,
                 shift: shiftVal,
                 siteName: siteVal,
@@ -980,54 +991,75 @@
                 q13: formAnswers.q13 || 'مطابق',
                 q14: formAnswers.q14 || 'مطابق',
                 q15: formAnswers.q15 || 'مطابق',
-                q15Reading: document.getElementById('input_q16')?.value || '',
+                q15Reading: pressureReading,
                 q16: formAnswers.q17 || 'مطابق',
                 q17: formAnswers.q18 || 'مطابق',
                 signature: getSignatureBase64(),
                 csrfToken: generateClientCsrfToken()
             };
 
-            if (!navigator.onLine) {
-                saveToOfflineQueue(payload);
-                document.getElementById('successMsgText').textContent = 'تم حفظ التقرير محلياً بنجاح (وضع عدم الاتصال). ستتم المزامنة تلقائياً عند توفر الإنترنت.';
-                document.getElementById('successOverlay').style.display = 'flex';
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال تقرير المرور اليومي';
-                return;
+            // 4. إظهار شاشة النجاح فورياً في أقل من 30 مللي ثانية (Zero-Lag Optimistic UI)
+            showInstantSuccess(instantRefCode, payload);
+
+            // 5. المزامنة والتوثيق السحابي في الخلفية دون تعطيل المستخدم
+            syncDailySafetyInBackground(payload, instantRefCode);
+        }
+
+        function showInstantSuccess(refCode, payload) {
+            const refBadge = document.getElementById('successRefBadge');
+            if (refBadge) refBadge.textContent = 'رقم التقرير: ' + refCode;
+
+            const summary = document.getElementById('successSummaryBox');
+            if (summary) {
+                summary.innerHTML = `
+                    <div><strong>📍 المصنع:</strong> ${payload.siteName} (${payload.shift})</div>
+                    <div><strong>👤 مسؤول السلامة:</strong> ${payload.inspectorName}</div>
+                    <div><strong>📅 التاريخ:</strong> ${payload.date}</div>
+                    <div><strong>📊 ضغط الطلمبات:</strong> ${payload.q15Reading}</div>
+                    <div><strong>✍️ التوقيع الرقمي:</strong> معتمد وموثق ✅</div>
+                `;
             }
 
-            try {
-                const GAS_URL = getEffectiveApiUrl();
-                const controller = new AbortController();
-                setTimeout(() => controller.abort(), 20000);
+            document.getElementById('successOverlay').style.display = 'flex';
+        }
 
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    mode: 'cors',
-                    redirect: 'follow',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: 'submitPublicDailySafetyChecklist',
-                        ...payload
-                    }),
-                    signal: controller.signal
-                });
+        async function syncDailySafetyInBackground(payload, refCode) {
+            const targetApiUrl = getEffectiveApiUrl();
+            let syncSuccess = false;
 
-                const data = await res.json();
-                if (data && data.success) {
-                    document.getElementById('successMsgText').textContent = 'تم إرسال تقرير المرور اليومي وتوثيقه في قاعدة البيانات بنجاح.';
-                    document.getElementById('successOverlay').style.display = 'flex';
-                } else {
-                    alert('تنبيه: ' + (data.message || 'حدث خطأ أثناء الإرسال'));
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const res = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await res.json();
+                    if (result && result.success) {
+                        syncSuccess = true;
+                        console.log('Daily Safety checklist synced successfully in background:', result);
+                        const msgText = document.getElementById('successMsgText');
+                        if (msgText) {
+                            msgText.innerHTML = '<span style="color: #10b981; font-weight: 700;">🟢 تم التوثيق والمزامنة السحابية بنجاح!</span>';
+                        }
+                        break;
+                    }
+                } catch(err) {
+                    console.warn(`Background sync attempt ${attempt} failed:`, err);
+                    if (attempt < 3) {
+                        await new Promise(r => setTimeout(r, 1500));
+                    }
                 }
-            } catch(err) {
-                // Save offline fallback
+            }
+
+            if (!syncSuccess) {
                 saveToOfflineQueue(payload);
-                document.getElementById('successMsgText').textContent = 'تم حفظ التقرير محلياً لضمان عدم فقدانه. ستتم المزامنة تلقائياً عند استقرار الاتصال.';
-                document.getElementById('successOverlay').style.display = 'flex';
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال تقرير المرور اليومي';
+                const msgText = document.getElementById('successMsgText');
+                if (msgText) {
+                    msgText.innerHTML = '<span style="color: #f59e0b; font-weight: 700;">🟡 تم الحفظ محلياً (Offline) وستتم المزامنة تلقائياً عند استقرار الشبكة.</span>';
+                }
             }
         }
 
