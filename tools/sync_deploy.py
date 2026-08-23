@@ -39,9 +39,11 @@ def sync_directories():
         print("Successfully synced vercel.json.")
 
     public_files = [
+        'forms-hub.html',
         'public-observation.html',
         'public-near-miss.html',
         'public-fire-inspection.html',
+        'manifest-hub.json',
         'manifest-observation.json',
         'manifest-near-miss.json',
         'manifest-fire-inspection.json'

@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>بوابة النماذج الميدانية | إدارة السلامة والصحة المهنية - ICAPP</title>
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest-hub.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="نماذج السلامة">
+    <link rel="apple-touch-icon" href="icons/icapp-logo.png">
+    
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/png" href="icons/icapp-logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts: Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-base: #0b1329;
+            --bg-card: #152243;
+            --bg-card-hover: #1c2d59;
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.35);
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --border-glass-hover: rgba(255, 255, 255, 0.18);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.4) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.8) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding-bottom: 40px;
+            direction: rtl;
+        }
+
+        /* Top Header */
+        .hub-header {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-glass);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding: 12px 16px;
+        }
+
+        .header-content {
+            max-width: 720px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            object-fit: contain;
+            background: white;
+            padding: 2px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .brand-info h1 {
+            font-size: 16px;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.2;
+        }
+
+        .brand-info p {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Connection & Install Badges */
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-pill.offline {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .install-btn {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .install-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* Main Container */
+        .hub-container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        /* Hero Banner */
+        .hero-banner {
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.5), rgba(15, 23, 42, 0.7));
+            border: 1px solid var(--border-glass-hover);
+            border-radius: 18px;
+            padding: 18px 20px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .hero-banner::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hero-desc {
+            font-size: 12px;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+
+        /* Search Bar */
+        .search-box {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border-glass-hover);
+            border-radius: 14px;
+            padding: 12px 42px 12px 16px;
+            color: #ffffff;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .search-box i {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* Section Title */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .forms-count {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+
+        /* Forms Grid */
+        .forms-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* Form Card */
+        .form-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 18px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .form-card::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--card-accent, #3b82f6);
+            border-radius: 4px 0 0 4px;
+        }
+
+        .form-card:hover, .form-card:active {
+            background: var(--bg-card-hover);
+            border-color: var(--border-glass-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        .form-card-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .form-icon-wrap {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+            background: var(--icon-bg, rgba(59, 130, 246, 0.15));
+            color: var(--icon-color, #60a5fa);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .form-badges {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+            flex-wrap: wrap;
+        }
+
+        .badge-tag {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+        }
+
+        .badge-tag.hot {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
+
+        .badge-tag.fast {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+
+        .form-card-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 2px;
+            line-height: 1.3;
+        }
+
+        .form-card-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .form-action-btn {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .form-card:hover .form-action-btn {
+            background: var(--card-accent, #3b82f6);
+            color: #ffffff;
+            transform: translateX(-4px);
+        }
+
+        /* Specific Card Accent Variables */
+        .card-obs {
+            --card-accent: #3b82f6;
+            --icon-bg: rgba(59, 130, 246, 0.15);
+            --icon-color: #60a5fa;
+        }
+
+        .card-near-miss {
+            --card-accent: #f59e0b;
+            --icon-bg: rgba(245, 158, 11, 0.15);
+            --icon-color: #fbbf24;
+        }
+
+        .card-fire {
+            --card-accent: #ef4444;
+            --icon-bg: rgba(239, 68, 68, 0.15);
+            --icon-color: #f87171;
+        }
+
+        .card-ptw {
+            --card-accent: #8b5cf6;
+            --icon-bg: rgba(139, 92, 246, 0.15);
+            --icon-color: #a78bfa;
+        }
+
+        /* Offline Sync Notice */
+        .offline-queue-bar {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px dashed rgba(245, 158, 11, 0.4);
+            border-radius: 14px;
+            padding: 12px 16px;
+            margin-top: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 12px;
+        }
+
+        .offline-queue-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #fde68a;
+            font-weight: 600;
+        }
+
+        .offline-queue-btn {
+            background: #d97706;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* iOS Safari Install Guide Modal */
+        .ios-guide-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            padding: 20px;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .ios-guide-sheet {
+            background: #1e293b;
+            border: 1px solid var(--border-glass-hover);
+            border-radius: 24px;
+            padding: 24px;
+            width: 100%;
+            max-width: 480px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .ios-guide-title {
+            font-size: 17px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        .ios-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            text-align: right;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+        }
+
+        .ios-step i {
+            font-size: 18px;
+            color: #60a5fa;
+        }
+
+        .close-guide-btn {
+            background: #334155;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            margin-top: 14px;
+            cursor: pointer;
+        }
+
+        /* Footer */
+        .hub-footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="hub-header">
+        <div class="header-content">
+            <div class="brand-section">
+                <img src="icons/icapp-logo.png" alt="ICAPP" class="brand-logo" onerror="this.src='icons/icapp-logo.png'">
+                <div class="brand-info">
+                    <h1>بوابة النماذج الميدانية</h1>
+                    <p>إدارة السلامة والصحة المهنية - ICAPP</p>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <span id="onlineStatus" class="status-pill">
+                    <i class="fas fa-circle text-xs"></i>
+                    <span>متصل</span>
+                </span>
+                <button id="pwaInstallBtn" class="install-btn" style="display: none;">
+                    <i class="fas fa-download"></i>
+                    <span>تثبيت</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="hub-container">
+        
+        <!-- Hero Banner -->
+        <div class="hero-banner">
+            <div class="hero-title">
+                <i class="fas fa-shield-halved text-blue-400"></i>
+                <span>تسجيل ميداني فوري وموحد</span>
+            </div>
+            <p class="hero-desc">
+                اختر النموذج المطلوب لبدء التسجيل المباشر بدون تسجيل دخول. يعمل بكفاءة تامة أثناء الاتصال أو بدون إنترنت.
+            </p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="formSearchInput" placeholder="ابحث عن نموذج (ملاحظة، حادث، حريق، معدات...)" oninput="filterForms()">
+        </div>
+
+        <!-- Section Title -->
+        <div class="section-header">
+            <div class="section-title">
+                <i class="fas fa-layer-group text-blue-400"></i>
+                <span>النماذج المتاحة</span>
+            </div>
+            <span class="forms-count" id="formsCountBadge">3 نماذج</span>
+        </div>
+
+        <!-- Forms Grid -->
+        <div class="forms-grid" id="formsGrid">
+            
+            <!-- 1. نموذج الملاحظات اليومية -->
+            <a href="public-observation.html" class="form-card card-obs" data-keywords="ملاحظة ملاحظات يومية سلوك خطر تدقيق unsafe act condition">
+                <div class="form-card-left">
+                    <div class="form-icon-wrap">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div class="form-text">
+                        <div class="form-badges">
+                            <span class="badge-tag fast"><i class="fas fa-bolt ml-1"></i>سريع</span>
+                            <span class="badge-tag">يومي</span>
+                        </div>
+                        <div class="form-card-title">تسجيل الملاحظات اليومية</div>
+                        <div class="form-card-desc">رصد السلوكيات والظروف غير الآمنة والإجراءات الفورية</div>
+                    </div>
+                </div>
+                <div class="form-action-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </div>
+            </a>
+
+            <!-- 2. نموذج الحوادث الوشيكة -->
+            <a href="public-near-miss.html" class="form-card card-near-miss" data-keywords="حادث وشيك حوادث وشيكة كاد يقع خطر داهم near miss incident">
+                <div class="form-card-left">
+                    <div class="form-icon-wrap">
+                        <i class="fas fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="form-text">
+                        <div class="form-badges">
+                            <span class="badge-tag hot"><i class="fas fa-fire ml-1"></i>عالي الأهمية</span>
+                            <span class="badge-tag">فوري</span>
+                        </div>
+                        <div class="form-card-title">تسجيل حادث وشيك (Near Miss)</div>
+                        <div class="form-card-desc">الإبلاغ عن الوقائع التي كادت تؤدي إلى إصابة أو خسائر</div>
+                    </div>
+                </div>
+                <div class="form-action-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </div>
+            </a>
+
+            <!-- 3. نموذج فحص الحريق -->
+            <a href="public-fire-inspection.html" class="form-card card-fire" data-keywords="حريق اطفاء طفاية طفايات مضخات فحص شهري معدات fire extinguisher">
+                <div class="form-card-left">
+                    <div class="form-icon-wrap">
+                        <i class="fas fa-fire-extinguisher"></i>
+                    </div>
+                    <div class="form-text">
+                        <div class="form-badges">
+                            <span class="badge-tag"><i class="fas fa-calendar-check ml-1"></i>فحص دوري</span>
+                            <span class="badge-tag">شهري</span>
+                        </div>
+                        <div class="form-card-title">فحص طفايات ومعدات الحريق</div>
+                        <div class="form-card-desc">الفحص الميداني الشهري لجاهزية معدات وأجهزة مكافحة الحريق</div>
+                    </div>
+                </div>
+                <div class="form-action-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </div>
+            </a>
+
+        </div>
+
+        <!-- Offline Queue Status -->
+        <div class="offline-queue-bar" id="offlineQueueBar" style="display: none;">
+            <div class="offline-queue-info">
+                <i class="fas fa-cloud-arrow-up"></i>
+                <span id="offlineQueueText">يوجد 0 سجلات محفوظة محلياً بانتظار المزامنة</span>
+            </div>
+            <button class="offline-queue-btn" onclick="syncAllOfflineData()">مزامنة الآن</button>
+        </div>
+
+        <!-- Footer -->
+        <footer class="hub-footer">
+            <p>منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP</p>
+            <p style="margin-top: 4px; opacity: 0.7;">الإصدار الميداني الموحد PWA</p>
+        </footer>
+
+    </main>
+
+    <!-- iOS Guide Modal -->
+    <div id="iosGuideModal" class="ios-guide-modal" onclick="closeIosGuide(event)">
+        <div class="ios-guide-sheet" onclick="event.stopPropagation()">
+            <div class="ios-guide-title">
+                <i class="fab fa-apple text-blue-400 ml-1"></i>
+                تثبيت النماذج على الآيفون (iOS)
+            </div>
+            <div class="ios-step">
+                <i class="fas fa-arrow-up-from-bracket"></i>
+                <span>1. اضغط على زر <strong>مشاركة (Share)</strong> في أسفل متصفح Safari.</span>
+            </div>
+            <div class="ios-step">
+                <i class="fas fa-plus-square"></i>
+                <span>2. مرر للأسفل واختر <strong>إضافة إلى الصفحة الرئيسية (Add to Home Screen)</strong>.</span>
+            </div>
+            <div class="ios-step">
+                <i class="fas fa-check-circle"></i>
+                <span>3. اضغط على <strong>إضافة (Add)</strong> في أعلى الزاوية.</span>
+            </div>
+            <button class="close-guide-btn" onclick="document.getElementById('iosGuideModal').style.display='none'">حسناً، فهمت</button>
+        </div>
+    </div>
+
+    <script>
+        // Check online status
+        function updateOnlineStatus() {
+            const statusPill = document.getElementById('onlineStatus');
+            if (navigator.onLine) {
+                statusPill.className = 'status-pill';
+                statusPill.innerHTML = '<i class="fas fa-circle text-xs"></i><span>متصل</span>';
+            } else {
+                statusPill.className = 'status-pill offline';
+                statusPill.innerHTML = '<i class="fas fa-circle-exclamation text-xs"></i><span>أوفلاين</span>';
+            }
+        }
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus();
+
+        // Search / Filter
+        function filterForms() {
+            const query = (document.getElementById('formSearchInput').value || '').trim().toLowerCase();
+            const cards = document.querySelectorAll('.form-card');
+            let visibleCount = 0;
+            cards.forEach(card => {
+                const title = card.querySelector('.form-card-title')?.textContent || '';
+                const desc = card.querySelector('.form-card-desc')?.textContent || '';
+                const keywords = card.getAttribute('data-keywords') || '';
+                const match = !query || title.toLowerCase().includes(query) || desc.toLowerCase().includes(query) || keywords.toLowerCase().includes(query);
+                card.style.display = match ? 'flex' : 'none';
+                if (match) visibleCount++;
+            });
+            document.getElementById('formsCountBadge').textContent = `${visibleCount} نماذج`;
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        const installBtn = document.getElementById('pwaInstallBtn');
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        if (isIOS && !window.navigator.standalone) {
+            installBtn.style.display = 'inline-flex';
+            installBtn.onclick = () => {
+                document.getElementById('iosGuideModal').style.display = 'flex';
+            };
+        } else {
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                installBtn.style.display = 'inline-flex';
+                installBtn.onclick = async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        if (outcome === 'accepted') {
+                            installBtn.style.display = 'none';
+                        }
+                        deferredPrompt = null;
+                    }
+                };
+            });
+        }
+
+        function closeIosGuide(e) {
+            if (e.target.id === 'iosGuideModal') {
+                document.getElementById('iosGuideModal').style.display = 'none';
+            }
+        }
+
+        // Check Offline Queues across forms
+        function checkOfflineQueues() {
+            try {
+                const obsQueue = JSON.parse(localStorage.getItem('HSE_OFFLINE_OBSERVATIONS_QUEUE') || '[]');
+                const nmQueue = JSON.parse(localStorage.getItem('HSE_OFFLINE_NEAR_MISS_QUEUE') || '[]');
+                const total = obsQueue.length + nmQueue.length;
+                const bar = document.getElementById('offlineQueueBar');
+                const text = document.getElementById('offlineQueueText');
+                if (total > 0) {
+                    bar.style.display = 'flex';
+                    text.textContent = `يوجد ${total} سجلات محفوظة محلياً بانتظار المزامنة`;
+                } else {
+                    bar.style.display = 'none';
+                }
+            } catch(e) {}
+        }
+        setInterval(checkOfflineQueues, 5000);
+        checkOfflineQueues();
+
+        function syncAllOfflineData() {
+            if (!navigator.onLine) {
+                alert('يرجى التأكد من الاتصال بالإنترنت أولاً للبدء بالمزامنة.');
+                return;
+            }
+            // Navigate to observation form to trigger auto-sync
+            window.location.href = 'public-observation.html?auto_sync=1';
+        }
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => {
+                        console.log('Hub Service Worker registered successfully:', reg.scope);
+                    })
+                    .catch(err => {
+                        console.warn('Service Worker registration failed:', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

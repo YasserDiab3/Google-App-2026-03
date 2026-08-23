@@ -1,0 +1,49 @@
+{
+  "name": "نماذج السلامة الميدانية - ICAPP",
+  "short_name": "نماذج السلامة",
+  "description": "بوابة النماذج الميدانية السريعة لإدارة السلامة والصحة المهنية - ICAPP",
+  "start_url": "./forms-hub.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icapp-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icapp-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "تسجيل ملاحظة يومية",
+      "short_name": "ملاحظة يومية",
+      "description": "فتح نموذج تسجيل الملاحظات اليومية الميدانية",
+      "url": "./public-observation.html?source=pwa_shortcut",
+      "icons": [{ "src": "icons/icapp-logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "تسجيل حادث وشيك (Near Miss)",
+      "short_name": "حادث وشيك",
+      "description": "فتح نموذج تسجيل الحوادث الوشيكة",
+      "url": "./public-near-miss.html?source=pwa_shortcut",
+      "icons": [{ "src": "icons/icapp-logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "فحص طفايات ومعدات الحريق",
+      "short_name": "فحص الحريق",
+      "description": "فتح نموذج الفحص الشهري لمعدات الإطفاء",
+      "url": "./public-fire-inspection.html?source=pwa_shortcut",
+      "icons": [{ "src": "icons/icapp-logo.png", "sizes": "192x192" }]
+    }
+  ]
+}

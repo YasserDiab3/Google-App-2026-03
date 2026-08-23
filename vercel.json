@@ -75,5 +75,12 @@
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-CSRF-Token" }
       ]
     }
+  ],
+  "rewrites": [
+    { "source": "/forms", "destination": "/forms-hub.html" },
+    { "source": "/hub", "destination": "/forms-hub.html" },
+    { "source": "/obs", "destination": "/public-observation.html" },
+    { "source": "/near-miss", "destination": "/public-near-miss.html" },
+    { "source": "/fire", "destination": "/public-fire-inspection.html" }
   ]
 }

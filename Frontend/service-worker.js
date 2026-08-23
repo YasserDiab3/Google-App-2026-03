@@ -58,7 +58,7 @@ function isSwDev() {
 // Bump cache version to force clients to pick up latest JS/CSS updates (زيادة عند كل نشر لظهور التحديثات)
 // يجب تحديث __SW_REGISTER_QUERY في index.html بنفس اللاحقة عند تغيير الإصدار لتسريع اكتشاف service-worker.js
 // Service Worker Version: 20260501 — isSwDev: مضيفات إضافية + معاينة Vercel
-const CACHE_VERSION = 'hse-app-v1.0.1322-20260823';
+const CACHE_VERSION = 'hse-app-v1.0.1323-20260823';
 const CACHE_NAME = `hse-cache-${CACHE_VERSION}`;
 
 /** أقصى حجم لعنصر في الكاش (بايت) — يحدّ تخزين ملفات CDN الضخمة */
@@ -92,9 +92,11 @@ const CORE_CACHE_FILES = [
     `${BASE_PATH}/index.html`,
     `${BASE_PATH}/styles.css`,
     `${BASE_PATH}/manifest.json`,
+    `${BASE_PATH}/manifest-hub.json`,
     `${BASE_PATH}/manifest-observation.json`,
     `${BASE_PATH}/manifest-near-miss.json`,
     `${BASE_PATH}/manifest-fire-inspection.json`,
+    `${BASE_PATH}/forms-hub.html`,
     `${BASE_PATH}/public-observation.html`,
     `${BASE_PATH}/public-near-miss.html`,
     `${BASE_PATH}/public-fire-inspection.html`,
