@@ -1083,10 +1083,30 @@ const DailyObservations = {
                 .replace(/[^\w\u0600-\u06FF]/g, '');
         };
 
+        const EXCLUDED_DEPTS = [
+            'ci & projects lead',
+            'hse',
+            'quality, health, safety and environment',
+            'top managament',
+            'top management'
+        ];
+
         rawDepts.forEach(raw => {
             if (!raw) return;
             const clean = String(raw).trim().replace(/\s+/g, ' ');
             if (!clean || clean.length < 2) return;
+
+            const lower = clean.toLowerCase();
+            // استبعاد الإدارات الإنجليزية الأربعة وأي نص لا يحتوي على حروف عربية
+            if (EXCLUDED_DEPTS.includes(lower) || 
+                lower.includes('ci & projects') ||
+                lower.includes('top manag') ||
+                lower.includes('quality, health, safety') ||
+                lower === 'hse' ||
+                !/[\u0600-\u06FF]/.test(clean)) {
+                return;
+            }
+
             const normKey = normalizeKey(clean);
             if (normKey && !seenMap.has(normKey)) {
                 seenMap.set(normKey, clean);

@@ -3354,6 +3354,10 @@
             combinedDepts.forEach(rawD => {
                 const d = String(rawD || '').trim();
                 if (!d || d.length < 2) return;
+                const lower = d.toLowerCase();
+                if (lower === 'hse' || lower.includes('ci & projects') || lower.includes('top manag') || lower.includes('quality, health, safety') || !/[\u0600-\u06FF]/.test(d)) {
+                    return;
+                }
                 const normKey = normalizeD(d);
                 if (seenDepts.has(normKey)) return;
                 seenDepts.add(normKey);
@@ -3361,7 +3365,7 @@
                 const opt = document.createElement('option');
                 opt.value = d;
                 opt.textContent = d;
-                if (previousDept ? (previousDept === d) : (d.includes('سلامة') || d.toLowerCase().includes('hse'))) {
+                if (previousDept ? (previousDept === d) : (d.includes('سلامة'))) {
                     opt.selected = true;
                 }
                 deptSelect.appendChild(opt);
