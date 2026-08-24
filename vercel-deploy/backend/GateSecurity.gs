@@ -116,11 +116,13 @@ function submitGateVisitorCheckOut(payload) {
         var foundRow = -1;
         var entryDateStr = '';
         var entryTimeStr = '';
+        var rowLength = 19;
 
         for (var i = 1; i < data.length; i++) {
             var rowId = String(data[i][0]).trim();
             if (rowId === targetId) {
                 foundRow = i + 1; // 1-indexed row in sheet
+                rowLength = data[i].length;
                 entryDateStr = String(data[i][1]).trim();
                 entryTimeStr = String(data[i][2]).trim();
                 break;
@@ -145,10 +147,25 @@ function submitGateVisitorCheckOut(payload) {
             durationMinutes = 0;
         }
 
-        // تحديث الأعمدة: Status (15), Exit Time (16), Duration (17)
-        sheet.getRange(foundRow, 15).setValue('تم الخروج (Departed)');
-        sheet.getRange(foundRow, 16).setValue(exitTime + ' (' + exitDate + ')');
-        sheet.getRange(foundRow, 17).setValue(durationMinutes);
+        // تحديد موضع أعمدة الحالة والخروج والمدة بذكاء
+        var statusCol = 15;
+        var exitCol = 16;
+        var durationCol = 17;
+        
+        var targetRow = data[foundRow - 1];
+        for (var colIdx = 0; colIdx < targetRow.length; colIdx++) {
+            var cellVal = String(targetRow[colIdx] || '');
+            if (cellVal.indexOf('بالداخل') !== -1) {
+                statusCol = colIdx + 1;
+                exitCol = colIdx + 2;
+                durationCol = colIdx + 3;
+                break;
+            }
+        }
+
+        sheet.getRange(foundRow, statusCol).setValue('تم الخروج (Departed)');
+        sheet.getRange(foundRow, exitCol).setValue(exitTime + ' (' + exitDate + ')');
+        sheet.getRange(foundRow, durationCol).setValue(durationMinutes);
 
         Logger.log('✅ تم تسجيل خروج الزائر بنجاح: ' + targetId + ' - مدة الزيارة: ' + durationMinutes + ' دقيقة');
 
@@ -176,39 +193,52 @@ function getActiveGateVisitors(payload) {
     try {
         var sheetName = 'GateVisitors';
         var ss = SpreadsheetApp.getActiveSpreadsheet() || (typeof getSpreadsheetId === 'function' ? SpreadsheetApp.openById(getSpreadsheetId()) : null);
-        if (!ss) return { success: true, activeVisitors: [] };
+        if (!ss) return { success: true, activeCount: 0, activeVisitors: [] };
 
         var sheet = ss.getSheetByName(sheetName);
-        if (!sheet) return { success: true, activeVisitors: [] };
+        if (!sheet) return { success: true, activeCount: 0, activeVisitors: [] };
 
         var data = sheet.getDataRange().getValues();
-        if (data.length <= 1) return { success: true, activeVisitors: [] };
+        if (data.length <= 1) return { success: true, activeCount: 0, activeVisitors: [] };
 
         var activeVisitors = [];
 
         for (var i = 1; i < data.length; i++) {
             var row = data[i];
-            var statusVal = String(row[14] || row[13] || '').trim();
-            var exitVal = String(row[15] || row[14] || '').trim();
+            
+            // فحص وجود حالة 'بالداخل' في أي من أعمدة الصف
+            var isInside = false;
+            var statusColIdx = -1;
+            for (var c = 0; c < row.length; c++) {
+                var val = String(row[c] || '').trim();
+                if (val.indexOf('بالداخل') !== -1) {
+                    isInside = true;
+                    statusColIdx = c;
+                    break;
+                }
+            }
 
-            if (statusVal.indexOf('بالداخل') !== -1 && (!exitVal || exitVal === '')) {
+            // فحص هل تم الخروج
+            var exitVal = (statusColIdx !== -1 && statusColIdx + 1 < row.length) ? String(row[statusColIdx + 1] || '').trim() : '';
+
+            if (isInside && (!exitVal || exitVal === '' || exitVal === '0')) {
                 activeVisitors.push({
-                    id: String(row[0]),
-                    entryDate: String(row[1]),
-                    entryTime: String(row[2]),
-                    name: String(row[3]),
-                    org: String(row[4]),
-                    idNumber: String(row[5]),
-                    phone: String(row[6]),
-                    vehicle: String(row[7]),
-                    site: String(row[8]),
-                    area: String(row[9]),
-                    host: String(row[10]),
-                    purpose: String(row[11]),
-                    badge: String(row[12]),
-                    registeredBy: String(row[13] || 'مسؤول الأمن'),
+                    id: String(row[0] || ''),
+                    entryDate: (row[1] instanceof Date) ? Utilities.formatDate(row[1], 'GMT+2', 'yyyy-MM-dd') : String(row[1] || ''),
+                    entryTime: (row[2] instanceof Date) ? Utilities.formatDate(row[2], 'GMT+2', 'HH:mm:ss') : String(row[2] || ''),
+                    name: String(row[3] || ''),
+                    org: String(row[4] || ''),
+                    idNumber: String(row[5] || ''),
+                    phone: String(row[6] || ''),
+                    vehicle: String(row[7] || ''),
+                    site: String(row[8] || ''),
+                    area: String(row[9] || ''),
+                    host: String(row[10] || ''),
+                    purpose: String(row[11] || ''),
+                    badge: String(row[12] || ''),
+                    registeredBy: String(statusColIdx === 14 ? row[13] : 'مسؤول الأمن'),
                     status: 'بالداخل (Onsite)',
-                    signatureUrl: String(row[17] || row[16] || '')
+                    signatureUrl: String(row[row.length - 2] || '')
                 });
             }
         }
@@ -221,7 +251,7 @@ function getActiveGateVisitors(payload) {
 
     } catch(err) {
         Logger.log('❌ خطأ في getActiveGateVisitors: ' + err.toString());
-        return { success: false, message: err.message, activeVisitors: [] };
+        return { success: false, message: err.message, activeCount: 0, activeVisitors: [] };
     }
 }
 
@@ -372,6 +402,32 @@ function getOrCreateGateVisitorsSheet(sheetName) {
         headerRange.setHorizontalAlignment('center');
         sheet.setFrozenRows(1);
         Logger.log('✅ تم إنشاء وتهيئة شيت GateVisitors بنجاح');
+    } else {
+        // إذا كان الشيت موجوداً، تأكد من تحديث الرؤوس إذا كانت أقل من 19 عمود
+        var lastCol = sheet.getLastColumn();
+        if (lastCol < 19) {
+            sheet.getRange(1, 1, 1, 19).setValues([[
+                'Record ID',
+                'Entry Date',
+                'Entry Time',
+                'Visitor Name',
+                'Organization / Company',
+                'National ID / Passport',
+                'Phone Number',
+                'Vehicle Plate',
+                'Target Site',
+                'Target Hall / Area',
+                'Host Person & Dept',
+                'Visit Purpose',
+                'Badge #',
+                'Security Officer / Registered By',
+                'Status',
+                'Exit Time',
+                'Duration (Minutes)',
+                'Signature URL',
+                'Created At Timestamp'
+            ]]);
+        }
     }
     return sheet;
 }

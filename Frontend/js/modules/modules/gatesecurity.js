@@ -261,11 +261,23 @@ class GateSecurityModule {
             const raw = localStorage.getItem('HSE_GATE_VISITORS_REGISTRY');
             this.visitors = raw ? JSON.parse(raw) : [];
 
-            // Then attempt to fetch from Google Sheets Backend if available
-            if (navigator.onLine && typeof GoogleIntegration !== 'undefined') {
+            // Then attempt to fetch from Google Sheets Backend if online
+            if (navigator.onLine) {
                 try {
-                    const res = await fetch(this.getEffectiveApiUrl() + '?action=getActiveGateVisitors', { method: 'GET', mode: 'cors' });
-                    const json = await res.json();
+                    const targetUrl = this.getEffectiveApiUrl();
+                    let json = null;
+                    try {
+                        const res = await fetch(targetUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'getActiveGateVisitors', data: {} })
+                        });
+                        json = await res.json();
+                    } catch(pErr) {
+                        const res = await fetch(targetUrl + '?action=getActiveGateVisitors', { method: 'GET', mode: 'cors' });
+                        json = await res.json();
+                    }
+
                     if (json && json.success && Array.isArray(json.activeVisitors)) {
                         const cloudActive = json.activeVisitors.map(v => ({
                             ...v,

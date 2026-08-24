@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl" data-theme="light">
 <head>
     <meta charset="UTF-8">
@@ -1515,19 +1515,28 @@
             if (!navigator.onLine) return;
             try {
                 const targetApiUrl = getEffectiveApiUrl();
-                const res = await fetch(targetApiUrl + '?action=getActiveGateVisitors', { method: 'GET', mode: 'cors' });
-                const data = await res.json();
+                let data = null;
+                try {
+                    const res = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'getActiveGateVisitors', data: {} })
+                    });
+                    data = await res.json();
+                } catch(postErr) {
+                    const res = await fetch(targetApiUrl + '?action=getActiveGateVisitors', { method: 'GET', mode: 'cors' });
+                    data = await res.json();
+                }
+
                 if (data && data.success && Array.isArray(data.activeVisitors)) {
                     const merged = data.activeVisitors.map(v => ({
                         ...v,
                         entryTimestamp: new Date(v.entryDate + ' ' + v.entryTime).getTime() || Date.now()
                     }));
-                    if (merged.length > 0) {
-                        try {
-                            localStorage.setItem('HSE_GATE_VISITORS_REGISTRY', JSON.stringify(merged));
-                        } catch(e) {}
-                        updateLiveVisitorsCount();
-                    }
+                    try {
+                        localStorage.setItem('HSE_GATE_VISITORS_REGISTRY', JSON.stringify(merged));
+                    } catch(e) {}
+                    updateLiveVisitorsCount();
                 }
             } catch(e) {}
         }

@@ -789,7 +789,9 @@ function doGet(e) {
             getPublicEmergencyMapData: true,
             publicEmergencyMapImage: true,
             getPublicObservationConfig: true,
-            getPublicFireInspectionConfig: true
+            getPublicFireInspectionConfig: true,
+            getActiveGateVisitors: true,
+            getSecurityOfficersList: true
         };
         if (action && !allowedGetActions[action]) {
             if (typeof logSecurityEvent === 'function') {
@@ -817,6 +819,22 @@ function doGet(e) {
                 ? getPublicObservationConfig()
                 : { success: false, message: 'getPublicObservationConfig not defined' };
             return setCorsHeaders(ContentService.createTextOutput(JSON.stringify(configResult)).setMimeType(ContentService.MimeType.JSON));
+        }
+
+        // استرجاع الزوار المتواجدين حالياً بالمصنع
+        if (action === 'getActiveGateVisitors') {
+            const visitorsResult = (typeof getActiveGateVisitors === 'function')
+                ? getActiveGateVisitors(e.parameter || {})
+                : { success: false, message: 'getActiveGateVisitors not defined' };
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify(visitorsResult)).setMimeType(ContentService.MimeType.JSON));
+        }
+
+        // استرجاع قائمة مسؤولي الأمن الإداري
+        if (action === 'getSecurityOfficersList') {
+            const officersResult = (typeof getSecurityOfficersList === 'function')
+                ? getSecurityOfficersList(e.parameter || {})
+                : { success: false, message: 'getSecurityOfficersList not defined' };
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify(officersResult)).setMimeType(ContentService.MimeType.JSON));
         }
 
         // معالجة طلب getProfileImage: إرجاع صورة الملف الشخصي من Drive كـ data URI (يعمل بعد النشر)
