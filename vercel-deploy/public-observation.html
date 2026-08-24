@@ -3772,9 +3772,9 @@
                 });
             }
 
-            // 4. تهيئة المقترحات الذكية وتعبئة تفاصيل النموذج الأولية فوراً
+            // 4. تهيئة المقترحات الذكية (مع ترك حقول النموذج فارغة تماماً عند الفتح)
             const initialSub = document.getElementById('subCategorySelect')?.value || '';
-            renderSmartSuggestions(selectedObservationType, initialSub, true);
+            renderSmartSuggestions(selectedObservationType, initialSub, false);
             setupObservationAutocomplete();
 
             // 5. استرجاع البروفايل المحفوظ وطابور عدم الاتصال
@@ -5080,7 +5080,7 @@
         }
 
         
-        function renderSmartSuggestions(obsType, subCat, autoApply = true) {
+        function renderSmartSuggestions(obsType, subCat, autoApply = false) {
             const container = document.getElementById('detailsQuickChips');
             const correctiveContainer = document.getElementById('correctiveQuickChips');
             if (!container) return;
@@ -6692,7 +6692,22 @@
                 setDefaultDateTime();
                 removePhoto();
 
-                // استعادة النوع الافتراضي والمقترحات
+                // تفريغ كافة الحقول النصية صراحة لفتح النموذج فارغاً تماماً
+                const detailsInput = document.getElementById('detailsInput');
+                if (detailsInput) {
+                    detailsInput.value = '';
+                    if (typeof handleDetailsInputQuality === 'function') handleDetailsInputQuality('');
+                }
+                const correctiveInput = document.getElementById('correctiveInput');
+                if (correctiveInput) correctiveInput.value = '';
+                const titleInput = document.getElementById('observationTitleInput');
+                if (titleInput) titleInput.value = '';
+                const customPlaceInput = document.getElementById('customPlaceInput');
+                if (customPlaceInput) customPlaceInput.value = '';
+                const customOwnerInput = document.getElementById('customOwnerInput');
+                if (customOwnerInput) customOwnerInput.value = '';
+
+                // استعادة النوع الافتراضي والمقترحات بدون تعبئة تلقائية
                 const defaultTypeCard = document.querySelector('.type-card[data-type="سلوك غير آمن"]');
                 if (defaultTypeCard) selectType(defaultTypeCard);
 
