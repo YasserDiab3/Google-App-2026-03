@@ -1444,7 +1444,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                         <span style="font-weight: 800; font-size: 12px; color: #1e3a8a;">\u062A\u0633\u0644\u0633\u0644 \u0627\u0644\u0643\u0627\u0631\u062A:</span>
                         <input type="text" id="badgeSerialInput" value="${o}" style="padding: 4px 8px; border-radius: 6px; border: 1.5px solid #059669; font-weight: 900; font-size: 12px; color: #047857; width: 140px; font-family: monospace;" oninput="document.getElementById('badgeSerialBox').textContent = 'Badge: ' + this.value">
 
-                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 10px;">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639:</span>
+                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 6px;">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639:</span>
                         <select id="siteSelect" onchange="updateSiteMap(this.value)" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #94a3b8; font-weight: 700; font-size: 12px;">
                             <option value="\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645" selected>${t.siteName}</option>
                             <option value="ICAPP-1">\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A (ICAPP-1)</option>
@@ -1452,10 +1452,23 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                             <option value="ICAPP-3">\u0645\u0635\u0646\u0639 \u0627\u0644\u0645\u0631\u0643\u0632\u0627\u062A (ICAPP-3)</option>
                             <option value="ICAPP-4">\u0645\u062D\u0637\u0629 \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629 \u0648\u0627\u0644\u0637\u0627\u0642\u0629 (ICAPP-4)</option>
                         </select>
+
+                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 6px;">\u062D\u062C\u0645 \u0627\u0644\u0643\u0627\u0631\u062A \u0639\u0646\u062F \u0627\u0644\u0637\u0628\u0627\u0639\u0629:</span>
+                        <select id="cardSizeSelect" onchange="changeCardPrintSize(this.value)" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #2563eb; font-weight: 800; font-size: 12px; background: #eff6ff; color: #1e40af;">
+                            <option value="full" selected>\u062D\u062C\u0645 A4 \u0643\u0627\u0645\u0644 (\u0627\u0641\u062A\u0631\u0627\u0636\u064A)</option>
+                            <option value="compact">\u062D\u062C\u0645 \u0643\u0627\u0631\u062A \u062C\u064A\u0628 \u0645\u062F\u0645\u062C (Pocket ID)</option>
+                            <option value="medium">\u062D\u062C\u0645 \u0645\u062A\u0648\u0633\u0637 (A5 Half Page)</option>
+                            <option value="custom-scale">\u062A\u062E\u0635\u064A\u0635 \u0646\u0633\u0628\u0629 \u0627\u0644\u062A\u0643\u0628\u064A\u0631 %</option>
+                        </select>
+
+                        <div id="customCardScaleWrap" style="display: none; align-items: center; gap: 4px;">
+                            <input type="range" id="cardScaleRange" min="50" max="150" value="100" oninput="applyCustomCardScale(this.value)" style="width: 80px; cursor: pointer;">
+                            <span id="cardScaleValText" style="font-size: 11px; font-weight: 900; color: #15803d;">100%</span>
+                        </div>
                     </div>
 
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <input type="text" id="customCoords" value="${t.coords}" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 11px; width: 220px;" oninput="document.getElementById('displayCoords').textContent = '\u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0642\u0639: ' + this.value + ' | DOC-HSE-MAP-01 Rev.02'">
+                        <input type="text" id="customCoords" value="${t.coords}" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 11px; width: 190px;" oninput="document.getElementById('displayCoords').textContent = '\u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0642\u0639: ' + this.value + ' | DOC-HSE-MAP-01 Rev.02'">
                         <button onclick="window.print()" style="padding: 6px 18px; background: #1e40af; color: #fff; border:none; border-radius:6px; cursor:pointer; font-weight: 900; font-size: 12px; box-shadow: 0 2px 6px rgba(30,64,175,0.25);">\u{1F5A8}\uFE0F \u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0643\u0627\u0631\u062A \u0627\u0644\u0622\u0646</button>
                     </div>
                 </div>
@@ -1774,6 +1787,43 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                 </div>
 
                 <script>
+                    function changeCardPrintSize(sizeMode) {
+                        const container = document.querySelector('.card-container');
+                        const scaleWrap = document.getElementById('customCardScaleWrap');
+                        if (!container) return;
+
+                        if (sizeMode === 'compact') {
+                            if (scaleWrap) scaleWrap.style.display = 'none';
+                            container.style.maxWidth = '720px';
+                            container.style.transform = 'scale(0.85)';
+                            container.style.transformOrigin = 'top center';
+                        } else if (sizeMode === 'medium') {
+                            if (scaleWrap) scaleWrap.style.display = 'none';
+                            container.style.maxWidth = '860px';
+                            container.style.transform = 'scale(0.92)';
+                            container.style.transformOrigin = 'top center';
+                        } else if (sizeMode === 'custom-scale') {
+                            if (scaleWrap) scaleWrap.style.display = 'inline-flex';
+                            const val = document.getElementById('cardScaleRange')?.value || 100;
+                            applyCustomCardScale(val);
+                        } else {
+                            if (scaleWrap) scaleWrap.style.display = 'none';
+                            container.style.maxWidth = '100%';
+                            container.style.transform = 'none';
+                        }
+                    }
+
+                    function applyCustomCardScale(val) {
+                        const container = document.querySelector('.card-container');
+                        const text = document.getElementById('cardScaleValText');
+                        if (text) text.textContent = val + '%';
+                        if (container) {
+                            const scale = parseInt(val) / 100;
+                            container.style.transform = 'scale(' + scale + ')';
+                            container.style.transformOrigin = 'top center';
+                        }
+                    }
+
                     function updateSiteMap(site) {
                         const coordsMap = {
                             'ICAPP-1': '30\xB024\\'12.4"N 31\xB018\\'45.2"E - \u0645\u0635\u0646\u0639 1 \u0627\u0644\u0641\u0627\u0643\u0647\u0629',

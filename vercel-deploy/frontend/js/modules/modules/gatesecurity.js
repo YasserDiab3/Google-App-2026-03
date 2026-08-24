@@ -2309,7 +2309,7 @@ class GateSecurityModule {
                         <span style="font-weight: 800; font-size: 12px; color: #1e3a8a;">تسلسل الكارت:</span>
                         <input type="text" id="badgeSerialInput" value="${defaultSerial}" style="padding: 4px 8px; border-radius: 6px; border: 1.5px solid #059669; font-weight: 900; font-size: 12px; color: #047857; width: 140px; font-family: monospace;" oninput="document.getElementById('badgeSerialBox').textContent = 'Badge: ' + this.value">
 
-                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 10px;">اختر الموقع:</span>
+                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 6px;">اختر الموقع:</span>
                         <select id="siteSelect" onchange="updateSiteMap(this.value)" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #94a3b8; font-weight: 700; font-size: 12px;">
                             <option value="الموقع العام" selected>${mapConfig.siteName}</option>
                             <option value="ICAPP-1">المصنع الرئيسي (ICAPP-1)</option>
@@ -2317,10 +2317,23 @@ class GateSecurityModule {
                             <option value="ICAPP-3">مصنع المركزات (ICAPP-3)</option>
                             <option value="ICAPP-4">محطة المعالجة والطاقة (ICAPP-4)</option>
                         </select>
+
+                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 6px;">حجم الكارت عند الطباعة:</span>
+                        <select id="cardSizeSelect" onchange="changeCardPrintSize(this.value)" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #2563eb; font-weight: 800; font-size: 12px; background: #eff6ff; color: #1e40af;">
+                            <option value="full" selected>حجم A4 كامل (افتراضي)</option>
+                            <option value="compact">حجم كارت جيب مدمج (Pocket ID)</option>
+                            <option value="medium">حجم متوسط (A5 Half Page)</option>
+                            <option value="custom-scale">تخصيص نسبة التكبير %</option>
+                        </select>
+
+                        <div id="customCardScaleWrap" style="display: none; align-items: center; gap: 4px;">
+                            <input type="range" id="cardScaleRange" min="50" max="150" value="100" oninput="applyCustomCardScale(this.value)" style="width: 80px; cursor: pointer;">
+                            <span id="cardScaleValText" style="font-size: 11px; font-weight: 900; color: #15803d;">100%</span>
+                        </div>
                     </div>
 
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <input type="text" id="customCoords" value="${mapConfig.coords}" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 11px; width: 220px;" oninput="document.getElementById('displayCoords').textContent = 'إحداثيات الموقع: ' + this.value + ' | DOC-HSE-MAP-01 Rev.02'">
+                        <input type="text" id="customCoords" value="${mapConfig.coords}" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 11px; width: 190px;" oninput="document.getElementById('displayCoords').textContent = 'إحداثيات الموقع: ' + this.value + ' | DOC-HSE-MAP-01 Rev.02'">
                         <button onclick="window.print()" style="padding: 6px 18px; background: #1e40af; color: #fff; border:none; border-radius:6px; cursor:pointer; font-weight: 900; font-size: 12px; box-shadow: 0 2px 6px rgba(30,64,175,0.25);">🖨️ طباعة الكارت الآن</button>
                     </div>
                 </div>
@@ -2638,7 +2651,44 @@ class GateSecurityModule {
                     </div>
                 </div>
 
-                <script>
+                \x3Cscript>
+                    function changeCardPrintSize(sizeMode) {
+                        const container = document.querySelector('.card-container');
+                        const scaleWrap = document.getElementById('customCardScaleWrap');
+                        if (!container) return;
+
+                        if (sizeMode === 'compact') {
+                            if (scaleWrap) scaleWrap.style.display = 'none';
+                            container.style.maxWidth = '720px';
+                            container.style.transform = 'scale(0.85)';
+                            container.style.transformOrigin = 'top center';
+                        } else if (sizeMode === 'medium') {
+                            if (scaleWrap) scaleWrap.style.display = 'none';
+                            container.style.maxWidth = '860px';
+                            container.style.transform = 'scale(0.92)';
+                            container.style.transformOrigin = 'top center';
+                        } else if (sizeMode === 'custom-scale') {
+                            if (scaleWrap) scaleWrap.style.display = 'inline-flex';
+                            const val = document.getElementById('cardScaleRange')?.value || 100;
+                            applyCustomCardScale(val);
+                        } else {
+                            if (scaleWrap) scaleWrap.style.display = 'none';
+                            container.style.maxWidth = '100%';
+                            container.style.transform = 'none';
+                        }
+                    }
+
+                    function applyCustomCardScale(val) {
+                        const container = document.querySelector('.card-container');
+                        const text = document.getElementById('cardScaleValText');
+                        if (text) text.textContent = val + '%';
+                        if (container) {
+                            const scale = parseInt(val) / 100;
+                            container.style.transform = 'scale(' + scale + ')';
+                            container.style.transformOrigin = 'top center';
+                        }
+                    }
+
                     function updateSiteMap(site) {
                         const coordsMap = {
                             'ICAPP-1': '30°24\\'12.4"N 31°18\\'45.2"E - مصنع 1 الفاكهة',
