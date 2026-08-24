@@ -84,8 +84,14 @@ class GateSecurityModule {
                         <button type="button" class="btn btn-outline-primary" onclick="GateSecurity.refreshData()" style="font-weight: 700;">
                             <i class="fas fa-rotate"></i> تحديث السجل
                         </button>
+                        <button type="button" class="btn" onclick="GateSecurity.printGateQrPoster()" style="font-weight: 800; background: #2563eb; color: #ffffff; border-color: #2563eb;">
+                            <i class="fas fa-qrcode"></i> بوستر QR للبوابات (A4)
+                        </button>
+                        <button type="button" class="btn" onclick="GateSecurity.printMasterVisitorBadges()" style="font-weight: 800; background: #059669; color: #ffffff; border-color: #059669;">
+                            <i class="fas fa-id-badge"></i> كروت الزوار العامة (A4)
+                        </button>
                         <button type="button" class="btn btn-primary" onclick="GateSecurity.printEmergencyMusterList()" style="font-weight: 700; background: #dc2626; border-color: #dc2626;">
-                            <i class="fas fa-print"></i> طباعة كشف حصر الإخلاء
+                            <i class="fas fa-print"></i> طباعة كشف الإخلاء
                         </button>
                     </div>
                 </div>
@@ -420,14 +426,13 @@ class GateSecurityModule {
                         `}
                     </td>
                     <td style="padding: 10px 14px; text-align: center; white-space: nowrap;">
-                        <button type="button" class="btn btn-sm" onclick="GateSecurity.printVisitorBadge('${v.id}')" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 3px 8px; margin-left: 4px;" title="طباعة كارت الزائر">
-                            <i class="fas fa-id-card"></i> كارت
-                        </button>
                         ${isActive ? `
-                            <button type="button" class="btn btn-sm" onclick="GateSecurity.adminForceCheckOut('${v.id}', '${v.badge}')" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 3px 8px;" title="تسجيل خروج إداري">
-                                <i class="fas fa-door-open"></i> خروج
+                            <button type="button" class="btn btn-sm" onclick="GateSecurity.adminForceCheckOut('${v.id}', '${v.badge}')" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 4px 10px;" title="تسجيل خروج إداري">
+                                <i class="fas fa-door-open"></i> تسجيل خروج
                             </button>
-                        ` : ''}
+                        ` : `
+                            <span style="color: #94a3b8; font-size: 0.75rem;">—</span>
+                        `}
                     </td>
                 </tr>
             `;
@@ -740,230 +745,614 @@ class GateSecurityModule {
         win.document.close();
     }
 
-    printVisitorBadge(visitorId) {
-        const rec = this.visitors.find(v => v.id === visitorId);
-        if (!rec) {
-            alert('لم يتم العثور على بيانات هذا الزائر');
-            return;
-        }
-
+    printGateQrPoster() {
+        const portalUrl = this.getGatePortalUrl();
+        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=480x480&format=png&margin=0&data=${encodeURIComponent(portalUrl)}`;
         const win = window.open('', '_blank');
         if (!win) {
-            alert('يرجى السماح بالنوافذ المنبثقة لطباعة كارت الزائر (Pop-ups)');
+            alert('يرجى السماح بالنوافذ المنبثقة لطباعة البوستر (Pop-ups)');
             return;
         }
-
-        const qrData = `ICAPP-VISITOR-PASS | Badge: ${rec.badge} | Name: ${rec.name} | Org: ${rec.org} | Site: ${rec.site} - ${rec.area} | Date: ${rec.entryDate} ${rec.entryTime}`;
-        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&format=png&margin=0&data=${encodeURIComponent(qrData)}`;
 
         win.document.write(`
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
                 <meta charset="UTF-8">
-                <title>كارت وتصريح دخول زائر - ${rec.badge} - ${rec.name} - ICAPP</title>
+                <title>لوحة رمز الاستجابة السريع QR - منظومة أمن البوابات والزوار - ICAPP</title>
                 <style>
                     @page {
                         size: A4 portrait;
-                        margin: 10mm 10mm 10mm 10mm;
+                        margin: 8mm 8mm 8mm 8mm;
                     }
                     * { box-sizing: border-box; }
                     body {
                         font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
                         margin: 0;
-                        padding: 15px;
+                        padding: 10px;
                         direction: rtl;
                         color: #0f172a;
-                        background: #f1f5f9;
+                        background: #ffffff;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
-                    .page-container {
+                    .poster-wrapper {
+                        border: 3px solid #1e3a8a;
+                        border-radius: 12px;
+                        padding: 12px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        min-height: 96vh;
+                        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+                    }
+                    /* ترويسة ISO ثلاثية الصناديق */
+                    .iso-print-header {
+                        display: grid;
+                        grid-template-columns: 160px 1fr 190px;
+                        border: 2px solid #0f172a;
+                        border-top: 5px solid #1e3a8a;
+                        border-radius: 8px;
+                        overflow: hidden;
+                        background: #ffffff;
+                        margin-bottom: 12px;
+                    }
+                    .iso-box-brand {
+                        padding: 6px 10px;
                         display: flex;
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
-                        min-height: 90vh;
+                        border-left: 1.5px solid #0f172a;
+                        background: #f8fafc;
+                        gap: 3px;
                     }
-                    /* كارت الزائر المعتمد */
-                    .visitor-badge-card {
-                        width: 105mm;
-                        min-height: 155mm;
-                        background: #ffffff;
-                        border: 2.5px solid #0f172a;
-                        border-radius: 14px;
-                        overflow: hidden;
-                        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                    .iso-print-logo {
+                        max-height: 40px;
+                        max-width: 95px;
+                        object-fit: contain;
+                    }
+                    .iso-dept-title {
+                        font-size: 10.5px;
+                        font-weight: 800;
+                        color: #1e3a8a;
+                        text-align: center;
+                        line-height: 1.2;
+                    }
+                    .iso-box-title {
+                        padding: 6px 10px;
                         display: flex;
                         flex-direction: column;
-                        position: relative;
+                        align-items: center;
+                        justify-content: center;
+                        text-align: center;
                     }
-                    .lanyard-slot {
-                        width: 16mm;
-                        height: 3.5mm;
-                        background: #e2e8f0;
-                        border: 1.5px dashed #64748b;
-                        border-radius: 4px;
-                        margin: 4px auto 0;
+                    .iso-main-title {
+                        margin: 0;
+                        font-size: 15px;
+                        font-weight: 900;
+                        color: #1e3a8a;
+                        line-height: 1.2;
                     }
-                    .badge-header {
+                    .iso-sub-title {
+                        font-size: 10px;
+                        font-weight: 700;
+                        color: #475569;
+                        margin-top: 2px;
+                    }
+                    .iso-box-meta {
+                        padding: 6px 8px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        border-right: 1.5px solid #0f172a;
+                        background: #f8fafc;
+                        font-size: 10px;
+                        gap: 2px;
+                    }
+                    .meta-row {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        border-bottom: 1px dashed #cbd5e1;
+                        padding-bottom: 1px;
+                    }
+                    .meta-row:last-child { border-bottom: none; }
+                    .meta-row span { color: #64748b; font-weight: 700; }
+                    .meta-row strong { color: #0f172a; }
+
+                    /* قسم البانر التوجيهي الرئيسي */
+                    .hero-banner {
+                        text-align: center;
                         background: #1e3a8a;
                         color: #ffffff;
-                        padding: 8px 12px;
-                        text-align: center;
-                        border-bottom: 3.5px solid #059669;
+                        padding: 10px 14px;
+                        border-radius: 8px;
+                        margin-bottom: 10px;
                     }
-                    .badge-logo-row {
+                    .hero-title {
+                        font-size: 18px;
+                        font-weight: 900;
+                        margin: 0 0 3px;
+                        letter-spacing: -0.2px;
+                    }
+                    .hero-sub {
+                        font-size: 11px;
+                        color: #93c5fd;
+                        font-weight: 700;
+                        margin: 0;
+                    }
+
+                    /* بطاقة رمز QR المركزية */
+                    .qr-card-center {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        background: #ffffff;
+                        border: 2px dashed #2563eb;
+                        border-radius: 12px;
+                        padding: 14px 10px;
+                        margin-bottom: 12px;
+                        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+                    }
+                    .qr-frame {
+                        background: #ffffff;
+                        padding: 10px;
+                        border: 3px solid #1e293b;
+                        border-radius: 12px;
+                        display: inline-block;
+                        box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+                    }
+                    .qr-img {
+                        width: 220px;
+                        height: 220px;
+                        display: block;
+                    }
+                    .qr-tagline {
+                        margin-top: 10px;
+                        font-size: 11.5px;
+                        font-weight: 800;
+                        color: #0f172a;
+                        background: #dbeafe;
+                        padding: 4px 14px;
+                        border-radius: 20px;
+                        border: 1px solid #93c5fd;
+                    }
+
+                    /* شبكة الخطوات الإرشادية 4 خطوات */
+                    .steps-grid {
+                        display: grid;
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 8px;
+                        margin-bottom: 10px;
+                    }
+                    .step-box {
+                        background: #ffffff;
+                        border: 1.5px solid #cbd5e1;
+                        border-top: 3.5px solid #2563eb;
+                        border-radius: 8px;
+                        padding: 8px;
+                        text-align: center;
+                    }
+                    .step-num {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 24px;
+                        height: 24px;
+                        background: #2563eb;
+                        color: #ffffff;
+                        border-radius: 50%;
+                        font-size: 12px;
+                        font-weight: 900;
+                        margin-bottom: 4px;
+                    }
+                    .step-title {
+                        font-size: 11px;
+                        font-weight: 800;
+                        color: #0f172a;
+                        margin-bottom: 2px;
+                    }
+                    .step-desc {
+                        font-size: 9.5px;
+                        color: #475569;
+                        line-height: 1.25;
+                    }
+
+                    /* شريط التنبيه الأمني والبيئي */
+                    .safety-strip {
+                        background: #fef2f2;
+                        border: 1.5px solid #f87171;
+                        border-radius: 8px;
+                        padding: 6px 12px;
+                        text-align: center;
+                        font-size: 10.5px;
+                        font-weight: 800;
+                        color: #991b1b;
+                        margin-bottom: 10px;
+                    }
+
+                    /* فوتر الاعتماد ثلاثي الصناديق */
+                    .iso-print-footer {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr 1fr;
+                        gap: 8px;
+                    }
+                    .footer-box {
+                        border: 1.5px solid #334155;
+                        border-radius: 6px;
+                        padding: 6px 8px;
+                        background: #f8fafc;
+                    }
+                    .footer-box-title {
+                        font-size: 10px;
+                        font-weight: 800;
+                        color: #1e3a8a;
+                        text-align: center;
+                        border-bottom: 1px solid #cbd5e1;
+                        padding-bottom: 3px;
+                        margin-bottom: 5px;
+                    }
+                    .footer-sig-line {
+                        font-size: 9.5px;
+                        color: #334155;
+                        margin-top: 4px;
+                        font-weight: 600;
+                    }
+
+                    .print-btn-wrap {
+                        text-align: center;
+                        margin-top: 15px;
+                    }
+                    @media print {
+                        .print-btn-wrap { display: none !important; }
+                        body { padding: 0; }
+                        .poster-wrapper { min-height: 98vh; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="poster-wrapper">
+                    <!-- ترويسة ISO ثلاثية الصناديق -->
+                    <div class="iso-print-header">
+                        <div class="iso-box-brand">
+                            <img src="icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='../icons/icapp-logo.png'">
+                            <div class="iso-dept-title">إدارة السلامة والصحة المهنية</div>
+                        </div>
+
+                        <div class="iso-box-title">
+                            <h1 class="iso-main-title">🛡️ منظومة أمن البوابات وسجل الزوار والمقاولين</h1>
+                            <div class="iso-sub-title">Gate Security Visitor & Contractor Control System</div>
+                        </div>
+
+                        <div class="iso-box-meta">
+                            <div class="meta-row">
+                                <span>كود الوثيقة:</span>
+                                <strong>DOC-SEC-QR-01</strong>
+                            </div>
+                            <div class="meta-row">
+                                <span>رقم الإصدار:</span>
+                                <strong>Rev. 02</strong>
+                            </div>
+                            <div class="meta-row">
+                                <span>درجة السرية:</span>
+                                <strong style="color: #047857;">عام داخلي</strong>
+                            </div>
+                            <div class="meta-row">
+                                <span>نظام الدخول:</span>
+                                <strong>تسجيل إلكتروني</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- البانر التوجيهي الرئيسي -->
+                    <div class="hero-banner">
+                        <div class="hero-title">📲 امسح رمز الاستجابة السريع لتسجيل الدخول فورياً</div>
+                        <div class="hero-sub">Scan QR Code with your smartphone camera to register your visit pass</div>
+                    </div>
+
+                    <!-- بطاقة QR المركزية -->
+                    <div class="qr-card-center">
+                        <div class="qr-frame">
+                            <img src="${qrImageUrl}" alt="Gate Entry QR Code" class="qr-img" onerror="this.src='https://chart.googleapis.com/chart?cht=qr&chs=450x450&chl=${encodeURIComponent(portalUrl)}';">
+                        </div>
+                        <div class="qr-tagline">
+                            🔒 مسح آمن ومباشر عبر الهاتف المحمول | Direct Mobile Check-In
+                        </div>
+                    </div>
+
+                    <!-- إرشادات الاستخدام 4 خطوات -->
+                    <div class="steps-grid">
+                        <div class="step-box">
+                            <div class="step-num">1</div>
+                            <div class="step-title">افتح الكاميرا</div>
+                            <div class="step-desc">وجّه كاميرا الهاتف نحو رمز QR أعلاه</div>
+                        </div>
+                        <div class="step-box">
+                            <div class="step-num">2</div>
+                            <div class="step-title">افتح الرابط</div>
+                            <div class="step-desc">انقر على الإشعار الظاهر لفتح النموذج</div>
+                        </div>
+                        <div class="step-box">
+                            <div class="step-num">3</div>
+                            <div class="step-title">سجل البيانات</div>
+                            <div class="step-desc">أدخل الاسم والجهة والمستضيف والسيارة</div>
+                        </div>
+                        <div class="step-box">
+                            <div class="step-num">4</div>
+                            <div class="step-title">استلم الكارت</div>
+                            <div class="step-desc">استلم كارت الزيارة المعتمد من مسؤول الأمن</div>
+                        </div>
+                    </div>
+
+                    <!-- شريط التنبيه الإلزامي للسلامة والأمن -->
+                    <div class="safety-strip">
+                        🛡️ تنبيه أمني وإلزامي: يُمنع التواجد داخل المصانع بدون تصريح رسمي، مع الالتزام التام بتعليمات السلامة وارتداء مهمات الوقاية (PPE).
+                    </div>
+
+                    <!-- فوتر الاعتماد ثلاثي الصناديق -->
+                    <div class="iso-print-footer">
+                        <div class="footer-box">
+                            <div class="footer-box-title">مسؤول الأمن الصناعي والحراسة</div>
+                            <div class="footer-sig-line">الاسم: .......................................</div>
+                            <div class="footer-sig-line">التوقيع: ....................................</div>
+                        </div>
+                        <div class="footer-box">
+                            <div class="footer-box-title">مدير إدارة السلامة والصحة المهنية</div>
+                            <div class="footer-sig-line">الاسم: .......................................</div>
+                            <div class="footer-sig-line">التوقيع: ....................................</div>
+                        </div>
+                        <div class="footer-box">
+                            <div class="footer-box-title">مدير العمليات وإدارة المصانع</div>
+                            <div class="footer-sig-line">الاسم: .......................................</div>
+                            <div class="footer-sig-line">التوقيع: ....................................</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="print-btn-wrap">
+                    <button onclick="window.print()" style="padding: 12px 28px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 900; font-size: 14px; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);">🖨️ طباعة لوحة QR الآن (A4 Poster)</button>
+                </div>
+            </body>
+            </html>
+        `);
+        win.document.close();
+    }
+
+    printMasterVisitorBadges() {
+        const portalUrl = this.getGatePortalUrl();
+        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&format=png&margin=0&data=${encodeURIComponent(portalUrl)}`;
+        const win = window.open('', '_blank');
+        if (!win) {
+            alert('يرجى السماح بالنوافذ المنبثقة لطباعة كروت الزوار (Pop-ups)');
+            return;
+        }
+
+        const badgeHtml = (num) => `
+            <div class="visitor-master-badge">
+                <div class="lanyard-hole"></div>
+                
+                <div class="badge-top-header">
+                    <div class="badge-top-brand">
+                        <img src="icons/icapp-logo.png" alt="ICAPP" class="badge-mini-logo" onerror="this.src='../icons/icapp-logo.png'">
+                        <div class="badge-dept-text">إدارة السلامة والصحة المهنية والأمن الصناعي</div>
+                    </div>
+                    <div class="badge-type-banner">
+                        🪪 كارت وشارة زائر معتمد | VISITOR PASS
+                    </div>
+                </div>
+
+                <div class="badge-number-box">
+                    <span class="badge-lbl">رقم كارت الزائر:</span>
+                    <span class="badge-val">VIS - ${num.toString().padStart(3, '0')}</span>
+                </div>
+
+                <div class="badge-body-content">
+                    <div class="badge-line-row">
+                        <span class="line-key">اسم الزائر:</span>
+                        <span class="line-dots">.......................................................................</span>
+                    </div>
+                    <div class="badge-line-row">
+                        <span class="line-key">الجهة / الشركة:</span>
+                        <span class="line-dots">.......................................................................</span>
+                    </div>
+                    <div class="badge-line-row">
+                        <span class="line-key">الموظف المستضيف:</span>
+                        <span class="line-dots">.......................................................................</span>
+                    </div>
+                    <div class="badge-line-row">
+                        <span class="line-key">المصنع / الموقع:</span>
+                        <span class="line-dots">.......................................................................</span>
+                    </div>
+
+                    <div class="badge-mid-qr-row">
+                        <img src="${qrImageUrl}" alt="Portal QR" class="badge-qr-pic" onerror="this.src='https://chart.googleapis.com/chart?cht=qr&chs=150x150&chl=${encodeURIComponent(portalUrl)}';">
+                        <div class="badge-rules-list">
+                            ⚠️ <strong>تعليمات أمنية وإلزامية:</strong><br>
+                            • حمل هذا الكارت بصفة ظاهرة طوال الزيارة.<br>
+                            • الالتزام بارتداء مهمات الوقاية (PPE).<br>
+                            • يُمنع التحرك الفردي بدون مرافق رسمي.<br>
+                            • يُسلّم هذا الكارت للبوابة عند تسجيل الخروج.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="badge-bottom-footer">
+                    <div>كود: <strong>DOC-SEC-VIS-PASS-01</strong></div>
+                    <div>ختم / اعتماد البوابة: ....................</div>
+                </div>
+            </div>
+        `;
+
+        win.document.write(`
+            <!DOCTYPE html>
+            <html lang="ar" dir="rtl">
+            <head>
+                <meta charset="UTF-8">
+                <title>نماذج كروت وشارات الزوار العامة المعتمدة - ICAPP</title>
+                <style>
+                    @page {
+                        size: A4 portrait;
+                        margin: 8mm 8mm 8mm 8mm;
+                    }
+                    * { box-sizing: border-box; }
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+                        margin: 0;
+                        padding: 10px;
+                        direction: rtl;
+                        color: #0f172a;
+                        background: #f8fafc;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    .sheet-wrapper {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 12px;
+                        max-width: 210mm;
+                        margin: 0 auto;
+                    }
+                    .visitor-master-badge {
+                        background: #ffffff;
+                        border: 2px dashed #64748b;
+                        border-radius: 12px;
+                        overflow: hidden;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        padding: 0;
+                        min-height: 128mm;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+                        position: relative;
+                    }
+                    .lanyard-hole {
+                        width: 14mm;
+                        height: 3mm;
+                        background: #e2e8f0;
+                        border: 1px dashed #64748b;
+                        border-radius: 3px;
+                        margin: 3px auto 1px;
+                    }
+                    .badge-top-header {
+                        background: #1e3a8a;
+                        color: #ffffff;
+                        padding: 6px 10px;
+                        text-align: center;
+                        border-bottom: 3px solid #059669;
+                    }
+                    .badge-top-brand {
                         display: flex;
                         align-items: center;
                         justify-content: space-between;
-                        margin-bottom: 4px;
+                        margin-bottom: 3px;
                     }
-                    .badge-logo {
-                        max-height: 32px;
-                        max-width: 80px;
+                    .badge-mini-logo {
+                        max-height: 26px;
+                        max-width: 65px;
                         object-fit: contain;
                         background: #ffffff;
-                        padding: 2px 6px;
-                        border-radius: 4px;
+                        padding: 1px 4px;
+                        border-radius: 3px;
                     }
-                    .badge-dept {
-                        font-size: 9.5px;
+                    .badge-dept-text {
+                        font-size: 8.5px;
                         font-weight: 800;
                         color: #93c5fd;
                         text-align: left;
                     }
-                    .badge-main-type {
-                        font-size: 13.5px;
+                    .badge-type-banner {
+                        font-size: 11.5px;
                         font-weight: 900;
-                        margin: 0;
-                        letter-spacing: 0.2px;
+                        margin-top: 2px;
                     }
-                    .badge-sub-type {
-                        font-size: 8.5px;
-                        color: #cbd5e1;
-                        font-weight: 700;
-                    }
-                    .badge-code-banner {
-                        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                    .badge-number-box {
+                        background: #0f172a;
                         color: #ffffff;
-                        padding: 8px 12px;
+                        padding: 5px 10px;
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
                     }
-                    .badge-code-label {
-                        font-size: 10px;
+                    .badge-lbl {
+                        font-size: 9.5px;
                         color: #94a3b8;
                         font-weight: 700;
                     }
-                    .badge-code-val {
-                        font-size: 19px;
+                    .badge-val {
+                        font-size: 15px;
                         font-weight: 900;
                         color: #34d399;
-                        letter-spacing: 1px;
                         font-family: 'Courier New', monospace;
+                        letter-spacing: 1px;
                     }
-                    .badge-body {
-                        padding: 10px 12px;
+                    .badge-body-content {
+                        padding: 8px 10px;
                         flex: 1;
                         display: flex;
                         flex-direction: column;
-                        gap: 6px;
+                        gap: 4px;
                     }
-                    .visitor-hero-box {
-                        background: #f8fafc;
-                        border: 1.5px solid #cbd5e1;
-                        border-radius: 8px;
-                        padding: 8px 10px;
-                        text-align: center;
-                    }
-                    .visitor-hero-name {
-                        font-size: 15px;
-                        font-weight: 900;
-                        color: #0f172a;
-                        margin-bottom: 2px;
-                    }
-                    .visitor-hero-org {
-                        font-size: 11px;
-                        font-weight: 800;
-                        color: #2563eb;
-                    }
-                    .badge-fields-grid {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 5px;
-                        background: #f8fafc;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 6px;
-                        padding: 6px 8px;
-                        font-size: 9.5px;
-                    }
-                    .b-field {
-                        display: flex;
-                        flex-direction: column;
-                    }
-                    .b-field-full {
-                        grid-column: span 2;
-                    }
-                    .b-key {
-                        color: #64748b;
-                        font-size: 8.5px;
-                        font-weight: 700;
-                    }
-                    .b-val {
-                        color: #0f172a;
-                        font-weight: 800;
-                    }
-                    .badge-qr-row {
+                    .badge-line-row {
                         display: flex;
                         align-items: center;
-                        gap: 10px;
-                        margin-top: 4px;
-                        background: #ffffff;
+                        font-size: 9px;
+                        margin-bottom: 2px;
+                    }
+                    .line-key {
+                        font-weight: 800;
+                        color: #1e3a8a;
+                        width: 75px;
+                        flex-shrink: 0;
+                    }
+                    .line-dots {
+                        color: #94a3b8;
+                        font-size: 8.5px;
+                        overflow: hidden;
+                        white-space: nowrap;
+                    }
+                    .badge-mid-qr-row {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        background: #f8fafc;
                         border: 1px solid #cbd5e1;
                         border-radius: 6px;
-                        padding: 6px;
+                        padding: 5px;
+                        margin-top: 4px;
                     }
-                    .badge-qr-img {
-                        width: 65px;
-                        height: 65px;
+                    .badge-qr-pic {
+                        width: 52px;
+                        height: 52px;
                         border: 1px solid #94a3b8;
                         border-radius: 4px;
                         flex-shrink: 0;
                     }
-                    .badge-rules {
-                        font-size: 8px;
+                    .badge-rules-list {
+                        font-size: 7.5px;
                         color: #334155;
-                        line-height: 1.35;
-                        font-weight: 600;
+                        line-height: 1.3;
                     }
-                    .badge-footer {
+                    .badge-bottom-footer {
                         background: #f1f5f9;
-                        border-top: 1.5px solid #cbd5e1;
-                        padding: 6px 10px;
+                        border-top: 1px solid #cbd5e1;
+                        padding: 4px 8px;
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                        font-size: 8.5px;
+                        font-size: 8px;
                         color: #475569;
                         font-weight: 700;
                     }
-                    .badge-sig-text {
-                        color: #0f172a;
-                        font-weight: 800;
-                    }
                     .print-btn-wrap {
-                        margin-top: 16px;
                         text-align: center;
+                        margin-top: 14px;
                     }
                     @media print {
                         body {
                             background: #ffffff;
                             padding: 0;
-                        }
-                        .page-container {
-                            min-height: 0;
                         }
                         .print-btn-wrap {
                             display: none !important;
@@ -972,86 +1361,19 @@ class GateSecurityModule {
                 </style>
             </head>
             <body>
-                <div class="page-container">
-                    <div class="visitor-badge-card">
-                        <div class="lanyard-slot"></div>
-                        <div class="badge-header">
-                            <div class="badge-logo-row">
-                                <img src="icons/icapp-logo.png" alt="ICAPP" class="badge-logo" onerror="this.src='icons/icapp-logo.png'">
-                                <div class="badge-dept">
-                                    إدارة السلامة والصحة المهنية<br>
-                                    منظومة أمن وحراسة البوابات
-                                </div>
-                            </div>
-                            <div class="badge-main-type">🪪 تصريح وشارة دخول زائر / مقاول</div>
-                            <div class="badge-sub-type">OFFICIAL VISITOR / CONTRACTOR PASS</div>
-                        </div>
+                <div style="text-align: center; margin-bottom: 8px;" class="print-btn-wrap">
+                    <span style="font-size: 12px; font-weight: 800; color: #1e40af;">📄 صفحة كروت وشارات الزوار العامة (A4 Sheet - 4 Badges) — قم بالطباعة والقص والتغليف الحراري للتسليم اليدوي</span>
+                </div>
 
-                        <div class="badge-code-banner">
-                            <div class="badge-code-label">رقم كارت / شارة الزائر:</div>
-                            <div class="badge-code-val">🏷️ ${rec.badge}</div>
-                        </div>
+                <div class="sheet-wrapper">
+                    ${badgeHtml(1)}
+                    ${badgeHtml(2)}
+                    ${badgeHtml(3)}
+                    ${badgeHtml(4)}
+                </div>
 
-                        <div class="badge-body">
-                            <div class="visitor-hero-box">
-                                <div class="visitor-hero-name">👤 ${rec.name}</div>
-                                <div class="visitor-hero-org">🏢 ${rec.org}</div>
-                            </div>
-
-                            <div class="badge-fields-grid">
-                                <div class="b-field">
-                                    <span class="b-key">الرقم القومي / الجواز:</span>
-                                    <span class="b-val">${rec.idNumber || '-'}</span>
-                                </div>
-                                <div class="b-field">
-                                    <span class="b-key">الهاتف:</span>
-                                    <span class="b-val">${rec.phone || '-'}</span>
-                                </div>
-                                <div class="b-field-full">
-                                    <span class="b-key">المصنع والموقع المصرح به:</span>
-                                    <span class="b-val" style="color: #1e40af;">📍 ${rec.site} — ${rec.area}</span>
-                                </div>
-                                <div class="b-field">
-                                    <span class="b-key">الموظف المستضيف:</span>
-                                    <span class="b-val">${rec.host || '-'}</span>
-                                </div>
-                                <div class="b-field">
-                                    <span class="b-key">وقت وتاريخ الدخول:</span>
-                                    <span class="b-val">⏱️ ${rec.entryDate} | ${rec.entryTime}</span>
-                                </div>
-                                <div class="b-field-full">
-                                    <span class="b-key">نوع وغرض الزيارة:</span>
-                                    <span class="b-val">${rec.purpose || '-'}</span>
-                                </div>
-                                ${rec.vehicle ? `
-                                    <div class="b-field-full" style="background: #eff6ff; padding: 2px 4px; border-radius: 4px; border: 1px dashed #93c5fd;">
-                                        <span class="b-key">🚗 مركبة مصرحة (رقم اللوحة):</span>
-                                        <span class="b-val" style="color: #1d4ed8; font-weight: 900;">${rec.vehicle}</span>
-                                    </div>
-                                ` : ''}
-                            </div>
-
-                            <div class="badge-qr-row">
-                                <img src="${qrImageUrl}" alt="Pass QR" class="badge-qr-img" onerror="this.src='https://chart.googleapis.com/chart?cht=qr&chs=180x180&chl=${encodeURIComponent(qrData)}';">
-                                <div class="badge-rules">
-                                    ⚠️ <strong>تعليمات أمنية وإلزامية:</strong><br>
-                                    • حمل هذا الكارت بصفة ظاهرة طوال الزيارة.<br>
-                                    • الالتزام بارتداء مهمات الوقاية الشخصية (PPE).<br>
-                                    • يُمنع التحرك الفردي بدون مرافق رسمي.<br>
-                                    • يُسلّم هذا الكارت للبوابة عند تسجيل الخروج.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="badge-footer">
-                            <div>كود: <strong>DOC-SEC-VIS-PASS-01</strong></div>
-                            <div class="badge-sig-text">اعتماد أمن البوابة: ....................</div>
-                        </div>
-                    </div>
-
-                    <div class="print-btn-wrap">
-                        <button onclick="window.print()" style="padding: 10px 24px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 800; font-size: 13px; box-shadow: 0 4px 12px rgba(30,64,175,0.25);">🖨️ طباعة كارت الزائر الآن</button>
-                    </div>
+                <div class="print-btn-wrap">
+                    <button onclick="window.print()" style="padding: 10px 24px; background: #059669; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 900; font-size: 13px; box-shadow: 0 4px 12px rgba(5,150,105,0.3);">🖨️ طباعة كروت وشارات الزوار (A4 Sheet)</button>
                 </div>
             </body>
             </html>

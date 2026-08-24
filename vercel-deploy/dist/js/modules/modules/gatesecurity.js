@@ -1,9 +1,9 @@
-class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[],this.filterSite="all",this.filterStatus="all",this.searchQuery="",this.autoRefreshTimer=null,this.init()}init(){window.GateSecurity=this,document.addEventListener("DOMContentLoaded",()=>{this.checkAndApplyVisibility()})}checkAndApplyVisibility(){const e=this.isAdmin(),t=document.querySelector('a[data-section="gate-security"]');t&&(t.style.display=e?"flex":"none");const i=document.getElementById("gate-security-section");i&&!e&&(i.style.display="none")}isAdmin(){try{if(typeof Permissions<"u"&&typeof Permissions.isCurrentUserAdmin=="function"&&Permissions.isCurrentUserAdmin()||typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin())return!0;const e=AppState?.currentUser?.role;return e==="admin"||e==="hse_manager"||e==="general_manager"||e==="security_admin"}catch{return!1}}render(){const e=document.getElementById("gate-security-section");if(!e)return;if(!this.isAdmin()){e.innerHTML=`
+class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[],this.filterSite="all",this.filterStatus="all",this.searchQuery="",this.autoRefreshTimer=null,this.init()}init(){window.GateSecurity=this,document.addEventListener("DOMContentLoaded",()=>{this.checkAndApplyVisibility()})}checkAndApplyVisibility(){const t=this.isAdmin(),i=document.querySelector('a[data-section="gate-security"]');i&&(i.style.display=t?"flex":"none");const e=document.getElementById("gate-security-section");e&&!t&&(e.style.display="none")}isAdmin(){try{if(typeof Permissions<"u"&&typeof Permissions.isCurrentUserAdmin=="function"&&Permissions.isCurrentUserAdmin()||typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin())return!0;const t=AppState?.currentUser?.role;return t==="admin"||t==="hse_manager"||t==="general_manager"||t==="security_admin"}catch{return!1}}render(){const t=document.getElementById("gate-security-section");if(!t)return;if(!this.isAdmin()){t.innerHTML=`
                 <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
                     <i class="fas fa-lock text-rose-500" style="font-size: 3rem; margin-bottom: 12px; display:block;"></i>
                     <h3 style="font-size: 1.2rem; font-weight:800;">\u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0645\u062E\u0635\u0635 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0648\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0623\u0645\u0646 \u0641\u0642\u0637</h3>
                 </div>
-            `;return}const t=this.getGatePortalUrl();e.innerHTML=`
+            `;return}const i=this.getGatePortalUrl();t.innerHTML=`
             <div class="module-header" style="margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                     <div>
@@ -20,8 +20,14 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                         <button type="button" class="btn btn-outline-primary" onclick="GateSecurity.refreshData()" style="font-weight: 700;">
                             <i class="fas fa-rotate"></i> \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0633\u062C\u0644
                         </button>
+                        <button type="button" class="btn" onclick="GateSecurity.printGateQrPoster()" style="font-weight: 800; background: #2563eb; color: #ffffff; border-color: #2563eb;">
+                            <i class="fas fa-qrcode"></i> \u0628\u0648\u0633\u062A\u0631 QR \u0644\u0644\u0628\u0648\u0627\u0628\u0627\u062A (A4)
+                        </button>
+                        <button type="button" class="btn" onclick="GateSecurity.printMasterVisitorBadges()" style="font-weight: 800; background: #059669; color: #ffffff; border-color: #059669;">
+                            <i class="fas fa-id-badge"></i> \u0643\u0631\u0648\u062A \u0627\u0644\u0632\u0648\u0627\u0631 \u0627\u0644\u0639\u0627\u0645\u0629 (A4)
+                        </button>
                         <button type="button" class="btn btn-primary" onclick="GateSecurity.printEmergencyMusterList()" style="font-weight: 700; background: #dc2626; border-color: #dc2626;">
-                            <i class="fas fa-print"></i> \u0637\u0628\u0627\u0639\u0629 \u0643\u0634\u0641 \u062D\u0635\u0631 \u0627\u0644\u0625\u062E\u0644\u0627\u0621
+                            <i class="fas fa-print"></i> \u0637\u0628\u0627\u0639\u0629 \u0643\u0634\u0641 \u0627\u0644\u0625\u062E\u0644\u0627\u0621
                         </button>
                     </div>
                 </div>
@@ -41,10 +47,10 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                         </p>
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <a href="${t}" target="_blank" class="btn" style="background: #ffffff; color: #1e40af; font-weight: 800; font-size: 0.85rem; padding: 8px 16px; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <a href="${i}" target="_blank" class="btn" style="background: #ffffff; color: #1e40af; font-weight: 800; font-size: 0.85rem; padding: 8px 16px; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                             <i class="fas fa-external-link-alt"></i> \u0641\u062A\u062D \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0628\u0627\u0634\u0631
                         </a>
-                        <button type="button" class="btn" onclick="GateSecurity.copyGateLink('${t}')" style="background: rgba(255,255,255,0.15); color: #ffffff; border: 1px solid rgba(255,255,255,0.3); font-weight: 700; font-size: 0.85rem; padding: 8px 14px; border-radius: 10px;">
+                        <button type="button" class="btn" onclick="GateSecurity.copyGateLink('${i}')" style="background: rgba(255,255,255,0.15); color: #ffffff; border: 1px solid rgba(255,255,255,0.3); font-weight: 700; font-size: 0.85rem; padding: 8px 14px; border-radius: 10px;">
                             <i class="fas fa-copy"></i> \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637
                         </button>
                     </div>
@@ -150,38 +156,38 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                     </table>
                 </div>
             </div>
-        `,this.loadVisitorsData(),this.startAutoRefresh()}getGatePortalUrl(){const e=window.location.origin||window.location.protocol+"//"+window.location.host,t=window.location.pathname;return t.includes("/Frontend/")?`${e}/Frontend/gate-visitor-entry.html`:t.includes("/dist/")?`${e}/dist/gate-visitor-entry.html`:`${e}/gate-visitor-entry.html`}copyGateLink(e){navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(e).then(()=>{typeof Utils<"u"&&Utils.showNotification?Utils.showNotification("\u062A\u0645 \u0646\u0633\u062E \u0631\u0627\u0628\u0637 \u062A\u0633\u062C\u064A\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0628\u0646\u062C\u0627\u062D \u2705","success"):alert("\u062A\u0645 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0628\u0646\u062C\u0627\u062D: "+e)}):prompt("\u0627\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0623\u0645\u0646 \u0639\u0646\u062F \u0627\u0644\u0628\u0648\u0627\u0628\u0629:",e)}async loadVisitorsData(){try{const e=localStorage.getItem("HSE_GATE_VISITORS_REGISTRY");if(this.visitors=e?JSON.parse(e):[],navigator.onLine&&typeof GoogleIntegration<"u")try{const i=await(await fetch(this.getEffectiveApiUrl()+"?action=getActiveGateVisitors",{method:"GET",mode:"cors"})).json();if(i&&i.success&&Array.isArray(i.activeVisitors)){const o=i.activeVisitors.map(r=>({...r,entryTimestamp:new Date(r.entryDate+" "+r.entryTime).getTime()||Date.now()})),s=new Map;this.visitors.forEach(r=>s.set(r.id,r)),o.forEach(r=>s.set(r.id,r)),this.visitors=Array.from(s.values()).sort((r,n)=>(n.entryTimestamp||0)-(r.entryTimestamp||0)),localStorage.setItem("HSE_GATE_VISITORS_REGISTRY",JSON.stringify(this.visitors))}}catch{}this.applyFilters(),this.updateKpis()}catch{}}getEffectiveApiUrl(){const e="https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec";try{const t=localStorage.getItem("HSE_SETTINGS_CACHE");if(t){const i=JSON.parse(t);if(i&&i.scriptUrl&&i.scriptUrl.includes("script.google.com"))return i.scriptUrl}}catch{}return e}updateKpis(){const e=new Date().toISOString().split("T")[0],t=e.slice(0,7),i=this.visitors.filter(a=>a.entryDate===e),o=this.visitors.filter(a=>!a.exitTime),s=this.visitors.filter(a=>a.entryDate&&a.entryDate.startsWith(t)),r=Date.now(),n=o.filter(a=>(r-(a.entryTimestamp||0))/6e4>=240).length,d=document.getElementById("kpiActiveVisitors");d&&(d.textContent=o.length);const l=document.getElementById("kpiTodayVisitors");l&&(l.textContent=i.length);const p=document.getElementById("kpiOverstayVisitors");p&&(p.textContent=n);const c=document.getElementById("kpiMonthVisitors");c&&(c.textContent=s.length)}applyFilters(){let e=[...this.visitors];if(this.filterSite!=="all"&&(e=e.filter(t=>t.site===this.filterSite)),this.filterStatus==="active"?e=e.filter(t=>!t.exitTime):this.filterStatus==="exited"&&(e=e.filter(t=>!!t.exitTime)),this.searchQuery){const t=this.searchQuery.toLowerCase();e=e.filter(i=>i.name&&i.name.toLowerCase().includes(t)||i.org&&i.org.toLowerCase().includes(t)||i.badge&&i.badge.toLowerCase().includes(t)||i.host&&i.host.toLowerCase().includes(t)||i.phone&&i.phone.includes(t)||i.vehicle&&i.vehicle.toLowerCase().includes(t))}this.filteredVisitors=e,this.renderTable()}renderTable(){const e=document.getElementById("gateVisitorsTableBody");if(!e)return;if(this.filteredVisitors.length===0){e.innerHTML=`
+        `,this.loadVisitorsData(),this.startAutoRefresh()}getGatePortalUrl(){const t=window.location.origin||window.location.protocol+"//"+window.location.host,i=window.location.pathname;return i.includes("/Frontend/")?`${t}/Frontend/gate-visitor-entry.html`:i.includes("/dist/")?`${t}/dist/gate-visitor-entry.html`:`${t}/gate-visitor-entry.html`}copyGateLink(t){navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t).then(()=>{typeof Utils<"u"&&Utils.showNotification?Utils.showNotification("\u062A\u0645 \u0646\u0633\u062E \u0631\u0627\u0628\u0637 \u062A\u0633\u062C\u064A\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0628\u0646\u062C\u0627\u062D \u2705","success"):alert("\u062A\u0645 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0628\u0646\u062C\u0627\u062D: "+t)}):prompt("\u0627\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0623\u0645\u0646 \u0639\u0646\u062F \u0627\u0644\u0628\u0648\u0627\u0628\u0629:",t)}async loadVisitorsData(){try{const t=localStorage.getItem("HSE_GATE_VISITORS_REGISTRY");if(this.visitors=t?JSON.parse(t):[],navigator.onLine&&typeof GoogleIntegration<"u")try{const e=await(await fetch(this.getEffectiveApiUrl()+"?action=getActiveGateVisitors",{method:"GET",mode:"cors"})).json();if(e&&e.success&&Array.isArray(e.activeVisitors)){const o=e.activeVisitors.map(r=>({...r,entryTimestamp:new Date(r.entryDate+" "+r.entryTime).getTime()||Date.now()})),s=new Map;this.visitors.forEach(r=>s.set(r.id,r)),o.forEach(r=>s.set(r.id,r)),this.visitors=Array.from(s.values()).sort((r,n)=>(n.entryTimestamp||0)-(r.entryTimestamp||0)),localStorage.setItem("HSE_GATE_VISITORS_REGISTRY",JSON.stringify(this.visitors))}}catch{}this.applyFilters(),this.updateKpis()}catch{}}getEffectiveApiUrl(){const t="https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec";try{const i=localStorage.getItem("HSE_SETTINGS_CACHE");if(i){const e=JSON.parse(i);if(e&&e.scriptUrl&&e.scriptUrl.includes("script.google.com"))return e.scriptUrl}}catch{}return t}updateKpis(){const t=new Date().toISOString().split("T")[0],i=t.slice(0,7),e=this.visitors.filter(a=>a.entryDate===t),o=this.visitors.filter(a=>!a.exitTime),s=this.visitors.filter(a=>a.entryDate&&a.entryDate.startsWith(i)),r=Date.now(),n=o.filter(a=>(r-(a.entryTimestamp||0))/6e4>=240).length,d=document.getElementById("kpiActiveVisitors");d&&(d.textContent=o.length);const l=document.getElementById("kpiTodayVisitors");l&&(l.textContent=e.length);const p=document.getElementById("kpiOverstayVisitors");p&&(p.textContent=n);const c=document.getElementById("kpiMonthVisitors");c&&(c.textContent=s.length)}applyFilters(){let t=[...this.visitors];if(this.filterSite!=="all"&&(t=t.filter(i=>i.site===this.filterSite)),this.filterStatus==="active"?t=t.filter(i=>!i.exitTime):this.filterStatus==="exited"&&(t=t.filter(i=>!!i.exitTime)),this.searchQuery){const i=this.searchQuery.toLowerCase();t=t.filter(e=>e.name&&e.name.toLowerCase().includes(i)||e.org&&e.org.toLowerCase().includes(i)||e.badge&&e.badge.toLowerCase().includes(i)||e.host&&e.host.toLowerCase().includes(i)||e.phone&&e.phone.includes(i)||e.vehicle&&e.vehicle.toLowerCase().includes(i))}this.filteredVisitors=t,this.renderTable()}renderTable(){const t=document.getElementById("gateVisitorsTableBody");if(!t)return;if(this.filteredVisitors.length===0){t.innerHTML=`
                 <tr>
                     <td colspan="9" style="text-align: center; padding: 36px 12px; color: var(--text-muted);">
                         <i class="fas fa-folder-open" style="font-size: 2rem; color: #94a3b8; display:block; margin-bottom: 8px;"></i>
                         <span style="font-weight: 700;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0632\u0648\u0627\u0631 \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0645\u0639\u0627\u064A\u064A\u0631 \u0627\u0644\u0628\u062D\u062B \u0627\u0644\u062D\u0627\u0644\u064A\u0629</span>
                     </td>
                 </tr>
-            `;return}const t=Date.now();e.innerHTML=this.filteredVisitors.map(i=>{const o=!i.exitTime,s=Math.round((t-(i.entryTimestamp||t))/6e4),r=Math.floor(s/60),n=s%60,d=o&&s>=240,l=o?r>0?`${r}\u0633 ${n}\u062F`:`${n}\u062F`:i.durationMinutes?`${i.durationMinutes} \u062F\u0642\u064A\u0642\u0629`:"\u0645\u0643\u062A\u0645\u0644";return`
+            `;return}const i=Date.now();t.innerHTML=this.filteredVisitors.map(e=>{const o=!e.exitTime,s=Math.round((i-(e.entryTimestamp||i))/6e4),r=Math.floor(s/60),n=s%60,d=o&&s>=240,l=o?r>0?`${r}\u0633 ${n}\u062F`:`${n}\u062F`:e.durationMinutes?`${e.durationMinutes} \u062F\u0642\u064A\u0642\u0629`:"\u0645\u0643\u062A\u0645\u0644";return`
                 <tr style="border-bottom: 1px solid var(--border-color); ${d?"background: rgba(254, 242, 242, 0.6);":""}">
                     <td style="padding: 10px 14px; font-weight: 900; color: #1e40af;">
                         <span style="background: #dbeafe; color: #1e40af; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; border: 1px solid #bfdbfe;">
-                            \u{1F3F7}\uFE0F ${i.badge||"\u0628\u062F\u0648\u0646"}
+                            \u{1F3F7}\uFE0F ${e.badge||"\u0628\u062F\u0648\u0646"}
                         </span>
                     </td>
                     <td style="padding: 10px 14px;">
-                        <div style="font-weight: 800; color: var(--text-primary);">${i.name}</div>
-                        <div style="font-size: 0.76rem; color: #2563eb; font-weight: 700;"><i class="fas fa-building"></i> ${i.org}</div>
+                        <div style="font-weight: 800; color: var(--text-primary);">${e.name}</div>
+                        <div style="font-size: 0.76rem; color: #2563eb; font-weight: 700;"><i class="fas fa-building"></i> ${e.org}</div>
                     </td>
                     <td style="padding: 10px 14px;">
-                        <div style="font-weight: 700;"><a href="tel:${i.phone}" style="color: inherit; text-decoration: none;">${i.phone||"-"}</a></div>
-                        <div style="font-size: 0.74rem; color: var(--text-muted);">\u0631\u0642\u0645 \u0627\u0644\u0642\u0648\u0645\u064A: ${i.idNumber||"-"}</div>
+                        <div style="font-weight: 700;"><a href="tel:${e.phone}" style="color: inherit; text-decoration: none;">${e.phone||"-"}</a></div>
+                        <div style="font-size: 0.74rem; color: var(--text-muted);">\u0631\u0642\u0645 \u0627\u0644\u0642\u0648\u0645\u064A: ${e.idNumber||"-"}</div>
                     </td>
                     <td style="padding: 10px 14px;">
-                        <div style="font-weight: 800; color: var(--text-primary);">${i.site}</div>
-                        <div style="font-size: 0.74rem; color: var(--text-muted);">${i.area}</div>
+                        <div style="font-weight: 800; color: var(--text-primary);">${e.site}</div>
+                        <div style="font-size: 0.74rem; color: var(--text-muted);">${e.area}</div>
                     </td>
                     <td style="padding: 10px 14px; font-weight: 700; color: var(--text-secondary);">
-                        <i class="fas fa-user-tie text-blue-500"></i> ${i.host}
+                        <i class="fas fa-user-tie text-blue-500"></i> ${e.host}
                     </td>
                     <td style="padding: 10px 14px; font-size: 0.78rem;">
-                        <div><strong style="color: #10b981;">\u062F\u062E\u0648\u0644:</strong> ${i.entryTime} (${i.entryDate})</div>
-                        <div><strong style="color: #64748b;">\u062E\u0631\u0648\u062C:</strong> ${i.exitTime||"\u2014"}</div>
+                        <div><strong style="color: #10b981;">\u062F\u062E\u0648\u0644:</strong> ${e.entryTime} (${e.entryDate})</div>
+                        <div><strong style="color: #64748b;">\u062E\u0631\u0648\u062C:</strong> ${e.exitTime||"\u2014"}</div>
                     </td>
                     <td style="padding: 10px 14px;">
                         <span style="font-weight: 800; font-size: 0.78rem; ${d?"color: #dc2626; font-weight: 900;":"color: var(--text-secondary);"}">
@@ -201,17 +207,16 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                         `}
                     </td>
                     <td style="padding: 10px 14px; text-align: center; white-space: nowrap;">
-                        <button type="button" class="btn btn-sm" onclick="GateSecurity.printVisitorBadge('${i.id}')" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 3px 8px; margin-left: 4px;" title="\u0637\u0628\u0627\u0639\u0629 \u0643\u0627\u0631\u062A \u0627\u0644\u0632\u0627\u0626\u0631">
-                            <i class="fas fa-id-card"></i> \u0643\u0627\u0631\u062A
-                        </button>
                         ${o?`
-                            <button type="button" class="btn btn-sm" onclick="GateSecurity.adminForceCheckOut('${i.id}', '${i.badge}')" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 3px 8px;" title="\u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0625\u062F\u0627\u0631\u064A">
-                                <i class="fas fa-door-open"></i> \u062E\u0631\u0648\u062C
+                            <button type="button" class="btn btn-sm" onclick="GateSecurity.adminForceCheckOut('${e.id}', '${e.badge}')" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 4px 10px;" title="\u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0625\u062F\u0627\u0631\u064A">
+                                <i class="fas fa-door-open"></i> \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C
                             </button>
-                        `:""}
+                        `:`
+                            <span style="color: #94a3b8; font-size: 0.75rem;">\u2014</span>
+                        `}
                     </td>
                 </tr>
-            `}).join("")}handleSearch(e){this.searchQuery=e.trim(),this.applyFilters()}handleFilterSite(e){this.filterSite=e,this.applyFilters()}handleFilterStatus(e){this.filterStatus=e,this.applyFilters()}async adminForceCheckOut(e,t){if(!confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0647\u0630\u0627 \u0627\u0644\u0632\u0627\u0626\u0631 \u0625\u062F\u0627\u0631\u064A\u0627\u064B\u061F"))return;const i=this.visitors.findIndex(o=>o.id===e);if(i!==-1){const o=new Date,s=o.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});this.visitors[i].exitTime=s,this.visitors[i].exitTimestamp=o.getTime(),localStorage.setItem("HSE_GATE_VISITORS_REGISTRY",JSON.stringify(this.visitors)),this.applyFilters(),this.updateKpis();try{const r=this.getEffectiveApiUrl();await fetch(r,{method:"POST",mode:"cors",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"submitGateVisitorCheckOut",id:e,exitTime:s,badge:t})})}catch{}typeof Utils<"u"&&Utils.showNotification&&Utils.showNotification("\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0627\u0644\u0632\u0627\u0626\u0631 \u0628\u0646\u062C\u0627\u062D \u2705","success")}}refreshData(){this.loadVisitorsData(),typeof Utils<"u"&&Utils.showNotification&&Utils.showNotification("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0633\u062C\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0628\u0646\u062C\u0627\u062D \u{1F504}","info")}startAutoRefresh(){this.autoRefreshTimer&&clearInterval(this.autoRefreshTimer),this.autoRefreshTimer=setInterval(()=>{this.loadVisitorsData()},3e4)}printEmergencyMusterList(){const e=this.visitors.filter(o=>!o.exitTime),t=window.open("","_blank"),i=new Date;t.document.write(`
+            `}).join("")}handleSearch(t){this.searchQuery=t.trim(),this.applyFilters()}handleFilterSite(t){this.filterSite=t,this.applyFilters()}handleFilterStatus(t){this.filterStatus=t,this.applyFilters()}async adminForceCheckOut(t,i){if(!confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0647\u0630\u0627 \u0627\u0644\u0632\u0627\u0626\u0631 \u0625\u062F\u0627\u0631\u064A\u0627\u064B\u061F"))return;const e=this.visitors.findIndex(o=>o.id===t);if(e!==-1){const o=new Date,s=o.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});this.visitors[e].exitTime=s,this.visitors[e].exitTimestamp=o.getTime(),localStorage.setItem("HSE_GATE_VISITORS_REGISTRY",JSON.stringify(this.visitors)),this.applyFilters(),this.updateKpis();try{const r=this.getEffectiveApiUrl();await fetch(r,{method:"POST",mode:"cors",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"submitGateVisitorCheckOut",id:t,exitTime:s,badge:i})})}catch{}typeof Utils<"u"&&Utils.showNotification&&Utils.showNotification("\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0627\u0644\u0632\u0627\u0626\u0631 \u0628\u0646\u062C\u0627\u062D \u2705","success")}}refreshData(){this.loadVisitorsData(),typeof Utils<"u"&&Utils.showNotification&&Utils.showNotification("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0633\u062C\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0628\u0646\u062C\u0627\u062D \u{1F504}","info")}startAutoRefresh(){this.autoRefreshTimer&&clearInterval(this.autoRefreshTimer),this.autoRefreshTimer=setInterval(()=>{this.loadVisitorsData()},3e4)}printEmergencyMusterList(){const t=this.visitors.filter(o=>!o.exitTime),i=window.open("","_blank"),e=new Date;i.document.write(`
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
@@ -371,16 +376,16 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                         </div>
                         <div class="meta-row">
                             <span>\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0637\u0628\u0627\u0639\u0629:</span>
-                            <strong>${i.toLocaleDateString("ar-EG")} ${i.toLocaleTimeString("ar-EG")}</strong>
+                            <strong>${e.toLocaleDateString("ar-EG")} ${e.toLocaleTimeString("ar-EG")}</strong>
                         </div>
                         <div class="meta-row">
                             <span>\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u062A\u0648\u0627\u062C\u062F\u064A\u0646:</span>
-                            <strong style="color: #b91c1c; font-size: 11px;">${e.length} \u0641\u0631\u062F</strong>
+                            <strong style="color: #b91c1c; font-size: 11px;">${t.length} \u0641\u0631\u062F</strong>
                         </div>
                     </div>
                 </div>
 
-                ${e.length===0?`
+                ${t.length===0?`
                     <div style="text-align: center; padding: 30px 20px; border: 2px dashed #059669; border-radius: 8px; margin: 20px 0; background: #f0fdf4;">
                         <h3 style="color: #059669; margin: 0 0 6px; font-size: 15px;">\u2705 \u0625\u0641\u0627\u062F\u0629 \u062E\u0644\u0648 \u0627\u0644\u0645\u0646\u0634\u0623\u0629 \u0645\u0646 \u0623\u064A \u0632\u0648\u0627\u0631 \u0623\u0648 \u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u062E\u0627\u0631\u062C\u064A\u064A\u0646</h3>
                         <p style="color: #166534; margin: 0; font-size: 12px; font-weight: 600;">\u062A\u0645 \u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0641\u062D\u0635 \u0627\u0644\u0644\u062D\u0638\u064A \u0644\u0633\u062C\u0644 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0648\u062A\u0623\u0643\u064A\u062F \u0639\u062F\u0645 \u0648\u062C\u0648\u062F \u0623\u064A \u0632\u0627\u0626\u0631 \u0623\u0648 \u0645\u0642\u0627\u0648\u0644 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u0628\u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A \u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0623\u0639\u0644\u0627\u0647.</p>
@@ -401,7 +406,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                             </tr>
                         </thead>
                         <tbody>
-                            ${e.map((o,s)=>`
+                            ${t.map((o,s)=>`
                                 <tr>
                                     <td style="text-align: center;">${s+1}</td>
                                     <td><strong>${o.badge||"-"}</strong></td>
@@ -442,214 +447,590 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                 </div>
             </body>
             </html>
-        `),t.document.close()}printVisitorBadge(e){const t=this.visitors.find(r=>r.id===e);if(!t){alert("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A \u0647\u0630\u0627 \u0627\u0644\u0632\u0627\u0626\u0631");return}const i=window.open("","_blank");if(!i){alert("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0637\u0628\u0627\u0639\u0629 \u0643\u0627\u0631\u062A \u0627\u0644\u0632\u0627\u0626\u0631 (Pop-ups)");return}const o=`ICAPP-VISITOR-PASS | Badge: ${t.badge} | Name: ${t.name} | Org: ${t.org} | Site: ${t.site} - ${t.area} | Date: ${t.entryDate} ${t.entryTime}`,s=`https://api.qrserver.com/v1/create-qr-code/?size=250x250&format=png&margin=0&data=${encodeURIComponent(o)}`;i.document.write(`
+        `),i.document.close()}printGateQrPoster(){const t=this.getGatePortalUrl(),i=`https://api.qrserver.com/v1/create-qr-code/?size=480x480&format=png&margin=0&data=${encodeURIComponent(t)}`,e=window.open("","_blank");if(!e){alert("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0628\u0648\u0633\u062A\u0631 (Pop-ups)");return}e.document.write(`
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
                 <meta charset="UTF-8">
-                <title>\u0643\u0627\u0631\u062A \u0648\u062A\u0635\u0631\u064A\u062D \u062F\u062E\u0648\u0644 \u0632\u0627\u0626\u0631 - ${t.badge} - ${t.name} - ICAPP</title>
+                <title>\u0644\u0648\u062D\u0629 \u0631\u0645\u0632 \u0627\u0644\u0627\u0633\u062A\u062C\u0627\u0628\u0629 \u0627\u0644\u0633\u0631\u064A\u0639 QR - \u0645\u0646\u0638\u0648\u0645\u0629 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0648\u0627\u0644\u0632\u0648\u0627\u0631 - ICAPP</title>
                 <style>
                     @page {
                         size: A4 portrait;
-                        margin: 10mm 10mm 10mm 10mm;
+                        margin: 8mm 8mm 8mm 8mm;
                     }
                     * { box-sizing: border-box; }
                     body {
                         font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
                         margin: 0;
-                        padding: 15px;
+                        padding: 10px;
                         direction: rtl;
                         color: #0f172a;
-                        background: #f1f5f9;
+                        background: #ffffff;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
-                    .page-container {
+                    .poster-wrapper {
+                        border: 3px solid #1e3a8a;
+                        border-radius: 12px;
+                        padding: 12px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        min-height: 96vh;
+                        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+                    }
+                    /* \u062A\u0631\u0648\u064A\u0633\u0629 ISO \u062B\u0644\u0627\u062B\u064A\u0629 \u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 */
+                    .iso-print-header {
+                        display: grid;
+                        grid-template-columns: 160px 1fr 190px;
+                        border: 2px solid #0f172a;
+                        border-top: 5px solid #1e3a8a;
+                        border-radius: 8px;
+                        overflow: hidden;
+                        background: #ffffff;
+                        margin-bottom: 12px;
+                    }
+                    .iso-box-brand {
+                        padding: 6px 10px;
                         display: flex;
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
-                        min-height: 90vh;
+                        border-left: 1.5px solid #0f172a;
+                        background: #f8fafc;
+                        gap: 3px;
                     }
-                    /* \u0643\u0627\u0631\u062A \u0627\u0644\u0632\u0627\u0626\u0631 \u0627\u0644\u0645\u0639\u062A\u0645\u062F */
-                    .visitor-badge-card {
-                        width: 105mm;
-                        min-height: 155mm;
-                        background: #ffffff;
-                        border: 2.5px solid #0f172a;
-                        border-radius: 14px;
-                        overflow: hidden;
-                        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                    .iso-print-logo {
+                        max-height: 40px;
+                        max-width: 95px;
+                        object-fit: contain;
+                    }
+                    .iso-dept-title {
+                        font-size: 10.5px;
+                        font-weight: 800;
+                        color: #1e3a8a;
+                        text-align: center;
+                        line-height: 1.2;
+                    }
+                    .iso-box-title {
+                        padding: 6px 10px;
                         display: flex;
                         flex-direction: column;
-                        position: relative;
+                        align-items: center;
+                        justify-content: center;
+                        text-align: center;
                     }
-                    .lanyard-slot {
-                        width: 16mm;
-                        height: 3.5mm;
-                        background: #e2e8f0;
-                        border: 1.5px dashed #64748b;
-                        border-radius: 4px;
-                        margin: 4px auto 0;
+                    .iso-main-title {
+                        margin: 0;
+                        font-size: 15px;
+                        font-weight: 900;
+                        color: #1e3a8a;
+                        line-height: 1.2;
                     }
-                    .badge-header {
+                    .iso-sub-title {
+                        font-size: 10px;
+                        font-weight: 700;
+                        color: #475569;
+                        margin-top: 2px;
+                    }
+                    .iso-box-meta {
+                        padding: 6px 8px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        border-right: 1.5px solid #0f172a;
+                        background: #f8fafc;
+                        font-size: 10px;
+                        gap: 2px;
+                    }
+                    .meta-row {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        border-bottom: 1px dashed #cbd5e1;
+                        padding-bottom: 1px;
+                    }
+                    .meta-row:last-child { border-bottom: none; }
+                    .meta-row span { color: #64748b; font-weight: 700; }
+                    .meta-row strong { color: #0f172a; }
+
+                    /* \u0642\u0633\u0645 \u0627\u0644\u0628\u0627\u0646\u0631 \u0627\u0644\u062A\u0648\u062C\u064A\u0647\u064A \u0627\u0644\u0631\u0626\u064A\u0633\u064A */
+                    .hero-banner {
+                        text-align: center;
                         background: #1e3a8a;
                         color: #ffffff;
-                        padding: 8px 12px;
-                        text-align: center;
-                        border-bottom: 3.5px solid #059669;
+                        padding: 10px 14px;
+                        border-radius: 8px;
+                        margin-bottom: 10px;
                     }
-                    .badge-logo-row {
+                    .hero-title {
+                        font-size: 18px;
+                        font-weight: 900;
+                        margin: 0 0 3px;
+                        letter-spacing: -0.2px;
+                    }
+                    .hero-sub {
+                        font-size: 11px;
+                        color: #93c5fd;
+                        font-weight: 700;
+                        margin: 0;
+                    }
+
+                    /* \u0628\u0637\u0627\u0642\u0629 \u0631\u0645\u0632 QR \u0627\u0644\u0645\u0631\u0643\u0632\u064A\u0629 */
+                    .qr-card-center {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        background: #ffffff;
+                        border: 2px dashed #2563eb;
+                        border-radius: 12px;
+                        padding: 14px 10px;
+                        margin-bottom: 12px;
+                        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+                    }
+                    .qr-frame {
+                        background: #ffffff;
+                        padding: 10px;
+                        border: 3px solid #1e293b;
+                        border-radius: 12px;
+                        display: inline-block;
+                        box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+                    }
+                    .qr-img {
+                        width: 220px;
+                        height: 220px;
+                        display: block;
+                    }
+                    .qr-tagline {
+                        margin-top: 10px;
+                        font-size: 11.5px;
+                        font-weight: 800;
+                        color: #0f172a;
+                        background: #dbeafe;
+                        padding: 4px 14px;
+                        border-radius: 20px;
+                        border: 1px solid #93c5fd;
+                    }
+
+                    /* \u0634\u0628\u0643\u0629 \u0627\u0644\u062E\u0637\u0648\u0627\u062A \u0627\u0644\u0625\u0631\u0634\u0627\u062F\u064A\u0629 4 \u062E\u0637\u0648\u0627\u062A */
+                    .steps-grid {
+                        display: grid;
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 8px;
+                        margin-bottom: 10px;
+                    }
+                    .step-box {
+                        background: #ffffff;
+                        border: 1.5px solid #cbd5e1;
+                        border-top: 3.5px solid #2563eb;
+                        border-radius: 8px;
+                        padding: 8px;
+                        text-align: center;
+                    }
+                    .step-num {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 24px;
+                        height: 24px;
+                        background: #2563eb;
+                        color: #ffffff;
+                        border-radius: 50%;
+                        font-size: 12px;
+                        font-weight: 900;
+                        margin-bottom: 4px;
+                    }
+                    .step-title {
+                        font-size: 11px;
+                        font-weight: 800;
+                        color: #0f172a;
+                        margin-bottom: 2px;
+                    }
+                    .step-desc {
+                        font-size: 9.5px;
+                        color: #475569;
+                        line-height: 1.25;
+                    }
+
+                    /* \u0634\u0631\u064A\u0637 \u0627\u0644\u062A\u0646\u0628\u064A\u0647 \u0627\u0644\u0623\u0645\u0646\u064A \u0648\u0627\u0644\u0628\u064A\u0626\u064A */
+                    .safety-strip {
+                        background: #fef2f2;
+                        border: 1.5px solid #f87171;
+                        border-radius: 8px;
+                        padding: 6px 12px;
+                        text-align: center;
+                        font-size: 10.5px;
+                        font-weight: 800;
+                        color: #991b1b;
+                        margin-bottom: 10px;
+                    }
+
+                    /* \u0641\u0648\u062A\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 */
+                    .iso-print-footer {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr 1fr;
+                        gap: 8px;
+                    }
+                    .footer-box {
+                        border: 1.5px solid #334155;
+                        border-radius: 6px;
+                        padding: 6px 8px;
+                        background: #f8fafc;
+                    }
+                    .footer-box-title {
+                        font-size: 10px;
+                        font-weight: 800;
+                        color: #1e3a8a;
+                        text-align: center;
+                        border-bottom: 1px solid #cbd5e1;
+                        padding-bottom: 3px;
+                        margin-bottom: 5px;
+                    }
+                    .footer-sig-line {
+                        font-size: 9.5px;
+                        color: #334155;
+                        margin-top: 4px;
+                        font-weight: 600;
+                    }
+
+                    .print-btn-wrap {
+                        text-align: center;
+                        margin-top: 15px;
+                    }
+                    @media print {
+                        .print-btn-wrap { display: none !important; }
+                        body { padding: 0; }
+                        .poster-wrapper { min-height: 98vh; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="poster-wrapper">
+                    <!-- \u062A\u0631\u0648\u064A\u0633\u0629 ISO \u062B\u0644\u0627\u062B\u064A\u0629 \u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 -->
+                    <div class="iso-print-header">
+                        <div class="iso-box-brand">
+                            <img src="icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='../icons/icapp-logo.png'">
+                            <div class="iso-dept-title">\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629</div>
+                        </div>
+
+                        <div class="iso-box-title">
+                            <h1 class="iso-main-title">\u{1F6E1}\uFE0F \u0645\u0646\u0638\u0648\u0645\u0629 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0648\u0633\u062C\u0644 \u0627\u0644\u0632\u0648\u0627\u0631 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</h1>
+                            <div class="iso-sub-title">Gate Security Visitor & Contractor Control System</div>
+                        </div>
+
+                        <div class="iso-box-meta">
+                            <div class="meta-row">
+                                <span>\u0643\u0648\u062F \u0627\u0644\u0648\u062B\u064A\u0642\u0629:</span>
+                                <strong>DOC-SEC-QR-01</strong>
+                            </div>
+                            <div class="meta-row">
+                                <span>\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631:</span>
+                                <strong>Rev. 02</strong>
+                            </div>
+                            <div class="meta-row">
+                                <span>\u062F\u0631\u062C\u0629 \u0627\u0644\u0633\u0631\u064A\u0629:</span>
+                                <strong style="color: #047857;">\u0639\u0627\u0645 \u062F\u0627\u062E\u0644\u064A</strong>
+                            </div>
+                            <div class="meta-row">
+                                <span>\u0646\u0638\u0627\u0645 \u0627\u0644\u062F\u062E\u0648\u0644:</span>
+                                <strong>\u062A\u0633\u062C\u064A\u0644 \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- \u0627\u0644\u0628\u0627\u0646\u0631 \u0627\u0644\u062A\u0648\u062C\u064A\u0647\u064A \u0627\u0644\u0631\u0626\u064A\u0633\u064A -->
+                    <div class="hero-banner">
+                        <div class="hero-title">\u{1F4F2} \u0627\u0645\u0633\u062D \u0631\u0645\u0632 \u0627\u0644\u0627\u0633\u062A\u062C\u0627\u0628\u0629 \u0627\u0644\u0633\u0631\u064A\u0639 \u0644\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0641\u0648\u0631\u064A\u0627\u064B</div>
+                        <div class="hero-sub">Scan QR Code with your smartphone camera to register your visit pass</div>
+                    </div>
+
+                    <!-- \u0628\u0637\u0627\u0642\u0629 QR \u0627\u0644\u0645\u0631\u0643\u0632\u064A\u0629 -->
+                    <div class="qr-card-center">
+                        <div class="qr-frame">
+                            <img src="${i}" alt="Gate Entry QR Code" class="qr-img" onerror="this.src='https://chart.googleapis.com/chart?cht=qr&chs=450x450&chl=${encodeURIComponent(t)}';">
+                        </div>
+                        <div class="qr-tagline">
+                            \u{1F512} \u0645\u0633\u062D \u0622\u0645\u0646 \u0648\u0645\u0628\u0627\u0634\u0631 \u0639\u0628\u0631 \u0627\u0644\u0647\u0627\u062A\u0641 \u0627\u0644\u0645\u062D\u0645\u0648\u0644 | Direct Mobile Check-In
+                        </div>
+                    </div>
+
+                    <!-- \u0625\u0631\u0634\u0627\u062F\u0627\u062A \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 4 \u062E\u0637\u0648\u0627\u062A -->
+                    <div class="steps-grid">
+                        <div class="step-box">
+                            <div class="step-num">1</div>
+                            <div class="step-title">\u0627\u0641\u062A\u062D \u0627\u0644\u0643\u0627\u0645\u064A\u0631\u0627</div>
+                            <div class="step-desc">\u0648\u062C\u0651\u0647 \u0643\u0627\u0645\u064A\u0631\u0627 \u0627\u0644\u0647\u0627\u062A\u0641 \u0646\u062D\u0648 \u0631\u0645\u0632 QR \u0623\u0639\u0644\u0627\u0647</div>
+                        </div>
+                        <div class="step-box">
+                            <div class="step-num">2</div>
+                            <div class="step-title">\u0627\u0641\u062A\u062D \u0627\u0644\u0631\u0627\u0628\u0637</div>
+                            <div class="step-desc">\u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u0627\u0644\u0625\u0634\u0639\u0627\u0631 \u0627\u0644\u0638\u0627\u0647\u0631 \u0644\u0641\u062A\u062D \u0627\u0644\u0646\u0645\u0648\u0630\u062C</div>
+                        </div>
+                        <div class="step-box">
+                            <div class="step-num">3</div>
+                            <div class="step-title">\u0633\u062C\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</div>
+                            <div class="step-desc">\u0623\u062F\u062E\u0644 \u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u062C\u0647\u0629 \u0648\u0627\u0644\u0645\u0633\u062A\u0636\u064A\u0641 \u0648\u0627\u0644\u0633\u064A\u0627\u0631\u0629</div>
+                        </div>
+                        <div class="step-box">
+                            <div class="step-num">4</div>
+                            <div class="step-title">\u0627\u0633\u062A\u0644\u0645 \u0627\u0644\u0643\u0627\u0631\u062A</div>
+                            <div class="step-desc">\u0627\u0633\u062A\u0644\u0645 \u0643\u0627\u0631\u062A \u0627\u0644\u0632\u064A\u0627\u0631\u0629 \u0627\u0644\u0645\u0639\u062A\u0645\u062F \u0645\u0646 \u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0623\u0645\u0646</div>
+                        </div>
+                    </div>
+
+                    <!-- \u0634\u0631\u064A\u0637 \u0627\u0644\u062A\u0646\u0628\u064A\u0647 \u0627\u0644\u0625\u0644\u0632\u0627\u0645\u064A \u0644\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0623\u0645\u0646 -->
+                    <div class="safety-strip">
+                        \u{1F6E1}\uFE0F \u062A\u0646\u0628\u064A\u0647 \u0623\u0645\u0646\u064A \u0648\u0625\u0644\u0632\u0627\u0645\u064A: \u064A\u064F\u0645\u0646\u0639 \u0627\u0644\u062A\u0648\u0627\u062C\u062F \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u0628\u062F\u0648\u0646 \u062A\u0635\u0631\u064A\u062D \u0631\u0633\u0645\u064A\u060C \u0645\u0639 \u0627\u0644\u0627\u0644\u062A\u0632\u0627\u0645 \u0627\u0644\u062A\u0627\u0645 \u0628\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0631\u062A\u062F\u0627\u0621 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 (PPE).
+                    </div>
+
+                    <!-- \u0641\u0648\u062A\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 -->
+                    <div class="iso-print-footer">
+                        <div class="footer-box">
+                            <div class="footer-box-title">\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0623\u0645\u0646 \u0627\u0644\u0635\u0646\u0627\u0639\u064A \u0648\u0627\u0644\u062D\u0631\u0627\u0633\u0629</div>
+                            <div class="footer-sig-line">\u0627\u0644\u0627\u0633\u0645: .......................................</div>
+                            <div class="footer-sig-line">\u0627\u0644\u062A\u0648\u0642\u064A\u0639: ....................................</div>
+                        </div>
+                        <div class="footer-box">
+                            <div class="footer-box-title">\u0645\u062F\u064A\u0631 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629</div>
+                            <div class="footer-sig-line">\u0627\u0644\u0627\u0633\u0645: .......................................</div>
+                            <div class="footer-sig-line">\u0627\u0644\u062A\u0648\u0642\u064A\u0639: ....................................</div>
+                        </div>
+                        <div class="footer-box">
+                            <div class="footer-box-title">\u0645\u062F\u064A\u0631 \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0648\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0635\u0627\u0646\u0639</div>
+                            <div class="footer-sig-line">\u0627\u0644\u0627\u0633\u0645: .......................................</div>
+                            <div class="footer-sig-line">\u0627\u0644\u062A\u0648\u0642\u064A\u0639: ....................................</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="print-btn-wrap">
+                    <button onclick="window.print()" style="padding: 12px 28px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 900; font-size: 14px; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);">\u{1F5A8}\uFE0F \u0637\u0628\u0627\u0639\u0629 \u0644\u0648\u062D\u0629 QR \u0627\u0644\u0622\u0646 (A4 Poster)</button>
+                </div>
+            </body>
+            </html>
+        `),e.document.close()}printMasterVisitorBadges(){const t=this.getGatePortalUrl(),i=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&format=png&margin=0&data=${encodeURIComponent(t)}`,e=window.open("","_blank");if(!e){alert("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0637\u0628\u0627\u0639\u0629 \u0643\u0631\u0648\u062A \u0627\u0644\u0632\u0648\u0627\u0631 (Pop-ups)");return}const o=s=>`
+            <div class="visitor-master-badge">
+                <div class="lanyard-hole"></div>
+                
+                <div class="badge-top-header">
+                    <div class="badge-top-brand">
+                        <img src="icons/icapp-logo.png" alt="ICAPP" class="badge-mini-logo" onerror="this.src='../icons/icapp-logo.png'">
+                        <div class="badge-dept-text">\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0623\u0645\u0646 \u0627\u0644\u0635\u0646\u0627\u0639\u064A</div>
+                    </div>
+                    <div class="badge-type-banner">
+                        \u{1FAAA} \u0643\u0627\u0631\u062A \u0648\u0634\u0627\u0631\u0629 \u0632\u0627\u0626\u0631 \u0645\u0639\u062A\u0645\u062F | VISITOR PASS
+                    </div>
+                </div>
+
+                <div class="badge-number-box">
+                    <span class="badge-lbl">\u0631\u0642\u0645 \u0643\u0627\u0631\u062A \u0627\u0644\u0632\u0627\u0626\u0631:</span>
+                    <span class="badge-val">VIS - ${s.toString().padStart(3,"0")}</span>
+                </div>
+
+                <div class="badge-body-content">
+                    <div class="badge-line-row">
+                        <span class="line-key">\u0627\u0633\u0645 \u0627\u0644\u0632\u0627\u0626\u0631:</span>
+                        <span class="line-dots">.......................................................................</span>
+                    </div>
+                    <div class="badge-line-row">
+                        <span class="line-key">\u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0634\u0631\u0643\u0629:</span>
+                        <span class="line-dots">.......................................................................</span>
+                    </div>
+                    <div class="badge-line-row">
+                        <span class="line-key">\u0627\u0644\u0645\u0648\u0638\u0641 \u0627\u0644\u0645\u0633\u062A\u0636\u064A\u0641:</span>
+                        <span class="line-dots">.......................................................................</span>
+                    </div>
+                    <div class="badge-line-row">
+                        <span class="line-key">\u0627\u0644\u0645\u0635\u0646\u0639 / \u0627\u0644\u0645\u0648\u0642\u0639:</span>
+                        <span class="line-dots">.......................................................................</span>
+                    </div>
+
+                    <div class="badge-mid-qr-row">
+                        <img src="${i}" alt="Portal QR" class="badge-qr-pic" onerror="this.src='https://chart.googleapis.com/chart?cht=qr&chs=150x150&chl=${encodeURIComponent(t)}';">
+                        <div class="badge-rules-list">
+                            \u26A0\uFE0F <strong>\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0623\u0645\u0646\u064A\u0629 \u0648\u0625\u0644\u0632\u0627\u0645\u064A\u0629:</strong><br>
+                            \u2022 \u062D\u0645\u0644 \u0647\u0630\u0627 \u0627\u0644\u0643\u0627\u0631\u062A \u0628\u0635\u0641\u0629 \u0638\u0627\u0647\u0631\u0629 \u0637\u0648\u0627\u0644 \u0627\u0644\u0632\u064A\u0627\u0631\u0629.<br>
+                            \u2022 \u0627\u0644\u0627\u0644\u062A\u0632\u0627\u0645 \u0628\u0627\u0631\u062A\u062F\u0627\u0621 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 (PPE).<br>
+                            \u2022 \u064A\u064F\u0645\u0646\u0639 \u0627\u0644\u062A\u062D\u0631\u0643 \u0627\u0644\u0641\u0631\u062F\u064A \u0628\u062F\u0648\u0646 \u0645\u0631\u0627\u0641\u0642 \u0631\u0633\u0645\u064A.<br>
+                            \u2022 \u064A\u064F\u0633\u0644\u0651\u0645 \u0647\u0630\u0627 \u0627\u0644\u0643\u0627\u0631\u062A \u0644\u0644\u0628\u0648\u0627\u0628\u0629 \u0639\u0646\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="badge-bottom-footer">
+                    <div>\u0643\u0648\u062F: <strong>DOC-SEC-VIS-PASS-01</strong></div>
+                    <div>\u062E\u062A\u0645 / \u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0628\u0648\u0627\u0628\u0629: ....................</div>
+                </div>
+            </div>
+        `;e.document.write(`
+            <!DOCTYPE html>
+            <html lang="ar" dir="rtl">
+            <head>
+                <meta charset="UTF-8">
+                <title>\u0646\u0645\u0627\u0630\u062C \u0643\u0631\u0648\u062A \u0648\u0634\u0627\u0631\u0627\u062A \u0627\u0644\u0632\u0648\u0627\u0631 \u0627\u0644\u0639\u0627\u0645\u0629 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 - ICAPP</title>
+                <style>
+                    @page {
+                        size: A4 portrait;
+                        margin: 8mm 8mm 8mm 8mm;
+                    }
+                    * { box-sizing: border-box; }
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+                        margin: 0;
+                        padding: 10px;
+                        direction: rtl;
+                        color: #0f172a;
+                        background: #f8fafc;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    .sheet-wrapper {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 12px;
+                        max-width: 210mm;
+                        margin: 0 auto;
+                    }
+                    .visitor-master-badge {
+                        background: #ffffff;
+                        border: 2px dashed #64748b;
+                        border-radius: 12px;
+                        overflow: hidden;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        padding: 0;
+                        min-height: 128mm;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+                        position: relative;
+                    }
+                    .lanyard-hole {
+                        width: 14mm;
+                        height: 3mm;
+                        background: #e2e8f0;
+                        border: 1px dashed #64748b;
+                        border-radius: 3px;
+                        margin: 3px auto 1px;
+                    }
+                    .badge-top-header {
+                        background: #1e3a8a;
+                        color: #ffffff;
+                        padding: 6px 10px;
+                        text-align: center;
+                        border-bottom: 3px solid #059669;
+                    }
+                    .badge-top-brand {
                         display: flex;
                         align-items: center;
                         justify-content: space-between;
-                        margin-bottom: 4px;
+                        margin-bottom: 3px;
                     }
-                    .badge-logo {
-                        max-height: 32px;
-                        max-width: 80px;
+                    .badge-mini-logo {
+                        max-height: 26px;
+                        max-width: 65px;
                         object-fit: contain;
                         background: #ffffff;
-                        padding: 2px 6px;
-                        border-radius: 4px;
+                        padding: 1px 4px;
+                        border-radius: 3px;
                     }
-                    .badge-dept {
-                        font-size: 9.5px;
+                    .badge-dept-text {
+                        font-size: 8.5px;
                         font-weight: 800;
                         color: #93c5fd;
                         text-align: left;
                     }
-                    .badge-main-type {
-                        font-size: 13.5px;
+                    .badge-type-banner {
+                        font-size: 11.5px;
                         font-weight: 900;
-                        margin: 0;
-                        letter-spacing: 0.2px;
+                        margin-top: 2px;
                     }
-                    .badge-sub-type {
-                        font-size: 8.5px;
-                        color: #cbd5e1;
-                        font-weight: 700;
-                    }
-                    .badge-code-banner {
-                        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                    .badge-number-box {
+                        background: #0f172a;
                         color: #ffffff;
-                        padding: 8px 12px;
+                        padding: 5px 10px;
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
                     }
-                    .badge-code-label {
-                        font-size: 10px;
+                    .badge-lbl {
+                        font-size: 9.5px;
                         color: #94a3b8;
                         font-weight: 700;
                     }
-                    .badge-code-val {
-                        font-size: 19px;
+                    .badge-val {
+                        font-size: 15px;
                         font-weight: 900;
                         color: #34d399;
-                        letter-spacing: 1px;
                         font-family: 'Courier New', monospace;
+                        letter-spacing: 1px;
                     }
-                    .badge-body {
-                        padding: 10px 12px;
+                    .badge-body-content {
+                        padding: 8px 10px;
                         flex: 1;
                         display: flex;
                         flex-direction: column;
-                        gap: 6px;
+                        gap: 4px;
                     }
-                    .visitor-hero-box {
-                        background: #f8fafc;
-                        border: 1.5px solid #cbd5e1;
-                        border-radius: 8px;
-                        padding: 8px 10px;
-                        text-align: center;
-                    }
-                    .visitor-hero-name {
-                        font-size: 15px;
-                        font-weight: 900;
-                        color: #0f172a;
-                        margin-bottom: 2px;
-                    }
-                    .visitor-hero-org {
-                        font-size: 11px;
-                        font-weight: 800;
-                        color: #2563eb;
-                    }
-                    .badge-fields-grid {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 5px;
-                        background: #f8fafc;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 6px;
-                        padding: 6px 8px;
-                        font-size: 9.5px;
-                    }
-                    .b-field {
-                        display: flex;
-                        flex-direction: column;
-                    }
-                    .b-field-full {
-                        grid-column: span 2;
-                    }
-                    .b-key {
-                        color: #64748b;
-                        font-size: 8.5px;
-                        font-weight: 700;
-                    }
-                    .b-val {
-                        color: #0f172a;
-                        font-weight: 800;
-                    }
-                    .badge-qr-row {
+                    .badge-line-row {
                         display: flex;
                         align-items: center;
-                        gap: 10px;
-                        margin-top: 4px;
-                        background: #ffffff;
+                        font-size: 9px;
+                        margin-bottom: 2px;
+                    }
+                    .line-key {
+                        font-weight: 800;
+                        color: #1e3a8a;
+                        width: 75px;
+                        flex-shrink: 0;
+                    }
+                    .line-dots {
+                        color: #94a3b8;
+                        font-size: 8.5px;
+                        overflow: hidden;
+                        white-space: nowrap;
+                    }
+                    .badge-mid-qr-row {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        background: #f8fafc;
                         border: 1px solid #cbd5e1;
                         border-radius: 6px;
-                        padding: 6px;
+                        padding: 5px;
+                        margin-top: 4px;
                     }
-                    .badge-qr-img {
-                        width: 65px;
-                        height: 65px;
+                    .badge-qr-pic {
+                        width: 52px;
+                        height: 52px;
                         border: 1px solid #94a3b8;
                         border-radius: 4px;
                         flex-shrink: 0;
                     }
-                    .badge-rules {
-                        font-size: 8px;
+                    .badge-rules-list {
+                        font-size: 7.5px;
                         color: #334155;
-                        line-height: 1.35;
-                        font-weight: 600;
+                        line-height: 1.3;
                     }
-                    .badge-footer {
+                    .badge-bottom-footer {
                         background: #f1f5f9;
-                        border-top: 1.5px solid #cbd5e1;
-                        padding: 6px 10px;
+                        border-top: 1px solid #cbd5e1;
+                        padding: 4px 8px;
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                        font-size: 8.5px;
+                        font-size: 8px;
                         color: #475569;
                         font-weight: 700;
                     }
-                    .badge-sig-text {
-                        color: #0f172a;
-                        font-weight: 800;
-                    }
                     .print-btn-wrap {
-                        margin-top: 16px;
                         text-align: center;
+                        margin-top: 14px;
                     }
                     @media print {
                         body {
                             background: #ffffff;
                             padding: 0;
-                        }
-                        .page-container {
-                            min-height: 0;
                         }
                         .print-btn-wrap {
                             display: none !important;
@@ -658,89 +1039,22 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                 </style>
             </head>
             <body>
-                <div class="page-container">
-                    <div class="visitor-badge-card">
-                        <div class="lanyard-slot"></div>
-                        <div class="badge-header">
-                            <div class="badge-logo-row">
-                                <img src="icons/icapp-logo.png" alt="ICAPP" class="badge-logo" onerror="this.src='icons/icapp-logo.png'">
-                                <div class="badge-dept">
-                                    \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629<br>
-                                    \u0645\u0646\u0638\u0648\u0645\u0629 \u0623\u0645\u0646 \u0648\u062D\u0631\u0627\u0633\u0629 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A
-                                </div>
-                            </div>
-                            <div class="badge-main-type">\u{1FAAA} \u062A\u0635\u0631\u064A\u062D \u0648\u0634\u0627\u0631\u0629 \u062F\u062E\u0648\u0644 \u0632\u0627\u0626\u0631 / \u0645\u0642\u0627\u0648\u0644</div>
-                            <div class="badge-sub-type">OFFICIAL VISITOR / CONTRACTOR PASS</div>
-                        </div>
+                <div style="text-align: center; margin-bottom: 8px;" class="print-btn-wrap">
+                    <span style="font-size: 12px; font-weight: 800; color: #1e40af;">\u{1F4C4} \u0635\u0641\u062D\u0629 \u0643\u0631\u0648\u062A \u0648\u0634\u0627\u0631\u0627\u062A \u0627\u0644\u0632\u0648\u0627\u0631 \u0627\u0644\u0639\u0627\u0645\u0629 (A4 Sheet - 4 Badges) \u2014 \u0642\u0645 \u0628\u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0648\u0627\u0644\u0642\u0635 \u0648\u0627\u0644\u062A\u063A\u0644\u064A\u0641 \u0627\u0644\u062D\u0631\u0627\u0631\u064A \u0644\u0644\u062A\u0633\u0644\u064A\u0645 \u0627\u0644\u064A\u062F\u0648\u064A</span>
+                </div>
 
-                        <div class="badge-code-banner">
-                            <div class="badge-code-label">\u0631\u0642\u0645 \u0643\u0627\u0631\u062A / \u0634\u0627\u0631\u0629 \u0627\u0644\u0632\u0627\u0626\u0631:</div>
-                            <div class="badge-code-val">\u{1F3F7}\uFE0F ${t.badge}</div>
-                        </div>
+                <div class="sheet-wrapper">
+                    ${o(1)}
+                    ${o(2)}
+                    ${o(3)}
+                    ${o(4)}
+                </div>
 
-                        <div class="badge-body">
-                            <div class="visitor-hero-box">
-                                <div class="visitor-hero-name">\u{1F464} ${t.name}</div>
-                                <div class="visitor-hero-org">\u{1F3E2} ${t.org}</div>
-                            </div>
-
-                            <div class="badge-fields-grid">
-                                <div class="b-field">
-                                    <span class="b-key">\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0642\u0648\u0645\u064A / \u0627\u0644\u062C\u0648\u0627\u0632:</span>
-                                    <span class="b-val">${t.idNumber||"-"}</span>
-                                </div>
-                                <div class="b-field">
-                                    <span class="b-key">\u0627\u0644\u0647\u0627\u062A\u0641:</span>
-                                    <span class="b-val">${t.phone||"-"}</span>
-                                </div>
-                                <div class="b-field-full">
-                                    <span class="b-key">\u0627\u0644\u0645\u0635\u0646\u0639 \u0648\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0645\u0635\u0631\u062D \u0628\u0647:</span>
-                                    <span class="b-val" style="color: #1e40af;">\u{1F4CD} ${t.site} \u2014 ${t.area}</span>
-                                </div>
-                                <div class="b-field">
-                                    <span class="b-key">\u0627\u0644\u0645\u0648\u0638\u0641 \u0627\u0644\u0645\u0633\u062A\u0636\u064A\u0641:</span>
-                                    <span class="b-val">${t.host||"-"}</span>
-                                </div>
-                                <div class="b-field">
-                                    <span class="b-key">\u0648\u0642\u062A \u0648\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062F\u062E\u0648\u0644:</span>
-                                    <span class="b-val">\u23F1\uFE0F ${t.entryDate} | ${t.entryTime}</span>
-                                </div>
-                                <div class="b-field-full">
-                                    <span class="b-key">\u0646\u0648\u0639 \u0648\u063A\u0631\u0636 \u0627\u0644\u0632\u064A\u0627\u0631\u0629:</span>
-                                    <span class="b-val">${t.purpose||"-"}</span>
-                                </div>
-                                ${t.vehicle?`
-                                    <div class="b-field-full" style="background: #eff6ff; padding: 2px 4px; border-radius: 4px; border: 1px dashed #93c5fd;">
-                                        <span class="b-key">\u{1F697} \u0645\u0631\u0643\u0628\u0629 \u0645\u0635\u0631\u062D\u0629 (\u0631\u0642\u0645 \u0627\u0644\u0644\u0648\u062D\u0629):</span>
-                                        <span class="b-val" style="color: #1d4ed8; font-weight: 900;">${t.vehicle}</span>
-                                    </div>
-                                `:""}
-                            </div>
-
-                            <div class="badge-qr-row">
-                                <img src="${s}" alt="Pass QR" class="badge-qr-img" onerror="this.src='https://chart.googleapis.com/chart?cht=qr&chs=180x180&chl=${encodeURIComponent(o)}';">
-                                <div class="badge-rules">
-                                    \u26A0\uFE0F <strong>\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0623\u0645\u0646\u064A\u0629 \u0648\u0625\u0644\u0632\u0627\u0645\u064A\u0629:</strong><br>
-                                    \u2022 \u062D\u0645\u0644 \u0647\u0630\u0627 \u0627\u0644\u0643\u0627\u0631\u062A \u0628\u0635\u0641\u0629 \u0638\u0627\u0647\u0631\u0629 \u0637\u0648\u0627\u0644 \u0627\u0644\u0632\u064A\u0627\u0631\u0629.<br>
-                                    \u2022 \u0627\u0644\u0627\u0644\u062A\u0632\u0627\u0645 \u0628\u0627\u0631\u062A\u062F\u0627\u0621 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629 (PPE).<br>
-                                    \u2022 \u064A\u064F\u0645\u0646\u0639 \u0627\u0644\u062A\u062D\u0631\u0643 \u0627\u0644\u0641\u0631\u062F\u064A \u0628\u062F\u0648\u0646 \u0645\u0631\u0627\u0641\u0642 \u0631\u0633\u0645\u064A.<br>
-                                    \u2022 \u064A\u064F\u0633\u0644\u0651\u0645 \u0647\u0630\u0627 \u0627\u0644\u0643\u0627\u0631\u062A \u0644\u0644\u0628\u0648\u0627\u0628\u0629 \u0639\u0646\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="badge-footer">
-                            <div>\u0643\u0648\u062F: <strong>DOC-SEC-VIS-PASS-01</strong></div>
-                            <div class="badge-sig-text">\u0627\u0639\u062A\u0645\u0627\u062F \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0629: ....................</div>
-                        </div>
-                    </div>
-
-                    <div class="print-btn-wrap">
-                        <button onclick="window.print()" style="padding: 10px 24px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 800; font-size: 13px; box-shadow: 0 4px 12px rgba(30,64,175,0.25);">\u{1F5A8}\uFE0F \u0637\u0628\u0627\u0639\u0629 \u0643\u0627\u0631\u062A \u0627\u0644\u0632\u0627\u0626\u0631 \u0627\u0644\u0622\u0646</button>
-                    </div>
+                <div class="print-btn-wrap">
+                    <button onclick="window.print()" style="padding: 10px 24px; background: #059669; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 900; font-size: 13px; box-shadow: 0 4px 12px rgba(5,150,105,0.3);">\u{1F5A8}\uFE0F \u0637\u0628\u0627\u0639\u0629 \u0643\u0631\u0648\u062A \u0648\u0634\u0627\u0631\u0627\u062A \u0627\u0644\u0632\u0648\u0627\u0631 (A4 Sheet)</button>
                 </div>
             </body>
             </html>
-        `),i.document.close()}exportToExcel(){if(this.filteredVisitors.length===0){alert("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u062A\u0635\u062F\u064A\u0631\u0647\u0627");return}let e=`\uFEFF\u0631\u0642\u0645 \u0627\u0644\u0643\u0627\u0631\u062A,\u0627\u0633\u0645 \u0627\u0644\u0632\u0627\u0626\u0631,\u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0634\u0631\u0643\u0629,\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641,\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0642\u0648\u0645\u064A,\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641,\u0627\u0644\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641,\u0627\u0644\u0645\u0633\u062A\u0636\u064A\u0641,\u063A\u0631\u0636 \u0627\u0644\u0632\u064A\u0627\u0631\u0629,\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062F\u062E\u0648\u0644,\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644,\u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C,\u0627\u0644\u062D\u0627\u0644\u0629
-`;this.filteredVisitors.forEach(s=>{e+=`"${s.badge||""}","${s.name||""}","${s.org||""}","${s.phone||""}","${s.idNumber||""}","${s.site||""}","${s.area||""}","${s.host||""}","${s.purpose||""}","${s.entryDate||""}","${s.entryTime||""}","${s.exitTime||""}","${s.exitTime?"\u062A\u0645 \u0627\u0644\u062E\u0631\u0648\u062C":"\u0628\u0627\u0644\u062F\u0627\u062E\u0644"}"
-`});const t=new Blob([e],{type:"text/csv;charset=utf-8;"}),i=URL.createObjectURL(t),o=document.createElement("a");o.href=i,o.download=`Gate_Visitors_Log_${new Date().toISOString().slice(0,10)}.csv`,o.click(),URL.revokeObjectURL(i)}}new GateSecurityModule;
+        `),e.document.close()}exportToExcel(){if(this.filteredVisitors.length===0){alert("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u062A\u0635\u062F\u064A\u0631\u0647\u0627");return}let t=`\uFEFF\u0631\u0642\u0645 \u0627\u0644\u0643\u0627\u0631\u062A,\u0627\u0633\u0645 \u0627\u0644\u0632\u0627\u0626\u0631,\u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0634\u0631\u0643\u0629,\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641,\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0642\u0648\u0645\u064A,\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641,\u0627\u0644\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641,\u0627\u0644\u0645\u0633\u062A\u0636\u064A\u0641,\u063A\u0631\u0636 \u0627\u0644\u0632\u064A\u0627\u0631\u0629,\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062F\u062E\u0648\u0644,\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644,\u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C,\u0627\u0644\u062D\u0627\u0644\u0629
+`;this.filteredVisitors.forEach(s=>{t+=`"${s.badge||""}","${s.name||""}","${s.org||""}","${s.phone||""}","${s.idNumber||""}","${s.site||""}","${s.area||""}","${s.host||""}","${s.purpose||""}","${s.entryDate||""}","${s.entryTime||""}","${s.exitTime||""}","${s.exitTime?"\u062A\u0645 \u0627\u0644\u062E\u0631\u0648\u062C":"\u0628\u0627\u0644\u062F\u0627\u062E\u0644"}"
+`});const i=new Blob([t],{type:"text/csv;charset=utf-8;"}),e=URL.createObjectURL(i),o=document.createElement("a");o.href=e,o.download=`Gate_Visitors_Log_${new Date().toISOString().slice(0,10)}.csv`,o.click(),URL.revokeObjectURL(e)}}new GateSecurityModule;
