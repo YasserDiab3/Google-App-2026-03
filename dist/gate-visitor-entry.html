@@ -105,93 +105,162 @@
             max-width: 840px;
         }
 
-        /* ISO Header */
+        /* ترويسة ISO المعتمدة ثلاثية الأعمدة (موحدة لجميع النماذج) */
         .iso-header-table {
             position: sticky;
-            top: 8px;
+            top: 6px;
             z-index: 100;
             display: grid;
-            grid-template-columns: minmax(190px, 1.15fr) 2fr minmax(85px, 0.6fr);
-            background: var(--header-bg);
-            border: 2px solid #bfdbfe;
-            border-top: 5px solid #1e40af;
-            border-radius: var(--radius-lg);
+            grid-template-columns: minmax(140px, 1.1fr) 2.2fr minmax(140px, 1fr);
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-top: 4px solid #312e81;
+            border-radius: 14px;
             overflow: hidden;
-            box-shadow: var(--shadow-md);
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
             margin-bottom: 16px;
-            transition: all 0.2s ease;
         }
 
         .iso-col-brand {
-            padding: 10px 12px;
+            padding: 10px 8px;
             display: flex;
             flex-direction: column;
+            align-items: center;
             justify-content: center;
-            gap: 3px;
-            border-left: 1.5px solid #dbeafe;
-            background: linear-gradient(180deg, rgba(37,99,235,0.03) 0%, rgba(37,99,235,0.08) 100%);
+            gap: 5px;
+            border-left: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
         }
 
-        .iso-company-name {
-            font-size: 0.72rem;
-            font-weight: 900;
-            color: #1e3a8a;
-            line-height: 1.25;
+        .iso-logo-wrap {
+            max-width: 130px;
+            min-height: 46px;
+            max-height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 3px 6px;
+        }
+
+        .iso-logo-img {
+            max-height: 42px;
+            max-width: 100px;
+            object-fit: contain;
         }
 
         .iso-dept-name {
-            font-size: 0.65rem;
+            font-size: 0.68rem;
             font-weight: 800;
-            color: #0369a1;
+            color: #312e81;
+            text-align: center;
             line-height: 1.2;
+            white-space: nowrap;
         }
 
         .iso-col-title {
-            padding: 8px 12px;
+            padding: 10px 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
+            background: #ffffff;
+            gap: 2px;
         }
 
         .iso-doc-title {
-            font-size: 1.05rem;
+            font-size: 1.15rem;
             font-weight: 900;
-            color: var(--text-main);
-            margin-bottom: 2px;
-            line-height: 1.2;
+            color: #1e1b4b;
+            margin: 0;
+            line-height: 1.25;
+            white-space: nowrap;
         }
 
         .iso-doc-subtitle {
-            font-size: 0.68rem;
+            font-size: 0.72rem;
             font-weight: 700;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            color: #4338ca;
+            margin-top: 2px;
         }
 
-        .iso-col-logo {
-            padding: 8px;
+        .iso-col-meta {
+            padding: 8px 10px;
             display: flex;
-            align-items: center;
+            flex-direction: column;
             justify-content: center;
-            background: var(--header-bg);
+            gap: 3px;
+            border-right: 1px solid #e2e8f0;
+            background: #f8fafc;
+            font-size: 0.68rem;
         }
 
-        .iso-logo-wrap {
-            max-width: 68px;
-            max-height: 44px;
+        .iso-meta-row {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 2px;
+        }
+        .iso-meta-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+        .iso-meta-key { font-weight: 700; color: #64748b; font-size: 0.64rem; }
+        .iso-meta-val {
+            font-weight: 800;
+            color: #1e1b4b;
+            font-family: monospace, inherit;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 0 4px;
+            border-radius: 4px;
+            font-size: 0.66rem;
         }
 
-        .iso-logo-img {
-            max-height: 42px;
-            max-width: 68px;
-            object-fit: contain;
+        @media (max-width: 768px) {
+            .iso-header-table {
+                grid-template-columns: minmax(72px, 85px) 1fr minmax(90px, 115px);
+                border-radius: 10px;
+                margin-bottom: 12px;
+            }
+            .iso-col-brand {
+                padding: 6px 4px;
+                gap: 3px;
+            }
+            .iso-logo-wrap {
+                max-width: 65px;
+                min-height: 34px;
+                max-height: 38px;
+                padding: 2px 4px;
+            }
+            .iso-logo-img {
+                max-height: 32px;
+                max-width: 60px;
+            }
+            .iso-dept-name {
+                font-size: 0.52rem;
+                white-space: normal;
+                line-height: 1.1;
+            }
+            .iso-col-title {
+                padding: 6px 4px;
+            }
+            .iso-doc-title {
+                font-size: 0.85rem;
+                white-space: normal;
+                line-height: 1.2;
+            }
+            .iso-doc-subtitle {
+                font-size: 0.58rem;
+            }
+            .iso-col-meta {
+                padding: 6px 4px;
+                gap: 2px;
+            }
+            .iso-meta-key { font-size: 0.54rem; }
+            .iso-meta-val { font-size: 0.56rem; padding: 0 2px; }
         }
 
         /* Top Action Buttons: Theme & Lang */
@@ -687,30 +756,8 @@
     <div id="toastMsg" class="toast-msg"></div>
 
     <div class="container">
-        <!-- ترويسة ISO المعتمدة الخاصة بأمن البوابات (بدون أي روابط خارجية) -->
-        <div class="iso-header-table">
-            <div class="iso-col-brand">
-                <div class="iso-company-name">الشركة العالمية للانتاج والتصنيع الزراعي</div>
-                <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
-            </div>
-
-            <div class="iso-col-title">
-                <h1 class="iso-doc-title" id="isoDocTitle">نظام تسجيل وتتبع الزوار والمقاولين</h1>
-                <div class="iso-doc-subtitle" id="isoDocSubtitle">
-                    <i class="fas fa-shield-halved text-blue-600"></i>
-                    <span>Gate Security Visitor & Contractor Control</span>
-                </div>
-            </div>
-
-            <div class="iso-col-logo">
-                <div class="iso-logo-wrap">
-                    <img id="isoLogoImg" src="icons/icapp-logo.png" alt="شعار الشركة" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
-                </div>
-            </div>
-        </div>
-
         <!-- شريط أدوات البوابة وتبديل الثيم واللغة -->
-        <div class="top-tools-bar">
+        <div class="top-tools-bar" style="margin-bottom: 8px;">
             <div class="gate-badge">
                 <i class="fas fa-dungeon text-amber-400"></i>
                 <span id="gateBadgeText">بوابة الدخول الرئيسية (Main Gate Security)</span>
@@ -724,6 +771,38 @@
                     <i class="fas fa-globe"></i>
                     <span id="langBtnText">EN</span>
                 </button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             ترويسة ISO المعتمدة ثلاثية الأعمدة (موحدة لجميع النماذج)
+        ══════════════════════════════════════════════════════ -->
+        <div class="iso-header-table">
+            <div class="iso-col-brand">
+                <div class="iso-logo-wrap">
+                    <img id="isoLogoImg" src="icons/icapp-logo.png" alt="شعار الشركة" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
+                </div>
+                <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
+            </div>
+
+            <div class="iso-col-title">
+                <h1 class="iso-doc-title" id="isoDocTitle">نظام تسجيل وتتبع الزوار والمقاولين</h1>
+                <div class="iso-doc-subtitle" id="isoDocSubtitle">Gate Security Visitor & Contractor Control</div>
+            </div>
+
+            <div class="iso-col-meta">
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">كود الوثيقة:</span>
+                    <span class="iso-meta-val">DOC-HSE-GAT-01</span>
+                </div>
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">رقم الإصدار:</span>
+                    <span class="iso-meta-val">Rev. 02</span>
+                </div>
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">درجة السرية:</span>
+                    <span class="iso-meta-val" style="color: #047857;">عام داخلي</span>
+                </div>
             </div>
         </div>
 
