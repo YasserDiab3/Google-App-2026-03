@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Google Apps Script for HSE System - Default Headers
  * 
  * الرؤوس الافتراضية لجميع الأوراق
@@ -311,6 +311,13 @@ function getDefaultHeaders(sheetName) {
             'excavation', 'contractorPTW', 'liftingPlan',
             'sortOrder', 'notes',
             'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
+        ],
+        // ✅ منظومة بوابات الأمن وحصر الزوار والمقاولين
+        'GateVisitors': [
+            'Record ID', 'Entry Date', 'Entry Time', 'Visitor Name', 'Organization / Company',
+            'National ID / Passport', 'Phone Number', 'Vehicle Plate', 'Target Site',
+            'Target Hall / Area', 'Host Person & Dept', 'Visit Purpose', 'Badge #',
+            'Status', 'Exit Time', 'Duration (Minutes)', 'Signature URL', 'Created At Timestamp'
         ]
     };
     

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Google Apps Script for HSE System - Configuration
  * 
  * ملف الإعدادات والثوابت
@@ -95,7 +95,9 @@ function getRequiredSheets() {
         // جداول إحداثيات المواقع للخريطة
         'PTW_MAP_COORDINATES', 'PTW_DEFAULT_COORDINATES',
         // نظام النسخ الاحتياطي
-        'BackupLog', 'BackupSettings'
+        'BackupLog', 'BackupSettings',
+        // منظومة أمن البوابات وحصر الزوار والمقاولين
+        'GateVisitors'
     ];
     
     // التحقق من عدم وجود تكرار (للتحسين)
