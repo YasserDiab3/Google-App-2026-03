@@ -2004,21 +2004,12 @@ const DailyObservations = {
             const CACHE_DURATION = 10 * 60 * 1000;
             const isStale = cacheAge >= CACHE_DURATION;
             if ((!hasObsData || isStale) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets) {
-                void this.ensureDailyObservationsDataLoaded({ force: isStale && hasObsData })
-                    .catch(() => {})
-                    .finally(() => {
-                        try {
-                            const tableEl = document.getElementById('observations-table-container');
-                            const statsEl = document.getElementById('observations-stats-cards');
-                            if (!tableEl && !statsEl) return;
-                            if (tableEl && typeof this.loadObservationsList === 'function') {
-                                this.loadObservationsList();
-                            }
-                            if (statsEl && typeof this.renderStatsCards === 'function') {
-                                this.renderStatsCards();
-                            }
-                        } catch (e) { /* ignore */ }
-                    });
+                try {
+                    await this.ensureDailyObservationsDataLoaded({ force: !hasObsData || isStale });
+                } catch (loadErr) {
+                    Utils?.safeWarn?.('⚠️ خطأ في جلب بيانات الملاحظات:', loadErr);
+                }
+                this._dailyObsBackendFetchOk = true;
             } else if (hasObsData) {
                 this._dailyObsBackendFetchOk = true;
             }
