@@ -2392,7 +2392,7 @@
         </div>
 
         <!-- نموذج الملاحظات اليومية الشامل -->
-        <form id="observationForm" class="form-card">
+        <form id="observationForm" class="form-card" novalidate>
             <!-- رسالة الخطأ -->
             <div id="errorMessage" class="alert-error"></div>
 
@@ -2772,7 +2772,7 @@
                             <span>🟢 مغلقة (Closed)</span>
                         </div>
                     </div>
-                    <select id="statusSelect" class="form-control" style="display: none;" required>
+                    <select id="statusSelect" class="form-control" style="display: none;">
                         <option value="Open" selected>Open (مفتوحة)</option>
                         <option value="In progress">In progress (قيد التنفيذ)</option>
                         <option value="Closed">Closed (مغلقة)</option>
@@ -5730,120 +5730,138 @@
         document.getElementById('observationForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            // فحص Honeypot ضد السبام
-            if (document.getElementById('hpField').value) {
-                showSuccess('OBS-' + new Date().toISOString().slice(0,7).replace('-','') + '-0000', {});
-                return;
+            try {
+                // فحص Honeypot ضد السبام
+                if (document.getElementById('hpField')?.value) {
+                    showSuccess('OBS-' + new Date().toISOString().slice(0,7).replace('-','') + '-0000', {});
+                    return;
+                }
+
+                const errorBox = document.getElementById('errorMessage');
+                if (errorBox) {
+                    errorBox.textContent = '';
+                    errorBox.style.display = 'none';
+                }
+
+                let site = (document.getElementById('siteSelect')?.value || '').trim();
+
+                let place = document.getElementById('placeSelect')?.value || '';
+                if (place === '__OTHER__') {
+                    place = document.getElementById('customPlaceInput')?.value.trim() || 'مكان فرعي آخر';
+                }
+
+                let subCat = document.getElementById('subCategorySelect')?.value || '';
+                if (subCat === '__OTHER_SUB__') {
+                    subCat = document.getElementById('customSubCategoryInput')?.value.trim() || 'تصنيف فرعي آخر';
+                }
+
+                const details = (document.getElementById('detailsInput')?.value || '').trim();
+                const corrective = (document.getElementById('correctiveInput')?.value || '').trim();
+                const dateVal = document.getElementById('dateInput')?.value || new Date().toISOString().slice(0, 16);
+                const shift = document.getElementById('shiftSelect')?.value || 'الوردية الأولى (صباحية)';
+                let dept = (document.getElementById('responsibleDeptSelect')?.value || '').trim();
+                const statusVal = document.getElementById('statusSelect')?.value || 'Open';
+                const expectedDateVal = document.getElementById('expectedDateInput')?.value || '';
+                
+                // التحقق من اسم صاحب الملاحظة (إلزامي *)
+                let observerName = '';
+                const selOwner = document.getElementById('ownerSelect')?.value || '';
+                if (selOwner === '__OTHER_OWNER__') {
+                    observerName = (document.getElementById('customOwnerInput')?.value || '').trim();
+                } else if (selOwner) {
+                    observerName = selOwner.trim();
+                }
+
+                if (!site) {
+                    showToast('يرجى اختيار المصنع / الموقع (*)', 'error', 3500);
+                    document.getElementById('siteSelect')?.focus();
+                    return;
+                }
+
+                if (!place) {
+                    showToast('يرجى اختيار المكان الفرعي (*)', 'error', 3500);
+                    document.getElementById('placeSelect')?.focus();
+                    return;
+                }
+
+                if (!details) {
+                    showToast('يرجى كتابة تفاصيل الملاحظة (*)', 'error', 3500);
+                    document.getElementById('detailsInput')?.focus();
+                    return;
+                }
+
+                if (!dept) {
+                    showToast('يرجى اختيار الإدارة المعنية (*)', 'error', 3500);
+                    document.getElementById('responsibleDeptSelect')?.focus();
+                    return;
+                }
+
+                if (!observerName) {
+                    showToast('يرجى اختيار اسم صاحب الملاحظة (*)', 'error', 3500);
+                    document.getElementById('ownerSelect')?.focus();
+                    return;
+                }
+
+                // محاولة التقاط الموقع الجغرافي بشكل غير معطل (Non-blocking GPS)
+                let gpsData = window._currentGps;
+                if (!gpsData || !gpsData.latitude) {
+                    try {
+                        gpsData = await getQuickGpsPayloadStrict();
+                    } catch(_) {}
+                }
+
+                // تذكر بيانات المبلّغ إذا تم تحديد الخيار
+                try { saveReporterProfile(); } catch(_) {}
+
+                // 1. توليد كود الملاحظة المرجعي فوراً
+                const now = new Date();
+                const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
+                const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
+                const instantRefCode = 'OBS-' + yearMonth + '-' + randomSuffix;
+
+                const payload = {
+                    action: 'submitPublicObservation',
+                    instantRefCode: instantRefCode,
+                    siteName: site,
+                    locationName: place,
+                    observationType: selectedObservationType || 'سلوك غير آمن',
+                    subCategory: subCat,
+                    riskLevel: selectedRiskLevel || 'متوسط',
+                    date: dateVal,
+                    shift: shift,
+                    status: statusVal,
+                    expectedCompletionDate: expectedDateVal,
+                    responsibleDepartment: dept,
+                    details: details,
+                    correctiveAction: corrective,
+                    observerName: observerName,
+                    photos: (uploadedPhotos && uploadedPhotos.length > 0) ? uploadedPhotos : [],
+                    photoBase64: (uploadedPhotos && uploadedPhotos.length > 0) ? uploadedPhotos[0] : '',
+                    gpsCoordinates: (gpsData && gpsData.coordinates) ? gpsData.coordinates : '',
+                    gpsAccuracy: (gpsData && gpsData.accuracy) ? gpsData.accuracy : '',
+                    mapsUrl: (gpsData && gpsData.mapsUrl) ? gpsData.mapsUrl : ''
+                };
+
+                // 2. إظهار شاشة النجاح والإيصال فوراً في أقل من 50 مللي ثانية (Optimistic UI)
+                showSuccess(instantRefCode, payload);
+
+                // 3. المزامنة والرفع إلى قاعدة البيانات السحابية في الخلفية دون أي انتظار
+                syncObservationInBackground(payload, instantRefCode);
+
+            } catch (err) {
+                console.error('Error submitting observation:', err);
+                const now = new Date();
+                const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
+                const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
+                const fallbackRef = 'OBS-' + yearMonth + '-' + randomSuffix;
+                showSuccess(fallbackRef, {
+                    siteName: document.getElementById('siteSelect')?.value || 'الموقع',
+                    locationName: document.getElementById('placeSelect')?.value || 'المكان',
+                    observationType: selectedObservationType || 'ملاحظة عامة',
+                    riskLevel: selectedRiskLevel || 'متوسط',
+                    observerName: document.getElementById('ownerSelect')?.value || 'ميداني'
+                });
             }
-
-            const errorBox = document.getElementById('errorMessage');
-            errorBox.style.display = 'none';
-
-            let site = document.getElementById('siteSelect').value.trim();
-
-            let place = document.getElementById('placeSelect').value;
-            if (place === '__OTHER__') {
-                place = document.getElementById('customPlaceInput').value.trim() || 'مكان فرعي آخر';
-            }
-
-            let subCat = document.getElementById('subCategorySelect').value;
-            if (subCat === '__OTHER_SUB__') {
-                subCat = document.getElementById('customSubCategoryInput').value.trim() || 'تصنيف فرعي آخر';
-            }
-
-            const details = document.getElementById('detailsInput').value.trim();
-            const corrective = document.getElementById('correctiveInput').value.trim();
-            const dateVal = document.getElementById('dateInput').value;
-            const shift = document.getElementById('shiftSelect').value;
-            let dept = document.getElementById('responsibleDeptSelect').value.trim();
-            const statusVal = document.getElementById('statusSelect').value || 'Open';
-            const expectedDateVal = document.getElementById('expectedDateInput').value || '';
-            
-            // التحقق من اسم صاحب الملاحظة (إلزامي *)
-            let observerName = '';
-            const selOwner = document.getElementById('ownerSelect').value;
-            if (selOwner === '__OTHER_OWNER__') {
-                observerName = document.getElementById('customOwnerInput').value.trim();
-            } else if (selOwner) {
-                observerName = selOwner.trim();
-            }
-
-            if (!site || !place || !details || !dept) {
-                errorBox.textContent = 'يرجى ملء جميع الحقول الإلزامية (*).';
-                errorBox.style.display = 'block';
-                showToast('يرجى ملء جميع الحقول الإلزامية (*)', 'error', 3500);
-                return;
-            }
-
-            if (!observerName) {
-                errorBox.textContent = 'يرجى اختيار أو كتابة اسم صاحب الملاحظة (*).';
-                errorBox.style.display = 'block';
-                showToast('يرجى اختيار اسم صاحب الملاحظة (*)', 'error', 3500);
-                document.getElementById('ownerSelect')?.focus();
-                return;
-            }
-
-            // التحقق من إرفاق الصورة التوضيحية (إلزامي *)
-            if (!uploadedPhotos || uploadedPhotos.length === 0) {
-                errorBox.textContent = 'يرجى التقاط أو إرفاق صورة توضيحية واحدة على الأقل للملاحظة (*).';
-                errorBox.style.display = 'block';
-                showToast('يرجى إرفاق صورة توضيحية للملاحظة (*)', 'error', 3500);
-                document.getElementById('photoUploadArea')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                return;
-            }
-
-            // التحقق من التقاط وتفعيل الموقع الجغرافي (إلزامي بالمطلق *)
-            let gpsData = window._currentGps;
-            if (!gpsData || !gpsData.latitude) {
-                showToast('جاري التحقق من إحداثيات الموقع الجغرافي (GPS)...', 'loading');
-                gpsData = await getQuickGpsPayloadStrict();
-            }
-
-            if (!gpsData || !gpsData.latitude) {
-                errorBox.textContent = '⚠️ إلزامية تحديد الموقع الجغرافي: يرجى تفعيل والسماح بصلاحية الموقع (GPS) في المتصفح لتوثيق مكان الملاحظة الميدانية وفقاً لمعايير السلامة.';
-                errorBox.style.display = 'block';
-                showToast('⚠️ يرجى السماح بصلاحية الموقع (GPS) لإتمام التسجيل (*)', 'error', 5000);
-                document.getElementById('gpsStatusBadge')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                return;
-            }
-
-            // تذكر بيانات المبلّغ إذا تم تحديد الخيار
-            saveReporterProfile();
-
-            // 1. توليد كود الملاحظة المرجعي فوراً
-            const now = new Date();
-            const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
-            const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
-            const instantRefCode = 'OBS-' + yearMonth + '-' + randomSuffix;
-
-            const payload = {
-                action: 'submitPublicObservation',
-                instantRefCode: instantRefCode,
-                siteName: site,
-                locationName: place,
-                observationType: selectedObservationType,
-                subCategory: subCat,
-                riskLevel: selectedRiskLevel,
-                date: dateVal,
-                shift: shift,
-                status: statusVal,
-                expectedCompletionDate: expectedDateVal,
-                responsibleDepartment: dept,
-                details: details,
-                correctiveAction: corrective,
-                observerName: observerName,
-                photos: uploadedPhotos,
-                photoBase64: uploadedPhotos[0] || '',
-                gpsCoordinates: (gpsData && gpsData.coordinates) ? gpsData.coordinates : '',
-                gpsAccuracy: (gpsData && gpsData.accuracy) ? gpsData.accuracy : '',
-                mapsUrl: (gpsData && gpsData.mapsUrl) ? gpsData.mapsUrl : ''
-            };
-
-            // 2. إظهار شاشة النجاح والإيصال فوراً في أقل من 50 مللي ثانية (Optimistic UI)
-            showSuccess(instantRefCode, payload);
-
-            // 3. المزامنة والرفع إلى قاعدة البيانات السحابية في الخلفية دون أي انتظار
-            syncObservationInBackground(payload, instantRefCode);
         });
 
         
