@@ -24,7 +24,10 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                             <i class="fas fa-qrcode"></i> \u0628\u0648\u0633\u062A\u0631 QR \u0644\u0644\u0628\u0648\u0627\u0628\u0627\u062A (A4)
                         </button>
                         <button type="button" class="btn" onclick="GateSecurity.printMasterVisitorBadges()" style="font-weight: 800; background: #059669; color: #ffffff; border-color: #059669;">
-                            <i class="fas fa-id-badge"></i> \u0643\u0631\u0648\u062A \u0627\u0644\u0632\u0648\u0627\u0631 \u0627\u0644\u0639\u0627\u0645\u0629 (A4)
+                            <i class="fas fa-id-badge"></i> \u0643\u0627\u0631\u062A \u0648\u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0632\u0627\u0626\u0631\u064A\u0646 (A4)
+                        </button>
+                        <button type="button" class="btn" onclick="GateSecurity.openMapEditorModal()" style="font-weight: 800; background: #8b5cf6; color: #ffffff; border-color: #8b5cf6;">
+                            <i class="fas fa-map-marked-alt"></i> \u0645\u062D\u0631\u0631 \u0627\u0644\u062E\u0631\u064A\u0637\u0629 \u0648\u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639
                         </button>
                         <button type="button" class="btn btn-primary" onclick="GateSecurity.printEmergencyMusterList()" style="font-weight: 700; background: #dc2626; border-color: #dc2626;">
                             <i class="fas fa-print"></i> \u0637\u0628\u0627\u0639\u0629 \u0643\u0634\u0641 \u0627\u0644\u0625\u062E\u0644\u0627\u0621
@@ -156,14 +159,14 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                     </table>
                 </div>
             </div>
-        `,this.loadVisitorsData(),this.startAutoRefresh()}getGatePortalUrl(){const t=window.location.origin||window.location.protocol+"//"+window.location.host,i=window.location.pathname;return i.includes("/Frontend/")?`${t}/Frontend/gate-visitor-entry.html`:i.includes("/dist/")?`${t}/dist/gate-visitor-entry.html`:`${t}/gate-visitor-entry.html`}copyGateLink(t){navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t).then(()=>{typeof Utils<"u"&&Utils.showNotification?Utils.showNotification("\u062A\u0645 \u0646\u0633\u062E \u0631\u0627\u0628\u0637 \u062A\u0633\u062C\u064A\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0628\u0646\u062C\u0627\u062D \u2705","success"):alert("\u062A\u0645 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0628\u0646\u062C\u0627\u062D: "+t)}):prompt("\u0627\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0623\u0645\u0646 \u0639\u0646\u062F \u0627\u0644\u0628\u0648\u0627\u0628\u0629:",t)}async loadVisitorsData(){try{const t=localStorage.getItem("HSE_GATE_VISITORS_REGISTRY");if(this.visitors=t?JSON.parse(t):[],navigator.onLine&&typeof GoogleIntegration<"u")try{const e=await(await fetch(this.getEffectiveApiUrl()+"?action=getActiveGateVisitors",{method:"GET",mode:"cors"})).json();if(e&&e.success&&Array.isArray(e.activeVisitors)){const o=e.activeVisitors.map(r=>({...r,entryTimestamp:new Date(r.entryDate+" "+r.entryTime).getTime()||Date.now()})),s=new Map;this.visitors.forEach(r=>s.set(r.id,r)),o.forEach(r=>s.set(r.id,r)),this.visitors=Array.from(s.values()).sort((r,n)=>(n.entryTimestamp||0)-(r.entryTimestamp||0)),localStorage.setItem("HSE_GATE_VISITORS_REGISTRY",JSON.stringify(this.visitors))}}catch{}this.applyFilters(),this.updateKpis()}catch{}}getEffectiveApiUrl(){const t="https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec";try{const i=localStorage.getItem("HSE_SETTINGS_CACHE");if(i){const e=JSON.parse(i);if(e&&e.scriptUrl&&e.scriptUrl.includes("script.google.com"))return e.scriptUrl}}catch{}return t}updateKpis(){const t=new Date().toISOString().split("T")[0],i=t.slice(0,7),e=this.visitors.filter(a=>a.entryDate===t),o=this.visitors.filter(a=>!a.exitTime),s=this.visitors.filter(a=>a.entryDate&&a.entryDate.startsWith(i)),r=Date.now(),n=o.filter(a=>(r-(a.entryTimestamp||0))/6e4>=240).length,d=document.getElementById("kpiActiveVisitors");d&&(d.textContent=o.length);const l=document.getElementById("kpiTodayVisitors");l&&(l.textContent=e.length);const p=document.getElementById("kpiOverstayVisitors");p&&(p.textContent=n);const c=document.getElementById("kpiMonthVisitors");c&&(c.textContent=s.length)}applyFilters(){let t=[...this.visitors];if(this.filterSite!=="all"&&(t=t.filter(i=>i.site===this.filterSite)),this.filterStatus==="active"?t=t.filter(i=>!i.exitTime):this.filterStatus==="exited"&&(t=t.filter(i=>!!i.exitTime)),this.searchQuery){const i=this.searchQuery.toLowerCase();t=t.filter(e=>e.name&&e.name.toLowerCase().includes(i)||e.org&&e.org.toLowerCase().includes(i)||e.badge&&e.badge.toLowerCase().includes(i)||e.host&&e.host.toLowerCase().includes(i)||e.phone&&e.phone.includes(i)||e.vehicle&&e.vehicle.toLowerCase().includes(i))}this.filteredVisitors=t,this.renderTable()}renderTable(){const t=document.getElementById("gateVisitorsTableBody");if(!t)return;if(this.filteredVisitors.length===0){t.innerHTML=`
+        `,this.loadVisitorsData(),this.startAutoRefresh()}getGatePortalUrl(){const t=window.location.origin||window.location.protocol+"//"+window.location.host,i=window.location.pathname;return i.includes("/Frontend/")?`${t}/Frontend/gate-visitor-entry.html`:i.includes("/dist/")?`${t}/dist/gate-visitor-entry.html`:`${t}/gate-visitor-entry.html`}copyGateLink(t){navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t).then(()=>{typeof Utils<"u"&&Utils.showNotification?Utils.showNotification("\u062A\u0645 \u0646\u0633\u062E \u0631\u0627\u0628\u0637 \u062A\u0633\u062C\u064A\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0628\u0646\u062C\u0627\u062D \u2705","success"):alert("\u062A\u0645 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0628\u0646\u062C\u0627\u062D: "+t)}):prompt("\u0627\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0623\u0645\u0646 \u0639\u0646\u062F \u0627\u0644\u0628\u0648\u0627\u0628\u0629:",t)}async loadVisitorsData(){try{const t=localStorage.getItem("HSE_GATE_VISITORS_REGISTRY");if(this.visitors=t?JSON.parse(t):[],navigator.onLine&&typeof GoogleIntegration<"u")try{const e=await(await fetch(this.getEffectiveApiUrl()+"?action=getActiveGateVisitors",{method:"GET",mode:"cors"})).json();if(e&&e.success&&Array.isArray(e.activeVisitors)){const o=e.activeVisitors.map(n=>({...n,entryTimestamp:new Date(n.entryDate+" "+n.entryTime).getTime()||Date.now()})),s=new Map;this.visitors.forEach(n=>s.set(n.id,n)),o.forEach(n=>s.set(n.id,n)),this.visitors=Array.from(s.values()).sort((n,a)=>(a.entryTimestamp||0)-(n.entryTimestamp||0)),localStorage.setItem("HSE_GATE_VISITORS_REGISTRY",JSON.stringify(this.visitors))}}catch{}this.applyFilters(),this.updateKpis()}catch{}}getEffectiveApiUrl(){const t="https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec";try{const i=localStorage.getItem("HSE_SETTINGS_CACHE");if(i){const e=JSON.parse(i);if(e&&e.scriptUrl&&e.scriptUrl.includes("script.google.com"))return e.scriptUrl}}catch{}return t}updateKpis(){const t=new Date().toISOString().split("T")[0],i=t.slice(0,7),e=this.visitors.filter(l=>l.entryDate===t),o=this.visitors.filter(l=>!l.exitTime),s=this.visitors.filter(l=>l.entryDate&&l.entryDate.startsWith(i)),n=Date.now(),a=o.filter(l=>(n-(l.entryTimestamp||0))/6e4>=240).length,d=document.getElementById("kpiActiveVisitors");d&&(d.textContent=o.length);const r=document.getElementById("kpiTodayVisitors");r&&(r.textContent=e.length);const p=document.getElementById("kpiOverstayVisitors");p&&(p.textContent=a);const c=document.getElementById("kpiMonthVisitors");c&&(c.textContent=s.length)}applyFilters(){let t=[...this.visitors];if(this.filterSite!=="all"&&(t=t.filter(i=>i.site===this.filterSite)),this.filterStatus==="active"?t=t.filter(i=>!i.exitTime):this.filterStatus==="exited"&&(t=t.filter(i=>!!i.exitTime)),this.searchQuery){const i=this.searchQuery.toLowerCase();t=t.filter(e=>e.name&&e.name.toLowerCase().includes(i)||e.org&&e.org.toLowerCase().includes(i)||e.badge&&e.badge.toLowerCase().includes(i)||e.host&&e.host.toLowerCase().includes(i)||e.phone&&e.phone.includes(i)||e.vehicle&&e.vehicle.toLowerCase().includes(i))}this.filteredVisitors=t,this.renderTable()}renderTable(){const t=document.getElementById("gateVisitorsTableBody");if(!t)return;if(this.filteredVisitors.length===0){t.innerHTML=`
                 <tr>
                     <td colspan="9" style="text-align: center; padding: 36px 12px; color: var(--text-muted);">
                         <i class="fas fa-folder-open" style="font-size: 2rem; color: #94a3b8; display:block; margin-bottom: 8px;"></i>
                         <span style="font-weight: 700;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0632\u0648\u0627\u0631 \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0645\u0639\u0627\u064A\u064A\u0631 \u0627\u0644\u0628\u062D\u062B \u0627\u0644\u062D\u0627\u0644\u064A\u0629</span>
                     </td>
                 </tr>
-            `;return}const i=Date.now();t.innerHTML=this.filteredVisitors.map(e=>{const o=!e.exitTime,s=Math.round((i-(e.entryTimestamp||i))/6e4),r=Math.floor(s/60),n=s%60,d=o&&s>=240,l=o?r>0?`${r}\u0633 ${n}\u062F`:`${n}\u062F`:e.durationMinutes?`${e.durationMinutes} \u062F\u0642\u064A\u0642\u0629`:"\u0645\u0643\u062A\u0645\u0644";return`
+            `;return}const i=Date.now();t.innerHTML=this.filteredVisitors.map(e=>{const o=!e.exitTime,s=Math.round((i-(e.entryTimestamp||i))/6e4),n=Math.floor(s/60),a=s%60,d=o&&s>=240,r=o?n>0?`${n}\u0633 ${a}\u062F`:`${a}\u062F`:e.durationMinutes?`${e.durationMinutes} \u062F\u0642\u064A\u0642\u0629`:"\u0645\u0643\u062A\u0645\u0644";return`
                 <tr style="border-bottom: 1px solid var(--border-color); ${d?"background: rgba(254, 242, 242, 0.6);":""}">
                     <td style="padding: 10px 14px; font-weight: 900; color: #1e40af;">
                         <span style="background: #dbeafe; color: #1e40af; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; border: 1px solid #bfdbfe;">
@@ -191,7 +194,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                     </td>
                     <td style="padding: 10px 14px;">
                         <span style="font-weight: 800; font-size: 0.78rem; ${d?"color: #dc2626; font-weight: 900;":"color: var(--text-secondary);"}">
-                            ${l}
+                            ${r}
                             ${d?'<span style="display:block; font-size: 0.68rem; color: #dc2626;">\u26A0\uFE0F \u062A\u0623\u062E\u064A\u0631 +4\u0633</span>':""}
                         </span>
                     </td>
@@ -216,7 +219,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                         `}
                     </td>
                 </tr>
-            `}).join("")}handleSearch(t){this.searchQuery=t.trim(),this.applyFilters()}handleFilterSite(t){this.filterSite=t,this.applyFilters()}handleFilterStatus(t){this.filterStatus=t,this.applyFilters()}async adminForceCheckOut(t,i){if(!confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0647\u0630\u0627 \u0627\u0644\u0632\u0627\u0626\u0631 \u0625\u062F\u0627\u0631\u064A\u0627\u064B\u061F"))return;const e=this.visitors.findIndex(o=>o.id===t);if(e!==-1){const o=new Date,s=o.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});this.visitors[e].exitTime=s,this.visitors[e].exitTimestamp=o.getTime(),localStorage.setItem("HSE_GATE_VISITORS_REGISTRY",JSON.stringify(this.visitors)),this.applyFilters(),this.updateKpis();try{const r=this.getEffectiveApiUrl();await fetch(r,{method:"POST",mode:"cors",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"submitGateVisitorCheckOut",id:t,exitTime:s,badge:i})})}catch{}typeof Utils<"u"&&Utils.showNotification&&Utils.showNotification("\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0627\u0644\u0632\u0627\u0626\u0631 \u0628\u0646\u062C\u0627\u062D \u2705","success")}}refreshData(){this.loadVisitorsData(),typeof Utils<"u"&&Utils.showNotification&&Utils.showNotification("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0633\u062C\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0628\u0646\u062C\u0627\u062D \u{1F504}","info")}startAutoRefresh(){this.autoRefreshTimer&&clearInterval(this.autoRefreshTimer),this.autoRefreshTimer=setInterval(()=>{this.loadVisitorsData()},3e4)}printEmergencyMusterList(){const t=this.visitors.filter(o=>!o.exitTime),i=window.open("","_blank"),e=new Date;i.document.write(`
+            `}).join("")}handleSearch(t){this.searchQuery=t.trim(),this.applyFilters()}handleFilterSite(t){this.filterSite=t,this.applyFilters()}handleFilterStatus(t){this.filterStatus=t,this.applyFilters()}async adminForceCheckOut(t,i){if(!confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0647\u0630\u0627 \u0627\u0644\u0632\u0627\u0626\u0631 \u0625\u062F\u0627\u0631\u064A\u0627\u064B\u061F"))return;const e=this.visitors.findIndex(o=>o.id===t);if(e!==-1){const o=new Date,s=o.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});this.visitors[e].exitTime=s,this.visitors[e].exitTimestamp=o.getTime(),localStorage.setItem("HSE_GATE_VISITORS_REGISTRY",JSON.stringify(this.visitors)),this.applyFilters(),this.updateKpis();try{const n=this.getEffectiveApiUrl();await fetch(n,{method:"POST",mode:"cors",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"submitGateVisitorCheckOut",id:t,exitTime:s,badge:i})})}catch{}typeof Utils<"u"&&Utils.showNotification&&Utils.showNotification("\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0627\u0644\u0632\u0627\u0626\u0631 \u0628\u0646\u062C\u0627\u062D \u2705","success")}}refreshData(){this.loadVisitorsData(),typeof Utils<"u"&&Utils.showNotification&&Utils.showNotification("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0633\u062C\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0628\u0646\u062C\u0627\u062D \u{1F504}","info")}startAutoRefresh(){this.autoRefreshTimer&&clearInterval(this.autoRefreshTimer),this.autoRefreshTimer=setInterval(()=>{this.loadVisitorsData()},3e4)}printEmergencyMusterList(){const t=this.visitors.filter(o=>!o.exitTime),i=window.open("","_blank"),e=new Date;i.document.write(`
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
@@ -809,252 +812,827 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                 </div>
             </body>
             </html>
-        `),e.document.close()}printMasterVisitorBadges(){const t=this.getGatePortalUrl(),i=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&format=png&margin=0&data=${encodeURIComponent(t)}`,e=window.open("","_blank");if(!e){alert("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0637\u0628\u0627\u0639\u0629 \u0643\u0631\u0648\u062A \u0627\u0644\u0632\u0648\u0627\u0631 (Pop-ups)");return}const o=s=>`
-            <div class="visitor-master-badge">
-                <div class="lanyard-hole"></div>
-                
-                <div class="badge-top-header">
-                    <div class="badge-top-brand">
-                        <img src="icons/icapp-logo.png" alt="ICAPP" class="badge-mini-logo" onerror="this.src='../icons/icapp-logo.png'">
-                        <div class="badge-dept-text">\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0623\u0645\u0646 \u0627\u0644\u0635\u0646\u0627\u0639\u064A</div>
-                    </div>
-                    <div class="badge-type-banner">
-                        \u{1FAAA} \u0643\u0627\u0631\u062A \u0648\u0634\u0627\u0631\u0629 \u0632\u0627\u0626\u0631 \u0645\u0639\u062A\u0645\u062F | VISITOR PASS
-                    </div>
-                </div>
-
-                <div class="badge-number-box">
-                    <span class="badge-lbl">\u0631\u0642\u0645 \u0643\u0627\u0631\u062A \u0627\u0644\u0632\u0627\u0626\u0631:</span>
-                    <span class="badge-val">VIS - ${s.toString().padStart(3,"0")}</span>
-                </div>
-
-                <div class="badge-body-content">
-                    <div class="badge-line-row">
-                        <span class="line-key">\u0627\u0633\u0645 \u0627\u0644\u0632\u0627\u0626\u0631:</span>
-                        <span class="line-dots">.......................................................................</span>
-                    </div>
-                    <div class="badge-line-row">
-                        <span class="line-key">\u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0634\u0631\u0643\u0629:</span>
-                        <span class="line-dots">.......................................................................</span>
-                    </div>
-                    <div class="badge-line-row">
-                        <span class="line-key">\u0627\u0644\u0645\u0648\u0638\u0641 \u0627\u0644\u0645\u0633\u062A\u0636\u064A\u0641:</span>
-                        <span class="line-dots">.......................................................................</span>
-                    </div>
-                    <div class="badge-line-row">
-                        <span class="line-key">\u0627\u0644\u0645\u0635\u0646\u0639 / \u0627\u0644\u0645\u0648\u0642\u0639:</span>
-                        <span class="line-dots">.......................................................................</span>
+        `),e.document.close()}getMapConfig(){const t=localStorage.getItem("icapp_visitor_map_config");if(t)try{return JSON.parse(t)}catch{}return{coords:`30\xB024'12.4"N 31\xB018'45.2"E`,siteName:"\u0645\u062C\u0645\u0639 \u0645\u0635\u0627\u0646\u0639 ICAPP \u0627\u0644\u0645\u0639\u0627\u062F\u064A \u0648\u0627\u0644\u0625\u0633\u0645\u0627\u0639\u064A\u0644\u064A\u0629",musterPoints:[{id:"m1",name:"\u0646\u0642\u0637\u0629 1",desc:"\u0627\u0644\u0633\u0627\u062D\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 \u0623\u0645\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629",x:145,y:140},{id:"m2",name:"\u0646\u0642\u0637\u0629 2",desc:"\u0633\u0627\u062D\u0629 \u0631\u0635\u064A\u0641 \u0627\u0644\u0634\u062D\u0646 \u0648\u0627\u0644\u0645\u062E\u0627\u0632\u0646",x:410,y:240},{id:"m3",name:"\u0646\u0642\u0637\u0629 3",desc:"\u0628\u062C\u0648\u0627\u0631 \u0645\u062D\u0637\u0629 \u0627\u0644\u062E\u062F\u0645\u0627\u062A \u0648\u0627\u0644\u0641\u0646\u064A\u0629",x:110,y:310},{id:"m4",name:"\u0646\u0642\u0637\u0629 4",desc:"\u0627\u0644\u0633\u0627\u062D\u0629 \u0627\u0644\u0634\u0631\u0642\u064A\u0629 \u0644\u0644\u0645\u0635\u0646\u0639",x:270,y:30}],exits:[{id:"e1",name:"\u0628\u0648\u0627\u0628\u0629 \u0631\u0626\u064A\u0633\u064A\u0629",x:18,y:135}],buildings:[{name:"\u0627\u0644\u0645\u0628\u0646\u0649 \u0627\u0644\u0625\u062F\u0627\u0631\u064A",sub:"\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0648\u0627\u0644\u0645\u062E\u062A\u0628\u0631",x:50,y:50,w:120,h:60,fill:"#dbeafe",stroke:"#1d4ed8",color:"#1e3a8a"},{name:"\u0645\u0635\u0646\u0639 ICAPP-1",sub:"\u062E\u0637\u0648\u0637 \u0627\u0644\u0641\u0627\u0643\u0647\u0629 \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639",x:190,y:50,w:160,h:120,fill:"#fef3c7",stroke:"#d97706",color:"#92400e"},{name:"\u0645\u0635\u0627\u0646\u0639 ICAPP-2 & 3",sub:"\u0627\u0644\u062A\u062C\u0645\u064A\u062F \u0648\u0627\u0644\u0645\u0631\u0643\u0632\u0627\u062A",x:190,y:190,w:160,h:115,fill:"#ede9fe",stroke:"#6d28d9",color:"#5b21b6"},{name:"\u0627\u0644\u0645\u062E\u0627\u0632\u0646 WH",sub:"\u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u062E\u0627\u0645 \u0648\u0627\u0644\u062A\u0639\u0628\u0626\u0629",x:370,y:50,w:80,h:160,fill:"#f1f5f9",stroke:"#475569",color:"#334155"},{name:"\u0645\u062D\u0637\u0629 \u0627\u0644\u062E\u062F\u0645\u0627\u062A \u0627\u0644\u0641\u0646\u064A\u0629",sub:"\u0648\u0627\u0644\u0637\u0627\u0642\u0629 (ICAPP-4)",x:50,y:190,w:120,h:115,fill:"#fce7f3",stroke:"#be185d",color:"#9d174d"}]}}saveMapConfig(t){localStorage.setItem("icapp_visitor_map_config",JSON.stringify(t)),alert("\u062A\u0645 \u062D\u0641\u0638 \u0645\u062E\u0637\u0637 \u0627\u0644\u062E\u0631\u064A\u0637\u0629 \u0648\u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639 \u0628\u0646\u062C\u0627\u062D! \u0633\u064A\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F\u0647 \u0641\u064A \u062C\u0645\u064A\u0639 \u0627\u0644\u0643\u0631\u0648\u062A \u0627\u0644\u0645\u0637\u0628\u0648\u0639\u0629.")}openMapEditorModal(){const t=this.getMapConfig();let i=`
+            <div id="mapEditorModal" style="position: fixed; inset: 0; background: rgba(15,23,42,0.75); backdrop-filter: blur(4px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 15px;">
+                <div style="background: #ffffff; width: 100%; max-width: 900px; max-height: 92vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; direction: rtl;">
+                    <!-- Modal Header -->
+                    <div style="background: #1e3a8a; color: #ffffff; padding: 16px 20px; border-top-left-radius: 16px; border-top-right-radius: 16px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-map-marked-alt" style="font-size: 1.4rem; color: #60a5fa;"></i>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 900;">\u0645\u062D\u0631\u0631 \u0627\u0644\u062E\u0631\u064A\u0637\u0629 \u0648\u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639 (Map & Layout Customizer)</h3>
+                                <span style="font-size: 0.78rem; color: #bfdbfe;">\u062E\u0627\u0635 \u0628\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 - \u062A\u062D\u062F\u064A\u062F \u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639\u060C \u0627\u0644\u0645\u0628\u0627\u0646\u064A\u060C \u0645\u062E\u0627\u0631\u062C \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0648\u0627\u0644\u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A</span>
+                            </div>
+                        </div>
+                        <button onclick="document.getElementById('mapEditorModal').remove()" style="background: rgba(255,255,255,0.15); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: 900; font-size: 1.1rem;">\u2715</button>
                     </div>
 
-                    <div class="badge-mid-qr-row">
-                        <img src="${i}" alt="Portal QR" class="badge-qr-pic" onerror="this.src='https://chart.googleapis.com/chart?cht=qr&chs=150x150&chl=${encodeURIComponent(t)}';">
-                        <div class="badge-rules-list">
-                            \u26A0\uFE0F <strong>\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0623\u0645\u0646\u064A\u0629 \u0648\u0625\u0644\u0632\u0627\u0645\u064A\u0629:</strong><br>
-                            \u2022 \u062D\u0645\u0644 \u0647\u0630\u0627 \u0627\u0644\u0643\u0627\u0631\u062A \u0628\u0635\u0641\u0629 \u0638\u0627\u0647\u0631\u0629 \u0637\u0648\u0627\u0644 \u0627\u0644\u0632\u064A\u0627\u0631\u0629.<br>
-                            \u2022 \u0627\u0644\u0627\u0644\u062A\u0632\u0627\u0645 \u0628\u0627\u0631\u062A\u062F\u0627\u0621 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 (PPE).<br>
-                            \u2022 \u064A\u064F\u0645\u0646\u0639 \u0627\u0644\u062A\u062D\u0631\u0643 \u0627\u0644\u0641\u0631\u062F\u064A \u0628\u062F\u0648\u0646 \u0645\u0631\u0627\u0641\u0642 \u0631\u0633\u0645\u064A.<br>
-                            \u2022 \u064A\u064F\u0633\u0644\u0651\u0645 \u0647\u0630\u0627 \u0627\u0644\u0643\u0627\u0631\u062A \u0644\u0644\u0628\u0648\u0627\u0628\u0629 \u0639\u0646\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C.
+                    <!-- Modal Body -->
+                    <div style="padding: 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                            <div>
+                                <label style="font-size: 0.85rem; font-weight: 800; color: #1e3a8a; display: block; margin-bottom: 4px;">\u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A \u0645\u0648\u0642\u0639 \u0627\u0644\u0645\u0635\u0646\u0639 (GPS Coordinates):</label>
+                                <input type="text" id="editMapCoords" value="${t.coords}" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-size: 0.88rem;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85rem; font-weight: 800; color: #1e3a8a; display: block; margin-bottom: 4px;">\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A:</label>
+                                <input type="text" id="editSiteName" value="${t.siteName}" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-size: 0.88rem;">
+                            </div>
+                        </div>
+
+                        <!-- \u0642\u0627\u0626\u0645\u0629 \u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639 -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 900; color: #15803d; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fas fa-flag"></i> \u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639 \u0627\u0644\u0645\u0639\u0631\u0641\u0629 (Muster Points)
+                                </h4>
+                                <button type="button" onclick="GateSecurity.addEditorMusterPoint()" style="background: #15803d; color: #fff; border: none; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 0.78rem; cursor: pointer;">
+                                    + \u0625\u0636\u0627\u0641\u0629 \u0646\u0642\u0637\u0629 \u062A\u062C\u0645\u0639 \u062C\u062F\u064A\u062F\u0629
+                                </button>
+                            </div>
+                            <div id="musterPointsList" style="display: flex; flex-direction: column; gap: 8px;">
+                                ${t.musterPoints.map((e,o)=>`
+                                    <div class="mp-item-row" style="display: grid; grid-template-columns: 80px 1fr 70px 70px 40px; gap: 8px; align-items: center; background: #fff; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                                        <input type="text" class="mp-name" value="${e.name}" style="padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: 800; font-size: 0.8rem;">
+                                        <input type="text" class="mp-desc" value="${e.desc}" style="padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem;">
+                                        <div><span style="font-size: 0.7rem; color: #64748b;">X:</span> <input type="number" class="mp-x" value="${e.x}" style="width: 45px; padding: 3px; font-size: 0.78rem;"></div>
+                                        <div><span style="font-size: 0.7rem; color: #64748b;">Y:</span> <input type="number" class="mp-y" value="${e.y}" style="width: 45px; padding: 3px; font-size: 0.78rem;"></div>
+                                        <button type="button" onclick="this.closest('.mp-item-row').remove()" style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; padding: 3px 6px; font-size: 0.75rem;">\u2715</button>
+                                    </div>
+                                `).join("")}
+                            </div>
+                        </div>
+
+                        <!-- \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0628\u0627\u0646\u064A \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 10px; font-size: 0.95rem; font-weight: 900; color: #1e3a8a; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-building"></i> \u0627\u0644\u0645\u0628\u0627\u0646\u064A \u0648\u0627\u0644\u0645\u0631\u0627\u0641\u0642 \u0627\u0644\u0645\u0635\u0645\u0645\u0629 \u0639\u0644\u0649 \u0627\u0644\u062E\u0631\u064A\u0637\u0629
+                            </h4>
+                            <div id="buildingsList" style="display: flex; flex-direction: column; gap: 8px;">
+                                ${t.buildings.map((e,o)=>`
+                                    <div class="bldg-item-row" style="display: grid; grid-template-columns: 140px 1fr 60px 60px 40px; gap: 8px; align-items: center; background: #fff; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                                        <input type="text" class="bldg-name" value="${e.name}" style="padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: 800; font-size: 0.8rem;">
+                                        <input type="text" class="bldg-sub" value="${e.sub||""}" style="padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem;">
+                                        <div><span style="font-size: 0.7rem; color: #64748b;">X:</span> <input type="number" class="bldg-x" value="${e.x}" style="width: 40px; padding: 3px; font-size: 0.78rem;"></div>
+                                        <div><span style="font-size: 0.7rem; color: #64748b;">Y:</span> <input type="number" class="bldg-y" value="${e.y}" style="width: 40px; padding: 3px; font-size: 0.78rem;"></div>
+                                        <button type="button" onclick="this.closest('.bldg-item-row').remove()" style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; padding: 3px 6px; font-size: 0.75rem;">\u2715</button>
+                                    </div>
+                                `).join("")}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div style="background: #f1f5f9; padding: 14px 20px; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0;">
+                        <button type="button" onclick="GateSecurity.resetMapConfigToDefault()" style="background: #cbd5e1; color: #334155; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; cursor: pointer;">
+                            <i class="fas fa-rotate-left"></i> \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062E\u0637\u0637 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A
+                        </button>
+
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" onclick="document.getElementById('mapEditorModal').remove()" style="background: #ffffff; border: 1.5px solid #cbd5e1; color: #475569; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; cursor: pointer;">\u0625\u0644\u063A\u0627\u0621</button>
+                            <button type="button" onclick="GateSecurity.saveEditorMapConfig()" style="background: #15803d; color: #ffffff; border: none; padding: 8px 20px; border-radius: 8px; font-weight: 900; font-size: 0.88rem; cursor: pointer; box-shadow: 0 4px 12px rgba(21,128,61,0.25);">
+                                <i class="fas fa-save"></i> \u062D\u0641\u0638 \u0627\u0644\u0645\u062E\u0637\u0637 \u0648\u0627\u0639\u062A\u0645\u0627\u062F\u0647 \u0644\u0644\u0637\u0628\u0627\u0639\u0629
+                            </button>
                         </div>
                     </div>
                 </div>
-
-                <div class="badge-bottom-footer">
-                    <div>\u0643\u0648\u062F: <strong>DOC-SEC-VIS-PASS-01</strong></div>
-                    <div>\u062E\u062A\u0645 / \u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0628\u0648\u0627\u0628\u0629: ....................</div>
-                </div>
             </div>
-        `;e.document.write(`
+        `;document.body.insertAdjacentHTML("beforeend",i)}addEditorMusterPoint(){const t=document.getElementById("musterPointsList");if(!t)return;const e=`
+            <div class="mp-item-row" style="display: grid; grid-template-columns: 80px 1fr 70px 70px 40px; gap: 8px; align-items: center; background: #fff; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                <input type="text" class="mp-name" value="\u0646\u0642\u0637\u0629 ${t.querySelectorAll(".mp-item-row").length+1}" style="padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: 800; font-size: 0.8rem;">
+                <input type="text" class="mp-desc" value="\u0645\u0648\u0642\u0639 \u0646\u0642\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u0639 \u0627\u0644\u062C\u062F\u064A\u062F\u0629" style="padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem;">
+                <div><span style="font-size: 0.7rem; color: #64748b;">X:</span> <input type="number" class="mp-x" value="200" style="width: 45px; padding: 3px; font-size: 0.78rem;"></div>
+                <div><span style="font-size: 0.7rem; color: #64748b;">Y:</span> <input type="number" class="mp-y" value="200" style="width: 45px; padding: 3px; font-size: 0.78rem;"></div>
+                <button type="button" onclick="this.closest('.mp-item-row').remove()" style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; padding: 3px 6px; font-size: 0.75rem;">\u2715</button>
+            </div>
+        `;t.insertAdjacentHTML("beforeend",e)}saveEditorMapConfig(){const t=document.getElementById("editMapCoords").value||`30\xB024'12.4"N 31\xB018'45.2"E`,i=document.getElementById("editSiteName").value||"\u0645\u062C\u0645\u0639 \u0645\u0635\u0627\u0646\u0639 ICAPP",e=[];document.querySelectorAll("#musterPointsList .mp-item-row").forEach((a,d)=>{e.push({id:`m${d+1}`,name:a.querySelector(".mp-name").value||`\u0646\u0642\u0637\u0629 ${d+1}`,desc:a.querySelector(".mp-desc").value||"",x:parseInt(a.querySelector(".mp-x").value)||200,y:parseInt(a.querySelector(".mp-y").value)||200})});const o=[];document.querySelectorAll("#buildingsList .bldg-item-row").forEach((a,d)=>{o.push({name:a.querySelector(".bldg-name").value||`\u0645\u0628\u0646\u0649 ${d+1}`,sub:a.querySelector(".bldg-sub").value||"",x:parseInt(a.querySelector(".bldg-x").value)||50,y:parseInt(a.querySelector(".bldg-y").value)||50,w:120,h:60,fill:"#dbeafe",stroke:"#1d4ed8",color:"#1e3a8a"})});const s={coords:t,siteName:i,musterPoints:e,buildings:o,exits:[{id:"e1",name:"\u0628\u0648\u0627\u0628\u0629 \u0631\u0626\u064A\u0633\u064A\u0629",x:18,y:135}]};this.saveMapConfig(s);const n=document.getElementById("mapEditorModal");n&&n.remove()}resetMapConfigToDefault(){if(confirm("\u0647\u0644 \u0623\u0646\u062A \u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062E\u0637\u0637 \u0627\u0644\u0647\u064A\u0643\u0644\u064A \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0644\u0644\u062E\u0631\u064A\u0637\u0629 \u0648\u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639\u061F")){localStorage.removeItem("icapp_visitor_map_config"),alert("\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062E\u0637\u0637 \u0627\u0644\u0647\u064A\u0643\u0644\u064A \u0644\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A.");const t=document.getElementById("mapEditorModal");t&&t.remove()}}printMasterVisitorBadges(t){const i=this.getGatePortalUrl(),e=this.getMapConfig(),o=this.visitors.length||0,s=t||`VIS-${new Date().getFullYear()}-${(o+1).toString().padStart(3,"0")}`,n=window.open("","_blank");if(!n){alert("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0637\u0628\u0627\u0639\u0629 \u0643\u0627\u0631\u062A \u0648\u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0632\u0627\u0626\u0631\u064A\u0646 (Pop-ups)");return}const a=e.musterPoints.map(r=>`
+            <g transform="translate(${r.x}, ${r.y})">
+                <rect x="-24" y="-14" width="48" height="28" rx="4" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+                <text x="0" y="3" font-size="9.5" font-weight="900" fill="#ffffff" text-anchor="middle" font-family="Segoe UI">${r.name}</text>
+            </g>
+        `).join(""),d=e.buildings.map(r=>`
+            <rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="4" fill="${r.fill}" stroke="${r.stroke}" stroke-width="2"/>
+            <text x="${r.x+r.w/2}" y="${r.y+r.h/2-(r.sub?6:0)}" font-size="11.5" font-weight="900" fill="${r.color}" text-anchor="middle" font-family="Segoe UI">${r.name}</text>
+            ${r.sub?`<text x="${r.x+r.w/2}" y="${r.y+r.h/2+12}" font-size="8.5" font-weight="700" fill="${r.stroke}" text-anchor="middle" font-family="Segoe UI">${r.sub}</text>`:""}
+        `).join("");n.document.write(`
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
                 <meta charset="UTF-8">
-                <title>\u0646\u0645\u0627\u0630\u062C \u0643\u0631\u0648\u062A \u0648\u0634\u0627\u0631\u0627\u062A \u0627\u0644\u0632\u0648\u0627\u0631 \u0627\u0644\u0639\u0627\u0645\u0629 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 - ICAPP</title>
+                <title>\u0643\u0627\u0631\u062A \u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0632\u0627\u0626\u0631\u064A\u0646 \u0648\u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639 - ICAPP Safety Rules & Assembly Points</title>
                 <style>
                     @page {
-                        size: A4 portrait;
-                        margin: 8mm 8mm 8mm 8mm;
+                        size: A4 landscape;
+                        margin: 5mm 5mm 5mm 5mm;
                     }
                     * { box-sizing: border-box; }
                     body {
                         font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
                         margin: 0;
-                        padding: 10px;
+                        padding: 6px;
                         direction: rtl;
-                        color: #0f172a;
-                        background: #f8fafc;
+                        color: #000000;
+                        background: #f1f5f9;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
-                    .sheet-wrapper {
+                    .card-container {
+                        width: 100%;
+                        max-width: 287mm;
+                        margin: 0 auto;
                         display: grid;
                         grid-template-columns: 1fr 1fr;
-                        gap: 12px;
-                        max-width: 210mm;
-                        margin: 0 auto;
-                    }
-                    .visitor-master-badge {
+                        gap: 10px;
                         background: #ffffff;
-                        border: 2px dashed #64748b;
-                        border-radius: 12px;
+                        border: 2.5px solid #1e3a8a;
+                        padding: 8px;
+                        min-height: 190mm;
+                    }
+                    
+                    /* ======================================================== */
+                    /* \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0623\u064A\u0633\u0631: \u0631\u0633\u0645 \u062A\u0648\u0636\u064A\u062D\u064A \u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639 (ASSEMBLY POINT) */
+                    /* ======================================================== */
+                    .left-panel {
+                        border: 2px solid #0f172a;
+                        border-radius: 4px;
+                        padding: 8px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        background: #ffffff;
+                    }
+                    .left-header {
+                        text-align: center;
+                        margin-bottom: 6px;
+                        border-bottom: 2px solid #0f172a;
+                        padding-bottom: 4px;
+                    }
+                    .left-header h2 {
+                        margin: 0;
+                        font-size: 18px;
+                        font-weight: 900;
+                        color: #000000;
+                    }
+                    .left-header h3 {
+                        margin: 1px 0 0;
+                        font-size: 13px;
+                        font-weight: 800;
+                        color: #000000;
+                        letter-spacing: 1px;
+                    }
+                    
+                    .map-canvas-container {
+                        flex: 1;
+                        border: 1.5px dashed #475569;
+                        border-radius: 6px;
+                        background: #f8fafc;
+                        position: relative;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        padding: 8px;
+                        min-height: 132mm;
+                    }
+                    .schematic-map {
+                        width: 100%;
+                        height: 100%;
+                        max-height: 128mm;
+                    }
+                    .map-legend-bar {
+                        display: flex;
+                        justify-content: space-around;
+                        align-items: center;
+                        background: #e2e8f0;
+                        border: 1px solid #94a3b8;
+                        border-radius: 4px;
+                        padding: 4px 8px;
+                        font-size: 9px;
+                        font-weight: 800;
+                        margin-top: 4px;
+                        flex-wrap: wrap;
+                        gap: 6px;
+                    }
+                    .legend-item {
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                    }
+                    .legend-color {
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 2px;
+                    }
+                    .site-coordinates-box {
+                        font-size: 8.5px;
+                        color: #334155;
+                        text-align: center;
+                        margin-top: 4px;
+                        font-weight: 700;
+                        direction: ltr;
+                    }
+
+                    /* ======================================================== */
+                    /* \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0623\u064A\u0645\u0646: \u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0632\u0627\u0626\u0631\u064A\u0646 (SAFETY RULES VISITORS) */
+                    /* ======================================================== */
+                    .right-panel {
+                        border: 2px solid #1e3a8a;
+                        border-radius: 4px;
                         overflow: hidden;
                         display: flex;
                         flex-direction: column;
                         justify-content: space-between;
-                        padding: 0;
-                        min-height: 128mm;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-                        position: relative;
-                    }
-                    .lanyard-hole {
-                        width: 14mm;
-                        height: 3mm;
-                        background: #e2e8f0;
-                        border: 1px dashed #64748b;
-                        border-radius: 3px;
-                        margin: 3px auto 1px;
-                    }
-                    .badge-top-header {
-                        background: #1e3a8a;
-                        color: #ffffff;
-                        padding: 6px 10px;
-                        text-align: center;
-                        border-bottom: 3px solid #059669;
-                    }
-                    .badge-top-brand {
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        margin-bottom: 3px;
-                    }
-                    .badge-mini-logo {
-                        max-height: 26px;
-                        max-width: 65px;
-                        object-fit: contain;
                         background: #ffffff;
-                        padding: 1px 4px;
-                        border-radius: 3px;
                     }
-                    .badge-dept-text {
-                        font-size: 8.5px;
-                        font-weight: 800;
-                        color: #93c5fd;
-                        text-align: left;
+                    .right-header-top {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 6px 10px;
+                        border-bottom: 2px solid #1e3a8a;
+                        background: #ffffff;
                     }
-                    .badge-type-banner {
-                        font-size: 11.5px;
-                        font-weight: 900;
-                        margin-top: 2px;
+                    .brand-logo-img {
+                        max-height: 38px;
+                        max-width: 110px;
+                        object-fit: contain;
                     }
-                    .badge-number-box {
-                        background: #0f172a;
+
+                    /* \u0627\u0644\u0635\u0646\u062F\u0648\u0642 \u0627\u0644\u0623\u0632\u0631\u0642 \u0627\u0644\u0631\u0626\u064A\u0633\u064A \u0645\u0639 \u0627\u0644\u0641\u0635\u0644 \u0627\u0644\u062A\u0627\u0645 RTL / LTR */
+                    .blue-priority-banner {
+                        background: #1e40af;
                         color: #ffffff;
                         padding: 5px 10px;
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
                     }
-                    .badge-lbl {
-                        font-size: 9.5px;
-                        color: #94a3b8;
-                        font-weight: 700;
-                    }
-                    .badge-val {
-                        font-size: 15px;
+                    .blue-text-ar {
+                        text-align: right;
+                        direction: rtl;
+                        font-size: 10.5px;
                         font-weight: 900;
-                        color: #34d399;
-                        font-family: 'Courier New', monospace;
-                        letter-spacing: 1px;
+                        line-height: 1.25;
+                        width: 48%;
                     }
-                    .badge-body-content {
-                        padding: 8px 10px;
-                        flex: 1;
-                        display: flex;
-                        flex-direction: column;
-                        gap: 4px;
-                    }
-                    .badge-line-row {
-                        display: flex;
-                        align-items: center;
+                    .blue-text-en {
+                        text-align: left;
+                        direction: ltr;
                         font-size: 9px;
-                        margin-bottom: 2px;
-                    }
-                    .line-key {
                         font-weight: 800;
-                        color: #1e3a8a;
-                        width: 75px;
-                        flex-shrink: 0;
+                        line-height: 1.2;
+                        width: 48%;
                     }
-                    .line-dots {
-                        color: #94a3b8;
-                        font-size: 8.5px;
-                        overflow: hidden;
-                        white-space: nowrap;
-                    }
-                    .badge-mid-qr-row {
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                        background: #f8fafc;
-                        border: 1px solid #cbd5e1;
-                        border-radius: 6px;
-                        padding: 5px;
-                        margin-top: 4px;
-                    }
-                    .badge-qr-pic {
-                        width: 52px;
-                        height: 52px;
-                        border: 1px solid #94a3b8;
-                        border-radius: 4px;
-                        flex-shrink: 0;
-                    }
-                    .badge-rules-list {
-                        font-size: 7.5px;
-                        color: #334155;
-                        line-height: 1.3;
-                    }
-                    .badge-bottom-footer {
-                        background: #f1f5f9;
-                        border-top: 1px solid #cbd5e1;
-                        padding: 4px 8px;
+
+                    /* \u0642\u0633\u0645 \u062D\u0638\u0631 \u0627\u0644\u062A\u062F\u062E\u064A\u0646 */
+                    .smoking-section {
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                        font-size: 8px;
-                        color: #475569;
-                        font-weight: 700;
+                        padding: 5px 8px;
+                        border-bottom: 1.5px solid #cbd5e1;
+                        gap: 6px;
                     }
-                    .print-btn-wrap {
+                    .smoke-ar {
+                        font-size: 9.5px;
+                        direction: rtl;
+                        text-align: right;
+                        line-height: 1.25;
+                        font-weight: 800;
+                        width: 42%;
+                        color: #000000;
+                    }
+                    .smoke-icon-box {
+                        width: 44px;
+                        height: 44px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .smoke-en {
+                        font-size: 8.5px;
+                        direction: ltr;
+                        text-align: left;
+                        line-height: 1.2;
+                        font-weight: 700;
+                        width: 42%;
+                        color: #000000;
+                    }
+
+                    /* \u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 (\u0627\u0644\u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0627\u0644\u062F\u0627\u0626\u0631\u064A\u0629) */
+                    .basic-rules-section {
+                        padding: 4px 6px;
+                        border-bottom: 1.5px solid #cbd5e1;
+                    }
+                    .basic-rules-header {
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 10px;
+                        font-weight: 900;
+                        color: #000000;
+                        margin-bottom: 4px;
+                        padding: 0 4px;
+                    }
+                    .rules-icons-row {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 2px 4px;
+                    }
+                    .rule-circle-icon {
+                        width: 32px;
+                        height: 32px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+
+                    /* \u0634\u0631\u064A\u0637 \u0633\u0627\u0631\u064A\u0646\u0629 \u0627\u0644\u0625\u0646\u0630\u0627\u0631 \u0627\u0644\u0623\u062D\u0645\u0631 \u0648\u0627\u0644\u062E\u0637\u0648\u0627\u062A \u0627\u0644\u0635\u0641\u0631\u0627\u0621 \u0627\u0644\u062B\u0644\u0627\u062B */
+                    .siren-section {
+                        border-bottom: 1.5px solid #cbd5e1;
+                    }
+                    .siren-red-bar {
+                        background: #dc2626;
+                        color: #ffffff;
+                        padding: 4px 8px;
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 10.5px;
+                        font-weight: 900;
+                    }
+                    .siren-steps-container {
+                        background: #facc15;
+                        padding: 4px 6px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 3px;
+                    }
+                    .siren-step-row {
+                        display: grid;
+                        grid-template-columns: 1fr 40px 1fr;
+                        align-items: center;
+                        gap: 4px;
+                        background: #eab308;
+                        padding: 2px 6px;
+                        border-radius: 3px;
+                    }
+                    .s-text-ar {
+                        font-size: 9.5px;
+                        font-weight: 900;
+                        direction: rtl;
+                        text-align: right;
+                        color: #000000;
+                    }
+                    .s-icon-center {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .s-text-en {
+                        font-size: 8.5px;
+                        font-weight: 800;
+                        direction: ltr;
+                        text-align: left;
+                        color: #000000;
+                    }
+
+                    /* \u0642\u0633\u0645 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629 PPE */
+                    .ppe-section {
+                        padding: 4px 6px;
+                        border-bottom: 1.5px solid #cbd5e1;
+                    }
+                    .ppe-header-texts {
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 9px;
+                        font-weight: 800;
+                        color: #000000;
+                        margin-bottom: 4px;
+                        padding: 0 2px;
+                    }
+                    .ppe-icons-row {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 0 4px;
+                    }
+                    .ppe-icon-circle {
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 50%;
+                        background: #0f172a;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #ffffff;
+                    }
+
+                    /* \u0641\u0648\u062A\u0631 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0648\u0627\u0644\u0627\u062A\u0635\u0627\u0644 */
+                    .emergency-footer {
+                        padding: 4px 8px 6px;
                         text-align: center;
-                        margin-top: 14px;
+                    }
+                    .emergency-top-row {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        font-size: 11px;
+                        font-weight: 900;
+                        color: #000000;
+                        margin-bottom: 2px;
+                    }
+                    .phone-icons-box {
+                        display: flex;
+                        gap: 6px;
+                    }
+                    .phone-pill {
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 4px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #ffffff;
+                        font-size: 13px;
+                    }
+                    .emergency-call-line {
+                        font-size: 10px;
+                        font-weight: 900;
+                        color: #000000;
+                        margin-top: 2px;
+                        direction: rtl;
+                    }
+
+                    /* \u0623\u062F\u0648\u0627\u062A \u0627\u0644\u062A\u062D\u0643\u0645 \u0627\u0644\u0639\u0644\u0648\u064A\u0629 \u0644\u0644\u0637\u0628\u0627\u0639\u0629 \u0648\u0627\u0644\u062A\u0633\u0644\u0633\u0644 */
+                    .toolbar-top {
+                        background: #ffffff;
+                        border: 1px solid #cbd5e1;
+                        border-radius: 8px;
+                        padding: 8px 14px;
+                        margin-bottom: 8px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        flex-wrap: wrap;
+                        gap: 8px;
                     }
                     @media print {
-                        body {
-                            background: #ffffff;
-                            padding: 0;
-                        }
-                        .print-btn-wrap {
-                            display: none !important;
-                        }
+                        .toolbar-top { display: none !important; }
+                        body { padding: 0; background: #ffffff; }
+                        .card-container { min-height: 98vh; max-width: 100%; border: 2px solid #1e3a8a; }
                     }
                 </style>
             </head>
             <body>
-                <div style="text-align: center; margin-bottom: 8px;" class="print-btn-wrap">
-                    <span style="font-size: 12px; font-weight: 800; color: #1e40af;">\u{1F4C4} \u0635\u0641\u062D\u0629 \u0643\u0631\u0648\u062A \u0648\u0634\u0627\u0631\u0627\u062A \u0627\u0644\u0632\u0648\u0627\u0631 \u0627\u0644\u0639\u0627\u0645\u0629 (A4 Sheet - 4 Badges) \u2014 \u0642\u0645 \u0628\u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0648\u0627\u0644\u0642\u0635 \u0648\u0627\u0644\u062A\u063A\u0644\u064A\u0641 \u0627\u0644\u062D\u0631\u0627\u0631\u064A \u0644\u0644\u062A\u0633\u0644\u064A\u0645 \u0627\u0644\u064A\u062F\u0648\u064A</span>
+                <div class="toolbar-top">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a;">\u062A\u0633\u0644\u0633\u0644 \u0627\u0644\u0643\u0627\u0631\u062A:</span>
+                        <input type="text" id="badgeSerialInput" value="${s}" style="padding: 4px 8px; border-radius: 6px; border: 1.5px solid #059669; font-weight: 900; font-size: 12px; color: #047857; width: 140px; font-family: monospace;" oninput="document.getElementById('badgeSerialBox').textContent = 'Badge: ' + this.value">
+
+                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 10px;">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639:</span>
+                        <select id="siteSelect" onchange="updateSiteMap(this.value)" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #94a3b8; font-weight: 700; font-size: 12px;">
+                            <option value="\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645" selected>${e.siteName}</option>
+                            <option value="ICAPP-1">\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A (ICAPP-1)</option>
+                            <option value="ICAPP-2">\u0645\u0635\u0646\u0639 \u0627\u0644\u062A\u062C\u0645\u064A\u062F (ICAPP-2)</option>
+                            <option value="ICAPP-3">\u0645\u0635\u0646\u0639 \u0627\u0644\u0645\u0631\u0643\u0632\u0627\u062A (ICAPP-3)</option>
+                            <option value="ICAPP-4">\u0645\u062D\u0637\u0629 \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629 \u0648\u0627\u0644\u0637\u0627\u0642\u0629 (ICAPP-4)</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" id="customCoords" value="${e.coords}" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 11px; width: 220px;" oninput="document.getElementById('displayCoords').textContent = '\u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0642\u0639: ' + this.value + ' | DOC-HSE-MAP-01 Rev.02'">
+                        <button onclick="window.print()" style="padding: 6px 18px; background: #1e40af; color: #fff; border:none; border-radius:6px; cursor:pointer; font-weight: 900; font-size: 12px; box-shadow: 0 2px 6px rgba(30,64,175,0.25);">\u{1F5A8}\uFE0F \u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0643\u0627\u0631\u062A \u0627\u0644\u0622\u0646</button>
+                    </div>
                 </div>
 
-                <div class="sheet-wrapper">
-                    ${o(1)}
-                    ${o(2)}
-                    ${o(3)}
-                    ${o(4)}
+                <div class="card-container">
+                    <!-- \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0623\u064A\u0633\u0631: \u0631\u0633\u0645 \u062A\u0648\u0636\u064A\u062D\u064A \u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639 -->
+                    <div class="left-panel">
+                        <div class="left-header">
+                            <h2>\u0631\u0633\u0645 \u062A\u0648\u0636\u064A\u062D\u064A \u0644\u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639</h2>
+                            <h3>ASSEMBLY POINT</h3>
+                        </div>
+
+                        <div class="map-canvas-container">
+                            <svg class="schematic-map" viewBox="0 0 500 360" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="10" width="480" height="340" rx="8" fill="#f1f5f9" stroke="#334155" stroke-width="2.5" stroke-dasharray="6,4"/>
+                                <rect x="20" y="20" width="460" height="320" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+                                <rect x="35" y="35" width="430" height="290" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+
+                                <!-- \u0627\u0644\u0645\u0628\u0627\u0646\u064A \u0648\u0627\u0644\u0645\u0631\u0627\u0641\u0642 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 \u0645\u0646 \u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 -->
+                                ${d}
+
+                                <!-- \u0645\u0633\u0627\u0631\u0627\u062A \u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0627\u0644\u062E\u0636\u0631\u0627\u0621 -->
+                                <path d="M 110 110 L 110 150 L 190 150" stroke="#16a34a" stroke-width="3.5" fill="none" stroke-dasharray="6,3"/>
+                                <path d="M 270 170 L 270 190" stroke="#16a34a" stroke-width="3.5" fill="none" stroke-dasharray="6,3"/>
+                                <path d="M 350 110 L 370 110" stroke="#16a34a" stroke-width="3.5" fill="none" stroke-dasharray="6,3"/>
+                                <path d="M 270 305 L 270 325" stroke="#16a34a" stroke-width="3.5" fill="none" stroke-dasharray="6,3"/>
+                                <path d="M 50 150 L 35 150" stroke="#16a34a" stroke-width="3.5" fill="none" stroke-dasharray="6,3"/>
+
+                                <!-- \u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639 \u0627\u0644\u0645\u0635\u0645\u0645\u0629 \u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0627\u064B -->
+                                ${a}
+
+                                <!-- \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0648\u0645\u062E\u0631\u062C\u0627\u062A \u0627\u0644\u0637\u0648\u0627\u0631\u0626 -->
+                                <rect x="18" y="135" width="16" height="30" fill="#dc2626" rx="2"/>
+                                <text x="26" y="154" font-size="8" font-weight="900" fill="#ffffff" text-anchor="middle" transform="rotate(-90 26 154)" font-family="Segoe UI">\u0628\u0648\u0627\u0628\u0629</text>
+
+                                <!-- \u0628\u0648\u0635\u0644\u0629 \u0627\u0644\u0634\u0645\u0627\u0644 -->
+                                <g transform="translate(450, 45)">
+                                    <circle cx="0" cy="0" r="14" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+                                    <polygon points="0,-12 4,0 0,-2 -4,0" fill="#dc2626"/>
+                                    <polygon points="0,12 4,0 0,2 -4,0" fill="#0f172a"/>
+                                    <text x="0" y="-15" font-size="9" font-weight="900" fill="#dc2626" text-anchor="middle">N</text>
+                                </g>
+                            </svg>
+                        </div>
+
+                        <div class="map-legend-bar">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #15803d;"></div>
+                                <span>\u0646\u0642\u0637\u0629 \u062A\u062C\u0645\u0639 (Muster Point)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #16a34a;"></div>
+                                <span>\u0645\u0633\u0627\u0631 \u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0627\u0644\u0622\u0645\u0646 \u2794</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #dc2626;"></div>
+                                <span>\u0628\u0648\u0627\u0628\u0627\u062A \u0648\u0645\u062E\u0627\u0631\u062C \u0627\u0644\u0637\u0648\u0627\u0631\u0626</span>
+                            </div>
+                        </div>
+
+                        <div class="site-coordinates-box" id="displayCoords">
+                            \u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0642\u0639: ${e.coords} | DOC-HSE-MAP-01 Rev.02
+                        </div>
+                    </div>
+
+                    <!-- \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0623\u064A\u0645\u0646: \u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0632\u0627\u0626\u0631\u064A\u0646 -->
+                    <div class="right-panel">
+                        <!-- \u062A\u0631\u0648\u064A\u0633\u0629 \u0627\u0644\u0643\u0627\u0631\u062A \u0645\u0639 \u0634\u0639\u0627\u0631 \u0627\u0644\u0634\u0631\u0643\u0629 \u0648\u0627\u0644\u062A\u0633\u0644\u0633\u0644 -->
+                        <div class="right-header-top">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <img src="icons/icapp-logo.png" alt="ICAPP Logo" class="brand-logo-img" onerror="this.src='../icons/icapp-logo.png';">
+                                <div style="text-align: right; direction: rtl;">
+                                    <div style="font-size: 17px; font-weight: 900; color: #000000;">\u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0632\u0627\u0626\u0631\u064A\u0646</div>
+                                    <div style="font-size: 9.5px; font-weight: 800; color: #1e3a8a;">\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0623\u0645\u0646</div>
+                                </div>
+                            </div>
+                            <div style="text-align: left; direction: ltr;">
+                                <div style="font-size: 13px; font-weight: 900; color: #000000;">SAFETY RULES VISITORS</div>
+                                <div id="badgeSerialBox" style="font-size: 11px; font-weight: 900; color: #047857; font-family: monospace; background: #ecfdf5; border: 1.5px solid #a7f3d0; padding: 2px 8px; border-radius: 6px; margin-top: 2px; display: inline-block;">
+                                    Badge: ${s}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- \u0627\u0644\u0635\u0646\u062F\u0648\u0642 \u0627\u0644\u0623\u0632\u0631\u0642 \u0627\u0644\u0631\u0626\u064A\u0633\u064A \u0645\u0639 \u0627\u0644\u062A\u0648\u062C\u064A\u0647 \u0627\u0644\u0645\u0636\u0628\u0648\u0637 LTR / RTL -->
+                        <div class="blue-priority-banner">
+                            <div class="blue-text-ar">
+                                <strong>\u0639\u0632\u064A\u0632\u064A \u0627\u0644\u0632\u0627\u0626\u0631 \u0633\u0644\u0627\u0645\u062A\u0643 \u062A\u0647\u0645\u0646\u0627</strong><br>
+                                \u064A\u0631\u062C\u0649 \u0625\u062A\u0628\u0627\u0639 \u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0645\u0648\u0636\u062D\u0629
+                            </div>
+                            <div class="blue-text-en">
+                                <strong>YOUR SAFETY IS OF OUR PRIORITY</strong><br>
+                                All visitors are kindly requested to follow the safety instructions here
+                            </div>
+                        </div>
+
+                        <!-- \u0642\u0633\u0645 \u0627\u0644\u062A\u062F\u062E\u064A\u0646 -->
+                        <div class="smoking-section">
+                            <div class="smoke-ar">
+                                \u0627\u0644\u062A\u062F\u062E\u064A\u0646 \u063A\u064A\u0631 \u0645\u0633\u0645\u0648\u062D \u0628\u0647 \u0646\u0647\u0627\u0626\u064A\u0627\u064B \u062F\u0627\u062E\u0644 \u0623\u0645\u0627\u0643\u0646 \u0627\u0644\u0639\u0645\u0644 \u0628\u0625\u0633\u062A\u062B\u0646\u0627\u0621 \u0627\u0644\u0623\u0645\u0627\u0643\u0646 \u0627\u0644\u0645\u062E\u0635\u0635\u0629 \u0648\u0627\u0644\u062A\u064A \u062A\u0645 \u062A\u062C\u0647\u064A\u0632\u0647\u0627 \u0644\u0630\u0644\u0643.
+                            </div>
+                            <div class="smoke-icon-box">
+                                <svg width="40" height="40" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="#dc2626" stroke-width="8"/>
+                                    <line x1="20" y1="20" x2="80" y2="80" stroke="#dc2626" stroke-width="8"/>
+                                    <rect x="25" y="45" width="40" height="10" fill="#ffffff" stroke="#000" stroke-width="1.5"/>
+                                    <rect x="25" y="45" width="12" height="10" fill="#f59e0b"/>
+                                    <path d="M 68 43 Q 72 38 76 43 T 80 43" fill="none" stroke="#64748b" stroke-width="2"/>
+                                    <path d="M 70 57 Q 74 52 78 57 T 82 57" fill="none" stroke="#64748b" stroke-width="2"/>
+                                </svg>
+                            </div>
+                            <div class="smoke-en">
+                                Smoking is prohibited throughout the plant premises except in specially dedicated and adapted areas.
+                            </div>
+                        </div>
+
+                        <!-- \u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 7 \u0623\u064A\u0642\u0648\u0646\u0627\u062A \u062F\u0627\u0626\u0631\u064A\u0629 -->
+                        <div class="basic-rules-section">
+                            <div class="basic-rules-header">
+                                <span style="direction: rtl; text-align: right;">\u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629</span>
+                                <span style="direction: ltr; text-align: left;">SAFETY BASIC RULES</span>
+                            </div>
+
+                            <div class="rules-icons-row">
+                                <!-- \u0645\u0645\u0631 \u0645\u0634\u0627\u0629 -->
+                                <div class="rule-circle-icon" title="Pedestrian Walkway">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="46" fill="#1d4ed8"/>
+                                        <circle cx="50" cy="30" r="7" fill="#ffffff"/>
+                                        <path d="M 45 42 L 55 42 L 58 60 L 65 75 L 58 75 L 53 62 L 48 75 L 42 75 L 47 56 L 40 60 Z" fill="#ffffff"/>
+                                    </svg>
+                                </div>
+                                <!-- \u0643\u0644\u0627\u0631\u0643\u0627\u062A -->
+                                <div class="rule-circle-icon" title="Forklift Caution">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <polygon points="50,15 88,80 12,80" fill="#facc15" stroke="#000" stroke-width="4"/>
+                                        <rect x="35" y="55" width="25" height="15" fill="#000"/>
+                                        <circle cx="42" cy="72" r="4" fill="#000"/>
+                                        <circle cx="56" cy="72" r="4" fill="#000"/>
+                                        <line x1="65" y1="45" x2="65" y2="72" stroke="#000" stroke-width="3"/>
+                                        <line x1="65" y1="70" x2="75" y2="70" stroke="#000" stroke-width="3"/>
+                                    </svg>
+                                </div>
+                                <!-- \u0633\u0631\u0639\u0629 20 -->
+                                <div class="rule-circle-icon" title="Speed Limit 20">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="44" fill="none" stroke="#dc2626" stroke-width="9"/>
+                                        <text x="50" y="52" font-size="28" font-weight="900" fill="#000" text-anchor="middle" font-family="Arial">20</text>
+                                        <text x="50" y="68" font-size="14" font-weight="900" fill="#000" text-anchor="middle" font-family="Arial">km/h</text>
+                                    </svg>
+                                </div>
+                                <!-- \u0623\u0633\u0644\u062D\u0629 \u0648\u0623\u062F\u0648\u0627\u062A \u062D\u0627\u062F\u0629 -->
+                                <div class="rule-circle-icon" title="No Weapons">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="44" fill="none" stroke="#dc2626" stroke-width="9"/>
+                                        <line x1="19" y1="19" x2="81" y2="81" stroke="#dc2626" stroke-width="9"/>
+                                        <path d="M 35 65 L 65 35 L 70 40 L 40 70 Z" fill="#000"/>
+                                    </svg>
+                                </div>
+                                <!-- \u062A\u0635\u0648\u064A\u0631 -->
+                                <div class="rule-circle-icon" title="No Photography">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="44" fill="none" stroke="#dc2626" stroke-width="9"/>
+                                        <line x1="19" y1="19" x2="81" y2="81" stroke="#dc2626" stroke-width="9"/>
+                                        <rect x="30" y="40" width="40" height="28" rx="4" fill="#000"/>
+                                        <circle cx="50" cy="54" r="8" fill="#fff"/>
+                                        <rect x="42" y="34" width="16" height="6" fill="#000"/>
+                                    </svg>
+                                </div>
+                                <!-- \u0643\u062D\u0648\u0644\u064A\u0627\u062A -->
+                                <div class="rule-circle-icon" title="No Alcohol">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="44" fill="none" stroke="#dc2626" stroke-width="9"/>
+                                        <line x1="19" y1="19" x2="81" y2="81" stroke="#dc2626" stroke-width="9"/>
+                                        <path d="M 40 35 L 60 35 L 53 52 L 53 68 L 62 68 L 62 72 L 38 72 L 38 68 L 47 68 L 47 52 Z" fill="#000"/>
+                                    </svg>
+                                </div>
+                                <!-- 18 \u0645\u0645\u0646\u0648\u0639 -->
+                                <div class="rule-circle-icon" title="No Minors">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="44" fill="none" stroke="#dc2626" stroke-width="9"/>
+                                        <line x1="19" y1="19" x2="81" y2="81" stroke="#dc2626" stroke-width="9"/>
+                                        <text x="50" y="60" font-size="34" font-weight="900" fill="#000" text-anchor="middle" font-family="Arial">18</text>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- \u0641\u064A \u062D\u0627\u0644\u0629 \u0633\u0645\u0627\u0639 \u0633\u0627\u0631\u064A\u0646\u0629 \u0627\u0644\u0625\u0646\u0630\u0627\u0631 -->
+                        <div class="siren-section">
+                            <div class="siren-red-bar">
+                                <span style="direction: rtl; text-align: right;">\u0641\u064A \u062D\u0627\u0644\u0629 \u0633\u0645\u0627\u0639 \u0633\u0627\u0631\u064A\u0646\u0629 \u0627\u0644\u0625\u0646\u0630\u0627\u0631 :</span>
+                                <span style="direction: ltr; text-align: left;">When you hear the emergency siren:</span>
+                            </div>
+
+                            <div class="siren-steps-container">
+                                <div class="siren-step-row">
+                                    <div class="s-text-ar">\u0661- \u0627\u062A\u0628\u0639 \u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0645\u0631\u0627\u0641\u0642 \u0644\u0643 \u0623\u0648 \u0631\u0626\u064A\u0633 \u0627\u0644\u0642\u0633\u0645</div>
+                                    <div class="s-icon-center">
+                                        <svg width="26" height="26" viewBox="0 0 100 100">
+                                            <rect width="100" height="100" fill="#dc2626" rx="6"/>
+                                            <circle cx="50" cy="50" r="16" fill="#ffffff"/>
+                                            <path d="M 28 35 A 25 25 0 0 1 28 65" fill="none" stroke="#ffffff" stroke-width="6"/>
+                                            <path d="M 72 35 A 25 25 0 0 0 72 65" fill="none" stroke="#ffffff" stroke-width="6"/>
+                                        </svg>
+                                    </div>
+                                    <div class="s-text-en">1- Follow your escort's instructions</div>
+                                </div>
+
+                                <div class="siren-step-row">
+                                    <div class="s-text-ar">\u0662- \u0625\u062A\u062C\u0647 \u0625\u0644\u0649 \u0623\u0642\u0631\u0628 \u0628\u0627\u0628 \u062E\u0631\u0648\u062C</div>
+                                    <div class="s-icon-center">
+                                        <svg width="34" height="26" viewBox="0 0 140 100">
+                                            <rect width="140" height="100" fill="#15803d" rx="6"/>
+                                            <path d="M 35 50 L 15 50 L 25 35 M 15 50 L 25 65" stroke="#ffffff" stroke-width="7" fill="none"/>
+                                            <circle cx="70" cy="30" r="9" fill="#ffffff"/>
+                                            <path d="M 60 45 L 80 45 L 85 65 L 95 85 L 85 85 L 75 68 L 65 85 L 55 85 L 68 60 L 58 55 Z" fill="#ffffff"/>
+                                            <rect x="100" y="20" width="25" height="60" fill="none" stroke="#ffffff" stroke-width="6"/>
+                                        </svg>
+                                    </div>
+                                    <div class="s-text-en">2- Go to the nearest exit door</div>
+                                </div>
+
+                                <div class="siren-step-row">
+                                    <div class="s-text-ar">\u0663- \u0625\u062A\u062C\u0647 \u0625\u0644\u0649 \u0623\u0642\u0631\u0628 \u0646\u0642\u0637\u0629 \u062A\u062C\u0645\u0639</div>
+                                    <div class="s-icon-center">
+                                        <svg width="26" height="26" viewBox="0 0 100 100">
+                                            <rect width="100" height="100" fill="#15803d" rx="6"/>
+                                            <circle cx="50" cy="38" r="7" fill="#ffffff"/>
+                                            <path d="M 42 50 L 58 50 L 58 68 L 42 68 Z" fill="#ffffff"/>
+                                            <path d="M 20 20 L 35 35 M 35 20 L 35 35 L 20 35" stroke="#ffffff" stroke-width="5" fill="none"/>
+                                            <path d="M 80 20 L 65 35 M 65 20 L 65 35 L 80 35" stroke="#ffffff" stroke-width="5" fill="none"/>
+                                            <path d="M 20 80 L 35 65 M 35 80 L 35 65 L 20 65" stroke="#ffffff" stroke-width="5" fill="none"/>
+                                            <path d="M 80 80 L 65 65 M 65 80 L 65 65 L 80 65" stroke="#ffffff" stroke-width="5" fill="none"/>
+                                        </svg>
+                                    </div>
+                                    <div class="s-text-en">3- Go to the nearest assembly point</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629 PPE -->
+                        <div class="ppe-section">
+                            <div class="ppe-header-texts">
+                                <span style="direction: rtl; text-align: right;">\u064A\u062C\u0628 \u0627\u0644\u0625\u0644\u062A\u0632\u0627\u0645 \u0628\u0625\u0631\u062A\u062F\u0627\u0621 \u0645\u0644\u0627\u0628\u0633 \u0648\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629 \u0644\u0623\u0645\u0627\u0643\u0646 \u0627\u0644\u0632\u064A\u0627\u0631\u0629</span>
+                                <span style="direction: ltr; text-align: left;">Use personal protective equipment suitable to the area you enter</span>
+                            </div>
+
+                            <div class="ppe-icons-row">
+                                <div class="ppe-icon-circle" title="Safety Boots">
+                                    <svg width="20" height="20" viewBox="0 0 100 100">
+                                        <path d="M 35 25 L 55 25 L 55 55 L 75 65 L 75 75 L 30 75 L 30 35 Z" fill="#fff"/>
+                                    </svg>
+                                </div>
+                                <div class="ppe-icon-circle" title="Safety Helmet">
+                                    <svg width="20" height="20" viewBox="0 0 100 100">
+                                        <path d="M 25 60 Q 25 25 50 25 Q 75 25 75 60 Z" fill="#fff"/>
+                                        <rect x="18" y="58" width="64" height="8" rx="3" fill="#fff"/>
+                                    </svg>
+                                </div>
+                                <div class="ppe-icon-circle" title="Ear Protection">
+                                    <svg width="20" height="20" viewBox="0 0 100 100">
+                                        <path d="M 25 55 Q 25 20 50 20 Q 75 20 75 55" fill="none" stroke="#fff" stroke-width="6"/>
+                                        <rect x="20" y="50" width="12" height="22" rx="4" fill="#fff"/>
+                                        <rect x="68" y="50" width="12" height="22" rx="4" fill="#fff"/>
+                                    </svg>
+                                </div>
+                                <div class="ppe-icon-circle" title="Dust Mask">
+                                    <svg width="20" height="20" viewBox="0 0 100 100">
+                                        <path d="M 25 45 Q 50 35 75 45 L 68 70 Q 50 80 32 70 Z" fill="#fff"/>
+                                        <line x1="25" y1="45" x2="10" y2="35" stroke="#fff" stroke-width="5"/>
+                                        <line x1="75" y1="45" x2="90" y2="35" stroke="#fff" stroke-width="5"/>
+                                    </svg>
+                                </div>
+                                <div class="ppe-icon-circle" title="Safety Gloves">
+                                    <svg width="20" height="20" viewBox="0 0 100 100">
+                                        <path d="M 35 75 L 35 45 Q 35 38 42 38 Q 48 38 48 45 L 48 35 Q 48 28 55 28 Q 62 28 62 35 L 62 45 Q 62 38 68 38 Q 75 38 75 45 L 75 75 Z" fill="#fff"/>
+                                    </svg>
+                                </div>
+                                <div class="ppe-icon-circle" title="Face Shield">
+                                    <svg width="20" height="20" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="40" r="18" fill="#fff"/>
+                                        <path d="M 30 30 Q 50 20 70 30 L 70 65 Q 50 85 30 65 Z" fill="none" stroke="#fff" stroke-width="6"/>
+                                    </svg>
+                                </div>
+                                <div class="ppe-icon-circle" title="Safety Glasses">
+                                    <svg width="20" height="20" viewBox="0 0 100 100">
+                                        <circle cx="32" cy="50" r="16" fill="none" stroke="#fff" stroke-width="6"/>
+                                        <circle cx="68" cy="50" r="16" fill="none" stroke="#fff" stroke-width="6"/>
+                                        <line x1="48" y1="50" x2="52" y2="50" stroke="#fff" stroke-width="6"/>
+                                        <line x1="16" y1="50" x2="5" y2="40" stroke="#fff" stroke-width="6"/>
+                                        <line x1="84" y1="50" x2="95" y2="40" stroke="#fff" stroke-width="6"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- \u0641\u0648\u062A\u0631 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 -->
+                        <div class="emergency-footer">
+                            <div class="emergency-top-row">
+                                <span style="direction: rtl; text-align: right;">\u0637\u0648\u0627\u0631\u0626 \u0627\u0644\u0645\u0635\u0646\u0639</span>
+                                <div class="phone-icons-box">
+                                    <div class="phone-pill" style="background: #dc2626;">\u{1F4DE}</div>
+                                    <div class="phone-pill" style="background: #16a34a;">\u{1F4F1}</div>
+                                </div>
+                                <span style="direction: ltr; text-align: left;">Emergency call</span>
+                            </div>
+                            <div class="emergency-call-line">
+                                \u0641\u064A \u062D\u0627\u0644\u0629 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u064A\u0631\u062C\u0649 \u0627\u0644\u0625\u062A\u0635\u0627\u0644 \u0639\u0644\u0649 \u0631\u0642\u0645: <strong>0100000000 / \u062F\u0627\u062E\u0644\u064A: 100</strong>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="print-btn-wrap">
-                    <button onclick="window.print()" style="padding: 10px 24px; background: #059669; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 900; font-size: 13px; box-shadow: 0 4px 12px rgba(5,150,105,0.3);">\u{1F5A8}\uFE0F \u0637\u0628\u0627\u0639\u0629 \u0643\u0631\u0648\u062A \u0648\u0634\u0627\u0631\u0627\u062A \u0627\u0644\u0632\u0648\u0627\u0631 (A4 Sheet)</button>
-                </div>
+                <script>
+                    function updateSiteMap(site) {
+                        const coordsMap = {
+                            'ICAPP-1': '30\xB024\\'12.4"N 31\xB018\\'45.2"E - \u0645\u0635\u0646\u0639 1 \u0627\u0644\u0641\u0627\u0643\u0647\u0629',
+                            'ICAPP-2': '30\xB024\\'14.1"N 31\xB018\\'48.6"E - \u0645\u0635\u0646\u0639 2 \u0627\u0644\u062A\u062C\u0645\u064A\u062F',
+                            'ICAPP-3': '30\xB024\\'15.8"N 31\xB018\\'50.1"E - \u0645\u0635\u0646\u0639 3 \u0627\u0644\u0645\u0631\u0643\u0632\u0627\u062A',
+                            'ICAPP-4': '30\xB024\\'10.2"N 31\xB018\\'42.5"E - \u0645\u062D\u0637\u0629 \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629 \u0648\u0627\u0644\u0637\u0627\u0642\u0629',
+                            'WH': '30\xB024\\'18.0"N 31\xB018\\'52.3"E - \u0627\u0644\u0645\u062E\u0627\u0632\u0646 \u0627\u0644\u0639\u0627\u0645\u0629',
+                            '\u0627\u0644\u0645\u0628\u0646\u0649 \u0627\u0644\u0625\u062F\u0627\u0631\u064A': '30\xB024\\'08.5"N 31\xB018\\'40.1"E - \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629',
+                            '\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645': '${e.coords}'
+                        };
+                        const c = coordsMap[site] || '${e.coords}';
+                        document.getElementById('customCoords').value = c;
+                        document.getElementById('displayCoords').textContent = '\u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0642\u0639: ' + c + ' | DOC-HSE-MAP-01 Rev.02';
+                    }
+                <\/script>
             </body>
             </html>
-        `),e.document.close()}exportToExcel(){if(this.filteredVisitors.length===0){alert("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u062A\u0635\u062F\u064A\u0631\u0647\u0627");return}let t=`\uFEFF\u0631\u0642\u0645 \u0627\u0644\u0643\u0627\u0631\u062A,\u0627\u0633\u0645 \u0627\u0644\u0632\u0627\u0626\u0631,\u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0634\u0631\u0643\u0629,\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641,\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0642\u0648\u0645\u064A,\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641,\u0627\u0644\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641,\u0627\u0644\u0645\u0633\u062A\u0636\u064A\u0641,\u063A\u0631\u0636 \u0627\u0644\u0632\u064A\u0627\u0631\u0629,\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062F\u062E\u0648\u0644,\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644,\u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C,\u0627\u0644\u062D\u0627\u0644\u0629
+        `),n.document.close()}exportToExcel(){if(this.filteredVisitors.length===0){alert("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u062A\u0635\u062F\u064A\u0631\u0647\u0627");return}let t=`\uFEFF\u0631\u0642\u0645 \u0627\u0644\u0643\u0627\u0631\u062A,\u0627\u0633\u0645 \u0627\u0644\u0632\u0627\u0626\u0631,\u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0634\u0631\u0643\u0629,\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641,\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0642\u0648\u0645\u064A,\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641,\u0627\u0644\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641,\u0627\u0644\u0645\u0633\u062A\u0636\u064A\u0641,\u063A\u0631\u0636 \u0627\u0644\u0632\u064A\u0627\u0631\u0629,\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062F\u062E\u0648\u0644,\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644,\u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C,\u0627\u0644\u062D\u0627\u0644\u0629
 `;this.filteredVisitors.forEach(s=>{t+=`"${s.badge||""}","${s.name||""}","${s.org||""}","${s.phone||""}","${s.idNumber||""}","${s.site||""}","${s.area||""}","${s.host||""}","${s.purpose||""}","${s.entryDate||""}","${s.entryTime||""}","${s.exitTime||""}","${s.exitTime?"\u062A\u0645 \u0627\u0644\u062E\u0631\u0648\u062C":"\u0628\u0627\u0644\u062F\u0627\u062E\u0644"}"
 `});const i=new Blob([t],{type:"text/csv;charset=utf-8;"}),e=URL.createObjectURL(i),o=document.createElement("a");o.href=e,o.download=`Gate_Visitors_Log_${new Date().toISOString().slice(0,10)}.csv`,o.click(),URL.revokeObjectURL(e)}}new GateSecurityModule;
