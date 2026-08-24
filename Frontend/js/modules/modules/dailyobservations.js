@@ -8383,10 +8383,11 @@ const DailyObservations = {
                                 <i class="fas fa-tasks" style="color: #16a34a; margin-left: 6px;"></i>حالة الملاحظات <span style="color: #dc2626;">*</span>
                             </label>
                             <select id="dailyobs-ppt-status" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 700; color: #15803d; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
-                                <option value="all" selected>جميع الملاحظات (المفتوحة والمغلقة والقائمة)</option>
-                                <option value="open">الملاحظات المفتوحة فقط (Open Only)</option>
-                                <option value="closed">الملاحظات المغلقة فقط (Closed Only)</option>
-                                <option value="in_progress">الملاحظات قيد التنفيذ فقط (In Progress)</option>
+                                <option value="all" selected>جميع الملاحظات (All)</option>
+                                <option value="open">الملاحظات المفتوحة فقط (Open)</option>
+                                <option value="closed">الملاحظات المغلقة فقط (Closed)</option>
+                                <option value="in_progress">الملاحظات الجارية / قيد التنفيذ (In Progress)</option>
+                                <option value="pending">الملاحظات المعلقة / قيد المراجعة (Pending)</option>
                             </select>
                         </div>
                     </div>
@@ -8512,9 +8513,16 @@ const DailyObservations = {
                 if (site && String(obs.siteName || '').trim() !== site) return false;
                 if (dept && String(obs.responsibleDepartment || '').trim() !== dept) return false;
                 
-                if (status === 'open' && (obs.status === 'مغلق')) return false;
-                if (status === 'closed' && (obs.status !== 'مغلق')) return false;
-                if (status === 'in_progress' && (obs.status !== 'جاري' && obs.status !== 'قيد التنفيذ')) return false;
+                const st = String(obs.status || '').trim().toLowerCase();
+                if (status === 'open') {
+                    if (st === 'مغلق' || st === 'closed' || st === 'معلق' || st === 'pending' || st === 'قيد المراجعة') return false;
+                } else if (status === 'closed') {
+                    if (st !== 'مغلق' && st !== 'closed') return false;
+                } else if (status === 'in_progress') {
+                    if (st !== 'جاري' && st !== 'قيد التنفيذ' && st !== 'in progress' && st !== 'in_progress') return false;
+                } else if (status === 'pending') {
+                    if (st !== 'معلق' && st !== 'قيد المراجعة' && st !== 'انتظار الموافقة' && st !== 'pending') return false;
+                }
 
                 if (!from && !to) return true;
                 const d = obs.date ? new Date(obs.date) : null;
