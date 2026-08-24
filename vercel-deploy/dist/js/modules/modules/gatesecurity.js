@@ -217,33 +217,172 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                 <meta charset="UTF-8">
                 <title>\u0643\u0634\u0641 \u062D\u0635\u0631 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0648\u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0644\u0644\u0632\u0648\u0627\u0631 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 - ICAPP</title>
                 <style>
-                    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 25px; direction: rtl; color: #0f172a; }
-                    .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; }
-                    .header h2 { margin: 0 0 6px; color: #b91c1c; font-size: 18px; }
-                    .header-sub { font-size: 13px; font-weight: bold; color: #1e3a8a; }
-                    .meta-strip { margin-top: 6px; font-size: 11px; color: #475569; display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 4px; }
+                    @page {
+                        size: A4 portrait;
+                        margin: 10mm 10mm 12mm 10mm;
+                    }
+                    * { box-sizing: border-box; }
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+                        padding: 10px;
+                        direction: rtl;
+                        color: #0f172a;
+                        background: #ffffff;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    /* \u062A\u0631\u0648\u064A\u0633\u0629 ISO \u062B\u0644\u0627\u062B\u064A\u0629 \u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 */
+                    .iso-print-header {
+                        display: grid;
+                        grid-template-columns: 160px 1fr 200px;
+                        border: 2px solid #0f172a;
+                        border-top: 5px solid #1e3a8a;
+                        border-radius: 8px;
+                        margin-bottom: 16px;
+                        overflow: hidden;
+                        background: #ffffff;
+                    }
+                    .iso-box-brand {
+                        padding: 8px 10px;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        border-left: 1.5px solid #0f172a;
+                        background: #f8fafc;
+                        gap: 4px;
+                    }
+                    .iso-print-logo {
+                        max-height: 44px;
+                        max-width: 100px;
+                        object-fit: contain;
+                    }
+                    .iso-dept-title {
+                        font-size: 11px;
+                        font-weight: 800;
+                        color: #1e3a8a;
+                        text-align: center;
+                        line-height: 1.2;
+                    }
+                    .iso-box-title {
+                        padding: 8px 12px;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        text-align: center;
+                    }
+                    .iso-main-title {
+                        margin: 0;
+                        font-size: 15px;
+                        font-weight: 900;
+                        color: #b91c1c;
+                        line-height: 1.25;
+                    }
+                    .iso-sub-title {
+                        font-size: 10px;
+                        font-weight: 700;
+                        color: #475569;
+                        margin-top: 3px;
+                    }
+                    .iso-box-meta {
+                        padding: 6px 10px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        border-right: 1.5px solid #0f172a;
+                        background: #f8fafc;
+                        font-size: 10.5px;
+                        gap: 3px;
+                    }
+                    .meta-row {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        border-bottom: 1px dashed #cbd5e1;
+                        padding-bottom: 2px;
+                    }
+                    .meta-row:last-child { border-bottom: none; }
+                    .meta-row span { color: #64748b; font-size: 10px; font-weight: 700; }
+                    .meta-row strong { color: #0f172a; font-size: 10px; }
+
                     table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 11.5px; }
-                    th, td { border: 1px solid #334155; padding: 6px 8px; text-align: right; }
-                    th { background: #f1f5f9; font-weight: bold; color: #0f172a; }
-                    .footer { margin-top: 36px; display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; border-top: 1px solid #cbd5e1; padding-top: 15px; }
-                    @media print { button { display: none !important; } body { padding: 10px; } }
+                    th, td { border: 1.5px solid #334155; padding: 6px 8px; text-align: right; }
+                    th { background: #f1f5f9; font-weight: 800; color: #0f172a; font-size: 11px; }
+
+                    /* \u0641\u0648\u062A\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A \u0648\u0627\u0644\u062A\u0648\u0642\u064A\u0639\u0627\u062A \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 */
+                    .iso-print-footer {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr 1fr;
+                        gap: 12px;
+                        margin-top: 28px;
+                        page-break-inside: avoid;
+                    }
+                    .footer-box {
+                        border: 1.5px solid #334155;
+                        border-radius: 6px;
+                        padding: 8px 10px;
+                        background: #f8fafc;
+                    }
+                    .footer-box-title {
+                        font-size: 11px;
+                        font-weight: 800;
+                        color: #1e3a8a;
+                        text-align: center;
+                        border-bottom: 1px solid #cbd5e1;
+                        padding-bottom: 5px;
+                        margin-bottom: 8px;
+                    }
+                    .footer-sig-line {
+                        font-size: 10.5px;
+                        color: #334155;
+                        margin-top: 6px;
+                        font-weight: 600;
+                    }
+                    .print-btn-wrap { text-align: center; margin-top: 25px; }
+                    @media print {
+                        .print-btn-wrap { display: none !important; }
+                        body { padding: 0; }
+                    }
                 </style>
             </head>
             <body>
-                <div class="header">
-                    <h2>\u{1F6A8} \u0643\u0634\u0641 \u062D\u0635\u0631 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0648\u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0627\u0644\u0641\u0648\u0631\u064A \u0644\u0644\u0632\u0648\u0627\u0631 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</h2>
-                    <div class="header-sub">\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0639\u0627\u0644\u0645\u064A\u0629 \u0644\u0644\u0625\u0646\u062A\u0627\u062C \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639 \u0627\u0644\u0632\u0631\u0627\u0639\u064A (ICAPP) \u2014 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629</div>
-                    <div class="meta-strip">
-                        <span>\u0643\u0648\u062F \u0627\u0644\u0648\u062B\u064A\u0642\u0629: DOC-HSE-EMR-VIS-01 | Rev. 02</span>
-                        <span>\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0637\u0648\u0627\u0631\u0626 / \u0627\u0644\u0637\u0628\u0627\u0639\u0629: ${e.toLocaleDateString("ar-EG")} - ${e.toLocaleTimeString("ar-EG")}</span>
-                        <span>\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u062A\u0648\u0627\u062C\u062F\u064A\u0646 \u0628\u0627\u0644\u0645\u0646\u0634\u0623\u0629: <strong>${t.length}</strong></span>
+                <!-- \u062A\u0631\u0648\u064A\u0633\u0629 ISO \u062B\u0644\u0627\u062B\u064A\u0629 \u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 -->
+                <div class="iso-print-header">
+                    <div class="iso-box-brand">
+                        <img src="icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='icons/icapp-logo.png'">
+                        <div class="iso-dept-title">\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629</div>
+                    </div>
+
+                    <div class="iso-box-title">
+                        <h1 class="iso-main-title">\u{1F6A8} \u0643\u0634\u0641 \u062D\u0635\u0631 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0648\u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0627\u0644\u0641\u0648\u0631\u064A \u0644\u0644\u0632\u0648\u0627\u0631 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</h1>
+                        <div class="iso-sub-title">Emergency Visitor & Contractor Evacuation Headcount Sheet</div>
+                    </div>
+
+                    <div class="iso-box-meta">
+                        <div class="meta-row">
+                            <span>\u0643\u0648\u062F \u0627\u0644\u0648\u062B\u064A\u0642\u0629:</span>
+                            <strong>DOC-HSE-EMR-VIS-01</strong>
+                        </div>
+                        <div class="meta-row">
+                            <span>\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631:</span>
+                            <strong>Rev. 02</strong>
+                        </div>
+                        <div class="meta-row">
+                            <span>\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0637\u0628\u0627\u0639\u0629:</span>
+                            <strong>${e.toLocaleDateString("ar-EG")} ${e.toLocaleTimeString("ar-EG")}</strong>
+                        </div>
+                        <div class="meta-row">
+                            <span>\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u062A\u0648\u0627\u062C\u062F\u064A\u0646:</span>
+                            <strong style="color: #b91c1c; font-size: 11px;">${t.length} \u0641\u0631\u062F</strong>
+                        </div>
                     </div>
                 </div>
 
                 ${t.length===0?`
-                    <div style="text-align: center; padding: 30px; border: 1px dashed #94a3b8; border-radius: 8px; margin: 20px 0; background: #f8fafc;">
-                        <h3 style="color: #059669; margin: 0 0 6px;">\u2705 \u0625\u0641\u0627\u062F\u0629 \u062E\u0644\u0648 \u0627\u0644\u0645\u0646\u0634\u0623\u0629 \u0645\u0646 \u0623\u064A \u0632\u0648\u0627\u0631 \u0623\u0648 \u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u062E\u0627\u0631\u062C\u064A\u064A\u0646</h3>
-                        <p style="color: #64748b; margin: 0; font-size: 12px;">\u062A\u0645 \u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0641\u062D\u0635 \u0627\u0644\u0644\u062D\u0638\u064A \u0644\u0633\u062C\u0644 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0648\u062A\u0623\u0643\u064A\u062F \u0639\u062F\u0645 \u0648\u062C\u0648\u062F \u0623\u064A \u0632\u0627\u0626\u0631 \u0623\u0648 \u0645\u0642\u0627\u0648\u0644 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u0628\u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A \u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0623\u0639\u0644\u0627\u0647.</p>
+                    <div style="text-align: center; padding: 30px 20px; border: 2px dashed #059669; border-radius: 8px; margin: 20px 0; background: #f0fdf4;">
+                        <h3 style="color: #059669; margin: 0 0 6px; font-size: 15px;">\u2705 \u0625\u0641\u0627\u062F\u0629 \u062E\u0644\u0648 \u0627\u0644\u0645\u0646\u0634\u0623\u0629 \u0645\u0646 \u0623\u064A \u0632\u0648\u0627\u0631 \u0623\u0648 \u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u062E\u0627\u0631\u062C\u064A\u064A\u0646</h3>
+                        <p style="color: #166534; margin: 0; font-size: 12px; font-weight: 600;">\u062A\u0645 \u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0641\u062D\u0635 \u0627\u0644\u0644\u062D\u0638\u064A \u0644\u0633\u062C\u0644 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0648\u062A\u0623\u0643\u064A\u062F \u0639\u062F\u0645 \u0648\u062C\u0648\u062F \u0623\u064A \u0632\u0627\u0626\u0631 \u0623\u0648 \u0645\u0642\u0627\u0648\u0644 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u0628\u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A \u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0623\u0639\u0644\u0627\u0647.</p>
                     </div>
                 `:`
                     <table>
@@ -278,14 +417,27 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                     </table>
                 `}
 
-                <div class="footer">
-                    <div>\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629: ........................</div>
-                    <div>\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0648\u0646\u0642\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u0639: ........................</div>
-                    <div>\u0642\u0627\u0626\u062F \u0641\u0631\u064A\u0642 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 (Incident Commander): ........................</div>
+                <!-- \u0641\u0648\u062A\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A \u0648\u0627\u0644\u062A\u0648\u0642\u064A\u0639\u0627\u062A \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 -->
+                <div class="iso-print-footer">
+                    <div class="footer-box">
+                        <div class="footer-box-title">\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629</div>
+                        <div class="footer-sig-line">\u0627\u0644\u0627\u0633\u0645: .......................................</div>
+                        <div class="footer-sig-line">\u0627\u0644\u062A\u0648\u0642\u064A\u0639: ....................................</div>
+                    </div>
+                    <div class="footer-box">
+                        <div class="footer-box-title">\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0648\u0646\u0642\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u0639</div>
+                        <div class="footer-sig-line">\u0627\u0644\u0627\u0633\u0645: .......................................</div>
+                        <div class="footer-sig-line">\u0627\u0644\u062A\u0648\u0642\u064A\u0639: ....................................</div>
+                    </div>
+                    <div class="footer-box">
+                        <div class="footer-box-title">\u0642\u0627\u0626\u062F \u0641\u0631\u064A\u0642 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 (Incident Commander)</div>
+                        <div class="footer-sig-line">\u0627\u0644\u0627\u0633\u0645: .......................................</div>
+                        <div class="footer-sig-line">\u0627\u0644\u062A\u0648\u0642\u064A\u0639: ....................................</div>
+                    </div>
                 </div>
 
-                <div style="text-align: center; margin-top: 25px;">
-                    <button onclick="window.print()" style="padding: 10px 22px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: bold; font-size: 13px;">\u{1F5A8}\uFE0F \u0637\u0628\u0627\u0639\u0629 \u0643\u0634\u0641 \u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0627\u0644\u0622\u0646</button>
+                <div class="print-btn-wrap">
+                    <button onclick="window.print()" style="padding: 10px 24px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 800; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">\u{1F5A8}\uFE0F \u0637\u0628\u0627\u0639\u0629 \u0643\u0634\u0641 \u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0627\u0644\u0622\u0646</button>
                 </div>
             </body>
             </html>
