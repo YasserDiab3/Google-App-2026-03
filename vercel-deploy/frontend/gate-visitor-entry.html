@@ -943,10 +943,14 @@
                         <select id="visitPurpose" class="form-select" required>
                             <option value="شؤون مالية واستلام شيكات / تسويات">💰 شؤون مالية واستلام شيكات / تسويات</option>
                             <option value="زيارة عمل واجتماع رسمي / تنسيق إداري" selected>🤝 زيارة عمل واجتماع رسمي / تنسيق إداري</option>
+                            <option value="تفتيش جهة حكومية (رقابة صناعية / سلامة وبيئة / تموين)">🏢 تفتيش جهة حكومية (رقابة صناعية / سلامة وبيئة / تموين)</option>
+                            <option value="شركة الكهرباء (طوارئ / صيانة عدادات وشبكة)">⚡ شركة الكهرباء (طوارئ / صيانة عدادات وشبكة)</option>
+                            <option value="شركة الغاز (طوارئ / فحص وصيانة خطوط ومحابس)">🔥 شركة الغاز (طوارئ / فحص وصيانة خطوط ومحابس)</option>
+                            <option value="الحماية المدنية والدفاع المدني">🚒 الحماية المدنية والدفاع المدني</option>
+                            <option value="شركة مياه الشرب والصرف الصحي">💧 شركة مياه الشرب والصرف الصحي</option>
                             <option value="صيانة ومقاول تنفيذ أعمال ومشاريع">🛠️ صيانة ومقاول تنفيذ أعمال ومشاريع</option>
                             <option value="توريد وتسليم بضائع وخامات ومهمات">📦 توريد وتسليم بضائع وخامات ومهمات</option>
                             <option value="استلام بضائع وتعبئة وشحن منتجات">🚚 استلام بضائع وتعبئة وشحن منتجات</option>
-                            <option value="تفتيش جهة حكومية / رقابة صناعية / بيئة وسلامة">🔍 تفتيش جهة حكومية / رقابة صناعية / بيئة وسلامة</option>
                             <option value="مراجعة وتدقيق جودة / مراجعي ISO / عملاء">🔬 مراجعة وتدقيق جودة / مراجعي ISO / عملاء</option>
                             <option value="مقابلة عمل وتوظيف (HR Interview)">👔 مقابلة عمل وتوظيف (HR Interview)</option>
                             <option value="كشف طبي / زيارة عيادة / مندوب تأمين صحي">🏥 كشف طبي / زيارة عيادة / مندوب تأمين صحي</option>
@@ -1177,10 +1181,14 @@
         const VISIT_PURPOSES = [
             { id: 'financial_check', icon: '💰', ar: 'شؤون مالية واستلام شيكات / تسويات', en: 'Finance / Check Collection & Settlement' },
             { id: 'meeting_official', icon: '🤝', ar: 'زيارة عمل واجتماع رسمي / تنسيق إداري', en: 'Official Business Meeting & Coordination' },
+            { id: 'gov_inspection', icon: '🏢', ar: 'تفتيش جهة حكومية (رقابة صناعية / سلامة وبيئة / تموين)', en: 'Government Regulatory / Industrial Safety Inspection' },
+            { id: 'electricity_company', icon: '⚡', ar: 'شركة الكهرباء (طوارئ / صيانة عدادات وشبكة)', en: 'Electricity Utility Company (Emergency & Meters Maintenance)' },
+            { id: 'gas_company', icon: '🔥', ar: 'شركة الغاز (طوارئ / فحص وصيانة خطوط ومحابس)', en: 'Gas Utility Company (Inspection & Valves Maintenance)' },
+            { id: 'civil_defense', icon: '🚒', ar: 'الحماية المدنية والدفاع المدني', en: 'Civil Defense & Fire Service Authority' },
+            { id: 'water_company', icon: '💧', ar: 'شركة مياه الشرب والصرف الصحي', en: 'Water & Wastewater Utility Authority' },
             { id: 'contractor_maintenance', icon: '🛠️', ar: 'صيانة ومقاول تنفيذ أعمال ومشاريع', en: 'Contractor / Maintenance & Civil Works' },
             { id: 'materials_delivery', icon: '📦', ar: 'توريد وتسليم بضائع وخامات ومهمات', en: 'Supplies Delivery & Warehouse Offloading' },
             { id: 'shipping_dispatch', icon: '🚚', ar: 'استلام بضائع وتعبئة وشحن منتجات', en: 'Goods Collection & Product Dispatch' },
-            { id: 'gov_inspection', icon: '🔍', ar: 'تفتيش جهة حكومية / رقابة صناعية / بيئة وسلامة', en: 'Government / Regulatory Authority Inspection' },
             { id: 'quality_audit', icon: '🔬', ar: 'مراجعة وتدقيق جودة / مراجعي ISO / عملاء', en: 'Quality Audit / ISO Certifiers / Client Audit' },
             { id: 'hr_interview', icon: '👔', ar: 'مقابلة عمل وتوظيف (HR Interview)', en: 'Job Interview & Recruitment' },
             { id: 'medical_clinic', icon: '🏥', ar: 'كشف طبي / زيارة عيادة / مندوب تأمين صحي', en: 'Medical Clinic / Health Insurance Representative' },
