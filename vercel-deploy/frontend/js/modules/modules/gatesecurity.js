@@ -170,6 +170,7 @@ class GateSecurityModule {
                         <option value="ICAPP-4">ICAPP-4</option>
                         <option value="WH">المخازن العامة (WH)</option>
                         <option value="المبنى الإداري">المبنى الإداري</option>
+                        <option value="الموقع العام">الموقع العام والمرافق</option>
                     </select>
 
                     <select id="gateFilterStatus" class="form-select" style="width: auto; min-width: 150px; font-size: 0.85rem;" onchange="GateSecurity.handleFilterStatus(this.value)">
