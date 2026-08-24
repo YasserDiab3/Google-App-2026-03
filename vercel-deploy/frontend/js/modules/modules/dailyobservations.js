@@ -2004,18 +2004,20 @@ const DailyObservations = {
             const CACHE_DURATION = 10 * 60 * 1000;
             const isStale = cacheAge >= CACHE_DURATION;
             if ((!hasObsData || isStale) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets) {
-                void this.ensureDailyObservationsDataLoaded({ force: !hasObsData || isStale })
+                void this.ensureDailyObservationsDataLoaded({ force: isStale && hasObsData })
                     .catch(() => {})
                     .finally(() => {
                         try {
-                            this._dailyObsBackendFetchOk = true;
-                            if (typeof this.loadObservationsList === 'function' && document.getElementById('observations-table-container')) {
+                            const tableEl = document.getElementById('observations-table-container');
+                            const statsEl = document.getElementById('observations-stats-cards');
+                            if (!tableEl && !statsEl) return;
+                            if (tableEl && typeof this.loadObservationsList === 'function') {
                                 this.loadObservationsList();
                             }
-                            if (typeof this.renderStatsCards === 'function' && document.getElementById('observations-stats-cards')) {
+                            if (statsEl && typeof this.renderStatsCards === 'function') {
                                 this.renderStatsCards();
                             }
-                        } catch (e) {}
+                        } catch (e) { /* ignore */ }
                     });
             } else if (hasObsData) {
                 this._dailyObsBackendFetchOk = true;
@@ -7965,16 +7967,7 @@ const DailyObservations = {
             const refreshModuleBtn = document.getElementById('daily-observations-refresh-btn');
             if (refreshModuleBtn) {
                 refreshModuleBtn.replaceWith(refreshModuleBtn.cloneNode(true));
-                document.getElementById('daily-observations-refresh-btn').addEventListener('click', async () => {
-                    if (typeof Notification !== 'undefined' && Notification.info) {
-                        Notification.info('جاري تحديث بيانات الملاحظات...');
-                    }
-                    await this.ensureDailyObservationsDataLoaded({ force: true }).catch(() => {});
-                    await this.load();
-                    if (typeof Notification !== 'undefined' && Notification.success) {
-                        Notification.success('تم تحديث الملاحظات بنجاح');
-                    }
-                });
+                document.getElementById('daily-observations-refresh-btn').addEventListener('click', () => this.load());
             }
 
             // البحث والفلاتر - إعادة ربط جميع الأحداث

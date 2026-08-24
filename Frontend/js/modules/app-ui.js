@@ -1,4 +1,4 @@
-// تطبيق الوضع الليلي فوراً عند تحميل الصفحة (قبل تعريف UI)
+﻿// تطبيق الوضع الليلي فوراً عند تحميل الصفحة (قبل تعريف UI)
 (function applyThemeImmediately() {
     try {
         const savedTheme = (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) || 'light';
@@ -5277,19 +5277,20 @@ window.UI = {
             typeof Permissions.hasAccess === 'function');
 
         if (canCheckPermissions && !Permissions.checkBeforeShow(sectionName, suppressMessage)) {
-            // إذا لم يكن لديه صلاحية، نعرض Dashboard بدلاً منه
+            // إذا لم يكن لديه صلاحية للمقطع المطلوب:
             if (sectionName !== 'dashboard' && Permissions.hasAccess('dashboard')) {
                 sectionName = 'dashboard';
             } else {
-                // إذا كان التنقل عودة، نعود للـ dashboard بدون رسالة
-                if (suppressMessage) {
-                    if (Permissions.hasAccess('dashboard')) {
-                        sectionName = 'dashboard';
-                    } else {
-                        return;
-                    }
+                // إذا لم يكن مصرحاً له بالداشبورد أيضاً، نوجّهه فوراً لأول موديول مسموح له صراحةً (مثل العيادة أو التدريب أو التصاريح)
+                const accessibleList = (typeof Permissions.getAccessibleModules === 'function')
+                    ? Permissions.getAccessibleModules()
+                    : [];
+                const firstAllowed = accessibleList.find(m => m && m !== 'dashboard' && m !== 'profile' && m !== 'help');
+                if (firstAllowed) {
+                    sectionName = firstAllowed;
+                } else if (Permissions.hasAccess('profile')) {
+                    sectionName = 'profile';
                 } else {
-                    // checkBeforeShow يعرض الرسالة بالفعل عند محاولة الوصول الفعلية
                     return;
                 }
             }

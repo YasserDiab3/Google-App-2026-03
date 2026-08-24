@@ -1,4 +1,4 @@
-/* ========================================
+﻿/* ========================================
    نظام السلامة المهنية - أمريكانا HSE
    app-utils.js - الدوال المساعدة والثوابت
    ======================================== */
@@ -291,6 +291,7 @@ const MODULE_PERMISSIONS_CONFIG = [
     { key: 'ppe', label: 'مهمات الوقاية', icon: 'fa-hard-hat' },
     { key: 'violations', label: 'المخالفات', icon: 'fa-ban', hasDetailedPermissions: true },
     { key: 'contractors', label: 'المقاولين', icon: 'fa-users', hasDetailedPermissions: true },
+    { key: 'gate-security', label: 'بوابة تسجيل الزوار والأمن', icon: 'fa-shield-halved' },
     { key: 'behavior-monitoring', label: 'مراقبة السلوكيات', icon: 'fa-user-check' },
     { key: 'chemical-safety', label: 'السلامة الكيميائية', icon: 'fa-flask' },
     { key: 'daily-observations', label: 'الملاحظات اليومية', icon: 'fa-eye', hasDetailedPermissions: true },
@@ -304,6 +305,7 @@ const MODULE_PERMISSIONS_CONFIG = [
     { key: 'sustainability', label: 'الاستدامة', icon: 'fa-leaf', hasDetailedPermissions: true },
     { key: 'safety-budget', label: 'ميزانية السلامة وتتبع الإنفاق', icon: 'fa-wallet' },
     { key: 'ai-assistant', label: 'المساعد الذكي', icon: 'fa-robot' },
+    { key: 'apptester', label: 'أداة اختبار النظام', icon: 'fa-vial', adminOnly: true },
     { key: 'safety-performance-kpis', label: 'مؤشرات الأداء لإدارة السلامة', icon: 'fa-gauge-high', hasDetailedPermissions: true },
     { key: 'kpi-annual-plan', label: 'الخطة السنوية لمؤشرات الأداء (KPIs)', icon: 'fa-calendar-alt', parentModule: 'safety-performance-kpis' },
     { key: 'hse-monitoring-plan', label: 'خطة متابعة HSE', icon: 'fa-clipboard-check', parentModule: 'safety-performance-kpis' },
@@ -3111,14 +3113,10 @@ const Permissions = {
             return true;
         }
 
-        // التحقق من الصلاحيات المخصصة للمستخدم (الممنوحة صراحةً)
+        // التحقق من الصلاحيات المخصصة للمستخدم (مبدأ الصلاحيات الصريحة الصارمة Zero-Trust)
         const effectivePermissions = this.getEffectivePermissions(user);
-        const hasAnyExplicitPermission = effectivePermissions &&
-            typeof effectivePermissions === 'object' &&
-            !Array.isArray(effectivePermissions) &&
-            Object.keys(effectivePermissions).some(k => k !== '__isAdmin');
-
-        if (hasAnyExplicitPermission) {
+        
+        if (effectivePermissions && typeof effectivePermissions === 'object' && !Array.isArray(effectivePermissions)) {
             // 1. فحص التفعيل المباشر للموديول (Boolean true)
             if (effectivePermissions[moduleName] === true) {
                 if (AppState.debugMode) {
@@ -3139,66 +3137,12 @@ const Permissions = {
                     return true;
                 }
             }
-
-            // 3. المستخدم لديه كائن صلاحيات مخصص — أي موديول غير مفعّل صراحةً يُمنع عنه حصراً (منع التسريب)
-            if (AppState.debugMode) {
-                Utils.safeLog(`🔍 hasAccess(${moduleName}): ❌ غير مسموح (غير محدد في الصلاحيات المخصصة)`);
-            }
-            return false;
         }
 
-        if (Object.prototype.hasOwnProperty.call(effectivePermissions, moduleName)) {
-            const hasAccess = effectivePermissions[moduleName] === true;
-            if (AppState.debugMode) {
-                Utils.safeLog(`🔍 hasAccess(${moduleName}): ${hasAccess ? '✅ مسموح' : '❌ غير مسموح'} (من الصلاحيات الفعالة)`);
-            }
-            return hasAccess;
+        // 🛡️ حظر قطعي لأي موديول آخر غير مفعّل صراحةً (Strict Zero-Trust: لا توجد صلاحيات افتراضية للأدوار العادية تمنح موديولات غير مخصصة)
+        if (AppState.debugMode) {
+            Utils.safeLog(`🔍 hasAccess(${moduleName}): ❌ غير مسموح (محظور لعدم وجود إذن صريح)`);
         }
-
-        // fallback إلى الصلاحيات الافتراضية للدور — يُطبَّق فقط بعد التأكد من حالة قاعدة المستخدمين:
-        const appUsersList = (AppState.appData && Array.isArray(AppState.appData.users))
-            ? AppState.appData.users
-            : null;
-        const usersListLoaded = Array.isArray(appUsersList) && appUsersList.length > 0;
-        const dbUserMatch = usersListLoaded
-            ? appUsersList.find(candidate => candidate.email && user.email &&
-                candidate.email.toString().toLowerCase().trim() === user.email.toString().toLowerCase().trim())
-            : null;
-        const dbPermissionsHere = this.getDatabasePermissions(user);
-        const dbUserHasExplicit = dbPermissionsHere && typeof dbPermissionsHere === 'object' &&
-            !Array.isArray(dbPermissionsHere) && Object.keys(dbPermissionsHere).length > 0;
-
-        if (!usersListLoaded) {
-            if (AppState.debugMode) {
-                Utils.safeLog(`🔒 hasAccess(${moduleName}): قائمة المستخدمين غير مكتملة بعد - لا صلاحيات افتراضية للإقلاع (منع تسريب)`);
-            }
-            return false;
-        }
-
-        if (dbUserHasExplicit) {
-            if (AppState.debugMode) {
-                Utils.safeLog(`🔒 hasAccess(${moduleName}): المستخدم في جدول المستخدمين بصلاحيات صريحة - لا صلاحيات افتراضية`);
-            }
-            return false;
-        }
-
-        if (!dbUserMatch) {
-            if (AppState.debugMode) {
-                Utils.safeLog(`🔒 hasAccess(${moduleName}): المستخدم غير موجود في جدول المستخدمين - لا صلاحيات افتراضية`);
-            }
-            return false;
-        }
-
-        const userRole = String(user.role || 'user').toLowerCase().trim();
-        const roleDefaults = DEFAULT_ROLE_PERMISSIONS[userRole] || DEFAULT_ROLE_PERMISSIONS['user'] || {};
-        if (Object.prototype.hasOwnProperty.call(roleDefaults, moduleName)) {
-            const hasAccess = roleDefaults[moduleName] === true;
-            if (AppState.debugMode) {
-                Utils.safeLog(`🔍 hasAccess(${moduleName}): ${hasAccess ? '✅ مسموح' : '❌ غير مسموح'} (من صلاحيات الدور الافتراضية - مستخدم قديم بصلاحيات فارغة)`);
-            }
-            return hasAccess;
-        }
-
         return false;
     },
 
@@ -4297,14 +4241,14 @@ const Permissions = {
         }
 
         navItems.forEach(item => {
-            const module = item.getAttribute('data-section');
+            const module = item.getAttribute('data-section') || (item.getAttribute('href') || '').replace(/^#/, '');
             if (module) {
                 const hasAccess = this.hasAccess(module);
                 if (!hasAccess) {
-                    item.style.display = 'none';
+                    item.style.setProperty('display', 'none', 'important');
                     item.setAttribute('data-permission-hidden', 'true');
                 } else {
-                    item.style.display = '';
+                    item.style.removeProperty('display');
                     item.setAttribute('data-permission-hidden', 'false');
                 }
             }
@@ -4397,7 +4341,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1421',
+    appVersion: '1.0.1422',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
