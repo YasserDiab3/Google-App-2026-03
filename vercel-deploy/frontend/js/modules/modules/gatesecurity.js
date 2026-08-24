@@ -419,14 +419,15 @@ class GateSecurityModule {
                             </span>
                         `}
                     </td>
-                    <td style="padding: 10px 14px; text-align: center;">
+                    <td style="padding: 10px 14px; text-align: center; white-space: nowrap;">
+                        <button type="button" class="btn btn-sm" onclick="GateSecurity.printVisitorBadge('${v.id}')" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 3px 8px; margin-left: 4px;" title="طباعة كارت الزائر">
+                            <i class="fas fa-id-card"></i> كارت
+                        </button>
                         ${isActive ? `
                             <button type="button" class="btn btn-sm" onclick="GateSecurity.adminForceCheckOut('${v.id}', '${v.badge}')" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 3px 8px;" title="تسجيل خروج إداري">
                                 <i class="fas fa-door-open"></i> خروج
                             </button>
-                        ` : `
-                            <span style="color: #94a3b8; font-size: 0.75rem;">—</span>
-                        `}
+                        ` : ''}
                     </td>
                 </tr>
             `;
@@ -732,6 +733,325 @@ class GateSecurityModule {
 
                 <div class="print-btn-wrap">
                     <button onclick="window.print()" style="padding: 10px 24px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 800; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">🖨️ طباعة كشف الإخلاء الآن</button>
+                </div>
+            </body>
+            </html>
+        `);
+        win.document.close();
+    }
+
+    printVisitorBadge(visitorId) {
+        const rec = this.visitors.find(v => v.id === visitorId);
+        if (!rec) {
+            alert('لم يتم العثور على بيانات هذا الزائر');
+            return;
+        }
+
+        const win = window.open('', '_blank');
+        if (!win) {
+            alert('يرجى السماح بالنوافذ المنبثقة لطباعة كارت الزائر (Pop-ups)');
+            return;
+        }
+
+        const qrData = `ICAPP-VISITOR-PASS | Badge: ${rec.badge} | Name: ${rec.name} | Org: ${rec.org} | Site: ${rec.site} - ${rec.area} | Date: ${rec.entryDate} ${rec.entryTime}`;
+        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&format=png&margin=0&data=${encodeURIComponent(qrData)}`;
+
+        win.document.write(`
+            <!DOCTYPE html>
+            <html lang="ar" dir="rtl">
+            <head>
+                <meta charset="UTF-8">
+                <title>كارت وتصريح دخول زائر - ${rec.badge} - ${rec.name} - ICAPP</title>
+                <style>
+                    @page {
+                        size: A4 portrait;
+                        margin: 10mm 10mm 10mm 10mm;
+                    }
+                    * { box-sizing: border-box; }
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+                        margin: 0;
+                        padding: 15px;
+                        direction: rtl;
+                        color: #0f172a;
+                        background: #f1f5f9;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    .page-container {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        min-height: 90vh;
+                    }
+                    /* كارت الزائر المعتمد */
+                    .visitor-badge-card {
+                        width: 105mm;
+                        min-height: 155mm;
+                        background: #ffffff;
+                        border: 2.5px solid #0f172a;
+                        border-radius: 14px;
+                        overflow: hidden;
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                        display: flex;
+                        flex-direction: column;
+                        position: relative;
+                    }
+                    .lanyard-slot {
+                        width: 16mm;
+                        height: 3.5mm;
+                        background: #e2e8f0;
+                        border: 1.5px dashed #64748b;
+                        border-radius: 4px;
+                        margin: 4px auto 0;
+                    }
+                    .badge-header {
+                        background: #1e3a8a;
+                        color: #ffffff;
+                        padding: 8px 12px;
+                        text-align: center;
+                        border-bottom: 3.5px solid #059669;
+                    }
+                    .badge-logo-row {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        margin-bottom: 4px;
+                    }
+                    .badge-logo {
+                        max-height: 32px;
+                        max-width: 80px;
+                        object-fit: contain;
+                        background: #ffffff;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                    }
+                    .badge-dept {
+                        font-size: 9.5px;
+                        font-weight: 800;
+                        color: #93c5fd;
+                        text-align: left;
+                    }
+                    .badge-main-type {
+                        font-size: 13.5px;
+                        font-weight: 900;
+                        margin: 0;
+                        letter-spacing: 0.2px;
+                    }
+                    .badge-sub-type {
+                        font-size: 8.5px;
+                        color: #cbd5e1;
+                        font-weight: 700;
+                    }
+                    .badge-code-banner {
+                        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                        color: #ffffff;
+                        padding: 8px 12px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    }
+                    .badge-code-label {
+                        font-size: 10px;
+                        color: #94a3b8;
+                        font-weight: 700;
+                    }
+                    .badge-code-val {
+                        font-size: 19px;
+                        font-weight: 900;
+                        color: #34d399;
+                        letter-spacing: 1px;
+                        font-family: 'Courier New', monospace;
+                    }
+                    .badge-body {
+                        padding: 10px 12px;
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 6px;
+                    }
+                    .visitor-hero-box {
+                        background: #f8fafc;
+                        border: 1.5px solid #cbd5e1;
+                        border-radius: 8px;
+                        padding: 8px 10px;
+                        text-align: center;
+                    }
+                    .visitor-hero-name {
+                        font-size: 15px;
+                        font-weight: 900;
+                        color: #0f172a;
+                        margin-bottom: 2px;
+                    }
+                    .visitor-hero-org {
+                        font-size: 11px;
+                        font-weight: 800;
+                        color: #2563eb;
+                    }
+                    .badge-fields-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 5px;
+                        background: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 6px;
+                        padding: 6px 8px;
+                        font-size: 9.5px;
+                    }
+                    .b-field {
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    .b-field-full {
+                        grid-column: span 2;
+                    }
+                    .b-key {
+                        color: #64748b;
+                        font-size: 8.5px;
+                        font-weight: 700;
+                    }
+                    .b-val {
+                        color: #0f172a;
+                        font-weight: 800;
+                    }
+                    .badge-qr-row {
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                        margin-top: 4px;
+                        background: #ffffff;
+                        border: 1px solid #cbd5e1;
+                        border-radius: 6px;
+                        padding: 6px;
+                    }
+                    .badge-qr-img {
+                        width: 65px;
+                        height: 65px;
+                        border: 1px solid #94a3b8;
+                        border-radius: 4px;
+                        flex-shrink: 0;
+                    }
+                    .badge-rules {
+                        font-size: 8px;
+                        color: #334155;
+                        line-height: 1.35;
+                        font-weight: 600;
+                    }
+                    .badge-footer {
+                        background: #f1f5f9;
+                        border-top: 1.5px solid #cbd5e1;
+                        padding: 6px 10px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        font-size: 8.5px;
+                        color: #475569;
+                        font-weight: 700;
+                    }
+                    .badge-sig-text {
+                        color: #0f172a;
+                        font-weight: 800;
+                    }
+                    .print-btn-wrap {
+                        margin-top: 16px;
+                        text-align: center;
+                    }
+                    @media print {
+                        body {
+                            background: #ffffff;
+                            padding: 0;
+                        }
+                        .page-container {
+                            min-height: 0;
+                        }
+                        .print-btn-wrap {
+                            display: none !important;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="page-container">
+                    <div class="visitor-badge-card">
+                        <div class="lanyard-slot"></div>
+                        <div class="badge-header">
+                            <div class="badge-logo-row">
+                                <img src="icons/icapp-logo.png" alt="ICAPP" class="badge-logo" onerror="this.src='icons/icapp-logo.png'">
+                                <div class="badge-dept">
+                                    إدارة السلامة والصحة المهنية<br>
+                                    منظومة أمن وحراسة البوابات
+                                </div>
+                            </div>
+                            <div class="badge-main-type">🪪 تصريح وشارة دخول زائر / مقاول</div>
+                            <div class="badge-sub-type">OFFICIAL VISITOR / CONTRACTOR PASS</div>
+                        </div>
+
+                        <div class="badge-code-banner">
+                            <div class="badge-code-label">رقم كارت / شارة الزائر:</div>
+                            <div class="badge-code-val">🏷️ ${rec.badge}</div>
+                        </div>
+
+                        <div class="badge-body">
+                            <div class="visitor-hero-box">
+                                <div class="visitor-hero-name">👤 ${rec.name}</div>
+                                <div class="visitor-hero-org">🏢 ${rec.org}</div>
+                            </div>
+
+                            <div class="badge-fields-grid">
+                                <div class="b-field">
+                                    <span class="b-key">الرقم القومي / الجواز:</span>
+                                    <span class="b-val">${rec.idNumber || '-'}</span>
+                                </div>
+                                <div class="b-field">
+                                    <span class="b-key">الهاتف:</span>
+                                    <span class="b-val">${rec.phone || '-'}</span>
+                                </div>
+                                <div class="b-field-full">
+                                    <span class="b-key">المصنع والموقع المصرح به:</span>
+                                    <span class="b-val" style="color: #1e40af;">📍 ${rec.site} — ${rec.area}</span>
+                                </div>
+                                <div class="b-field">
+                                    <span class="b-key">الموظف المستضيف:</span>
+                                    <span class="b-val">${rec.host || '-'}</span>
+                                </div>
+                                <div class="b-field">
+                                    <span class="b-key">وقت وتاريخ الدخول:</span>
+                                    <span class="b-val">⏱️ ${rec.entryDate} | ${rec.entryTime}</span>
+                                </div>
+                                <div class="b-field-full">
+                                    <span class="b-key">نوع وغرض الزيارة:</span>
+                                    <span class="b-val">${rec.purpose || '-'}</span>
+                                </div>
+                                ${rec.vehicle ? `
+                                    <div class="b-field-full" style="background: #eff6ff; padding: 2px 4px; border-radius: 4px; border: 1px dashed #93c5fd;">
+                                        <span class="b-key">🚗 مركبة مصرحة (رقم اللوحة):</span>
+                                        <span class="b-val" style="color: #1d4ed8; font-weight: 900;">${rec.vehicle}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <div class="badge-qr-row">
+                                <img src="${qrImageUrl}" alt="Pass QR" class="badge-qr-img" onerror="this.src='https://chart.googleapis.com/chart?cht=qr&chs=180x180&chl=${encodeURIComponent(qrData)}';">
+                                <div class="badge-rules">
+                                    ⚠️ <strong>تعليمات أمنية وإلزامية:</strong><br>
+                                    • حمل هذا الكارت بصفة ظاهرة طوال الزيارة.<br>
+                                    • الالتزام بارتداء مهمات الوقاية الشخصية (PPE).<br>
+                                    • يُمنع التحرك الفردي بدون مرافق رسمي.<br>
+                                    • يُسلّم هذا الكارت للبوابة عند تسجيل الخروج.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="badge-footer">
+                            <div>كود: <strong>DOC-SEC-VIS-PASS-01</strong></div>
+                            <div class="badge-sig-text">اعتماد أمن البوابة: ....................</div>
+                        </div>
+                    </div>
+
+                    <div class="print-btn-wrap">
+                        <button onclick="window.print()" style="padding: 10px 24px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 800; font-size: 13px; box-shadow: 0 4px 12px rgba(30,64,175,0.25);">🖨️ طباعة كارت الزائر الآن</button>
+                    </div>
                 </div>
             </body>
             </html>
