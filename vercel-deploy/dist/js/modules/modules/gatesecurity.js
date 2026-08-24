@@ -210,6 +210,9 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                         `}
                     </td>
                     <td style="padding: 10px 14px; text-align: center; white-space: nowrap;">
+                        <button type="button" class="btn btn-sm" onclick="GateSecurity.shareVisitorWhatsApp('${t.id}')" style="background: #25D366; color: #ffffff; border: none; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 4px 8px; margin-left: 4px;" title="\u0645\u0634\u0627\u0631\u0643\u0629 \u0643\u0627\u0631\u062A \u0627\u0644\u0632\u0627\u0626\u0631 \u0639\u0628\u0631 \u0648\u0627\u062A\u0633\u0627\u0628">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
                         ${r?`
                             <button type="button" class="btn btn-sm" onclick="GateSecurity.adminForceCheckOut('${t.id}', '${t.badge}')" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 4px 10px;" title="\u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0625\u062F\u0627\u0631\u064A">
                                 <i class="fas fa-door-open"></i> \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C

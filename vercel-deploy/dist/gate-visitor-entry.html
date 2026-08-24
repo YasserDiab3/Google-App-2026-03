@@ -1533,9 +1533,9 @@
                     <i class="fas fa-user-plus"></i>
                     <span id="btnNextVisitor">تسجيل زائر جديد</span>
                 </button>
-                <button type="button" class="tool-btn" style="padding: 10px 18px; font-size: 0.85rem; background: #f0fdf4; border: 1.5px solid #059669; color: #047857; font-weight: 800;" onclick="printSingleVisitorPass()">
-                    <i class="fas fa-print"></i>
-                    <span>طباعة تصريح الدخول (Badge)</span>
+                <button type="button" class="btn-whatsapp-share" onclick="shareVisitorPassViaWhatsApp()" style="margin-top: 0; padding: 10px 22px; font-size: 0.88rem; font-weight: 800; background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #ffffff; border: none; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4); transition: all 0.2s;">
+                    <i class="fab fa-whatsapp" style="font-size: 1.25rem;"></i>
+                    <span id="btnShareWhatsApp">مشاركة التصريح عبر واتساب 📲</span>
                 </button>
                 <button type="button" class="tool-btn" style="padding: 10px 18px; font-size: 0.85rem; background: var(--bg-card); color: var(--text-main);" onclick="switchTab('active')">
                     <i class="fas fa-users-viewfinder"></i>
@@ -2485,7 +2485,50 @@
             }
         }
 
-                function printSingleVisitorPass() {
+                function shareVisitorPassViaWhatsApp(targetRec) {
+            const v = targetRec || currentReceiptVisitor;
+            if (!v) {
+                showToast('لا توجد بيانات تصريح للمشاركة', 'error');
+                return;
+            }
+
+            const text = 
+`*📋 تصريح دخول زائر / مقاول معتمد*
+*الشركة العالمية للانتاج والتصنيع الزراعي (ICAPP)*
+━━━━━━━━━━━━━━━━━━━━
+🎫 *كارت رقم:* ${v.badge || 'غير محدد'}
+👤 *اسم الزائر:* ${v.name || ''}
+🏢 *الجهة / الشركة:* ${v.org || ''}
+🪪 *إثبات الشخصية:* ${v.idNumber || '-'}
+📞 *رقم الهاتف:* ${v.phone || '-'}
+🚗 *رقم السيارة:* ${v.vehicle || 'بدون'}
+📍 *المصنع والموقع:* ${v.site || ''} — ${v.area || ''}
+🤝 *المسؤول المستضيف:* ${v.host || ''}
+🎯 *الغرض من الزيارة:* ${v.purpose || ''}
+⏰ *وقت وتاريخ الدخول:* ${v.entryTime || ''} (${v.entryDate || ''})
+👮 *القائم بالتسجيل:* ${v.registeredBy || 'مسؤول الأمن'}
+━━━━━━━━━━━━━━━━━━━━
+*⚠️ تعليمات السلامة والصحة المهنية (HSE):*
+• ارتداء مهمات الوقاية الشخصية (PPE) إلزامية.
+• يمنع التدخين والتصوير داخل المنشأة نهائياً.
+• الالتزام بالمرافقة والمسارات المحددة فقط.
+• في حالات الطوارئ التوجه لأقرب نقطة تجمع (Assembly Point).
+
+_نظام إدارة أمن البوابات والسلامة المهنية — ICAPP_`;
+
+            const encoded = encodeURIComponent(text);
+            window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+        }
+
+        function shareSpecificVisitorViaWhatsApp(visitorId) {
+            const list = getVisitorsRegistry();
+            const v = list.find(item => item.id === visitorId);
+            if (v) {
+                shareVisitorPassViaWhatsApp(v);
+            }
+        }
+
+        function printSingleVisitorPass() {
             if (!currentReceiptVisitor) return;
             const v = currentReceiptVisitor;
             const win = window.open('', '_blank');
@@ -2504,6 +2547,9 @@
                         @page { size: A6 portrait; margin: 6mm; }
                         * { box-sizing: border-box; }
                         body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; margin: 0; padding: 6px; color: #0f172a; direction: rtl; }
+                        .no-print-bar { position: sticky; top: 0; background: #f8fafc; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; margin-bottom: 10px; display: flex; gap: 10px; justify-content: center; align-items: center; }
+                        .btn-print-act { padding: 6px 14px; background: #1e40af; color: #ffffff; border: none; border-radius: 6px; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
+                        .btn-close-act { padding: 6px 14px; background: #64748b; color: #ffffff; border: none; border-radius: 6px; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
                         .pass-card { border: 2.5px solid #1e3a8a; border-radius: 12px; padding: 12px; text-align: center; }
                         .pass-header { border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
                         .pass-badge { background: #1e3a8a; color: #fff; font-size: 1.15rem; font-weight: 900; padding: 4px 14px; border-radius: 8px; display: inline-block; margin-bottom: 8px; }
@@ -2516,9 +2562,16 @@
                         .pass-row strong { color: #0f172a; }
                         .pass-rules { font-size: 0.65rem; color: #047857; background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 6px; padding: 6px; margin-top: 8px; text-align: center; font-weight: 700; }
                         .pass-sig { margin-top: 12px; display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 800; }
+                        @media print {
+                            .no-print-bar { display: none !important; }
+                        }
                     </style>
                 </head>
                 <body>
+                    <div class="no-print-bar">
+                        <button class="btn-print-act" onclick="window.print()">🖨️ طباعة التصريح</button>
+                        <button class="btn-close-act" onclick="window.close()">❌ عودة / إغلاق النافذة</button>
+                    </div>
                     <div class="pass-card">
                         <div class="pass-header">
                             <img src="icons/icapp-logo.png" style="max-height: 32px; max-width: 60px; object-fit: contain;" onerror="this.style.display='none'">
@@ -2533,6 +2586,7 @@
                             <div class="pass-row"><span>الجهة / الشركة:</span><strong>${v.org}</strong></div>
                             <div class="pass-row"><span>المصنع / الموقع:</span><strong>${v.site} — ${v.area}</strong></div>
                             <div class="pass-row"><span>المستضيف:</span><strong>${v.host}</strong></div>
+                            <div class="pass-row"><span>القائم بالتسجيل:</span><strong>${v.registeredBy || 'مسؤول الأمن'}</strong></div>
                             <div class="pass-row"><span>وقت الدخول:</span><strong>${v.entryTime} (${v.entryDate})</strong></div>
                             <div class="pass-row"><span>الغرض:</span><strong>${v.purpose}</strong></div>
                         </div>
@@ -2544,9 +2598,6 @@
                             <div>توقيع الزائر: ...........</div>
                         </div>
                     </div>
-                    <script>
-                        window.onload = () => { window.print(); };
-                    <\/script>
                 </body>
                 </html>
             `);

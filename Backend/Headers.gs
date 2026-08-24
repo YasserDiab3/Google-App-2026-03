@@ -312,11 +312,14 @@ function getDefaultHeaders(sheetName) {
             'sortOrder', 'notes',
             'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
         ],
+        // ✅ قائمة مسؤولي الأمن الإداري والقائمين بالتسجيل
+        'SecurityOfficers': ['id', 'name', 'role', 'site', 'phone', 'isActive', 'createdAt', 'updatedAt'],
         // ✅ منظومة بوابات الأمن وحصر الزوار والمقاولين
         'GateVisitors': [
             'Record ID', 'Entry Date', 'Entry Time', 'Visitor Name', 'Organization / Company',
             'National ID / Passport', 'Phone Number', 'Vehicle Plate', 'Target Site',
             'Target Hall / Area', 'Host Person & Dept', 'Visit Purpose', 'Badge #',
+            'Security Officer / Registered By',
             'Status', 'Exit Time', 'Duration (Minutes)', 'Signature URL', 'Created At Timestamp'
         ]
     };

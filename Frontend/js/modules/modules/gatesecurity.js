@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ==============================================================================
  * Gate Security & Visitors Management Module (Admin & HSE Portal)
  * الشركة العالمية للانتاج والتصنيع الزراعي (ICAPP)
@@ -429,6 +429,9 @@ class GateSecurityModule {
                         `}
                     </td>
                     <td style="padding: 10px 14px; text-align: center; white-space: nowrap;">
+                        <button type="button" class="btn btn-sm" onclick="GateSecurity.shareVisitorWhatsApp('${v.id}')" style="background: #25D366; color: #ffffff; border: none; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 4px 8px; margin-left: 4px;" title="مشاركة كارت الزائر عبر واتساب">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
                         ${isActive ? `
                             <button type="button" class="btn btn-sm" onclick="GateSecurity.adminForceCheckOut('${v.id}', '${v.badge}')" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 4px 10px;" title="تسجيل خروج إداري">
                                 <i class="fas fa-door-open"></i> تسجيل خروج

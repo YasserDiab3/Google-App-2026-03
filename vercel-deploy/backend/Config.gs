@@ -97,7 +97,7 @@ function getRequiredSheets() {
         // نظام النسخ الاحتياطي
         'BackupLog', 'BackupSettings',
         // منظومة أمن البوابات وحصر الزوار والمقاولين
-        'GateVisitors'
+        'SecurityOfficers', 'GateVisitors'
     ];
     
     // التحقق من عدم وجود تكرار (للتحسين)
