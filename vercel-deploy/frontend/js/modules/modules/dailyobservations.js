@@ -7958,7 +7958,16 @@ const DailyObservations = {
             const refreshModuleBtn = document.getElementById('daily-observations-refresh-btn');
             if (refreshModuleBtn) {
                 refreshModuleBtn.replaceWith(refreshModuleBtn.cloneNode(true));
-                document.getElementById('daily-observations-refresh-btn').addEventListener('click', () => this.load());
+                document.getElementById('daily-observations-refresh-btn').addEventListener('click', async () => {
+                    if (typeof Notification !== 'undefined' && Notification.info) {
+                        Notification.info('جاري تحديث بيانات الملاحظات...');
+                    }
+                    await this.ensureDailyObservationsDataLoaded({ force: true }).catch(() => {});
+                    await this.load();
+                    if (typeof Notification !== 'undefined' && Notification.success) {
+                        Notification.success('تم تحديث الملاحظات بنجاح');
+                    }
+                });
             }
 
             // البحث والفلاتر - إعادة ربط جميع الأحداث
