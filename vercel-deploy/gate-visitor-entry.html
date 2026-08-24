@@ -292,47 +292,84 @@
             color: #e2e8f0;
         }
 
-        /* ═══ ريسبونسف: موبايل صغير ═══ */
-        @media (max-width: 480px) {
+        /* ═══ ريسبونسف: موبايل وشاشات صغيرة (ضمان سطر واحد 100%) ═══ */
+        @media (max-width: 540px) {
+            body {
+                padding: 8px 6px 36px;
+            }
             .iso-header-table {
-                grid-template-columns: 58px 1fr 78px;
+                grid-template-columns: 50px 1fr 70px;
                 border-radius: 10px;
                 margin-bottom: 10px;
                 border-top-width: 3px;
             }
             .iso-col-brand {
                 padding: 4px 2px;
-                min-width: 58px;
-                max-width: 58px;
+                min-width: 50px;
+                max-width: 50px;
             }
             .iso-logo-wrap {
-                width: 48px;
-                height: 32px;
-                padding: 2px;
+                width: 44px;
+                height: 28px;
+                padding: 1px 2px;
+                border-radius: 5px;
             }
             .iso-logo-img {
-                max-height: 26px;
-                max-width: 42px;
+                max-height: 24px;
+                max-width: 38px;
             }
             .iso-dept-name {
-                display: none;
+                display: none !important;
             }
             .iso-col-title {
-                padding: 4px 4px;
+                padding: 3px 2px;
+                gap: 1px;
             }
             .iso-doc-title {
-                font-size: 0.74rem;
+                font-size: clamp(0.58rem, 2.6vw, 0.78rem) !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                line-height: 1.2 !important;
             }
             .iso-doc-subtitle {
-                font-size: 0.48rem;
+                font-size: clamp(0.42rem, 1.6vw, 0.52rem) !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
             }
             .iso-col-meta {
-                padding: 4px 4px;
-                min-width: 78px;
-                max-width: 78px;
+                padding: 3px 4px;
+                min-width: 70px;
+                max-width: 70px;
+                gap: 1px;
             }
-            .iso-meta-key { font-size: 0.46rem; }
-            .iso-meta-val { font-size: 0.5rem; padding: 0 2px; }
+            .iso-meta-key { font-size: 0.44rem !important; }
+            .iso-meta-val { font-size: 0.48rem !important; padding: 0 2px !important; }
+        }
+
+        @media (max-width: 375px) {
+            .iso-header-table {
+                grid-template-columns: 44px 1fr 66px;
+            }
+            .iso-col-brand {
+                min-width: 44px;
+                max-width: 44px;
+            }
+            .iso-logo-wrap {
+                width: 38px;
+                height: 26px;
+            }
+            .iso-doc-title {
+                font-size: 0.62rem !important;
+            }
+            .iso-col-meta {
+                min-width: 66px;
+                max-width: 66px;
+            }
+            .iso-meta-row:last-child {
+                display: none; /* إخفاء درجة السرية في أصغر شاشات لتوفير مساحة */
+            }
         }
 
         /* Top Action Buttons: Theme & Lang */
