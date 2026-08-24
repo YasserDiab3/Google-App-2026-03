@@ -1559,37 +1559,20 @@ class GateSecurityModule {
             bList.innerHTML = config.buildings.map((b, idx) => {
                 const isSel = window._selectedItem && window._selectedItem.type === 'building' && window._selectedItem.idx === idx;
                 return `
-                    <div style="background: ${isSel ? '#fef2f2' : '#ffffff'}; border: 1.5px solid ${isSel ? '#ef4444' : '#cbd5e1'}; border-radius: 8px; padding: 7px 10px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.2s;">
-                        <!-- السطر الأول: الاسم الرئيسي والوصف وزر الحذف -->
-                        <div style="display: flex; gap: 6px; align-items: center; width: 100%;">
-                            <input type="text" value="${b.name}" placeholder="اسم المبنى الرئيسي" onchange="GateSecurity.updateBuildingProp(${idx}, 'name', this.value)" style="flex: 1.3; font-weight: 800; font-size: 0.78rem; padding: 3px 7px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; color: #1e293b; min-width: 0;" title="اسم المبنى الرئيسي">
-                            <input type="text" value="${b.sub || ''}" placeholder="الوصف الفرعي" onchange="GateSecurity.updateBuildingProp(${idx}, 'sub', this.value)" style="flex: 1; font-size: 0.74rem; padding: 3px 7px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #475569; min-width: 0;" title="الوصف الفرعي (مثال: الإدارة والإنتاج)">
-                            <button type="button" onclick="GateSecurity.removeBuilding(${idx})" style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 6px; width: 26px; height: 26px; font-weight: 900; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="حذف هذا الموقع">✕</button>
-                        </div>
-                        <!-- السطر الثاني: اللون والأبعاد تفاعلياً -->
-                        <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; font-size: 0.74rem; color: #334155; border-top: 1px dashed #e2e8f0; padding-top: 5px;">
-                            <div style="display: flex; align-items: center; gap: 4px;">
-                                <span style="font-weight: 800; color: #475569;">اللون:</span>
-                                <select onchange="GateSecurity.updateBuildingColor(${idx}, this.value)" style="font-size: 0.72rem; padding: 2px 6px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 800; background: #ffffff; cursor: pointer;">
-                                    <option value="#dbeafe" ${b.fill === '#dbeafe' ? 'selected' : ''}>🔵 أزرق</option>
-                                    <option value="#fef3c7" ${b.fill === '#fef3c7' ? 'selected' : ''}>🟡 أصفر</option>
-                                    <option value="#ede9fe" ${b.fill === '#ede9fe' ? 'selected' : ''}>🟣 بنفسجي</option>
-                                    <option value="#fce7f3" ${b.fill === '#fce7f3' ? 'selected' : ''}>🩷 وردي</option>
-                                    <option value="#dcfce7" ${b.fill === '#dcfce7' ? 'selected' : ''}>🟢 أخضر</option>
-                                    <option value="#f1f5f9" ${b.fill === '#f1f5f9' ? 'selected' : ''}>⚪ رمادي</option>
-                                </select>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <div style="display: flex; align-items: center; gap: 3px;">
-                                    <span style="font-weight: 800; color: #1e40af;">W:</span>
-                                    <input type="number" value="${b.w}" onchange="GateSecurity.updateBuildingProp(${idx}, 'w', parseInt(this.value))" style="width: 42px; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 0.74rem; text-align: center; font-weight: 800; background: #fff;" title="عرض المبنى بالبكسل">
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 3px;">
-                                    <span style="font-weight: 800; color: #1e40af;">H:</span>
-                                    <input type="number" value="${b.h}" onchange="GateSecurity.updateBuildingProp(${idx}, 'h', parseInt(this.value))" style="width: 42px; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 0.74rem; text-align: center; font-weight: 800; background: #fff;" title="ارتفاع المبنى بالبكسل">
-                                </div>
-                            </div>
-                        </div>
+                    <div style="display: flex; align-items: center; gap: 4px; background: ${isSel ? '#fef2f2' : '#ffffff'}; border: 1.5px solid ${isSel ? '#ef4444' : '#cbd5e1'}; border-radius: 8px; padding: 5px 7px; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.03); transition: all 0.2s;">
+                        <input type="text" value="${b.name}" placeholder="اسم المبنى" onchange="GateSecurity.updateBuildingProp(${idx}, 'name', this.value)" style="flex: 2; min-width: 65px; font-weight: 800; font-size: 0.76rem; padding: 3px 6px; border: 1px solid #cbd5e1; border-radius: 5px; background: #f8fafc; color: #1e293b; box-sizing: border-box;" title="اسم المبنى الرئيسي">
+                        <input type="text" value="${b.sub || ''}" placeholder="وصف الفرعي" onchange="GateSecurity.updateBuildingProp(${idx}, 'sub', this.value)" style="flex: 1.5; min-width: 55px; font-size: 0.72rem; padding: 3px 6px; border: 1px solid #cbd5e1; border-radius: 5px; background: #ffffff; color: #475569; box-sizing: border-box;" title="الوصف الفرعي">
+                        <div style="display: flex; align-items: center; gap: 1px; flex-shrink: 0;"><span style="font-size: 0.64rem; font-weight: 900; color: #1e40af;">W:</span><input type="number" value="${b.w}" onchange="GateSecurity.updateBuildingProp(${idx}, 'w', parseInt(this.value))" style="width: 32px; padding: 2px 2px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.72rem; text-align: center; font-weight: 800; background: #fff;" title="العرض"></div>
+                        <div style="display: flex; align-items: center; gap: 1px; flex-shrink: 0;"><span style="font-size: 0.64rem; font-weight: 900; color: #1e40af;">H:</span><input type="number" value="${b.h}" onchange="GateSecurity.updateBuildingProp(${idx}, 'h', parseInt(this.value))" style="width: 32px; padding: 2px 2px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.72rem; text-align: center; font-weight: 800; background: #fff;" title="الارتفاع"></div>
+                        <select onchange="GateSecurity.updateBuildingColor(${idx}, this.value)" style="width: 62px; font-size: 0.68rem; padding: 2px 2px; border-radius: 5px; border: 1px solid #cbd5e1; font-weight: 800; background: #ffffff; cursor: pointer; flex-shrink: 0;" title="لون المبنى">
+                            <option value="#dbeafe" ${b.fill === '#dbeafe' ? 'selected' : ''}>🔵 أزرق</option>
+                            <option value="#fef3c7" ${b.fill === '#fef3c7' ? 'selected' : ''}>🟡 أصفر</option>
+                            <option value="#ede9fe" ${b.fill === '#ede9fe' ? 'selected' : ''}>🟣 بنفسجي</option>
+                            <option value="#fce7f3" ${b.fill === '#fce7f3' ? 'selected' : ''}>🩷 وردي</option>
+                            <option value="#dcfce7" ${b.fill === '#dcfce7' ? 'selected' : ''}>🟢 أخضر</option>
+                            <option value="#f1f5f9" ${b.fill === '#f1f5f9' ? 'selected' : ''}>⚪ رمادي</option>
+                        </select>
+                        <button type="button" onclick="GateSecurity.removeBuilding(${idx})" style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 5px; width: 23px; height: 23px; font-weight: 900; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="حذف هذا الموقع">✕</button>
                     </div>
                 `;
             }).join('');
