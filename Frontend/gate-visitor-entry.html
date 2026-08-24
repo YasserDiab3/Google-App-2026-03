@@ -757,17 +757,21 @@
 
     <div class="container">
         <!-- شريط أدوات البوابة وتبديل الثيم واللغة -->
-        <div class="top-tools-bar" style="margin-bottom: 8px;">
-            <div class="gate-badge">
-                <i class="fas fa-dungeon text-amber-400"></i>
+        <div class="top-tools-bar" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <div class="gate-badge" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.82rem; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; padding: 4px 12px; border-radius: 8px;">
+                <i class="fas fa-dungeon text-amber-500"></i>
                 <span id="gateBadgeText">بوابة الدخول الرئيسية (Main Gate Security)</span>
             </div>
 
-            <div class="tools-actions">
-                <button type="button" class="tool-btn" onclick="toggleTheme()" title="تبديل الثيم">
+            <div class="tools-actions" style="display: flex; gap: 6px; align-items: center;">
+                <button type="button" class="tool-btn" onclick="printGateQrPoster()" style="padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                    <i class="fas fa-qrcode text-blue-600"></i>
+                    <span id="btnQrPosterText">بوستر QR (A4)</span>
+                </button>
+                <button type="button" class="tool-btn" onclick="toggleTheme()" title="تبديل الثيم" style="padding: 4px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer;">
                     <i class="fas fa-moon" id="themeIcon"></i>
                 </button>
-                <button type="button" class="tool-btn" onclick="toggleLanguage()" title="Switch Language / تبديل اللغة">
+                <button type="button" id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()" style="padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                     <i class="fas fa-globe"></i>
                     <span id="langBtnText">EN</span>
                 </button>
@@ -775,19 +779,19 @@
         </div>
 
         <!-- ══════════════════════════════════════════════════════
-             ترويسة ISO المعتمدة ثلاثية الأعمدة (موحدة لجميع النماذج)
+             ترويسة ISO المعتمدة ثلاثية الأعمدة (مطابقة لجميع النماذج)
         ══════════════════════════════════════════════════════ -->
         <div class="iso-header-table">
             <div class="iso-col-brand">
                 <div class="iso-logo-wrap">
-                    <img id="isoLogoImg" src="icons/icapp-logo.png" alt="شعار الشركة" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
+                    <img id="isoLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
                 </div>
                 <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
             </div>
 
             <div class="iso-col-title">
-                <h1 class="iso-doc-title" id="isoDocTitle">نظام تسجيل وتتبع الزوار والمقاولين</h1>
-                <div class="iso-doc-subtitle" id="isoDocSubtitle">Gate Security Visitor & Contractor Control</div>
+                <h1 class="iso-doc-title" id="isoDocTitle">نظام تسجيل الزائرين - المقاولين</h1>
+                <div class="iso-doc-subtitle" id="isoDocSubtitle">Visitor & Contractor Registration System</div>
             </div>
 
             <div class="iso-col-meta">
@@ -1092,9 +1096,9 @@
             ar: {
                 dir: 'rtl',
                 langBtn: 'EN',
-                pageTitle: 'SafetyHub | نظام تسجيل وتتبع الزوار والمقاولين',
-                docTitle: 'نظام تسجيل وتتبع الزوار والمقاولين',
-                docSubtitle: 'Gate Security Visitor & Contractor Control',
+                pageTitle: 'SafetyHub | نظام تسجيل الزائرين - المقاولين',
+                docTitle: 'نظام تسجيل الزائرين - المقاولين',
+                docSubtitle: 'Visitor & Contractor Registration System',
                 deptName: 'إدارة السلامة والصحة المهنية',
                 gateBadge: 'بوابة الدخول الرئيسية (Main Gate Security)',
                 btnQrPosterText: 'بوستر QR (A4)',
@@ -1143,9 +1147,9 @@
             en: {
                 dir: 'ltr',
                 langBtn: 'AR',
-                pageTitle: 'SafetyHub | Gate Security Visitor & Contractor Control',
-                docTitle: 'Gate Security Visitor & Contractor Control',
-                docSubtitle: 'Gate Security Visitor & Contractor Control',
+                pageTitle: 'SafetyHub | Visitor & Contractor Registration System',
+                docTitle: 'Visitor & Contractor Registration System',
+                docSubtitle: 'Visitor & Contractor Registration System',
                 deptName: 'Occupational Health & Safety Department',
                 gateBadge: 'Main Gate Security Station',
                 btnQrPosterText: 'QR Poster (A4)',
@@ -1511,7 +1515,7 @@
 
             const docTitle = document.getElementById('isoDocTitle');
             if (docTitle) docTitle.textContent = t.docTitle;
-            const docSubtitle = document.querySelector('#isoDocSubtitle span');
+            const docSubtitle = document.getElementById('isoDocSubtitle');
             if (docSubtitle) docSubtitle.textContent = t.docSubtitle;
             const isoDept = document.getElementById('isoDeptName');
             if (isoDept && t.deptName) isoDept.textContent = t.deptName;
