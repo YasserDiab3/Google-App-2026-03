@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Google Apps Script for HSE System - Main Entry Point
  * 
  * هذا هو الملف الرئيسي الذي يتعامل مع جميع الطلبات
@@ -408,7 +408,8 @@ function doPost(e) {
             'submitPublicObservation', 'getPublicObservationConfig',
             'submitPublicNearMiss', 'getPublicNearMissConfig',
             'submitPublicFireInspection', 'getPublicFireInspectionConfig',
-            'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig'
+            'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig',
+            'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
         var needsSessionForWrite = !isReadOnlyAction;
