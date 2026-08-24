@@ -216,62 +216,75 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                 <meta charset="UTF-8">
                 <title>\u0643\u0634\u0641 \u062D\u0635\u0631 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0648\u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0644\u0644\u0632\u0648\u0627\u0631 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 - ICAPP</title>
                 <style>
-                    body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; direction: rtl; }
+                    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 25px; direction: rtl; color: #0f172a; }
                     .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; }
-                    h2 { margin: 0 0 6px; color: #b91c1c; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
-                    th, td { border: 1px solid #000; padding: 6px 8px; text-align: right; }
-                    th { background: #f1f5f9; }
-                    .footer { margin-top: 30px; display: flex; justify-content: space-between; font-weight: bold; }
-                    @media print { button { display: none; } }
+                    .header h2 { margin: 0 0 6px; color: #b91c1c; font-size: 18px; }
+                    .header-sub { font-size: 13px; font-weight: bold; color: #1e3a8a; }
+                    .meta-strip { margin-top: 6px; font-size: 11px; color: #475569; display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 4px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 11.5px; }
+                    th, td { border: 1px solid #334155; padding: 6px 8px; text-align: right; }
+                    th { background: #f1f5f9; font-weight: bold; color: #0f172a; }
+                    .footer { margin-top: 36px; display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; border-top: 1px solid #cbd5e1; padding-top: 15px; }
+                    @media print { button { display: none !important; } body { padding: 10px; } }
                 </style>
             </head>
             <body>
                 <div class="header">
                     <h2>\u{1F6A8} \u0643\u0634\u0641 \u062D\u0635\u0631 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0648\u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0627\u0644\u0641\u0648\u0631\u064A \u0644\u0644\u0632\u0648\u0627\u0631 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</h2>
-                    <div>\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0639\u0627\u0644\u0645\u064A\u0629 \u0644\u0644\u0625\u0646\u062A\u0627\u062C \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639 \u0627\u0644\u0632\u0631\u0627\u0639\u064A (ICAPP) \u2014 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0623\u0645\u0646 \u0627\u0644\u0635\u0646\u0627\u0639\u064A</div>
-                    <div style="margin-top: 4px; font-size: 11px; color: #475569;">\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0637\u0628\u0627\u0639\u0629: ${e.toLocaleDateString("ar-EG")} - ${e.toLocaleTimeString("ar-EG")} | \u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u062A\u0648\u0627\u062C\u062F\u064A\u0646: <strong>${t.length}</strong> \u0632\u0627\u0626\u0631/\u0645\u0642\u0627\u0648\u0644</div>
+                    <div class="header-sub">\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0639\u0627\u0644\u0645\u064A\u0629 \u0644\u0644\u0625\u0646\u062A\u0627\u062C \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639 \u0627\u0644\u0632\u0631\u0627\u0639\u064A (ICAPP) \u2014 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629</div>
+                    <div class="meta-strip">
+                        <span>\u0643\u0648\u062F \u0627\u0644\u0648\u062B\u064A\u0642\u0629: DOC-HSE-EMR-VIS-01 | Rev. 02</span>
+                        <span>\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0637\u0648\u0627\u0631\u0626 / \u0627\u0644\u0637\u0628\u0627\u0639\u0629: ${e.toLocaleDateString("ar-EG")} - ${e.toLocaleTimeString("ar-EG")}</span>
+                        <span>\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u062A\u0648\u0627\u062C\u062F\u064A\u0646 \u0628\u0627\u0644\u0645\u0646\u0634\u0623\u0629: <strong>${t.length}</strong></span>
+                    </div>
                 </div>
 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>\u0631\u0642\u0645 \u0627\u0644\u0643\u0627\u0631\u062A</th>
-                            <th>\u0627\u0633\u0645 \u0627\u0644\u0632\u0627\u0626\u0631</th>
-                            <th>\u0627\u0644\u0634\u0631\u0643\u0629 / \u0627\u0644\u062C\u0647\u0629</th>
-                            <th>\u0627\u0644\u0645\u0635\u0646\u0639</th>
-                            <th>\u0627\u0644\u0645\u0643\u0627\u0646 / \u0627\u0644\u0635\u0627\u0644\u0629</th>
-                            <th>\u0627\u0644\u0634\u062E\u0635 \u0627\u0644\u0645\u0633\u062A\u0636\u064A\u0641</th>
-                            <th>\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644</th>
-                            <th>\u0627\u0644\u062A\u062D\u0642\u0642 \u0639\u0646\u062F \u0646\u0642\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u0639 (Muster Point)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${t.map((s,o)=>`
+                ${t.length===0?`
+                    <div style="text-align: center; padding: 30px; border: 1px dashed #94a3b8; border-radius: 8px; margin: 20px 0; background: #f8fafc;">
+                        <h3 style="color: #059669; margin: 0 0 6px;">\u2705 \u0625\u0641\u0627\u062F\u0629 \u062E\u0644\u0648 \u0627\u0644\u0645\u0646\u0634\u0623\u0629 \u0645\u0646 \u0623\u064A \u0632\u0648\u0627\u0631 \u0623\u0648 \u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u062E\u0627\u0631\u062C\u064A\u064A\u0646</h3>
+                        <p style="color: #64748b; margin: 0; font-size: 12px;">\u062A\u0645 \u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0641\u062D\u0635 \u0627\u0644\u0644\u062D\u0638\u064A \u0644\u0633\u062C\u0644 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0648\u062A\u0623\u0643\u064A\u062F \u0639\u062F\u0645 \u0648\u062C\u0648\u062F \u0623\u064A \u0632\u0627\u0626\u0631 \u0623\u0648 \u0645\u0642\u0627\u0648\u0644 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u0628\u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A \u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0623\u0639\u0644\u0627\u0647.</p>
+                    </div>
+                `:`
+                    <table>
+                        <thead>
                             <tr>
-                                <td>${o+1}</td>
-                                <td><strong>${s.badge||"-"}</strong></td>
-                                <td><strong>${s.name}</strong></td>
-                                <td>${s.org}</td>
-                                <td>${s.site}</td>
-                                <td>${s.area}</td>
-                                <td>${s.host}</td>
-                                <td>${s.entryTime}</td>
-                                <td style="width: 120px;">[ &nbsp; ] \u0633\u0644\u064A\u0645 &nbsp;&nbsp; [ &nbsp; ] \u0645\u0641\u0642\u0648\u062F</td>
+                                <th style="width: 25px; text-align: center;">#</th>
+                                <th style="width: 70px;">\u0631\u0642\u0645 \u0627\u0644\u0643\u0627\u0631\u062A</th>
+                                <th>\u0627\u0633\u0645 \u0627\u0644\u0632\u0627\u0626\u0631 / \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                                <th>\u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0634\u0631\u0643\u0629</th>
+                                <th>\u0627\u0644\u0645\u0635\u0646\u0639</th>
+                                <th>\u0627\u0644\u0645\u0643\u0627\u0646 / \u0627\u0644\u0635\u0627\u0644\u0629</th>
+                                <th>\u0627\u0644\u0645\u0648\u0638\u0641 \u0627\u0644\u0645\u0633\u062A\u0636\u064A\u0641</th>
+                                <th style="width: 70px;">\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644</th>
+                                <th style="width: 140px; text-align: center;">\u0627\u0644\u062A\u062D\u0642\u0642 \u0639\u0646\u062F \u0646\u0642\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u0639 (Muster Point)</th>
                             </tr>
-                        `).join("")}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            ${t.map((s,o)=>`
+                                <tr>
+                                    <td style="text-align: center;">${o+1}</td>
+                                    <td><strong>${s.badge||"-"}</strong></td>
+                                    <td><strong>${s.name}</strong></td>
+                                    <td>${s.org}</td>
+                                    <td>${s.site}</td>
+                                    <td>${s.area}</td>
+                                    <td>${s.host}</td>
+                                    <td>${s.entryTime}</td>
+                                    <td style="text-align: center; font-size: 11px;">[ &nbsp; ] \u0622\u0645\u0646 / \u0633\u0644\u064A\u0645 &nbsp;&nbsp; [ &nbsp; ] \u0645\u0641\u0642\u0648\u062F</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                `}
 
                 <div class="footer">
-                    <div>\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0623\u0645\u0646 \u0627\u0644\u0635\u0646\u0627\u0639\u064A: ........................</div>
-                    <div>\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0648\u0627\u0644\u0633\u0644\u0627\u0645\u0629: ........................</div>
-                    <div>\u0642\u0627\u0626\u062F \u0641\u0631\u064A\u0642 \u0627\u0644\u0637\u0648\u0627\u0631\u0626: ........................</div>
+                    <div>\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629: ........................</div>
+                    <div>\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0648\u0646\u0642\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u0639: ........................</div>
+                    <div>\u0642\u0627\u0626\u062F \u0641\u0631\u064A\u0642 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 (Incident Commander): ........................</div>
                 </div>
 
-                <div style="text-align: center; margin-top: 20px;">
-                    <button onclick="window.print()" style="padding: 8px 16px; background: #1e40af; color: #fff; border:none; border-radius:6px; cursor:pointer;">\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0643\u0634\u0641</button>
+                <div style="text-align: center; margin-top: 25px;">
+                    <button onclick="window.print()" style="padding: 10px 22px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: bold; font-size: 13px;">\u{1F5A8}\uFE0F \u0637\u0628\u0627\u0639\u0629 \u0643\u0634\u0641 \u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0627\u0644\u0622\u0646</button>
                 </div>
             </body>
             </html>

@@ -691,7 +691,7 @@
         <div class="iso-header-table">
             <div class="iso-col-brand">
                 <div class="iso-company-name">الشركة العالمية للانتاج والتصنيع الزراعي</div>
-                <div class="iso-dept-name">إدارة الأمن الصناعي وحراسة البوابات</div>
+                <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
             </div>
 
             <div class="iso-col-title">
@@ -998,6 +998,7 @@
                 pageTitle: 'SafetyHub | نظام تسجيل وتتبع الزوار والمقاولين',
                 docTitle: 'نظام تسجيل وتتبع الزوار والمقاولين',
                 docSubtitle: 'Gate Security Visitor & Contractor Control',
+                deptName: 'إدارة السلامة والصحة المهنية',
                 gateBadge: 'بوابة الدخول الرئيسية (Main Gate Security)',
                 tabCheckIn: 'تسجيل دخول جديد',
                 tabActive: 'الزوار المتواجدون بالمصنع',
@@ -1049,6 +1050,7 @@
                 pageTitle: 'SafetyHub | Gate Security Visitor & Contractor Control',
                 docTitle: 'Gate Security Visitor & Contractor Control',
                 docSubtitle: 'Gate Security Visitor & Contractor Control',
+                deptName: 'Occupational Health & Safety Department',
                 gateBadge: 'Main Gate Security Station',
                 tabCheckIn: 'New Check-In',
                 tabActive: 'Active Onsite Visitors',
@@ -1144,6 +1146,8 @@
             if (docTitle) docTitle.textContent = t.docTitle;
             const docSubtitle = document.querySelector('#isoDocSubtitle span');
             if (docSubtitle) docSubtitle.textContent = t.docSubtitle;
+            const isoDept = document.getElementById('isoDeptName');
+            if (isoDept && t.deptName) isoDept.textContent = t.deptName;
 
             const gateBadge = document.getElementById('gateBadgeText');
             if (gateBadge) gateBadge.textContent = t.gateBadge;

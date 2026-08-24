@@ -510,62 +510,75 @@ class GateSecurityModule {
                 <meta charset="UTF-8">
                 <title>كشف حصر الطوارئ والإخلاء للزوار والمقاولين - ICAPP</title>
                 <style>
-                    body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; direction: rtl; }
+                    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 25px; direction: rtl; color: #0f172a; }
                     .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; }
-                    h2 { margin: 0 0 6px; color: #b91c1c; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
-                    th, td { border: 1px solid #000; padding: 6px 8px; text-align: right; }
-                    th { background: #f1f5f9; }
-                    .footer { margin-top: 30px; display: flex; justify-content: space-between; font-weight: bold; }
-                    @media print { button { display: none; } }
+                    .header h2 { margin: 0 0 6px; color: #b91c1c; font-size: 18px; }
+                    .header-sub { font-size: 13px; font-weight: bold; color: #1e3a8a; }
+                    .meta-strip { margin-top: 6px; font-size: 11px; color: #475569; display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 4px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 11.5px; }
+                    th, td { border: 1px solid #334155; padding: 6px 8px; text-align: right; }
+                    th { background: #f1f5f9; font-weight: bold; color: #0f172a; }
+                    .footer { margin-top: 36px; display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; border-top: 1px solid #cbd5e1; padding-top: 15px; }
+                    @media print { button { display: none !important; } body { padding: 10px; } }
                 </style>
             </head>
             <body>
                 <div class="header">
                     <h2>🚨 كشف حصر الطوارئ والإخلاء الفوري للزوار والمقاولين</h2>
-                    <div>الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) — إدارة السلامة والأمن الصناعي</div>
-                    <div style="margin-top: 4px; font-size: 11px; color: #475569;">توقيت الطباعة: ${now.toLocaleDateString('ar-EG')} - ${now.toLocaleTimeString('ar-EG')} | إجمالي المتواجدين: <strong>${active.length}</strong> زائر/مقاول</div>
+                    <div class="header-sub">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) — إدارة السلامة والصحة المهنية</div>
+                    <div class="meta-strip">
+                        <span>كود الوثيقة: DOC-HSE-EMR-VIS-01 | Rev. 02</span>
+                        <span>توقيت الطوارئ / الطباعة: ${now.toLocaleDateString('ar-EG')} - ${now.toLocaleTimeString('ar-EG')}</span>
+                        <span>إجمالي المتواجدين بالمنشأة: <strong>${active.length}</strong></span>
+                    </div>
                 </div>
 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>رقم الكارت</th>
-                            <th>اسم الزائر</th>
-                            <th>الشركة / الجهة</th>
-                            <th>المصنع</th>
-                            <th>المكان / الصالة</th>
-                            <th>الشخص المستضيف</th>
-                            <th>وقت الدخول</th>
-                            <th>التحقق عند نقطة التجمع (Muster Point)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${active.map((v, i) => `
+                ${active.length === 0 ? `
+                    <div style="text-align: center; padding: 30px; border: 1px dashed #94a3b8; border-radius: 8px; margin: 20px 0; background: #f8fafc;">
+                        <h3 style="color: #059669; margin: 0 0 6px;">✅ إفادة خلو المنشأة من أي زوار أو مقاولين خارجيين</h3>
+                        <p style="color: #64748b; margin: 0; font-size: 12px;">تم إجراء الفحص اللحظي لسجل البوابات وتأكيد عدم وجود أي زائر أو مقاول داخل المصانع بتاريخ ووقت الطباعة أعلاه.</p>
+                    </div>
+                ` : `
+                    <table>
+                        <thead>
                             <tr>
-                                <td>${i + 1}</td>
-                                <td><strong>${v.badge || '-'}</strong></td>
-                                <td><strong>${v.name}</strong></td>
-                                <td>${v.org}</td>
-                                <td>${v.site}</td>
-                                <td>${v.area}</td>
-                                <td>${v.host}</td>
-                                <td>${v.entryTime}</td>
-                                <td style="width: 120px;">[ &nbsp; ] سليم &nbsp;&nbsp; [ &nbsp; ] مفقود</td>
+                                <th style="width: 25px; text-align: center;">#</th>
+                                <th style="width: 70px;">رقم الكارت</th>
+                                <th>اسم الزائر / المقاول</th>
+                                <th>الجهة / الشركة</th>
+                                <th>المصنع</th>
+                                <th>المكان / الصالة</th>
+                                <th>الموظف المستضيف</th>
+                                <th style="width: 70px;">وقت الدخول</th>
+                                <th style="width: 140px; text-align: center;">التحقق عند نقطة التجمع (Muster Point)</th>
                             </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            ${active.map((v, i) => `
+                                <tr>
+                                    <td style="text-align: center;">${i + 1}</td>
+                                    <td><strong>${v.badge || '-'}</strong></td>
+                                    <td><strong>${v.name}</strong></td>
+                                    <td>${v.org}</td>
+                                    <td>${v.site}</td>
+                                    <td>${v.area}</td>
+                                    <td>${v.host}</td>
+                                    <td>${v.entryTime}</td>
+                                    <td style="text-align: center; font-size: 11px;">[ &nbsp; ] آمن / سليم &nbsp;&nbsp; [ &nbsp; ] مفقود</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `}
 
                 <div class="footer">
-                    <div>مسؤول الأمن الصناعي: ........................</div>
-                    <div>مسؤول الإخلاء والسلامة: ........................</div>
-                    <div>قائد فريق الطوارئ: ........................</div>
+                    <div>مسؤول السلامة والصحة المهنية: ........................</div>
+                    <div>مسؤول الإخلاء ونقطة التجمع: ........................</div>
+                    <div>قائد فريق الطوارئ (Incident Commander): ........................</div>
                 </div>
 
-                <div style="text-align: center; margin-top: 20px;">
-                    <button onclick="window.print()" style="padding: 8px 16px; background: #1e40af; color: #fff; border:none; border-radius:6px; cursor:pointer;">طباعة الكشف</button>
+                <div style="text-align: center; margin-top: 25px;">
+                    <button onclick="window.print()" style="padding: 10px 22px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: bold; font-size: 13px;">🖨️ طباعة كشف الإخلاء الآن</button>
                 </div>
             </body>
             </html>
