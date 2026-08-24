@@ -85,6 +85,61 @@
             padding: 16px 12px 40px;
         }
 
+        /* LTR Overrides */
+        html[dir="ltr"] body {
+            direction: ltr;
+            text-align: left;
+        }
+        html[dir="ltr"] .form-section,
+        html[dir="ltr"] .section-header,
+        html[dir="ltr"] .section-desc,
+        html[dir="ltr"] .form-group,
+        html[dir="ltr"] .receipt-card,
+        html[dir="ltr"] .receipt-row,
+        html[dir="ltr"] .iso-col-title {
+            text-align: left;
+        }
+        html[dir="ltr"] .section-desc {
+            margin-right: 0;
+            margin-left: 30px;
+        }
+        html[dir="ltr"] .section-theme-1 { border-right: 1px solid #e2e8f0 !important; border-left: 4px solid #2563eb !important; }
+        html[dir="ltr"] .section-theme-2 { border-right: 1px solid #e2e8f0 !important; border-left: 4px solid #ea580c !important; }
+        html[dir="ltr"] .section-theme-3 { border-right: 1px solid #e2e8f0 !important; border-left: 4px solid #059669 !important; }
+        html[dir="ltr"] .section-theme-4 { border-right: 1px solid #e2e8f0 !important; border-left: 4px solid #7c3aed !important; }
+        html[dir="ltr"] .iso-col-brand {
+            border-left: none;
+            border-right: 1.5px solid #dbeafe;
+        }
+        html[dir="ltr"] .floating-hub-btn {
+            right: auto;
+            left: 22px;
+        }
+        @media (max-width: 640px) {
+            html[dir="ltr"] .floating-hub-btn {
+                right: auto;
+                left: 14px;
+            }
+        }
+
+        .lang-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            background: #e0e7ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+            border-radius: 9999px;
+            padding: 2px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .lang-btn:hover {
+            background: #c7d2fe;
+        }
+
         .container {
             width: 100%;
             max-width: 800px;
@@ -2250,17 +2305,21 @@
             <!-- المنتصف: عنوان النموذج المعتمد ورابط بوابة النماذج -->
             <div class="iso-col-title">
                 <a href="forms-hub.html" style="text-decoration: none; color: inherit; display: block;" title="الرجوع إلى بوابة النماذج">
-                    <h1 class="iso-doc-title">نموذج تسجيل الملاحظات اليومية</h1>
-                    <div class="iso-doc-subtitle">
+                    <h1 class="iso-doc-title" id="isoDocTitle">نموذج تسجيل الملاحظات اليومية</h1>
+                    <div class="iso-doc-subtitle" id="isoDocSubtitle">
                         <i class="fas fa-clipboard-check text-blue-600"></i>
                         <span>Daily Observation Report</span>
                     </div>
                 </a>
-                <div style="margin-top: 5px;">
-                    <a href="forms-hub.html" style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; background: rgba(37, 99, 235, 0.1); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25); border-radius: 9999px; padding: 2px 10px; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='rgba(37, 99, 235, 0.2)'" onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'">
+                <div style="margin-top: 5px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <a href="forms-hub.html" class="hub-link-btn" style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; background: rgba(37, 99, 235, 0.1); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25); border-radius: 9999px; padding: 2px 10px; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='rgba(37, 99, 235, 0.2)'" onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'">
                         <i class="fas fa-layer-group"></i>
-                        <span>بوابة النماذج</span>
+                        <span id="hubBtnText">بوابة النماذج</span>
                     </a>
+                    <button type="button" id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()">
+                        <i class="fas fa-globe"></i>
+                        <span id="langBtnText">EN</span>
+                    </button>
                 </div>
             </div>
 
@@ -2843,6 +2902,320 @@
     </a>
 
     <script>
+        // ==========================================
+        // Full Bilingual Translation Dictionary (i18n)
+        // ==========================================
+        const PUBLIC_OBS_I18N = {
+            ar: {
+                dir: 'rtl',
+                langBtn: 'EN',
+                pageTitle: 'SafetyHub | نموذج تسجيل الملاحظات اليومية',
+                companyName: 'الشركة العالمية للانتاج والتصنيع الزراعي',
+                deptName: 'إدارة السلامة والصحة المهنية',
+                docTitle: 'نموذج تسجيل الملاحظات اليومية',
+                docSubtitle: 'Daily Observation Report',
+                hubBtn: 'بوابة النماذج',
+                docCodeKey: 'كود الوثيقة:',
+                docRevKey: 'رقم الإصدار:',
+                docDateKey: 'تاريخ الاعتماد:',
+                allRights: 'جميع الحقوق محفوظة',
+                companyFooter: 'الشركة العالمية للانتاج والتصنيع الزراعي',
+                sec1Title: 'الموقع والتوقيت والنوع',
+                sec1Desc: 'تحديد مكان وتوقيت الملاحظة بدقة مع التصنيف الأولي للملاحظة الميدانية',
+                sec2Title: 'تفاصيل الملاحظة والإجراء ومستوى الخطر',
+                sec2Desc: 'وصف السلوك أو الحالة غير الآمنة وتحديد الإجراء التصحيحي الواجب اتخاذه والمستوى المحتمل للخطر',
+                sec3Title: 'الصور التوضيحية للملاحظة',
+                sec3Desc: 'إرفاق صور توضيحية للملاحظة الميدانية',
+                sec4Title: 'بيانات القائم بالملاحظة والتأكيد',
+                sec4Desc: 'توثيق هوية مسجل الملاحظة لسهولة المتابعة والتكريم',
+                siteLabel: 'المصنع *',
+                sitePlaceholder: '— اختر المصنع أولاً —',
+                placeLabel: 'المكان الفرعي *',
+                placePlaceholder: '— اختر المكان الفرعي —',
+                dateLabel: 'التاريخ *',
+                timeLabel: 'الوقت *',
+                shiftLabel: 'الوردية *',
+                shift1: 'الوردية الأولى (صباحية)',
+                shift2: 'الوردية الثانية (مسائية)',
+                shift3: 'الوردية الثالثة (ليلية)',
+                typeLabel: 'نوع الملاحظة *',
+                subCategoryLabel: 'التصنيف الفرعي المحدد للملاحظة *',
+                deptLabel: 'الإدارة المسؤولة عن الملاحظة *',
+                deptPlaceholder: '— اختر الإدارة المسؤولة —',
+                hazardLabel: 'وصف الملاحظة أو الخطر المرصود *',
+                hazardPlaceholder: 'اكتب وصفاً دقيقاً ومفصلاً لما شاهدته في الموقع أو السلوك المرصود...',
+                correctiveLabel: 'الإجراء التصحيحي / الوقائي المطلوب *',
+                correctivePlaceholder: 'حدد الإجراء الفوري أو المستقبلي المطلوب إنجازه لمعالجة هذه الملاحظة ومنع تكرارها...',
+                riskLabel: 'تقييم مستوى الخطر *',
+                riskLow: '🟢 منخفض',
+                riskMed: '🟡 متوسط',
+                riskHigh: '🔴 عالي',
+                riskCrit: '🛑 حرج',
+                targetDateLabel: 'تاريخ التنفيذ المستهدف',
+                datePillToday: '⚡ فوراً (اليوم)',
+                datePill24h: '⏱️ خلال 24 ساعة',
+                datePill3d: '📅 خلال 3 أيام',
+                datePillWeek: '🗓️ خلال أسبوع',
+                statusLabel: 'حالة الملاحظة *',
+                statusOpen: '🔴 مفتوحة',
+                statusInProgress: '🟡 قيد التنفيذ',
+                statusClosed: '🟢 مغلقة',
+                photosLabel: 'الصور التوضيحية للملاحظة (حتى 3 صور)',
+                btnCamera: 'التقاط بالكاميرا',
+                btnGallery: 'فتح المعرض',
+                btnAddPhoto: 'إضافة صورة أخرى (حتى 3)',
+                reporterLabel: 'اسم صاحب الملاحظة / مسؤول السلامة',
+                reporterPlaceholder: '— اختر اسمك من قائمة النظام المعتمدة —',
+                customOwnerLabel: 'اسمك الكامل (إدخال يدوي) *',
+                customOwnerPlaceholder: 'اكتب اسمك كاملاً بدقة...',
+                rememberProfile: 'تذكّر اسمي وبياناتي على هذا الجهاز لتسهيل التسجيل القادم',
+                submitBtn: 'تسجيل وتوثيق الملاحظة',
+                submittingBtn: 'جاري حفظ وتوثيق الملاحظة...',
+                successTitle: 'تم تسجيل الملاحظة بنجاح!',
+                successDesc: 'تم توثيق الملاحظة في سجل الملاحظات اليومية وإحالتها لفريق السلامة للمتابعة الفورية.',
+                waBtn: 'مشاركة واتساب',
+                copyBtn: 'نسخ الملخص',
+                pdfBtn: 'طباعة / PDF',
+                newBtn: 'تسجيل ملاحظة أخرى',
+                backHubBtn: 'الرجوع إلى بوابة النماذج',
+                floatingHub: 'بوابة النماذج'
+            },
+            en: {
+                dir: 'ltr',
+                langBtn: 'AR',
+                pageTitle: 'SafetyHub | Daily Safety Observation Form',
+                companyName: 'International Company for Agricultural Production & Processing',
+                deptName: 'HSE Department',
+                docTitle: 'Daily Safety Observation Form',
+                docSubtitle: 'Daily Observation Report',
+                hubBtn: 'Forms Hub',
+                docCodeKey: 'Doc Code:',
+                docRevKey: 'Revision:',
+                docDateKey: 'Approval Date:',
+                allRights: 'All Rights Reserved',
+                companyFooter: 'International Company for Agricultural Production & Processing (ICAPP)',
+                sec1Title: 'Location, Timing & Classification',
+                sec1Desc: 'Specify location and timing with preliminary observation classification',
+                sec2Title: 'Observation Details, Action & Risk',
+                sec2Desc: 'Describe the unsafe act/condition, required corrective action, and risk assessment',
+                sec3Title: 'Observation Scene Photos',
+                sec3Desc: 'Attach photographic evidence from the field',
+                sec4Title: 'Observer Details & Submission',
+                sec4Desc: 'Verify reporter details for recognition and transparent follow-up',
+                siteLabel: 'Factory / Site *',
+                sitePlaceholder: '— Select Factory First —',
+                placeLabel: 'Specific Area *',
+                placePlaceholder: '— Select Area —',
+                dateLabel: 'Date *',
+                timeLabel: 'Time *',
+                shiftLabel: 'Shift *',
+                shift1: '1st Shift (Morning)',
+                shift2: '2nd Shift (Evening)',
+                shift3: '3rd Shift (Night)',
+                typeLabel: 'Observation Type *',
+                subCategoryLabel: 'Specific Sub-Category *',
+                deptLabel: 'Responsible Department *',
+                deptPlaceholder: '— Select Responsible Department —',
+                hazardLabel: 'Observation / Hazard Description *',
+                hazardPlaceholder: 'Provide a detailed description of the observed condition, behavior or hazard...',
+                correctiveLabel: 'Corrective / Preventive Action *',
+                correctivePlaceholder: 'Specify the immediate or planned corrective action to resolve and prevent recurrence...',
+                riskLabel: 'Risk Level Assessment *',
+                riskLow: '🟢 Low',
+                riskMed: '🟡 Medium',
+                riskHigh: '🔴 High',
+                riskCrit: '🛑 Critical',
+                targetDateLabel: 'Target Completion Date',
+                datePillToday: '⚡ Immediately (Today)',
+                datePill24h: '⏱️ Within 24h',
+                datePill3d: '📅 Within 3 Days',
+                datePillWeek: '🗓️ Within 1 Week',
+                statusLabel: 'Observation Status *',
+                statusOpen: '🔴 Open',
+                statusInProgress: '🟡 In Progress',
+                statusClosed: '🟢 Closed',
+                photosLabel: 'Observation Photos (Up to 3)',
+                btnCamera: 'Capture Camera',
+                btnGallery: 'Open Gallery',
+                btnAddPhoto: 'Add Another Photo (Up to 3)',
+                reporterLabel: 'Observer Name / Safety Officer',
+                reporterPlaceholder: '— Select your name from certified list —',
+                customOwnerLabel: 'Full Name (Manual Entry) *',
+                customOwnerPlaceholder: 'Enter your full name accurately...',
+                rememberProfile: 'Remember my identity on this device for faster submissions',
+                submitBtn: 'Submit Safety Observation',
+                submittingBtn: 'Saving & certifying observation...',
+                successTitle: 'Observation Submitted Successfully!',
+                successDesc: 'Logged into the safety observation database and routed for immediate corrective action.',
+                waBtn: 'Share WhatsApp',
+                copyBtn: 'Copy Summary',
+                pdfBtn: 'Print / PDF',
+                newBtn: 'Record Another Observation',
+                backHubBtn: 'Back to Forms Portal',
+                floatingHub: 'Forms Hub'
+            }
+        };
+
+        let currentLang = 'ar';
+
+        function applyLanguage(lang) {
+            currentLang = lang;
+            const t = PUBLIC_OBS_I18N[lang] || PUBLIC_OBS_I18N.ar;
+            document.documentElement.lang = lang;
+            document.documentElement.dir = t.dir;
+            document.title = t.pageTitle;
+
+            const langBtnText = document.getElementById('langBtnText');
+            if (langBtnText) langBtnText.textContent = t.langBtn;
+
+            // ISO Header
+            const compName = document.querySelector('.iso-company-name');
+            if (compName) compName.textContent = t.companyName;
+            const deptName = document.querySelector('.iso-dept-name');
+            if (deptName) deptName.textContent = t.deptName;
+            const docTitle = document.getElementById('isoDocTitle');
+            if (docTitle) docTitle.textContent = t.docTitle;
+            const docSubtitle = document.querySelector('#isoDocSubtitle span');
+            if (docSubtitle) docSubtitle.textContent = t.docSubtitle;
+            const hubBtnText = document.getElementById('hubBtnText');
+            if (hubBtnText) hubBtnText.textContent = t.hubBtn;
+
+            // Section Titles & Descriptions
+            const secTitles = document.querySelectorAll('.section-title');
+            if (secTitles[0]) secTitles[0].textContent = t.sec1Title;
+            if (secTitles[1]) secTitles[1].textContent = t.sec2Title;
+
+            const secDescs = document.querySelectorAll('.section-desc');
+            if (secDescs[0]) secDescs[0].textContent = t.sec1Desc;
+            if (secDescs[1]) secDescs[1].textContent = t.sec2Desc;
+
+            // Section 1 Labels
+            const locationCardTitle = document.querySelector('.location-selector-card label span');
+            if (locationCardTitle) locationCardTitle.textContent = `${t.siteLabel} & ${t.placeLabel}`;
+            const timingCardTitle = document.querySelector('.timing-shift-card label span');
+            if (timingCardTitle) timingCardTitle.textContent = `${t.dateLabel} & ${t.timeLabel} & ${t.shiftLabel}`;
+
+            // Shift Options
+            const shiftSelect = document.getElementById('shiftSelect');
+            if (shiftSelect && shiftSelect.options.length >= 3) {
+                shiftSelect.options[0].textContent = t.shift1;
+                shiftSelect.options[1].textContent = t.shift2;
+                shiftSelect.options[2].textContent = t.shift3;
+            }
+
+            // SubCategory Card
+            const subCatLabel = document.querySelector('.subcategory-card label span');
+            if (subCatLabel) subCatLabel.textContent = t.subCategoryLabel;
+
+            // Section 2 Labels
+            const deptLabel = document.querySelector('.dept-selector-card label span');
+            if (deptLabel) deptLabel.textContent = t.deptLabel;
+            const hazardLabel = document.querySelector('.observation-hazard-card label span');
+            if (hazardLabel) hazardLabel.textContent = t.hazardLabel;
+            const hazardInp = document.getElementById('hazardInput');
+            if (hazardInp) hazardInp.placeholder = t.hazardPlaceholder;
+
+            const corrLabel = document.querySelector('.observation-corrective-card label span');
+            if (corrLabel) corrLabel.textContent = t.correctiveLabel;
+            const corrInp = document.getElementById('correctiveInput');
+            if (corrInp) corrInp.placeholder = t.correctivePlaceholder;
+
+            const riskContainerLabel = document.querySelector('.risk-level-container-card label span');
+            if (riskContainerLabel) riskContainerLabel.textContent = t.riskLabel;
+
+            const riskChips = document.querySelectorAll('.risk-chip');
+            if (riskChips[0]) riskChips[0].innerHTML = `<i class="fas fa-circle-check"></i> <span>${t.riskLow}</span>`;
+            if (riskChips[1]) riskChips[1].innerHTML = `<i class="fas fa-triangle-exclamation"></i> <span>${t.riskMed}</span>`;
+            if (riskChips[2]) riskChips[2].innerHTML = `<i class="fas fa-fire-flame-curved"></i> <span>${t.riskHigh}</span>`;
+            if (riskChips[3]) riskChips[3].innerHTML = `<i class="fas fa-radiation"></i> <span>${t.riskCrit}</span>`;
+
+            // Target Date
+            const targetDateLabel = document.querySelector('.target-date-card label span');
+            if (targetDateLabel) targetDateLabel.textContent = t.targetDateLabel;
+            const datePills = document.querySelectorAll('.date-preset-btn');
+            if (datePills[0]) datePills[0].textContent = t.datePillToday;
+            if (datePills[1]) datePills[1].textContent = t.datePill24h;
+            if (datePills[2]) datePills[2].textContent = t.datePill3d;
+            if (datePills[3]) datePills[3].textContent = t.datePillWeek;
+
+            // Status Cards
+            const statusCards = document.querySelectorAll('.status-card');
+            if (statusCards[0]) statusCards[0].innerHTML = `<i class="fas fa-circle-exclamation"></i> <span>${t.statusOpen}</span>`;
+            if (statusCards[1]) statusCards[1].innerHTML = `<i class="fas fa-clock-rotate-left"></i> <span>${t.statusInProgress}</span>`;
+            if (statusCards[2]) statusCards[2].innerHTML = `<i class="fas fa-circle-check"></i> <span>${t.statusClosed}</span>`;
+
+            // Photos Card
+            const photoCardLabel = document.querySelector('.photo-upload-card label span');
+            if (photoCardLabel) photoCardLabel.textContent = t.photosLabel;
+            const photoActionBtns = document.querySelectorAll('.btn-action-photo span');
+            if (photoActionBtns[0]) photoActionBtns[0].textContent = t.btnCamera;
+            if (photoActionBtns[1]) photoActionBtns[1].textContent = t.btnGallery;
+            const addMoreSpan = document.querySelector('#addMorePhotosBtn span');
+            if (addMoreSpan) addMoreSpan.textContent = t.btnAddPhoto;
+
+            // Reporter Card
+            const repLabel = document.querySelector('#reporterInfoFields label[for="ownerSelect"] span');
+            if (repLabel) repLabel.textContent = t.reporterLabel;
+            const customOwnerLabel = document.querySelector('#customOwnerGroup label');
+            if (customOwnerLabel) customOwnerLabel.innerHTML = `${t.customOwnerLabel} <span class="required">*</span>:`;
+            const customOwnerInp = document.getElementById('customOwnerInput');
+            if (customOwnerInp) customOwnerInp.placeholder = t.customOwnerPlaceholder;
+            const remSpan = document.querySelector('.form-check-profile span span');
+            if (remSpan) remSpan.textContent = t.rememberProfile;
+
+            // Submit Button
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.innerHTML = `<i class="fas fa-paper-plane"></i> <span>${t.submitBtn}</span>`;
+            }
+
+            // Success Screen
+            const succH2 = document.querySelector('#successScreen h2');
+            if (succH2) succH2.textContent = t.successTitle;
+            const succP = document.querySelector('#successScreen p');
+            if (succP) succP.textContent = t.successDesc;
+            const shareWa = document.getElementById('shareWhatsappBtn');
+            if (shareWa) shareWa.innerHTML = `<i class="fab fa-whatsapp"></i> ${t.waBtn}`;
+            const copyBtn = document.querySelector('.btn-copy-receipt');
+            if (copyBtn) copyBtn.innerHTML = `<i class="fas fa-copy"></i> ${t.copyBtn}`;
+            const pdfBtn = document.querySelector('.btn-pdf');
+            if (pdfBtn) pdfBtn.innerHTML = `<i class="fas fa-file-pdf"></i> ${t.pdfBtn}`;
+            const newObsBtn = document.querySelector('.btn-new');
+            if (newObsBtn) newObsBtn.innerHTML = `<i class="fas fa-plus"></i> ${t.newBtn}`;
+            const succHub = document.querySelector('#successScreen a[href*="forms-hub.html"]');
+            if (succHub) succHub.innerHTML = `<i class="fas fa-layer-group"></i> ${t.backHubBtn}`;
+
+            // Floating Hub
+            const floatHub = document.querySelector('.floating-hub-btn span');
+            if (floatHub) floatHub.textContent = t.floatingHub;
+
+            // Footer
+            const footMetaKeys = document.querySelectorAll('.iso-footer-meta-key');
+            if (footMetaKeys[0]) footMetaKeys[0].textContent = t.docCodeKey;
+            if (footMetaKeys[1]) footMetaKeys[1].textContent = t.docRevKey;
+            if (footMetaKeys[2]) footMetaKeys[2].textContent = t.docDateKey;
+
+            const footRights = document.querySelector('.footer-rights span');
+            if (footRights) footRights.textContent = t.allRights;
+            const footComp = document.querySelector('.footer-company span');
+            if (footComp) footComp.textContent = t.companyFooter;
+
+            // Update hub links href with ?lang=
+            document.querySelectorAll('a[href*="forms-hub.html"]').forEach(a => {
+                a.href = `forms-hub.html${lang === 'en' ? '?lang=en' : ''}`;
+            });
+
+            try {
+                localStorage.setItem('HSE_PORTAL_LANG', lang);
+                localStorage.setItem('language', lang);
+            } catch(e) {}
+        }
+
+        function toggleLanguage() {
+            const next = currentLang === 'ar' ? 'en' : 'ar';
+            applyLanguage(next);
+        }
+
         var qrStream = null;
         var qrScanning = false;
         window._qrStream = null;
@@ -3139,6 +3512,15 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const qLang = urlParams.get('lang');
+                const savedLang = qLang || localStorage.getItem('HSE_PORTAL_LANG') || localStorage.getItem('language') || 'ar';
+                applyLanguage(savedLang);
+            } catch(e) {
+                applyLanguage('ar');
+            }
+
             setDefaultDateTime();
 
             // 1. تهيئة فورية لكافة الحقول الافتراضية وإخفاء مؤشر التحميل فوراً (0ms)

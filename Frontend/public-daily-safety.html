@@ -146,18 +146,52 @@
             gap: 8px;
         }
 
-        .theme-btn {
+        .theme-btn, .lang-btn {
             background: var(--theme-btn-bg);
             color: var(--theme-btn-color);
             border: 1px solid var(--theme-btn-border);
-            width: 36px;
             height: 36px;
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-btn {
+            width: 36px;
             font-size: 14px;
+        }
+
+        .lang-btn {
+            padding: 0 10px;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .theme-btn:hover, .lang-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* LTR Overrides */
+        html[dir="ltr"] body {
+            direction: ltr;
+            text-align: left;
+        }
+        html[dir="ltr"] .checklist-item,
+        html[dir="ltr"] .form-label,
+        html[dir="ltr"] .form-group,
+        html[dir="ltr"] .section-header,
+        html[dir="ltr"] #successSummaryBox {
+            text-align: left;
+        }
+        html[dir="ltr"] .form-label span.req {
+            margin-right: 0;
+            margin-left: 4px;
         }
 
         .hub-link-btn {
@@ -495,9 +529,14 @@
             </a>
 
             <div class="header-tools">
+                <button id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()">
+                    <i class="fas fa-globe"></i>
+                    <span id="langBtnText">EN</span>
+                </button>
+
                 <a href="forms-hub.html" class="hub-link-btn">
                     <i class="fas fa-layer-group"></i>
-                    <span>بوابة النماذج</span>
+                    <span id="hubBtnText">بوابة النماذج</span>
                 </a>
                 
                 <button id="themeToggleBtn" class="theme-btn" title="تبديل المظهر" onclick="toggleTheme()">
@@ -506,7 +545,7 @@
 
                 <span id="onlineStatusPill" class="status-pill">
                     <i class="fas fa-circle text-xs"></i>
-                    <span>متصل</span>
+                    <span id="onlineStatusText">متصل</span>
                 </span>
             </div>
         </div>
@@ -676,67 +715,283 @@
     </a>
 
     <script>
-        // Questions Definition
+        // ==========================================
+        // Full Bilingual Translation Dictionary (i18n)
+        // ==========================================
+        const DAILY_SAFETY_I18N = {
+            ar: {
+                dir: 'rtl',
+                langBtn: 'EN',
+                pageTitle: 'نموذج المرور اليومي لمسئولي السلامة | ICAPP',
+                headerTitle: 'نموذج المرور اليومي للسلامة',
+                headerSubtitle: 'إدارة السلامة والصحة المهنية - ICAPP',
+                hubBtn: 'بوابة النماذج',
+                online: 'متصل',
+                offline: 'أوفلاين',
+                sec1Title: 'بيانات المرور والوردية',
+                dateLabel: 'التاريخ',
+                shiftLabel: 'الوردية',
+                shift1: 'الوردية الأولى (صباحية)',
+                shift2: 'الوردية الثانية (مسائية)',
+                shift3: 'الوردية الثالثة (ليلية)',
+                siteLabel: 'المصنع / الموقع',
+                sitePlaceholder: '— اختر المصنع —',
+                inspectorLabel: 'القائم بالمرور (مسؤول السلامة)',
+                inspectorPlaceholder: '— اختر مسؤول السلامة —',
+                sec2Title: 'بنود قائمة المرور اليومي (18 بنداً)',
+                btnCompliant: 'مطابق',
+                btnNonCompliant: 'غير مطابق',
+                btnNa: 'لا ينطبق',
+                pressurePlaceholder: 'أدخل قراءة الضغط (مثال: 7.5 Bar) — إلزامي *',
+                sec3Title: 'الملاحظات والإجراءات المتخذة',
+                notesLabel: 'الملاحظات المرصودة أثناء المرور',
+                notesPlaceholder: 'سجل أي ملاحظات إضافية، سلوكيات، أو إجراءات فورية تم اتخاذها أثناء جولة المرور...',
+                sec4Title: 'التوقيع الرقمي لمسؤول السلامة',
+                clearSigBtn: 'مسح التوقيع',
+                sigPlaceholder: '✍️ وقّع باللمس هنا (إلزامي *)',
+                submitBtn: 'إرسال تقرير المرور اليومي',
+                submittingBtn: 'جاري حفظ وتوثيق التقرير...',
+                successModalTitle: 'تم حفظ تقرير المرور فورياً!',
+                successModalSub: 'تم تسجيل جولة المرور بنجاح ويتم التوثيق والمزامنة السحابية في الخلفية.',
+                newReportBtn: 'تسجيل جولة مرور جديدة',
+                backHubBtn: 'العودة لبوابة النماذج',
+                floatingHub: 'بوابة النماذج',
+                valDate: '⚠️ حقل إلزامي: يرجى تحديد تاريخ المرور اليومي *',
+                valShift: '⚠️ حقل إلزامي: يرجى اختيار الوردية *',
+                valSite: '⚠️ حقل إلزامي: يرجى اختيار المصنع / الموقع *',
+                valInspector: '⚠️ حقل إلزامي: يرجى اختيار اسم القائم بالمرور (مسؤول السلامة) *',
+                valPressure: '⚠️ حقل إلزامي: يرجى إدخال قراءة ضغط غرفة الطلمبات (البند رقم 16) *',
+                valSignature: '⚠️ حقل إلزامي: يرجى التوقيع باللمس في خانة التوقيع الرقمي المعتمد لمسؤول السلامة *',
+                summaryFactory: '📍 المصنع:',
+                summaryInspector: '👤 مسؤول السلامة:',
+                summaryDate: '📅 التاريخ:',
+                summaryPressure: '📊 ضغط الطلمبات:',
+                summarySig: '✍️ التوقيع الرقمي:',
+                sigVerified: 'معتمد وموثق ✅',
+                syncedMsg: '🟢 تم التوثيق والمزامنة السحابية بنجاح!',
+                offlineSavedMsg: '🟡 تم الحفظ محلياً (Offline) وستتم المزامنة تلقائياً عند استقرار الشبكة.'
+            },
+            en: {
+                dir: 'ltr',
+                langBtn: 'AR',
+                pageTitle: 'Safety Officer Daily Patrol Checklist | ICAPP',
+                headerTitle: 'Safety Daily Patrol Checklist',
+                headerSubtitle: 'HSE Department - ICAPP',
+                hubBtn: 'Forms Hub',
+                online: 'Online',
+                offline: 'Offline',
+                sec1Title: 'Patrol & Shift Information',
+                dateLabel: 'Date',
+                shiftLabel: 'Shift',
+                shift1: '1st Shift (Morning)',
+                shift2: '2nd Shift (Evening)',
+                shift3: '3rd Shift (Night)',
+                siteLabel: 'Factory / Site',
+                sitePlaceholder: '— Select Factory / Site —',
+                inspectorLabel: 'Inspector (Safety Officer)',
+                inspectorPlaceholder: '— Select Safety Officer —',
+                sec2Title: 'Daily Patrol Checklist (18 Items)',
+                btnCompliant: 'Compliant',
+                btnNonCompliant: 'Non-Compliant',
+                btnNa: 'N/A',
+                pressurePlaceholder: 'Enter pressure reading (e.g. 7.5 Bar) — Mandatory *',
+                sec3Title: 'Observations & Immediate Actions',
+                notesLabel: 'Observations recorded during patrol',
+                notesPlaceholder: 'Record additional findings, behaviors, or immediate corrective actions taken...',
+                sec4Title: 'Safety Officer Digital Signature',
+                clearSigBtn: 'Clear Signature',
+                sigPlaceholder: '✍️ Touch/Sign here (Mandatory *)',
+                submitBtn: 'Submit Daily Patrol Report',
+                submittingBtn: 'Saving & syncing report...',
+                successModalTitle: 'Daily Patrol Report Saved Instantly!',
+                successModalSub: 'Patrol recorded successfully and syncing in the background.',
+                newReportBtn: 'New Patrol Inspection',
+                backHubBtn: 'Back to Forms Portal',
+                floatingHub: 'Forms Hub',
+                valDate: '⚠️ Mandatory field: Please select patrol date *',
+                valShift: '⚠️ Mandatory field: Please select shift *',
+                valSite: '⚠️ Mandatory field: Please select factory / site *',
+                valInspector: '⚠️ Mandatory field: Please select Safety Officer *',
+                valPressure: '⚠️ Mandatory field: Please enter pump room pressure reading (Item #16) *',
+                valSignature: '⚠️ Mandatory field: Please sign in the digital signature box *',
+                summaryFactory: '📍 Factory:',
+                summaryInspector: '👤 Safety Officer:',
+                summaryDate: '📅 Date:',
+                summaryPressure: '📊 Pump Pressure:',
+                summarySig: '✍️ Digital Signature:',
+                sigVerified: 'Verified & Certified ✅',
+                syncedMsg: '🟢 Successfully certified & synced to cloud database!',
+                offlineSavedMsg: '🟡 Saved locally (Offline) and will sync automatically when online.'
+            }
+        };
+
+        let currentLang = 'ar';
+
+        // Questions Definition (Bilingual)
         const CHECKLIST_QUESTIONS = [
-            { key: 'q1', text: 'تم المرور على غرفة الطلمبات لمياه الحريق وشبكة الإطفاء الأوتوماتيك وحنفيات الحريق وأجهزة الإطفاء اليدوية ومنسوب المياة بخزان الحريق' },
-            { key: 'q2', text: 'المرور على المخازن (عنابر التخزين المبرد والمجمد والتاكد من عدم وجود أي ملاحظة متعلقة بممارسات التخزين)' },
-            { key: 'q3', text: 'المرور على مخزن المواد الأولية والتاكد من اشترطات السلامة بالمخزن' },
-            { key: 'q4', text: 'المرور علي مخزن قطع الغيار والتاكد من مطابقة لاشتراطات السلامة والصحة المهنية' },
-            { key: 'q5', text: 'المرور على نقط شحن بطاريات الفورك ليفت - الترانس بالت' },
-            { key: 'q6', text: 'المرور على رصيف الشحن والتاكد من عدم وجود أي ملاحظات' },
-            { key: 'q7', text: 'المرور على الأسوار الداخلية للمصنع - بوابات الخارجية (ومنطقة انتظار السيرات - الميزان البسكول- وصلة الدفاع المدني الخارجية وعدم وجود اشغالات)' },
-            { key: 'q8', text: 'المرور على غرفة محطة ضواغط الهواء وابراج التبريد الخاص بمحطات الامونيا' },
-            { key: 'q9', text: 'المرور على ورشة الإدارة الصيانة وورشة الحركة والتاكد من عدم وجود أي ملاحظات بالمكان' },
-            { key: 'q10', text: 'المرور على غرف توزيع الكهرباء الرئيسية - غرف المحولات الرئيسية' },
-            { key: 'q11', text: 'المرور على منطقة المخلفات - منطقة تجميع المخلفات' },
-            { key: 'q12', text: 'المرور على صالات الإنتاج والتعبئة والتاكد من توفر اشتراطات السلامة' },
-            { key: 'q13', text: 'المرور على فريق الصيانة الداخلي أو المقاول مع عدم السماح لهم بالعمل بدون استخراج على تصاريح عمل' },
-            { key: 'q14', text: 'المرور على لوحة الإنذار الرئيسية والفرعية بالمصنع وعمل Rest إذا لزم الأمر' },
-            { key: 'q15', text: 'المرور على نظام الإنذار والإطفاء التلقائي لغرف محول الكهرباء والغرف' },
-            { key: 'q16', text: 'المرور على غرفة الطلمبات وقراءة الضغط - وكانت القراءة (Bar / PSI)', isReading: true },
-            { key: 'q17', text: 'المرور على غرفة تغيير الملابس للعاملين والتاكد من عدم وجود أي ملاحظات غير امنة' },
-            { key: 'q18', text: 'المرور علي منطقة الغلاية وعدم وجود أي ملاحظة' }
+            { key: 'q1', text_ar: 'تم المرور على غرفة الطلمبات لمياه الحريق وشبكة الإطفاء الأوتوماتيك وحنفيات الحريق وأجهزة الإطفاء اليدوية ومنسوب المياة بخزان الحريق', text_en: 'Inspect main fire pump system, automatic sprinkler network, hydrants, portable extinguishers, and water tank level' },
+            { key: 'q2', text_ar: 'المرور على المخازن (عنابر التخزين المبرد والمجمد والتاكد من عدم وجود أي ملاحظة متعلقة بممارسات التخزين)', text_en: 'Inspect cold & frozen storage warehouses to ensure compliant storage practices and zero hazards' },
+            { key: 'q3', text_ar: 'المرور على مخزن المواد الأولية والتاكد من اشترطات السلامة بالمخزن', text_en: 'Inspect raw materials warehouse and verify adherence to safety standards' },
+            { key: 'q4', text_ar: 'المرور علي مخزن قطع الغيار والتاكد من مطابقة لاشتراطات السلامة والصحة المهنية', text_en: 'Inspect spare parts warehouse and verify compliance with HSE regulations' },
+            { key: 'q5', text_ar: 'المرور على نقط شحن بطاريات الفورك ليفت - الترانس بالت', text_en: 'Inspect forklift and trans-pallet battery charging stations' },
+            { key: 'q6', text_ar: 'المرور على رصيف الشحن والتاكد من عدم وجود أي ملاحظات', text_en: 'Inspect loading & unloading docks and verify clear, safe operations' },
+            { key: 'q7', text_ar: 'المرور على الأسوار الداخلية للمصنع - بوابات الخارجية (ومنطقة انتظار السيرات - الميزان البسكول- وصلة الدفاع المدني الخارجية وعدم وجود اشغالات)', text_en: 'Inspect perimeter walls, gates, parking area, weighbridge, and external civil defense connection for zero obstructions' },
+            { key: 'q8', text_ar: 'المرور على غرفة محطة ضواغط الهواء وابراج التبريد الخاص بمحطات الامونيا', text_en: 'Inspect air compressor station room and ammonia refrigeration cooling towers' },
+            { key: 'q9', text_ar: 'المرور على ورشة الإدارة الصيانة وورشة الحركة والتاكد من عدم وجود أي ملاحظات بالمكان', text_en: 'Inspect maintenance and vehicle workshops to ensure clean and safe conditions' },
+            { key: 'q10', text_ar: 'المرور على غرف توزيع الكهرباء الرئيسية - غرف المحولات الرئيسية', text_en: 'Inspect main electrical distribution rooms and high-voltage transformer stations' },
+            { key: 'q11', text_ar: 'المرور على منطقة المخلفات - منطقة تجميع المخلفات', text_en: 'Inspect waste management and scrap collection yards' },
+            { key: 'q12', text_ar: 'المرور على صالات الإنتاج والتعبئة والتاكد من توفر اشتراطات السلامة', text_en: 'Inspect production and packaging halls to verify comprehensive safety compliance' },
+            { key: 'q13', text_ar: 'المرور على فريق الصيانة الداخلي أو المقاول مع عدم السماح لهم بالعمل بدون استخراج على تصاريح عمل', text_en: 'Inspect internal/contractor maintenance; enforce valid Work Permits (PTW) before work' },
+            { key: 'q14', text_ar: 'المرور على لوحة الإنذار الرئيسية والفرعية بالمصنع وعمل Rest إذا لزم الأمر', text_en: 'Inspect main & secondary fire alarm control panels (FACP) and reset if needed' },
+            { key: 'q15', text_ar: 'المرور على نظام الإنذار والإطفاء التلقائي لغرف محول الكهرباء والغرف', text_en: 'Inspect automatic fire detection & suppression systems in electrical transformer rooms' },
+            { key: 'q16', text_ar: 'المرور على غرفة الطلمبات وقراءة الضغط - وكانت القراءة (Bar / PSI)', text_en: 'Inspect fire pump room and record pressure reading (Bar / PSI)', isReading: true },
+            { key: 'q17', text_ar: 'المرور على غرفة تغيير الملابس للعاملين والتاكد من عدم وجود أي ملاحظات غير امنة', text_en: 'Inspect worker locker & changing rooms to ensure cleanliness, hygiene and safety' },
+            { key: 'q18', text_ar: 'المرور علي منطقة الغلاية وعدم وجود أي ملاحظة', text_en: 'Inspect industrial boiler area and verify safe, normal operating parameters' }
         ];
 
         // Store answers
         const formAnswers = {};
 
+        function applyLanguage(lang) {
+            currentLang = lang;
+            const t = DAILY_SAFETY_I18N[lang] || DAILY_SAFETY_I18N.ar;
+            document.documentElement.lang = lang;
+            document.documentElement.dir = t.dir;
+            document.title = t.pageTitle;
+
+            const langBtnText = document.getElementById('langBtnText');
+            if (langBtnText) langBtnText.textContent = t.langBtn;
+
+            // Brand
+            const brandH1 = document.querySelector('.brand-text h1');
+            if (brandH1) brandH1.textContent = t.headerTitle;
+            const brandP = document.querySelector('.brand-text p');
+            if (brandP) brandP.textContent = t.headerSubtitle;
+
+            // Hub links
+            const hubBtnText = document.getElementById('hubBtnText');
+            if (hubBtnText) hubBtnText.textContent = t.hubBtn;
+            const floatHub = document.querySelector('.floating-hub-btn span');
+            if (floatHub) floatHub.textContent = t.floatingHub;
+
+            // Online text
+            const onlText = document.getElementById('onlineStatusText');
+            if (onlText) onlText.textContent = navigator.onLine ? t.online : t.offline;
+
+            // Section 1
+            const secTitles = document.querySelectorAll('.section-title');
+            if (secTitles[0]) secTitles[0].textContent = t.sec1Title;
+            if (secTitles[1]) secTitles[1].textContent = t.sec2Title;
+            if (secTitles[2]) secTitles[2].textContent = t.sec3Title;
+            if (secTitles[3]) secTitles[3].innerHTML = `${t.sec4Title} <span class="req" style="color: #ef4444; font-weight: 800;">*</span>`;
+
+            // Form Labels
+            const formLabels = document.querySelectorAll('.form-label span:first-child');
+            if (formLabels[0]) formLabels[0].textContent = t.dateLabel;
+            if (formLabels[1]) formLabels[1].textContent = t.shiftLabel;
+            if (formLabels[2]) formLabels[2].textContent = t.siteLabel;
+            if (formLabels[3]) formLabels[3].textContent = t.inspectorLabel;
+            if (formLabels[4]) formLabels[4].textContent = t.notesLabel;
+
+            // Shift Options
+            const shiftSelect = document.getElementById('shiftSelect');
+            if (shiftSelect && shiftSelect.options.length >= 3) {
+                shiftSelect.options[0].textContent = t.shift1;
+                shiftSelect.options[1].textContent = t.shift2;
+                shiftSelect.options[2].textContent = t.shift3;
+            }
+
+            // Notes Placeholder
+            const notesInp = document.getElementById('notesInput');
+            if (notesInp) notesInp.placeholder = t.notesPlaceholder;
+
+            // Signature
+            const sigPh = document.getElementById('sigPlaceholder');
+            if (sigPh) sigPh.textContent = t.sigPlaceholder;
+            const clearSigBtn = document.querySelector('.section-header button[onclick="clearSignature()"]');
+            if (clearSigBtn) clearSigBtn.innerHTML = `<i class="fas fa-eraser"></i> ${t.clearSigBtn}`;
+
+            // Submit Button
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.innerHTML = `<i class="fas fa-paper-plane"></i> <span>${t.submitBtn}</span>`;
+            }
+
+            // Success Modal Static Texts
+            const modalH2 = document.querySelector('.success-modal h2');
+            if (modalH2) modalH2.textContent = t.successModalTitle;
+            const modalBtns = document.querySelectorAll('.success-modal button, .success-modal a');
+            if (modalBtns[0]) modalBtns[0].innerHTML = `<i class="fas fa-plus ml-1"></i> ${t.newReportBtn}`;
+            if (modalBtns[1]) modalBtns[1].innerHTML = `<i class="fas fa-arrow-right ml-1"></i> ${t.backHubBtn}`;
+
+            // Update hub links href with ?lang=
+            document.querySelectorAll('a[href*="forms-hub.html"]').forEach(a => {
+                a.href = `forms-hub.html${lang === 'en' ? '?lang=en' : ''}`;
+            });
+
+            // Re-render checklist questions with the active language
+            renderQuestions();
+            loadCachedConfig();
+
+            try {
+                localStorage.setItem('HSE_PORTAL_LANG', lang);
+                localStorage.setItem('language', lang);
+            } catch(e) {}
+        }
+
+        function toggleLanguage() {
+            const next = currentLang === 'ar' ? 'en' : 'ar';
+            applyLanguage(next);
+        }
+
         // Render Questions
         function renderQuestions() {
             const container = document.getElementById('checklistContainer');
             container.innerHTML = '';
+            const t = DAILY_SAFETY_I18N[currentLang] || DAILY_SAFETY_I18N.ar;
 
             CHECKLIST_QUESTIONS.forEach((q, idx) => {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'checklist-item';
+                const questionText = currentLang === 'en' ? (q.text_en || q.text_ar) : q.text_ar;
                 
                 if (q.isReading) {
                     itemDiv.innerHTML = `
                         <div class="checklist-title">
                             <span class="q-number">${idx + 1}</span>
-                            <span>${q.text}</span>
+                            <span>${questionText}</span>
                             <span class="req" style="color: #ef4444; font-weight: 800; margin-right: 4px;">*</span>
                         </div>
                         <div>
-                            <input type="text" id="input_${q.key}" class="form-input" required placeholder="أدخل قراءة الضغط (مثال: 7.5 Bar) — إلزامي *" oninput="formAnswers['${q.key}'] = this.value">
+                            <input type="text" id="input_${q.key}" class="form-input" required placeholder="${t.pressurePlaceholder}" oninput="formAnswers['${q.key}'] = this.value">
                         </div>
                     `;
+                    if (formAnswers[q.key]) {
+                        setTimeout(() => {
+                            const inp = document.getElementById(`input_${q.key}`);
+                            if (inp) inp.value = formAnswers[q.key];
+                        }, 0);
+                    }
                 } else {
                     formAnswers[q.key] = formAnswers[q.key] || 'مطابق'; // Default compliant
+                    const isCompliant = formAnswers[q.key] === 'مطابق';
+                    const isNonCompliant = formAnswers[q.key] === 'غير مطابق';
+                    const isNa = formAnswers[q.key] === 'لا ينطبق';
+
                     itemDiv.innerHTML = `
                         <div class="checklist-title">
                             <span class="q-number">${idx + 1}</span>
-                            <span>${q.text}</span>
+                            <span>${questionText}</span>
                         </div>
                         <div class="status-toggle-group">
-                            <div class="toggle-btn active-compliant" id="btn_${q.key}_مطابق" onclick="setQuestionStatus('${q.key}', 'مطابق')">
-                                <i class="fas fa-check-circle"></i> مطابق
+                            <div class="toggle-btn ${isCompliant ? 'active-compliant' : ''}" id="btn_${q.key}_مطابق" onclick="setQuestionStatus('${q.key}', 'مطابق')">
+                                <i class="fas fa-check-circle"></i> ${t.btnCompliant}
                             </div>
-                            <div class="toggle-btn" id="btn_${q.key}_غير مطابق" onclick="setQuestionStatus('${q.key}', 'غير مطابق')">
-                                <i class="fas fa-times-circle"></i> غير مطابق
+                            <div class="toggle-btn ${isNonCompliant ? 'active-non-compliant' : ''}" id="btn_${q.key}_غير مطابق" onclick="setQuestionStatus('${q.key}', 'غير مطابق')">
+                                <i class="fas fa-times-circle"></i> ${t.btnNonCompliant}
                             </div>
-                            <div class="toggle-btn" id="btn_${q.key}_لا ينطبق" onclick="setQuestionStatus('${q.key}', 'لا ينطبق')">
-                                <i class="fas fa-minus-circle"></i> لا ينطبق
+                            <div class="toggle-btn ${isNa ? 'active-na' : ''}" id="btn_${q.key}_لا ينطبق" onclick="setQuestionStatus('${q.key}', 'لا ينطبق')">
+                                <i class="fas fa-minus-circle"></i> ${t.btnNa}
                             </div>
                         </div>
                     `;
@@ -776,7 +1031,7 @@
             applyTheme(current === 'dark' ? 'light' : 'dark');
         }
 
-        // Initialize Defaults
+        // Initialize Defaults & Language
         window.addEventListener('DOMContentLoaded', () => {
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('dateInput').value = today;
@@ -784,10 +1039,15 @@
             try {
                 const savedTheme = localStorage.getItem('HSE_DAILY_SAFETY_THEME');
                 applyTheme(savedTheme || 'light');
-            } catch(e) {}
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const qLang = urlParams.get('lang');
+                const savedLang = qLang || localStorage.getItem('HSE_PORTAL_LANG') || localStorage.getItem('language') || 'ar';
+                applyLanguage(savedLang);
+            } catch(e) {
+                applyLanguage('ar');
+            }
 
-            renderQuestions();
-            loadCachedConfig();
             fetchServerConfig();
         });
 
@@ -909,25 +1169,26 @@
         // Form Submission
         async function handleSubmit(e) {
             e.preventDefault();
+            const t = DAILY_SAFETY_I18N[currentLang] || DAILY_SAFETY_I18N.ar;
 
             // 1. التحقق الإلزامي من الحقول الأساسية
             const dateVal = document.getElementById('dateInput').value;
             if (!dateVal) {
-                alert('⚠️ حقل إلزامي: يرجى تحديد تاريخ المرور اليومي *');
+                alert(t.valDate);
                 document.getElementById('dateInput').focus();
                 return;
             }
 
             const shiftVal = document.getElementById('shiftSelect').value;
             if (!shiftVal) {
-                alert('⚠️ حقل إلزامي: يرجى اختيار الوردية *');
+                alert(t.valShift);
                 document.getElementById('shiftSelect').focus();
                 return;
             }
 
             const siteVal = document.getElementById('siteSelect').value;
             if (!siteVal) {
-                alert('⚠️ حقل إلزامي: يرجى اختيار المصنع / الموقع *');
+                alert(t.valSite);
                 const s = document.getElementById('siteSelect');
                 s.focus();
                 s.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -936,7 +1197,7 @@
 
             const inspectorVal = document.getElementById('inspectorSelect').value;
             if (!inspectorVal) {
-                alert('⚠️ حقل إلزامي: يرجى اختيار اسم القائم بالمرور (مسؤول السلامة) *');
+                alert(t.valInspector);
                 const insp = document.getElementById('inspectorSelect');
                 insp.focus();
                 insp.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -946,7 +1207,7 @@
             // 2. التحقق الإلزامي من قراءة ضغط غرفة الطلمبات (البند 16)
             const pressureReading = (document.getElementById('input_q16')?.value || '').trim();
             if (!pressureReading) {
-                alert('⚠️ حقل إلزامي: يرجى إدخال قراءة ضغط غرفة الطلمبات (البند رقم 16) *');
+                alert(t.valPressure);
                 const inp = document.getElementById('input_q16');
                 if (inp) {
                     inp.focus();
@@ -957,7 +1218,7 @@
 
             // 3. التحقق الإلزامي من التوقيع الرقمي باللمس
             if (!hasSignature) {
-                alert('⚠️ حقل إلزامي: يرجى التوقيع باللمس في خانة التوقيع الرقمي المعتمد لمسؤول السلامة *');
+                alert(t.valSignature);
                 const sigBox = document.getElementById('signatureCanvas');
                 if (sigBox) {
                     sigBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1009,17 +1270,18 @@
         }
 
         function showInstantSuccess(refCode, payload) {
+            const t = DAILY_SAFETY_I18N[currentLang] || DAILY_SAFETY_I18N.ar;
             const refBadge = document.getElementById('successRefBadge');
-            if (refBadge) refBadge.textContent = 'رقم التقرير: ' + refCode;
+            if (refBadge) refBadge.textContent = (currentLang === 'en' ? 'Report Ref: ' : 'رقم التقرير: ') + refCode;
 
             const summary = document.getElementById('successSummaryBox');
             if (summary) {
                 summary.innerHTML = `
-                    <div><strong>📍 المصنع:</strong> ${payload.siteName} (${payload.shift})</div>
-                    <div><strong>👤 مسؤول السلامة:</strong> ${payload.inspectorName}</div>
-                    <div><strong>📅 التاريخ:</strong> ${payload.date}</div>
-                    <div><strong>📊 ضغط الطلمبات:</strong> ${payload.q15Reading}</div>
-                    <div><strong>✍️ التوقيع الرقمي:</strong> معتمد وموثق ✅</div>
+                    <div><strong>${t.summaryFactory}</strong> ${payload.siteName} (${payload.shift})</div>
+                    <div><strong>${t.summaryInspector}</strong> ${payload.inspectorName}</div>
+                    <div><strong>${t.summaryDate}</strong> ${payload.date}</div>
+                    <div><strong>${t.summaryPressure}</strong> ${payload.q15Reading}</div>
+                    <div><strong>${t.summarySig}</strong> ${t.sigVerified}</div>
                 `;
             }
 
@@ -1028,6 +1290,7 @@
 
         async function syncDailySafetyInBackground(payload, refCode) {
             const targetApiUrl = getEffectiveApiUrl();
+            const t = DAILY_SAFETY_I18N[currentLang] || DAILY_SAFETY_I18N.ar;
             let syncSuccess = false;
 
             for (let attempt = 1; attempt <= 3; attempt++) {
@@ -1045,7 +1308,7 @@
                         console.log('Daily Safety checklist synced successfully in background:', result);
                         const msgText = document.getElementById('successMsgText');
                         if (msgText) {
-                            msgText.innerHTML = '<span style="color: #10b981; font-weight: 700;">🟢 تم التوثيق والمزامنة السحابية بنجاح!</span>';
+                            msgText.innerHTML = `<span style="color: #10b981; font-weight: 700;">${t.syncedMsg}</span>`;
                         }
                         break;
                     }
@@ -1061,7 +1324,7 @@
                 saveToOfflineQueue(payload);
                 const msgText = document.getElementById('successMsgText');
                 if (msgText) {
-                    msgText.innerHTML = '<span style="color: #f59e0b; font-weight: 700;">🟡 تم الحفظ محلياً (Offline) وستتم المزامنة تلقائياً عند استقرار الشبكة.</span>';
+                    msgText.innerHTML = `<span style="color: #f59e0b; font-weight: 700;">${t.offlineSavedMsg}</span>`;
                 }
             }
         }

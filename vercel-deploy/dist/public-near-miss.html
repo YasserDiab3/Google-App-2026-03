@@ -50,6 +50,54 @@
             padding: 12px 10px 40px;
         }
 
+        /* LTR Overrides */
+        html[dir="ltr"] body {
+            direction: ltr;
+            text-align: left;
+        }
+        html[dir="ltr"] .form-card,
+        html[dir="ltr"] .section-header,
+        html[dir="ltr"] label,
+        html[dir="ltr"] .iso-col-title {
+            text-align: left;
+        }
+        html[dir="ltr"] .iso-col-brand {
+            border-left: none;
+            border-right: 1px solid #e2e8f0;
+        }
+        html[dir="ltr"] .iso-col-meta {
+            border-right: none;
+            border-left: 1px solid #e2e8f0;
+        }
+        html[dir="ltr"] .floating-hub-btn {
+            right: auto;
+            left: 22px;
+        }
+        @media (max-width: 640px) {
+            html[dir="ltr"] .floating-hub-btn {
+                right: auto;
+                left: 14px;
+            }
+        }
+
+        .lang-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            background: #e0e7ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+            border-radius: 9999px;
+            padding: 2px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .lang-btn:hover {
+            background: #c7d2fe;
+        }
+
         .container {
             width: 100%;
             max-width: 760px;
@@ -441,14 +489,18 @@
 
         <div class="iso-col-title">
             <a href="forms-hub.html" style="text-decoration: none; color: inherit; display: block;" title="الرجوع إلى بوابة النماذج">
-                <h1 class="iso-doc-title">نموذج الإبلاغ عن حادث وشيك</h1>
-                <div class="iso-doc-subtitle">Near Miss Report</div>
+                <h1 class="iso-doc-title" id="isoDocTitle">نموذج الإبلاغ عن حادث وشيك</h1>
+                <div class="iso-doc-subtitle" id="isoDocSubtitle">Near Miss Incident Report</div>
             </a>
-            <div style="margin-top: 5px;">
-                <a href="forms-hub.html" style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; background: rgba(37, 99, 235, 0.1); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25); border-radius: 9999px; padding: 2px 10px; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='rgba(37, 99, 235, 0.2)'" onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'">
+            <div style="margin-top: 5px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <a href="forms-hub.html" class="hub-link-btn" style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; background: rgba(37, 99, 235, 0.1); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25); border-radius: 9999px; padding: 2px 10px; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='rgba(37, 99, 235, 0.2)'" onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'">
                     <i class="fas fa-layer-group"></i>
-                    <span>بوابة النماذج</span>
+                    <span id="hubBtnText">بوابة النماذج</span>
                 </a>
+                <button type="button" id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()">
+                    <i class="fas fa-globe"></i>
+                    <span id="langBtnText">EN</span>
+                </button>
             </div>
         </div>
 
@@ -791,12 +843,286 @@
     ]
   }
 ];
+    // ==========================================
+    // Full Bilingual Translation Dictionary (i18n)
+    // ==========================================
+    const NEAR_MISS_I18N = {
+        ar: {
+            dir: 'rtl',
+            langBtn: 'EN',
+            pageTitle: 'SafetyHub | نموذج الإبلاغ عن حادث وشيك (Near Miss)',
+            deptName: 'إدارة السلامة والصحة المهنية',
+            docTitle: 'نموذج الإبلاغ عن حادث وشيك',
+            docSubtitle: 'Near Miss Report',
+            hubBtn: 'بوابة النماذج',
+            docCodeKey: 'كود الوثيقة:',
+            docRevKey: 'رقم الإصدار:',
+            docConfKey: 'درجة السرية:',
+            docConfVal: 'عام داخلي',
+            sec1Title: 'الموقع والمصنع داخل المنشأة',
+            siteLabel: 'المصنع / المنشأة *',
+            sitePlaceholder: '— اختر المصنع أولاً —',
+            placeLabel: 'المكان الفرعي بالمصنع *',
+            placePlaceholder: '— اختر المصنع أولاً —',
+            customPlaceLabel: 'اكتب اسم المكان الفرعي بدقة *',
+            customPlacePlaceholder: 'اكتب تفاصيل المكان الفرعي...',
+            sec2Title: 'تصنيف الواقعة ومستوى الخطورة',
+            typeLabel: 'نوع وتصنيف الحادث الوشيك *',
+            types: [
+                { val: 'سقوط أشياء / أحمال', text: 'سقوط أشياء / أحمال' },
+                { val: 'تعثر / انزلاق', text: 'تعثر / انزلاق' },
+                { val: 'اقتراب معدات / فوركلفت', text: 'اقتراب معدات / فوركلفت' },
+                { val: 'خطر كهربائي وشيك', text: 'خطر كهربائي وشيك' },
+                { val: 'تسريب مواد كيميائية / غاز', text: 'تسريب مواد كيميائية / غاز' },
+                { val: 'حريق وشيك', text: 'حريق وشيك' },
+                { val: 'تصرف غير آمن', text: 'تصرف غير آمن' },
+                { val: 'وضع غير آمن', text: 'وضع غير آمن' },
+                { val: 'حادث وشيك عام', text: 'حادث وشيك عام' }
+            ],
+            sevLabel: 'مستوى الخطورة المحتملة *',
+            sevLow: '🟢 منخفض',
+            sevMed: '🟡 متوسط',
+            sevHigh: '🔴 عالي',
+            sevCrit: '🚨 وشيك',
+            sec3Title: 'تفاصيل الواقعة (ما كاد أن يحدث) *',
+            descPlaceholder: 'صف الواقعة بدقة: ماذا حدث بالتحديد وما هي الإصابة أو الخسائر التي كادت أن تقع لولا تدارك الأمر؟',
+            sec4Title: 'الإجراء الوقائي المتخذ / المقترح (اختياري)',
+            corrPlaceholder: 'ما هو الإجراء الفوري المتخذ أو المطلوب لمنع تكرار الواقعة؟',
+            sec5Title: 'صورة توضيحية من الموقع (اختياري)',
+            sec6Title: 'بيانات المبلّغ',
+            anonCheck: '🔒 إبلاغ سري بدون اسم',
+            nameLabel: 'الاسم',
+            namePlaceholder: 'الاسم ثلاثي',
+            phoneLabel: 'رقم التليفون',
+            phonePlaceholder: '+20XXXXXXXXXX',
+            submitBtn: 'إرسال تقرير الحادث الوشيك 🚀',
+            submittingBtn: 'جاري إرسال البلاغ...',
+            successTitle: 'تم إرسال تقرير الحادث الوشيك بنجاح!',
+            successDesc: 'تم توثيق البلاغ في سجلات السلامة بقاعدة البيانات وإحالته للمتابعة الفورية لمنع وقوع الحوادث.',
+            waShareBtn: 'مشاركة عبر واتساب',
+            anotherReportBtn: 'بلاغ وشيك آخر',
+            backHubBtn: 'الرجوع إلى بوابة النماذج',
+            floatingHub: 'بوابة النماذج',
+            footerTop: 'SafetyHub | ICAPP — منظومة السلامة والصحة المهنية المتكاملة',
+            footerSub: 'نظام الإبلاغ الفوري عن الحوادث الوشيكة وإدارة الإجراءات الوقائية © 2026 جميع الحقوق محفوظة',
+            valSite: 'يرجى اختيار المصنع أولاً',
+            valPlace: 'يرجى اختيار المكان الفرعي بدقة',
+            valDesc: 'يرجى وصف ما كاد أن يحدث بالتفصيل'
+        },
+        en: {
+            dir: 'ltr',
+            langBtn: 'AR',
+            pageTitle: 'SafetyHub | Near Miss Incident Report',
+            deptName: 'HSE Department',
+            docTitle: 'Near Miss Incident Report',
+            docSubtitle: 'Near Miss Incident Report',
+            hubBtn: 'Forms Hub',
+            docCodeKey: 'Doc Code:',
+            docRevKey: 'Revision:',
+            docConfKey: 'Classification:',
+            docConfVal: 'Internal Public',
+            sec1Title: 'Facility & Location Details',
+            siteLabel: 'Factory / Facility *',
+            sitePlaceholder: '— Select Factory First —',
+            placeLabel: 'Specific Area / Sub-location *',
+            placePlaceholder: '— Select Factory First —',
+            customPlaceLabel: 'Specify exact sub-location *',
+            customPlacePlaceholder: 'Enter detailed area name...',
+            sec2Title: 'Incident Classification & Severity',
+            typeLabel: 'Near Miss Classification Type *',
+            types: [
+                { val: 'سقوط أشياء / أحمال', text: 'Falling Objects / Loads' },
+                { val: 'تعثر / انزلاق', text: 'Slip / Trip / Fall' },
+                { val: 'اقتراب معدات / فوركلفت', text: 'Forklift / Vehicle Near Contact' },
+                { val: 'خطر كهربائي وشيك', text: 'Electrical Hazard' },
+                { val: 'تسريب مواد كيميائية / غاز', text: 'Chemical / Gas Leak' },
+                { val: 'حريق وشيك', text: 'Fire Hazard / Flash' },
+                { val: 'تصرف غير آمن', text: 'Unsafe Act / Behavior' },
+                { val: 'وضع غير آمن', text: 'Unsafe Condition' },
+                { val: 'حادث وشيك عام', text: 'General Near Miss' }
+            ],
+            sevLabel: 'Potential Severity Level *',
+            sevLow: '🟢 Low',
+            sevMed: '🟡 Medium',
+            sevHigh: '🔴 High',
+            sevCrit: '🚨 Critical',
+            sec3Title: 'Incident Description (What almost happened) *',
+            descPlaceholder: 'Describe accurately: What happened and what injury or loss could have occurred?',
+            sec4Title: 'Preventive Action Taken / Suggested (Optional)',
+            corrPlaceholder: 'What immediate or recommended corrective action is needed to prevent recurrence?',
+            sec5Title: 'Incident Scene Photo (Optional)',
+            sec6Title: 'Reporter Information',
+            anonCheck: '🔒 Anonymous Report',
+            nameLabel: 'Full Name',
+            namePlaceholder: 'Full Name',
+            phoneLabel: 'Phone Number',
+            phonePlaceholder: '+20XXXXXXXXXX',
+            submitBtn: 'Submit Near Miss Report 🚀',
+            submittingBtn: 'Submitting report...',
+            successTitle: 'Near Miss Report Submitted Successfully!',
+            successDesc: 'Incident logged in the HSE database and routed for immediate corrective action.',
+            waShareBtn: 'Share via WhatsApp',
+            anotherReportBtn: 'Submit Another Report',
+            backHubBtn: 'Back to Forms Portal',
+            floatingHub: 'Forms Hub',
+            footerTop: 'SafetyHub | ICAPP — Integrated HSE Management System',
+            footerSub: 'Instant Near Miss Incident Reporting & CAPA Management System © 2026',
+            valSite: 'Please select the factory / facility',
+            valPlace: 'Please select or specify the specific area',
+            valDesc: 'Please describe what almost happened in detail'
+        }
+    };
+
+    let currentLang = 'ar';
+
+    function applyLanguage(lang) {
+        currentLang = lang;
+        const t = NEAR_MISS_I18N[lang] || NEAR_MISS_I18N.ar;
+        document.documentElement.lang = lang;
+        document.documentElement.dir = t.dir;
+        document.title = t.pageTitle;
+
+        const langBtnText = document.getElementById('langBtnText');
+        if (langBtnText) langBtnText.textContent = t.langBtn;
+
+        // ISO Header
+        const deptName = document.querySelector('.iso-dept-name');
+        if (deptName) deptName.textContent = t.deptName;
+        const docTitle = document.getElementById('isoDocTitle');
+        if (docTitle) docTitle.textContent = t.docTitle;
+        const docSubtitle = document.getElementById('isoDocSubtitle');
+        if (docSubtitle) docSubtitle.textContent = t.docSubtitle;
+        const hubBtnText = document.getElementById('hubBtnText');
+        if (hubBtnText) hubBtnText.textContent = t.hubBtn;
+
+        const metaKeys = document.querySelectorAll('.iso-meta-key');
+        if (metaKeys[0]) metaKeys[0].textContent = t.docCodeKey;
+        if (metaKeys[1]) metaKeys[1].textContent = t.docRevKey;
+        if (metaKeys[2]) metaKeys[2].textContent = t.docConfKey;
+        const metaValConf = document.querySelectorAll('.iso-meta-val');
+        if (metaValConf[2]) metaValConf[2].textContent = t.docConfVal;
+
+        // Section Titles
+        const secTitles = document.querySelectorAll('.section-title');
+        if (secTitles[0]) secTitles[0].textContent = t.sec1Title;
+        if (secTitles[1]) secTitles[1].textContent = t.sec2Title;
+        if (secTitles[2]) secTitles[2].textContent = t.sec3Title;
+        if (secTitles[3]) secTitles[3].textContent = t.sec4Title;
+        if (secTitles[4]) secTitles[4].textContent = t.sec5Title;
+        if (secTitles[5]) secTitles[5].textContent = t.sec6Title;
+
+        // Section 1 Labels
+        const sec1Labels = document.querySelectorAll('#nearMissForm .form-card:nth-of-type(1) label');
+        if (sec1Labels[0]) sec1Labels[0].textContent = t.siteLabel;
+        if (sec1Labels[1]) sec1Labels[1].textContent = t.placeLabel;
+        const customPlaceLabel = document.querySelector('#customPlaceGroup label');
+        if (customPlaceLabel) customPlaceLabel.textContent = t.customPlaceLabel;
+        const customPlaceInp = document.getElementById('customPlaceInput');
+        if (customPlaceInp) customPlaceInp.placeholder = t.customPlacePlaceholder;
+
+        // Section 2 Types & Severity
+        const sec2Labels = document.querySelectorAll('#nearMissForm .form-card:nth-of-type(2) label');
+        if (sec2Labels[0]) sec2Labels[0].textContent = t.typeLabel;
+        if (sec2Labels[1]) sec2Labels[1].textContent = t.sevLabel;
+
+        const typeSelect = document.getElementById('typeSelect');
+        if (typeSelect) {
+            const curVal = typeSelect.value;
+            typeSelect.innerHTML = '';
+            t.types.forEach(ty => {
+                const opt = document.createElement('option');
+                opt.value = ty.val;
+                opt.textContent = ty.text;
+                if (curVal === ty.val) opt.selected = true;
+                typeSelect.appendChild(opt);
+            });
+        }
+
+        const sevBtns = document.querySelectorAll('.sev-btn');
+        if (sevBtns[0]) sevBtns[0].textContent = t.sevLow;
+        if (sevBtns[1]) sevBtns[1].textContent = t.sevMed;
+        if (sevBtns[2]) sevBtns[2].textContent = t.sevHigh;
+        if (sevBtns[3]) sevBtns[3].textContent = t.sevCrit;
+
+        // Section 3 & 4 Textareas
+        const descInp = document.getElementById('descriptionInput');
+        if (descInp) descInp.placeholder = t.descPlaceholder;
+        const corrInp = document.getElementById('correctiveInput');
+        if (corrInp) corrInp.placeholder = t.corrPlaceholder;
+
+        // Section 6 Reporter
+        const anonSpan = document.querySelector('#nearMissForm .form-card:nth-of-type(5) label span, #anonCheck ~ span');
+        if (anonSpan) anonSpan.textContent = t.anonCheck;
+        const repLabels = document.querySelectorAll('#reporterInputs label');
+        if (repLabels[0]) repLabels[0].textContent = t.nameLabel;
+        if (repLabels[1]) repLabels[1].textContent = t.phoneLabel;
+        const nameInp = document.getElementById('observerNameInput');
+        if (nameInp) nameInp.placeholder = t.namePlaceholder;
+        const phoneInp = document.getElementById('phoneInput');
+        if (phoneInp) phoneInp.placeholder = t.phonePlaceholder;
+
+        // Submit Button
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.innerHTML = `<i class="fas fa-paper-plane text-amber-300"></i> <span>${t.submitBtn}</span>`;
+        }
+
+        // Success Screen
+        const succH2 = document.querySelector('#successScreen h2');
+        if (succH2) succH2.textContent = t.successTitle;
+        const succP = document.querySelector('#successScreen p');
+        if (succP) succP.textContent = t.successDesc;
+        const waBtn = document.getElementById('whatsappShareBtn');
+        if (waBtn) waBtn.innerHTML = `<i class="fab fa-whatsapp"></i> ${t.waShareBtn}`;
+        const newRepBtn = document.querySelector('#successScreen button[onclick="location.reload()"]');
+        if (newRepBtn) newRepBtn.innerHTML = `<i class="fas fa-plus"></i> ${t.anotherReportBtn}`;
+        const succHubBtn = document.querySelector('#successScreen a[href*="forms-hub.html"]');
+        if (succHubBtn) succHubBtn.innerHTML = `<i class="fas fa-layer-group"></i> ${t.backHubBtn}`;
+
+        // Floating Hub
+        const floatHub = document.querySelector('.floating-hub-btn span');
+        if (floatHub) floatHub.textContent = t.floatingHub;
+
+        // Footer
+        const footTop = document.querySelector('.iso-footer-top');
+        if (footTop) footTop.textContent = t.footerTop;
+        const footSub = document.querySelector('.iso-footer div:nth-child(2)');
+        if (footSub) footSub.textContent = t.footerSub;
+
+        // Update hub links href with ?lang=
+        document.querySelectorAll('a[href*="forms-hub.html"]').forEach(a => {
+            a.href = `forms-hub.html${lang === 'en' ? '?lang=en' : ''}`;
+        });
+
+        // Re-render dropdowns if needed
+        renderSitesDropdown(loadedConfig);
+
+        try {
+            localStorage.setItem('HSE_PORTAL_LANG', lang);
+            localStorage.setItem('language', lang);
+        } catch(e) {}
+    }
+
+    function toggleLanguage() {
+        const next = currentLang === 'ar' ? 'en' : 'ar';
+        applyLanguage(next);
+    }
+
     let loadedConfig = { sites: defaultSites };
     let userGps = { lat: null, lng: null, accuracy: null, mapLink: '' };
     let photoBase64 = '';
     let isDirectQrScan = false;
 
     window.addEventListener('DOMContentLoaded', () => {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const qLang = urlParams.get('lang');
+            const savedLang = qLang || localStorage.getItem('HSE_PORTAL_LANG') || localStorage.getItem('language') || 'ar';
+            applyLanguage(savedLang);
+        } catch(e) {
+            applyLanguage('ar');
+        }
+
         initGpsCapture();
         loadConfiguration();
     });

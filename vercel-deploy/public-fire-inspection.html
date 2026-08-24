@@ -955,13 +955,56 @@
             transform: translateY(-2px) scale(1.02);
             box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55);
         }
+        /* LTR Overrides */
+        html[dir="ltr"] body {
+            direction: ltr;
+            text-align: left;
+        }
+        html[dir="ltr"] .form-section,
+        html[dir="ltr"] .section-header,
+        html[dir="ltr"] .section-desc,
+        html[dir="ltr"] .form-group,
+        html[dir="ltr"] .receipt-card,
+        html[dir="ltr"] .receipt-row,
+        html[dir="ltr"] .iso-col-title,
+        html[dir="ltr"] .check-item-title {
+            text-align: left;
+        }
+        html[dir="ltr"] .iso-col-brand {
+            border-left: none;
+            border-right: 1px solid #e2e8f0;
+        }
+        html[dir="ltr"] .iso-col-meta {
+            border-right: none;
+            border-left: 1px solid #e2e8f0;
+        }
+        html[dir="ltr"] .floating-hub-btn {
+            right: auto;
+            left: 22px;
+        }
         @media (max-width: 640px) {
-            .floating-hub-btn {
-                bottom: 14px;
-                right: 14px;
-                padding: 8px 12px;
-                font-size: 11px;
+            html[dir="ltr"] .floating-hub-btn {
+                right: auto;
+                left: 14px;
             }
+        }
+
+        .lang-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            background: #e0e7ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+            border-radius: 9999px;
+            padding: 2px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .lang-btn:hover {
+            background: #c7d2fe;
         }
     </style>
 </head>
@@ -978,18 +1021,22 @@
 
             <div class="iso-col-title">
                 <a href="forms-hub.html" style="text-decoration: none; color: inherit; display: block;" title="الرجوع إلى بوابة النماذج">
-                    <h1 class="iso-doc-title">نموذج الفحص الشهري لمعدات الإطفاء</h1>
-                    <div class="iso-doc-subtitle">Monthly Fire Equipment Inspection Form</div>
+                    <h1 class="iso-doc-title" id="isoDocTitle">نموذج الفحص الشهري لمعدات الإطفاء</h1>
+                    <div class="iso-doc-subtitle" id="isoDocSubtitle">Monthly Fire Equipment Inspection Form</div>
                 </a>
                 <div style="display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
                     <span class="iso-platform-tag" style="margin: 0;">
                         <i class="fas fa-fire-extinguisher"></i>
-                        <span>بوابة الفحص الميداني</span>
+                        <span id="platformTagText">بوابة الفحص الميداني</span>
                     </span>
-                    <a href="forms-hub.html" style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; background: rgba(37, 99, 235, 0.1); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25); border-radius: 9999px; padding: 2px 10px; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='rgba(37, 99, 235, 0.2)'" onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'">
+                    <a href="forms-hub.html" class="hub-link-btn" style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; background: rgba(37, 99, 235, 0.1); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25); border-radius: 9999px; padding: 2px 10px; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='rgba(37, 99, 235, 0.2)'" onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'">
                         <i class="fas fa-layer-group"></i>
-                        <span>بوابة النماذج</span>
+                        <span id="hubBtnText">بوابة النماذج</span>
                     </a>
+                    <button type="button" id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()">
+                        <i class="fas fa-globe"></i>
+                        <span id="langBtnText">EN</span>
+                    </button>
                 </div>
             </div>
 
@@ -1298,6 +1345,295 @@
     <div id="toast" class="toast-msg"></div>
 
     <script>
+        // ==========================================
+        // Full Bilingual Translation Dictionary (i18n)
+        // ==========================================
+        const FIRE_INSP_I18N = {
+            ar: {
+                dir: 'rtl',
+                langBtn: 'EN',
+                pageTitle: 'SafetyHub | نموذج الفحص الشهري لمعدات الإطفاء',
+                deptName: 'إدارة السلامة والصحة المهنية والبيئة',
+                docTitle: 'نموذج الفحص الشهري لمعدات الإطفاء',
+                docSubtitle: 'Monthly Fire Equipment Inspection Form',
+                platformTag: 'بوابة الفحص الميداني',
+                hubBtn: 'بوابة النماذج',
+                docCodeKey: 'كود الوثيقة:',
+                docRevKey: 'رقم الإصدار:',
+                docDateKey: 'تاريخ الاعتماد:',
+                docStdKey: 'المعيار:',
+                sec1Title: 'بيانات وموقع جهاز الإطفاء',
+                sec1Desc: 'حدد الجهاز من القائمة أو امسح كود QR الملصق على الطفاية',
+                scanQrBtn: 'مسح كود QR',
+                siteLabel: 'المصنع / الموقع *',
+                sitePlaceholder: '— اختر المصنع / الموقع —',
+                deviceLabel: 'كود / رقم جهاز الإطفاء *',
+                devicePlaceholder: '— اختر كود الطفاية —',
+                deviceLockedNotice: 'تم قفل النموذج على هذا الجهاز المحدد بواسطة كود الـ QR',
+                sec2Title: 'بيانات الفحص والمفتش',
+                sec2Desc: 'تسجيل تاريخ الفحص واسم القائم بالمهمة',
+                dateLabel: 'تاريخ الفحص *',
+                inspectorLabel: 'القائم بالفحص (مسؤول السلامة) *',
+                inspectorPlaceholder: '— اختر اسمك من قائمة السلامة المعتمدة —',
+                sec3Title: 'الفحص الفني والظاهري لمهمة الإطفاء',
+                sec3Desc: 'فحص المؤشر وسلامة الصمام والأجزاء الميكانيكية',
+                statusLabel: 'الحالة العامة للطفاية *',
+                statusValid: 'سليم وصالح للاستخدام',
+                statusWarn: 'يحتاج صيانة / ملاحظات',
+                statusDanger: 'تالف / غير صالح',
+                pressureLabel: 'مؤشر الضغط (Pressure Gauge):',
+                pressure1: '✅ في المنطقة الخضراء (سليم)',
+                pressure2: '⚠️ منخفض (يحتاج شحن)',
+                pressure3: '⚠️ مرتفع (ضغط زائد)',
+                pressure4: '➖ لا ينطبق (طفاية CO2)',
+                sealLabel: 'محبس وتيلة الأمان والشريط الرصاصي (Safety Pin & Seal):',
+                seal1: '✅ سليم ومثبت بإحكام',
+                seal2: '⚠️ مفقود أو غير مثبت',
+                seal3: '❌ مكسور أو تالف',
+                hoseLabel: 'الخرطوم والقاذف (Hose & Nozzle):',
+                hose1: '✅ سليم ونظيف ولا يوجد شروخ',
+                hose2: '⚠️ به شروخ أو جفاف بالمطاط',
+                hose3: '❌ مسدود أو تالف',
+                bodyLabel: 'جسم الأسطوانة والحامل الجداري:',
+                body1: '✅ سليم ونظيف والحامل مثبت',
+                body2: '⚠️ به صدأ سطحي أو خدوش',
+                body3: '❌ الحامل مخلخل أو يوجد عائق أمام الطفاية',
+                sec4Title: 'التوثيق والملاحظات والإجراءات',
+                sec4Desc: 'إرفاق صورة توضيحية وتدوين الإجراءات المتخذة',
+                photoLabel: 'صورة توضيحية للجهاز أثناء الفحص:',
+                photoCaptureBtn: 'التقاط صورة بالكاميرا',
+                remarksLabel: 'أية ملاحظات إضافية:',
+                remarksPlaceholder: 'اكتب أية ملاحظات تم رصدها أثناء المعاينة...',
+                actionsLabel: 'الإجراء المتخذ / التوصيات:',
+                actionsPlaceholder: 'مثال: تم ضبط ضغط الطفاية / تم استبدال تيلة الأمان / تم طلب إعادة تعبئة...',
+                submitBtn: 'تسجيل وتوثيق الفحص الشهري الآن',
+                submittingBtn: 'جاري تسجيل وتوثيق الفحص...',
+                successTitle: 'تم توثيق الفحص بنجاح!',
+                successDesc: 'تم حفظ سجل الفحص وتحديث بيانات الجهاز بالسجل المركزي للسلامة',
+                newBtn: 'فحص طفاية أخرى',
+                backHubBtn: 'الرجوع إلى بوابة النماذج',
+                floatingHub: 'بوابة النماذج'
+            },
+            en: {
+                dir: 'ltr',
+                langBtn: 'AR',
+                pageTitle: 'SafetyHub | Monthly Fire Equipment Inspection Form',
+                deptName: 'HSE & Environmental Department',
+                docTitle: 'Monthly Fire Equipment Inspection Form',
+                docSubtitle: 'Monthly Fire Equipment Inspection Form',
+                platformTag: 'Field Inspection Portal',
+                hubBtn: 'Forms Hub',
+                docCodeKey: 'Doc Code:',
+                docRevKey: 'Version:',
+                docDateKey: 'Approval Date:',
+                docStdKey: 'Standard:',
+                sec1Title: 'Fire Equipment & Location Details',
+                sec1Desc: 'Select equipment from list or scan extinguisher QR code',
+                scanQrBtn: 'Scan QR Code',
+                siteLabel: 'Factory / Site *',
+                sitePlaceholder: '— Select Factory / Site —',
+                deviceLabel: 'Equipment Code / ID *',
+                devicePlaceholder: '— Select Equipment ID —',
+                deviceLockedNotice: 'Form locked to this specific equipment via QR code',
+                sec2Title: 'Inspection & Inspector Details',
+                sec2Desc: 'Record inspection date and certified safety officer name',
+                dateLabel: 'Inspection Date *',
+                inspectorLabel: 'Inspector (Safety Officer) *',
+                inspectorPlaceholder: '— Select Safety Officer —',
+                sec3Title: 'Technical & Visual Equipment Check',
+                sec3Desc: 'Inspect pressure gauge, safety pin, hose and physical condition',
+                statusLabel: 'General Equipment Status *',
+                statusValid: 'Valid & Operable',
+                statusWarn: 'Needs Maintenance / Warning',
+                statusDanger: 'Out of Service / Inoperable',
+                pressureLabel: 'Pressure Gauge Status:',
+                pressure1: '✅ In Green Zone (Normal)',
+                pressure2: '⚠️ Low Pressure (Needs Recharge)',
+                pressure3: '⚠️ Overcharged (High Pressure)',
+                pressure4: '➖ N/A (CO2 Cylinder)',
+                sealLabel: 'Safety Pin & Tamper Seal:',
+                seal1: '✅ Intact & Properly Secured',
+                seal2: '⚠️ Missing or Unsecured',
+                seal3: '❌ Broken or Damaged',
+                hoseLabel: 'Hose & Nozzle Condition:',
+                hose1: '✅ Clean, Intact & No Cracks',
+                hose2: '⚠️ Cracked or Dry Rubber',
+                hose3: '❌ Blocked or Damaged',
+                bodyLabel: 'Cylinder Body & Wall Bracket:',
+                body1: '✅ Clean, Intact & Bracket Mounted',
+                body2: '⚠️ Minor Surface Rust / Scratches',
+                body3: '❌ Loose Bracket or Blocked Access',
+                sec4Title: 'Documentation & Corrective Actions',
+                sec4Desc: 'Attach inspection photo and record corrective actions',
+                photoLabel: 'Equipment Inspection Photo:',
+                photoCaptureBtn: 'Capture Inspection Photo',
+                remarksLabel: 'Additional Notes / Findings:',
+                remarksPlaceholder: 'Enter any findings observed during inspection...',
+                actionsLabel: 'Action Taken / Recommendation:',
+                actionsPlaceholder: 'e.g. Pressure verified / Pin replaced / Sent for refill...',
+                submitBtn: 'Submit & Certify Fire Inspection',
+                submittingBtn: 'Saving & certifying inspection...',
+                successTitle: 'Inspection Recorded Successfully!',
+                successDesc: 'Inspection logged into safety registry and next inspection date updated.',
+                newBtn: 'Inspect Another Equipment',
+                backHubBtn: 'Back to Forms Portal',
+                floatingHub: 'Forms Hub'
+            }
+        };
+
+        let currentLang = 'ar';
+
+        function applyLanguage(lang) {
+            currentLang = lang;
+            const t = FIRE_INSP_I18N[lang] || FIRE_INSP_I18N.ar;
+            document.documentElement.lang = lang;
+            document.documentElement.dir = t.dir;
+            document.title = t.pageTitle;
+
+            const langBtnText = document.getElementById('langBtnText');
+            if (langBtnText) langBtnText.textContent = t.langBtn;
+
+            // ISO Header
+            const deptName = document.getElementById('isoDeptName');
+            if (deptName) deptName.textContent = t.deptName;
+            const docTitle = document.getElementById('isoDocTitle');
+            if (docTitle) docTitle.textContent = t.docTitle;
+            const docSubtitle = document.querySelector('#isoDocSubtitle');
+            if (docSubtitle) docSubtitle.textContent = t.docSubtitle;
+            const platformTag = document.getElementById('platformTagText');
+            if (platformTag) platformTag.textContent = t.platformTag;
+            const hubBtnText = document.getElementById('hubBtnText');
+            if (hubBtnText) hubBtnText.textContent = t.hubBtn;
+
+            const metaKeys = document.querySelectorAll('.iso-meta-key');
+            if (metaKeys[0]) metaKeys[0].textContent = t.docCodeKey;
+            if (metaKeys[1]) metaKeys[1].textContent = t.docRevKey;
+            if (metaKeys[2]) metaKeys[2].textContent = t.docDateKey;
+            if (metaKeys[3]) metaKeys[3].textContent = t.docStdKey;
+
+            // Section Titles & Descriptions
+            const secTitles = document.querySelectorAll('.section-title');
+            if (secTitles[0]) secTitles[0].textContent = t.sec1Title;
+            if (secTitles[1]) secTitles[1].textContent = t.sec2Title;
+            if (secTitles[2]) secTitles[2].textContent = t.sec3Title;
+            if (secTitles[3]) secTitles[3].textContent = t.sec4Title;
+
+            const secDescs = document.querySelectorAll('.section-desc');
+            if (secDescs[0]) secDescs[0].textContent = t.sec1Desc;
+            if (secDescs[1]) secDescs[1].textContent = t.sec2Desc;
+            if (secDescs[2]) secDescs[2].textContent = t.sec3Desc;
+            if (secDescs[3]) secDescs[3].textContent = t.sec4Desc;
+
+            // Scan QR Button
+            const scanQrBtn = document.querySelector('.btn-scan-qr-inline span');
+            if (scanQrBtn) scanQrBtn.textContent = t.scanQrBtn;
+
+            // Section 1 Labels
+            const siteLabel = document.querySelector('.sec-device .form-group:nth-of-type(1) .form-label');
+            if (siteLabel) siteLabel.innerHTML = `<i class="fas fa-building text-slate-500"></i> ${t.siteLabel}`;
+            const deviceLabel = document.querySelector('.sec-device .form-group:nth-of-type(2) .form-label');
+            if (deviceLabel) deviceLabel.innerHTML = `<i class="fas fa-barcode text-red-600"></i> ${t.deviceLabel}`;
+
+            const deviceNoticeText = document.getElementById('deviceLockedNoticeText');
+            if (deviceNoticeText) deviceNoticeText.textContent = t.deviceLockedNotice;
+
+            // Section 2 Labels
+            const dateLabel = document.querySelector('.sec-insp .form-group:nth-of-type(1) .form-label');
+            if (dateLabel) dateLabel.innerHTML = `<i class="fas fa-calendar-alt text-slate-500"></i> ${t.dateLabel}`;
+            const inspLabel = document.querySelector('.sec-insp .form-group:nth-of-type(2) .form-label');
+            if (inspLabel) inspLabel.innerHTML = `<i class="fas fa-user-check text-blue-600"></i> ${t.inspectorLabel}`;
+
+            // Section 3 Status & Checks
+            const statusLabel = document.querySelector('.sec-tech .form-label');
+            if (statusLabel) statusLabel.innerHTML = `<i class="fas fa-heart-pulse text-rose-600"></i> ${t.statusLabel}`;
+
+            const statusOptSpans = document.querySelectorAll('.status-option-btn span');
+            if (statusOptSpans[0]) statusOptSpans[0].textContent = t.statusValid;
+            if (statusOptSpans[1]) statusOptSpans[1].textContent = t.statusWarn;
+            if (statusOptSpans[2]) statusOptSpans[2].textContent = t.statusDanger;
+
+            // Select Dropdowns
+            const pressureSelect = document.getElementById('pressureGauge');
+            if (pressureSelect && pressureSelect.options.length >= 4) {
+                pressureSelect.options[0].textContent = t.pressure1;
+                pressureSelect.options[1].textContent = t.pressure2;
+                pressureSelect.options[2].textContent = t.pressure3;
+                pressureSelect.options[3].textContent = t.pressure4;
+            }
+
+            const sealSelect = document.getElementById('sealIntact');
+            if (sealSelect && sealSelect.options.length >= 3) {
+                sealSelect.options[0].textContent = t.seal1;
+                sealSelect.options[1].textContent = t.seal2;
+                sealSelect.options[2].textContent = t.seal3;
+            }
+
+            const hoseSelect = document.getElementById('hoseCondition');
+            if (hoseSelect && hoseSelect.options.length >= 3) {
+                hoseSelect.options[0].textContent = t.hose1;
+                hoseSelect.options[1].textContent = t.hose2;
+                hoseSelect.options[2].textContent = t.hose3;
+            }
+
+            const bodySelect = document.getElementById('bodyCondition');
+            if (bodySelect && bodySelect.options.length >= 3) {
+                bodySelect.options[0].textContent = t.body1;
+                bodySelect.options[1].textContent = t.body2;
+                bodySelect.options[2].textContent = t.body3;
+            }
+
+            // Section 4 Photos & Remarks
+            const photoLabel = document.querySelector('.sec-doc .form-group:nth-of-type(1) .form-label');
+            if (photoLabel) photoLabel.innerHTML = `<i class="fas fa-camera text-emerald-600"></i> ${t.photoLabel}`;
+            const photoBtn = document.querySelector('.btn-action-photo span');
+            if (photoBtn) photoBtn.textContent = t.photoCaptureBtn;
+
+            const remarksLabel = document.querySelector('.sec-doc .form-group:nth-of-type(2) .form-label');
+            if (remarksLabel) remarksLabel.innerHTML = `<i class="fas fa-comment-dots text-slate-600"></i> ${t.remarksLabel}`;
+            const remarksInp = document.getElementById('remarksInput');
+            if (remarksInp) remarksInp.placeholder = t.remarksPlaceholder;
+
+            const actionsLabel = document.querySelector('.sec-doc .form-group:nth-of-type(3) .form-label');
+            if (actionsLabel) actionsLabel.innerHTML = `<i class="fas fa-wrench text-amber-600"></i> ${t.actionsLabel}`;
+            const actionsInp = document.getElementById('actionsInput');
+            if (actionsInp) actionsInp.placeholder = t.actionsPlaceholder;
+
+            // Submit Button
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.innerHTML = `<i class="fas fa-clipboard-check"></i> <span>${t.submitBtn}</span>`;
+            }
+
+            // Success Screen
+            const succH2 = document.querySelector('#successScreen h2');
+            if (succH2) succH2.textContent = t.successTitle;
+            const succP = document.querySelector('#successScreen p');
+            if (succP) succP.textContent = t.successDesc;
+            const newBtn = document.querySelector('#successScreen button[onclick="resetInspectionForm()"]');
+            if (newBtn) newBtn.innerHTML = `<i class="fas fa-plus"></i> ${t.newBtn}`;
+            const succHub = document.querySelector('#successScreen a[href*="forms-hub.html"]');
+            if (succHub) succHub.innerHTML = `<i class="fas fa-layer-group"></i> ${t.backHubBtn}`;
+
+            // Floating Hub
+            const floatHub = document.querySelector('.floating-hub-btn span');
+            if (floatHub) floatHub.textContent = t.floatingHub;
+
+            // Update hub links href with ?lang=
+            document.querySelectorAll('a[href*="forms-hub.html"]').forEach(a => {
+                a.href = `forms-hub.html${lang === 'en' ? '?lang=en' : ''}`;
+            });
+
+            try {
+                localStorage.setItem('HSE_PORTAL_LANG', lang);
+                localStorage.setItem('language', lang);
+            } catch(e) {}
+        }
+
+        function toggleLanguage() {
+            const next = currentLang === 'ar' ? 'en' : 'ar';
+            applyLanguage(next);
+        }
+
         const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
         let allAssets = [];
         let currentPhotoBase64 = '';
@@ -1500,6 +1836,15 @@
 
         // تهيئة الصفحة
         window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const qLang = urlParams.get('lang');
+                const savedLang = qLang || localStorage.getItem('HSE_PORTAL_LANG') || localStorage.getItem('language') || 'ar';
+                applyLanguage(savedLang);
+            } catch(e) {
+                applyLanguage('ar');
+            }
+
             // ضبط تاريخ اليوم
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('inspectionDate').value = today;
