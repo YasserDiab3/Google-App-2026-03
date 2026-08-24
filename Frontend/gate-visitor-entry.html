@@ -823,10 +823,139 @@
             align-items: center;
             gap: 8px;
         }
+
+        /* ══ PWA Install Banner ══ */
+        #pwaBanner {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            inset-inline: 0;
+            z-index: 9990;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            color: #fff;
+            padding: 14px 20px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            box-shadow: 0 -4px 20px rgba(15,23,42,0.25);
+            border-top: 3px solid #3b82f6;
+        }
+
+        .pwa-banner-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .pwa-banner-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .pwa-banner-text {
+            min-width: 0;
+        }
+
+        .pwa-banner-title {
+            font-size: 0.9rem;
+            font-weight: 900;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pwa-banner-desc {
+            font-size: 0.72rem;
+            font-weight: 600;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+
+        .pwa-banner-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .btn-pwa-install {
+            background: #ffffff;
+            color: #1e40af;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 0.85rem;
+            font-weight: 900;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-pwa-install:hover {
+            background: #eff6ff;
+            transform: scale(1.02);
+        }
+
+        .btn-pwa-dismiss {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: #fff;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-pwa-dismiss:hover { background: rgba(255,255,255,0.25); }
+
+        @media (max-width: 480px) {
+            #pwaBanner { padding: 10px 14px; gap: 8px; }
+            .pwa-banner-title { font-size: 0.8rem; }
+            .pwa-banner-desc { display: none; }
+            .btn-pwa-install { padding: 7px 14px; font-size: 0.8rem; }
+        }
     </style>
 </head>
 <body>
     <div id="toastMsg" class="toast-msg"></div>
+
+    <!-- ══ PWA Install Banner ══ -->
+    <div id="pwaBanner" role="banner" aria-label="تثبيت التطبيق">
+        <div class="pwa-banner-content">
+            <div class="pwa-banner-icon">
+                <img src="icons/icapp-logo.png" alt="ICAPP" style="width:32px;height:32px;object-fit:contain;border-radius:6px;" onerror="this.style.display='none';this.parentElement.innerHTML='🛡️'">
+            </div>
+            <div class="pwa-banner-text">
+                <div class="pwa-banner-title">بوابة الأمن — SafetyHub</div>
+                <div class="pwa-banner-desc">ثبّت التطبيق للوصول السريع بدون متصفح</div>
+            </div>
+        </div>
+        <div class="pwa-banner-actions">
+            <button type="button" class="btn-pwa-install" onclick="triggerInstall()">
+                <i class="fas fa-download"></i>
+                تثبيت
+            </button>
+            <button type="button" class="btn-pwa-dismiss" onclick="hideInstallBanner()" title="إغلاق">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
 
     <div class="container">
         <!-- شريط أدوات البوابة وتبديل الثيم واللغة -->
@@ -2470,6 +2599,61 @@
             loadGateSystemConfig();
             updateStatsBadges();
         });
+
+        // ════════════════════════════════════════════════════
+        // PWA: Service Worker Registration
+        // ════════════════════════════════════════════════════
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => {
+                        reg.update();
+                        console.log('[Gate PWA] SW registered:', reg.scope);
+                    })
+                    .catch(err => console.warn('[Gate PWA] SW failed:', err));
+            });
+        }
+
+        // ════════════════════════════════════════════════════
+        // PWA: Install Prompt
+        // ════════════════════════════════════════════════════
+        let _deferredInstallPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            _deferredInstallPrompt = e;
+            showInstallBanner();
+        });
+
+        window.addEventListener('appinstalled', () => {
+            hideInstallBanner();
+            _deferredInstallPrompt = null;
+            showToast('✅ تم تثبيت تطبيق بوابة الأمن بنجاح!', 3000);
+        });
+
+        function showInstallBanner() {
+            const banner = document.getElementById('pwaBanner');
+            if (banner) banner.style.display = 'flex';
+        }
+
+        function hideInstallBanner() {
+            const banner = document.getElementById('pwaBanner');
+            if (banner) banner.style.display = 'none';
+        }
+
+        async function triggerInstall() {
+            if (_deferredInstallPrompt) {
+                _deferredInstallPrompt.prompt();
+                const { outcome } = await _deferredInstallPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    _deferredInstallPrompt = null;
+                    hideInstallBanner();
+                }
+            } else {
+                // iOS fallback
+                showToast('📱 iOS: اضغط زر المشاركة ← أضف إلى الشاشة الرئيسية', 5000);
+            }
+        }
     </script>
 </body>
 </html>
