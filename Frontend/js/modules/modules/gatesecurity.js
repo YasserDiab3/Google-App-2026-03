@@ -1165,37 +1165,43 @@ class GateSecurityModule {
         window._currentEditorConfig = JSON.parse(JSON.stringify(config));
 
         let modalHtml = `
-            <div id="mapEditorModal" style="position: fixed; inset: 0; background: rgba(15,23,42,0.8); backdrop-filter: blur(5px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 10px;">
-                <div style="background: #ffffff; width: 100%; max-width: 1150px; max-height: 95vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); border: 1px solid #cbd5e1; direction: rtl; display: flex; flex-direction: column;">
+            <div id="mapEditorModal" style="position: fixed; inset: 0; background: rgba(15,23,42,0.85); backdrop-filter: blur(6px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 10px;">
+                <div id="mapEditorContainer" style="background: #ffffff; width: 100%; max-width: 1180px; max-height: 95vh; transition: all 0.25s ease; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35); border: 1px solid #cbd5e1; direction: rtl; display: flex; flex-direction: column;">
                     <!-- Modal Header -->
-                    <div style="background: #1e3a8a; color: #ffffff; padding: 14px 20px; border-top-left-radius: 16px; border-top-right-radius: 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="background: #1e3a8a; color: #ffffff; padding: 12px 20px; border-top-left-radius: 16px; border-top-right-radius: 16px; display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <i class="fas fa-drafting-compass" style="font-size: 1.5rem; color: #60a5fa;"></i>
                             <div>
                                 <h3 style="margin: 0; font-size: 1.1rem; font-weight: 900;">مصمم ومحرر الخريطة التفاعلي (Interactive Canvas & Layout Designer)</h3>
-                                <span style="font-size: 0.78rem; color: #bfdbfe;">اسحب وحرك المباني والأيقونات مباشرة بالماوس | إضافة مناطق، علامات سلامة، وتكبير/تصغير إطار الخلفية</span>
+                                <span style="font-size: 0.78rem; color: #bfdbfe;">اسحب وحرك المباني والأيقونات مباشرة بالماوس | رسم مربع موقع، إضافة وحذف علامات، وتمرير ملء الشاشة</span>
                             </div>
                         </div>
-                        <button onclick="document.getElementById('mapEditorModal').remove()" style="background: rgba(255,255,255,0.15); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: 900; font-size: 1.1rem;">✕</button>
+
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <button type="button" onclick="GateSecurity.toggleEditorFullscreen()" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3); color: #ffffff; padding: 5px 14px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <i id="fsIcon" class="fas fa-expand"></i> <span id="fsBtnText">وضع ملء الشاشة</span>
+                            </button>
+                            <button onclick="document.getElementById('mapEditorModal').remove()" style="background: rgba(255,255,255,0.15); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: 900; font-size: 1.1rem;">✕</button>
+                        </div>
                     </div>
 
                     <!-- Modal Body Split Layout -->
-                    <div style="padding: 16px; display: grid; grid-template-columns: 580px 1fr; gap: 16px; flex: 1;">
+                    <div id="editorBodyGrid" style="padding: 14px; display: grid; grid-template-columns: 620px 1fr; gap: 14px; flex: 1; overflow: hidden;">
                         <!-- الجانب الأيمن: لوحة الرسم التفاعلية MOUSE CANVAS -->
-                        <div style="display: flex; flex-direction: column; gap: 10px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
-                                <span style="font-weight: 900; font-size: 0.85rem; color: #1e3a8a;"><i class="fas fa-mouse-pointer"></i> لوحة الرسم الحية (انقر واسحب العناصر):</span>
+                        <div style="display: flex; flex-direction: column; gap: 8px; height: 100%;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                                <span style="font-weight: 900; font-size: 0.85rem; color: #1e3a8a;"><i class="fas fa-mouse-pointer"></i> لوحة الرسم المباشر (اسحب بالماوس):</span>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <label style="font-size: 0.75rem; font-weight: 800;">تكبير الإطار (Scale):</label>
-                                    <input type="range" id="frameScaleRange" min="80" max="140" value="${config.frameScale || 100}" oninput="GateSecurity.updateEditorFrameScale(this.value)" style="width: 90px; cursor: pointer;">
+                                    <input type="range" id="frameScaleRange" min="80" max="150" value="${config.frameScale || 100}" oninput="GateSecurity.updateEditorFrameScale(this.value)" style="width: 90px; cursor: pointer;">
                                     <span id="scaleValText" style="font-size: 0.75rem; font-weight: 900; color: #15803d;">${config.frameScale || 100}%</span>
                                 </div>
                             </div>
 
                             <!-- الـ SVG التفاعلي السحب والإفلات -->
-                            <div id="canvasViewport" style="border: 2px solid #334155; border-radius: 10px; background: ${config.frameBg || '#f1f5f9'}; overflow: hidden; position: relative; width: 100%; height: 380px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 6px rgba(0,0,0,0.1);">
+                            <div id="canvasViewport" style="border: 2px solid #334155; border-radius: 10px; background: ${config.frameBg || '#f1f5f9'}; overflow: hidden; position: relative; width: 100%; height: 420px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 6px rgba(0,0,0,0.1); transition: height 0.25s ease;">
                                 <svg id="interactiveCanvasSvg" viewBox="0 0 500 360" style="width: 100%; height: 100%; cursor: crosshair; user-select: none;" onmousedown="GateSecurity.handleCanvasMouseDown(event)" onmousemove="GateSecurity.handleCanvasMouseMove(event)" onmouseup="GateSecurity.handleCanvasMouseUp(event)">
-                                    <!-- background -->
+                                    <!-- background frame -->
                                     <rect x="10" y="10" width="480" height="340" rx="8" fill="#ffffff" stroke="#334155" stroke-width="2.5" stroke-dasharray="6,4"/>
                                     <rect x="20" y="20" width="460" height="320" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
                                     <rect x="35" y="35" width="430" height="290" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
@@ -1214,14 +1220,14 @@ class GateSecurityModule {
                                 </svg>
                             </div>
                             <div style="font-size: 0.72rem; color: #64748b; text-align: center; font-weight: 700;">
-                                💡 نصيحة: انقر بالماوس واسحب أي مبنى أو نقطة تجمع أو أيقونة سلامة لتحريكها إلى أي موقِع بدقة.
+                                💡 اسحب أي مبنى أو أيقونة بالماوس لموقعها الدقيق. انقر على الأيقونة للتحكم فيها أو حذفها.
                             </div>
                         </div>
 
                         <!-- الجانب الأيسر: لوحة التحكم والخيارات والإضافة -->
-                        <div style="display: flex; flex-direction: column; gap: 12px; overflow-y: auto; max-height: 70vh; padding-left: 4px;">
+                        <div style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 78vh; padding-left: 4px;">
                             <!-- بيانات الخريطة والإحداثيات -->
-                            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px;">
+                            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 10px;">
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                     <div>
                                         <label style="font-size: 0.75rem; font-weight: 800; color: #1e3a8a; display: block; margin-bottom: 2px;">إحداثيات GPS:</label>
@@ -1240,53 +1246,54 @@ class GateSecurityModule {
                             </div>
 
                             <!-- إضافة علامات وأيقونات السلامة -->
-                            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 10px;">
-                                <h4 style="margin: 0 0 8px; font-size: 0.88rem; font-weight: 900; color: #1e40af; display: flex; align-items: center; gap: 6px;">
+                            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 8px 10px;">
+                                <h4 style="margin: 0 0 6px; font-size: 0.85rem; font-weight: 900; color: #1e40af; display: flex; align-items: center; gap: 6px;">
                                     <i class="fas fa-plus-circle"></i> إضافة أيقونات وعلامات السلامة (Safety Signs)
                                 </h4>
-                                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🧯', 'مطفأة حريق', '#dc2626')" style="background: #ffffff; border: 1px solid #fca5a5; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">🧯 مطفأة حريق</button>
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🚪', 'مخرج طوارئ', '#16a34a')" style="background: #ffffff; border: 1px solid #86efac; color: #16a34a; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">🚪 مخرج طوارئ</button>
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('➕', 'إسعافات أولية', '#16a34a')" style="background: #ffffff; border: 1px solid #86efac; color: #16a34a; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">➕ إسعافات أولية</button>
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('⚠️', 'علامة خطورة', '#d97706')" style="background: #ffffff; border: 1px solid #fde68a; color: #b45309; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">⚠️ منطقة خطرة</button>
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🚭', 'ممنوع التدخين', '#dc2626')" style="background: #ffffff; border: 1px solid #fca5a5; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">🚭 منع تدخين</button>
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('💧', 'دش طوارئ', '#0284c7')" style="background: #ffffff; border: 1px solid #7dd3fc; color: #0284c7; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">💧 دش طوارئ</button>
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🥽', 'مهمات وقاية', '#4f46e5')" style="background: #ffffff; border: 1px solid #c7d2fe; color: #4338ca; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">🥽 مهمات PPE</button>
+                                <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px;">
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🧯', 'مطفأة حريق', '#dc2626')" style="background: #ffffff; border: 1px solid #fca5a5; color: #dc2626; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">🧯 مطفأة حريق</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🚪', 'مخرج طوارئ', '#16a34a')" style="background: #ffffff; border: 1px solid #86efac; color: #16a34a; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">🚪 مخرج طوارئ</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('➕', 'إسعافات أولية', '#16a34a')" style="background: #ffffff; border: 1px solid #86efac; color: #16a34a; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">➕ إسعافات أولية</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('⚠️', 'علامة خطورة', '#d97706')" style="background: #ffffff; border: 1px solid #fde68a; color: #b45309; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">⚠️ منطقة خطرة</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🚭', 'ممنوع التدخين', '#dc2626')" style="background: #ffffff; border: 1px solid #fca5a5; color: #dc2626; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">🚭 منع تدخين</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('💧', 'دش طوارئ', '#0284c7')" style="background: #ffffff; border: 1px solid #7dd3fc; color: #0284c7; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">💧 دش طوارئ</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🥽', 'مهمات وقاية', '#4f46e5')" style="background: #ffffff; border: 1px solid #c7d2fe; color: #4338ca; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">🥽 مهمات PPE</button>
                                 </div>
+                                <div id="editorSafetyIconsList" style="display: flex; flex-direction: column; gap: 4px; max-height: 100px; overflow-y: auto;"></div>
                             </div>
 
-                            <!-- زر إضافة مبنى/منطقة جديدة -->
-                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px;">
+                            <!-- إضافة مربع رسم موقع / منطقة جديدة -->
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                    <span style="font-size: 0.85rem; font-weight: 900; color: #1e3a8a;"><i class="fas fa-building"></i> تصميم المناطق والمباني:</span>
-                                    <button type="button" onclick="GateSecurity.addEditorBuildingZone()" style="background: #2563eb; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">
-                                        + إضافة منطقة/مبنى جديد
+                                    <span style="font-size: 0.84rem; font-weight: 900; color: #1e3a8a;"><i class="fas fa-vector-square"></i> إضافة وتصميم مربع رسم موقع:</span>
+                                    <button type="button" onclick="GateSecurity.addEditorBuildingZone()" style="background: #2563eb; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">
+                                        + رسم مربع موقع جديد
                                     </button>
                                 </div>
-                                <div id="editorBuildingsList" style="display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto;"></div>
+                                <div id="editorBuildingsList" style="display: flex; flex-direction: column; gap: 5px; max-height: 160px; overflow-y: auto;"></div>
                             </div>
 
                             <!-- قائمة نقاط التجمع -->
-                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px;">
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                    <span style="font-size: 0.85rem; font-weight: 900; color: #15803d;"><i class="fas fa-flag"></i> نقاط التجمع (Muster Points):</span>
-                                    <button type="button" onclick="GateSecurity.addEditorMusterPoint()" style="background: #15803d; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">
+                                    <span style="font-size: 0.84rem; font-weight: 900; color: #15803d;"><i class="fas fa-flag"></i> نقاط التجمع (Muster Points):</span>
+                                    <button type="button" onclick="GateSecurity.addEditorMusterPoint()" style="background: #15803d; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">
                                         + إضافة نقطة تجمع
                                     </button>
                                 </div>
-                                <div id="editorMusterList" style="display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto;"></div>
+                                <div id="editorMusterList" style="display: flex; flex-direction: column; gap: 5px; max-height: 120px; overflow-y: auto;"></div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Modal Footer -->
-                    <div style="background: #f1f5f9; padding: 12px 20px; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0;">
-                        <button type="button" onclick="GateSecurity.resetMapConfigToDefault()" style="background: #cbd5e1; color: #334155; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 0.82rem; cursor: pointer;">
+                    <div style="background: #f1f5f9; padding: 10px 20px; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0;">
+                        <button type="button" onclick="GateSecurity.resetMapConfigToDefault()" style="background: #cbd5e1; color: #334155; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; cursor: pointer;">
                             <i class="fas fa-rotate-left"></i> استعادة المخطط الافتراضي
                         </button>
 
                         <div style="display: flex; gap: 10px;">
-                            <button type="button" onclick="document.getElementById('mapEditorModal').remove()" style="background: #ffffff; border: 1.5px solid #cbd5e1; color: #475569; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 0.82rem; cursor: pointer;">إلغاء</button>
+                            <button type="button" onclick="document.getElementById('mapEditorModal').remove()" style="background: #ffffff; border: 1.5px solid #cbd5e1; color: #475569; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; cursor: pointer;">إلغاء</button>
                             <button type="button" onclick="GateSecurity.saveEditorMapConfig()" style="background: #15803d; color: #ffffff; border: none; padding: 8px 22px; border-radius: 8px; font-weight: 900; font-size: 0.88rem; cursor: pointer; box-shadow: 0 4px 12px rgba(21,128,61,0.25);">
                                 <i class="fas fa-save"></i> حفظ المخطط والتصميم والطباعة
                             </button>
@@ -1298,6 +1305,40 @@ class GateSecurityModule {
 
         document.body.insertAdjacentHTML('beforeend', modalHtml);
         this.renderEditorCanvas();
+    }
+
+    toggleEditorFullscreen() {
+        const container = document.getElementById('mapEditorContainer');
+        const viewport = document.getElementById('canvasViewport');
+        const grid = document.getElementById('editorBodyGrid');
+        const fsBtnText = document.getElementById('fsBtnText');
+        const fsIcon = document.getElementById('fsIcon');
+        
+        if (!container) return;
+
+        if (!container.classList.contains('is-fullscreen')) {
+            container.classList.add('is-fullscreen');
+            container.style.width = '99vw';
+            container.style.height = '98vh';
+            container.style.maxWidth = '100vw';
+            container.style.maxHeight = '100vh';
+            container.style.borderRadius = '0';
+            if (viewport) viewport.style.height = 'calc(98vh - 140px)';
+            if (grid) grid.style.gridTemplateColumns = '1fr 400px';
+            if (fsBtnText) fsBtnText.textContent = 'إلغاء ملء الشاشة';
+            if (fsIcon) fsIcon.className = 'fas fa-compress';
+        } else {
+            container.classList.remove('is-fullscreen');
+            container.style.width = '100%';
+            container.style.height = 'auto';
+            container.style.maxWidth = '1180px';
+            container.style.maxHeight = '95vh';
+            container.style.borderRadius = '16px';
+            if (viewport) viewport.style.height = '420px';
+            if (grid) grid.style.gridTemplateColumns = '620px 1fr';
+            if (fsBtnText) fsBtnText.textContent = 'وضع ملء الشاشة';
+            if (fsIcon) fsIcon.className = 'fas fa-expand';
+        }
     }
 
     renderEditorCanvas() {
@@ -1335,7 +1376,7 @@ class GateSecurityModule {
             `).join('');
         }
 
-        // Render Safety Icons
+        // Render Safety Icons with clickable delete badge
         const sContainer = document.getElementById('svgSafetyIconsGroup');
         if (sContainer) {
             sContainer.innerHTML = (config.safetyIcons || []).map((s, idx) => `
@@ -1354,75 +1395,78 @@ class GateSecurityModule {
         const config = window._currentEditorConfig;
         if (!config) return;
 
+        // Buildings / Site Rectangles List
         const bList = document.getElementById('editorBuildingsList');
         if (bList) {
             bList.innerHTML = config.buildings.map((b, idx) => `
-                <div style="display: grid; grid-template-columns: 120px 1fr 50px 50px 30px; gap: 6px; align-items: center; background: #fff; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
-                    <input type="text" value="${b.name}" onchange="GateSecurity.updateBuildingProp(${idx}, 'name', this.value)" style="padding: 2px 4px; font-size: 0.75rem; font-weight: 800;">
-                    <input type="text" value="${b.sub || ''}" placeholder="وصف الفرعي" onchange="GateSecurity.updateBuildingProp(${idx}, 'sub', this.value)" style="padding: 2px 4px; font-size: 0.75rem;">
-                    <div><span style="font-size: 0.65rem;">W:</span><input type="number" value="${b.w}" onchange="GateSecurity.updateBuildingProp(${idx}, 'w', parseInt(this.value))" style="width: 35px; font-size: 0.7rem;"></div>
-                    <div><span style="font-size: 0.65rem;">H:</span><input type="number" value="${b.h}" onchange="GateSecurity.updateBuildingProp(${idx}, 'h', parseInt(this.value))" style="width: 35px; font-size: 0.7rem;"></div>
-                    <button type="button" onclick="GateSecurity.removeBuilding(${idx})" style="color: #dc2626; border: none; background: none; cursor: pointer; font-weight: 900;">✕</button>
+                <div style="display: grid; grid-template-columns: 110px 1fr 45px 45px 50px 24px; gap: 4px; align-items: center; background: #fff; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <input type="text" value="${b.name}" onchange="GateSecurity.updateBuildingProp(${idx}, 'name', this.value)" style="padding: 2px 4px; font-size: 0.74rem; font-weight: 800;">
+                    <input type="text" value="${b.sub || ''}" placeholder="وصف الفرعي" onchange="GateSecurity.updateBuildingProp(${idx}, 'sub', this.value)" style="padding: 2px 4px; font-size: 0.74rem;">
+                    <div><span style="font-size: 0.62rem;">W:</span><input type="number" value="${b.w}" onchange="GateSecurity.updateBuildingProp(${idx}, 'w', parseInt(this.value))" style="width: 32px; font-size: 0.68rem;"></div>
+                    <div><span style="font-size: 0.62rem;">H:</span><input type="number" value="${b.h}" onchange="GateSecurity.updateBuildingProp(${idx}, 'h', parseInt(this.value))" style="width: 32px; font-size: 0.68rem;"></div>
+                    <select onchange="GateSecurity.updateBuildingColor(${idx}, this.value)" style="font-size: 0.65rem; padding: 1px;">
+                        <option value="#dbeafe" ${b.fill === '#dbeafe' ? 'selected' : ''}>أزرق</option>
+                        <option value="#fef3c7" ${b.fill === '#fef3c7' ? 'selected' : ''}>أصفر</option>
+                        <option value="#ede9fe" ${b.fill === '#ede9fe' ? 'selected' : ''}>بنفسجي</option>
+                        <option value="#fce7f3" ${b.fill === '#fce7f3' ? 'selected' : ''}>وردي</option>
+                        <option value="#dcfce7" ${b.fill === '#dcfce7' ? 'selected' : ''}>أخضر</option>
+                        <option value="#f1f5f9" ${b.fill === '#f1f5f9' ? 'selected' : ''}>رمادي</option>
+                    </select>
+                    <button type="button" onclick="GateSecurity.removeBuilding(${idx})" style="color: #dc2626; border: none; background: #fee2e2; border-radius: 4px; cursor: pointer; font-weight: 900; font-size: 0.75rem;">✕</button>
                 </div>
             `).join('');
         }
 
+        // Safety Icons List with Delete Buttons
+        const sList = document.getElementById('editorSafetyIconsList');
+        if (sList) {
+            sList.innerHTML = (config.safetyIcons || []).map((s, idx) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 8px;">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 800;">
+                        <span>${s.icon}</span>
+                        <span>${s.name}</span>
+                        <span style="font-size: 0.68rem; color: #64748b; font-weight: 600;">(${s.x}, ${s.y})</span>
+                    </div>
+                    <button type="button" onclick="GateSecurity.removeSafetyIcon(${idx})" style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 4px; padding: 1px 6px; font-weight: 900; font-size: 0.72rem; cursor: pointer;">
+                        ✕ حذف الأيقونة
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Muster Points List
         const mList = document.getElementById('editorMusterList');
         if (mList) {
             mList.innerHTML = config.musterPoints.map((m, idx) => `
-                <div style="display: grid; grid-template-columns: 100px 1fr 30px; gap: 6px; align-items: center; background: #fff; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
-                    <input type="text" value="${m.name}" onchange="GateSecurity.updateMusterProp(${idx}, 'name', this.value)" style="padding: 2px 4px; font-size: 0.75rem; font-weight: 800;">
-                    <span style="font-size: 0.72rem; color: #64748b;">موقع: (${m.x}, ${m.y})</span>
-                    <button type="button" onclick="GateSecurity.removeMuster(${idx})" style="color: #dc2626; border: none; background: none; cursor: pointer; font-weight: 900;">✕</button>
+                <div style="display: grid; grid-template-columns: 100px 1fr 24px; gap: 6px; align-items: center; background: #fff; padding: 3px 6px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <input type="text" value="${m.name}" onchange="GateSecurity.updateMusterProp(${idx}, 'name', this.value)" style="padding: 2px 4px; font-size: 0.74rem; font-weight: 800;">
+                    <span style="font-size: 0.7rem; color: #64748b;">موقع: (${m.x}, ${m.y})</span>
+                    <button type="button" onclick="GateSecurity.removeMuster(${idx})" style="color: #dc2626; border: none; background: #fee2e2; border-radius: 4px; cursor: pointer; font-weight: 900; font-size: 0.75rem;">✕</button>
                 </div>
             `).join('');
         }
     }
 
-    updateEditorFrameScale(val) {
-        if (!window._currentEditorConfig) return;
-        window._currentEditorConfig.frameScale = parseInt(val) || 100;
-        const text = document.getElementById('scaleValText');
-        if (text) text.textContent = val + '%';
+    updateBuildingColor(idx, fill) {
+        if (!window._currentEditorConfig || !window._currentEditorConfig.buildings[idx]) return;
+        const colorMap = {
+            '#dbeafe': { fill: '#dbeafe', stroke: '#1d4ed8', color: '#1e3a8a' },
+            '#fef3c7': { fill: '#fef3c7', stroke: '#d97706', color: '#92400e' },
+            '#ede9fe': { fill: '#ede9fe', stroke: '#6d28d9', color: '#5b21b6' },
+            '#fce7f3': { fill: '#fce7f3', stroke: '#be185d', color: '#9d174d' },
+            '#dcfce7': { fill: '#dcfce7', stroke: '#15803d', color: '#14532d' },
+            '#f1f5f9': { fill: '#f1f5f9', stroke: '#475569', color: '#334155' }
+        };
+        const st = colorMap[fill] || colorMap['#dbeafe'];
+        window._currentEditorConfig.buildings[idx].fill = st.fill;
+        window._currentEditorConfig.buildings[idx].stroke = st.stroke;
+        window._currentEditorConfig.buildings[idx].color = st.color;
         this.renderEditorCanvas();
     }
 
-    updateEditorFrameBg(val) {
-        if (!window._currentEditorConfig) return;
-        window._currentEditorConfig.frameBg = val;
-        const vp = document.getElementById('canvasViewport');
-        if (vp) vp.style.background = val;
-    }
-
-    addEditorSafetyIcon(icon, name, color) {
-        if (!window._currentEditorConfig) return;
-        if (!window._currentEditorConfig.safetyIcons) window._currentEditorConfig.safetyIcons = [];
-        window._currentEditorConfig.safetyIcons.push({
-            id: 's_' + Date.now(),
-            name: name,
-            icon: icon,
-            x: 220 + (window._currentEditorConfig.safetyIcons.length * 15),
-            y: 180,
-            color: color
-        });
-        this.renderEditorCanvas();
-    }
-
-    addEditorBuildingZone() {
-        if (!window._currentEditorConfig) return;
-        const count = window._currentEditorConfig.buildings.length + 1;
-        window._currentEditorConfig.buildings.push({
-            id: 'b_' + Date.now(),
-            name: `منطقة ${count}`,
-            sub: 'قسم جديد',
-            x: 180,
-            y: 150,
-            w: 120,
-            h: 60,
-            fill: '#dbeafe',
-            stroke: '#1d4ed8',
-            color: '#1e3a8a'
-        });
+    removeSafetyIcon(idx) {
+        if (!window._currentEditorConfig || !window._currentEditorConfig.safetyIcons) return;
+        window._currentEditorConfig.safetyIcons.splice(idx, 1);
         this.renderEditorCanvas();
     }
 
