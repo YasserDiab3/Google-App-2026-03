@@ -1379,6 +1379,30 @@
             if (countNum) countNum.textContent = active.length;
         }
 
+        async function fetchLiveVisitorsFromCloud() {
+            if (!navigator.onLine) return;
+            try {
+                const targetApiUrl = getEffectiveApiUrl();
+                const res = await fetch(targetApiUrl + '?action=getActiveGateVisitors', { method: 'GET', mode: 'cors' });
+                const data = await res.json();
+                if (data && data.success && Array.isArray(data.activeVisitors)) {
+                    const merged = data.activeVisitors.map(v => ({
+                        ...v,
+                        entryTimestamp: new Date(v.entryDate + ' ' + v.entryTime).getTime() || Date.now()
+                    }));
+                    if (merged.length > 0) {
+                        try {
+                            localStorage.setItem('HSE_GATE_VISITORS_REGISTRY', JSON.stringify(merged));
+                        } catch(e) {}
+                        updateLiveVisitorsCount();
+                    }
+                }
+            } catch(e) {}
+        }
+
+        window.addEventListener('online', fetchLiveVisitorsFromCloud);
+        setInterval(fetchLiveVisitorsFromCloud, 30000);
+
         function openLiveVisitorsModal() {
             const modal = document.getElementById('liveVisitorsModal');
             const body = document.getElementById('liveVisitorsModalBody');
@@ -1488,6 +1512,7 @@
                 const queryLang = urlParams.get('lang');
                 const savedLang = queryLang || localStorage.getItem('HSE_PORTAL_LANG') || localStorage.getItem('language') || 'ar';
                 applyLanguage(savedLang);
+                fetchLiveVisitorsFromCloud();
             } catch(e) {
                 applyHubTheme('light');
                 applyLanguage('ar');

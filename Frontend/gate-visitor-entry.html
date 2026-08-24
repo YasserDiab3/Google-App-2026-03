@@ -1463,6 +1463,9 @@
             // Show Success Receipt
             showReceiptScreen(visitorRecord);
             showToast(t.succTitle, 'success', 3500);
+
+            // Cloud Sync
+            syncVisitorCheckInToCloud(visitorRecord);
         });
 
         function showReceiptScreen(rec) {
@@ -1596,6 +1599,145 @@
             renderActiveVisitorsList(val);
         }
 
+        const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+
+        function getEffectiveApiUrl() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const p = urlParams.get('apiUrl') || urlParams.get('api');
+                if (p && p.includes('script.google.com')) return p;
+                const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
+                if (s1) {
+                    const parsed = JSON.parse(s1);
+                    if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+                }
+                const s2 = localStorage.getItem('hse_app_settings');
+                if (s2) {
+                    const parsed = JSON.parse(s2);
+                    if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+                }
+            } catch(e) {}
+            return DEFAULT_API_URL;
+        }
+
+        async function syncVisitorCheckInToCloud(visitorRecord) {
+            if (!navigator.onLine) {
+                saveVisitorOfflineQueue({ action: 'submitGateVisitorCheckIn', data: visitorRecord });
+                return;
+            }
+
+            const targetApiUrl = getEffectiveApiUrl();
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const res = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            action: 'submitGateVisitorCheckIn',
+                            ...visitorRecord
+                        })
+                    });
+                    const json = await res.json();
+                    if (json && json.success) {
+                        console.log('✅ Visitor checked in on cloud:', json);
+                        break;
+                    }
+                } catch(err) {
+                    console.warn(`Attempt ${attempt} sync visitor failed:`, err);
+                    if (attempt === 3) {
+                        saveVisitorOfflineQueue({ action: 'submitGateVisitorCheckIn', data: visitorRecord });
+                    } else {
+                        await new Promise(r => setTimeout(r, 1500));
+                    }
+                }
+            }
+        }
+
+        async function syncVisitorCheckOutToCloud(visitorId, exitTime, badge) {
+            if (!navigator.onLine) {
+                saveVisitorOfflineQueue({ action: 'submitGateVisitorCheckOut', data: { id: visitorId, exitTime, badge } });
+                return;
+            }
+
+            const targetApiUrl = getEffectiveApiUrl();
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const res = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            action: 'submitGateVisitorCheckOut',
+                            id: visitorId,
+                            exitTime: exitTime,
+                            badge: badge
+                        })
+                    });
+                    const json = await res.json();
+                    if (json && json.success) {
+                        console.log('✅ Visitor checked out on cloud:', json);
+                        break;
+                    }
+                } catch(err) {
+                    console.warn(`Attempt ${attempt} sync checkout failed:`, err);
+                    if (attempt === 3) {
+                        saveVisitorOfflineQueue({ action: 'submitGateVisitorCheckOut', data: { id: visitorId, exitTime, badge } });
+                    } else {
+                        await new Promise(r => setTimeout(r, 1500));
+                    }
+                }
+            }
+        }
+
+        function getVisitorOfflineQueue() {
+            try {
+                const q = localStorage.getItem('HSE_GATE_OFFLINE_QUEUE');
+                return q ? JSON.parse(q) : [];
+            } catch(e) { return []; }
+        }
+
+        function saveVisitorOfflineQueue(item) {
+            try {
+                const q = getVisitorOfflineQueue();
+                q.push(item);
+                localStorage.setItem('HSE_GATE_OFFLINE_QUEUE', JSON.stringify(q));
+            } catch(e) {}
+        }
+
+        async function syncGateOfflineQueue() {
+            const q = getVisitorOfflineQueue();
+            if (q.length === 0 || !navigator.onLine) return;
+
+            const targetApiUrl = getEffectiveApiUrl();
+            const remaining = [];
+
+            for (const item of q) {
+                try {
+                    const res = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(item.action === 'submitGateVisitorCheckIn' ? { action: 'submitGateVisitorCheckIn', ...item.data } : { action: 'submitGateVisitorCheckOut', ...item.data })
+                    });
+                    const json = await res.json();
+                    if (!json || !json.success) remaining.push(item);
+                } catch(e) {
+                    remaining.push(item);
+                }
+            }
+
+            try {
+                localStorage.setItem('HSE_GATE_OFFLINE_QUEUE', JSON.stringify(remaining));
+            } catch(e) {}
+        }
+
+        window.addEventListener('online', syncGateOfflineQueue);
+        setInterval(syncGateOfflineQueue, 45000);
+
         function executeCheckOut(id) {
             const t = GATE_I18N[currentLang] || GATE_I18N.ar;
             if (!confirm(t.confirmCheckOut)) return;
@@ -1604,11 +1746,15 @@
             const index = registry.findIndex(v => v.id === id);
             if (index !== -1) {
                 const now = new Date();
-                registry[index].exitTime = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                const exitTime = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                registry[index].exitTime = exitTime;
                 registry[index].exitTimestamp = now.getTime();
                 saveVisitorsRegistry(registry);
                 renderActiveVisitorsList(document.getElementById('visitorSearchInput')?.value || '');
                 showToast(t.checkOutSuccess, 'success');
+
+                // Cloud Sync
+                syncVisitorCheckOutToCloud(registry[index].id, exitTime, registry[index].badge);
             }
         }
 

@@ -338,7 +338,7 @@ function doPost(e) {
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -536,6 +536,12 @@ function doPost(e) {
                 result = submitPublicDailySafetyChecklist(payload || postData.data || postData || {});
             } else if (action === 'getPublicDailySafetyConfig' && typeof getPublicDailySafetyConfig === 'function') {
                 result = getPublicDailySafetyConfig();
+            } else if (action === 'submitGateVisitorCheckIn' && typeof submitGateVisitorCheckIn === 'function') {
+                result = submitGateVisitorCheckIn(payload || postData.data || postData || {});
+            } else if (action === 'submitGateVisitorCheckOut' && typeof submitGateVisitorCheckOut === 'function') {
+                result = submitGateVisitorCheckOut(payload || postData.data || postData || {});
+            } else if (action === 'getActiveGateVisitors' && typeof getActiveGateVisitors === 'function') {
+                result = getActiveGateVisitors(payload || postData.data || postData || {});
             } else if (typeof ActionHandlers[action] === 'function') {
                 const spreadsheetId = getSpreadsheetId() || postData.spreadsheetId || '';
                 result = ActionHandlers[action](payload, postData, action, actorUserData, spreadsheetId);
