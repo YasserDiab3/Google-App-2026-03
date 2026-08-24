@@ -543,29 +543,178 @@
             box-shadow: 0 0 0 3px var(--primary-light);
         }
 
-        /* HSE Checklist Card */
-        .hse-checklist {
-            background: #f8fafc;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 10px;
-            padding: 12px;
-            margin-top: 8px;
+                /* ════════════════════════════════════════════════════
+           بطاقة إرشادات السلامة وسلامة الغذاء الاحترافية
+        ════════════════════════════════════════════════════ */
+        .hse-induction-card {
+            background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+            border: 1.5px solid #a7f3d0;
+            border-radius: 14px;
+            padding: 16px 14px;
+            margin-top: 12px;
+            box-shadow: 0 4px 14px rgba(5, 150, 105, 0.08);
         }
-        [data-theme="dark"] .hse-checklist {
-            background: #0f172a;
-            border-color: #334155;
+        [data-theme="dark"] .hse-induction-card {
+            background: linear-gradient(180deg, #064e3b 0%, #0f172a 100%);
+            border-color: #047857;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
         }
 
-        .hse-rule-item {
+        .hse-induction-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #d1fae5;
+        }
+        [data-theme="dark"] .hse-induction-header {
+            border-bottom-color: #065f46;
+        }
+
+        .hse-induction-badge {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+        }
+
+        .hse-induction-title {
+            font-size: 0.88rem;
+            font-weight: 900;
+            color: #065f46;
+            line-height: 1.25;
+        }
+        [data-theme="dark"] .hse-induction-title { color: #6ee7b7; }
+
+        .hse-induction-desc {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #047857;
+            margin-top: 2px;
+            opacity: 0.9;
+        }
+        [data-theme="dark"] .hse-induction-desc { color: #a7f3d0; }
+
+        .hse-rules-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        @media (max-width: 620px) {
+            .hse-rules-grid { grid-template-columns: 1fr; }
+        }
+
+        .hse-rule-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px 12px;
             display: flex;
             align-items: flex-start;
-            gap: 8px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: var(--text-main);
+            gap: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         }
-        .hse-rule-item i { color: #059669; margin-top: 3px; }
+        .hse-rule-card:hover {
+            border-color: #10b981;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(16, 185, 129, 0.15);
+        }
+        [data-theme="dark"] .hse-rule-card {
+            background: #1e293b;
+            border-color: #334155;
+        }
+        [data-theme="dark"] .hse-rule-card:hover {
+            border-color: #059669;
+        }
+
+        .hse-rule-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .icon-ppe { background: #eff6ff; color: #2563eb; }
+        .icon-food { background: #ecfdf5; color: #059669; }
+        .icon-smoking { background: #fef2f2; color: #dc2626; }
+        .icon-camera { background: #fff7ed; color: #ea580c; }
+        .icon-walk { background: #faf5ff; color: #9333ea; }
+        .icon-emergency { background: #fefce8; color: #ca8a04; }
+
+        [data-theme="dark"] .icon-ppe { background: #1e3a8a; color: #93c5fd; }
+        [data-theme="dark"] .icon-food { background: #064e3b; color: #6ee7b7; }
+        [data-theme="dark"] .icon-smoking { background: #7f1d1d; color: #fca5a5; }
+        [data-theme="dark"] .icon-camera { background: #7c2d12; color: #fdba74; }
+        [data-theme="dark"] .icon-walk { background: #581c87; color: #d8b4fe; }
+        [data-theme="dark"] .icon-emergency { background: #713f12; color: #fde047; }
+
+        .hse-rule-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .hse-rule-name {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 2px;
+            line-height: 1.25;
+        }
+
+        .hse-rule-text {
+            font-size: 0.71rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            line-height: 1.35;
+        }
+
+        .hse-ack-banner {
+            background: #ffffff;
+            border: 1.5px dashed #059669;
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+        }
+        [data-theme="dark"] .hse-ack-banner {
+            background: #1e293b;
+            border-color: #10b981;
+        }
+
+        .hse-ack-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            color: #065f46;
+            cursor: pointer;
+            line-height: 1.35;
+        }
+        [data-theme="dark"] .hse-ack-label { color: #6ee7b7; }
+
+        .hse-ack-check {
+            width: 18px;
+            height: 18px;
+            accent-color: #059669;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
 
         /* Signature Canvas */
         .signature-box {
@@ -1199,26 +1348,92 @@
                         <input type="text" id="badgeNumber" class="form-control" placeholder="مثال: VIS-105" required style="font-weight: 800; color: #1e40af;">
                     </div>
 
-                    <!-- إقرار السلامة وسلامة الغذاء المعتمد -->
-                    <div class="hse-checklist">
-                        <div style="font-weight: 800; font-size: 0.82rem; color: #047857; margin-bottom: 6px;" id="hseBriefTitle">
-                            🛡️ تعليمات السلامة والصحة المهنية وسلامة الغذاء الإلزامية:
+                                        <!-- إقرار وتعليمات السلامة والصحة المهنية وسلامة الغذاء المعتمدة -->
+                    <div class="hse-induction-card">
+                        <div class="hse-induction-header">
+                            <div class="hse-induction-badge">
+                                <i class="fas fa-shield-halved"></i>
+                            </div>
+                            <div>
+                                <div class="hse-induction-title" id="hseBriefTitle">تعليمات السلامة والصحة المهنية وسلامة الغذاء الإلزامية</div>
+                                <div class="hse-induction-desc" id="hseBriefDesc">يرجى قراءة التعليمات بعناية والالتزام التام بها طوال فترة التواجد داخل منشآت ICAPP</div>
+                            </div>
                         </div>
-                        <div class="hse-rule-item">
-                            <i class="fas fa-check-circle"></i>
-                            <span id="hseRule1">الالتزام بمهمات الوقاية الشخصية المقررة (حذاء أمان، سترة عاكسة، غطاء رأس في صالات الإنتاج).</span>
+
+                        <div class="hse-rules-grid">
+                            <!-- Rule 1: مهمات الوقاية OHS / PPE -->
+                            <div class="hse-rule-card">
+                                <div class="hse-rule-icon icon-ppe">
+                                    <i class="fas fa-helmet-safety"></i>
+                                </div>
+                                <div class="hse-rule-body">
+                                    <div class="hse-rule-name" id="hseRule1Title">مهمات الوقاية الشخصية (PPE)</div>
+                                    <div class="hse-rule-text" id="hseRule1">ارتداء حذاء السلامة والسترة العاكسة، والبالطو وغطاء الرأس/اللحية عند دخول صالات الإنتاج.</div>
+                                </div>
+                            </div>
+
+                            <!-- Rule 2: سلامة الغذاء والممارسات الصحية Food Safety / GMP -->
+                            <div class="hse-rule-card">
+                                <div class="hse-rule-icon icon-food">
+                                    <i class="fas fa-hand-sparkles"></i>
+                                </div>
+                                <div class="hse-rule-body">
+                                    <div class="hse-rule-name" id="hseRule2Title">سلامة الغذاء والنظافة الصحية (GMP)</div>
+                                    <div class="hse-rule-text" id="hseRule2">غسيل وتطهير الأيدي عند الدخول، خلع الحلي والساعات، ويُمنع نهائياً إدخال الأغذية أو الأدوية للصالات.</div>
+                                </div>
+                            </div>
+
+                            <!-- Rule 3: حظر التدخين والأمان No Smoking & Fire Safety -->
+                            <div class="hse-rule-card">
+                                <div class="hse-rule-icon icon-smoking">
+                                    <i class="fas fa-ban-smoking"></i>
+                                </div>
+                                <div class="hse-rule-body">
+                                    <div class="hse-rule-name" id="hseRule3Title">حظر التدخين ومنع مسببات الحريق</div>
+                                    <div class="hse-rule-text" id="hseRule3">يُحظر التدخين والسجائر الإلكترونية والقداحات تماماً داخل المنشأة إلا في النقاط المصرح بها فقط.</div>
+                                </div>
+                            </div>
+
+                            <!-- Rule 4: سرية المنشأة وحظر التصوير Security & Confidentiality -->
+                            <div class="hse-rule-card">
+                                <div class="hse-rule-icon icon-camera">
+                                    <i class="fas fa-camera-slash"></i>
+                                </div>
+                                <div class="hse-rule-body">
+                                    <div class="hse-rule-name" id="hseRule4Title">سرية المنشأة وحظر التصوير</div>
+                                    <div class="hse-rule-text" id="hseRule4">يُمنع التصوير الفوتوغرافي والفيديو منعاً باتاً داخل المنشأة دون إذن وتصريح كتابي مسبق من الإدارة.</div>
+                                </div>
+                            </div>
+
+                            <!-- Rule 5: المرافقة والمسارات المحددة Escort & Designated Walkways -->
+                            <div class="hse-rule-card">
+                                <div class="hse-rule-icon icon-walk">
+                                    <i class="fas fa-person-walking-dashed-line-arrow-right"></i>
+                                </div>
+                                <div class="hse-rule-body">
+                                    <div class="hse-rule-name" id="hseRule5Title">المسارات الآمنة والمرافقة المستمرة</div>
+                                    <div class="hse-rule-text" id="hseRule5">الالتزام بالسير في الممرات المحددة بالأصفر، عدم التجول الفردي، ومرافقة الشخص المسؤول طوال الزيارة.</div>
+                                </div>
+                            </div>
+
+                            <!-- Rule 6: الطوارئ ونقاط التجمع Emergency & Evacuation -->
+                            <div class="hse-rule-card">
+                                <div class="hse-rule-icon icon-emergency">
+                                    <i class="fas fa-person-running"></i>
+                                </div>
+                                <div class="hse-rule-body">
+                                    <div class="hse-rule-name" id="hseRule6Title">إجراءات الطوارئ والإخلاء الآمن</div>
+                                    <div class="hse-rule-text" id="hseRule6">عند سماع صفارة الإنذار، التوجه فوراً مع المستضيف لأقرب نقطة تجمع آمنة (Muster Point) واتباع التعليمات.</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="hse-rule-item">
-                            <i class="fas fa-check-circle"></i>
-                            <span id="hseRule2">حظر التدخين تماماً إلا في الأماكن المخصصة المصرح بها.</span>
-                        </div>
-                        <div class="hse-rule-item">
-                            <i class="fas fa-check-circle"></i>
-                            <span id="hseRule3">حظر التصوير داخل المنشأة دون تصريح رسمي مسبق.</span>
-                        </div>
-                        <div class="hse-rule-item">
-                            <i class="fas fa-check-circle"></i>
-                            <span id="hseRule4">البقاء في المكان المصرح به فقط وعدم التحرك الفردي داخل خطوط الإنتاج دون مرافق.</span>
+
+                        <!-- إقرار الموافقة -->
+                        <div class="hse-ack-banner">
+                            <label class="hse-ack-label">
+                                <input type="checkbox" id="hseAckCheckbox" required checked class="hse-ack-check">
+                                <span id="hseAckText">أقر بأنني اطلعت وتعهدت بالالتزام الكامل بتعليمات السلامة والصحة المهنية وسلامة الغذاء الواردة أعلاه أثناء تواجدي بالمنشأة.</span>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -1297,7 +1512,7 @@
         // ==========================================
         // Full Bilingual Translation Dictionary (i18n)
         // ==========================================
-        const GATE_I18N = {
+                const GATE_I18N = {
             ar: {
                 dir: 'rtl',
                 langBtn: 'EN',
@@ -1327,6 +1542,21 @@
                 sec3Title: 'رقم كارت الزائر وإقرار السلامة',
                 sec3Desc: 'تسليم كارت الزيارة الأمني والاطلاع على تعليمات السلامة والنظافة العامة',
                 lblBadgeNumber: 'رقم كارت / شارة الزائر الممنوحة له',
+                hseBriefTitle: 'تعليمات السلامة والصحة المهنية وسلامة الغذاء الإلزامية',
+                hseBriefDesc: 'يرجى قراءة التعليمات بعناية والالتزام التام بها طوال فترة التواجد داخل منشآت ICAPP',
+                hseRule1Title: 'مهمات الوقاية الشخصية (PPE)',
+                hseRule1: 'ارتداء حذاء السلامة والسترة العاكسة، والبالطو وغطاء الرأس/اللحية عند دخول صالات الإنتاج.',
+                hseRule2Title: 'سلامة الغذاء والنظافة الصحية (GMP)',
+                hseRule2: 'غسيل وتطهير الأيدي عند الدخول، خلع الحلي والساعات، ويُمنع نهائياً إدخال الأغذية أو الأدوية للصالات.',
+                hseRule3Title: 'حظر التدخين ومنع مسببات الحريق',
+                hseRule3: 'يُحظر التدخين والسجائر الإلكترونية والقداحات تماماً داخل المنشأة إلا في النقاط المصرح بها فقط.',
+                hseRule4Title: 'سرية المنشأة وحظر التصوير',
+                hseRule4: 'يُمنع التصوير الفوتوغرافي والفيديو منعاً باتاً داخل المنشأة دون إذن وتصريح كتابي مسبق من الإدارة.',
+                hseRule5Title: 'المسارات الآمنة والمرافقة المستمرة',
+                hseRule5: 'الالتزام بالسير في الممرات المحددة بالأصفر، عدم التجول الفردي، ومرافقة الشخص المسؤول طوال الزيارة.',
+                hseRule6Title: 'إجراءات الطوارئ والإخلاء الآمن',
+                hseRule6: 'عند سماع صفارة الإنذار، التوجه فوراً مع المستضيف لأقرب نقطة تجمع آمنة (Muster Point) واتباع التعليمات.',
+                hseAckText: 'أقر بأنني اطلعت وتعهدت بالالتزام الكامل بتعليمات السلامة والصحة المهنية وسلامة الغذاء الواردة أعلاه أثناء تواجدي بالمنشأة.',
                 btnSubmitText: 'تسجيل الدخول وإصدار تصريح الزيارة 🛡️',
                 succTitle: 'تم تسجيل دخول الزائر بنجاح!',
                 succSubtitle: 'تم توثيق الزيارة وحفظها بسجل المتواجدين الفعلي بالمصنع.',
@@ -1378,6 +1608,21 @@
                 sec3Title: 'Visitor Badge & Safety Briefing',
                 sec3Desc: 'Assign security badge number and confirm safety briefing acknowledgement',
                 lblBadgeNumber: 'Assigned Visitor Badge / Card #',
+                hseBriefTitle: 'Mandatory HSE & Food Safety Instructions',
+                hseBriefDesc: 'Please read instructions carefully and comply strictly while inside ICAPP premises',
+                hseRule1Title: 'Personal Protective Equipment (PPE)',
+                hseRule1: 'Wear safety shoes, high-vis vest, coat, and hair/beard net when entering production areas.',
+                hseRule2Title: 'Food Safety & Hygiene (GMP)',
+                hseRule2: 'Sanitize hands upon entry, remove jewelry & watches, and no outside food/medicines in halls.',
+                hseRule3Title: 'No Smoking & Fire Prevention',
+                hseRule3: 'Smoking, e-cigarettes, and lighters are strictly prohibited except in designated smoking areas.',
+                hseRule4Title: 'Confidentiality & No Photography',
+                hseRule4: 'Photography and video recording are strictly prohibited without written management approval.',
+                hseRule5Title: 'Safe Walkways & Continuous Escort',
+                hseRule5: 'Walk only within yellow walkways, no solitary wandering, and remain escorted at all times.',
+                hseRule6Title: 'Emergency & Evacuation Procedures',
+                hseRule6: 'Upon alarm, proceed immediately with your host to the nearest safe Muster Point and follow staff.',
+                hseAckText: 'I acknowledge that I have read and agree to strictly follow all HSE & Food Safety rules above.',
                 btnSubmitText: 'Complete Check-In & Issue Pass 🛡️',
                 succTitle: 'Visitor Checked In Successfully!',
                 succSubtitle: 'Logged in the live plant register and badge active.',
