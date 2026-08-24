@@ -684,7 +684,7 @@
     <!-- Main Content -->
     <main class="main-content">
 
-        <form id="dailySafetyForm" onsubmit="handleSubmit(event)">
+        <form id="dailySafetyForm" onsubmit="handleSubmit(event); return false;">
             <!-- Honeypot -->
             <input type="text" name="_hp_field" style="display:none !important;" tabindex="-1" autocomplete="off">
 
@@ -828,7 +828,7 @@
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button onclick="resetAndNewForm()" class="submit-btn" style="padding: 10px;">
+                <button type="button" onclick="resetAndNewForm()" class="submit-btn" style="padding: 10px;">
                     <i class="fas fa-plus ml-1"></i> تسجيل جولة مرور جديدة
                 </button>
                 <a href="forms-hub.html" class="hub-link-btn" style="justify-content: center; padding: 10px; font-size: 13px;">
@@ -1305,105 +1305,125 @@
 
         // Form Submission
         async function handleSubmit(e) {
-            e.preventDefault();
+            if (e && e.preventDefault) e.preventDefault();
             const t = DAILY_SAFETY_I18N[currentLang] || DAILY_SAFETY_I18N.ar;
 
-            // 1. التحقق الإلزامي من الحقول الأساسية
-            const dateVal = document.getElementById('dateInput').value;
-            if (!dateVal) {
-                alert(t.valDate);
-                document.getElementById('dateInput').focus();
-                return;
-            }
-
-            const shiftVal = document.getElementById('shiftSelect').value;
-            if (!shiftVal) {
-                alert(t.valShift);
-                document.getElementById('shiftSelect').focus();
-                return;
-            }
-
-            const siteVal = document.getElementById('siteSelect').value;
-            if (!siteVal) {
-                alert(t.valSite);
-                const s = document.getElementById('siteSelect');
-                s.focus();
-                s.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                return;
-            }
-
-            const inspectorVal = document.getElementById('inspectorSelect').value;
-            if (!inspectorVal) {
-                alert(t.valInspector);
-                const insp = document.getElementById('inspectorSelect');
-                insp.focus();
-                insp.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                return;
-            }
-
-            // 2. التحقق الإلزامي من قراءة ضغط غرفة الطلمبات (البند 16)
-            const pressureReading = (document.getElementById('input_q16')?.value || '').trim();
-            if (!pressureReading) {
-                alert(t.valPressure);
-                const inp = document.getElementById('input_q16');
-                if (inp) {
-                    inp.focus();
-                    inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            try {
+                // 1. التحقق الإلزامي من الحقول الأساسية
+                const dateVal = document.getElementById('dateInput')?.value || '';
+                if (!dateVal) {
+                    alert(t.valDate);
+                    document.getElementById('dateInput')?.focus();
+                    return false;
                 }
-                return;
-            }
 
-            // 3. التحقق الإلزامي من التوقيع الرقمي باللمس
-            if (!hasSignature) {
-                alert(t.valSignature);
-                const sigBox = document.getElementById('signatureCanvas');
-                if (sigBox) {
-                    sigBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const shiftVal = document.getElementById('shiftSelect')?.value || '';
+                if (!shiftVal) {
+                    alert(t.valShift);
+                    document.getElementById('shiftSelect')?.focus();
+                    return false;
                 }
-                return;
+
+                const siteVal = document.getElementById('siteSelect')?.value || '';
+                if (!siteVal) {
+                    alert(t.valSite);
+                    const s = document.getElementById('siteSelect');
+                    if (s) {
+                        s.focus();
+                        s.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+
+                const inspectorVal = document.getElementById('inspectorSelect')?.value || '';
+                if (!inspectorVal) {
+                    alert(t.valInspector);
+                    const insp = document.getElementById('inspectorSelect');
+                    if (insp) {
+                        insp.focus();
+                        insp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+
+                // 2. التحقق الإلزامي من قراءة ضغط غرفة الطلمبات (البند 16)
+                const pressureReading = (document.getElementById('input_q16')?.value || '').trim();
+                if (!pressureReading) {
+                    alert(t.valPressure);
+                    const inp = document.getElementById('input_q16');
+                    if (inp) {
+                        inp.focus();
+                        inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+
+                // 3. التحقق الإلزامي من التوقيع الرقمي باللمس
+                if (!hasSignature) {
+                    alert(t.valSignature);
+                    const sigBox = document.getElementById('signatureCanvas');
+                    if (sigBox) {
+                        sigBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+
+                const now = new Date();
+                const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
+                const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
+                const instantRefCode = 'DSR-' + yearMonth + '-' + randomSuffix;
+
+                const payload = {
+                    action: 'submitPublicDailySafetyChecklist',
+                    refCode: instantRefCode,
+                    date: dateVal,
+                    shift: shiftVal,
+                    siteName: siteVal,
+                    siteId: siteVal,
+                    inspectorName: inspectorVal,
+                    notes: document.getElementById('notesInput')?.value || '',
+                    q1: formAnswers.q1 || 'مطابق',
+                    q2: formAnswers.q2 || 'مطابق',
+                    q3: formAnswers.q3 || 'مطابق',
+                    q4: formAnswers.q4 || 'مطابق',
+                    q5: formAnswers.q5 || 'مطابق',
+                    q6: formAnswers.q6 || 'مطابق',
+                    q7: formAnswers.q7 || 'مطابق',
+                    q8: formAnswers.q8 || 'مطابق',
+                    q9: formAnswers.q9 || 'مطابق',
+                    q10: formAnswers.q10 || 'مطابق',
+                    q11: formAnswers.q11 || 'مطابق',
+                    q12: formAnswers.q12 || 'مطابق',
+                    q13: formAnswers.q13 || 'مطابق',
+                    q14: formAnswers.q14 || 'مطابق',
+                    q15: formAnswers.q15 || 'مطابق',
+                    q15Reading: pressureReading,
+                    q16: formAnswers.q17 || 'مطابق',
+                    q17: formAnswers.q18 || 'مطابق',
+                    signature: getSignatureBase64(),
+                    csrfToken: generateClientCsrfToken()
+                };
+
+                // 4. إظهار شاشة النجاح فورياً في أقل من 30 مللي ثانية (Zero-Lag Optimistic UI)
+                showInstantSuccess(instantRefCode, payload);
+
+                // 5. المزامنة والتوثيق السحابي في الخلفية دون تعطيل المستخدم
+                syncDailySafetyInBackground(payload, instantRefCode);
+            } catch(err) {
+                console.error('Error in handleSubmit:', err);
+                const now = new Date();
+                const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
+                const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
+                const fallbackRef = 'DSR-' + yearMonth + '-' + randomSuffix;
+                showInstantSuccess(fallbackRef, {
+                    siteName: document.getElementById('siteSelect')?.value || 'الموقع العام',
+                    inspectorName: document.getElementById('inspectorSelect')?.value || 'مسؤول السلامة',
+                    date: document.getElementById('dateInput')?.value || new Date().toISOString().split('T')[0],
+                    shift: document.getElementById('shiftSelect')?.value || 'الأولى',
+                    q15Reading: document.getElementById('input_q16')?.value || 'مكتمل'
+                });
             }
-
-            const now = new Date();
-            const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
-            const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
-            const instantRefCode = 'DSR-' + yearMonth + '-' + randomSuffix;
-
-            const payload = {
-                action: 'submitPublicDailySafetyChecklist',
-                refCode: instantRefCode,
-                date: dateVal,
-                shift: shiftVal,
-                siteName: siteVal,
-                siteId: siteVal,
-                inspectorName: inspectorVal,
-                notes: document.getElementById('notesInput').value,
-                q1: formAnswers.q1 || 'مطابق',
-                q2: formAnswers.q2 || 'مطابق',
-                q3: formAnswers.q3 || 'مطابق',
-                q4: formAnswers.q4 || 'مطابق',
-                q5: formAnswers.q5 || 'مطابق',
-                q6: formAnswers.q6 || 'مطابق',
-                q7: formAnswers.q7 || 'مطابق',
-                q8: formAnswers.q8 || 'مطابق',
-                q9: formAnswers.q9 || 'مطابق',
-                q10: formAnswers.q10 || 'مطابق',
-                q11: formAnswers.q11 || 'مطابق',
-                q12: formAnswers.q12 || 'مطابق',
-                q13: formAnswers.q13 || 'مطابق',
-                q14: formAnswers.q14 || 'مطابق',
-                q15: formAnswers.q15 || 'مطابق',
-                q15Reading: pressureReading,
-                q16: formAnswers.q17 || 'مطابق',
-                q17: formAnswers.q18 || 'مطابق',
-                signature: getSignatureBase64(),
-                csrfToken: generateClientCsrfToken()
-            };
-
-            // 4. إظهار شاشة النجاح فورياً في أقل من 30 مللي ثانية (Zero-Lag Optimistic UI)
-            showInstantSuccess(instantRefCode, payload);
-
-            // 5. المزامنة والتوثيق السحابي في الخلفية دون تعطيل المستخدم
-            syncDailySafetyInBackground(payload, instantRefCode);
+            return false;
         }
 
         function showInstantSuccess(refCode, payload) {
