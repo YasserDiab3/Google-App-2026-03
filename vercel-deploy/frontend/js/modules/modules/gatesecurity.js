@@ -1257,9 +1257,9 @@ class GateSecurityModule {
 
                         <!-- الجانب الأيسر: لوحة التحكم والخيارات الجانبية (Sidebar) بأسلوب ثابت وواضح -->
                         <div id="editorSidebar" style="width: 380px; min-width: 340px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 100%; padding: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px;">
-                            <!-- بيانات الخريطة والإحداثيات -->
+                            <!-- بيانات الخريطة والإحداثيات وأرقام الطوارئ -->
                             <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px;">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                                     <div>
                                         <label style="font-size: 0.78rem; font-weight: 800; color: #1e3a8a; display: block; margin-bottom: 2px;">إحداثيات GPS:</label>
                                         <input type="text" id="editMapCoords" value="${config.coords}" style="width: 100%; padding: 5px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.8rem;">
@@ -1272,6 +1272,21 @@ class GateSecurityModule {
                                             <option value="#e2e8f0" ${config.frameBg === '#e2e8f0' ? 'selected' : ''}>رمادي دافئ</option>
                                             <option value="#ecfdf5" ${config.frameBg === '#ecfdf5' ? 'selected' : ''}>أخضر سلامة هادئ</option>
                                         </select>
+                                    </div>
+                                </div>
+                                <div style="border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                                    <label style="font-size: 0.78rem; font-weight: 900; color: #dc2626; display: block; margin-bottom: 4px;">
+                                        <i class="fas fa-phone-alt"></i> أرقام الطوارئ المطبوعة على كارت الزائر:
+                                    </label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                        <div>
+                                            <span style="font-size: 0.7rem; color: #475569; font-weight: 700;">رقم الهاتف:</span>
+                                            <input type="text" id="editEmergencyPhone" value="${config.emergencyPhone || '0100000000'}" placeholder="0100000000" style="width: 100%; padding: 4px 6px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.78rem;">
+                                        </div>
+                                        <div>
+                                            <span style="font-size: 0.7rem; color: #475569; font-weight: 700;">الداخلي (Ext):</span>
+                                            <input type="text" id="editEmergencyExt" value="${config.emergencyExt || '100'}" placeholder="100" style="width: 100%; padding: 4px 6px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.78rem;">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1861,7 +1876,11 @@ class GateSecurityModule {
     saveEditorMapConfig() {
         if (!window._currentEditorConfig) return;
         const coords = document.getElementById('editMapCoords')?.value || window._currentEditorConfig.coords;
+        const phone = document.getElementById('editEmergencyPhone')?.value || window._currentEditorConfig.emergencyPhone || '0100000000';
+        const ext = document.getElementById('editEmergencyExt')?.value || window._currentEditorConfig.emergencyExt || '100';
         window._currentEditorConfig.coords = coords;
+        window._currentEditorConfig.emergencyPhone = phone.trim();
+        window._currentEditorConfig.emergencyExt = ext.trim();
         this.saveMapConfig(window._currentEditorConfig);
         const modal = document.getElementById('mapEditorModal');
         if (modal) modal.remove();
@@ -2613,7 +2632,7 @@ class GateSecurityModule {
                                 <span style="direction: ltr; text-align: left;">Emergency call</span>
                             </div>
                             <div class="emergency-call-line">
-                                في حالة الطوارئ يرجى الإتصال على رقم: <strong>0100000000 / داخلي: 100</strong>
+                                في حالة الطوارئ يرجى الإتصال على رقم: <strong>${mapConfig.emergencyPhone || '0100000000'} / داخلي: ${mapConfig.emergencyExt || '100'}</strong>
                             </div>
                         </div>
                     </div>
