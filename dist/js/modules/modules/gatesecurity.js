@@ -790,7 +790,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                     <!-- \u0641\u0648\u062A\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u062B\u0644\u0627\u062B\u064A \u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 -->
                     <div class="iso-print-footer">
                         <div class="footer-box">
-                            <div class="footer-box-title">\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0623\u0645\u0646 \u0627\u0644\u0635\u0646\u0627\u0639\u064A \u0648\u0627\u0644\u062D\u0631\u0627\u0633\u0629</div>
+                            <div class="footer-box-title">\u0645\u062F\u064A\u0631 \u0627\u0644\u0623\u0645\u0646 - \u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0623\u0645\u0646</div>
                             <div class="footer-sig-line">\u0627\u0644\u0627\u0633\u0645: .......................................</div>
                             <div class="footer-sig-line">\u0627\u0644\u062A\u0648\u0642\u064A\u0639: ....................................</div>
                         </div>

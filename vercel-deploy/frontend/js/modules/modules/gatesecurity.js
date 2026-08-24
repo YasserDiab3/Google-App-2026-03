@@ -1097,7 +1097,7 @@ class GateSecurityModule {
                     <!-- فوتر الاعتماد ثلاثي الصناديق -->
                     <div class="iso-print-footer">
                         <div class="footer-box">
-                            <div class="footer-box-title">مسؤول الأمن الصناعي والحراسة</div>
+                            <div class="footer-box-title">مدير الأمن - مسؤول الأمن</div>
                             <div class="footer-sig-line">الاسم: .......................................</div>
                             <div class="footer-sig-line">التوقيع: ....................................</div>
                         </div>
