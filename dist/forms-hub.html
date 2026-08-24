@@ -2214,7 +2214,9 @@
                 try { mapConfig = JSON.parse(savedMap); } catch(e) {}
             }
 
-            const defaultSerial = paramBadgeNo || `VIS-${new Date().getFullYear()}-001`;
+            const savedLastNum = parseInt(localStorage.getItem('icapp_last_visitor_badge_num') || '0');
+            const nextSerialNum = savedLastNum > 0 ? (savedLastNum + 1) : 1;
+            const defaultSerial = paramBadgeNo || `VIS-${new Date().getFullYear()}-${nextSerialNum.toString().padStart(3, '0')}`;
             const win = window.open('', '_blank');
             if (!win) {
                 alert('يرجى السماح بالنوافذ المنبثقة لطباعة كارت وقواعد السلامة للزائرين (Pop-ups)');

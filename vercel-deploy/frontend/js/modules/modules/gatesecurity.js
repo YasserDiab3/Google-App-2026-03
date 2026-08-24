@@ -1899,9 +1899,11 @@ class GateSecurityModule {
         const portalUrl = this.getGatePortalUrl();
         const mapConfig = this.getMapConfig();
         
-        // حساب وتسلسل رقم الكارت المطابق للنظام
+        // حساب وتسلسل رقم الكارت المطابق للنظام واستمرارية الترقيم من آخر طباعة
         const todayCount = this.visitors.length || 0;
-        const defaultSerial = paramBadgeNo || `VIS-${new Date().getFullYear()}-${(todayCount + 1).toString().padStart(3, '0')}`;
+        const savedLastNum = parseInt(localStorage.getItem('icapp_last_visitor_badge_num') || '0');
+        const nextSerialNum = savedLastNum > 0 ? (savedLastNum + 1) : (todayCount + 1);
+        const defaultSerial = paramBadgeNo || `VIS-${new Date().getFullYear()}-${nextSerialNum.toString().padStart(3, '0')}`;
 
         const win = window.open('', '_blank');
         if (!win) {
@@ -2759,14 +2761,33 @@ class GateSecurityModule {
                     };
 
                     window.exportBatchCardsFromPrintWindow = function() {
-                        const qtyStr = prompt('أدخل عدد الكروت المطلوب صدورها وتصديرها دفعة واحدة للطباعة أو كملف PDF (مثال: 5 أو 10 كروت):', '5');
-                        if (!qtyStr) return;
-                        const num = parseInt(qtyStr);
-                        if (isNaN(num) || num < 1) return;
+                        const savedLastNum = parseInt(localStorage.getItem('icapp_last_visitor_badge_num') || '0');
+                        const curSerialInput = document.getElementById('badgeSerialInput')?.value || 'VIS-2026-001';
+                        const prefix = curSerialInput.substring(0, curSerialInput.lastIndexOf('-') + 1) || 'VIS-2026-';
+                        const defaultStartNum = parseInt(curSerialInput.substring(curSerialInput.lastIndexOf('-') + 1)) || (savedLastNum + 1 || 1);
 
-                        const curSerial = document.getElementById('badgeSerialInput')?.value || 'VIS-2026-001';
-                        const prefix = curSerial.substring(0, curSerial.lastIndexOf('-') + 1) || 'VIS-2026-';
-                        const startNum = parseInt(curSerial.substring(curSerial.lastIndexOf('-') + 1)) || 1;
+                        const qtyStr = prompt(
+                            'تصدير وطباعة دفعة كروت زوار (PDF / Batch Print):\n' +
+                            '• يمكن اختيار من 1 إلى 50 كارت دفعة واحدة.\n' +
+                            '• تسلسل البداية المقترح: ' + prefix + defaultStartNum.toString().padStart(3, '0') + '\n\n' +
+                            'أدخل عدد الكروت المطلوب صدورها (1 إلى 50):',
+                            '10'
+                        );
+                        if (!qtyStr) return;
+                        let num = parseInt(qtyStr);
+                        if (isNaN(num) || num < 1) return;
+                        if (num > 50) {
+                            alert('الحد الأقصى المسموح به في الدفعة الواحدة هو 50 كارت. تم ضبط العدد على 50.');
+                            num = 50;
+                        }
+
+                        const startNumStr = prompt(
+                            'تحديد تسلسل بداية الطباعة:\n' +
+                            'أدخل رقم بداية التسلسل (سيتم الترقيم تلقائياً):',
+                            defaultStartNum.toString()
+                        );
+                        const startNum = parseInt(startNumStr || defaultStartNum);
+                        if (isNaN(startNum)) return;
 
                         const baseCard = document.querySelector('.card-container');
                         if (!baseCard) return;
@@ -2780,20 +2801,33 @@ class GateSecurityModule {
                         batchWrap.innerHTML = '';
                         baseCard.style.display = 'none';
 
+                        let lastGeneratedNum = startNum;
                         for (let i = 0; i < num; i++) {
+                            lastGeneratedNum = startNum + i;
                             const clone = baseCard.cloneNode(true);
                             clone.style.display = '';
                             clone.style.pageBreakAfter = 'always';
                             clone.style.marginBottom = '30px';
                             
-                            const cardSerial = prefix + (startNum + i).toString().padStart(3, '0');
+                            const cardSerial = prefix + lastGeneratedNum.toString().padStart(3, '0');
                             const serialBox = clone.querySelector('#badgeSerialBox');
                             if (serialBox) serialBox.textContent = 'Badge: ' + cardSerial;
                             
                             batchWrap.appendChild(clone);
                         }
 
-                        alert('تم تجهيز وتوليد ' + num + ' كارت زائر متتالي بنجاح!\nسيتم فتح شاشة الطباعة والتصدير لـ PDF الآن.');
+                        // حفظ آخر رقم تم طباعته لاستمرار التسلسل تلقائياً في الطباعة القادمة
+                        localStorage.setItem('icapp_last_visitor_badge_num', lastGeneratedNum.toString());
+                        const nextNum = lastGeneratedNum + 1;
+                        const nextSerialText = prefix + nextNum.toString().padStart(3, '0');
+                        const inputElem = document.getElementById('badgeSerialInput');
+                        if (inputElem) inputElem.value = nextSerialText;
+
+                        alert(
+                            'تم تجهيز وتوليد ' + num + ' كارت زائر متتالي بنجاح!\n' +
+                            'النطاق: من ' + prefix + startNum.toString().padStart(3, '0') + ' إلى ' + prefix + lastGeneratedNum.toString().padStart(3, '0') + '\n\n' +
+                            'تنويه: الدفعة القادمة ستستكمل تلقائياً من الكارت: ' + nextSerialText
+                        );
                         window.print();
                     };
 
