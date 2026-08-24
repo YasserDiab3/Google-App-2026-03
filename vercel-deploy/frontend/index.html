@@ -2062,6 +2062,18 @@
                         <span data-i18n="nav.contractors">المقاولين</span>
                     </a>
                     <a
+                        href="#gate-security"
+                        class="nav-item"
+                        data-section="gate-security"
+                        data-admin-only="true"
+                        role="menuitem"
+                        title="أمن البوابات والزوار"
+                        style="color: #38bdf8; font-weight: 700;"
+                    >
+                        <i class="fas fa-shield-halved" aria-hidden="true"></i>
+                        <span>أمن البوابات والزوار</span>
+                    </a>
+                    <a
                         href="#behavior-monitoring"
                         class="nav-item"
                         data-section="behavior-monitoring"
@@ -4266,6 +4278,12 @@
                         aria-label="قسم المقاولين"
                     ></section>
                     <section
+                        id="gate-security-section"
+                        class="section"
+                        role="region"
+                        aria-label="قسم أمن البوابات والزوار"
+                    ></section>
+                    <section
                         id="behavior-monitoring-section"
                         class="section"
                         role="region"
@@ -4760,7 +4778,7 @@
         <!-- CRITICAL: DataManager is defined here and must be loaded before login-init-fixed.js -->
         <!-- Load individual service modules first (they expose themselves to window) -->
         <script src="js/modules/services/local-db-cache.js" defer></script>
-        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.1361-20260824" defer></script>
+        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.1362-20260824" defer></script>
         <script
             src="js/modules/services/periodic-inspection-store.js"
             defer
@@ -4822,17 +4840,18 @@
         <script src="js/modules/modules/investigation-rca.js" defer></script>
         <script src="js/modules/modules/incidents.js?v=20260719-incident-forms-v1" defer></script>
         <script src="js/modules/modules/nearmiss.js" defer></script>
-        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.1361-20260824" defer></script>
+        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.1362-20260824" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
         <script src="js/modules/modules/help-content-en.js" defer></script>
         <script src="js/modules/modules/help.js" defer></script>
         <script src="js/modules/modules/settings.js?v=20260426-2" defer></script>
-        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.1361-20260824" defer></script>
+        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.1362-20260824" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
         <script src="js/modules/modules/ppe.js?v=20260723-ppe-identity-v2" defer></script>
         <script src="js/modules/modules/periodic-equipment.js?v=20260626-1" defer></script>
         <script src="js/modules/modules/periodicinspections.js?v=20260626-dsc-reprocess" defer></script>
         <script src="js/modules/modules/contractors.js?v=20260626-analytics-kpi" defer></script>
+        <script src="js/modules/modules/gatesecurity.js" defer></script>
         <script src="js/modules/modules/violations.js?v=20260718-report-image-v2" defer></script>
         <script src="js/modules/modules/employees.js" defer></script>
         <script src="js/modules/modules/behaviormonitoring.js" defer></script>
@@ -4985,7 +5004,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.1361-20260824";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.1362-20260824";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

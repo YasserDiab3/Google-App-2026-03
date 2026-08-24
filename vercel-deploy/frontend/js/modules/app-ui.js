@@ -6134,6 +6134,15 @@ window.UI = {
                         Utils.safeError('خطأ في عرض بوابة النماذج:', e);
                     }
                     break;
+                case 'gate-security':
+                    if (typeof GateSecurity !== 'undefined' && GateSecurity.render) {
+                        try {
+                            GateSecurity.render();
+                        } catch(e) {
+                            Utils.safeError('خطأ في عرض موديول أمن البوابات:', e);
+                        }
+                    }
+                    break;
                 case 'safety-calendar':
                     if (typeof SafetyCalendar !== 'undefined' && SafetyCalendar.load) {
                         try {
