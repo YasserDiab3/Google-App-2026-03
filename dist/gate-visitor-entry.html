@@ -941,12 +941,19 @@
                             <span class="req">*</span>
                         </label>
                         <select id="visitPurpose" class="form-select" required>
-                            <option value="صيانة ومقاول تنفيذ أعمال">🛠️ صيانة ومقاول تنفيذ أعمال</option>
-                            <option value="مراجعة وتدقيق جودة / عميل">🔍 مراجعة وتدقيق جودة / عميل</option>
-                            <option value="توريد وتفريغ خامات">📦 توريد وتفريغ خامات</option>
-                            <option value="مقابلة عمل وتوظيف">👔 مقابلة عمل وتوظيف</option>
-                            <option value="زيارة عمل واجتماع رسمي" selected>🤝 زيارة عمل واجتماع رسمي</option>
-                            <option value="أخرى">📋 أخرى</option>
+                            <option value="شؤون مالية واستلام شيكات / تسويات">💰 شؤون مالية واستلام شيكات / تسويات</option>
+                            <option value="زيارة عمل واجتماع رسمي / تنسيق إداري" selected>🤝 زيارة عمل واجتماع رسمي / تنسيق إداري</option>
+                            <option value="صيانة ومقاول تنفيذ أعمال ومشاريع">🛠️ صيانة ومقاول تنفيذ أعمال ومشاريع</option>
+                            <option value="توريد وتسليم بضائع وخامات ومهمات">📦 توريد وتسليم بضائع وخامات ومهمات</option>
+                            <option value="استلام بضائع وتعبئة وشحن منتجات">🚚 استلام بضائع وتعبئة وشحن منتجات</option>
+                            <option value="تفتيش جهة حكومية / رقابة صناعية / بيئة وسلامة">🔍 تفتيش جهة حكومية / رقابة صناعية / بيئة وسلامة</option>
+                            <option value="مراجعة وتدقيق جودة / مراجعي ISO / عملاء">🔬 مراجعة وتدقيق جودة / مراجعي ISO / عملاء</option>
+                            <option value="مقابلة عمل وتوظيف (HR Interview)">👔 مقابلة عمل وتوظيف (HR Interview)</option>
+                            <option value="كشف طبي / زيارة عيادة / مندوب تأمين صحي">🏥 كشف طبي / زيارة عيادة / مندوب تأمين صحي</option>
+                            <option value="شؤون قانونية / محامين ومستشارين">⚖️ شؤون قانونية / محامين ومستشارين</option>
+                            <option value="خدمات تكنولوجيا المعلومات وشبكات ودعم فني">💻 خدمات تكنولوجيا المعلومات وشبكات ودعم فني</option>
+                            <option value="تدريب وزيارة ميدانية / وفد طلابي وبحثي">🎓 تدريب وزيارة ميدانية / وفد طلابي وبحثي</option>
+                            <option value="أخرى (غرض محدد بالملاحظات)">📋 أخرى (غرض محدد بالملاحظات)</option>
                         </select>
                     </div>
                 </div>
@@ -1160,6 +1167,34 @@
                 valBadge: 'Please enter assigned badge number'
             }
         };
+
+        const VISIT_PURPOSES = [
+            { id: 'financial_check', icon: '💰', ar: 'شؤون مالية واستلام شيكات / تسويات', en: 'Finance / Check Collection & Settlement' },
+            { id: 'meeting_official', icon: '🤝', ar: 'زيارة عمل واجتماع رسمي / تنسيق إداري', en: 'Official Business Meeting & Coordination' },
+            { id: 'contractor_maintenance', icon: '🛠️', ar: 'صيانة ومقاول تنفيذ أعمال ومشاريع', en: 'Contractor / Maintenance & Civil Works' },
+            { id: 'materials_delivery', icon: '📦', ar: 'توريد وتسليم بضائع وخامات ومهمات', en: 'Supplies Delivery & Warehouse Offloading' },
+            { id: 'shipping_dispatch', icon: '🚚', ar: 'استلام بضائع وتعبئة وشحن منتجات', en: 'Goods Collection & Product Dispatch' },
+            { id: 'gov_inspection', icon: '🔍', ar: 'تفتيش جهة حكومية / رقابة صناعية / بيئة وسلامة', en: 'Government / Regulatory Authority Inspection' },
+            { id: 'quality_audit', icon: '🔬', ar: 'مراجعة وتدقيق جودة / مراجعي ISO / عملاء', en: 'Quality Audit / ISO Certifiers / Client Audit' },
+            { id: 'hr_interview', icon: '👔', ar: 'مقابلة عمل وتوظيف (HR Interview)', en: 'Job Interview & Recruitment' },
+            { id: 'medical_clinic', icon: '🏥', ar: 'كشف طبي / زيارة عيادة / مندوب تأمين صحي', en: 'Medical Clinic / Health Insurance Representative' },
+            { id: 'legal_affairs', icon: '⚖️', ar: 'شؤون قانونية / محامين ومستشارين', en: 'Legal Affairs / Attorneys & Consultants' },
+            { id: 'it_services', icon: '💻', ar: 'خدمات تكنولوجيا المعلومات وشبكات ودعم فني', en: 'IT & Network Services / Technical Support' },
+            { id: 'training_visit', icon: '🎓', ar: 'تدريب وزيارة ميدانية / وفد طلابي وبحثي', en: 'Training / Field Visit & Research Delegation' },
+            { id: 'other', icon: '📋', ar: 'أخرى (غرض محدد بالملاحظات)', en: 'Other (Specific Purpose)' }
+        ];
+
+        function renderVisitPurposeOptions(lang = 'ar') {
+            const select = document.getElementById('visitPurpose');
+            if (!select) return;
+            const currentVal = select.value;
+            select.innerHTML = VISIT_PURPOSES.map(p => {
+                const label = `${p.icon} ${lang === 'en' ? p.en : p.ar}`;
+                const val = lang === 'en' ? p.en : p.ar;
+                const isSelected = currentVal ? (currentVal === p.ar || currentVal === p.en || currentVal.includes(p.ar.slice(0, 8))) : (p.id === 'meeting_official');
+                return `<option value="${val}" ${isSelected ? 'selected' : ''}>${label}</option>`;
+            }).join('');
+        }
 
         let currentLang = 'ar';
         let currentTheme = 'light';
@@ -1522,6 +1557,7 @@
             const searchInp = document.getElementById('visitorSearchInput');
             if (searchInp) searchInp.placeholder = t.searchPlaceholder;
 
+            renderVisitPurposeOptions(lang);
             renderGateConfigToUI(currentSystemConfig);
             renderActiveVisitorsList();
         }
