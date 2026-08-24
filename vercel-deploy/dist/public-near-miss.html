@@ -1188,9 +1188,10 @@
 
         const siteSelect = document.getElementById('siteSelect');
         const rawSites = (Array.isArray(cfg.sites) && cfg.sites.length > 0) ? cfg.sites : defaultSites;
+        const t = NEAR_MISS_I18N[currentLang] || NEAR_MISS_I18N.ar;
 
         const prevVal = siteSelect.value;
-        siteSelect.innerHTML = '<option value="">— اختر المصنع / الموقع —</option>';
+        siteSelect.innerHTML = `<option value="">${t.sitePlaceholder || '— اختر المصنع / الموقع —'}</option>`;
         rawSites.forEach(site => {
             const siteName = (typeof site === 'string') ? site : (site.name || site.siteName || site.factoryName || '');
             if (siteName && siteName !== '__OTHER_SITE__') {
@@ -1241,16 +1242,17 @@
 
         const placeSelect = document.getElementById('placeSelect');
         const customGroup = document.getElementById('customPlaceGroup');
+        const t = NEAR_MISS_I18N[currentLang] || NEAR_MISS_I18N.ar;
         if (customGroup) customGroup.style.display = 'none';
 
         if (!siteName) {
-            placeSelect.innerHTML = '<option value="">— اختر المصنع أولاً —</option>';
+            placeSelect.innerHTML = `<option value="">${t.placePlaceholder || '— اختر المصنع أولاً —'}</option>`;
             placeSelect.disabled = true;
             return;
         }
 
         placeSelect.disabled = false;
-        placeSelect.innerHTML = '<option value="">— اختر الموقع الفرعي / المكان —</option>';
+        placeSelect.innerHTML = `<option value="">${currentLang === 'en' ? '— Select Specific Sub-Location —' : '— اختر الموقع الفرعي / المكان —'}</option>`;
 
         const sites = (loadedConfig && loadedConfig.sites) ? loadedConfig.sites : defaultSites;
         const foundSite = sites.find(s => {
@@ -1281,7 +1283,7 @@
         // خيار مكان فرعي آخر
         const otherOpt = document.createElement('option');
         otherOpt.value = '__OTHER_PLACE__';
-        otherOpt.textContent = '➕ مكان فرعي آخر (إدخال يدوي)...';
+        otherOpt.textContent = currentLang === 'en' ? '➕ Other Area (Manual Entry)...' : '➕ مكان فرعي آخر (إدخال يدوي)...';
         placeSelect.appendChild(otherOpt);
 
         if (!targetPlace && placeSelect.options.length > 1) {

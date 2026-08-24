@@ -2003,7 +2003,8 @@
             select.disabled = false;
             select.style.backgroundColor = '#ffffff';
             select.style.cursor = 'default';
-            select.innerHTML = '<option value="">— اختر جهاز الإطفاء من القائمة —</option>';
+            const t = FIRE_INSP_I18N[currentLang] || FIRE_INSP_I18N.ar;
+            select.innerHTML = `<option value="">${t.devicePlaceholder || '— اختر كود الطفاية —'}</option>`;
             
             assets.forEach(a => {
                 const opt = document.createElement('option');
@@ -2028,16 +2029,16 @@
         function updateDeviceCard(asset) {
             const card = document.getElementById('deviceCardPreview');
             document.getElementById('cardDeviceId').textContent = asset.id || 'EFA-0000';
-            document.getElementById('cardDeviceType').textContent = (asset.type || 'طفاية حريق') + (asset.capacity ? ` - ${asset.capacity}` : '');
-            document.getElementById('cardDeviceLocation').textContent = (asset.location || 'غير محدد') + (asset.subLocation ? ` (${asset.subLocation})` : '');
+            document.getElementById('cardDeviceType').textContent = (asset.type || (currentLang === 'en' ? 'Fire Extinguisher' : 'طفاية حريق')) + (asset.capacity ? ` - ${asset.capacity}` : '');
+            document.getElementById('cardDeviceLocation').textContent = (asset.location || (currentLang === 'en' ? 'Unspecified' : 'غير محدد')) + (asset.subLocation ? ` (${asset.subLocation})` : '');
             document.getElementById('cardDeviceNumber').textContent = asset.number || asset.id || '-';
-            document.getElementById('cardDeviceLastInsp').textContent = asset.lastInspection || 'لم يفحص بعد';
+            document.getElementById('cardDeviceLastInsp').textContent = asset.lastInspection || (currentLang === 'en' ? 'Not inspected yet' : 'لم يفحص بعد');
             
             const statusEl = document.getElementById('cardDeviceStatus');
-            statusEl.textContent = asset.status || 'صالح';
-            if (asset.status === 'صالح') {
+            statusEl.textContent = asset.status || (currentLang === 'en' ? 'Valid' : 'صالح');
+            if (asset.status === 'صالح' || asset.status === 'Valid') {
                 statusEl.style.color = '#86efac';
-            } else if (asset.status === 'يحتاج صيانة') {
+            } else if (asset.status === 'يحتاج صيانة' || asset.status === 'Needs Maintenance') {
                 statusEl.style.color = '#fde68a';
             } else {
                 statusEl.style.color = '#fca5a5';
@@ -2049,6 +2050,14 @@
         function populateInspectors(members, preset) {
             const select = document.getElementById('inspectorSelect');
             const customOption = select.querySelector('option[value="__CUSTOM__"]');
+            if (customOption) {
+                customOption.textContent = currentLang === 'en' ? '➕ Other Inspector (Manual Entry)...' : '➕ اسم آخر (إدخال يدوي)...';
+            }
+            const firstOpt = select.querySelector('option[value=""]');
+            if (firstOpt) {
+                const t = FIRE_INSP_I18N[currentLang] || FIRE_INSP_I18N.ar;
+                firstOpt.textContent = t.inspectorPlaceholder || '— اختر مسؤول السلامة —';
+            }
             
             // تنظيف الخيارات السابقة لتجنب التكرار
             const options = Array.from(select.querySelectorAll('option'));

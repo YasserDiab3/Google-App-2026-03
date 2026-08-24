@@ -2920,57 +2920,103 @@
                 docDateKey: 'تاريخ الاعتماد:',
                 allRights: 'جميع الحقوق محفوظة',
                 companyFooter: 'الشركة العالمية للانتاج والتصنيع الزراعي',
-                sec1Title: 'الموقع والتوقيت والنوع',
-                sec1Desc: 'تحديد مكان وتوقيت الملاحظة بدقة مع التصنيف الأولي للملاحظة الميدانية',
-                sec2Title: 'تفاصيل الملاحظة والإجراء ومستوى الخطر',
-                sec2Desc: 'وصف السلوك أو الحالة غير الآمنة وتحديد الإجراء التصحيحي الواجب اتخاذه والمستوى المحتمل للخطر',
-                sec3Title: 'الصور التوضيحية للملاحظة',
-                sec3Desc: 'إرفاق صور توضيحية للملاحظة الميدانية',
-                sec4Title: 'بيانات القائم بالملاحظة والتأكيد',
-                sec4Desc: 'توثيق هوية مسجل الملاحظة لسهولة المتابعة والتكريم',
-                siteLabel: 'المصنع *',
-                sitePlaceholder: '— اختر المصنع أولاً —',
-                placeLabel: 'المكان الفرعي *',
-                placePlaceholder: '— اختر المكان الفرعي —',
-                dateLabel: 'التاريخ *',
-                timeLabel: 'الوقت *',
-                shiftLabel: 'الوردية *',
-                shift1: 'الوردية الأولى (صباحية)',
-                shift2: 'الوردية الثانية (مسائية)',
-                shift3: 'الوردية الثالثة (ليلية)',
-                typeLabel: 'نوع الملاحظة *',
-                subCategoryLabel: 'التصنيف الفرعي المحدد للملاحظة *',
-                deptLabel: 'الإدارة المسؤولة عن الملاحظة *',
+                
+                // Offline
+                offlineQueueText: 'ملاحظة محفوظة محلياً قيد المزامنة',
+                syncNowBtn: 'مزامنة الآن',
+
+                // Section 1
+                sec1Title: 'الموقع وتوقيت الملاحظة',
+                sec1Desc: 'حدد المصنع والمكان وتوقيت الرصد الميداني والوردية بدقة.',
+                locationCardTitle: 'تحديد المصنع والمكان الميداني',
+                locationBadge: 'قاعدة المواقع المعتمدة',
+                siteLabel: 'اسم المصنع / الموقع',
+                sitePlaceholder: '— اختر المصنع / الموقع —',
+                placeLabel: 'الموقع الفرعي / المكان',
+                placeSearchPlaceholder: '🔍 بحث سريع في الأماكن المتاحة...',
+                placePlaceholder: '— اختر المصنع أولاً —',
+                customPlaceLabel: 'مكان فرعي آخر (إدخال يدوي):',
+                customPlacePlaceholder: 'اكتب المكان أو القسم بدقة...',
+                timingCardTitle: 'توقيت الرصد الميداني والوردية',
+                timingBadge: 'تحديد الوردية تلقائياً حسب الوقت',
+                dateLabel: 'تاريخ ووقت الملاحظة',
+                shiftLabel: 'وردية العمل (Shift)',
+                shift1: 'الأولى (07:30 ص – 03:30 م)',
+                shift2: 'الثانية (03:30 م – 10:30 م)',
+                shift3: 'الثالثة (10:30 م – 07:30 ص)',
+
+                // Section 2
+                sec2Title: 'نوع وتصنيف الملاحظة ومصدر الخطر',
+                typeLabel: 'نوع الملاحظة',
+                types: {
+                    'سلوك غير آمن': 'سلوك غير آمن',
+                    'وضع غير آمن': 'وضع غير آمن',
+                    'سلوك آمن وإيجابي': 'سلوك آمن وإيجابي',
+                    'ملاحظة بيئية': 'ملاحظة بيئية',
+                    'خطر حريق': 'خطر حريق',
+                    'أخرى': 'أخرى'
+                },
+                subCategoryCardTitle: 'التصنيف الفرعي المحدد (نوع الخطر)',
+                subCategoryBadge: 'محدد حسب نوع الملاحظة',
+                subCategoryPlaceholder: '— اختر التصنيف الفرعي المحدد —',
+                subCategoryHelper: 'اختيار التصنيف يملأ التفاصيل والإجراء ومعدل الخطورة تلقائياً',
+                customSubCategoryLabel: 'حدد التصنيف الفرعي (إدخال يدوي):',
+                customSubCategoryPlaceholder: 'اكتب التصنيف الفرعي بدقة...',
+
+                // Section 3
+                sec3Title: 'تفاصيل الملاحظة والإجراء والتنفيذ',
+                deptCardTitle: 'المسؤول عن التنفيذ / الإدارة المعنية',
+                deptBadge: 'جهة الاختصاص والمتابعة',
                 deptPlaceholder: '— اختر الإدارة المسؤولة —',
-                hazardLabel: 'وصف الملاحظة أو الخطر المرصود *',
-                hazardPlaceholder: 'اكتب وصفاً دقيقاً ومفصلاً لما شاهدته في الموقع أو السلوك المرصود...',
-                correctiveLabel: 'الإجراء التصحيحي / الوقائي المطلوب *',
-                correctivePlaceholder: 'حدد الإجراء الفوري أو المستقبلي المطلوب إنجازه لمعالجة هذه الملاحظة ومنع تكرارها...',
-                riskLabel: 'تقييم مستوى الخطر *',
+                hazardCardTitle: 'تفاصيل الملاحظة / الخطر المرصود',
+                hazardBadge: 'مقترحات سريعة',
+                voiceDictationBtn: 'إملاء صوتي',
+                hazardPlaceholder: 'أدخل تفاصيل ما شاهدته بدقة أو اختر من المقترحات أعلاه...',
+                descQualityDefault: 'يرجى توضيح تفاصيل الملاحظة بدقة',
+                charCount: (n) => `${n} حرف`,
+                correctiveCardTitle: 'الإجراء التصحيحي / الوقائي الفوري',
+                aiSuggestBtn: 'اقتراح ذكي AI',
+                correctivePlaceholder: 'الإجراء الفوري المتخذ أو المقترح (أو اختر من المقترحات السريعة أعلاه)...',
+                correctiveHelper: 'وثّق الإجراء الفوري أو انقر على المقترحات الذكية أعلاه للتعبئة المباشرة',
+                riskCardTitle: 'معدل الخطورة (Risk Level)',
+                riskBadge: 'تحديد ذكي حسب نوع الخطر',
                 riskLow: '🟢 منخفض',
                 riskMed: '🟡 متوسط',
                 riskHigh: '🔴 عالي',
                 riskCrit: '🛑 حرج',
-                targetDateLabel: 'تاريخ التنفيذ المستهدف',
-                datePillToday: '⚡ فوراً (اليوم)',
+                targetDateCardTitle: 'التاريخ المتوقع للتنفيذ (Target Date)',
+                targetDateBadge: 'يُحدد تلقائياً حسب شدة الخطر',
+                datePillToday: '⚡ فوري اليوم',
                 datePill24h: '⏱️ خلال 24 ساعة',
-                datePill3d: '📅 خلال 3 أيام',
                 datePillWeek: '🗓️ خلال أسبوع',
-                statusLabel: 'حالة الملاحظة *',
-                statusOpen: '🔴 مفتوحة',
-                statusInProgress: '🟡 قيد التنفيذ',
-                statusClosed: '🟢 مغلقة',
-                photosLabel: 'الصور التوضيحية للملاحظة (حتى 3 صور)',
+                datePillMonth: '🏁 نهاية الشهر',
+                targetDateHelper: 'اختر بنقرة واحدة من الأزرار أعلاه أو حدد يدوياً من التقويم',
+
+                // Section 4
+                sec4Title: 'حالة الملاحظة والصور الميدانية',
+                statusCardTitle: 'حالة الملاحظة (Status)',
+                statusBadge: 'اختر بنقرة واحدة',
+                statusOpen: '🔴 مفتوحة (Open)',
+                statusInProgress: '🟡 قيد التنفيذ (In Progress)',
+                statusClosed: '🟢 مغلقة (Closed)',
+                photoCardTitle: 'الصور التوضيحية للملاحظة (حتى 3 صور)',
+                photoBadge: 'الخطر + الإجراء + إضافية',
+                photoUploadZoneTitle: 'إرفاق صور للملاحظة الميدانية',
+                photoUploadZoneSub: 'التقط صورة بالكاميرا أو اختر من المعرض مع إمكانية التحديد والرسم على الصورة',
                 btnCamera: 'التقاط بالكاميرا',
                 btnGallery: 'فتح المعرض',
                 btnAddPhoto: 'إضافة صورة أخرى (حتى 3)',
-                reporterLabel: 'اسم صاحب الملاحظة / مسؤول السلامة',
+                reporterCardTitle: 'اسم صاحب الملاحظة / مسؤول السلامة',
+                reporterBadge: 'التوثيق والاعتماد الميداني',
                 reporterPlaceholder: '— اختر اسمك من قائمة النظام المعتمدة —',
-                customOwnerLabel: 'اسمك الكامل (إدخال يدوي) *',
+                customOwnerLabel: 'اسمك الكامل (إدخال يدوي)',
                 customOwnerPlaceholder: 'اكتب اسمك كاملاً بدقة...',
                 rememberProfile: 'تذكّر اسمي وبياناتي على هذا الجهاز لتسهيل التسجيل القادم',
-                submitBtn: 'تسجيل وتوثيق الملاحظة',
+                autoSaveBadge: '⚡ حفظ تلقائي',
+                submitBtn: 'تسجيل الملاحظة',
                 submittingBtn: 'جاري حفظ وتوثيق الملاحظة...',
+
+                // Success Screen
                 successTitle: 'تم تسجيل الملاحظة بنجاح!',
                 successDesc: 'تم توثيق الملاحظة في سجل الملاحظات اليومية وإحالتها لفريق السلامة للمتابعة الفورية.',
                 waBtn: 'مشاركة واتساب',
@@ -2978,7 +3024,20 @@
                 pdfBtn: 'طباعة / PDF',
                 newBtn: 'تسجيل ملاحظة أخرى',
                 backHubBtn: 'الرجوع إلى بوابة النماذج',
-                floatingHub: 'بوابة النماذج'
+                floatingHub: 'بوابة النماذج',
+
+                // Modals
+                markupModalTitle: 'تحديد موضع الخطر على الصورة',
+                toolCircle: 'دائرة حمراء',
+                toolArrow: 'سهم تأشير',
+                toolPen: 'قلم حر',
+                toolUndo: 'تراجع',
+                toolClear: 'مسح الكل',
+                modalCancel: 'إلغاء',
+                modalSave: 'حفظ وتطبيق التعديل',
+                qrModalTitle: 'مسح QR كود الموقع / المعدة',
+                qrGuideText: 'وجّه الكاميرا نحو ملصق الـ QR الخاص بالموقع لتحديده تلقائياً',
+                qrFileBtn: 'أو اختر صورة QR من المعرض / الكاميرا'
             },
             en: {
                 dir: 'ltr',
@@ -2994,57 +3053,103 @@
                 docDateKey: 'Approval Date:',
                 allRights: 'All Rights Reserved',
                 companyFooter: 'International Company for Agricultural Production & Processing (ICAPP)',
-                sec1Title: 'Location, Timing & Classification',
-                sec1Desc: 'Specify location and timing with preliminary observation classification',
-                sec2Title: 'Observation Details, Action & Risk',
-                sec2Desc: 'Describe the unsafe act/condition, required corrective action, and risk assessment',
-                sec3Title: 'Observation Scene Photos',
-                sec3Desc: 'Attach photographic evidence from the field',
-                sec4Title: 'Observer Details & Submission',
-                sec4Desc: 'Verify reporter details for recognition and transparent follow-up',
-                siteLabel: 'Factory / Site *',
-                sitePlaceholder: '— Select Factory First —',
-                placeLabel: 'Specific Area *',
-                placePlaceholder: '— Select Area —',
-                dateLabel: 'Date *',
-                timeLabel: 'Time *',
-                shiftLabel: 'Shift *',
-                shift1: '1st Shift (Morning)',
-                shift2: '2nd Shift (Evening)',
-                shift3: '3rd Shift (Night)',
-                typeLabel: 'Observation Type *',
-                subCategoryLabel: 'Specific Sub-Category *',
-                deptLabel: 'Responsible Department *',
+                
+                // Offline
+                offlineQueueText: 'offline observation(s) pending sync',
+                syncNowBtn: 'Sync Now',
+
+                // Section 1
+                sec1Title: 'Observation Location & Timing',
+                sec1Desc: 'Specify factory, specific location, timing, and work shift accurately.',
+                locationCardTitle: 'Factory & Specific Location',
+                locationBadge: 'Certified Sites Database',
+                siteLabel: 'Factory / Site Name',
+                sitePlaceholder: '— Select Factory / Site —',
+                placeLabel: 'Specific Location / Area',
+                placeSearchPlaceholder: '🔍 Quick search in locations...',
+                placePlaceholder: '— Select Factory First —',
+                customPlaceLabel: 'Other Sub-Location (Manual Entry):',
+                customPlacePlaceholder: 'Enter exact place or department...',
+                timingCardTitle: 'Observation Time & Shift',
+                timingBadge: 'Auto-assigned by time',
+                dateLabel: 'Observation Date & Time',
+                shiftLabel: 'Work Shift',
+                shift1: '1st Shift (07:30 AM – 03:30 PM)',
+                shift2: '2nd Shift (03:30 PM – 10:30 PM)',
+                shift3: '3rd Shift (10:30 PM – 07:30 AM)',
+
+                // Section 2
+                sec2Title: 'Observation Type & Hazard Classification',
+                typeLabel: 'Observation Type',
+                types: {
+                    'سلوك غير آمن': 'Unsafe Act',
+                    'وضع غير آمن': 'Unsafe Condition',
+                    'سلوك آمن وإيجابي': 'Safe & Positive Behavior',
+                    'ملاحظة بيئية': 'Environmental Observation',
+                    'خطر حريق': 'Fire Hazard',
+                    'أخرى': 'Other'
+                },
+                subCategoryCardTitle: 'Specific Sub-Category (Hazard Type)',
+                subCategoryBadge: 'Filtered by Type',
+                subCategoryPlaceholder: '— Select Specific Sub-Category —',
+                subCategoryHelper: 'Selecting category auto-populates details and action',
+                customSubCategoryLabel: 'Specify Sub-Category (Manual Entry):',
+                customSubCategoryPlaceholder: 'Enter sub-category accurately...',
+
+                // Section 3
+                sec3Title: 'Observation Details, Action & Target Date',
+                deptCardTitle: 'Responsible Dept / Action Owner',
+                deptBadge: 'Action & Follow-up Dept',
                 deptPlaceholder: '— Select Responsible Department —',
-                hazardLabel: 'Observation / Hazard Description *',
-                hazardPlaceholder: 'Provide a detailed description of the observed condition, behavior or hazard...',
-                correctiveLabel: 'Corrective / Preventive Action *',
-                correctivePlaceholder: 'Specify the immediate or planned corrective action to resolve and prevent recurrence...',
-                riskLabel: 'Risk Level Assessment *',
+                hazardCardTitle: 'Observation Details / Identified Hazard',
+                hazardBadge: 'Quick Suggestions',
+                voiceDictationBtn: 'Voice Input',
+                hazardPlaceholder: 'Enter detailed observation findings or pick from suggestions above...',
+                descQualityDefault: 'Please provide detailed observation description',
+                charCount: (n) => `${n} chars`,
+                correctiveCardTitle: 'Immediate Corrective / Preventive Action',
+                aiSuggestBtn: 'Smart AI Suggest',
+                correctivePlaceholder: 'Immediate corrective action taken or suggested (or pick suggestions above)...',
+                correctiveHelper: 'Document immediate action or click smart suggestions above to auto-fill',
+                riskCardTitle: 'Risk Level Assessment',
+                riskBadge: 'Auto-assigned by Hazard Type',
                 riskLow: '🟢 Low',
                 riskMed: '🟡 Medium',
                 riskHigh: '🔴 High',
                 riskCrit: '🛑 Critical',
-                targetDateLabel: 'Target Completion Date',
-                datePillToday: '⚡ Immediately (Today)',
+                targetDateCardTitle: 'Target Completion Date',
+                targetDateBadge: 'Auto-calculated from Risk Level',
+                datePillToday: '⚡ Today',
                 datePill24h: '⏱️ Within 24h',
-                datePill3d: '📅 Within 3 Days',
                 datePillWeek: '🗓️ Within 1 Week',
-                statusLabel: 'Observation Status *',
+                datePillMonth: '🏁 End of Month',
+                targetDateHelper: 'Pick with one click above or select manually from calendar',
+
+                // Section 4
+                sec4Title: 'Observation Status & Scene Photos',
+                statusCardTitle: 'Observation Status',
+                statusBadge: '1-Click Selection',
                 statusOpen: '🔴 Open',
                 statusInProgress: '🟡 In Progress',
                 statusClosed: '🟢 Closed',
-                photosLabel: 'Observation Photos (Up to 3)',
-                btnCamera: 'Capture Camera',
+                photoCardTitle: 'Observation Photos (Up to 3)',
+                photoBadge: 'Hazard + Action + Extra',
+                photoUploadZoneTitle: 'Attach Observation Scene Photos',
+                photoUploadZoneSub: 'Take a photo or choose from gallery with drawing markup capability',
+                btnCamera: 'Take Photo',
                 btnGallery: 'Open Gallery',
                 btnAddPhoto: 'Add Another Photo (Up to 3)',
-                reporterLabel: 'Observer Name / Safety Officer',
+                reporterCardTitle: 'Observer Name / Safety Officer',
+                reporterBadge: 'Field Certification',
                 reporterPlaceholder: '— Select your name from certified list —',
-                customOwnerLabel: 'Full Name (Manual Entry) *',
+                customOwnerLabel: 'Full Name (Manual Entry)',
                 customOwnerPlaceholder: 'Enter your full name accurately...',
                 rememberProfile: 'Remember my identity on this device for faster submissions',
+                autoSaveBadge: '⚡ Auto Save',
                 submitBtn: 'Submit Safety Observation',
                 submittingBtn: 'Saving & certifying observation...',
+
+                // Success Screen
                 successTitle: 'Observation Submitted Successfully!',
                 successDesc: 'Logged into the safety observation database and routed for immediate corrective action.',
                 waBtn: 'Share WhatsApp',
@@ -3052,7 +3157,20 @@
                 pdfBtn: 'Print / PDF',
                 newBtn: 'Record Another Observation',
                 backHubBtn: 'Back to Forms Portal',
-                floatingHub: 'Forms Hub'
+                floatingHub: 'Forms Hub',
+
+                // Modals
+                markupModalTitle: 'Highlight Hazard on Photo',
+                toolCircle: 'Red Circle',
+                toolArrow: 'Arrow Marker',
+                toolPen: 'Free Pen',
+                toolUndo: 'Undo',
+                toolClear: 'Clear All',
+                modalCancel: 'Cancel',
+                modalSave: 'Save & Apply Markup',
+                qrModalTitle: 'Scan Location / Equipment QR Code',
+                qrGuideText: 'Point camera at the location QR code to select it automatically',
+                qrFileBtn: 'Or choose QR image from gallery / camera'
             }
         };
 
@@ -3080,22 +3198,73 @@
             const hubBtnText = document.getElementById('hubBtnText');
             if (hubBtnText) hubBtnText.textContent = t.hubBtn;
 
-            // Section Titles & Descriptions
-            const secTitles = document.querySelectorAll('.section-title');
-            if (secTitles[0]) secTitles[0].textContent = t.sec1Title;
-            if (secTitles[1]) secTitles[1].textContent = t.sec2Title;
+            // Offline Queue
+            const offlineBtn = document.querySelector('.btn-sync-offline');
+            if (offlineBtn) offlineBtn.innerHTML = `<i class="fas fa-rotate"></i> ${t.syncNowBtn}`;
 
-            const secDescs = document.querySelectorAll('.section-desc');
-            if (secDescs[0]) secDescs[0].textContent = t.sec1Desc;
-            if (secDescs[1]) secDescs[1].textContent = t.sec2Desc;
+            // Section Titles & Descriptions (All 4 Sections)
+            const secThemes = [
+                document.querySelector('.section-theme-1'),
+                document.querySelector('.section-theme-2'),
+                document.querySelector('.section-theme-3'),
+                document.querySelector('.section-theme-4')
+            ];
+            if (secThemes[0]) {
+                const title = secThemes[0].querySelector('.section-title');
+                const desc = secThemes[0].querySelector('.section-desc');
+                if (title) title.textContent = t.sec1Title;
+                if (desc) desc.textContent = t.sec1Desc;
+            }
+            if (secThemes[1]) {
+                const title = secThemes[1].querySelector('.section-title');
+                if (title) title.textContent = t.sec2Title;
+            }
+            if (secThemes[2]) {
+                const title = secThemes[2].querySelector('.section-title');
+                if (title) title.textContent = t.sec3Title;
+            }
+            if (secThemes[3]) {
+                const title = secThemes[3].querySelector('.section-title');
+                if (title) title.textContent = t.sec4Title;
+            }
 
-            // Section 1 Labels
-            const locationCardTitle = document.querySelector('.location-selector-card label span');
-            if (locationCardTitle) locationCardTitle.textContent = `${t.siteLabel} & ${t.placeLabel}`;
-            const timingCardTitle = document.querySelector('.timing-shift-card label span');
-            if (timingCardTitle) timingCardTitle.textContent = `${t.dateLabel} & ${t.timeLabel} & ${t.shiftLabel}`;
+            // Section 1 Elements
+            const locCardLabel = document.querySelector('.location-selector-card label span');
+            if (locCardLabel) locCardLabel.textContent = t.locationCardTitle;
+            const locBadge = document.querySelector('.location-selector-card span[style*="background: #dbeafe"]');
+            if (locBadge) locBadge.innerHTML = `<i class="fas fa-building ml-1"></i>${t.locationBadge}`;
+            
+            const siteLabel = document.querySelector('label[for="siteSelect"] span');
+            if (siteLabel) siteLabel.textContent = t.siteLabel;
+            const siteSelect = document.getElementById('siteSelect');
+            if (siteSelect && siteSelect.options.length > 0) {
+                siteSelect.options[0].textContent = t.sitePlaceholder;
+            }
 
-            // Shift Options
+            const placeLabel = document.querySelector('label[for="placeSelect"] span');
+            if (placeLabel) placeLabel.textContent = t.placeLabel;
+            const placeSearch = document.getElementById('placeSearchInput');
+            if (placeSearch) placeSearch.placeholder = t.placeSearchPlaceholder;
+            const placeSelect = document.getElementById('placeSelect');
+            if (placeSelect && placeSelect.options.length > 0 && (!siteSelect || !siteSelect.value)) {
+                placeSelect.options[0].textContent = t.placePlaceholder;
+            }
+
+            const customPlaceLabel = document.querySelector('#customPlaceGroup label');
+            if (customPlaceLabel) customPlaceLabel.textContent = t.customPlaceLabel;
+            const customPlaceInp = document.getElementById('customPlaceInput');
+            if (customPlaceInp) customPlaceInp.placeholder = t.customPlacePlaceholder;
+
+            const timingCardLabel = document.querySelector('.timing-shift-card label span');
+            if (timingCardLabel) timingCardLabel.textContent = t.timingCardTitle;
+            const timingBadge = document.querySelector('.timing-shift-card span[style*="background: #dbeafe"]');
+            if (timingBadge) timingBadge.innerHTML = `<i class="fas fa-clock-rotate-left text-blue-600"></i>${t.timingBadge}`;
+
+            const dateLabel = document.querySelector('label[for="dateInput"] span');
+            if (dateLabel) dateLabel.textContent = t.dateLabel;
+
+            const shiftLabel = document.querySelector('label[for="shiftSelect"] span');
+            if (shiftLabel) shiftLabel.textContent = t.shiftLabel;
             const shiftSelect = document.getElementById('shiftSelect');
             if (shiftSelect && shiftSelect.options.length >= 3) {
                 shiftSelect.options[0].textContent = t.shift1;
@@ -3103,65 +3272,134 @@
                 shiftSelect.options[2].textContent = t.shift3;
             }
 
+            // Section 2 Elements (Observation Types Grid)
+            const typeHeaderLabel = document.querySelector('.section-theme-2 .form-group > .form-label');
+            if (typeHeaderLabel) {
+                typeHeaderLabel.innerHTML = `<i class="fas fa-tags text-blue-600"></i> ${t.typeLabel} <span class="required">*</span>`;
+            }
+            document.querySelectorAll('.type-card').forEach(card => {
+                const origType = card.dataset.type;
+                const titleSpan = card.querySelector('.title');
+                if (titleSpan && origType && t.types[origType]) {
+                    titleSpan.textContent = t.types[origType];
+                }
+            });
+
             // SubCategory Card
-            const subCatLabel = document.querySelector('.subcategory-card label span');
-            if (subCatLabel) subCatLabel.textContent = t.subCategoryLabel;
+            const subCatCardLabel = document.querySelector('#subCategoryGroup label[for="subCategorySelect"] span');
+            if (subCatCardLabel) subCatCardLabel.textContent = t.subCategoryCardTitle;
+            const subCatBadge = document.getElementById('subCategoryTypeBadge');
+            if (subCatBadge) subCatBadge.innerHTML = `<i class="fas fa-bolt text-amber-600"></i>${t.subCategoryBadge}`;
+            const subCatHelper = document.querySelector('#subCategoryGroup > span[style*="margin-top: 5px"]');
+            if (subCatHelper) subCatHelper.innerHTML = `<i class="fas fa-wand-magic-sparkles ml-1"></i>${t.subCategoryHelper}`;
+            const customSubCatLabel = document.querySelector('#customSubCategoryGroup label');
+            if (customSubCatLabel) customSubCatLabel.textContent = t.customSubCategoryLabel;
+            const customSubCatInp = document.getElementById('customSubCategoryInput');
+            if (customSubCatInp) customSubCatInp.placeholder = t.customSubCategoryPlaceholder;
 
-            // Section 2 Labels
-            const deptLabel = document.querySelector('.dept-selector-card label span');
-            if (deptLabel) deptLabel.textContent = t.deptLabel;
-            const hazardLabel = document.querySelector('.observation-hazard-card label span');
-            if (hazardLabel) hazardLabel.textContent = t.hazardLabel;
-            const hazardInp = document.getElementById('hazardInput');
+            // Section 3 Elements
+            const deptCardLabel = document.querySelector('.dept-selector-card label[for="responsibleDeptSelect"] span');
+            if (deptCardLabel) deptCardLabel.textContent = t.deptCardTitle;
+            const deptBadge = document.querySelector('.dept-selector-card span[style*="background: #d1fae5"]');
+            if (deptBadge) deptBadge.innerHTML = `<i class="fas fa-users-gear text-emerald-600"></i>${t.deptBadge}`;
+            const deptSelect = document.getElementById('responsibleDeptSelect');
+            if (deptSelect && deptSelect.options.length > 0 && !deptSelect.value) {
+                deptSelect.options[0].textContent = t.deptPlaceholder;
+            }
+
+            const hazardCardLabel = document.querySelector('.observation-hazard-card label[for="detailsInput"] span');
+            if (hazardCardLabel) hazardCardLabel.textContent = t.hazardCardTitle;
+            const hazardBadge = document.querySelector('.observation-hazard-card span[style*="background: #ffedd5"]');
+            if (hazardBadge) hazardBadge.innerHTML = `<i class="fas fa-wand-magic-sparkles text-amber-600"></i>${t.hazardBadge}`;
+            const hazardVoice = document.querySelector('.observation-hazard-card .btn-voice-dictation span');
+            if (hazardVoice) hazardVoice.textContent = t.voiceDictationBtn;
+            const hazardInp = document.getElementById('detailsInput');
             if (hazardInp) hazardInp.placeholder = t.hazardPlaceholder;
+            const descQualityText = document.getElementById('descQualityText');
+            if (descQualityText && (!hazardInp || !hazardInp.value)) descQualityText.textContent = t.descQualityDefault;
 
-            const corrLabel = document.querySelector('.observation-corrective-card label span');
-            if (corrLabel) corrLabel.textContent = t.correctiveLabel;
+            const corrCardLabel = document.querySelector('.observation-corrective-card label[for="correctiveInput"] span');
+            if (corrCardLabel) corrCardLabel.textContent = t.correctiveCardTitle;
+            const aiBtn = document.querySelector('.observation-corrective-card button[onclick*="autoSuggestCorrectiveAction"] span');
+            if (aiBtn) aiBtn.textContent = t.aiSuggestBtn;
+            const corrVoice = document.querySelector('.observation-corrective-card button[onclick*="toggleVoiceDictation(\'correctiveInput\'"] span');
+            if (corrVoice) corrVoice.textContent = t.voiceDictationBtn;
             const corrInp = document.getElementById('correctiveInput');
             if (corrInp) corrInp.placeholder = t.correctivePlaceholder;
+            const corrHelper = document.querySelector('.observation-corrective-card > span[style*="margin-top: 5px"]');
+            if (corrHelper) corrHelper.innerHTML = `<i class="fas fa-circle-check ml-1"></i>${t.correctiveHelper}`;
 
-            const riskContainerLabel = document.querySelector('.risk-level-container-card label span');
-            if (riskContainerLabel) riskContainerLabel.textContent = t.riskLabel;
+            const riskCardLabel = document.querySelector('.risk-level-container-card label span');
+            if (riskCardLabel) riskCardLabel.textContent = t.riskCardTitle;
+            const riskBadge = document.querySelector('.risk-level-container-card span[style*="background: #fee2e2"]');
+            if (riskBadge) riskBadge.innerHTML = `<i class="fas fa-wand-magic-sparkles text-red-600"></i>${t.riskBadge}`;
 
             const riskChips = document.querySelectorAll('.risk-chip');
-            if (riskChips[0]) riskChips[0].innerHTML = `<i class="fas fa-circle-check"></i> <span>${t.riskLow}</span>`;
-            if (riskChips[1]) riskChips[1].innerHTML = `<i class="fas fa-triangle-exclamation"></i> <span>${t.riskMed}</span>`;
-            if (riskChips[2]) riskChips[2].innerHTML = `<i class="fas fa-fire-flame-curved"></i> <span>${t.riskHigh}</span>`;
-            if (riskChips[3]) riskChips[3].innerHTML = `<i class="fas fa-radiation"></i> <span>${t.riskCrit}</span>`;
+            if (riskChips[0]) riskChips[0].querySelector('span').textContent = t.riskLow;
+            if (riskChips[1]) riskChips[1].querySelector('span').textContent = t.riskMed;
+            if (riskChips[2]) riskChips[2].querySelector('span').textContent = t.riskHigh;
+            if (riskChips[3]) riskChips[3].querySelector('span').textContent = t.riskCrit;
 
-            // Target Date
-            const targetDateLabel = document.querySelector('.target-date-card label span');
-            if (targetDateLabel) targetDateLabel.textContent = t.targetDateLabel;
+            const targetDateCardLabel = document.querySelector('.target-date-card label[for="expectedDateInput"] span');
+            if (targetDateCardLabel) targetDateCardLabel.textContent = t.targetDateCardTitle;
+            const targetDateBadge = document.querySelector('.target-date-card span[style*="background: #d1fae5"]');
+            if (targetDateBadge) targetDateBadge.innerHTML = `<i class="fas fa-bolt text-emerald-600"></i>${t.targetDateBadge}`;
+
             const datePills = document.querySelectorAll('.date-preset-btn');
-            if (datePills[0]) datePills[0].textContent = t.datePillToday;
-            if (datePills[1]) datePills[1].textContent = t.datePill24h;
-            if (datePills[2]) datePills[2].textContent = t.datePill3d;
-            if (datePills[3]) datePills[3].textContent = t.datePillWeek;
+            datePills.forEach(pill => {
+                const p = pill.dataset.preset;
+                if (p === 'today') pill.textContent = t.datePillToday;
+                else if (p === '24h') pill.textContent = t.datePill24h;
+                else if (p === 'week') pill.textContent = t.datePillWeek;
+                else if (p === 'month') pill.textContent = t.datePillMonth;
+            });
+            const targetDateHelper = document.querySelector('.target-date-card > span[style*="margin-top: 5px"]');
+            if (targetDateHelper) targetDateHelper.innerHTML = `<i class="fas fa-info-circle ml-1"></i>${t.targetDateHelper}`;
 
-            // Status Cards
+            // Section 4 Elements
+            const statusCardLabel = document.querySelector('.section-theme-4 .form-group:nth-of-type(1) label');
+            if (statusCardLabel) statusCardLabel.innerHTML = `<i class="fas fa-circle-notch text-blue-600"></i> ${t.statusCardTitle} <span class="required">*</span>`;
+            const statusBadge = document.querySelector('.section-theme-4 .form-group:nth-of-type(1) span[style*="color: #2563eb"]');
+            if (statusBadge) statusBadge.innerHTML = `<i class="fas fa-sliders ml-1"></i>${t.statusBadge}`;
+
             const statusCards = document.querySelectorAll('.status-card');
-            if (statusCards[0]) statusCards[0].innerHTML = `<i class="fas fa-circle-exclamation"></i> <span>${t.statusOpen}</span>`;
-            if (statusCards[1]) statusCards[1].innerHTML = `<i class="fas fa-clock-rotate-left"></i> <span>${t.statusInProgress}</span>`;
-            if (statusCards[2]) statusCards[2].innerHTML = `<i class="fas fa-circle-check"></i> <span>${t.statusClosed}</span>`;
+            if (statusCards[0]) statusCards[0].querySelector('span').textContent = t.statusOpen;
+            if (statusCards[1]) statusCards[1].querySelector('span').textContent = t.statusInProgress;
+            if (statusCards[2]) statusCards[2].querySelector('span').textContent = t.statusClosed;
 
-            // Photos Card
             const photoCardLabel = document.querySelector('.photo-upload-card label span');
-            if (photoCardLabel) photoCardLabel.textContent = t.photosLabel;
+            if (photoCardLabel) photoCardLabel.textContent = t.photoCardTitle;
+            const photoBadge = document.querySelector('.photo-upload-card span[style*="background: #fae8ff"]');
+            if (photoBadge) photoBadge.innerHTML = `<i class="fas fa-layer-group text-purple-600"></i>${t.photoBadge}`;
+            const photoZoneTitle = document.querySelector('#photoUploadArea > div:nth-of-type(1)');
+            if (photoZoneTitle) photoZoneTitle.innerHTML = `${t.photoUploadZoneTitle} <span style="color: #ef4444;">*</span>`;
+            const photoZoneSub = document.querySelector('#photoUploadArea > div:nth-of-type(2)');
+            if (photoZoneSub) photoZoneSub.textContent = t.photoUploadZoneSub;
+
             const photoActionBtns = document.querySelectorAll('.btn-action-photo span');
             if (photoActionBtns[0]) photoActionBtns[0].textContent = t.btnCamera;
             if (photoActionBtns[1]) photoActionBtns[1].textContent = t.btnGallery;
             const addMoreSpan = document.querySelector('#addMorePhotosBtn span');
             if (addMoreSpan) addMoreSpan.textContent = t.btnAddPhoto;
 
-            // Reporter Card
-            const repLabel = document.querySelector('#reporterInfoFields label[for="ownerSelect"] span');
-            if (repLabel) repLabel.textContent = t.reporterLabel;
+            const repCardLabel = document.querySelector('#reporterInfoFields label[for="ownerSelect"] span');
+            if (repCardLabel) repCardLabel.textContent = t.reporterCardTitle;
+            const repBadge = document.querySelector('#reporterInfoFields span[style*="background: #fef3c7"]');
+            if (repBadge) repBadge.innerHTML = `<i class="fas fa-id-badge text-amber-600"></i>${t.reporterBadge}`;
+            const ownerSelect = document.getElementById('ownerSelect');
+            if (ownerSelect && ownerSelect.options.length > 0) {
+                ownerSelect.options[0].textContent = t.reporterPlaceholder;
+            }
+
             const customOwnerLabel = document.querySelector('#customOwnerGroup label');
             if (customOwnerLabel) customOwnerLabel.innerHTML = `${t.customOwnerLabel} <span class="required">*</span>:`;
             const customOwnerInp = document.getElementById('customOwnerInput');
             if (customOwnerInp) customOwnerInp.placeholder = t.customOwnerPlaceholder;
+
             const remSpan = document.querySelector('.form-check-profile span span');
             if (remSpan) remSpan.textContent = t.rememberProfile;
+            const autoSaveSpan = document.querySelector('.form-check-profile span[style*="background: #fef3c7"]');
+            if (autoSaveSpan) autoSaveSpan.textContent = t.autoSaveBadge;
 
             // Submit Button
             const submitBtn = document.getElementById('submitBtn');
@@ -3200,10 +3438,42 @@
             const footComp = document.querySelector('.footer-company span');
             if (footComp) footComp.textContent = t.companyFooter;
 
+            // Modals
+            const markupTitle = document.querySelector('#markupModal span[style*="font-weight: 700"]');
+            if (markupTitle) markupTitle.innerHTML = `<i class="fas fa-paintbrush text-amber-400 ml-2"></i>${t.markupModalTitle}`;
+            const toolCirc = document.getElementById('toolCircleBtn');
+            if (toolCirc) toolCirc.innerHTML = `<i class="fas fa-circle-notch"></i> ${t.toolCircle}`;
+            const toolArr = document.getElementById('toolArrowBtn');
+            if (toolArr) toolArr.innerHTML = `<i class="fas fa-arrow-left"></i> ${t.toolArrow}`;
+            const toolPen = document.getElementById('toolPenBtn');
+            if (toolPen) toolPen.innerHTML = `<i class="fas fa-pen"></i> ${t.toolPen}`;
+            const toolUndo = document.querySelector('#markupModal button[onclick*="undoMarkup()"]');
+            if (toolUndo) toolUndo.innerHTML = `<i class="fas fa-undo"></i> ${t.toolUndo}`;
+            const toolClr = document.querySelector('#markupModal button[onclick*="clearMarkup()"]');
+            if (toolClr) toolClr.innerHTML = `<i class="fas fa-rotate-left"></i> ${t.toolClear}`;
+            const modalCancelBtn = document.querySelector('#markupModal button[onclick*="closeMarkupModal()"]');
+            if (modalCancelBtn) modalCancelBtn.textContent = t.modalCancel;
+            const modalSaveBtn = document.querySelector('#markupModal button[onclick*="saveMarkupAndApply()"]');
+            if (modalSaveBtn) modalSaveBtn.innerHTML = `<i class="fas fa-check ml-1"></i> ${t.modalSave}`;
+
+            const qrTitle = document.querySelector('#qrScannerModal span[style*="font-weight: 700"]');
+            if (qrTitle) qrTitle.innerHTML = `<i class="fas fa-qrcode text-blue-400 ml-2"></i>${t.qrModalTitle}`;
+            const qrGuide = document.querySelector('#qrScannerModal div[style*="font-size: 0.8rem"] > div:nth-of-type(1)');
+            if (qrGuide) qrGuide.textContent = t.qrGuideText;
+            const qrFile = document.querySelector('#qrScannerModal button[onclick*="triggerQrFileInput()"]');
+            if (qrFile) qrFile.innerHTML = `<i class="fas fa-image"></i> ${t.qrFileBtn}`;
+
             // Update hub links href with ?lang=
             document.querySelectorAll('a[href*="forms-hub.html"]').forEach(a => {
                 a.href = `forms-hub.html${lang === 'en' ? '?lang=en' : ''}`;
             });
+
+            // Re-render subcategories for current type so placeholder/options are fresh
+            try {
+                if (typeof renderSubCategories === 'function' && typeof selectedObservationType !== 'undefined') {
+                    renderSubCategories(selectedObservationType);
+                }
+            } catch(e) {}
 
             try {
                 localStorage.setItem('HSE_PORTAL_LANG', lang);
@@ -3405,8 +3675,9 @@
             const customGroup = document.getElementById('customSubCategoryGroup');
             if (!subSelect) return;
 
+            const t = PUBLIC_OBS_I18N[currentLang] || PUBLIC_OBS_I18N.ar;
             customGroup.style.display = 'none';
-            subSelect.innerHTML = '<option value="">— اختر التصنيف الفرعي المحدد —</option>';
+            subSelect.innerHTML = `<option value="">${t.subCategoryPlaceholder || '— اختر التصنيف الفرعي المحدد —'}</option>`;
 
             const list = SUB_CATEGORIES_MAP[obsType] || SUB_CATEGORIES_MAP['سلوك غير آمن'] || [];
             list.forEach(item => {
@@ -3418,7 +3689,7 @@
 
             const otherOpt = document.createElement('option');
             otherOpt.value = '__OTHER_SUB__';
-            otherOpt.textContent = '➕ تصنيف فرعي آخر (إدخال يدوي)...';
+            otherOpt.textContent = currentLang === 'en' ? '➕ Other Sub-Category (Manual Entry)...' : '➕ تصنيف فرعي آخر (إدخال يدوي)...';
             subSelect.appendChild(otherOpt);
 
             if (subSelect.options.length > 1) {
@@ -6178,7 +6449,11 @@
             const queue = getOfflineQueue();
             if (queue.length > 0) {
                 badge.style.display = 'flex';
-                if (countText) countText.textContent = `لديك (${queue.length}) ملاحظة معلقة قيد المزامنة مع السجل العام`;
+                if (countText) {
+                    countText.textContent = currentLang === 'en' 
+                        ? `You have (${queue.length}) offline observation(s) pending sync`
+                        : `لديك (${queue.length}) ملاحظة معلقة قيد المزامنة مع السجل العام`;
+                }
             } else {
                 badge.style.display = 'none';
             }
