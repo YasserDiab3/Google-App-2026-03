@@ -726,6 +726,151 @@
             cursor: pointer;
         }
 
+        /* Live Visitors Widget & Modal */
+        .live-visitors-widget {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 58, 138, 0.85));
+            border: 1.5px solid rgba(59, 130, 246, 0.35);
+            border-radius: 16px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            transition: all 0.22s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .live-visitors-widget:hover {
+            transform: translateY(-2px);
+            border-color: #3b82f6;
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+        }
+        .live-visitors-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .live-visitors-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .pulse-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-green 1.8s infinite;
+            flex-shrink: 0;
+        }
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .live-visitors-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.3;
+        }
+        .live-visitors-subtitle {
+            font-size: 11px;
+            color: #93c5fd;
+            font-weight: 600;
+        }
+        .live-visitors-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 900;
+            flex-shrink: 0;
+        }
+        html[dir="ltr"] .live-visitors-content { flex-direction: row; }
+        html[dir="ltr"] .live-visitors-left { flex-direction: row; text-align: left; }
+
+        /* Modal for Live Visitors */
+        .live-visitors-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 150;
+            padding: 16px;
+            align-items: center;
+            justify-content: center;
+        }
+        .live-visitors-dialog {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass-hover);
+            border-radius: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 640px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            color: var(--text-main);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            animation: zoomIn 0.22s ease;
+        }
+        @keyframes zoomIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .live-dialog-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-glass);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .live-dialog-title {
+            font-size: 16px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .live-dialog-body {
+            overflow-y: auto;
+            flex: 1;
+            padding-right: 4px;
+        }
+        .visitor-hub-row {
+            background: var(--bg-card-hover);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 12px;
+        }
+        .visitor-hub-row-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .visitor-hub-badge {
+            background: #1e40af;
+            color: #ffffff;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 800;
+            font-size: 11px;
+        }
+
         /* Footer */
         .hub-footer {
             text-align: center;
@@ -785,6 +930,24 @@
             <p class="hero-desc">
                 اختر النموذج المطلوب لبدء التسجيل المباشر بدون تسجيل دخول. يعمل بكفاءة تامة أثناء الاتصال أو بدون إنترنت.
             </p>
+        </div>
+
+        <!-- شريط المتابعة الحية للزوار والمقاولين المتواجدين بالمصنع -->
+        <div id="liveVisitorsWidget" class="live-visitors-widget" onclick="openLiveVisitorsModal()">
+            <div class="live-visitors-content">
+                <div class="live-visitors-left">
+                    <div class="pulse-indicator"></div>
+                    <div>
+                        <div class="live-visitors-title" id="liveVisitorsWidgetTitle">الزوار والمقاولون المتواجدون بالمصنع حالياً</div>
+                        <div class="live-visitors-subtitle" id="liveVisitorsWidgetSubtitle">متابعة حية من بوابات الأمن وحصر التواجد الميداني للطوارئ</div>
+                    </div>
+                </div>
+                <div class="live-visitors-badge" id="liveVisitorsCountBadge">
+                    <i class="fas fa-users-viewfinder"></i>
+                    <span id="liveVisitorsCountNum">0</span>
+                    <span id="liveVisitorsCountLabel">زائر</span>
+                </div>
+            </div>
         </div>
 
         <!-- Search Bar -->
@@ -904,6 +1067,33 @@
 
     </main>
 
+    <!-- Live Onsite Visitors Modal -->
+    <div id="liveVisitorsModal" class="live-visitors-modal" onclick="closeLiveVisitorsModal(event)">
+        <div class="live-visitors-dialog" onclick="event.stopPropagation()">
+            <div class="live-dialog-header">
+                <div class="live-dialog-title">
+                    <i class="fas fa-users-viewfinder text-blue-500"></i>
+                    <span id="liveModalTitle">كشف الزوار والمقاولين المتواجدين بالمصنع حالياً</span>
+                </div>
+                <button type="button" class="theme-toggle-btn" style="width: 32px; height: 32px;" onclick="document.getElementById('liveVisitorsModal').style.display='none'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="live-dialog-body" id="liveVisitorsModalBody">
+                <!-- سيتم تعبئتها ديناميكياً -->
+            </div>
+
+            <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+                <span id="liveModalFooterText" style="font-size: 11px; color: var(--text-muted);">محدث لحظياً من بوابات الأمن وحراسة المصنع</span>
+                <button type="button" class="install-btn" style="padding: 6px 12px; font-size: 11px;" onclick="printEmergencyVisitorsList()">
+                    <i class="fas fa-print"></i>
+                    <span id="btnPrintMuster">طباعة كشف حصر الطوارئ</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- iOS Guide Modal -->
     <div id="iosGuideModal" class="ios-guide-modal" onclick="closeIosGuide(event)">
         <div class="ios-guide-sheet" onclick="event.stopPropagation()">
@@ -966,6 +1156,15 @@
                 c4_b2: 'شهري',
                 c4_title: 'فحص طفايات ومعدات الحريق',
                 c4_desc: 'الفحص الميداني الشهري لجاهزية معدات وأجهزة مكافحة الحريق',
+                // Live Visitors
+                liveWidgetTitle: 'الزوار والمقاولون المتواجدون بالمصنع حالياً',
+                liveWidgetSubtitle: 'متابعة حية من بوابات الأمن وحصر التواجد الميداني للطوارئ',
+                liveCountLabel: 'زائر',
+                liveModalTitle: 'كشف الزوار والمقاولين المتواجدين بالمصنع حالياً',
+                liveModalFooterText: 'محدث لحظياً من بوابات الأمن وحراسة المصنع',
+                btnPrintMuster: 'طباعة كشف حصر الطوارئ',
+                noVisitorsOnsite: 'لا يوجد زوار أو مقاولين متواجدين داخل المصنع حالياً 👍',
+                timeElapsedPrefix: 'بالداخل منذ:',
                 // Offline bar
                 syncBtn: 'مزامنة الآن',
                 syncing: 'جاري المزامنة...',
@@ -1014,6 +1213,15 @@
                 c4_b2: 'Monthly',
                 c4_title: 'Fire Equipment & Extinguishers',
                 c4_desc: 'Monthly field inspection of fire extinguishers & firefighting readiness',
+                // Live Visitors
+                liveWidgetTitle: 'Active Visitors & Contractors Onsite',
+                liveWidgetSubtitle: 'Live Gate Security Tracking & Emergency Muster Roster',
+                liveCountLabel: 'Visitors',
+                liveModalTitle: 'Active Onsite Visitors & Contractors List',
+                liveModalFooterText: 'Updated live from plant gate security stations',
+                btnPrintMuster: 'Print Emergency Muster List',
+                noVisitorsOnsite: 'No active visitors currently inside the facility 👍',
+                timeElapsedPrefix: 'Time on site:',
                 // Offline bar
                 syncBtn: 'Sync Now',
                 syncing: 'Syncing...',
@@ -1059,6 +1267,20 @@
             if (ht) ht.textContent = t.heroTitle;
             const hd = document.querySelector('.hero-desc');
             if (hd) hd.textContent = t.heroDesc;
+
+            // Live Visitors Widget
+            const lwt = document.getElementById('liveVisitorsWidgetTitle');
+            if (lwt) lwt.textContent = t.liveWidgetTitle;
+            const lws = document.getElementById('liveVisitorsWidgetSubtitle');
+            if (lws) lws.textContent = t.liveWidgetSubtitle;
+            const lcl = document.getElementById('liveVisitorsCountLabel');
+            if (lcl) lcl.textContent = t.liveCountLabel;
+            const lmt = document.getElementById('liveModalTitle');
+            if (lmt) lmt.textContent = t.liveModalTitle;
+            const lmf = document.getElementById('liveModalFooterText');
+            if (lmf) lmf.textContent = t.liveModalFooterText;
+            const bpm = document.getElementById('btnPrintMuster');
+            if (bpm) bpm.textContent = t.btnPrintMuster;
 
             // Search
             const searchInp = document.getElementById('formSearchInput');
@@ -1135,6 +1357,80 @@
                 localStorage.setItem('HSE_PORTAL_LANG', lang);
                 localStorage.setItem('language', lang);
             } catch(e) {}
+
+            updateLiveVisitorsCount();
+        }
+
+        // Live Visitors Monitor Logic
+        function getActiveVisitorsList() {
+            try {
+                const raw = localStorage.getItem('HSE_GATE_VISITORS_REGISTRY');
+                const list = raw ? JSON.parse(raw) : [];
+                const todayStr = new Date().toISOString().split('T')[0];
+                return list.filter(v => v.entryDate === todayStr && !v.exitTime);
+            } catch(e) {
+                return [];
+            }
+        }
+
+        function updateLiveVisitorsCount() {
+            const active = getActiveVisitorsList();
+            const countNum = document.getElementById('liveVisitorsCountNum');
+            if (countNum) countNum.textContent = active.length;
+        }
+
+        function openLiveVisitorsModal() {
+            const modal = document.getElementById('liveVisitorsModal');
+            const body = document.getElementById('liveVisitorsModalBody');
+            if (!modal || !body) return;
+
+            const active = getActiveVisitorsList();
+            const t = HUB_I18N[currentLang] || HUB_I18N.ar;
+
+            if (active.length === 0) {
+                body.innerHTML = `
+                    <div style="text-align: center; padding: 30px 12px; color: var(--text-muted); font-weight:700;">
+                        <i class="fas fa-user-shield" style="font-size: 2.2rem; color: #10b981; margin-bottom: 8px; display:block;"></i>
+                        <div>${t.noVisitorsOnsite}</div>
+                    </div>
+                `;
+            } else {
+                const nowTs = Date.now();
+                body.innerHTML = active.map(v => {
+                    const elapsedMin = Math.round((nowTs - v.entryTimestamp) / 60000);
+                    const hours = Math.floor(elapsedMin / 60);
+                    const mins = elapsedMin % 60;
+                    const elapsedStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+
+                    return `
+                        <div class="visitor-hub-row">
+                            <div class="visitor-hub-row-top">
+                                <div>
+                                    <strong style="font-size: 13.5px;">${v.name}</strong>
+                                    <span style="color: #2563eb; font-weight:700; margin-right:6px;">(${v.org})</span>
+                                </div>
+                                <span class="visitor-hub-badge">🏷️ ${v.badge}</span>
+                            </div>
+                            <div style="color: var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+                                <span><i class="fas fa-location-dot text-amber-500"></i> ${v.site} — ${v.area}</span>
+                                <span><i class="fas fa-user-tie text-blue-500"></i> ${v.host}</span>
+                                <span><i class="fas fa-clock text-emerald-500"></i> ${t.timeElapsedPrefix} ${elapsedStr} (${v.entryTime})</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closeLiveVisitorsModal(event) {
+            const modal = document.getElementById('liveVisitorsModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function printEmergencyVisitorsList() {
+            window.print();
         }
 
         function toggleLanguage() {

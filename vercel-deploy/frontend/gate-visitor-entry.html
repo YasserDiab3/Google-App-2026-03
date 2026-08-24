@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SafetyHub | نظام تسجيل وتتبع الزوار والمقاولين</title>
+    
+    <!-- PWA & Theme Meta -->
+    <meta name="theme-color" content="#1e40af" id="metaThemeColor">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest-visitor.json">
+    <link rel="icon" type="image/png" href="icons/icapp-logo.png">
+    
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-base: #f8fafc;
+            --bg-base-gradient: radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.05) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(30, 64, 175, 0.05) 0px, transparent 50%);
+            --header-bg: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-subtle: #f1f5f9;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #dbeafe;
+            --accent-security: #0f172a;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --border-glass: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 14px rgba(0,0,0,0.08);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.12);
+            --radius-md: 10px;
+            --radius-lg: 14px;
+        }
+
+        [data-theme="dark"] {
+            --bg-base: #090e1a;
+            --bg-base-gradient: radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.4) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.8) 0px, transparent 50%);
+            --header-bg: #0f172a;
+            --bg-card: #131d33;
+            --bg-card-subtle: #1e293b;
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --primary-light: rgba(59, 130, 246, 0.2);
+            --accent-security: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --border-glass: rgba(255,255,255,0.1);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 14px rgba(0,0,0,0.35);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: var(--bg-base-gradient);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 10px 40px;
+        }
+
+        /* LTR Overrides */
+        html[dir="ltr"] body {
+            direction: ltr;
+            text-align: left;
+        }
+        html[dir="ltr"] .form-section,
+        html[dir="ltr"] .section-header,
+        html[dir="ltr"] .section-desc,
+        html[dir="ltr"] .form-group,
+        html[dir="ltr"] .receipt-card,
+        html[dir="ltr"] .receipt-row,
+        html[dir="ltr"] .iso-col-title,
+        html[dir="ltr"] .visitor-card,
+        html[dir="ltr"] .gate-badge {
+            text-align: left;
+        }
+        html[dir="ltr"] .iso-col-brand {
+            border-left: none;
+            border-right: 1.5px solid var(--border-glass);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 840px;
+        }
+
+        /* ISO Header */
+        .iso-header-table {
+            position: sticky;
+            top: 8px;
+            z-index: 100;
+            display: grid;
+            grid-template-columns: minmax(190px, 1.15fr) 2fr minmax(85px, 0.6fr);
+            background: var(--header-bg);
+            border: 2px solid #bfdbfe;
+            border-top: 5px solid #1e40af;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .iso-col-brand {
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 3px;
+            border-left: 1.5px solid #dbeafe;
+            background: linear-gradient(180deg, rgba(37,99,235,0.03) 0%, rgba(37,99,235,0.08) 100%);
+        }
+
+        .iso-company-name {
+            font-size: 0.72rem;
+            font-weight: 900;
+            color: #1e3a8a;
+            line-height: 1.25;
+        }
+
+        .iso-dept-name {
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: #0369a1;
+            line-height: 1.2;
+        }
+
+        .iso-col-title {
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .iso-doc-title {
+            font-size: 1.05rem;
+            font-weight: 900;
+            color: var(--text-main);
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+
+        .iso-doc-subtitle {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .iso-col-logo {
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--header-bg);
+        }
+
+        .iso-logo-wrap {
+            max-width: 68px;
+            max-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .iso-logo-img {
+            max-height: 42px;
+            max-width: 68px;
+            object-fit: contain;
+        }
+
+        /* Top Action Buttons: Theme & Lang */
+        .top-tools-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .gate-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 5px 12px;
+            border-radius: 9999px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .tools-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tool-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 5px 12px;
+            border-radius: 9999px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tool-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Mode Tabs Navigation */
+        .tabs-nav {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tab-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 10px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 800;
+            border: 1.5px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #1e40af, #2563eb);
+            color: #ffffff;
+            border-color: #1d4ed8;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+        }
+
+        .tab-counter-badge {
+            background: rgba(255, 255, 255, 0.25);
+            color: inherit;
+            padding: 2px 7px;
+            border-radius: 9999px;
+            font-size: 0.72rem;
+            font-weight: 900;
+        }
+        .tab-btn:not(.active) .tab-counter-badge {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        /* Form Card & Sections */
+        .form-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 18px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 16px;
+        }
+
+        .form-section {
+            border-radius: 12px;
+            padding: 14px 14px 16px;
+            margin-bottom: 14px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+        }
+
+        .sec-theme-blue { border-right: 4px solid #2563eb; }
+        .sec-theme-orange { border-right: 4px solid #ea580c; }
+        .sec-theme-emerald { border-right: 4px solid #059669; }
+
+        html[dir="ltr"] .sec-theme-blue { border-right: 1px solid var(--border-color); border-left: 4px solid #2563eb; }
+        html[dir="ltr"] .sec-theme-orange { border-right: 1px solid var(--border-color); border-left: 4px solid #ea580c; }
+        html[dir="ltr"] .sec-theme-emerald { border-right: 1px solid var(--border-color); border-left: 4px solid #059669; }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .section-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #1e40af;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 900;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .section-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            margin-right: 32px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .iso-header-table {
+                grid-template-columns: 1.2fr 1.6fr 60px;
+            }
+            .iso-company-name { font-size: 0.65rem; }
+            .iso-doc-title { font-size: 0.9rem; }
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: var(--text-main);
+        }
+        .form-label .req { color: #dc2626; font-weight: 900; }
+
+        .form-control, .form-select {
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: 8px;
+            border: 1.5px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-main);
+            font-size: 0.88rem;
+            font-weight: 600;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        /* HSE Checklist Card */
+        .hse-checklist {
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 8px;
+        }
+        [data-theme="dark"] .hse-checklist {
+            background: #0f172a;
+            border-color: #334155;
+        }
+
+        .hse-rule-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+        .hse-rule-item i { color: #059669; margin-top: 3px; }
+
+        /* Signature Canvas */
+        .signature-box {
+            border: 1.5px dashed var(--border-color);
+            border-radius: 10px;
+            background: #ffffff;
+            overflow: hidden;
+            position: relative;
+            margin-top: 8px;
+        }
+        [data-theme="dark"] .signature-box {
+            background: #0f172a;
+        }
+        .sig-canvas {
+            width: 100%;
+            height: 110px;
+            touch-action: none;
+            cursor: crosshair;
+            display: block;
+        }
+        .sig-tools {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 10px;
+            background: var(--bg-card-subtle);
+            border-top: 1px solid var(--border-glass);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+        .btn-clear-sig {
+            background: none;
+            border: none;
+            color: #dc2626;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* Submit Button */
+        .btn-submit-gate {
+            width: 100%;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 20px;
+            font-size: 1.05rem;
+            font-weight: 900;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+            transition: all 0.2s ease;
+            margin-top: 12px;
+        }
+        .btn-submit-gate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55);
+        }
+        .btn-submit-gate:active { transform: scale(0.98); }
+
+        /* Tab 2: Active Visitors List UI */
+        .active-visitors-container {
+            display: none;
+        }
+
+        .active-summary-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .stat-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            padding: 10px 8px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+        }
+        .stat-num {
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1.1;
+        }
+        .stat-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .visitor-card {
+            background: var(--bg-card);
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .visitor-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .visitor-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-glass);
+            padding-bottom: 8px;
+        }
+
+        .visitor-badge-code {
+            background: #1e3a8a;
+            color: #ffffff;
+            font-size: 0.75rem;
+            font-weight: 900;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .visitor-name {
+            font-size: 0.95rem;
+            font-weight: 900;
+            color: var(--text-main);
+        }
+        .visitor-org {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #2563eb;
+        }
+
+        .visitor-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            font-size: 0.78rem;
+        }
+
+        .visitor-info-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-muted);
+        }
+        .visitor-info-item strong {
+            color: var(--text-main);
+        }
+
+        .visitor-card-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 4px;
+            padding-top: 6px;
+            border-top: 1px dashed var(--border-glass);
+        }
+
+        .time-badge {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #059669;
+            background: #d1fae5;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+        .time-badge.overstay {
+            color: #dc2626;
+            background: #fee2e2;
+            animation: pulse 1.5s infinite;
+        }
+
+        .btn-checkout {
+            background: #dc2626;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+        }
+        .btn-checkout:hover {
+            background: #b91c1c;
+            transform: scale(1.02);
+        }
+
+        /* Success & Receipt Screen */
+        .success-receipt-screen {
+            display: none;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 24px 16px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 16px;
+        }
+
+        .receipt-card {
+            background: var(--bg-card-subtle);
+            border: 1.5px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 14px;
+            margin: 16px 0;
+            text-align: right;
+        }
+
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border-glass);
+            font-size: 0.85rem;
+        }
+        .receipt-row:last-child { border-bottom: none; }
+
+        /* Footer */
+        .iso-footer {
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 20px;
+            line-height: 1.5;
+        }
+
+        /* Toast Message */
+        .toast-msg {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0f172a;
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="toastMsg" class="toast-msg"></div>
+
+    <div class="container">
+        <!-- ترويسة ISO المعتمدة الخاصة بأمن البوابات (بدون أي روابط خارجية) -->
+        <div class="iso-header-table">
+            <div class="iso-col-brand">
+                <div class="iso-company-name">الشركة العالمية للانتاج والتصنيع الزراعي</div>
+                <div class="iso-dept-name">إدارة الأمن الصناعي وحراسة البوابات</div>
+            </div>
+
+            <div class="iso-col-title">
+                <h1 class="iso-doc-title" id="isoDocTitle">نظام تسجيل وتتبع الزوار والمقاولين</h1>
+                <div class="iso-doc-subtitle" id="isoDocSubtitle">
+                    <i class="fas fa-shield-halved text-blue-600"></i>
+                    <span>Gate Security Visitor & Contractor Control</span>
+                </div>
+            </div>
+
+            <div class="iso-col-logo">
+                <div class="iso-logo-wrap">
+                    <img id="isoLogoImg" src="icons/icapp-logo.png" alt="شعار الشركة" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
+                </div>
+            </div>
+        </div>
+
+        <!-- شريط أدوات البوابة وتبديل الثيم واللغة -->
+        <div class="top-tools-bar">
+            <div class="gate-badge">
+                <i class="fas fa-dungeon text-amber-400"></i>
+                <span id="gateBadgeText">بوابة الدخول الرئيسية (Main Gate Security)</span>
+            </div>
+
+            <div class="tools-actions">
+                <button type="button" class="tool-btn" onclick="toggleTheme()" title="تبديل الثيم">
+                    <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
+                <button type="button" class="tool-btn" onclick="toggleLanguage()" title="Switch Language / تبديل اللغة">
+                    <i class="fas fa-globe"></i>
+                    <span id="langBtnText">EN</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- تبويبات التنقل السريعة بين تسجيل الدخول وقائمة المتواجدين -->
+        <div class="tabs-nav">
+            <button type="button" id="tabCheckInBtn" class="tab-btn active" onclick="switchTab('checkin')">
+                <i class="fas fa-user-plus"></i>
+                <span id="tabCheckInText">تسجيل دخول جديد</span>
+            </button>
+            <button type="button" id="tabActiveBtn" class="tab-btn" onclick="switchTab('active')">
+                <i class="fas fa-users-viewfinder"></i>
+                <span id="tabActiveText">الزوار المتواجدون بالمصنع</span>
+                <span id="activeCountBadge" class="tab-counter-badge">0</span>
+            </button>
+        </div>
+
+        <!-- 1. شاشة تسجيل الدخول الجديد -->
+        <div id="checkInTabContainer">
+            <form id="visitorForm" class="form-card">
+                <!-- القسم 1: بيانات الزائر والجهة -->
+                <div class="form-section sec-theme-blue">
+                    <div class="section-header">
+                        <div class="section-badge">1</div>
+                        <div class="section-title" id="sec1Title">بيانات الزائر وجهة العمل</div>
+                    </div>
+                    <div class="section-desc" id="sec1Desc">توثيق الهوية الشخصية ورقم الهاتف والجهة التابع لها الزائر</div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="visitorName">
+                                <i class="fas fa-user text-blue-600"></i>
+                                <span id="lblVisitorName">الاسم ثلاثي</span>
+                                <span class="req">*</span>
+                            </label>
+                            <input type="text" id="visitorName" class="form-control" placeholder="اكتب اسم الزائر بالكامل..." required autocomplete="off">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="visitorOrg">
+                                <i class="fas fa-building text-blue-600"></i>
+                                <span id="lblVisitorOrg">الجهة / الشركة التابع لها</span>
+                                <span class="req">*</span>
+                            </label>
+                            <input type="text" id="visitorOrg" class="form-control" placeholder="اسم الشركة أو جهة العمل أو مقاول..." required autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="visitorId">
+                                <i class="fas fa-id-card text-blue-600"></i>
+                                <span id="lblVisitorId">الرقم القومي / جواز السفر</span>
+                                <span class="req">*</span>
+                            </label>
+                            <input type="text" id="visitorId" class="form-control" placeholder="14 رقم قومي أو رقم الجواز..." required autocomplete="off">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="visitorPhone">
+                                <i class="fas fa-phone text-blue-600"></i>
+                                <span id="lblVisitorPhone">رقم الهاتف المحمول</span>
+                                <span class="req">*</span>
+                            </label>
+                            <input type="tel" id="visitorPhone" class="form-control" placeholder="01XXXXXXXXX" required autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="visitorVehicle">
+                            <i class="fas fa-car text-slate-500"></i>
+                            <span id="lblVisitorVehicle">رقم لوحة السيارة (اختياري في حال دخول مركبة)</span>
+                        </label>
+                        <input type="text" id="visitorVehicle" class="form-control" placeholder="مثال: أ ب ج 1234">
+                    </div>
+                </div>
+
+                <!-- القسم 2: المصنع والمكان المستهدف والمستضيف -->
+                <div class="form-section sec-theme-orange">
+                    <div class="section-header">
+                        <div class="section-badge">2</div>
+                        <div class="section-title" id="sec2Title">المصنع والمكان المستهدف والمستضيف</div>
+                    </div>
+                    <div class="section-desc" id="sec2Desc">تحديد المصنع والصالة الدقيقة والشخص المسؤول لتتبع التواجد الميداني</div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="targetSite">
+                                <i class="fas fa-industry text-amber-600"></i>
+                                <span id="lblTargetSite">المصنع المستهدف</span>
+                                <span class="req">*</span>
+                            </label>
+                            <select id="targetSite" class="form-select" required onchange="handleGateSiteChange(this.value)">
+                                <option value="">— اختر المصنع —</option>
+                                <option value="ICAPP-1">ICAPP-1</option>
+                                <option value="ICAPP-2">ICAPP-2</option>
+                                <option value="ICAPP-3">ICAPP-3</option>
+                                <option value="ICAPP-4">ICAPP-4</option>
+                                <option value="WH">المخازن العامة (WH)</option>
+                                <option value="المبنى الإداري">المبنى الإداري الرئيسي</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="targetArea">
+                                <i class="fas fa-location-dot text-rose-600"></i>
+                                <span id="lblTargetArea">المكان / الصالة / العنبر المستهدف</span>
+                                <span class="req">*</span>
+                            </label>
+                            <select id="targetArea" class="form-select" required>
+                                <option value="">— اختر المصنع أولاً —</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="hostPerson">
+                                <i class="fas fa-user-tie text-emerald-600"></i>
+                                <span id="lblHostPerson">اسم الشخص المستضيف / الإدارة</span>
+                                <span class="req">*</span>
+                            </label>
+                            <input type="text" id="hostPerson" class="form-control" placeholder="اسم الموظف أو المهندس المستضيف..." required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="visitPurpose">
+                                <i class="fas fa-clipboard-list text-purple-600"></i>
+                                <span id="lblVisitPurpose">نوع وغرض الزيارة</span>
+                                <span class="req">*</span>
+                            </label>
+                            <select id="visitPurpose" class="form-select" required>
+                                <option value="صيانة ومقاول تنفيذ أعمال">🛠️ صيانة ومقاول تنفيذ أعمال</option>
+                                <option value="مراجعة وتدقيق جودة / عميل">🔍 مراجعة وتدقيق جودة / عميل</option>
+                                <option value="توريد وتفريغ خامات">📦 توريد وتفريغ خامات</option>
+                                <option value="مقابلة عمل وتوظيف">👔 مقابلة عمل وتوظيف</option>
+                                <option value="زيارة عمل واجتماع رسمي" selected>🤝 زيارة عمل واجتماع رسمي</option>
+                                <option value="أخرى">📋 أخرى</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- القسم 3: رقم الكارت وإقرار السلامة والتوقيع -->
+                <div class="form-section sec-theme-emerald">
+                    <div class="section-header">
+                        <div class="section-badge">3</div>
+                        <div class="section-title" id="sec3Title">رقم كارت الزائر وإقرار السلامة</div>
+                    </div>
+                    <div class="section-desc" id="sec3Desc">تسليم شارة الدخول وتوثيق التوقيع على تعليمات السلامة الإلزامية</div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="badgeNumber">
+                            <i class="fas fa-id-badge text-emerald-600"></i>
+                            <span id="lblBadgeNumber">رقم كارت / شارة الزائر الممنوحة له</span>
+                            <span class="req">*</span>
+                        </label>
+                        <input type="text" id="badgeNumber" class="form-control" placeholder="مثال: VIS-105" required style="font-weight: 800; color: #1e40af;">
+                    </div>
+
+                    <!-- إقرار السلامة وسلامة الغذاء المعتمد -->
+                    <div class="hse-checklist">
+                        <div style="font-weight: 800; font-size: 0.82rem; color: #047857; margin-bottom: 6px;" id="hseBriefTitle">
+                            🛡️ تعليمات السلامة والصحة المهنية وسلامة الغذاء الإلزامية:
+                        </div>
+                        <div class="hse-rule-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span id="hseRule1">الالتزام بمهمات الوقاية الشخصية المقررة (حذاء أمان، سترة عاكسة، غطاء رأس في صالات الإنتاج).</span>
+                        </div>
+                        <div class="hse-rule-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span id="hseRule2">حظر التدخين تماماً إلا في الأماكن المخصصة المصرح بها.</span>
+                        </div>
+                        <div class="hse-rule-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span id="hseRule3">حظر التصوير داخل المنشأة دون تصريح رسمي مسبق.</span>
+                        </div>
+                        <div class="hse-rule-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span id="hseRule4">البقاء في المكان المصرح به فقط وعدم التحرك الفردي داخل خطوط الإنتاج دون مرافق.</span>
+                        </div>
+                    </div>
+
+                    <!-- التوقيع الرقمي باللمس -->
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label class="form-label">
+                            <i class="fas fa-signature text-blue-600"></i>
+                            <span id="lblSignature">توقيع الزائر الرقمي (إقرار السلامة)</span>
+                            <span class="req">*</span>
+                        </label>
+                        <div class="signature-box">
+                            <canvas id="sigCanvas" class="sig-canvas"></canvas>
+                            <div class="sig-tools">
+                                <span id="sigPrompt">✍️ وقّع باللمس هنا لتأكيد الإقرار</span>
+                                <button type="button" class="btn-clear-sig" onclick="clearSignature()" id="btnClearSig">مسح التوقيع</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnSubmitGate" class="btn-submit-gate">
+                    <i class="fas fa-shield-check"></i>
+                    <span id="btnSubmitText">تسجيل الدخول وإصدار تصريح الزيارة 🛡️</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- شاشة تأكيد النجاح والإيصال الرقمي -->
+        <div id="successReceiptScreen" class="success-receipt-screen">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: #dcfce7; color: #16a34a; font-size: 2rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                <i class="fas fa-check"></i>
+            </div>
+            <h2 style="font-size: 1.25rem; font-weight: 900; color: var(--text-main); margin-bottom: 4px;" id="succTitle">تم تسجيل دخول الزائر بنجاح!</h2>
+            <p style="font-size: 0.82rem; color: var(--text-muted);" id="succSubtitle">تم توثيق الزيارة وحفظها بسجل المتواجدين الفعلي بالمصنع.</p>
+
+            <div class="receipt-card" id="receiptSummaryContent"></div>
+
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <button type="button" class="btn-submit-gate" style="margin-top: 0; padding: 10px 20px; font-size: 0.9rem;" onclick="resetCheckInForm()">
+                    <i class="fas fa-plus"></i>
+                    <span id="btnNextVisitor">تسجيل زائر جديد</span>
+                </button>
+                <button type="button" class="tool-btn" style="padding: 10px 18px; font-size: 0.85rem;" onclick="switchTab('active')">
+                    <i class="fas fa-users-viewfinder"></i>
+                    <span id="btnGoActive">عرض قائمة المتواجدين</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. شاشة الزوار المتواجدين وتسجيل الخروج -->
+        <div id="activeTabContainer" class="active-visitors-container">
+            <div class="active-summary-stats">
+                <div class="stat-box">
+                    <div class="stat-num" id="statActiveCount">0</div>
+                    <div class="stat-label" id="lblStatActive">متواجدون حالياً بالمصنع</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-num" id="statTodayTotal" style="color: #059669;">0</div>
+                    <div class="stat-label" id="lblStatTotal">إجمالي زيارات اليوم</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-num" id="statExitedTotal" style="color: #64748b;">0</div>
+                    <div class="stat-label" id="lblStatExited">تم تسجيل خروجهم</div>
+                </div>
+            </div>
+
+            <!-- شريط البحث والتصفية السريعة -->
+            <div class="form-group" style="position: relative; margin-bottom: 12px;">
+                <input type="text" id="visitorSearchInput" class="form-control" placeholder="🔍 بحث سريع باسم الزائر، الشركة، الكارت، أو المصنع..." oninput="filterActiveVisitors(this.value)" style="padding-left: 36px;">
+            </div>
+
+            <!-- قائمة كروت الزوار النشطين -->
+            <div id="activeVisitorsList">
+                <!-- سيتم تعبئتها ديناميكياً -->
+            </div>
+        </div>
+
+        <!-- الفوتر والتوثيق المعتمد -->
+        <div class="iso-footer">
+            <div>كود الوثيقة: <strong>DOC-SEC-VIS-01</strong> | الإصدار: <strong>Rev. 02</strong> | تاريخ الاعتماد: <strong>2026-08</strong></div>
+            <div>SafetyHub Gate Security System | ICAPP © 2026 جميع الحقوق محفوظة</div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // Full Bilingual Translation Dictionary (i18n)
+        // ==========================================
+        const GATE_I18N = {
+            ar: {
+                dir: 'rtl',
+                langBtn: 'EN',
+                pageTitle: 'SafetyHub | نظام تسجيل وتتبع الزوار والمقاولين',
+                docTitle: 'نظام تسجيل وتتبع الزوار والمقاولين',
+                docSubtitle: 'Gate Security Visitor & Contractor Control',
+                gateBadge: 'بوابة الدخول الرئيسية (Main Gate Security)',
+                tabCheckIn: 'تسجيل دخول جديد',
+                tabActive: 'الزوار المتواجدون بالمصنع',
+                sec1Title: 'بيانات الزائر وجهة العمل',
+                sec1Desc: 'توثيق الهوية الشخصية ورقم الهاتف والجهة التابع لها الزائر',
+                lblVisitorName: 'الاسم ثلاثي',
+                lblVisitorOrg: 'الجهة / الشركة التابع لها',
+                lblVisitorId: 'الرقم القومي / جواز السفر',
+                lblVisitorPhone: 'رقم الهاتف المحمول',
+                lblVisitorVehicle: 'رقم لوحة السيارة (اختياري في حال دخول مركبة)',
+                sec2Title: 'المصنع والمكان المستهدف والمستضيف',
+                sec2Desc: 'تحديد المصنع والصالة الدقيقة والشخص المسؤول لتتبع التواجد الميداني',
+                lblTargetSite: 'المصنع المستهدف',
+                lblTargetArea: 'المكان / الصالة / العنبر المستهدف',
+                lblHostPerson: 'اسم الشخص المستضيف / الإدارة',
+                lblVisitPurpose: 'نوع وغرض الزيارة',
+                sec3Title: 'رقم كارت الزائر وإقرار السلامة',
+                sec3Desc: 'تسليم شارة الدخول وتوثيق التوقيع على تعليمات السلامة الإلزامية',
+                lblBadgeNumber: 'رقم كارت / شارة الزائر الممنوحة له',
+                lblSignature: 'توقيع الزائر الرقمي (إقرار السلامة)',
+                sigPrompt: '✍️ وقّع باللمس هنا لتأكيد الإقرار',
+                btnClearSig: 'مسح التوقيع',
+                btnSubmitText: 'تسجيل الدخول وإصدار تصريح الزيارة 🛡️',
+                succTitle: 'تم تسجيل دخول الزائر بنجاح!',
+                succSubtitle: 'تم توثيق الزيارة وحفظها بسجل المتواجدين الفعلي بالمصنع.',
+                btnNextVisitor: 'تسجيل زائر جديد',
+                btnGoActive: 'عرض قائمة المتواجدين',
+                lblStatActive: 'متواجدون حالياً بالمصنع',
+                lblStatTotal: 'إجمالي زيارات اليوم',
+                lblStatExited: 'تم تسجيل خروجهم',
+                searchPlaceholder: '🔍 بحث سريع باسم الزائر، الشركة، الكارت، أو المصنع...',
+                noActiveVisitors: 'لا يوجد زوار متواجدون داخل المصنع حالياً 👍',
+                btnCheckOut: 'تسجيل خروج 🚪',
+                confirmCheckOut: 'هل أنت متأكد من تسجيل خروج هذا الزائر واستلام الكارت؟',
+                checkOutSuccess: 'تم تسجيل خروج الزائر بنجاح وتحديث السجل.',
+                valName: 'يرجى إدخال اسم الزائر ثلاثي',
+                valOrg: 'يرجى إدخال جهة العمل أو الشركة',
+                valId: 'يرجى إدخال الرقم القومي أو الجواز',
+                valPhone: 'يرجى إدخال رقم الهاتف',
+                valSite: 'يرجى اختيار المصنع المستهدف',
+                valArea: 'يرجى اختيار المكان المستهدف',
+                valHost: 'يرجى كتابة اسم المستضيف',
+                valBadge: 'يرجى إدخال رقم كارت الزائر',
+                valSignature: 'يرجى توقيع الزائر في خانة الإقرار الرقمي'
+            },
+            en: {
+                dir: 'ltr',
+                langBtn: 'AR',
+                pageTitle: 'SafetyHub | Gate Security Visitor & Contractor Control',
+                docTitle: 'Gate Security Visitor & Contractor Control',
+                docSubtitle: 'Gate Security Visitor & Contractor Control',
+                gateBadge: 'Main Gate Security Station',
+                tabCheckIn: 'New Check-In',
+                tabActive: 'Active Onsite Visitors',
+                sec1Title: 'Visitor & Organization Information',
+                sec1Desc: 'Document visitor identity, phone number, and employer company',
+                lblVisitorName: 'Full Name',
+                lblVisitorOrg: 'Company / Organization',
+                lblVisitorId: 'National ID / Passport #',
+                lblVisitorPhone: 'Mobile Phone #',
+                lblVisitorVehicle: 'Vehicle Plate # (Optional for vehicle entry)',
+                sec2Title: 'Target Destination & Host Details',
+                sec2Desc: 'Specify target factory, exact hall/area, and host person for accurate tracking',
+                lblTargetSite: 'Target Factory / Facility',
+                lblTargetArea: 'Target Area / Production Hall',
+                lblHostPerson: 'Host Employee / Department',
+                lblVisitPurpose: 'Visit Purpose & Type',
+                sec3Title: 'Visitor Badge & Safety Briefing',
+                sec3Desc: 'Assign security badge number and verify HSE & hygiene induction signature',
+                lblBadgeNumber: 'Assigned Visitor Badge / Card #',
+                lblSignature: 'Digital Signature (Safety Briefing Confirmation)',
+                sigPrompt: '✍️ Touch / Sign here to confirm briefing',
+                btnClearSig: 'Clear Signature',
+                btnSubmitText: 'Complete Check-In & Issue Pass 🛡️',
+                succTitle: 'Visitor Checked In Successfully!',
+                succSubtitle: 'Logged in the live plant register and badge active.',
+                btnNextVisitor: 'New Visitor Check-In',
+                btnGoActive: 'View Active Onsite List',
+                lblStatActive: 'Currently Inside Plant',
+                lblStatTotal: 'Total Visits Today',
+                lblStatExited: 'Checked Out',
+                searchPlaceholder: '🔍 Search by name, company, badge #, or facility...',
+                noActiveVisitors: 'No active visitors currently inside the facility 👍',
+                btnCheckOut: 'Check-Out 🚪',
+                confirmCheckOut: 'Confirm visitor check-out and badge return?',
+                checkOutSuccess: 'Visitor checked out successfully.',
+                valName: 'Please enter visitor full name',
+                valOrg: 'Please enter visitor company / organization',
+                valId: 'Please enter National ID or Passport',
+                valPhone: 'Please enter mobile phone number',
+                valSite: 'Please select target factory',
+                valArea: 'Please select target specific area',
+                valHost: 'Please enter host employee name',
+                valBadge: 'Please enter assigned badge number',
+                valSignature: 'Please sign in the digital signature box'
+            }
+        };
+
+        let currentLang = 'ar';
+        let currentTheme = 'light';
+
+        const SITES_PLACES_DATA = {
+            'ICAPP-1': [
+                'صالة تصنيع الفاكهة (1)', 'صالة تصنيع الفاكهة (2)', 'صالة الفراولة بالسكر',
+                'صالة التعبئة الآلي', 'صالة التعبئة اليدوي', 'صالة التجهيز (1)',
+                'صالة البيوريه', 'مشروع التجفيد الجديد', 'ممر الثلاجات', 'ورشة الصيانة الميكانيكية',
+                'ورشة الحركة والرافعات', 'محطة ضواغط التبريد (أمونيا)', 'غرف المحولات والكهرباء',
+                'مكاتب الإدارة والمختبرات'
+            ],
+            'ICAPP-2': [
+                'صالة الخضار (1)', 'صالة الخضار (2)', 'عنبر التجميد السريع IQF',
+                'صالة التعبئة والتغليف', 'رصيف استلام الخامات', 'محطة معالجة المياه والصرف',
+                'المخازن العامة وقطع الغيار', 'ورشة الصيانة والكهرباء', 'مكاتب إدارة الجودة'
+            ],
+            'ICAPP-3': [
+                'خط البطاطس نصف مقلية', 'صالة التجهيز والفرز', 'نفق التجميد الحلزوني',
+                'ثلاجات التخزين النهائي', 'غرفة الغلايات البخارية', 'مكاتب المهندسين'
+            ],
+            'ICAPP-4': [
+                'مشروع التوسعات الجديد', 'عنبر التخزين المبرد 401', 'عنبر التخزين المبرد 402',
+                'محطة الطلمبات الرئيسية', 'منطقة تجميع المخلفات'
+            ],
+            'WH': [
+                'مخزن المواد الخام', 'مخزن مواد التعبئة والكرتون', 'مخزن قطع الغيار',
+                'مخزن الكيماويات والمنظفات', 'رصيف الشحن والتصدير'
+            ],
+            'المبنى الإداري': [
+                'إدارة السلامة والصحة المهنية', 'إدارة الموارد البشرية', 'إدارة الجودة والتوكيد',
+                'الإدارة المالية والحسابات', 'قاعة الاجتماعات الرئيسية', 'المطعم والكافتيريا'
+            ]
+        };
+
+        function applyLanguage(lang) {
+            currentLang = lang;
+            const t = GATE_I18N[lang] || GATE_I18N.ar;
+            document.documentElement.lang = lang;
+            document.documentElement.dir = t.dir;
+            document.title = t.pageTitle;
+
+            const langBtn = document.getElementById('langBtnText');
+            if (langBtn) langBtn.textContent = t.langBtn;
+
+            const docTitle = document.getElementById('isoDocTitle');
+            if (docTitle) docTitle.textContent = t.docTitle;
+            const docSubtitle = document.querySelector('#isoDocSubtitle span');
+            if (docSubtitle) docSubtitle.textContent = t.docSubtitle;
+
+            const gateBadge = document.getElementById('gateBadgeText');
+            if (gateBadge) gateBadge.textContent = t.gateBadge;
+
+            const tabCheckIn = document.getElementById('tabCheckInText');
+            if (tabCheckIn) tabCheckIn.textContent = t.tabCheckIn;
+            const tabActive = document.getElementById('tabActiveText');
+            if (tabActive) tabActive.textContent = t.tabActive;
+
+            const sec1T = document.getElementById('sec1Title');
+            if (sec1T) sec1T.textContent = t.sec1Title;
+            const sec1D = document.getElementById('sec1Desc');
+            if (sec1D) sec1D.textContent = t.sec1Desc;
+
+            const lblName = document.getElementById('lblVisitorName');
+            if (lblName) lblName.textContent = t.lblVisitorName;
+            const lblOrg = document.getElementById('lblVisitorOrg');
+            if (lblOrg) lblOrg.textContent = t.lblVisitorOrg;
+            const lblId = document.getElementById('lblVisitorId');
+            if (lblId) lblId.textContent = t.lblVisitorId;
+            const lblPhone = document.getElementById('lblVisitorPhone');
+            if (lblPhone) lblPhone.textContent = t.lblVisitorPhone;
+            const lblVeh = document.getElementById('lblVisitorVehicle');
+            if (lblVeh) lblVeh.textContent = t.lblVisitorVehicle;
+
+            const sec2T = document.getElementById('sec2Title');
+            if (sec2T) sec2T.textContent = t.sec2Title;
+            const sec2D = document.getElementById('sec2Desc');
+            if (sec2D) sec2D.textContent = t.sec2Desc;
+
+            const lblSite = document.getElementById('lblTargetSite');
+            if (lblSite) lblSite.textContent = t.lblTargetSite;
+            const lblArea = document.getElementById('lblTargetArea');
+            if (lblArea) lblArea.textContent = t.lblTargetArea;
+            const lblHost = document.getElementById('lblHostPerson');
+            if (lblHost) lblHost.textContent = t.lblHostPerson;
+            const lblPurp = document.getElementById('lblVisitPurpose');
+            if (lblPurp) lblPurp.textContent = t.lblVisitPurpose;
+
+            const sec3T = document.getElementById('sec3Title');
+            if (sec3T) sec3T.textContent = t.sec3Title;
+            const sec3D = document.getElementById('sec3Desc');
+            if (sec3D) sec3D.textContent = t.sec3Desc;
+
+            const lblBadge = document.getElementById('lblBadgeNumber');
+            if (lblBadge) lblBadge.textContent = t.lblBadgeNumber;
+            const lblSig = document.getElementById('lblSignature');
+            if (lblSig) lblSig.textContent = t.lblSignature;
+            const sigPrompt = document.getElementById('sigPrompt');
+            if (sigPrompt) sigPrompt.textContent = t.sigPrompt;
+            const btnClear = document.getElementById('btnClearSig');
+            if (btnClear) btnClear.textContent = t.btnClearSig;
+
+            const btnSubmit = document.getElementById('btnSubmitText');
+            if (btnSubmit) btnSubmit.textContent = t.btnSubmitText;
+
+            const succT = document.getElementById('succTitle');
+            if (succT) succT.textContent = t.succTitle;
+            const succS = document.getElementById('succSubtitle');
+            if (succS) succS.textContent = t.succSubtitle;
+            const btnNext = document.getElementById('btnNextVisitor');
+            if (btnNext) btnNext.textContent = t.btnNextVisitor;
+            const btnGoAct = document.getElementById('btnGoActive');
+            if (btnGoAct) btnGoAct.textContent = t.btnGoActive;
+
+            const lblStAct = document.getElementById('lblStatActive');
+            if (lblStAct) lblStAct.textContent = t.lblStatActive;
+            const lblStTot = document.getElementById('lblStatTotal');
+            if (lblStTot) lblStTot.textContent = t.lblStatTotal;
+            const lblStExit = document.getElementById('lblStatExited');
+            if (lblStExit) lblStExit.textContent = t.lblStatExited;
+
+            const searchInp = document.getElementById('visitorSearchInput');
+            if (searchInp) searchInp.placeholder = t.searchPlaceholder;
+
+            renderActiveVisitorsList();
+        }
+
+        function toggleLanguage() {
+            const next = currentLang === 'ar' ? 'en' : 'ar';
+            applyLanguage(next);
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const nextTheme = isDark ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', nextTheme);
+            const icon = document.getElementById('themeIcon');
+            if (icon) icon.className = nextTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            try { localStorage.setItem('HSE_GATE_THEME', nextTheme); } catch(e) {}
+        }
+
+        function switchTab(tab) {
+            const checkInBtn = document.getElementById('tabCheckInBtn');
+            const activeBtn = document.getElementById('tabActiveBtn');
+            const checkInContainer = document.getElementById('checkInTabContainer');
+            const activeContainer = document.getElementById('activeTabContainer');
+            const successScreen = document.getElementById('successReceiptScreen');
+
+            if (tab === 'checkin') {
+                checkInBtn.classList.add('active');
+                activeBtn.classList.remove('active');
+                checkInContainer.style.display = 'block';
+                activeContainer.style.display = 'none';
+                if (successScreen) successScreen.style.display = 'none';
+            } else {
+                checkInBtn.classList.remove('active');
+                activeBtn.classList.add('active');
+                checkInContainer.style.display = 'none';
+                activeContainer.style.display = 'block';
+                if (successScreen) successScreen.style.display = 'none';
+                renderActiveVisitorsList();
+            }
+        }
+
+        function handleGateSiteChange(siteName) {
+            const areaSelect = document.getElementById('targetArea');
+            if (!areaSelect) return;
+
+            if (!siteName) {
+                areaSelect.innerHTML = `<option value="">${currentLang === 'en' ? '— Select Factory First —' : '— اختر المصنع أولاً —'}</option>`;
+                return;
+            }
+
+            const places = SITES_PLACES_DATA[siteName] || [];
+            areaSelect.innerHTML = `<option value="">${currentLang === 'en' ? '— Select Specific Hall / Area —' : '— اختر الصالة أو المكان المستهدف —'}</option>`;
+            
+            places.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                areaSelect.appendChild(opt);
+            });
+
+            const otherOpt = document.createElement('option');
+            otherOpt.value = '__OTHER__';
+            otherOpt.textContent = currentLang === 'en' ? '➕ Other Place (Manual)...' : '➕ مكان آخر (إدخال يدوي)...';
+            areaSelect.appendChild(otherOpt);
+        }
+
+        // ==========================================
+        // Signature Canvas Logic
+        // ==========================================
+        let canvas, ctx;
+        let isDrawing = false;
+        let hasSignature = false;
+
+        function initSignaturePad() {
+            canvas = document.getElementById('sigCanvas');
+            if (!canvas) return;
+            ctx = canvas.getContext('2d');
+            
+            function resize() {
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = 110;
+                ctx.lineWidth = 2.5;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#1e40af';
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            function getPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            }
+
+            canvas.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                const p = getPos(e);
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+            });
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDrawing) return;
+                const p = getPos(e);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+                hasSignature = true;
+            });
+            window.addEventListener('mouseup', () => { isDrawing = false; });
+
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                isDrawing = true;
+                const p = getPos(e);
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+            }, { passive: false });
+            canvas.addEventListener('touchmove', (e) => {
+                if (!isDrawing) return;
+                e.preventDefault();
+                const p = getPos(e);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+                hasSignature = true;
+            }, { passive: false });
+            window.addEventListener('touchend', () => { isDrawing = false; });
+        }
+
+        function clearSignature() {
+            if (canvas && ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                hasSignature = false;
+            }
+        }
+
+        // ==========================================
+        // LocalStorage Registry & Active List Management
+        // ==========================================
+        const STORAGE_KEY = 'HSE_GATE_VISITORS_REGISTRY';
+
+        function getVisitorsRegistry() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch(e) {
+                return [];
+            }
+        }
+
+        function saveVisitorsRegistry(data) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            } catch(e) {}
+            updateStatsBadges();
+        }
+
+        function updateStatsBadges() {
+            const list = getVisitorsRegistry();
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayList = list.filter(v => v.entryDate === todayStr);
+
+            const active = todayList.filter(v => !v.exitTime);
+            const exited = todayList.filter(v => !!v.exitTime);
+
+            const countBadge = document.getElementById('activeCountBadge');
+            if (countBadge) countBadge.textContent = active.length;
+
+            const statAct = document.getElementById('statActiveCount');
+            if (statAct) statAct.textContent = active.length;
+
+            const statTot = document.getElementById('statTodayTotal');
+            if (statTot) statTot.textContent = todayList.length;
+
+            const statExt = document.getElementById('statExitedTotal');
+            if (statExt) statExt.textContent = exited.length;
+        }
+
+        function showToast(msg, type = 'info', duration = 3000) {
+            const toast = document.getElementById('toastMsg');
+            if (!toast) return;
+            toast.textContent = msg;
+            toast.style.display = 'flex';
+            toast.style.background = type === 'error' ? '#dc2626' : (type === 'success' ? '#16a34a' : '#0f172a');
+            setTimeout(() => { toast.style.display = 'none'; }, duration);
+        }
+
+        // Check-In Form Submission
+        document.getElementById('visitorForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const t = GATE_I18N[currentLang] || GATE_I18N.ar;
+
+            const name = document.getElementById('visitorName').value.trim();
+            const org = document.getElementById('visitorOrg').value.trim();
+            const idNumber = document.getElementById('visitorId').value.trim();
+            const phone = document.getElementById('visitorPhone').value.trim();
+            const vehicle = document.getElementById('visitorVehicle').value.trim();
+            const site = document.getElementById('targetSite').value;
+            const area = document.getElementById('targetArea').value;
+            const host = document.getElementById('hostPerson').value.trim();
+            const purpose = document.getElementById('visitPurpose').value;
+            const badge = document.getElementById('badgeNumber').value.trim();
+
+            if (!name) { showToast(t.valName, 'error'); return; }
+            if (!org) { showToast(t.valOrg, 'error'); return; }
+            if (!idNumber) { showToast(t.valId, 'error'); return; }
+            if (!phone) { showToast(t.valPhone, 'error'); return; }
+            if (!site) { showToast(t.valSite, 'error'); return; }
+            if (!area) { showToast(t.valArea, 'error'); return; }
+            if (!host) { showToast(t.valHost, 'error'); return; }
+            if (!badge) { showToast(t.valBadge, 'error'); return; }
+            if (!hasSignature) { showToast(t.valSignature, 'error'); return; }
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = now.toISOString().split('T')[0];
+            const sigData = canvas ? canvas.toDataURL('image/png') : '';
+
+            const visitorRecord = {
+                id: 'VIS-' + Date.now().toString().slice(-6),
+                name,
+                org,
+                idNumber,
+                phone,
+                vehicle: vehicle || (currentLang === 'en' ? 'None' : 'بدون'),
+                site,
+                area: area === '__OTHER__' ? 'أخرى (يدوي)' : area,
+                host,
+                purpose,
+                badge,
+                entryDate: dateStr,
+                entryTime: timeStr,
+                entryTimestamp: now.getTime(),
+                exitTime: null,
+                exitTimestamp: null,
+                signature: sigData
+            };
+
+            const registry = getVisitorsRegistry();
+            registry.unshift(visitorRecord);
+            saveVisitorsRegistry(registry);
+
+            // Show Success Receipt
+            showReceiptScreen(visitorRecord);
+            showToast(t.succTitle, 'success', 3500);
+        });
+
+        function showReceiptScreen(rec) {
+            document.getElementById('checkInTabContainer').style.display = 'none';
+            const screen = document.getElementById('successReceiptScreen');
+            const summary = document.getElementById('receiptSummaryContent');
+            if (!screen || !summary) return;
+
+            summary.innerHTML = `
+                <div class="receipt-row">
+                    <span style="color: var(--text-muted); font-weight:700;">رقم كارت الزائر:</span>
+                    <strong style="color: #1e40af; font-size:1.1rem;">🏷️ ${rec.badge}</strong>
+                </div>
+                <div class="receipt-row">
+                    <span style="color: var(--text-muted); font-weight:700;">اسم الزائر:</span>
+                    <strong>${rec.name}</strong>
+                </div>
+                <div class="receipt-row">
+                    <span style="color: var(--text-muted); font-weight:700;">الجهة / الشركة:</span>
+                    <strong>${rec.org}</strong>
+                </div>
+                <div class="receipt-row">
+                    <span style="color: var(--text-muted); font-weight:700;">المصنع والمكان المستهدف:</span>
+                    <strong>${rec.site} — ${rec.area}</strong>
+                </div>
+                <div class="receipt-row">
+                    <span style="color: var(--text-muted); font-weight:700;">المستضيف:</span>
+                    <strong>${rec.host}</strong>
+                </div>
+                <div class="receipt-row">
+                    <span style="color: var(--text-muted); font-weight:700;">وقت الدخول المعتمد:</span>
+                    <strong>⏱️ ${rec.entryTime} (${rec.entryDate})</strong>
+                </div>
+            `;
+            screen.style.display = 'block';
+        }
+
+        function resetCheckInForm() {
+            document.getElementById('visitorForm').reset();
+            clearSignature();
+            document.getElementById('successReceiptScreen').style.display = 'none';
+            document.getElementById('checkInTabContainer').style.display = 'block';
+        }
+
+        function renderActiveVisitorsList(query = '') {
+            const container = document.getElementById('activeVisitorsList');
+            if (!container) return;
+
+            const t = GATE_I18N[currentLang] || GATE_I18N.ar;
+            const list = getVisitorsRegistry();
+            const todayStr = new Date().toISOString().split('T')[0];
+            let active = list.filter(v => v.entryDate === todayStr && !v.exitTime);
+
+            if (query && query.trim().length > 0) {
+                const q = query.trim().toLowerCase();
+                active = active.filter(v => 
+                    v.name.toLowerCase().includes(q) || 
+                    v.org.toLowerCase().includes(q) || 
+                    v.badge.toLowerCase().includes(q) || 
+                    v.site.toLowerCase().includes(q) ||
+                    v.host.toLowerCase().includes(q)
+                );
+            }
+
+            if (active.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding: 36px 12px; color: var(--text-muted); font-weight:700;">
+                        <i class="fas fa-user-check" style="font-size: 2.5rem; color: #10b981; margin-bottom: 10px; display:block;"></i>
+                        <div>${t.noActiveVisitors}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const nowTs = Date.now();
+
+            container.innerHTML = active.map(v => {
+                const elapsedMin = Math.round((nowTs - v.entryTimestamp) / 60000);
+                const hours = Math.floor(elapsedMin / 60);
+                const mins = elapsedMin % 60;
+                const timeElapsedText = hours > 0 ? `${hours} س و ${mins} د` : `${mins} دقيقة`;
+                const isOverstay = hours >= 4;
+
+                return `
+                    <div class="visitor-card">
+                        <div class="visitor-card-header">
+                            <div>
+                                <div class="visitor-name">${v.name}</div>
+                                <div class="visitor-org"><i class="fas fa-building"></i> ${v.org}</div>
+                            </div>
+                            <div class="visitor-badge-code">
+                                <i class="fas fa-id-badge"></i>
+                                <span>${v.badge}</span>
+                            </div>
+                        </div>
+
+                        <div class="visitor-info-grid">
+                            <div class="visitor-info-item">
+                                <i class="fas fa-industry text-slate-400"></i>
+                                <span><strong>${v.site}</strong> — ${v.area}</span>
+                            </div>
+                            <div class="visitor-info-item">
+                                <i class="fas fa-user-tie text-slate-400"></i>
+                                <span>المستضيف: <strong>${v.host}</strong></span>
+                            </div>
+                            <div class="visitor-info-item">
+                                <i class="fas fa-clock text-slate-400"></i>
+                                <span>دخول: <strong>${v.entryTime}</strong></span>
+                            </div>
+                            <div class="visitor-info-item">
+                                <i class="fas fa-phone text-slate-400"></i>
+                                <span><a href="tel:${v.phone}" style="color:inherit; text-decoration:none;">${v.phone}</a></span>
+                            </div>
+                        </div>
+
+                        <div class="visitor-card-actions">
+                            <span class="time-badge ${isOverstay ? 'overstay' : ''}">
+                                <i class="fas fa-stopwatch"></i> بالداخل منذ: ${timeElapsedText}
+                            </span>
+                            <button type="button" class="btn-checkout" onclick="executeCheckOut('${v.id}')">
+                                <i class="fas fa-door-open"></i>
+                                <span>${t.btnCheckOut}</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterActiveVisitors(val) {
+            renderActiveVisitorsList(val);
+        }
+
+        function executeCheckOut(id) {
+            const t = GATE_I18N[currentLang] || GATE_I18N.ar;
+            if (!confirm(t.confirmCheckOut)) return;
+
+            const registry = getVisitorsRegistry();
+            const index = registry.findIndex(v => v.id === id);
+            if (index !== -1) {
+                const now = new Date();
+                registry[index].exitTime = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                registry[index].exitTimestamp = now.getTime();
+                saveVisitorsRegistry(registry);
+                renderActiveVisitorsList(document.getElementById('visitorSearchInput')?.value || '');
+                showToast(t.checkOutSuccess, 'success');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initSignaturePad();
+            try {
+                const savedTheme = localStorage.getItem('HSE_GATE_THEME') || 'light';
+                if (savedTheme === 'dark') toggleTheme();
+            } catch(e) {}
+            applyLanguage('ar');
+            updateStatsBadges();
+        });
+    </script>
+</body>
+</html>

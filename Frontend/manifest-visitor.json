@@ -1,0 +1,24 @@
+{
+  "name": "SafetyHub Gate Security | ICAPP",
+  "short_name": "Gate Security",
+  "description": "نظام تسجيل وتتبع الزوار والمقاولين عند بوابات الأمن - ICAPP",
+  "start_url": "./gate-visitor-entry.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e40af",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icapp-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icapp-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

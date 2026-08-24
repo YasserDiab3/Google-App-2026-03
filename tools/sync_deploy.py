@@ -44,11 +44,13 @@ def sync_directories():
         'public-near-miss.html',
         'public-fire-inspection.html',
         'public-daily-safety.html',
+        'gate-visitor-entry.html',
         'manifest-hub.json',
         'manifest-observation.json',
         'manifest-near-miss.json',
         'manifest-fire-inspection.json',
-        'manifest-daily-safety.json'
+        'manifest-daily-safety.json',
+        'manifest-visitor.json'
     ]
     for pfile in public_files:
         pub_src = os.path.join(base_dir, 'Frontend', pfile)
