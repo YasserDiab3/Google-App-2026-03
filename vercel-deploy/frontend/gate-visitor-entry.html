@@ -107,42 +107,42 @@
         /* ═════════════════════════════════════════════════�        /* ════════════════════════════════════════════════════
            ترويسة ISO المعتمدة ثلاثية الأعمدة - تصميم احترافي
         ════════════════════════════════════════════════════ */
-        .iso-header-table {
+                .iso-header-table {
             position: sticky;
             top: 6px;
             z-index: 100;
             display: grid;
-            grid-template-columns: auto 1fr auto;
+            grid-template-columns: minmax(62px, 78px) 1fr minmax(82px, 98px);
             width: 100%;
             min-width: 0;
             background: #ffffff;
             border: 1px solid #c7d2e5;
-            border-top: 4px solid #312e81;
-            border-radius: 14px;
+            border-top: 3.5px solid #312e81;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.10), 0 1px 4px rgba(15,23,42,0.05);
-            margin-bottom: 16px;
+            box-shadow: 0 3px 14px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15,23,42,0.04);
+            margin-bottom: 14px;
         }
 
         [data-theme="dark"] .iso-header-table {
             background: #131d33;
             border-color: #334155;
             border-top-color: #4338ca;
-            box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+            box-shadow: 0 3px 14px rgba(0,0,0,0.35);
         }
 
-        /* عمود الشعار */
+        /* عمود الشعار - مدمج ومضغوط لتوفير أكبر مساحة للعنوان */
         .iso-col-brand {
-            padding: 10px 8px;
+            padding: 6px 4px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 4px;
+            gap: 2px;
             border-inline-end: 1px solid #e2e8f0;
             background: linear-gradient(160deg, #f8fafc 0%, #eef2ff 100%);
-            min-width: 80px;
-            max-width: 140px;
+            min-width: 62px;
+            max-width: 78px;
         }
 
         [data-theme="dark"] .iso-col-brand {
@@ -151,16 +151,16 @@
         }
 
         .iso-logo-wrap {
-            width: 72px;
-            height: 44px;
+            width: 54px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #ffffff;
             border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            padding: 3px 5px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border-radius: 6px;
+            padding: 2px 3px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
         [data-theme="dark"] .iso-logo-wrap {
@@ -169,37 +169,37 @@
         }
 
         .iso-logo-img {
-            max-height: 36px;
-            max-width: 62px;
+            max-height: 30px;
+            max-width: 48px;
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
         .iso-dept-name {
-            font-size: 0.6rem;
+            font-size: 0.52rem;
             font-weight: 800;
             color: #312e81;
             text-align: center;
-            line-height: 1.2;
+            line-height: 1.1;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 110px;
+            max-width: 70px;
         }
 
         [data-theme="dark"] .iso-dept-name { color: #818cf8; }
 
-        /* عمود العنوان - المركز */
+        /* عمود العنوان - المركز الواسع والمستقر */
         .iso-col-title {
-            padding: 10px 10px;
+            padding: 6px 8px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
             background: #ffffff;
-            gap: 3px;
+            gap: 2px;
             min-width: 0;
             overflow: hidden;
         }
@@ -207,7 +207,7 @@
         [data-theme="dark"] .iso-col-title { background: #131d33; }
 
         .iso-doc-title {
-            font-size: clamp(0.68rem, 2.3vw, 1.05rem);
+            font-size: clamp(0.72rem, 2.3vw, 1.05rem);
             font-weight: 900;
             color: #1e1b4b;
             margin: 0;
@@ -217,12 +217,13 @@
             text-overflow: ellipsis;
             text-align: center;
             width: 100%;
+            letter-spacing: -0.01em;
         }
 
         [data-theme="dark"] .iso-doc-title { color: #e0e7ff; }
 
         .iso-doc-subtitle {
-            font-size: clamp(0.52rem, 1.6vw, 0.7rem);
+            font-size: clamp(0.5rem, 1.4vw, 0.66rem);
             font-weight: 700;
             color: #4338ca;
             margin-top: 1px;
@@ -237,15 +238,15 @@
 
         /* عمود البيانات الوصفية */
         .iso-col-meta {
-            padding: 8px 10px;
+            padding: 6px 6px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 3px;
+            gap: 2px;
             border-inline-start: 1px solid #e2e8f0;
             background: #f8fafc;
-            min-width: 95px;
-            max-width: 140px;
+            min-width: 82px;
+            max-width: 98px;
         }
 
         [data-theme="dark"] .iso-col-meta {
@@ -257,9 +258,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
             border-bottom: 1px dashed #e2e8f0;
-            padding-bottom: 2px;
+            padding-bottom: 1px;
         }
         .iso-meta-row:last-child { border-bottom: none; padding-bottom: 0; }
 
@@ -268,7 +269,7 @@
         .iso-meta-key {
             font-weight: 700;
             color: #64748b;
-            font-size: 0.6rem;
+            font-size: 0.52rem;
             white-space: nowrap;
         }
 
@@ -278,9 +279,9 @@
             font-family: monospace, inherit;
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            padding: 1px 4px;
-            border-radius: 4px;
-            font-size: 0.6rem;
+            padding: 0 3px;
+            border-radius: 3px;
+            font-size: 0.54rem;
             white-space: nowrap;
         }
 
@@ -292,96 +293,122 @@
         }
 
         /* ═══ ريسبونسف: موبايل صغير ═══ */
-        @media (max-width: 520px) {
+        @media (max-width: 480px) {
             .iso-header-table {
-                grid-template-columns: minmax(60px, auto) 1fr minmax(75px, auto);
+                grid-template-columns: 58px 1fr 78px;
                 border-radius: 10px;
                 margin-bottom: 10px;
                 border-top-width: 3px;
             }
             .iso-col-brand {
-                padding: 6px 4px;
-                gap: 2px;
-                min-width: 60px;
+                padding: 4px 2px;
+                min-width: 58px;
+                max-width: 58px;
             }
             .iso-logo-wrap {
-                width: 50px;
-                height: 34px;
-                border-radius: 6px;
+                width: 48px;
+                height: 32px;
                 padding: 2px;
             }
             .iso-logo-img {
-                max-height: 28px;
-                max-width: 44px;
+                max-height: 26px;
+                max-width: 42px;
             }
             .iso-dept-name {
-                display: none; /* hide on tiny screens to preserve center title width */
+                display: none;
             }
             .iso-col-title {
-                padding: 6px 4px;
-                gap: 1px;
+                padding: 4px 4px;
             }
             .iso-doc-title {
-                font-size: clamp(0.65rem, 2.8vw, 0.82rem);
+                font-size: 0.74rem;
             }
             .iso-doc-subtitle {
-                font-size: 0.52rem;
+                font-size: 0.48rem;
             }
             .iso-col-meta {
-                padding: 6px 4px;
-                gap: 2px;
-                min-width: 75px;
+                padding: 4px 4px;
+                min-width: 78px;
+                max-width: 78px;
             }
-            .iso-meta-key { font-size: 0.48rem; }
-            .iso-meta-val { font-size: 0.52rem; padding: 0 2px; }
+            .iso-meta-key { font-size: 0.46rem; }
+            .iso-meta-val { font-size: 0.5rem; padding: 0 2px; }
         }
 
         /* Top Action Buttons: Theme & Lang */
         .top-tools-bar {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
+            justify-content: flex-end;
+            margin-bottom: 8px;
             gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .gate-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.78rem;
-            font-weight: 800;
-            background: #1e293b;
-            color: #f8fafc;
-            padding: 5px 12px;
-            border-radius: 9999px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
         }
 
         .tools-actions {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
 
-        .tool-btn {
+        /* زر تبديل اللغة الاحترافي */
+        .lang-pill-btn {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            font-size: 11px;
-            font-weight: 800;
-            padding: 5px 12px;
+            gap: 6px;
+            background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+            border: 1.5px solid #2563eb;
+            color: #1e40af;
+            padding: 4px 14px;
             border-radius: 9999px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-card);
-            color: var(--text-main);
+            font-size: 0.8rem;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+            transition: all 0.2s ease;
+            letter-spacing: 0.04em;
+        }
+        .lang-pill-btn:hover {
+            background: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+            transform: translateY(-1px);
+        }
+        [data-theme="dark"] .lang-pill-btn {
+            background: #1e3a8a;
+            border-color: #3b82f6;
+            color: #bfdbfe;
+        }
+        [data-theme="dark"] .lang-pill-btn:hover {
+            background: #2563eb;
+            color: #ffffff;
+        }
+
+        /* زر تبديل الثيم الدائري الأنيق */
+        .theme-toggle-btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #475569;
             cursor: pointer;
             transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            font-size: 0.85rem;
         }
-        .tool-btn:hover {
-            border-color: var(--primary);
-            color: var(--primary);
+        .theme-toggle-btn:hover {
+            border-color: #2563eb;
+            color: #2563eb;
+            transform: scale(1.06);
+        }
+        [data-theme="dark"] .theme-toggle-btn {
+            background: #1e293b;
+            border-color: #334155;
+            color: #fbbf24;
         }
 
         /* Mode Tabs Navigation - Single Line formatting */
@@ -1515,7 +1542,7 @@
                 const GATE_I18N = {
             ar: {
                 dir: 'rtl',
-                langBtn: 'EN',
+                langBtn: 'English',
                 pageTitle: 'SafetyHub | نظام تسجيل الزائرين - المقاولين',
                 docTitle: 'نظام تسجيل الزائرين - المقاولين',
                 docSubtitle: 'Visitor & Contractor Registration System',
@@ -1581,7 +1608,7 @@
             },
             en: {
                 dir: 'ltr',
-                langBtn: 'AR',
+                langBtn: 'العربية',
                 pageTitle: 'SafetyHub | Visitor & Contractor Registration System',
                 docTitle: 'Visitor & Contractor Registration System',
                 docSubtitle: 'Visitor & Contractor Registration System',
