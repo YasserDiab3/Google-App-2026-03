@@ -112,7 +112,7 @@
             top: 6px;
             z-index: 100;
             display: grid;
-            grid-template-columns: minmax(62px, 78px) 1fr minmax(82px, 98px);
+            grid-template-columns: minmax(76px, 96px) 1fr minmax(96px, 120px);
             width: 100%;
             min-width: 0;
             background: #ffffff;
@@ -131,18 +131,18 @@
             box-shadow: 0 3px 14px rgba(0,0,0,0.35);
         }
 
-        /* عمود الشعار - مدمج ومضغوط لتوفير أكبر مساحة للعنوان */
+        /* 1. عمود الشعار - منسق ومتناسب */
         .iso-col-brand {
-            padding: 6px 4px;
+            padding: 6px 8px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2px;
+            gap: 3px;
             border-inline-end: 1px solid #e2e8f0;
             background: linear-gradient(160deg, #f8fafc 0%, #eef2ff 100%);
-            min-width: 62px;
-            max-width: 78px;
+            min-width: 76px;
+            max-width: 96px;
         }
 
         [data-theme="dark"] .iso-col-brand {
@@ -151,15 +151,15 @@
         }
 
         .iso-logo-wrap {
-            width: 54px;
-            height: 36px;
+            width: 60px;
+            height: 38px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #ffffff;
             border: 1px solid #cbd5e1;
             border-radius: 6px;
-            padding: 2px 3px;
+            padding: 2px 4px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
@@ -169,28 +169,28 @@
         }
 
         .iso-logo-img {
-            max-height: 30px;
-            max-width: 48px;
+            max-height: 32px;
+            max-width: 52px;
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
         .iso-dept-name {
-            font-size: 0.52rem;
+            font-size: 0.56rem;
             font-weight: 800;
             color: #312e81;
             text-align: center;
-            line-height: 1.1;
+            line-height: 1.15;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 70px;
+            max-width: 86px;
         }
 
         [data-theme="dark"] .iso-dept-name { color: #818cf8; }
 
-        /* عمود العنوان - المركز الواسع والمستقر */
+        /* 2. عمود العنوان - المركز الواسع والمستقر */
         .iso-col-title {
             padding: 6px 8px;
             display: flex;
@@ -207,7 +207,7 @@
         [data-theme="dark"] .iso-col-title { background: #131d33; }
 
         .iso-doc-title {
-            font-size: clamp(0.72rem, 2.3vw, 1.05rem);
+            font-size: clamp(0.72rem, 2.2vw, 1.05rem);
             font-weight: 900;
             color: #1e1b4b;
             margin: 0;
@@ -236,17 +236,19 @@
 
         [data-theme="dark"] .iso-doc-subtitle { color: #a5b4fc; }
 
-        /* عمود البيانات الوصفية */
+        /* 3. عمود البيانات الوصفية - موسع ومُوسط بالكامل */
         .iso-col-meta {
-            padding: 6px 6px;
+            padding: 6px 8px;
             display: flex;
             flex-direction: column;
+            align-items: center;
             justify-content: center;
-            gap: 2px;
+            text-align: center;
+            gap: 3px;
             border-inline-start: 1px solid #e2e8f0;
             background: #f8fafc;
-            min-width: 82px;
-            max-width: 98px;
+            min-width: 96px;
+            max-width: 120px;
         }
 
         [data-theme="dark"] .iso-col-meta {
@@ -256,11 +258,12 @@
 
         .iso-meta-row {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            gap: 2px;
+            gap: 4px;
+            width: 100%;
             border-bottom: 1px dashed #e2e8f0;
-            padding-bottom: 1px;
+            padding-bottom: 2px;
         }
         .iso-meta-row:last-child { border-bottom: none; padding-bottom: 0; }
 
@@ -269,8 +272,9 @@
         .iso-meta-key {
             font-weight: 700;
             color: #64748b;
-            font-size: 0.52rem;
+            font-size: 0.56rem;
             white-space: nowrap;
+            text-align: center;
         }
 
         .iso-meta-val {
@@ -279,10 +283,11 @@
             font-family: monospace, inherit;
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            padding: 0 3px;
-            border-radius: 3px;
-            font-size: 0.54rem;
+            padding: 1px 4px;
+            border-radius: 4px;
+            font-size: 0.58rem;
             white-space: nowrap;
+            text-align: center;
         }
 
         [data-theme="dark"] .iso-meta-key { color: #94a3b8; }
@@ -292,31 +297,31 @@
             color: #e2e8f0;
         }
 
-        /* ═══ ريسبونسف: موبايل وشاشات صغيرة (ضمان سطر واحد 100%) ═══ */
+        /* ═══ ريسبونسف: موبايل وشاشات صغيرة (تناسق مثالي وسطر واحد 100%) ═══ */
         @media (max-width: 540px) {
             body {
                 padding: 8px 6px 36px;
             }
             .iso-header-table {
-                grid-template-columns: 50px 1fr 70px;
+                grid-template-columns: minmax(58px, 68px) 1fr minmax(78px, 94px);
                 border-radius: 10px;
                 margin-bottom: 10px;
                 border-top-width: 3px;
             }
             .iso-col-brand {
-                padding: 4px 2px;
-                min-width: 50px;
-                max-width: 50px;
+                padding: 4px;
+                min-width: 58px;
+                max-width: 68px;
             }
             .iso-logo-wrap {
-                width: 44px;
-                height: 28px;
+                width: 48px;
+                height: 30px;
                 padding: 1px 2px;
                 border-radius: 5px;
             }
             .iso-logo-img {
-                max-height: 24px;
-                max-width: 38px;
+                max-height: 26px;
+                max-width: 42px;
             }
             .iso-dept-name {
                 display: none !important;
@@ -326,49 +331,58 @@
                 gap: 1px;
             }
             .iso-doc-title {
-                font-size: clamp(0.58rem, 2.6vw, 0.78rem) !important;
+                font-size: clamp(0.58rem, 2.4vw, 0.76rem) !important;
                 white-space: nowrap !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
                 line-height: 1.2 !important;
             }
             .iso-doc-subtitle {
-                font-size: clamp(0.42rem, 1.6vw, 0.52rem) !important;
+                font-size: clamp(0.42rem, 1.5vw, 0.50rem) !important;
                 white-space: nowrap !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
             }
             .iso-col-meta {
                 padding: 3px 4px;
-                min-width: 70px;
-                max-width: 70px;
+                min-width: 78px;
+                max-width: 94px;
                 gap: 1px;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
             }
-            .iso-meta-key { font-size: 0.44rem !important; }
-            .iso-meta-val { font-size: 0.48rem !important; padding: 0 2px !important; }
+            .iso-meta-row {
+                justify-content: center;
+                gap: 3px;
+            }
+            .iso-meta-key { font-size: 0.46rem !important; }
+            .iso-meta-val { font-size: 0.50rem !important; padding: 0 2px !important; }
         }
 
         @media (max-width: 375px) {
             .iso-header-table {
-                grid-template-columns: 44px 1fr 66px;
+                grid-template-columns: 50px 1fr 72px;
             }
             .iso-col-brand {
-                min-width: 44px;
-                max-width: 44px;
+                min-width: 50px;
+                max-width: 50px;
+                padding: 2px;
             }
             .iso-logo-wrap {
-                width: 38px;
-                height: 26px;
+                width: 42px;
+                height: 28px;
             }
             .iso-doc-title {
-                font-size: 0.62rem !important;
+                font-size: 0.60rem !important;
             }
             .iso-col-meta {
-                min-width: 66px;
-                max-width: 66px;
+                min-width: 72px;
+                max-width: 72px;
+                padding: 2px;
             }
             .iso-meta-row:last-child {
-                display: none; /* إخفاء درجة السرية في أصغر شاشات لتوفير مساحة */
+                display: none;
             }
         }
 
