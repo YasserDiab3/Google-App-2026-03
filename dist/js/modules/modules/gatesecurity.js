@@ -1495,6 +1495,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
 
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <input type="text" id="customCoords" value="${t.coords}" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 11px; width: 170px;" oninput="document.getElementById('displayCoords').textContent = '\u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0642\u0639: ' + this.value + ' | DOC-HSE-MAP-01 Rev.02'">
+                        <button onclick="exportBatchCardsFromPrintWindow()" style="padding: 6px 14px; background: #059669; color: #fff; border:none; border-radius:6px; cursor:pointer; font-weight: 900; font-size: 12px; box-shadow: 0 2px 6px rgba(5,150,105,0.25);" title="\u062A\u0635\u062F\u064A\u0631 \u0648\u0637\u0628\u0627\u0639\u0629 \u0645\u062C\u0645\u0648\u0639\u0629 \u0643\u0631\u0648\u062A \u0645\u062A\u062A\u0627\u0644\u064A\u0629 \u062F\u0641\u0639\u0629 \u0648\u0627\u062D\u062F\u0629 \u0643\u0645\u0644\u0641 PDF">\u{1F5C2}\uFE0F \u062A\u0635\u062F\u064A\u0631 \u062F\u0641\u0639\u0629 PDF</button>
                         <button onclick="window.print()" style="padding: 6px 18px; background: #1e40af; color: #fff; border:none; border-radius:6px; cursor:pointer; font-weight: 900; font-size: 12px; box-shadow: 0 2px 6px rgba(30,64,175,0.25);">\u{1F5A8}\uFE0F \u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0643\u0627\u0631\u062A \u0627\u0644\u0622\u0646</button>
                     </div>
                 </div>
@@ -1819,32 +1820,33 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                 </div>
 
                 <script>
-                    function updateVisitorTypeHeader(type) {
+                    window.updateVisitorTypeHeader = function(type) {
                         const headerBanner = document.getElementById('visitorTypeHeaderBanner');
                         const badgeSerialBox = document.getElementById('badgeSerialBox');
                         const typeTitleAr = document.getElementById('visitorTypeTitleAr');
                         const typeTitleEn = document.getElementById('visitorTypeTitleEn');
                         
-                        const config = {
+                        const configMap = {
                             visitor: { bg: '#16a34a', border: '#15803d', textAr: '\u0643\u0627\u0631\u062A \u0632\u0627\u0626\u0631 \u0645\u0639\u062A\u0645\u062F', textEn: 'VISITOR PASS', color: '#047857', badgeBg: '#ecfdf5', badgeBorder: '#a7f3d0' },
                             contractor: { bg: '#ea580c', border: '#c2410c', textAr: '\u062A\u0635\u0631\u064A\u062D \u0645\u0642\u0627\u0648\u0644 / \u0635\u064A\u0627\u0646\u0629', textEn: 'CONTRACTOR PASS', color: '#c2410c', badgeBg: '#fff7ed', badgeBorder: '#ffedd5' },
                             vip: { bg: '#dc2626', border: '#b91c1c', textAr: '\u062A\u0635\u0631\u064A\u062D \u0643\u0628\u0627\u0631 \u0627\u0644\u0632\u0648\u0627\u0631 / \u062A\u0641\u062A\u064A\u0634', textEn: 'VIP / INSPECTOR PASS', color: '#b91c1c', badgeBg: '#fef2f2', badgeBorder: '#fecaca' }
-                        }[type] || { bg: '#16a34a', border: '#15803d', textAr: '\u0643\u0627\u0631\u062A \u0632\u0627\u0626\u0631 \u0645\u0639\u062A\u0645\u062F', textEn: 'VISITOR PASS', color: '#047857', badgeBg: '#ecfdf5', badgeBorder: '#a7f3d0' };
+                        };
+                        const cfg = configMap[type] || configMap.visitor;
 
                         if (headerBanner) {
-                            headerBanner.style.background = config.bg;
-                            headerBanner.style.borderColor = config.border;
+                            headerBanner.style.backgroundColor = cfg.bg;
+                            headerBanner.style.borderColor = cfg.border;
                         }
-                        if (typeTitleAr) typeTitleAr.textContent = config.textAr;
-                        if (typeTitleEn) typeTitleEn.textContent = config.textEn;
+                        if (typeTitleAr) typeTitleAr.textContent = cfg.textAr;
+                        if (typeTitleEn) typeTitleEn.textContent = cfg.textEn;
                         if (badgeSerialBox) {
-                            badgeSerialBox.style.color = config.color;
-                            badgeSerialBox.style.background = config.badgeBg;
-                            badgeSerialBox.style.borderColor = config.badgeBorder;
+                            badgeSerialBox.style.color = cfg.color;
+                            badgeSerialBox.style.backgroundColor = cfg.badgeBg;
+                            badgeSerialBox.style.borderColor = cfg.badgeBorder;
                         }
-                    }
+                    };
 
-                    function toggleDoubleSidedLayout(mode) {
+                    window.toggleDoubleSidedLayout = function(mode) {
                         const container = document.querySelector('.card-container');
                         if (!container) return;
                         if (mode === 'double') {
@@ -1852,9 +1854,9 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                         } else {
                             container.classList.remove('double-sided-mode');
                         }
-                    }
+                    };
 
-                    function changeCardPrintSize(sizeMode) {
+                    window.changeCardPrintSize = function(sizeMode) {
                         const container = document.querySelector('.card-container');
                         const scaleWrap = document.getElementById('customCardScaleWrap');
                         if (!container) return;
@@ -1878,9 +1880,9 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                             container.style.maxWidth = '100%';
                             container.style.transform = 'none';
                         }
-                    }
+                    };
 
-                    function applyCustomCardScale(val) {
+                    window.applyCustomCardScale = function(val) {
                         const container = document.querySelector('.card-container');
                         const text = document.getElementById('cardScaleValText');
                         if (text) text.textContent = val + '%';
@@ -1889,7 +1891,47 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                             container.style.transform = 'scale(' + scale + ')';
                             container.style.transformOrigin = 'top center';
                         }
-                    }
+                    };
+
+                    window.exportBatchCardsFromPrintWindow = function() {
+                        const qtyStr = prompt('\u0623\u062F\u062E\u0644 \u0639\u062F\u062F \u0627\u0644\u0643\u0631\u0648\u062A \u0627\u0644\u0645\u0637\u0644\u0648\u0628 \u0635\u062F\u0648\u0631\u0647\u0627 \u0648\u062A\u0635\u062F\u064A\u0631\u0647\u0627 \u062F\u0641\u0639\u0629 \u0648\u0627\u062D\u062F\u0629 \u0644\u0644\u0637\u0628\u0627\u0639\u0629 \u0623\u0648 \u0643\u0645\u0644\u0641 PDF (\u0645\u062B\u0627\u0644: 5 \u0623\u0648 10 \u0643\u0631\u0648\u062A):', '5');
+                        if (!qtyStr) return;
+                        const num = parseInt(qtyStr);
+                        if (isNaN(num) || num < 1) return;
+
+                        const curSerial = document.getElementById('badgeSerialInput')?.value || 'VIS-2026-001';
+                        const prefix = curSerial.substring(0, curSerial.lastIndexOf('-') + 1) || 'VIS-2026-';
+                        const startNum = parseInt(curSerial.substring(curSerial.lastIndexOf('-') + 1)) || 1;
+
+                        const baseCard = document.querySelector('.card-container');
+                        if (!baseCard) return;
+
+                        let batchWrap = document.getElementById('batchWrapperContainer');
+                        if (!batchWrap) {
+                            batchWrap = document.createElement('div');
+                            batchWrap.id = 'batchWrapperContainer';
+                            baseCard.parentNode.insertBefore(batchWrap, baseCard);
+                        }
+                        batchWrap.innerHTML = '';
+                        baseCard.style.display = 'none';
+
+                        for (let i = 0; i < num; i++) {
+                            const clone = baseCard.cloneNode(true);
+                            clone.style.display = '';
+                            clone.style.pageBreakAfter = 'always';
+                            clone.style.marginBottom = '30px';
+                            
+                            const cardSerial = prefix + (startNum + i).toString().padStart(3, '0');
+                            const serialBox = clone.querySelector('#badgeSerialBox');
+                            if (serialBox) serialBox.textContent = 'Badge: ' + cardSerial;
+                            
+                            batchWrap.appendChild(clone);
+                        }
+
+                        alert('\u062A\u0645 \u062A\u062C\u0647\u064A\u0632 \u0648\u062A\u0648\u0644\u064A\u062F ' + num + ' \u0643\u0627\u0631\u062A \u0632\u0627\u0626\u0631 \u0645\u062A\u062A\u0627\u0644\u064A \u0628\u0646\u062C\u0627\u062D!
+\u0633\u064A\u062A\u0645 \u0641\u062A\u062D \u0634\u0627\u0634\u0629 \u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0648\u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u0644\u0640 PDF \u0627\u0644\u0622\u0646.');
+                        window.print();
+                    };
 
                     function updateSiteMap(site) {
                         const coordsMap = {

@@ -2360,6 +2360,7 @@ class GateSecurityModule {
 
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <input type="text" id="customCoords" value="${mapConfig.coords}" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 11px; width: 170px;" oninput="document.getElementById('displayCoords').textContent = 'إحداثيات الموقع: ' + this.value + ' | DOC-HSE-MAP-01 Rev.02'">
+                        <button onclick="exportBatchCardsFromPrintWindow()" style="padding: 6px 14px; background: #059669; color: #fff; border:none; border-radius:6px; cursor:pointer; font-weight: 900; font-size: 12px; box-shadow: 0 2px 6px rgba(5,150,105,0.25);" title="تصدير وطباعة مجموعة كروت متتالية دفعة واحدة كملف PDF">🗂️ تصدير دفعة PDF</button>
                         <button onclick="window.print()" style="padding: 6px 18px; background: #1e40af; color: #fff; border:none; border-radius:6px; cursor:pointer; font-weight: 900; font-size: 12px; box-shadow: 0 2px 6px rgba(30,64,175,0.25);">🖨️ طباعة الكارت الآن</button>
                     </div>
                 </div>
@@ -2684,32 +2685,33 @@ class GateSecurityModule {
                 </div>
 
                 \x3Cscript>
-                    function updateVisitorTypeHeader(type) {
+                    window.updateVisitorTypeHeader = function(type) {
                         const headerBanner = document.getElementById('visitorTypeHeaderBanner');
                         const badgeSerialBox = document.getElementById('badgeSerialBox');
                         const typeTitleAr = document.getElementById('visitorTypeTitleAr');
                         const typeTitleEn = document.getElementById('visitorTypeTitleEn');
                         
-                        const config = {
+                        const configMap = {
                             visitor: { bg: '#16a34a', border: '#15803d', textAr: 'كارت زائر معتمد', textEn: 'VISITOR PASS', color: '#047857', badgeBg: '#ecfdf5', badgeBorder: '#a7f3d0' },
                             contractor: { bg: '#ea580c', border: '#c2410c', textAr: 'تصريح مقاول / صيانة', textEn: 'CONTRACTOR PASS', color: '#c2410c', badgeBg: '#fff7ed', badgeBorder: '#ffedd5' },
                             vip: { bg: '#dc2626', border: '#b91c1c', textAr: 'تصريح كبار الزوار / تفتيش', textEn: 'VIP / INSPECTOR PASS', color: '#b91c1c', badgeBg: '#fef2f2', badgeBorder: '#fecaca' }
-                        }[type] || { bg: '#16a34a', border: '#15803d', textAr: 'كارت زائر معتمد', textEn: 'VISITOR PASS', color: '#047857', badgeBg: '#ecfdf5', badgeBorder: '#a7f3d0' };
+                        };
+                        const cfg = configMap[type] || configMap.visitor;
 
                         if (headerBanner) {
-                            headerBanner.style.background = config.bg;
-                            headerBanner.style.borderColor = config.border;
+                            headerBanner.style.backgroundColor = cfg.bg;
+                            headerBanner.style.borderColor = cfg.border;
                         }
-                        if (typeTitleAr) typeTitleAr.textContent = config.textAr;
-                        if (typeTitleEn) typeTitleEn.textContent = config.textEn;
+                        if (typeTitleAr) typeTitleAr.textContent = cfg.textAr;
+                        if (typeTitleEn) typeTitleEn.textContent = cfg.textEn;
                         if (badgeSerialBox) {
-                            badgeSerialBox.style.color = config.color;
-                            badgeSerialBox.style.background = config.badgeBg;
-                            badgeSerialBox.style.borderColor = config.badgeBorder;
+                            badgeSerialBox.style.color = cfg.color;
+                            badgeSerialBox.style.backgroundColor = cfg.badgeBg;
+                            badgeSerialBox.style.borderColor = cfg.badgeBorder;
                         }
-                    }
+                    };
 
-                    function toggleDoubleSidedLayout(mode) {
+                    window.toggleDoubleSidedLayout = function(mode) {
                         const container = document.querySelector('.card-container');
                         if (!container) return;
                         if (mode === 'double') {
@@ -2717,9 +2719,9 @@ class GateSecurityModule {
                         } else {
                             container.classList.remove('double-sided-mode');
                         }
-                    }
+                    };
 
-                    function changeCardPrintSize(sizeMode) {
+                    window.changeCardPrintSize = function(sizeMode) {
                         const container = document.querySelector('.card-container');
                         const scaleWrap = document.getElementById('customCardScaleWrap');
                         if (!container) return;
@@ -2743,9 +2745,9 @@ class GateSecurityModule {
                             container.style.maxWidth = '100%';
                             container.style.transform = 'none';
                         }
-                    }
+                    };
 
-                    function applyCustomCardScale(val) {
+                    window.applyCustomCardScale = function(val) {
                         const container = document.querySelector('.card-container');
                         const text = document.getElementById('cardScaleValText');
                         if (text) text.textContent = val + '%';
@@ -2754,7 +2756,46 @@ class GateSecurityModule {
                             container.style.transform = 'scale(' + scale + ')';
                             container.style.transformOrigin = 'top center';
                         }
-                    }
+                    };
+
+                    window.exportBatchCardsFromPrintWindow = function() {
+                        const qtyStr = prompt('أدخل عدد الكروت المطلوب صدورها وتصديرها دفعة واحدة للطباعة أو كملف PDF (مثال: 5 أو 10 كروت):', '5');
+                        if (!qtyStr) return;
+                        const num = parseInt(qtyStr);
+                        if (isNaN(num) || num < 1) return;
+
+                        const curSerial = document.getElementById('badgeSerialInput')?.value || 'VIS-2026-001';
+                        const prefix = curSerial.substring(0, curSerial.lastIndexOf('-') + 1) || 'VIS-2026-';
+                        const startNum = parseInt(curSerial.substring(curSerial.lastIndexOf('-') + 1)) || 1;
+
+                        const baseCard = document.querySelector('.card-container');
+                        if (!baseCard) return;
+
+                        let batchWrap = document.getElementById('batchWrapperContainer');
+                        if (!batchWrap) {
+                            batchWrap = document.createElement('div');
+                            batchWrap.id = 'batchWrapperContainer';
+                            baseCard.parentNode.insertBefore(batchWrap, baseCard);
+                        }
+                        batchWrap.innerHTML = '';
+                        baseCard.style.display = 'none';
+
+                        for (let i = 0; i < num; i++) {
+                            const clone = baseCard.cloneNode(true);
+                            clone.style.display = '';
+                            clone.style.pageBreakAfter = 'always';
+                            clone.style.marginBottom = '30px';
+                            
+                            const cardSerial = prefix + (startNum + i).toString().padStart(3, '0');
+                            const serialBox = clone.querySelector('#badgeSerialBox');
+                            if (serialBox) serialBox.textContent = 'Badge: ' + cardSerial;
+                            
+                            batchWrap.appendChild(clone);
+                        }
+
+                        alert('تم تجهيز وتوليد ' + num + ' كارت زائر متتالي بنجاح!\nسيتم فتح شاشة الطباعة والتصدير لـ PDF الآن.');
+                        window.print();
+                    };
 
                     function updateSiteMap(site) {
                         const coordsMap = {
