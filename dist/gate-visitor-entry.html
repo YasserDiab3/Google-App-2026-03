@@ -990,22 +990,6 @@
                             <span id="hseRule4">البقاء في المكان المصرح به فقط وعدم التحرك الفردي داخل خطوط الإنتاج دون مرافق.</span>
                         </div>
                     </div>
-
-                    <!-- التوقيع الرقمي باللمس -->
-                    <div class="form-group" style="margin-top: 10px;">
-                        <label class="form-label">
-                            <i class="fas fa-signature text-blue-600"></i>
-                            <span id="lblSignature">توقيع الزائر الرقمي (إقرار السلامة)</span>
-                            <span class="req">*</span>
-                        </label>
-                        <div class="signature-box">
-                            <canvas id="sigCanvas" class="sig-canvas"></canvas>
-                            <div class="sig-tools">
-                                <span id="sigPrompt">✍️ وقّع باللمس هنا لتأكيد الإقرار</span>
-                                <button type="button" class="btn-clear-sig" onclick="clearSignature()" id="btnClearSig">مسح التوقيع</button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <button type="submit" id="btnSubmitGate" class="btn-submit-gate">
@@ -1102,11 +1086,8 @@
                 lblHostPerson: 'اسم المستضيف / الشخص المسؤول',
                 lblVisitPurpose: 'نوع وغرض الزيارة',
                 sec3Title: 'رقم كارت الزائر وإقرار السلامة',
-                sec3Desc: 'تسليم شارة الدخول وتوثيق التوقيع على تعليمات السلامة الإلزامية',
+                sec3Desc: 'تسليم كارت الزيارة الأمني والاطلاع على تعليمات السلامة والنظافة العامة',
                 lblBadgeNumber: 'رقم كارت / شارة الزائر الممنوحة له',
-                lblSignature: 'توقيع الزائر الرقمي (إقرار السلامة)',
-                sigPrompt: '✍️ وقّع باللمس هنا لتأكيد الإقرار',
-                btnClearSig: 'مسح التوقيع',
                 btnSubmitText: 'تسجيل الدخول وإصدار تصريح الزيارة 🛡️',
                 succTitle: 'تم تسجيل دخول الزائر بنجاح!',
                 succSubtitle: 'تم توثيق الزيارة وحفظها بسجل المتواجدين الفعلي بالمصنع.',
@@ -1127,8 +1108,7 @@
                 valArea: 'يرجى اختيار الموقع الفرعي',
                 valHostDept: 'يرجى اختيار الإدارة المستضيفة',
                 valHost: 'يرجى كتابة اسم المستضيف',
-                valBadge: 'يرجى إدخال رقم كارت الزائر',
-                valSignature: 'يرجى توقيع الزائر في خانة الإقرار الرقمي'
+                valBadge: 'يرجى إدخال رقم كارت الزائر'
             },
             en: {
                 dir: 'ltr',
@@ -1155,11 +1135,8 @@
                 lblHostPerson: 'Host Employee / In-Charge',
                 lblVisitPurpose: 'Visit Purpose & Type',
                 sec3Title: 'Visitor Badge & Safety Briefing',
-                sec3Desc: 'Assign security badge number and verify HSE & hygiene induction signature',
+                sec3Desc: 'Assign security badge number and confirm safety briefing acknowledgement',
                 lblBadgeNumber: 'Assigned Visitor Badge / Card #',
-                lblSignature: 'Digital Signature (Safety Briefing Confirmation)',
-                sigPrompt: '✍️ Touch / Sign here to confirm briefing',
-                btnClearSig: 'Clear Signature',
                 btnSubmitText: 'Complete Check-In & Issue Pass 🛡️',
                 succTitle: 'Visitor Checked In Successfully!',
                 succSubtitle: 'Logged in the live plant register and badge active.',
@@ -1180,8 +1157,7 @@
                 valArea: 'Please select sub-location',
                 valHostDept: 'Please select host department',
                 valHost: 'Please enter host employee name',
-                valBadge: 'Please enter assigned badge number',
-                valSignature: 'Please sign in the digital signature box'
+                valBadge: 'Please enter assigned badge number'
             }
         };
 
@@ -1523,12 +1499,6 @@
 
             const lblBadge = document.getElementById('lblBadgeNumber');
             if (lblBadge) lblBadge.textContent = t.lblBadgeNumber;
-            const lblSig = document.getElementById('lblSignature');
-            if (lblSig) lblSig.textContent = t.lblSignature;
-            const sigPrompt = document.getElementById('sigPrompt');
-            if (sigPrompt) sigPrompt.textContent = t.sigPrompt;
-            const btnClear = document.getElementById('btnClearSig');
-            if (btnClear) btnClear.textContent = t.btnClearSig;
 
             const btnSubmit = document.getElementById('btnSubmitText');
             if (btnSubmit) btnSubmit.textContent = t.btnSubmitText;
@@ -1743,12 +1713,10 @@
             if (!dept) { showToast('يرجى اختيار الإدارة المستضيفة', 'error'); return; }
             if (!hostPersonName) { showToast(t.valHost, 'error'); return; }
             if (!badge) { showToast(t.valBadge, 'error'); return; }
-            if (!hasSignature) { showToast(t.valSignature, 'error'); return; }
 
             const now = new Date();
             const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
             const dateStr = now.toISOString().split('T')[0];
-            const sigData = canvas ? canvas.toDataURL('image/png') : '';
 
             const visitorRecord = {
                 id: 'VIS-' + Date.now().toString().slice(-6),
@@ -1769,7 +1737,7 @@
                 entryTimestamp: now.getTime(),
                 exitTime: null,
                 exitTimestamp: null,
-                signature: sigData
+                signature: null
             };
 
             const registry = getVisitorsRegistry();
@@ -1821,7 +1789,6 @@
 
         function resetCheckInForm() {
             document.getElementById('visitorForm').reset();
-            clearSignature();
             document.getElementById('successReceiptScreen').style.display = 'none';
             document.getElementById('checkInTabContainer').style.display = 'block';
         }
@@ -2075,7 +2042,6 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            initSignaturePad();
             try {
                 const savedTheme = localStorage.getItem('HSE_GATE_THEME') || 'light';
                 if (savedTheme === 'dark') toggleTheme();
