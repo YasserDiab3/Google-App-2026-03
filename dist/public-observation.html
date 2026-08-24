@@ -5197,6 +5197,7 @@
         }
 
         // =========================================================================
+        // =========================================================================
         // محرك التوليد الذكي للإجراءات التصحيحية بناءً على تحليل النص والسياق الميداني
         // Generative Contextual Corrective Action Synthesis Engine (OSHA/ISO 45001)
         // =========================================================================
@@ -5207,9 +5208,7 @@
             if (!correctiveInput) return;
 
             const rawDetails = (detailsInput?.value || '').trim();
-            const selectedSub = document.getElementById('subCategorySelect')?.value || '';
-            const selectedSite = document.getElementById('siteSelect')?.value || '';
-            const selectedPlace = document.getElementById('placeSelect')?.value || '';
+            const selectedSub = (document.getElementById('subCategorySelect')?.value || '').trim();
 
             if (!rawDetails || rawDetails.length < 3) {
                 showToast('يرجى كتابة أو تسجيل تفاصيل الخطر أولاً لتوليد الإجراء التصحيحي المناسب ✨', 'info', 3000);
@@ -5223,128 +5222,210 @@
             let detectedRisk = 'متوسط';
             let detectedDate = 'today';
 
-            // 1. استخراج الكيان المعني بالخطر بدقة من النص (Object & Hazard Condition Extraction)
-            const isWater = lower.includes('مياه') || lower.includes('ماء') || lower.includes('ماسورة') || lower.includes('محبس') || lower.includes('خرطوم مياه') || lower.includes('رشاش');
-            const isOil = lower.includes('زيت') || lower.includes('شحم') || lower.includes('ديزل') || lower.includes('سولار') || lower.includes('هيدروليك');
-            const isSlipTrip = lower.includes('انزلاق') || lower.includes('مبلل') || lower.includes('تعثر') || lower.includes('ارضية') || lower.includes('أرضية') || lower.includes('ممر') || lower.includes('عوائق') || lower.includes('مخلفات');
-            const isElectric = lower.includes('كهربا') || lower.includes('سلك') || lower.includes('كابل') || lower.includes('لوحة') || lower.includes('قاطع') || lower.includes('فيشة') || lower.includes('صعق') || lower.includes('loto') || lower.includes('محول');
-            const isHeight = lower.includes('سقال') || lower.includes('حزام') || lower.includes('ارتفاع') || lower.includes('سلم') || lower.includes('سقوط من') || lower.includes('سقوط افراد') || lower.includes('سقوط أفراد') || lower.includes('حافة') || lower.includes('فتحة');
-            const isFire = lower.includes('حريق') || lower.includes('طفاية') || lower.includes('لحام') || lower.includes('قطع') || lower.includes('لهب') || lower.includes('شرز') || lower.includes('اشتعال') || lower.includes('دخان') || lower.includes('غاز ملتهب');
-            const isMachine = lower.includes('ماكينة') || lower.includes('سير') || lower.includes('ترس') || lower.includes('حوافظ') || lower.includes('غطاء') || lower.includes('دوار') || lower.includes('حساس أمان') || lower.includes('طوارئ') || lower.includes('e-stop');
-            const isChemical = lower.includes('كيميا') || lower.includes('غاز') || lower.includes('امونيا') || lower.includes('أمونيا') || lower.includes('فريون') || lower.includes('حمض') || lower.includes('قلوي') || lower.includes('برميل') || lower.includes('مبيد') || lower.includes('تسريب كيميائي');
-            const isStorage = lower.includes('باليت') || lower.includes('تخزين') || lower.includes('رص') || lower.includes('كرتون') || lower.includes('سقوط احمال') || lower.includes('سقوط أحمال') || lower.includes('أرفف') || lower.includes('رافعة هيدروليكية');
-            const isForklift = lower.includes('فوركلفت') || lower.includes('رافعة شوكية') || lower.includes('سائق') || lower.includes('سرعة') || lower.includes('لودر') || lower.includes('جرار') || lower.includes('شاحنة') || lower.includes('مركبة');
-            const isConfined = lower.includes('مغلق') || lower.includes('تانك') || lower.includes('خزان') || lower.includes('صومعة') || lower.includes('بيارة') || lower.includes('غرفة تفتيش') || lower.includes('نفق');
-            const isPPE = lower.includes('خوذة') || lower.includes('حذاء') || lower.includes('سيفتي') || lower.includes('نظارة') || lower.includes('كمامة') || lower.includes('قفاز') || lower.includes('واقي') || lower.includes('مهمات');
+            // 1. أولاً: التحقق من وجود تصنيف فرعي محدد ومطابقته مباشرة مع قوالب السلامة المعتمدة
+            let matchedSubKey = '';
+            if (selectedSub && DETAILED_SUBCATEGORY_TEMPLATES[selectedSub]) {
+                matchedSubKey = selectedSub;
+            } else if (selectedSub) {
+                const cleanSub = selectedSub.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+                matchedSubKey = Object.keys(DETAILED_SUBCATEGORY_TEMPLATES).find(k => {
+                    const cleanK = k.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+                    return cleanK === cleanSub || cleanK.includes(cleanSub) || cleanSub.includes(cleanK);
+                }) || '';
+            }
 
-            // 2. التوليد السياقي التخصصي للإجراء (Contextual Synthesis Engine)
-            if (isWater || (isSlipTrip && !isOil && !isElectric && !isHeight)) {
-                primaryAction = 'تم إغلاق مصدر المياه فوراً وتجفيف الأرضية بالكامل ووضع لافتة تحذيرية (أرضية زلقة) وإصلاح التسريب لمنع تكراره.';
-                secondaryActions = [
-                    'تم تجفيف وتنظيف مسار المشاة فوراً وتأمين المنطقة بالعلامات التحذيرية.',
-                    'تم استدعاء فني الصيانة واستبدال الوصلات التالفة والتأكد من جفاف الأرضية.',
-                    'تم فتح مصرف المياه وتطهير المجرى وتأمين عبور الأفراد بأمان.'
-                ];
-                detectedRisk = 'متوسط';
-                detectedDate = 'today';
-            } else if (isOil) {
-                primaryAction = 'تم إيقاف مصدر تسريب الزيت فوراً، واستخدام بودرة ومواد الامتصاص (Spill Kit) لتنظيف الأرضية ومنع الانزلاق.';
-                secondaryActions = [
-                    'تم تطويق انسكاب الزيت فوراً وتفريغه بحاوية آمنة وإصلاح خط الزيت.',
-                    'تم وضع علامات تحذيرية وتجفيف السطح بمزيل شحوم معتمد والتأكد من ثبات المسار.',
-                    'تم عزل الماكينة المسببة للتسريب وتغيير الجوانات لمنع تكرار الانسكاب.'
-                ];
-                detectedRisk = 'عالي';
-                detectedDate = 'today';
-            } else if (isElectric) {
-                primaryAction = 'تم فصل وعزل التيار الكهربائي فوراً وتطبيق نظام القفل والعزل (LOTO) واستدعاء فني الكهرباء لإعادة التوصيل الآمن.';
-                secondaryActions = [
-                    'تم تأمين وعزل الكابل المكشوف داخل مسار معزول وتثبيت قواطع الحماية.',
-                    'تم إغلاق وقفل لوحة المفاتيح ووضع بطاقة تحذيرية ومنع اقتراب غير المختصين.',
-                    'تم استبدال الفيش والمفاتيح التالفة بأخرى معتمدة ومطابقة لمواصفات العزل.'
-                ];
-                detectedRisk = 'عالي';
-                detectedDate = 'today';
-            } else if (isHeight) {
-                primaryAction = 'تم إيقاف العمل على الارتفاع فوراً، وإلزام العاملين بربط حزام الأمان بنقطة تثبيت معتمدة وتأمين درابزين السقالة.';
-                secondaryActions = [
-                    'تم إنزال العامل المخالف وتوفير حبل نجاة ونقطة ارتكاز مطابقة قبل استئناف النشاط.',
-                    'تم حظر استخدام السقالة وتثبيت بطاقة حمراء لحين استكمال الألواح والدرابزين.',
-                    'تم تغطية الفتحة الأرضية بغطاء خرساني/معدني آمن ومثبت بمسامير تحذيرية.'
-                ];
-                detectedRisk = 'عالي';
-                detectedDate = 'today';
-            } else if (isFire) {
-                primaryAction = 'تم إيقاف مصادر الاشتعال فوراً وتوفير طفاية حريق صالحة ومعتمدة ومراقب حريق وستائر عزل مقاومة للحرارة.';
-                secondaryActions = [
-                    'تم إخلاء ونقل المواد سريعة الاشتعال بعيداً عن مصادر الحرارة بمسافة أمان لا تقل عن 10 أمتار.',
-                    'تم استبدال طفاية الحريق التالفة بأخرى معتمدة وفحص مؤشر الضغط والصلاحية فوراً.',
-                    'تم إخلاء وفتح مسار مخرج الطوارئ وصندوق الحريق بعرض لا يقل عن 1.2 متر.'
-                ];
-                detectedRisk = 'عالي';
-                detectedDate = 'today';
-            } else if (isMachine) {
-                primaryAction = 'تم إيقاف الماكينة فوراً وتركيب حوافظ وسيور الأمان والتأكد من فاعلية زر التوقف في الطوارئ (E-Stop) قبل التشغيل.';
-                secondaryActions = [
-                    'تم عزل الماكينة LOTO وتثبيت غطاء التروس الدوارة لمنع مخاطر الانحشار والقص.',
-                    'تمت صيانة وإعادة تفعيل حساسات الأمان الضوئية بالماكينة قبل متابعة الإنتاج.',
-                    'تم توجيه المشغل بعدم إزالة أي واقي أمان أثناء دوران المعدة نهائياً.'
-                ];
-                detectedRisk = 'عالي';
-                detectedDate = 'today';
-            } else if (isChemical) {
-                primaryAction = 'تم إيقاف مصدر التسريب الكيميائي فوراً، وارتداء مهمات الوقاية المعتمدة واستخدام مواد الاحتواء (Spill Kit) وتهوية المكان.';
-                secondaryActions = [
-                    'تم نقل العبوات الكيميائية إلى دولاب المواد الخطرة ووضع بطاقات السلامة (SDS).',
-                    'تمت معالجة التسريب بمواد معادلة وتأمين حوض الاحتواء الثانوي للبراميل.',
-                    'تم إخلاء المنطقة وتوفير شفاطات تهوية ومحطة غسيل طوارئ صالحة للعمل.'
-                ];
-                detectedRisk = 'عالي';
-                detectedDate = 'today';
-            } else if (isStorage) {
-                primaryAction = 'تمت إعادة رص وتثبيت الباليتات بشكل هندسي مستقر ومطابق للارتفاع المسموح وفتح ممرات المشاة والتخزين.';
-                secondaryActions = [
-                    'تم إنزال الباليتات المائلة وإعادة تغليفها برول بلاستيكي محكم لمنع السقوط.',
-                    'تم فحص واستبدال الأرفف المعدنية التالفة وتثبيت لافتة الحمل الأقصى المسموح.',
-                    'تم إخلاء حرم الممرات وربط الكراتين بأحزمة تثبيت معتمدة.'
-                ];
-                detectedRisk = 'عالي';
-                detectedDate = 'today';
-            } else if (isForklift) {
-                primaryAction = 'تم إلزام سائق المعدة بالسرعة القانونية (10 كم/س) واستخدام آلة التنبيه وإعطاء الأولوية لمسارات المشاة.';
-                secondaryActions = [
-                    'تم إيقاف السائق وتوعيته بعدم رفع الأحمال أثناء السير والالتزام بمسار المعدات.',
-                    'تم عمل فحص فني لفرامل وإنارة الرافعة الشوكية والتأكد من سلامة حزام الأمان.',
-                    'تم وضع حواجز حماية إضافية لفصل حركة المشاة عن مسار حركة الرافعات.'
-                ];
-                detectedRisk = 'عالي';
-                detectedDate = 'today';
-            } else if (isConfined) {
-                primaryAction = 'تم إيقاف الدخول للمكان المغلق فوراً وإجراء قياسات نسبة الأكسجين والغازات وتوفير شفاطات تهوية وتصريح معتمد.';
-                secondaryActions = [
-                    'تم إلزام فريق العمل بارتداء جهاز تنفس ونظام إنقاذ بحبل ثلاثي القوائم (Tripod).',
-                    'تم تعيين مراقب سلامة خارجي وتأمين وسيلة اتصال مستمرة مع الداخلين.',
-                    'تم عزل كافة خطوط التغذية والمحابس المتصلة بالخزان وتطبيق نظام LOTO.'
-                ];
-                detectedRisk = 'عالي';
-                detectedDate = 'today';
-            } else if (isPPE) {
-                primaryAction = 'تم إيقاف العامل فوراً وتوفير مهمات الوقاية الشخصية (PPE) المطابقة وإلزامه بارتدائها قبل متابعة العمل.';
-                secondaryActions = [
-                    'تم استبدال مهمات الوقاية التالفة بأخرى جديدة معتمدة وتوعية العامل بأهميتها.',
-                    'تم توجيه وتدريب العامل على الاستخدام الصحيح لنظارات الوقاية والكمامة المناسبة.',
-                    'تم التنبيه بعدم دخول صالة العمل نهائياً بدون ارتداء كامل مهمات السلامة.'
-                ];
-                detectedRisk = 'منخفض';
-                detectedDate = 'today';
-            } else {
-                // استنتاج مبني على التصنيف الفرعي المتاح إن وجد
-                if (selectedSub && DETAILED_SUBCATEGORY_TEMPLATES[selectedSub]) {
-                    const tpl = DETAILED_SUBCATEGORY_TEMPLATES[selectedSub][0];
-                    primaryAction = tpl.corrective;
-                    detectedRisk = tpl.risk || 'متوسط';
-                    detectedDate = tpl.expected || 'today';
-                    secondaryActions = DETAILED_SUBCATEGORY_TEMPLATES[selectedSub].slice(1).map(t => t.corrective);
+            if (matchedSubKey && DETAILED_SUBCATEGORY_TEMPLATES[matchedSubKey]) {
+                const subTemplates = DETAILED_SUBCATEGORY_TEMPLATES[matchedSubKey];
+                // البحث عن أقرب قالب فرعي يطابق النص المكتوب
+                let bestTemplate = subTemplates.find(tpl => 
+                    lower.includes((tpl.title || '').toLowerCase()) || 
+                    lower.includes((tpl.detail || '').toLowerCase()) ||
+                    (tpl.detail && rawDetails.includes(tpl.detail.slice(0, 15)))
+                ) || subTemplates[0];
+
+                if (bestTemplate && bestTemplate.corrective) {
+                    primaryAction = bestTemplate.corrective;
+                    detectedRisk = bestTemplate.risk || 'متوسط';
+                    detectedDate = bestTemplate.expected || 'today';
+                    secondaryActions = subTemplates
+                        .map(t => t.corrective)
+                        .filter(c => c && c !== primaryAction);
+                }
+            }
+
+            // 2. ثانياً: إذا لم يحدد تصنيف فرعي أو لم نجد تطابقاً كافياً، تحليل الكلمات المفتاحية الذكي متعدد الأوزان
+            if (!primaryAction) {
+                // مصفوفة مجالات السلامة بالأوزان
+                const scores = {
+                    traffic: 0,
+                    forklift: 0,
+                    electric: 0,
+                    height: 0,
+                    fire: 0,
+                    machine: 0,
+                    chemical: 0,
+                    storage: 0,
+                    confined: 0,
+                    ppe: 0,
+                    oil: 0,
+                    water: 0,
+                    slipTrip: 0,
+                    lighting5s: 0
+                };
+
+                // حركة الشاحنات ومسارات المشاة والمركبات
+                if (/شاحن|معدات|تفريغ|حركة الشاحنات|مركبات|سيارات|مسار الشاحنات|حواجز الفصل|مسارات المشاة|سير العمال|دهس|ممرات المشاة/.test(lower)) scores.traffic += 5;
+                if (/فوركلفت|رافعة شوكية|كلارك|سائق الرافعة|لودر|جرار|عجلة قيادة/.test(lower)) scores.forklift += 5;
+                if (/كهربا|سلك|كابل|لوحة كهربائية|قاطع|فيشة|صعق|loto|جهد كهر|محول|كونتاكتور/.test(lower)) scores.electric += 5;
+                if (/سقال|حزام أمان|حزام الامان|ارتفاع|سلم|سقوط من|سقوط افراد|سقوط أفراد|حافة غير|فتحة أرضية|فتحة صيانة/.test(lower)) scores.height += 5;
+                if (/حريق|طفاية|لحام|لهب|شرز|اشتعال|دخان|غاز ملتهب|مخرج طوارئ|صندوق حريق|تدخين/.test(lower)) scores.fire += 5;
+                if (/ماكينة|سير دوار|ترس|حوافظ|غطاء ماكينة|دوار|حساس أمان|طوارئ|e-stop|انحشار|بتر/.test(lower)) scores.machine += 5;
+                if (/كيميا|أمونيا|امونيا|فريون|حمض|قلوي|برميل|مبيد|تسريب غاز|مادة خطرة|sds/.test(lower)) scores.chemical += 5;
+                if (/باليت|تخزين|رص|كرتون|سقوط احمال|سقوط أحمال|أرفف|تستيف|ميلان/.test(lower)) scores.storage += 5;
+                if (/مغلق|تانك|خزان|صومعة|بيارة|غرفة تفتيش|نفق|مكان محصور/.test(lower)) scores.confined += 5;
+                if (/خوذة|حذاء|سيفتي|نظارة|كمامة|قفاز|واقي وجه|مهمات وقاية|ppe/.test(lower)) scores.ppe += 5;
+                if (/زيت|شحم|ديزل|سولار|هيدروليك|تزييت|تسريب زيت/.test(lower)) scores.oil += 5;
+                if (/تسريب مياه|ماسورة مياه|محبس ماء|مياه غسيل|مياه راكدة|خرطوم مياه|تسريب ماء/.test(lower)) scores.water += 5;
+                if (/انزلاق|أرضية زلقة|مبلل|تعثر|أرضية غير مستوية/.test(lower)) scores.slipTrip += 3;
+                if (/إنارة|انارة|إضاءة|اضاءة|كشاف|تهوية|تراكم مخلفات|5s|نظافة/.test(lower)) scores.lighting5s += 4;
+
+                // إيجاد أعلى مجال خطورة مطابق
+                let maxDomain = 'traffic';
+                let maxScore = 0;
+                Object.keys(scores).forEach(d => {
+                    if (scores[d] > maxScore) {
+                        maxScore = scores[d];
+                        maxDomain = d;
+                    }
+                });
+
+                if (maxScore > 0) {
+                    if (maxDomain === 'traffic') {
+                        primaryAction = 'تم تخطيط ممرات المشاة باللون الأصفر وتركيب حواجز صد حديدية لحماية الأفراد وفصل مسار الشاحنات.';
+                        secondaryActions = [
+                            'تم وضع حواجز حماية إضافية وتثبيت لافتات تحذيرية لمنع سير المشاة في مسار التفريغ.',
+                            'تم إلزام السائقين بالسرعة الآمنة وإعطاء الأولوية لمسارات عبور المشاة المعتمدة.',
+                            'تم تجديد الدهانات والعلامات الأرضية التحذيرية لمسارات السير الآمنة.'
+                        ];
+                        detectedRisk = 'عالي';
+                        detectedDate = '24h';
+                    } else if (maxDomain === 'forklift') {
+                        primaryAction = 'تم إلزام سائق المعدة بالسرعة القانونية (10 كم/س) واستخدام آلة التنبيه وإعطاء الأولوية لمسارات المشاة.';
+                        secondaryActions = [
+                            'تم إيقاف السائق وتوعيته بعدم رفع الأحمال أثناء السير والالتزام بمسار المعدات.',
+                            'تم عمل فحص فني لفرامل وإنارة الرافعة الشوكية والتأكد من سلامة حزام الأمان.',
+                            'تم وضع حواجز حماية إضافية لفصل حركة المشاة عن مسار حركة الرافعات.'
+                        ];
+                        detectedRisk = 'عالي';
+                        detectedDate = 'today';
+                    } else if (maxDomain === 'electric') {
+                        primaryAction = 'تم فصل وعزل التيار الكهربائي فوراً وتطبيق نظام القفل والعزل (LOTO) واستدعاء فني الكهرباء لإعادة التوصيل الآمن.';
+                        secondaryActions = [
+                            'تم تأمين وعزل الكابل المكشوف داخل مسار معزول وتثبيت قواطع الحماية.',
+                            'تم إغلاق وقفل لوحة المفاتيح ووضع بطاقة تحذيرية ومنع اقتراب غير المختصين.',
+                            'تم استبدال الفيش والمفاتيح التالفة بأخرى معتمدة ومطابقة لمواصفات العزل.'
+                        ];
+                        detectedRisk = 'عالي';
+                        detectedDate = 'today';
+                    } else if (maxDomain === 'height') {
+                        primaryAction = 'تم إيقاف العمل على الارتفاع فوراً، وإلزام العاملين بربط حزام الأمان بنقطة تثبيت معتمدة وتأمين درابزين السقالة.';
+                        secondaryActions = [
+                            'تم إنزال العامل المخالف وتوفير حبل نجاة ونقطة ارتكاز مطابقة قبل استئناف النشاط.',
+                            'تم حظر استخدام السقالة وتثبيت بطاقة حمراء لحين استكمال الألواح والدرابزين.',
+                            'تم تغطية الفتحة الأرضية بغطاء خرساني/معدني آمن ومثبت بمسامير تحذيرية.'
+                        ];
+                        detectedRisk = 'عالي';
+                        detectedDate = 'today';
+                    } else if (maxDomain === 'fire') {
+                        primaryAction = 'تم إيقاف مصادر الاشتعال فوراً وتوفير طفاية حريق صالحة ومعتمدة ومراقب حريق وستائر عزل مقاومة للحرارة.';
+                        secondaryActions = [
+                            'تم إخلاء ونقل المواد سريعة الاشتعال بعيداً عن مصادر الحرارة بمسافة أمان لا تقل عن 10 أمتار.',
+                            'تم استبدال طفاية الحريق التالفة بأخرى معتمدة وفحص مؤشر الضغط والصلاحية فوراً.',
+                            'تم إخلاء وفتح مسار مخرج الطوارئ وصندوق الحريق بعرض لا يقل عن 1.2 متر.'
+                        ];
+                        detectedRisk = 'عالي';
+                        detectedDate = 'today';
+                    } else if (maxDomain === 'machine') {
+                        primaryAction = 'تم إيقاف الماكينة فوراً وتركيب حوافظ وسيور الأمان والتأكد من فاعلية زر التوقف في الطوارئ (E-Stop) قبل التشغيل.';
+                        secondaryActions = [
+                            'تم عزل الماكينة LOTO وتثبيت غطاء التروس الدوارة لمنع مخاطر الانحشار والقص.',
+                            'تمت صيانة وإعادة تفعيل حساسات الأمان الضوئية بالماكينة قبل متابعة الإنتاج.',
+                            'تم توجيه المشغل بعدم إزالة أي واقي أمان أثناء دوران المعدة نهائياً.'
+                        ];
+                        detectedRisk = 'عالي';
+                        detectedDate = 'today';
+                    } else if (maxDomain === 'chemical') {
+                        primaryAction = 'تم إيقاف مصدر التسريب الكيميائي فوراً، وارتداء مهمات الوقاية المعتمدة واستخدام مواد الاحتواء (Spill Kit) وتهوية المكان.';
+                        secondaryActions = [
+                            'تم نقل العبوات الكيميائية إلى دولاب المواد الخطرة ووضع بطاقات السلامة (SDS).',
+                            'تمت معالجة التسريب بمواد معادلة وتأمين حوض الاحتواء الثانوي للبراميل.',
+                            'تم إخلاء المنطقة وتوفير شفاطات تهوية ومحطة غسيل طوارئ صالحة للعمل.'
+                        ];
+                        detectedRisk = 'عالي';
+                        detectedDate = 'today';
+                    } else if (maxDomain === 'storage') {
+                        primaryAction = 'تمت إعادة رص وتثبيت الباليتات بشكل هندسي مستقر ومطابق للارتفاع المسموح وفتح ممرات المشاة والتخزين.';
+                        secondaryActions = [
+                            'تم إنزال الباليتات المائلة وإعادة تغليفها برول بلاستيكي محكم لمنع السقوط.',
+                            'تم فحص واستبدال الأرفف المعدنية التالفة وتثبيت لافتة الحمل الأقصى المسموح.',
+                            'تم إخلاء حرم الممرات وربط الكراتين بأحزمة تثبيت معتمدة.'
+                        ];
+                        detectedRisk = 'عالي';
+                        detectedDate = 'today';
+                    } else if (maxDomain === 'confined') {
+                        primaryAction = 'تم إيقاف الدخول للمكان المغلق فوراً وإجراء قياسات نسبة الأكسجين والغازات وتوفير شفاطات تهوية وتصريح معتمد.';
+                        secondaryActions = [
+                            'تم إلزام فريق العمل بارتداء جهاز تنفس ونظام إنقاذ بحبل ثلاثي القوائم (Tripod).',
+                            'تم تعيين مراقب سلامة خارجي وتأمين وسيلة اتصال مستمرة مع الداخلين.',
+                            'تم عزل كافة خطوط التغذية والمحابس المتصلة بالخزان وتطبيق نظام LOTO.'
+                        ];
+                        detectedRisk = 'عالي';
+                        detectedDate = 'today';
+                    } else if (maxDomain === 'ppe') {
+                        primaryAction = 'تم إيقاف العامل فوراً وتوفير مهمات الوقاية الشخصية (PPE) المطابقة وإلزامه بارتدائها قبل متابعة العمل.';
+                        secondaryActions = [
+                            'تم استبدال مهمات الوقاية التالفة بأخرى جديدة معتمدة وتوعية العامل بأهميتها.',
+                            'تم توجيه وتدريب العامل على الاستخدام الصحيح لنظارات الوقاية والكمامة المناسبة.',
+                            'تم التنبيه بعدم دخول صالة العمل نهائياً بدون ارتداء كامل مهمات السلامة.'
+                        ];
+                        detectedRisk = 'منخفض';
+                        detectedDate = 'today';
+                    } else if (maxDomain === 'oil') {
+                        primaryAction = 'تم إيقاف مصدر تسريب الزيت فوراً، واستخدام بودرة ومواد الامتصاص (Spill Kit) لتنظيف الأرضية ومنع الانزلاق.';
+                        secondaryActions = [
+                            'تم تطويق انسكاب الزيت فوراً وتفريغه بحاوية آمنة وإصلاح خط الزيت.',
+                            'تم وضع علامات تحذيرية وتجفيف السطح بمزيل شحوم معتمد والتأكد من ثبات المسار.',
+                            'تم عزل الماكينة المسببة للتسريب وتغيير الجوانات لمنع تكرار الانسكاب.'
+                        ];
+                        detectedRisk = 'عالي';
+                        detectedDate = 'today';
+                    } else if (maxDomain === 'water') {
+                        primaryAction = 'تم إغلاق مصدر المياه فوراً وتجفيف الأرضية بالكامل ووضع لافتة تحذيرية (أرضية زلقة) وإصلاح التسريب لمنع تكراره.';
+                        secondaryActions = [
+                            'تم تجفيف وتنظيف مسار المشاة فوراً وتأمين المنطقة بالعلامات التحذيرية.',
+                            'تم استدعاء فني الصيانة واستبدال الوصلات التالفة والتأكد من جفاف الأرضية.',
+                            'تم فتح مصرف المياه وتطهير المجرى وتأمين عبور الأفراد بأمان.'
+                        ];
+                        detectedRisk = 'متوسط';
+                        detectedDate = 'today';
+                    } else if (maxDomain === 'slipTrip') {
+                        primaryAction = 'تم تنظيف الممر وتجفيف الأرضية وإزالة كافة العوائق وتأمين حركة المشاة بالعلامات التحذيرية.';
+                        secondaryActions = [
+                            'تم رفع وتثبيت الخراطيم والكابلات بعيداً عن ممرات السير لمنع التعثر.',
+                            'تمت معالجة عيوب الأرضية وتثبيت شريط مانع للانزلاق ووضع لافتات تحذيرية.',
+                            'تم فتح وتوسيع ممرات المشاة بعرض آمن لا يقل عن متر واحد.'
+                        ];
+                        detectedRisk = 'متوسط';
+                        detectedDate = 'today';
+                    } else if (maxDomain === 'lighting5s') {
+                        primaryAction = 'تم إبلاغ قسم الصيانة والكهرباء واستبدال وحدات الإنارة وتأمين رؤية واضحة وكافية.';
+                        secondaryActions = [
+                            'تم تنظيف الموقع فوراً ونقل المخلفات للحاويات المخصصة وتطبيق نظام 5S.',
+                            'تم توفير تهوية مناسبة وإخلاء المسارات من أي تراكمات تعيق العمل.'
+                        ];
+                        detectedRisk = 'منخفض';
+                        detectedDate = '24h';
+                    }
                 } else {
                     primaryAction = 'تم اتخاذ الإجراء التصحيحي الفوري بالموقع وإزالة الخطر والتأكد من أمان واستقرار بيئة العمل.';
                     secondaryActions = [
@@ -5373,7 +5454,7 @@
                 `).join('');
             }
 
-            showToast('تم استنتاج وتوليد الإجراء التصحيحي التخصصي بنجاح بناءً على الوصف ✨', 'success', 3000);
+            showToast('تم استنتاج وتوليد الإجراء التصحيحي التخصصي بنجاح بناءً على سياق الخطر 🎯', 'success', 3000);
         }
 
         // تطبيق وسم الإجراء التصحيحي المباشر
