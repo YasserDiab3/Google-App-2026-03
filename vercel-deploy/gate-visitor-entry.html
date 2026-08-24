@@ -582,11 +582,6 @@
 
         @media (max-width: 600px) {
             .grid-2 { grid-template-columns: 1fr; }
-            .iso-header-table {
-                grid-template-columns: 1.2fr 1.6fr 60px;
-            }
-            .iso-company-name { font-size: 0.65rem; }
-            .iso-doc-title { font-size: 0.9rem; }
         }
 
         .form-group {
@@ -1533,12 +1528,16 @@
 
             <div class="receipt-card" id="receiptSummaryContent"></div>
 
-            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-                <button type="button" class="btn-submit-gate" style="margin-top: 0; padding: 10px 20px; font-size: 0.9rem;" onclick="resetCheckInForm()">
-                    <i class="fas fa-plus"></i>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px;">
+                <button type="button" class="btn-submit-gate" style="margin-top: 0; padding: 10px 20px; font-size: 0.88rem;" onclick="resetCheckInForm()">
+                    <i class="fas fa-user-plus"></i>
                     <span id="btnNextVisitor">تسجيل زائر جديد</span>
                 </button>
-                <button type="button" class="tool-btn" style="padding: 10px 18px; font-size: 0.85rem;" onclick="switchTab('active')">
+                <button type="button" class="tool-btn" style="padding: 10px 18px; font-size: 0.85rem; background: #f0fdf4; border: 1.5px solid #059669; color: #047857; font-weight: 800;" onclick="printSingleVisitorPass()">
+                    <i class="fas fa-print"></i>
+                    <span>طباعة تصريح الدخول (Badge)</span>
+                </button>
+                <button type="button" class="tool-btn" style="padding: 10px 18px; font-size: 0.85rem; background: var(--bg-card); color: var(--text-main);" onclick="switchTab('active')">
                     <i class="fas fa-users-viewfinder"></i>
                     <span id="btnGoActive">عرض قائمة المتواجدين</span>
                 </button>
@@ -2486,7 +2485,74 @@
             }
         }
 
-        function resetCheckInForm() {
+                function printSingleVisitorPass() {
+            if (!currentReceiptVisitor) return;
+            const v = currentReceiptVisitor;
+            const win = window.open('', '_blank');
+            if (!win) {
+                alert('يرجى السماح بالنوافذ المنبثقة للطباعة');
+                return;
+            }
+            const now = new Date();
+            win.document.write(`
+                <!DOCTYPE html>
+                <html lang="ar" dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>تصريح دخول زائر - ${v.badge}</title>
+                    <style>
+                        @page { size: A6 portrait; margin: 6mm; }
+                        * { box-sizing: border-box; }
+                        body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; margin: 0; padding: 6px; color: #0f172a; direction: rtl; }
+                        .pass-card { border: 2.5px solid #1e3a8a; border-radius: 12px; padding: 12px; text-align: center; }
+                        .pass-header { border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+                        .pass-badge { background: #1e3a8a; color: #fff; font-size: 1.15rem; font-weight: 900; padding: 4px 14px; border-radius: 8px; display: inline-block; margin-bottom: 8px; }
+                        .pass-title { font-size: 1rem; font-weight: 900; color: #1e1b4b; margin: 2px 0; }
+                        .pass-sub { font-size: 0.7rem; color: #64748b; font-weight: 700; }
+                        .pass-grid { text-align: right; font-size: 0.8rem; line-height: 1.6; margin: 10px 0; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; background: #f8fafc; }
+                        .pass-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding: 3px 0; }
+                        .pass-row:last-child { border-bottom: none; }
+                        .pass-row span { color: #64748b; font-weight: 700; }
+                        .pass-row strong { color: #0f172a; }
+                        .pass-rules { font-size: 0.65rem; color: #047857; background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 6px; padding: 6px; margin-top: 8px; text-align: center; font-weight: 700; }
+                        .pass-sig { margin-top: 12px; display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 800; }
+                    </style>
+                </head>
+                <body>
+                    <div class="pass-card">
+                        <div class="pass-header">
+                            <img src="icons/icapp-logo.png" style="max-height: 32px; max-width: 60px; object-fit: contain;" onerror="this.style.display='none'">
+                            <div>
+                                <div class="pass-title">تصريح دخول زائر / مقاول</div>
+                                <div class="pass-sub">ICAPP Visitor Access Pass</div>
+                            </div>
+                        </div>
+                        <div class="pass-badge">كارت رقم: ${v.badge}</div>
+                        <div class="pass-grid">
+                            <div class="pass-row"><span>اسم الزائر:</span><strong>${v.name}</strong></div>
+                            <div class="pass-row"><span>الجهة / الشركة:</span><strong>${v.org}</strong></div>
+                            <div class="pass-row"><span>المصنع / الموقع:</span><strong>${v.site} — ${v.area}</strong></div>
+                            <div class="pass-row"><span>المستضيف:</span><strong>${v.host}</strong></div>
+                            <div class="pass-row"><span>وقت الدخول:</span><strong>${v.entryTime} (${v.entryDate})</strong></div>
+                            <div class="pass-row"><span>الغرض:</span><strong>${v.purpose}</strong></div>
+                        </div>
+                        <div class="pass-rules">
+                            🛡️ مهمات الوقاية إلزامية | 🚭 التدخين والتصوير ممنوع | 🚶 الالتزام بالمرافقة
+                        </div>
+                        <div class="pass-sig">
+                            <div>توقيع مسؤول الأمن: ...........</div>
+                            <div>توقيع الزائر: ...........</div>
+                        </div>
+                    </div>
+                    <script>
+                        window.onload = () => { window.print(); };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            win.document.close();
+        }
+function resetCheckInForm() {
             document.getElementById('visitorForm').reset();
             const chk = document.getElementById('hasVehicleCheckbox');
             if (chk) chk.checked = false;
