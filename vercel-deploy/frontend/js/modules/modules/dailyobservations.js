@@ -8413,7 +8413,7 @@ const DailyObservations = {
                         </div>
                     </div>
 
-                    <!-- الصف الثالث: تاريخ التقرير ونطاق التواريخ -->
+                    <!-- الصف الثالث: تاريخ التقرير والحد الأقصى للشرائح -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                         <div>
                             <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
@@ -8422,13 +8422,27 @@ const DailyObservations = {
                             <input id="dailyobs-ppt-report-date" type="date" value="${todayStr}" style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 600; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
                         </div>
                         <div>
-                            <label style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 6px;">
-                                <i class="fas fa-calendar-alt" style="color: #9333ea; margin-left: 6px;"></i>من تاريخ - إلى تاريخ (اختياري)
+                            <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+                                <i class="fas fa-list-ol" style="color: #8b5cf6; margin-left: 6px;"></i>عدد الملاحظات المراد تصديرها <span style="color: #dc2626;">*</span>
                             </label>
-                            <div style="display: flex; gap: 8px;">
-                                <input id="dailyobs-ppt-from-date" type="date" value="" style="width: 50%; padding: 9px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 12px; color: #0f172a;">
-                                <input id="dailyobs-ppt-to-date" type="date" value="" style="width: 50%; padding: 9px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 12px; color: #0f172a;">
-                            </div>
+                            <select id="dailyobs-ppt-maxcount" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 13.5px; font-weight: 700; color: #0f172a; background: #ffffff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb';" onblur="this.style.borderColor='#cbd5e1';">
+                                <option value="all" selected>جميع الملاحظات المطابقة (تصدير الكل)</option>
+                                <option value="50">أحدث 50 ملاحظة</option>
+                                <option value="100">أحدث 100 ملاحظة</option>
+                                <option value="200">أحدث 200 ملاحظة</option>
+                                <option value="10">Top 10 (الأعلى أولوية وخطورة)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- الصف الرابع: نطاق التواريخ -->
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 6px;">
+                            <i class="fas fa-calendar-alt" style="color: #9333ea; margin-left: 6px;"></i>من تاريخ - إلى تاريخ (اختياري)
+                        </label>
+                        <div style="display: flex; gap: 8px;">
+                            <input id="dailyobs-ppt-from-date" type="date" value="" style="width: 50%; padding: 9px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 12px; color: #0f172a;">
+                            <input id="dailyobs-ppt-to-date" type="date" value="" style="width: 50%; padding: 9px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 12px; color: #0f172a;">
                         </div>
                     </div>
 
@@ -8470,13 +8484,14 @@ const DailyObservations = {
             const reportDate = modal.querySelector('#dailyobs-ppt-report-date')?.value || '';
             const fromDate = modal.querySelector('#dailyobs-ppt-from-date')?.value || '';
             const toDate = modal.querySelector('#dailyobs-ppt-to-date')?.value || '';
+            const maxCount = modal.querySelector('#dailyobs-ppt-maxcount')?.value || 'all';
 
             close();
-            await this.exportPptReport({ department: dept, siteName, language: lang, reportDate, fromDate, toDate, status, maxCount: 50 });
+            await this.exportPptReport({ department: dept, siteName, language: lang, reportDate, fromDate, toDate, status, maxCount });
         });
     },
 
-    async exportPptReport({ department = '', siteName = '', language = 'ar', reportDate = '', fromDate = '', toDate = '', status = 'all', maxCount = 10 } = {}) {
+    async exportPptReport({ department = '', siteName = '', language = 'ar', reportDate = '', fromDate = '', toDate = '', status = 'all', maxCount = 'all' } = {}) {
         try {
             const observationsRaw = Array.isArray(AppState.appData.dailyObservations)
                 ? AppState.appData.dailyObservations
@@ -8514,7 +8529,7 @@ const DailyObservations = {
                 return;
             }
 
-            // ترتيب الملاحظات لاختيار Top 10 حسب الأولوية القصوى (الخطورة العالية أولاً، ثم المفتوحة، ثم الأحدث)
+            // ترتيب الملاحظات لاختيار الأولوية القصوى (الخطورة العالية أولاً، ثم المفتوحة، ثم الأحدث)
             const sorted = [...filtered].sort((a, b) => {
                 const riskScore = (r) => {
                     const s = String(r || '').toLowerCase();
@@ -8534,7 +8549,8 @@ const DailyObservations = {
                 return dateB - dateA;
             });
 
-            const limit = parseInt(maxCount, 10) || 10;
+            const isAllCount = (maxCount === 'all' || maxCount === 0 || maxCount === '0' || !maxCount);
+            const limit = isAllCount ? sorted.length : (parseInt(maxCount, 10) || sorted.length);
             const exportBatch = sorted.slice(0, limit);
             const taskId = 'ppt_export_' + Date.now();
             const taskTitle = `جاري تصميم وتصدير تقرير PPTX (${exportBatch.length} ملاحظة)...`;

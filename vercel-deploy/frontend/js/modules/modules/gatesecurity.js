@@ -1165,6 +1165,7 @@ class GateSecurityModule {
         window._currentEditorConfig = JSON.parse(JSON.stringify(config));
         window._selectedItem = null;
         window._drawMode = false;
+        window._resizeState = null;
 
         // Cleanup any previous key listener
         if (window._mapEditorKeyHandler) {
@@ -1187,47 +1188,47 @@ class GateSecurityModule {
 
         let modalHtml = `
             <div id="mapEditorModal" style="position: fixed; inset: 0; background: rgba(15,23,42,0.85); backdrop-filter: blur(6px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 8px;">
-                <div id="mapEditorContainer" style="background: #ffffff; width: 100%; max-width: 1180px; max-height: 96vh; transition: all 0.25s ease; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35); border: 1px solid #cbd5e1; direction: rtl; display: flex; flex-direction: column;">
+                <div id="mapEditorContainer" style="background: #ffffff; width: 100%; max-width: 1250px; max-height: 96vh; transition: all 0.25s ease; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35); border: 1px solid #cbd5e1; direction: rtl; display: flex; flex-direction: column;">
                     <!-- Modal Header -->
                     <div style="background: #1e3a8a; color: #ffffff; padding: 10px 18px; border-top-left-radius: 16px; border-top-right-radius: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <i class="fas fa-drafting-compass" style="font-size: 1.4rem; color: #60a5fa;"></i>
                             <div>
                                 <h3 style="margin: 0; font-size: 1.05rem; font-weight: 900;">مصمم ومحرر الخريطة التفاعلي (Interactive Canvas & Layout Designer)</h3>
-                                <span style="font-size: 0.75rem; color: #bfdbfe;">اسحب بالماوس | رسم موقع جديد | اضغط زر Delete بالكيبورد للحذف السريع</span>
+                                <span style="font-size: 0.75rem; color: #bfdbfe;">اسحب بالماوس للتحريك والتحجيم | زر Delete بالكيبورد للحذف | سحب مقابض الزوايا لتكبير وتصغير الأبعاد</span>
                             </div>
                         </div>
 
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <button type="button" id="toggleDrawModeBtn" onclick="GateSecurity.toggleDrawMode()" style="background: #0284c7; color: #ffffff; border: none; padding: 5px 12px; border-radius: 8px; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <button type="button" id="toggleDrawModeBtn" onclick="GateSecurity.toggleDrawMode()" style="background: #0284c7; color: #ffffff; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
                                 <i class="fas fa-pencil-alt"></i> <span id="drawModeBtnText">تفعيل وضع رسم موقع بالماوس</span>
                             </button>
-                            <button type="button" onclick="GateSecurity.toggleEditorFullscreen()" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3); color: #ffffff; padding: 5px 12px; border-radius: 8px; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <button type="button" onclick="GateSecurity.toggleEditorFullscreen()" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3); color: #ffffff; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
                                 <i id="fsIcon" class="fas fa-expand"></i> <span id="fsBtnText">وضع ملء الشاشة</span>
                             </button>
-                            <button onclick="GateSecurity.closeMapEditorModal()" style="background: rgba(255,255,255,0.15); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-weight: 900; font-size: 1.1rem;">✕</button>
+                            <button onclick="GateSecurity.closeMapEditorModal()" style="background: rgba(255,255,255,0.15); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: 900; font-size: 1.1rem;">✕</button>
                         </div>
                     </div>
 
-                    <!-- Modal Body Split Layout -->
-                    <div id="editorBodyGrid" style="padding: 12px; display: grid; grid-template-columns: 640px 1fr; gap: 12px; flex: 1; overflow: hidden;">
+                    <!-- Modal Body Split Layout with FIXED SIDEBAR WIDTH -->
+                    <div id="editorBodyGrid" style="padding: 12px; display: flex; gap: 14px; flex: 1; overflow: hidden; height: calc(100% - 60px);">
                         <!-- الجانب الأيمن: لوحة الرسم التفاعلية MOUSE CANVAS -->
-                        <div style="display: flex; flex-direction: column; gap: 8px; height: 100%;">
+                        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; height: 100%;">
                             <!-- شريط أدوات التكبير والتصغير المعتمد والمحسّن -->
                             <div style="display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1; flex-wrap: wrap; gap: 6px;">
-                                <span style="font-weight: 900; font-size: 0.82rem; color: #1e3a8a;"><i class="fas fa-mouse-pointer"></i> لوحة الرسم المباشر:</span>
+                                <span style="font-weight: 900; font-size: 0.84rem; color: #1e3a8a;"><i class="fas fa-mouse-pointer"></i> لوحة الرسم المباشر (انقر واسحب بالماوس):</span>
                                 
                                 <div style="display: flex; align-items: center; gap: 6px;">
-                                    <button type="button" onclick="GateSecurity.stepEditorFrameScale(-10)" style="background: #ffffff; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 4px; font-weight: 900; font-size: 0.8rem; cursor: pointer;">-</button>
-                                    <input type="range" id="frameScaleRange" min="50" max="200" value="${config.frameScale || 100}" oninput="GateSecurity.updateEditorFrameScale(this.value)" style="width: 100px; cursor: pointer;">
-                                    <button type="button" onclick="GateSecurity.stepEditorFrameScale(10)" style="background: #ffffff; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 4px; font-weight: 900; font-size: 0.8rem; cursor: pointer;">+</button>
-                                    <button type="button" onclick="GateSecurity.updateEditorFrameScale(100)" style="background: #e2e8f0; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.7rem; cursor: pointer;">100%</button>
-                                    <span id="scaleValText" style="font-size: 0.78rem; font-weight: 900; color: #15803d; min-width: 40px; text-align: center;">${config.frameScale || 100}%</span>
+                                    <button type="button" onclick="GateSecurity.stepEditorFrameScale(-10)" style="background: #ffffff; border: 1px solid #cbd5e1; padding: 2px 10px; border-radius: 4px; font-weight: 900; font-size: 0.85rem; cursor: pointer;">-</button>
+                                    <input type="range" id="frameScaleRange" min="50" max="200" value="${config.frameScale || 100}" oninput="GateSecurity.updateEditorFrameScale(this.value)" style="width: 110px; cursor: pointer;">
+                                    <button type="button" onclick="GateSecurity.stepEditorFrameScale(10)" style="background: #ffffff; border: 1px solid #cbd5e1; padding: 2px 10px; border-radius: 4px; font-weight: 900; font-size: 0.85rem; cursor: pointer;">+</button>
+                                    <button type="button" onclick="GateSecurity.updateEditorFrameScale(100)" style="background: #e2e8f0; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.72rem; cursor: pointer;">100%</button>
+                                    <span id="scaleValText" style="font-size: 0.8rem; font-weight: 900; color: #15803d; min-width: 45px; text-align: center;">${config.frameScale || 100}%</span>
                                 </div>
                             </div>
 
-                            <!-- الـ SVG التفاعلي السحب والإفلات والرسم -->
-                            <div id="canvasViewport" style="border: 2px solid #334155; border-radius: 10px; background: ${config.frameBg || '#f1f5f9'}; overflow: auto; position: relative; width: 100%; height: 420px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 6px rgba(0,0,0,0.1); transition: height 0.25s ease;">
+                            <!-- الـ SVG التفاعلي السحب والإفلات والرسم والتحجيم -->
+                            <div id="canvasViewport" style="border: 2px solid #334155; border-radius: 10px; background: ${config.frameBg || '#f1f5f9'}; overflow: auto; position: relative; width: 100%; height: 440px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 6px rgba(0,0,0,0.1); transition: height 0.25s ease;">
                                 <svg id="interactiveCanvasSvg" viewBox="0 0 500 360" style="width: 100%; height: 100%; cursor: default; user-select: none;" onmousedown="GateSecurity.handleCanvasMouseDown(event)" onmousemove="GateSecurity.handleCanvasMouseMove(event)" onmouseup="GateSecurity.handleCanvasMouseUp(event)">
                                     <!-- background frame -->
                                     <rect x="10" y="10" width="480" height="340" rx="8" fill="#ffffff" stroke="#334155" stroke-width="2.5" stroke-dasharray="6,4"/>
@@ -1249,23 +1250,23 @@ class GateSecurityModule {
                                     </g>
                                 </svg>
                             </div>
-                            <div style="font-size: 0.72rem; color: #475569; text-align: center; font-weight: 700; background: #f8fafc; padding: 4px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                ⌨️ اضغط على أي عنصر لتحديده ثم اضغط زر <b style="color:#dc2626;">Delete</b> بالكيبورد لحذفه | استخدم الماوس للسحب
+                            <div style="font-size: 0.74rem; color: #334155; text-align: center; font-weight: 800; background: #f8fafc; padding: 6px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                                💡 سحب أي زاوية زرقاء للموقع للتكبير/التصغير بالماوس | اضغط <b style="color:#dc2626;">Delete</b> بالكيبورد للحذف
                             </div>
                         </div>
 
-                        <!-- الجانب الأيسر: لوحة التحكم والخيارات والإضافة -->
-                        <div style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 78vh; padding-left: 4px;">
+                        <!-- الجانب الأيسر: لوحة التحكم والخيارات الجانبية (Sidebar) بأسلوب ثابت وواضح -->
+                        <div id="editorSidebar" style="width: 380px; min-width: 340px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 100%; padding: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px;">
                             <!-- بيانات الخريطة والإحداثيات -->
-                            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 10px;">
+                            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px;">
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                     <div>
-                                        <label style="font-size: 0.75rem; font-weight: 800; color: #1e3a8a; display: block; margin-bottom: 2px;">إحداثيات GPS:</label>
-                                        <input type="text" id="editMapCoords" value="${config.coords}" style="width: 100%; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.8rem;">
+                                        <label style="font-size: 0.78rem; font-weight: 800; color: #1e3a8a; display: block; margin-bottom: 2px;">إحداثيات GPS:</label>
+                                        <input type="text" id="editMapCoords" value="${config.coords}" style="width: 100%; padding: 5px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.8rem;">
                                     </div>
                                     <div>
-                                        <label style="font-size: 0.75rem; font-weight: 800; color: #1e3a8a; display: block; margin-bottom: 2px;">لون إطار الخريطة:</label>
-                                        <select id="editFrameBg" onchange="GateSecurity.updateEditorFrameBg(this.value)" style="width: 100%; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.8rem;">
+                                        <label style="font-size: 0.78rem; font-weight: 800; color: #1e3a8a; display: block; margin-bottom: 2px;">لون إطار الخريطة:</label>
+                                        <select id="editFrameBg" onchange="GateSecurity.updateEditorFrameBg(this.value)" style="width: 100%; padding: 5px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.8rem;">
                                             <option value="#f1f5f9" ${config.frameBg === '#f1f5f9' ? 'selected' : ''}>رمادي فاتح (افتراضي)</option>
                                             <option value="#ffffff" ${config.frameBg === '#ffffff' ? 'selected' : ''}>أبيض ناصع</option>
                                             <option value="#e2e8f0" ${config.frameBg === '#e2e8f0' ? 'selected' : ''}>رمادي دافئ</option>
@@ -1276,38 +1277,38 @@ class GateSecurityModule {
                             </div>
 
                             <!-- إضافة مربع رسم موقع / منطقة جديدة -->
-                            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 8px 10px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                    <span style="font-size: 0.84rem; font-weight: 900; color: #1e3a8a;"><i class="fas fa-vector-square"></i> إضافة وتصميم مربع رسم موقع:</span>
-                                    <button type="button" onclick="GateSecurity.addEditorBuildingZone()" style="background: #2563eb; color: #fff; border: none; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer; box-shadow: 0 2px 5px rgba(37,99,235,0.2);">
-                                        + رسم مربع موقع جديد
+                            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-size: 0.86rem; font-weight: 900; color: #1e3a8a;"><i class="fas fa-vector-square"></i> رسم وتصميم المواقع والمباني:</span>
+                                    <button type="button" onclick="GateSecurity.addEditorBuildingZone()" style="background: #2563eb; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-weight: 800; font-size: 0.78rem; cursor: pointer; box-shadow: 0 2px 5px rgba(37,99,235,0.25);">
+                                        + رسم موقع جديد
                                     </button>
                                 </div>
-                                <div id="editorBuildingsList" style="display: flex; flex-direction: column; gap: 5px; max-height: 160px; overflow-y: auto;"></div>
+                                <div id="editorBuildingsList" style="display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto;"></div>
                             </div>
 
                             <!-- إضافة علامات وأيقونات السلامة -->
-                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px;">
+                            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px;">
                                 <h4 style="margin: 0 0 6px; font-size: 0.84rem; font-weight: 900; color: #1e40af; display: flex; align-items: center; gap: 6px;">
                                     <i class="fas fa-plus-circle"></i> إضافة أيقونات وعلامات السلامة (Safety Signs)
                                 </h4>
                                 <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px;">
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🧯', 'مطفأة حريق', '#dc2626')" style="background: #ffffff; border: 1px solid #fca5a5; color: #dc2626; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">🧯 مطفأة حريق</button>
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🚪', 'مخرج طوارئ', '#16a34a')" style="background: #ffffff; border: 1px solid #86efac; color: #16a34a; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">🚪 مخرج طوارئ</button>
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('➕', 'إسعافات أولية', '#16a34a')" style="background: #ffffff; border: 1px solid #86efac; color: #16a34a; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">➕ إسعافات أولية</button>
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('⚠️', 'علامة خطورة', '#d97706')" style="background: #ffffff; border: 1px solid #fde68a; color: #b45309; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">⚠️ منطقة خطرة</button>
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🚭', 'ممنوع التدخين', '#dc2626')" style="background: #ffffff; border: 1px solid #fca5a5; color: #dc2626; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">🚭 منع تدخين</button>
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('💧', 'دش طوارئ', '#0284c7')" style="background: #ffffff; border: 1px solid #7dd3fc; color: #0284c7; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">💧 دش طوارئ</button>
-                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🥽', 'مهمات وقاية', '#4f46e5')" style="background: #ffffff; border: 1px solid #c7d2fe; color: #4338ca; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">🥽 مهمات PPE</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🧯', 'مطفأة حريق', '#dc2626')" style="background: #ffffff; border: 1px solid #fca5a5; color: #dc2626; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; cursor: pointer;">🧯 مطفأة حريق</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🚪', 'مخرج طوارئ', '#16a34a')" style="background: #ffffff; border: 1px solid #86efac; color: #16a34a; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; cursor: pointer;">🚪 مخرج طوارئ</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('➕', 'إسعافات أولية', '#16a34a')" style="background: #ffffff; border: 1px solid #86efac; color: #16a34a; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; cursor: pointer;">➕ إسعافات أولية</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('⚠️', 'علامة خطورة', '#d97706')" style="background: #ffffff; border: 1px solid #fde68a; color: #b45309; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; cursor: pointer;">⚠️ منطقة خطرة</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🚭', 'ممنوع التدخين', '#dc2626')" style="background: #ffffff; border: 1px solid #fca5a5; color: #dc2626; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; cursor: pointer;">🚭 منع تدخين</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('💧', 'دش طوارئ', '#0284c7')" style="background: #ffffff; border: 1px solid #7dd3fc; color: #0284c7; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; cursor: pointer;">💧 دش طوارئ</button>
+                                    <button type="button" onclick="GateSecurity.addEditorSafetyIcon('🥽', 'مهمات وقاية', '#4f46e5')" style="background: #ffffff; border: 1px solid #c7d2fe; color: #4338ca; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; cursor: pointer;">🥽 مهمات PPE</button>
                                 </div>
-                                <div id="editorSafetyIconsList" style="display: flex; flex-direction: column; gap: 4px; max-height: 100px; overflow-y: auto;"></div>
+                                <div id="editorSafetyIconsList" style="display: flex; flex-direction: column; gap: 4px; max-height: 110px; overflow-y: auto;"></div>
                             </div>
 
                             <!-- قائمة نقاط التجمع -->
-                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px;">
+                            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                     <span style="font-size: 0.84rem; font-weight: 900; color: #15803d;"><i class="fas fa-flag"></i> نقاط التجمع (Muster Points):</span>
-                                    <button type="button" onclick="GateSecurity.addEditorMusterPoint()" style="background: #15803d; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">
+                                    <button type="button" onclick="GateSecurity.addEditorMusterPoint()" style="background: #15803d; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.76rem; cursor: pointer;">
                                         + إضافة نقطة تجمع
                                     </button>
                                 </div>
@@ -1365,7 +1366,7 @@ class GateSecurityModule {
     toggleEditorFullscreen() {
         const container = document.getElementById('mapEditorContainer');
         const viewport = document.getElementById('canvasViewport');
-        const grid = document.getElementById('editorBodyGrid');
+        const sidebar = document.getElementById('editorSidebar');
         const fsBtnText = document.getElementById('fsBtnText');
         const fsIcon = document.getElementById('fsIcon');
         
@@ -1373,24 +1374,24 @@ class GateSecurityModule {
 
         if (!container.classList.contains('is-fullscreen')) {
             container.classList.add('is-fullscreen');
-            container.style.width = '98vw';
-            container.style.height = '96vh';
+            container.style.width = '99vw';
+            container.style.height = '98vh';
             container.style.maxWidth = '100vw';
             container.style.maxHeight = '100vh';
             container.style.borderRadius = '0';
-            if (viewport) viewport.style.height = 'calc(96vh - 150px)';
-            if (grid) grid.style.gridTemplateColumns = '1fr 380px';
+            if (viewport) viewport.style.height = 'calc(98vh - 160px)';
+            if (sidebar) { sidebar.style.width = '420px'; sidebar.style.minWidth = '380px'; }
             if (fsBtnText) fsBtnText.textContent = 'إلغاء ملء الشاشة';
             if (fsIcon) fsIcon.className = 'fas fa-compress';
         } else {
             container.classList.remove('is-fullscreen');
             container.style.width = '100%';
             container.style.height = 'auto';
-            container.style.maxWidth = '1180px';
+            container.style.maxWidth = '1250px';
             container.style.maxHeight = '96vh';
             container.style.borderRadius = '16px';
-            if (viewport) viewport.style.height = '420px';
-            if (grid) grid.style.gridTemplateColumns = '640px 1fr';
+            if (viewport) viewport.style.height = '440px';
+            if (sidebar) { sidebar.style.width = '380px'; sidebar.style.minWidth = '340px'; }
             if (fsBtnText) fsBtnText.textContent = 'وضع ملء الشاشة';
             if (fsIcon) fsIcon.className = 'fas fa-expand';
         }
@@ -1476,7 +1477,7 @@ class GateSecurityModule {
             `).join('');
         }
 
-        // Render Selection Ring Highlight
+        // Render Selection Overlay with Mouse Resize Handles for Site Rectangles
         const selContainer = document.getElementById('svgSelectionGroup');
         if (selContainer) {
             if (window._selectedItem) {
@@ -1487,9 +1488,21 @@ class GateSecurityModule {
                     if (type === 'building') {
                         selContainer.innerHTML = `
                             <g transform="translate(${target.x}, ${target.y})">
+                                <!-- Dashed selection outline -->
                                 <rect x="-4" y="-4" width="${target.w + 8}" height="${target.h + 8}" rx="6" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="5,3"/>
+                                
+                                <!-- Delete button icon at top right -->
                                 <circle cx="${target.w + 4}" cy="-4" r="10" fill="#ef4444" cursor="pointer" onclick="GateSecurity.deleteSelectedItem()"/>
                                 <text x="${target.w + 4}" y="-1" font-size="11" font-weight="900" fill="#ffffff" text-anchor="middle" cursor="pointer" onclick="GateSecurity.deleteSelectedItem()">✕</text>
+
+                                <!-- Bottom-Right corner resize handle (SE) -->
+                                <rect class="resize-handle" data-handle="se" x="${target.w - 5}" y="${target.h - 5}" width="12" height="12" rx="2" fill="#2563eb" stroke="#ffffff" stroke-width="1.5" style="cursor: nwse-resize;"/>
+                                
+                                <!-- Right edge resize handle (E) -->
+                                <rect class="resize-handle" data-handle="e" x="${target.w - 5}" y="${target.h/2 - 6}" width="12" height="12" rx="2" fill="#2563eb" stroke="#ffffff" stroke-width="1.5" style="cursor: ew-resize;"/>
+
+                                <!-- Bottom edge resize handle (S) -->
+                                <rect class="resize-handle" data-handle="s" x="${target.w/2 - 6}" y="${target.h - 5}" width="12" height="12" rx="2" fill="#2563eb" stroke="#ffffff" stroke-width="1.5" style="cursor: ns-resize;"/>
                             </g>
                         `;
                     } else if (type === 'muster') {
@@ -1700,6 +1713,24 @@ class GateSecurityModule {
         const svgX = Math.round((e.clientX - rect.left) * (500 / rect.width));
         const svgY = Math.round((e.clientY - rect.top) * (360 / rect.height));
 
+        // Check interactive mouse resize handle click
+        if (e.target.classList.contains('resize-handle')) {
+            const handle = e.target.getAttribute('data-handle');
+            if (window._selectedItem && window._selectedItem.type === 'building') {
+                const idx = window._selectedItem.idx;
+                const b = window._currentEditorConfig.buildings[idx];
+                window._resizeState = {
+                    idx: idx,
+                    handle: handle,
+                    svgX: svgX,
+                    svgY: svgY,
+                    origW: b.w,
+                    origH: b.h
+                };
+                return;
+            }
+        }
+
         if (window._drawMode) {
             // Interactive mouse draw mode for site rectangles
             window._drawingState = { startX: svgX, startY: svgY };
@@ -1734,6 +1765,25 @@ class GateSecurityModule {
         const currentSvgX = Math.round((e.clientX - rect.left) * (500 / rect.width));
         const currentSvgY = Math.round((e.clientY - rect.top) * (360 / rect.height));
 
+        // Mouse Resize Dragging Logic
+        if (window._resizeState) {
+            const { idx, handle, svgX, svgY, origW, origH } = window._resizeState;
+            const dx = Math.round(currentSvgX - svgX);
+            const dy = Math.round(currentSvgY - svgY);
+            const b = window._currentEditorConfig.buildings[idx];
+
+            if (b) {
+                if (handle === 'se' || handle === 'e') {
+                    b.w = Math.max(30, origW + dx);
+                }
+                if (handle === 'se' || handle === 's') {
+                    b.h = Math.max(20, origH + dy);
+                }
+                this.renderEditorCanvas();
+            }
+            return;
+        }
+
         if (window._drawMode && window._drawingState) {
             // Render rubberband rectangle preview
             const previewGrp = document.getElementById('svgDrawingPreviewGroup');
@@ -1764,6 +1814,11 @@ class GateSecurityModule {
     }
 
     handleCanvasMouseUp(e) {
+        if (window._resizeState) {
+            window._resizeState = null;
+            return;
+        }
+
         if (window._drawMode && window._drawingState) {
             const svg = document.getElementById('interactiveCanvasSvg');
             if (svg) {
