@@ -918,14 +918,14 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                             </div>
 
                             <!-- \u0625\u0636\u0627\u0641\u0629 \u0645\u0631\u0628\u0639 \u0631\u0633\u0645 \u0645\u0648\u0642\u0639 / \u0645\u0646\u0637\u0642\u0629 \u062C\u062F\u064A\u062F\u0629 -->
-                            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 10px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 10px; max-width: 100%; box-sizing: border-box;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
                                     <span style="font-size: 0.86rem; font-weight: 900; color: #1e3a8a;"><i class="fas fa-vector-square"></i> \u0631\u0633\u0645 \u0648\u062A\u0635\u0645\u064A\u0645 \u0627\u0644\u0645\u0648\u0627\u0642\u0639 \u0648\u0627\u0644\u0645\u0628\u0627\u0646\u064A:</span>
                                     <button type="button" onclick="GateSecurity.addEditorBuildingZone()" style="background: #2563eb; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-weight: 800; font-size: 0.78rem; cursor: pointer; box-shadow: 0 2px 5px rgba(37,99,235,0.25);">
                                         + \u0631\u0633\u0645 \u0645\u0648\u0642\u0639 \u062C\u062F\u064A\u062F
                                     </button>
                                 </div>
-                                <div id="editorBuildingsList" style="display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto;"></div>
+                                <div id="editorBuildingsList" style="display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; overflow-x: auto; max-width: 100%; box-sizing: border-box; padding: 2px;"></div>
                             </div>
 
                             <!-- \u0625\u0636\u0627\u0641\u0629 \u0639\u0644\u0627\u0645\u0627\u062A \u0648\u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 -->
@@ -1020,12 +1020,12 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                                 <text x="14" y="-11" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle" cursor="pointer" onclick="GateSecurity.deleteSelectedItem()">\u2715</text>
                             </g>
                         `):d.innerHTML=""}else d.innerHTML="";this.renderEditorLists()}renderEditorLists(){const e=window._currentEditorConfig;if(!e)return;const i=document.getElementById("editorBuildingsList");i&&(i.innerHTML=e.buildings.map((o,s)=>{const d=window._selectedItem&&window._selectedItem.type==="building"&&window._selectedItem.idx===s;return`
-                    <div style="display: grid; grid-template-columns: 110px 1fr 45px 45px 50px 24px; gap: 4px; align-items: center; background: ${d?"#fef2f2":"#fff"}; padding: 4px 6px; border: 1.5px solid ${d?"#ef4444":"#cbd5e1"}; border-radius: 6px;">
-                        <input type="text" value="${o.name}" onchange="GateSecurity.updateBuildingProp(${s}, 'name', this.value)" style="padding: 2px 4px; font-size: 0.74rem; font-weight: 800;">
-                        <input type="text" value="${o.sub||""}" placeholder="\u0648\u0635\u0641 \u0627\u0644\u0641\u0631\u0639\u064A" onchange="GateSecurity.updateBuildingProp(${s}, 'sub', this.value)" style="padding: 2px 4px; font-size: 0.74rem;">
-                        <div><span style="font-size: 0.62rem;">W:</span><input type="number" value="${o.w}" onchange="GateSecurity.updateBuildingProp(${s}, 'w', parseInt(this.value))" style="width: 32px; font-size: 0.68rem;"></div>
-                        <div><span style="font-size: 0.62rem;">H:</span><input type="number" value="${o.h}" onchange="GateSecurity.updateBuildingProp(${s}, 'h', parseInt(this.value))" style="width: 32px; font-size: 0.68rem;"></div>
-                        <select onchange="GateSecurity.updateBuildingColor(${s}, this.value)" style="font-size: 0.65rem; padding: 1px;">
+                    <div style="display: grid; grid-template-columns: minmax(70px, 1.2fr) minmax(70px, 1fr) min-content min-content min-content 22px; gap: 3px; align-items: center; background: ${d?"#fef2f2":"#fff"}; padding: 4px 6px; border: 1.5px solid ${d?"#ef4444":"#cbd5e1"}; border-radius: 6px; min-width: 0; box-sizing: border-box;">
+                        <input type="text" value="${o.name}" onchange="GateSecurity.updateBuildingProp(${s}, 'name', this.value)" style="padding: 2px 4px; font-size: 0.74rem; font-weight: 800; min-width: 0; width: 100%; box-sizing: border-box;" title="\u0627\u0633\u0645 \u0627\u0644\u0645\u0628\u0646\u0649/\u0627\u0644\u0645\u0648\u0642\u0639">
+                        <input type="text" value="${o.sub||""}" placeholder="\u0648\u0635\u0641 \u0627\u0644\u0641\u0631\u0639\u064A" onchange="GateSecurity.updateBuildingProp(${s}, 'sub', this.value)" style="padding: 2px 4px; font-size: 0.72rem; min-width: 0; width: 100%; box-sizing: border-box;" title="\u0627\u0644\u0648\u0635\u0641 \u0627\u0644\u0641\u0631\u0639\u064A">
+                        <div style="display: flex; align-items: center; gap: 2px; white-space: nowrap;"><span style="font-size: 0.62rem; font-weight: 800; color: #475569;">W:</span><input type="number" value="${o.w}" onchange="GateSecurity.updateBuildingProp(${s}, 'w', parseInt(this.value))" style="width: 28px; font-size: 0.68rem; padding: 1px 2px;" title="\u0627\u0644\u0639\u0631\u0636"></div>
+                        <div style="display: flex; align-items: center; gap: 2px; white-space: nowrap;"><span style="font-size: 0.62rem; font-weight: 800; color: #475569;">H:</span><input type="number" value="${o.h}" onchange="GateSecurity.updateBuildingProp(${s}, 'h', parseInt(this.value))" style="width: 28px; font-size: 0.68rem; padding: 1px 2px;" title="\u0627\u0644\u0627\u0631\u062A\u0641\u0627\u0639"></div>
+                        <select onchange="GateSecurity.updateBuildingColor(${s}, this.value)" style="font-size: 0.65rem; padding: 1px; max-width: 52px; font-weight: 700;" title="\u0644\u0648\u0646 \u0627\u0644\u0645\u0628\u0646\u0649">
                             <option value="#dbeafe" ${o.fill==="#dbeafe"?"selected":""}>\u0623\u0632\u0631\u0642</option>
                             <option value="#fef3c7" ${o.fill==="#fef3c7"?"selected":""}>\u0623\u0635\u0641\u0631</option>
                             <option value="#ede9fe" ${o.fill==="#ede9fe"?"selected":""}>\u0628\u0646\u0641\u0633\u062C\u064A</option>
@@ -1033,7 +1033,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                             <option value="#dcfce7" ${o.fill==="#dcfce7"?"selected":""}>\u0623\u062E\u0636\u0631</option>
                             <option value="#f1f5f9" ${o.fill==="#f1f5f9"?"selected":""}>\u0631\u0645\u0627\u062F\u064A</option>
                         </select>
-                        <button type="button" onclick="GateSecurity.removeBuilding(${s})" style="color: #dc2626; border: none; background: #fee2e2; border-radius: 4px; cursor: pointer; font-weight: 900; font-size: 0.75rem;" title="\u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0642\u0639">\u2715</button>
+                        <button type="button" onclick="GateSecurity.removeBuilding(${s})" style="color: #dc2626; border: none; background: #fee2e2; border-radius: 4px; cursor: pointer; font-weight: 900; font-size: 0.75rem; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;" title="\u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0642\u0639">\u2715</button>
                     </div>
                 `}).join(""));const t=document.getElementById("editorSafetyIconsList");t&&(t.innerHTML=(e.safetyIcons||[]).map((o,s)=>{const d=window._selectedItem&&window._selectedItem.type==="icon"&&window._selectedItem.idx===s;return`
                     <div style="display: flex; justify-content: space-between; align-items: center; background: ${d?"#fef2f2":"#ffffff"}; border: 1.5px solid ${d?"#ef4444":"#cbd5e1"}; border-radius: 6px; padding: 3px 8px;">
