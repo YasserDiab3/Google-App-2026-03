@@ -5057,9 +5057,10 @@
             ]
         };
 
-        SAFETY_OBSERVATION_TEMPLATES['حالة غير آمنة'] = SAFETY_OBSERVATION_TEMPLATES['وضع غير آمن'];
+        var SAFETY_OBSERVATION_TEMPLATES = DETAILED_SUBCATEGORY_TEMPLATES;
+        SAFETY_OBSERVATION_TEMPLATES['حالة غير آمنة'] = SAFETY_OBSERVATION_TEMPLATES['وضع غير آمن'] || [];
 
-        const COMMON_CORRECTIVE_ACTIONS = [
+        var COMMON_CORRECTIVE_ACTIONS = [
             'تم تنبيه العامل فوراً والتوجيه بالسلوك الآمن المعتمد.',
             'تم إيقاف العمل مؤقتاً لحين معالجة وتأمين الخطر بالكامل.',
             'تم إزالة ورفع العائق وفتح الممر فوراً.',
