@@ -88,7 +88,7 @@ class GateSecurityModule {
                             <i class="fas fa-qrcode"></i> بوستر QR للبوابات (A4)
                         </button>
                         <button type="button" class="btn" onclick="GateSecurity.printMasterVisitorBadges()" style="font-weight: 800; background: #059669; color: #ffffff; border-color: #059669;">
-                            <i class="fas fa-id-badge"></i> كروت الزوار العامة (A4)
+                            <i class="fas fa-id-badge"></i> كارت وقواعد السلامة للزائرين (A4)
                         </button>
                         <button type="button" class="btn btn-primary" onclick="GateSecurity.printEmergencyMusterList()" style="font-weight: 700; background: #dc2626; border-color: #dc2626;">
                             <i class="fas fa-print"></i> طباعة كشف الإخلاء
@@ -1122,259 +1122,791 @@ class GateSecurityModule {
 
     printMasterVisitorBadges() {
         const portalUrl = this.getGatePortalUrl();
-        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&format=png&margin=0&data=${encodeURIComponent(portalUrl)}`;
         const win = window.open('', '_blank');
         if (!win) {
-            alert('يرجى السماح بالنوافذ المنبثقة لطباعة كروت الزوار (Pop-ups)');
+            alert('يرجى السماح بالنوافذ المنبثقة لطباعة كارت وقواعد السلامة للزائرين (Pop-ups)');
             return;
         }
-
-        const badgeHtml = (num) => `
-            <div class="visitor-master-badge">
-                <div class="lanyard-hole"></div>
-                
-                <div class="badge-top-header">
-                    <div class="badge-top-brand">
-                        <img src="icons/icapp-logo.png" alt="ICAPP" class="badge-mini-logo" onerror="this.src='../icons/icapp-logo.png'">
-                        <div class="badge-dept-text">إدارة السلامة والصحة المهنية والأمن الصناعي</div>
-                    </div>
-                    <div class="badge-type-banner">
-                        🪪 كارت وشارة زائر معتمد | VISITOR PASS
-                    </div>
-                </div>
-
-                <div class="badge-number-box">
-                    <span class="badge-lbl">رقم كارت الزائر:</span>
-                    <span class="badge-val">VIS - ${num.toString().padStart(3, '0')}</span>
-                </div>
-
-                <div class="badge-body-content">
-                    <div class="badge-line-row">
-                        <span class="line-key">اسم الزائر:</span>
-                        <span class="line-dots">.......................................................................</span>
-                    </div>
-                    <div class="badge-line-row">
-                        <span class="line-key">الجهة / الشركة:</span>
-                        <span class="line-dots">.......................................................................</span>
-                    </div>
-                    <div class="badge-line-row">
-                        <span class="line-key">الموظف المستضيف:</span>
-                        <span class="line-dots">.......................................................................</span>
-                    </div>
-                    <div class="badge-line-row">
-                        <span class="line-key">المصنع / الموقع:</span>
-                        <span class="line-dots">.......................................................................</span>
-                    </div>
-
-                    <div class="badge-mid-qr-row">
-                        <img src="${qrImageUrl}" alt="Portal QR" class="badge-qr-pic" onerror="this.src='https://chart.googleapis.com/chart?cht=qr&chs=150x150&chl=${encodeURIComponent(portalUrl)}';">
-                        <div class="badge-rules-list">
-                            ⚠️ <strong>تعليمات أمنية وإلزامية:</strong><br>
-                            • حمل هذا الكارت بصفة ظاهرة طوال الزيارة.<br>
-                            • الالتزام بارتداء مهمات الوقاية (PPE).<br>
-                            • يُمنع التحرك الفردي بدون مرافق رسمي.<br>
-                            • يُسلّم هذا الكارت للبوابة عند تسجيل الخروج.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="badge-bottom-footer">
-                    <div>كود: <strong>DOC-SEC-VIS-PASS-01</strong></div>
-                    <div>ختم / اعتماد البوابة: ....................</div>
-                </div>
-            </div>
-        `;
 
         win.document.write(`
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
                 <meta charset="UTF-8">
-                <title>نماذج كروت وشارات الزوار العامة المعتمدة - ICAPP</title>
+                <title>كارت قواعد السلامة للزائرين ونقاط التجمع - ICAPP Safety Rules & Assembly Points</title>
                 <style>
                     @page {
-                        size: A4 portrait;
-                        margin: 8mm 8mm 8mm 8mm;
+                        size: A4 landscape;
+                        margin: 6mm 6mm 6mm 6mm;
                     }
                     * { box-sizing: border-box; }
                     body {
                         font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
                         margin: 0;
-                        padding: 10px;
+                        padding: 8px;
                         direction: rtl;
-                        color: #0f172a;
-                        background: #f8fafc;
+                        color: #000000;
+                        background: #f1f5f9;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
-                    .sheet-wrapper {
+                    .card-container {
+                        width: 100%;
+                        max-width: 285mm;
+                        margin: 0 auto;
                         display: grid;
                         grid-template-columns: 1fr 1fr;
                         gap: 12px;
-                        max-width: 210mm;
-                        margin: 0 auto;
-                    }
-                    .visitor-master-badge {
                         background: #ffffff;
-                        border: 2px dashed #64748b;
-                        border-radius: 12px;
-                        overflow: hidden;
+                        border: 2.5px solid #1e3a8a;
+                        padding: 10px;
+                        min-height: 188mm;
+                    }
+                    
+                    /* ======================================================== */
+                    /* الجانب الأيسر: رسم توضيحي لنقاط التجمع (ASSEMBLY POINT) */
+                    /* ======================================================== */
+                    .left-panel {
+                        border: 2px solid #0f172a;
+                        border-radius: 4px;
+                        padding: 10px;
                         display: flex;
                         flex-direction: column;
                         justify-content: space-between;
-                        padding: 0;
-                        min-height: 128mm;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-                        position: relative;
-                    }
-                    .lanyard-hole {
-                        width: 14mm;
-                        height: 3mm;
-                        background: #e2e8f0;
-                        border: 1px dashed #64748b;
-                        border-radius: 3px;
-                        margin: 3px auto 1px;
-                    }
-                    .badge-top-header {
-                        background: #1e3a8a;
-                        color: #ffffff;
-                        padding: 6px 10px;
-                        text-align: center;
-                        border-bottom: 3px solid #059669;
-                    }
-                    .badge-top-brand {
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        margin-bottom: 3px;
-                    }
-                    .badge-mini-logo {
-                        max-height: 26px;
-                        max-width: 65px;
-                        object-fit: contain;
                         background: #ffffff;
-                        padding: 1px 4px;
-                        border-radius: 3px;
                     }
-                    .badge-dept-text {
-                        font-size: 8.5px;
+                    .left-header {
+                        text-align: center;
+                        margin-bottom: 8px;
+                        border-bottom: 2px solid #0f172a;
+                        padding-bottom: 6px;
+                    }
+                    .left-header h2 {
+                        margin: 0;
+                        font-size: 18px;
+                        font-weight: 900;
+                        color: #000000;
+                    }
+                    .left-header h3 {
+                        margin: 2px 0 0;
+                        font-size: 14px;
                         font-weight: 800;
-                        color: #93c5fd;
-                        text-align: left;
-                    }
-                    .badge-type-banner {
-                        font-size: 11.5px;
-                        font-weight: 900;
-                        margin-top: 2px;
-                    }
-                    .badge-number-box {
-                        background: #0f172a;
-                        color: #ffffff;
-                        padding: 5px 10px;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                    }
-                    .badge-lbl {
-                        font-size: 9.5px;
-                        color: #94a3b8;
-                        font-weight: 700;
-                    }
-                    .badge-val {
-                        font-size: 15px;
-                        font-weight: 900;
-                        color: #34d399;
-                        font-family: 'Courier New', monospace;
+                        color: #000000;
                         letter-spacing: 1px;
                     }
-                    .badge-body-content {
-                        padding: 8px 10px;
+                    
+                    /* خريطة المخطط التوضيحي لنقاط التجمع */
+                    .map-canvas-container {
                         flex: 1;
+                        border: 1.5px dashed #475569;
+                        border-radius: 6px;
+                        background: #f8fafc;
+                        position: relative;
                         display: flex;
                         flex-direction: column;
-                        gap: 4px;
-                    }
-                    .badge-line-row {
-                        display: flex;
+                        justify-content: center;
                         align-items: center;
-                        font-size: 9px;
-                        margin-bottom: 2px;
+                        padding: 12px;
+                        min-height: 130mm;
                     }
-                    .line-key {
-                        font-weight: 800;
-                        color: #1e3a8a;
-                        width: 75px;
-                        flex-shrink: 0;
+                    .schematic-map {
+                        width: 100%;
+                        height: 100%;
+                        max-height: 125mm;
                     }
-                    .line-dots {
-                        color: #94a3b8;
-                        font-size: 8.5px;
-                        overflow: hidden;
-                        white-space: nowrap;
-                    }
-                    .badge-mid-qr-row {
+                    .map-legend-bar {
                         display: flex;
+                        justify-content: space-around;
                         align-items: center;
-                        gap: 8px;
-                        background: #f8fafc;
-                        border: 1px solid #cbd5e1;
-                        border-radius: 6px;
-                        padding: 5px;
-                        margin-top: 4px;
-                    }
-                    .badge-qr-pic {
-                        width: 52px;
-                        height: 52px;
+                        background: #e2e8f0;
                         border: 1px solid #94a3b8;
                         border-radius: 4px;
-                        flex-shrink: 0;
+                        padding: 4px 8px;
+                        font-size: 9.5px;
+                        font-weight: 800;
+                        margin-top: 6px;
+                        flex-wrap: wrap;
+                        gap: 6px;
                     }
-                    .badge-rules-list {
-                        font-size: 7.5px;
+                    .legend-item {
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                    }
+                    .legend-color {
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 2px;
+                    }
+                    .site-coordinates-box {
+                        font-size: 9px;
                         color: #334155;
-                        line-height: 1.3;
+                        text-align: center;
+                        margin-top: 4px;
+                        font-weight: 700;
+                        direction: ltr;
                     }
-                    .badge-bottom-footer {
-                        background: #f1f5f9;
-                        border-top: 1px solid #cbd5e1;
+
+                    /* ======================================================== */
+                    /* الجانب الأيمن: قواعد السلامة للزائرين (SAFETY RULES VISITORS) */
+                    /* ======================================================== */
+                    .right-panel {
+                        border: 2px solid #1e3a8a;
+                        border-radius: 4px;
+                        overflow: hidden;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        background: #ffffff;
+                    }
+                    .right-header {
+                        text-align: center;
+                        padding: 6px 10px;
+                    }
+                    .right-header h2 {
+                        margin: 0;
+                        font-size: 19px;
+                        font-weight: 900;
+                        color: #000000;
+                    }
+                    .right-header h3 {
+                        margin: 1px 0 0;
+                        font-size: 13px;
+                        font-weight: 800;
+                        color: #000000;
+                        letter-spacing: 0.5px;
+                    }
+
+                    /* الصندوق الأزرق الرئيسي */
+                    .blue-priority-banner {
+                        background: #1e40af;
+                        color: #ffffff;
+                        padding: 5px 8px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        font-size: 10.5px;
+                        font-weight: 800;
+                    }
+                    .blue-text-en {
+                        text-align: left;
+                        direction: ltr;
+                        font-size: 9px;
+                        line-height: 1.2;
+                        width: 48%;
+                    }
+                    .blue-text-ar {
+                        text-align: right;
+                        direction: rtl;
+                        font-size: 10.5px;
+                        line-height: 1.25;
+                        width: 48%;
+                    }
+
+                    /* قسم حظر التدخين */
+                    .smoking-section {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 5px 8px;
+                        border-bottom: 1.5px solid #cbd5e1;
+                        gap: 6px;
+                    }
+                    .smoke-en {
+                        font-size: 8.5px;
+                        direction: ltr;
+                        text-align: left;
+                        line-height: 1.2;
+                        font-weight: 700;
+                        width: 42%;
+                        color: #000000;
+                    }
+                    .smoke-icon-box {
+                        width: 48px;
+                        height: 48px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .smoke-ar {
+                        font-size: 9.5px;
+                        direction: rtl;
+                        text-align: right;
+                        line-height: 1.25;
+                        font-weight: 800;
+                        width: 42%;
+                        color: #000000;
+                    }
+
+                    /* قواعد السلامة الرئيسية (الأيقونات الدائرية) */
+                    .basic-rules-section {
+                        padding: 4px 6px;
+                        border-bottom: 1.5px solid #cbd5e1;
+                    }
+                    .basic-rules-header {
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 10px;
+                        font-weight: 900;
+                        color: #000000;
+                        margin-bottom: 4px;
+                        padding: 0 4px;
+                    }
+                    .rules-icons-row {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 2px 4px;
+                    }
+                    .rule-circle-icon {
+                        width: 32px;
+                        height: 32px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+
+                    /* شريط سارينة الإنذار الأحمر والخطوات الصفراء الثلاث */
+                    .siren-section {
+                        border-bottom: 1.5px solid #cbd5e1;
+                    }
+                    .siren-red-bar {
+                        background: #dc2626;
+                        color: #ffffff;
                         padding: 4px 8px;
                         display: flex;
                         justify-content: space-between;
-                        align-items: center;
-                        font-size: 8px;
-                        color: #475569;
-                        font-weight: 700;
+                        font-size: 10.5px;
+                        font-weight: 900;
                     }
-                    .print-btn-wrap {
+                    .siren-steps-container {
+                        background: #facc15;
+                        padding: 4px 6px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 3px;
+                    }
+                    .siren-step-row {
+                        display: grid;
+                        grid-template-columns: 1fr 40px 1fr;
+                        align-items: center;
+                        gap: 4px;
+                        background: #eab308;
+                        padding: 2px 6px;
+                        border-radius: 3px;
+                    }
+                    .s-text-en {
+                        font-size: 8.5px;
+                        font-weight: 800;
+                        direction: ltr;
+                        text-align: left;
+                        color: #000000;
+                    }
+                    .s-icon-center {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .s-text-ar {
+                        font-size: 9.5px;
+                        font-weight: 900;
+                        direction: rtl;
+                        text-align: right;
+                        color: #000000;
+                    }
+
+                    /* قسم مهمات الوقاية الشخصية PPE */
+                    .ppe-section {
+                        padding: 4px 6px;
+                        border-bottom: 1.5px solid #cbd5e1;
+                    }
+                    .ppe-header-texts {
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 9px;
+                        font-weight: 800;
+                        color: #000000;
+                        margin-bottom: 4px;
+                        padding: 0 2px;
+                    }
+                    .ppe-icons-row {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 0 4px;
+                    }
+                    .ppe-icon-circle {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        background: #0f172a;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #ffffff;
+                    }
+
+                    /* فوتر الطوارئ والاتصال */
+                    .emergency-footer {
+                        padding: 4px 8px 6px;
                         text-align: center;
-                        margin-top: 14px;
+                    }
+                    .emergency-top-row {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        font-size: 11px;
+                        font-weight: 900;
+                        color: #000000;
+                        margin-bottom: 2px;
+                    }
+                    .phone-icons-box {
+                        display: flex;
+                        gap: 6px;
+                    }
+                    .phone-pill {
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 4px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #ffffff;
+                        font-size: 13px;
+                    }
+                    .emergency-call-line {
+                        font-size: 10px;
+                        font-weight: 900;
+                        color: #000000;
+                        margin-top: 2px;
+                    }
+
+                    /* أدوات التحكم العلوية للطباعة */
+                    .toolbar-top {
+                        background: #ffffff;
+                        border: 1px solid #cbd5e1;
+                        border-radius: 8px;
+                        padding: 8px 14px;
+                        margin-bottom: 10px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        flex-wrap: wrap;
+                        gap: 8px;
                     }
                     @media print {
-                        body {
-                            background: #ffffff;
-                            padding: 0;
-                        }
-                        .print-btn-wrap {
-                            display: none !important;
-                        }
+                        .toolbar-top { display: none !important; }
+                        body { padding: 0; background: #ffffff; }
+                        .card-container { min-height: 98vh; max-width: 100%; border: 2px solid #1e3a8a; }
                     }
                 </style>
             </head>
             <body>
-                <div style="text-align: center; margin-bottom: 8px;" class="print-btn-wrap">
-                    <span style="font-size: 12px; font-weight: 800; color: #1e40af;">📄 صفحة كروت وشارات الزوار العامة (A4 Sheet - 4 Badges) — قم بالطباعة والقص والتغليف الحراري للتسليم اليدوي</span>
+                <div class="toolbar-top">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a;">اختر المصنع / الموقع:</span>
+                        <select id="siteSelect" onchange="updateSiteMap(this.value)" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #94a3b8; font-weight: 700; font-size: 12px;">
+                            <option value="ICAPP-1">المصنع الرئيسي (ICAPP-1 - خطوط الفاكهة والتصنيع)</option>
+                            <option value="ICAPP-2">مصنع التجميد والتعبئة (ICAPP-2)</option>
+                            <option value="ICAPP-3">مصنع المركزات والعصائر (ICAPP-3)</option>
+                            <option value="ICAPP-4">محطة المعالجة والخدمات الفنية (ICAPP-4)</option>
+                            <option value="WH">المخازن العامة (WH)</option>
+                            <option value="المبنى الإداري">المبنى الإداري ومبنى السلامة</option>
+                            <option value="الموقع العام" selected>الموقع العام لكافة المصانع (Master Site Layout)</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" id="customCoords" placeholder="إحداثيات GPS (مثال: 30°24'12.4\"N 31°18'45.2\"E)" value="30°24'12.4&quot;N 31°18'45.2&quot;E" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 11px; width: 250px;" oninput="document.getElementById('displayCoords').textContent = 'إحداثيات الموقع: ' + this.value">
+                        <button onclick="window.print()" style="padding: 6px 18px; background: #1e40af; color: #fff; border:none; border-radius:6px; cursor:pointer; font-weight: 900; font-size: 12px;">🖨️ طباعة الكارت الآن</button>
+                    </div>
                 </div>
 
-                <div class="sheet-wrapper">
-                    ${badgeHtml(1)}
-                    ${badgeHtml(2)}
-                    ${badgeHtml(3)}
-                    ${badgeHtml(4)}
+                <div class="card-container">
+                    <!-- الجانب الأيسر: رسم توضيحي لنقاط التجمع -->
+                    <div class="left-panel">
+                        <div class="left-header">
+                            <h2>رسم توضيحي لنقاط التجمع</h2>
+                            <h3>ASSEMBLY POINT</h3>
+                        </div>
+
+                        <div class="map-canvas-container">
+                            <!-- المخطط التوضيحي SVG المعياري لنقاط التجمع والمصانع ومسارات الإخلاء -->
+                            <svg class="schematic-map" viewBox="0 0 500 360" xmlns="http://www.w3.org/2000/svg">
+                                <!-- الخلفية والمحيط الخارجي -->
+                                <rect x="10" y="10" width="480" height="340" rx="8" fill="#f1f5f9" stroke="#334155" stroke-width="2.5" stroke-dasharray="6,4"/>
+                                
+                                <!-- الشارع المحيط والبوابات -->
+                                <rect x="20" y="20" width="460" height="320" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+                                <rect x="35" y="35" width="430" height="290" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+
+                                <!-- مباني المصانع والمرافق الرئيسية -->
+                                <!-- مبنى الإدارة والمختبر -->
+                                <rect x="50" y="50" width="120" height="60" rx="4" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+                                <text x="110" y="85" font-size="11" font-weight="900" fill="#1e3a8a" text-anchor="middle" font-family="Segoe UI">المبنى الإداري</text>
+
+                                <!-- مصنع ICAPP-1 -->
+                                <rect x="190" y="50" width="160" height="120" rx="4" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+                                <text x="270" y="110" font-size="13" font-weight="900" fill="#92400e" text-anchor="middle" font-family="Segoe UI">مصنع ICAPP-1</text>
+                                <text x="270" y="128" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle" font-family="Segoe UI">خطوط الفاكهة والتصنيع</text>
+
+                                <!-- مصنع ICAPP-2 & ICAPP-3 -->
+                                <rect x="190" y="190" width="160" height="115" rx="4" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+                                <text x="270" y="245" font-size="13" font-weight="900" fill="#5b21b6" text-anchor="middle" font-family="Segoe UI">مصانع ICAPP-2 &amp; 3</text>
+                                <text x="270" y="263" font-size="9" font-weight="700" fill="#6d28d9" text-anchor="middle" font-family="Segoe UI">التجميد والمركزات</text>
+
+                                <!-- المخازن العامة WH -->
+                                <rect x="370" y="50" width="80" height="160" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="2"/>
+                                <text x="410" y="130" font-size="11" font-weight="900" fill="#334155" text-anchor="middle" font-family="Segoe UI">المخازن</text>
+                                <text x="410" y="148" font-size="9" font-weight="700" fill="#475569" text-anchor="middle" font-family="Segoe UI">WH</text>
+
+                                <!-- محطة المعالجة والخدمات -->
+                                <rect x="50" y="190" width="120" height="115" rx="4" fill="#fce7f3" stroke="#be185d" stroke-width="2"/>
+                                <text x="110" y="245" font-size="11" font-weight="900" fill="#9d174d" text-anchor="middle" font-family="Segoe UI">محطة الخدمات الفنية</text>
+                                <text x="110" y="263" font-size="9" font-weight="700" fill="#be185d" text-anchor="middle" font-family="Segoe UI">والطاقة (ICAPP-4)</text>
+
+                                <!-- مسارات الإخلاء الخضراء والأسهم -->
+                                <path d="M 110 110 L 110 150 L 190 150" stroke="#16a34a" stroke-width="3.5" fill="none" stroke-dasharray="6,3"/>
+                                <path d="M 270 170 L 270 190" stroke="#16a34a" stroke-width="3.5" fill="none" stroke-dasharray="6,3"/>
+                                <path d="M 350 110 L 370 110" stroke="#16a34a" stroke-width="3.5" fill="none" stroke-dasharray="6,3"/>
+                                <path d="M 270 305 L 270 325" stroke="#16a34a" stroke-width="3.5" fill="none" stroke-dasharray="6,3"/>
+                                <path d="M 50 150 L 35 150" stroke="#16a34a" stroke-width="3.5" fill="none" stroke-dasharray="6,3"/>
+
+                                <!-- نقاط التجمع الأربع (Muster Points) -->
+                                <!-- نقطة تجمع 1 -->
+                                <g transform="translate(145, 140)">
+                                    <rect x="-22" y="-14" width="44" height="28" rx="4" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+                                    <text x="0" y="3" font-size="9" font-weight="900" fill="#ffffff" text-anchor="middle" font-family="Segoe UI">نقطة 1</text>
+                                </g>
+
+                                <!-- نقطة تجمع 2 -->
+                                <g transform="translate(410, 240)">
+                                    <rect x="-22" y="-14" width="44" height="28" rx="4" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+                                    <text x="0" y="3" font-size="9" font-weight="900" fill="#ffffff" text-anchor="middle" font-family="Segoe UI">نقطة 2</text>
+                                </g>
+
+                                <!-- نقطة تجمع 3 -->
+                                <g transform="translate(110, 310)">
+                                    <rect x="-22" y="-14" width="44" height="28" rx="4" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+                                    <text x="0" y="3" font-size="9" font-weight="900" fill="#ffffff" text-anchor="middle" font-family="Segoe UI">نقطة 3</text>
+                                </g>
+
+                                <!-- نقطة تجمع 4 -->
+                                <g transform="translate(270, 30)">
+                                    <rect x="-22" y="-14" width="44" height="28" rx="4" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
+                                    <text x="0" y="3" font-size="9" font-weight="900" fill="#ffffff" text-anchor="middle" font-family="Segoe UI">نقطة 4</text>
+                                </g>
+
+                                <!-- بوابات الخروج والأمن -->
+                                <rect x="18" y="135" width="16" height="30" fill="#dc2626" rx="2"/>
+                                <text x="26" y="154" font-size="8" font-weight="900" fill="#ffffff" text-anchor="middle" transform="rotate(-90 26 154)" font-family="Segoe UI">بوابة</text>
+
+                                <!-- بوصلة الشمال -->
+                                <g transform="translate(450, 45)">
+                                    <circle cx="0" cy="0" r="14" fill="#ffffff" stroke="#0f172a" stroke-width="1.5"/>
+                                    <polygon points="0,-12 4,0 0,-2 -4,0" fill="#dc2626"/>
+                                    <polygon points="0,12 4,0 0,2 -4,0" fill="#0f172a"/>
+                                    <text x="0" y="-15" font-size="9" font-weight="900" fill="#dc2626" text-anchor="middle">N</text>
+                                </g>
+                            </svg>
+                        </div>
+
+                        <div class="map-legend-bar">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #15803d;"></div>
+                                <span>نقطة تجمع (Muster Point)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #16a34a;"></div>
+                                <span>مسار الإخلاء الآمن ➔</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #dc2626;"></div>
+                                <span>بوابات ومخارج الطوارئ</span>
+                            </div>
+                        </div>
+
+                        <div class="site-coordinates-box" id="displayCoords">
+                            إحداثيات الموقع: 30°24'12.4"N 31°18'45.2"E | DOC-HSE-MAP-01 Rev.02
+                        </div>
+                    </div>
+
+                    <!-- الجانب الأيمن: قواعد السلامة للزائرين -->
+                    <div class="right-panel">
+                        <div class="right-header">
+                            <h2>قواعد السلامة للزائرين</h2>
+                            <h3>SAFETY RULES VISITORS</h3>
+                        </div>
+
+                        <!-- الصندوق الأزرق الرئيسي -->
+                        <div class="blue-priority-banner">
+                            <div class="blue-text-en">
+                                <strong>YOUR SAFETY IS OF OUR PRIORITY</strong><br>
+                                All visitors are kindly requested to follow the safety instructions here
+                            </div>
+                            <div class="blue-text-ar">
+                                <strong>عزيزي الزائر سلامتك تهمنا</strong><br>
+                                يرجى إتباع تعليمات السلامة الموضحة
+                            </div>
+                        </div>
+
+                        <!-- التدخين غير مسموح -->
+                        <div class="smoking-section">
+                            <div class="smoke-en">
+                                Smoking is prohibited throughout the plant premises except in specially dedicated and adapted areas.
+                            </div>
+                            <div class="smoke-icon-box">
+                                <svg width="44" height="44" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="#dc2626" stroke-width="8"/>
+                                    <line x1="20" y1="20" x2="80" y2="80" stroke="#dc2626" stroke-width="8"/>
+                                    <!-- سيجارة -->
+                                    <rect x="25" y="45" width="40" height="10" fill="#ffffff" stroke="#000" stroke-width="1.5"/>
+                                    <rect x="25" y="45" width="12" height="10" fill="#f59e0b"/>
+                                    <path d="M 68 43 Q 72 38 76 43 T 80 43" fill="none" stroke="#64748b" stroke-width="2"/>
+                                    <path d="M 70 57 Q 74 52 78 57 T 82 57" fill="none" stroke="#64748b" stroke-width="2"/>
+                                </svg>
+                            </div>
+                            <div class="smoke-ar">
+                                التدخين غير مسموح به نهائياً داخل أماكن العمل بإستثناء الأماكن المخصصة والتي تم تجهيزها لذلك.
+                            </div>
+                        </div>
+
+                        <!-- قواعد السلامة الرئيسية 7 أيقونات -->
+                        <div class="basic-rules-section">
+                            <div class="basic-rules-header">
+                                <span>SAFETY BASIC RULES</span>
+                                <span>قواعد السلامة الرئيسية</span>
+                            </div>
+
+                            <div class="rules-icons-row">
+                                <!-- 18 ممنوع -->
+                                <div class="rule-circle-icon">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="44" fill="none" stroke="#dc2626" stroke-width="9"/>
+                                        <line x1="19" y1="19" x2="81" y2="81" stroke="#dc2626" stroke-width="9"/>
+                                        <text x="50" y="60" font-size="34" font-weight="900" fill="#000" text-anchor="middle" font-family="Arial">18</text>
+                                    </svg>
+                                </div>
+
+                                <!-- كحوليات -->
+                                <div class="rule-circle-icon">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="44" fill="none" stroke="#dc2626" stroke-width="9"/>
+                                        <line x1="19" y1="19" x2="81" y2="81" stroke="#dc2626" stroke-width="9"/>
+                                        <path d="M 40 35 L 60 35 L 53 52 L 53 68 L 62 68 L 62 72 L 38 72 L 38 68 L 47 68 L 47 52 Z" fill="#000"/>
+                                    </svg>
+                                </div>
+
+                                <!-- تصوير -->
+                                <div class="rule-circle-icon">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="44" fill="none" stroke="#dc2626" stroke-width="9"/>
+                                        <line x1="19" y1="19" x2="81" y2="81" stroke="#dc2626" stroke-width="9"/>
+                                        <rect x="30" y="40" width="40" height="28" rx="4" fill="#000"/>
+                                        <circle cx="50" cy="54" r="8" fill="#fff"/>
+                                        <rect x="42" y="34" width="16" height="6" fill="#000"/>
+                                    </svg>
+                                </div>
+
+                                <!-- أسلحة وأدوات حادة -->
+                                <div class="rule-circle-icon">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="44" fill="none" stroke="#dc2626" stroke-width="9"/>
+                                        <line x1="19" y1="19" x2="81" y2="81" stroke="#dc2626" stroke-width="9"/>
+                                        <path d="M 35 65 L 65 35 L 70 40 L 40 70 Z" fill="#000"/>
+                                    </svg>
+                                </div>
+
+                                <!-- سرعة 20 -->
+                                <div class="rule-circle-icon">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="44" fill="none" stroke="#dc2626" stroke-width="9"/>
+                                        <text x="50" y="52" font-size="28" font-weight="900" fill="#000" text-anchor="middle" font-family="Arial">20</text>
+                                        <text x="50" y="68" font-size="14" font-weight="900" fill="#000" text-anchor="middle" font-family="Arial">km/h</text>
+                                    </svg>
+                                </div>
+
+                                <!-- كلاركات / شوكة -->
+                                <div class="rule-circle-icon">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <polygon points="50,15 88,80 12,80" fill="#facc15" stroke="#000" stroke-width="4"/>
+                                        <rect x="35" y="55" width="25" height="15" fill="#000"/>
+                                        <circle cx="42" cy="72" r="4" fill="#000"/>
+                                        <circle cx="56" cy="72" r="4" fill="#000"/>
+                                        <line x1="65" y1="45" x2="65" y2="72" stroke="#000" stroke-width="3"/>
+                                        <line x1="65" y1="70" x2="75" y2="70" stroke="#000" stroke-width="3"/>
+                                    </svg>
+                                </div>
+
+                                <!-- ممر مشاة -->
+                                <div class="rule-circle-icon">
+                                    <svg width="30" height="30" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="46" fill="#1d4ed8"/>
+                                        <circle cx="50" cy="30" r="7" fill="#ffffff"/>
+                                        <path d="M 45 42 L 55 42 L 58 60 L 65 75 L 58 75 L 53 62 L 48 75 L 42 75 L 47 56 L 40 60 Z" fill="#ffffff"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- في حالة سماع سارينة الإنذار -->
+                        <div class="siren-section">
+                            <div class="siren-red-bar">
+                                <span>When you hear the emergency siren:</span>
+                                <span>في حالة سماع سارينة الإنذار :</span>
+                            </div>
+
+                            <div class="siren-steps-container">
+                                <!-- خطوة 1 -->
+                                <div class="siren-step-row">
+                                    <div class="s-text-en">1- Follow your escort's instructions</div>
+                                    <div class="s-icon-center">
+                                        <svg width="26" height="26" viewBox="0 0 100 100">
+                                            <rect width="100" height="100" fill="#dc2626" rx="6"/>
+                                            <circle cx="50" cy="50" r="16" fill="#ffffff"/>
+                                            <path d="M 28 35 A 25 25 0 0 1 28 65" fill="none" stroke="#ffffff" stroke-width="6"/>
+                                            <path d="M 72 35 A 25 25 0 0 0 72 65" fill="none" stroke="#ffffff" stroke-width="6"/>
+                                        </svg>
+                                    </div>
+                                    <div class="s-text-ar">١- اتبع تعليمات المرافق لك أو رئيس القسم</div>
+                                </div>
+
+                                <!-- خطوة 2 -->
+                                <div class="siren-step-row">
+                                    <div class="s-text-en">2- Go to the nearest exit door</div>
+                                    <div class="s-icon-center">
+                                        <svg width="34" height="26" viewBox="0 0 140 100">
+                                            <rect width="140" height="100" fill="#15803d" rx="6"/>
+                                            <path d="M 35 50 L 15 50 L 25 35 M 15 50 L 25 65" stroke="#ffffff" stroke-width="7" fill="none"/>
+                                            <circle cx="70" cy="30" r="9" fill="#ffffff"/>
+                                            <path d="M 60 45 L 80 45 L 85 65 L 95 85 L 85 85 L 75 68 L 65 85 L 55 85 L 68 60 L 58 55 Z" fill="#ffffff"/>
+                                            <rect x="100" y="20" width="25" height="60" fill="none" stroke="#ffffff" stroke-width="6"/>
+                                        </svg>
+                                    </div>
+                                    <div class="s-text-ar">٢- إتجه إلى أقرب باب خروج</div>
+                                </div>
+
+                                <!-- خطوة 3 -->
+                                <div class="siren-step-row">
+                                    <div class="s-text-en">3- Go to the nearest assembly point</div>
+                                    <div class="s-icon-center">
+                                        <svg width="26" height="26" viewBox="0 0 100 100">
+                                            <rect width="100" height="100" fill="#15803d" rx="6"/>
+                                            <circle cx="50" cy="38" r="7" fill="#ffffff"/>
+                                            <path d="M 42 50 L 58 50 L 58 68 L 42 68 Z" fill="#ffffff"/>
+                                            <path d="M 20 20 L 35 35 M 35 20 L 35 35 L 20 35" stroke="#ffffff" stroke-width="5" fill="none"/>
+                                            <path d="M 80 20 L 65 35 M 65 20 L 65 35 L 80 35" stroke="#ffffff" stroke-width="5" fill="none"/>
+                                            <path d="M 20 80 L 35 65 M 35 80 L 35 65 L 20 65" stroke="#ffffff" stroke-width="5" fill="none"/>
+                                            <path d="M 80 80 L 65 65 M 65 80 L 65 65 L 80 65" stroke="#ffffff" stroke-width="5" fill="none"/>
+                                        </svg>
+                                    </div>
+                                    <div class="s-text-ar">٣- إتجه إلى أقرب نقطة تجمع</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- مهمات الوقاية الشخصية PPE -->
+                        <div class="ppe-section">
+                            <div class="ppe-header-texts">
+                                <span>Use personal protective equipment suitable to the area you enter</span>
+                                <span>يجب الإلتزام بإرتداء ملابس ومهمات الوقاية المناسبة لأماكن الزيارة</span>
+                            </div>
+
+                            <div class="ppe-icons-row">
+                                <!-- نظارة -->
+                                <div class="ppe-icon-circle" title="Safety Glasses">
+                                    <svg width="22" height="22" viewBox="0 0 100 100">
+                                        <circle cx="32" cy="50" r="16" fill="none" stroke="#fff" stroke-width="6"/>
+                                        <circle cx="68" cy="50" r="16" fill="none" stroke="#fff" stroke-width="6"/>
+                                        <line x1="48" y1="50" x2="52" y2="50" stroke="#fff" stroke-width="6"/>
+                                        <line x1="16" y1="50" x2="5" y2="40" stroke="#fff" stroke-width="6"/>
+                                        <line x1="84" y1="50" x2="95" y2="40" stroke="#fff" stroke-width="6"/>
+                                    </svg>
+                                </div>
+
+                                <!-- واقي وجه -->
+                                <div class="ppe-icon-circle" title="Face Shield">
+                                    <svg width="22" height="22" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="40" r="18" fill="#fff"/>
+                                        <path d="M 30 30 Q 50 20 70 30 L 70 65 Q 50 85 30 65 Z" fill="none" stroke="#fff" stroke-width="6"/>
+                                    </svg>
+                                </div>
+
+                                <!-- قفازات -->
+                                <div class="ppe-icon-circle" title="Safety Gloves">
+                                    <svg width="22" height="22" viewBox="0 0 100 100">
+                                        <path d="M 35 75 L 35 45 Q 35 38 42 38 Q 48 38 48 45 L 48 35 Q 48 28 55 28 Q 62 28 62 35 L 62 45 Q 62 38 68 38 Q 75 38 75 45 L 75 75 Z" fill="#fff"/>
+                                    </svg>
+                                </div>
+
+                                <!-- كمامة -->
+                                <div class="ppe-icon-circle" title="Dust Mask">
+                                    <svg width="22" height="22" viewBox="0 0 100 100">
+                                        <path d="M 25 45 Q 50 35 75 45 L 68 70 Q 50 80 32 70 Z" fill="#fff"/>
+                                        <line x1="25" y1="45" x2="10" y2="35" stroke="#fff" stroke-width="5"/>
+                                        <line x1="75" y1="45" x2="90" y2="35" stroke="#fff" stroke-width="5"/>
+                                    </svg>
+                                </div>
+
+                                <!-- واقي أذن -->
+                                <div class="ppe-icon-circle" title="Ear Protection">
+                                    <svg width="22" height="22" viewBox="0 0 100 100">
+                                        <path d="M 25 55 Q 25 20 50 20 Q 75 20 75 55" fill="none" stroke="#fff" stroke-width="6"/>
+                                        <rect x="20" y="50" width="12" height="22" rx="4" fill="#fff"/>
+                                        <rect x="68" y="50" width="12" height="22" rx="4" fill="#fff"/>
+                                    </svg>
+                                </div>
+
+                                <!-- خوذة -->
+                                <div class="ppe-icon-circle" title="Safety Helmet">
+                                    <svg width="22" height="22" viewBox="0 0 100 100">
+                                        <path d="M 25 60 Q 25 25 50 25 Q 75 25 75 60 Z" fill="#fff"/>
+                                        <rect x="18" y="58" width="64" height="8" rx="3" fill="#fff"/>
+                                    </svg>
+                                </div>
+
+                                <!-- حذاء أمان -->
+                                <div class="ppe-icon-circle" title="Safety Boots">
+                                    <svg width="22" height="22" viewBox="0 0 100 100">
+                                        <path d="M 35 25 L 55 25 L 55 55 L 75 65 L 75 75 L 30 75 L 30 35 Z" fill="#fff"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- فوتر الطوارئ -->
+                        <div class="emergency-footer">
+                            <div class="emergency-top-row">
+                                <span>Emergency call</span>
+                                <div class="phone-icons-box">
+                                    <div class="phone-pill" style="background: #dc2626;">📞</div>
+                                    <div class="phone-pill" style="background: #16a34a;">📱</div>
+                                </div>
+                                <span>طوارئ المصنع</span>
+                            </div>
+                            <div class="emergency-call-line">
+                                في حالة الطوارئ يرجى الإتصال على رقم: <strong>0100000000 / داخلي: 100</strong>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="print-btn-wrap">
-                    <button onclick="window.print()" style="padding: 10px 24px; background: #059669; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 900; font-size: 13px; box-shadow: 0 4px 12px rgba(5,150,105,0.3);">🖨️ طباعة كروت وشارات الزوار (A4 Sheet)</button>
-                </div>
+                <script>
+                    function updateSiteMap(site) {
+                        const coordsMap = {
+                            'ICAPP-1': '30°24\\'12.4"N 31°18\\'45.2"E - مصنع 1 الفاكهة',
+                            'ICAPP-2': '30°24\\'14.1"N 31°18\\'48.6"E - مصنع 2 التجميد',
+                            'ICAPP-3': '30°24\\'15.8"N 31°18\\'50.1"E - مصنع 3 المركزات',
+                            'ICAPP-4': '30°24\\'10.2"N 31°18\\'42.5"E - محطة المعالجة والطاقة',
+                            'WH': '30°24\\'18.0"N 31°18\\'52.3"E - المخازن العامة',
+                            'المبنى الإداري': '30°24\\'08.5"N 31°18\\'40.1"E - الإدارة العامة',
+                            'الموقع العام': '30°24\\'12.4"N 31°18\\'45.2"E - مجمع مصانع ICAPP'
+                        };
+                        const c = coordsMap[site] || '30°24\\'12.4"N 31°18\\'45.2"E';
+                        document.getElementById('customCoords').value = c;
+                        document.getElementById('displayCoords').textContent = 'إحداثيات الموقع: ' + c + ' | DOC-HSE-MAP-01 Rev.02';
+                    }
+                </script>
             </body>
             </html>
         `);
