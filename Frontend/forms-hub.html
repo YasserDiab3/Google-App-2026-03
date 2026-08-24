@@ -2026,12 +2026,42 @@
                                 🔒 مسح آمن ومباشر عبر الهاتف المحمول | Direct Mobile Check-In
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            <script>
-            function printMasterVisitorBadges(paramBadgeNo) {
+                        <!-- شريط التنبيه الإلزامي للسلامة والأمن -->
+                        <div class="safety-strip">
+                            🛡️ تنبيه أمني وإلزامي: يُمنع التواجد داخل المصانع بدون تصريح رسمي، مع الالتزام التام بتعليمات السلامة وارتداء مهمات الوقاية (PPE).
+                        </div>
+
+                        <!-- فوتر الاعتماد ثلاثي الصناديق -->
+                        <div class="iso-print-footer">
+                            <div class="footer-box">
+                                <div class="footer-box-title">مدير الأمن - مسؤول الأمن</div>
+                                <div class="footer-sig-line">الاسم: .......................................</div>
+                                <div class="footer-sig-line">التوقيع: ....................................</div>
+                            </div>
+                            <div class="footer-box">
+                                <div class="footer-box-title">مدير إدارة السلامة والصحة المهنية</div>
+                                <div class="footer-sig-line">الاسم: .......................................</div>
+                                <div class="footer-sig-line">التوقيع: ....................................</div>
+                            </div>
+                            <div class="footer-box">
+                                <div class="footer-box-title">مدير العمليات وإدارة المصانع</div>
+                                <div class="footer-sig-line">الاسم: .......................................</div>
+                                <div class="footer-sig-line">التوقيع: ....................................</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="print-btn-wrap">
+                        <button onclick="window.print()" style="padding: 12px 28px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 900; font-size: 14px; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);">🖨️ طباعة لوحة QR الآن (A4 Poster)</button>
+                    </div>
+                </body>
+                </html>
+            `);
+            win.document.close();
+        }
+
+        function printMasterVisitorBadges(paramBadgeNo) {
             const savedMap = localStorage.getItem('icapp_visitor_map_config');
             let mapConfig = {
                 coords: '30°24\'12.4"N 31°18\'45.2"E',
@@ -2433,95 +2463,20 @@
                         </div>
                     </div>
 
-                    <script>
+                    \x3Cscript>
                         function updateSiteMap(site) {
                             const coordsMap = {
-                                'ICAPP-1': '30°24\\'12.4"N 31°18\\'45.2"E - مصنع 1 الفاكهة',
-                                'ICAPP-2': '30°24\\'14.1"N 31°18\\'48.6"E - مصنع 2 التجميد',
-                                'ICAPP-3': '30°24\\'15.8"N 31°18\\'50.1"E - مصنع 3 المركزات',
-                                'ICAPP-4': '30°24\\'10.2"N 31°18\\'42.5"E - محطة المعالجة والطاقة',
-                                'WH': '30°24\\'18.0"N 31°18\\'52.3"E - المخازن العامة',
-                                'المبنى الإداري': '30°24\\'08.5"N 31°18\\'40.1"E - الإدارة العامة',
+                                'ICAPP-1': '30°24\'12.4"N 31°18\'45.2"E - مصنع 1 الفاكهة',
+                                'ICAPP-2': '30°24\'14.1"N 31°18\'48.6"E - مصنع 2 التجميد',
+                                'ICAPP-3': '30°24\'15.8"N 31°18\'50.1"E - مصنع 3 المركزات',
+                                'ICAPP-4': '30°24\'10.2"N 31°18\'42.5"E - محطة المعالجة والطاقة',
+                                'WH': '30°24\'18.0"N 31°18\'52.3"E - المخازن العامة',
+                                'المبنى الإداري': '30°24\'08.5"N 31°18\'40.1"E - الإدارة العامة',
                                 'الموقع العام': '${mapConfig.coords}'
                             };
                             const c = coordsMap[site] || '${mapConfig.coords}';
-                            document.getElementById('customCoords').value = c;
-                            document.getElementById('displayCoords').textContent = 'إحداثيات الموقع: ' + c + ' | DOC-HSE-MAP-01 Rev.02';
                         }
-                    </script>
-                </body>
-                </html>
-            `);
-            win.document.close();
-        }"/>
-                                            <path d="M 30 30 Q 50 20 70 30 L 70 65 Q 50 85 30 65 Z" fill="none" stroke="#fff" stroke-width="6"/>
-                                        </svg>
-                                    </div>
-                                    <div class="ppe-icon-circle" title="Safety Gloves">
-                                        <svg width="22" height="22" viewBox="0 0 100 100">
-                                            <path d="M 35 75 L 35 45 Q 35 38 42 38 Q 48 38 48 45 L 48 35 Q 48 28 55 28 Q 62 28 62 35 L 62 45 Q 62 38 68 38 Q 75 38 75 45 L 75 75 Z" fill="#fff"/>
-                                        </svg>
-                                    </div>
-                                    <div class="ppe-icon-circle" title="Dust Mask">
-                                        <svg width="22" height="22" viewBox="0 0 100 100">
-                                            <path d="M 25 45 Q 50 35 75 45 L 68 70 Q 50 80 32 70 Z" fill="#fff"/>
-                                            <line x1="25" y1="45" x2="10" y2="35" stroke="#fff" stroke-width="5"/>
-                                            <line x1="75" y1="45" x2="90" y2="35" stroke="#fff" stroke-width="5"/>
-                                        </svg>
-                                    </div>
-                                    <div class="ppe-icon-circle" title="Ear Protection">
-                                        <svg width="22" height="22" viewBox="0 0 100 100">
-                                            <path d="M 25 55 Q 25 20 50 20 Q 75 20 75 55" fill="none" stroke="#fff" stroke-width="6"/>
-                                            <rect x="20" y="50" width="12" height="22" rx="4" fill="#fff"/>
-                                            <rect x="68" y="50" width="12" height="22" rx="4" fill="#fff"/>
-                                        </svg>
-                                    </div>
-                                    <div class="ppe-icon-circle" title="Safety Helmet">
-                                        <svg width="22" height="22" viewBox="0 0 100 100">
-                                            <path d="M 25 60 Q 25 25 50 25 Q 75 25 75 60 Z" fill="#fff"/>
-                                            <rect x="18" y="58" width="64" height="8" rx="3" fill="#fff"/>
-                                        </svg>
-                                    </div>
-                                    <div class="ppe-icon-circle" title="Safety Boots">
-                                        <svg width="22" height="22" viewBox="0 0 100 100">
-                                            <path d="M 35 25 L 55 25 L 55 55 L 75 65 L 75 75 L 30 75 L 30 35 Z" fill="#fff"/>
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="emergency-footer">
-                                <div class="emergency-top-row">
-                                    <span>Emergency call</span>
-                                    <div class="phone-icons-box">
-                                        <div class="phone-pill" style="background: #dc2626;">📞</div>
-                                        <div class="phone-pill" style="background: #16a34a;">📱</div>
-                                    </div>
-                                    <span>طوارئ المصنع</span>
-                                </div>
-                                <div class="emergency-call-line">
-                                    في حالة الطوارئ يرجى الإتصال على رقم: <strong>0100000000 / داخلي: 100</strong>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <script>
-                        function updateSiteMap(site) {
-                            const coordsMap = {
-                                "ICAPP-1": "30°24'12.4\"N 31°18'45.2\"E - مصنع 1 الفاكهة",
-                                "ICAPP-2": "30°24'14.1\"N 31°18'48.6\"E - مصنع 2 التجميد",
-                                "ICAPP-3": "30°24'15.8\"N 31°18'50.1\"E - مصنع 3 المركزات",
-                                "ICAPP-4": "30°24'10.2\"N 31°18'42.5\"E - محطة المعالجة والطاقة",
-                                "WH": "30°24'18.0\"N 31°18'52.3\"E - المخازن العامة",
-                                "المبنى الإداري": "30°24'08.5\"N 31°18'40.1\"E - الإدارة العامة",
-                                "الموقع العام": "30°24'12.4\"N 31°18'45.2\"E - مجمع مصانع ICAPP"
-                            };
-                            const c = coordsMap[site] || "30°24'12.4\"N 31°18'45.2\"E";
-                            document.getElementById('customCoords').value = c;
-                            document.getElementById('displayCoords').textContent = 'إحداثيات الموقع: ' + c + ' | DOC-HSE-MAP-01 Rev.02';
-                        }
-                    </script>
+                    \x3C/script>
                 </body>
                 </html>
             `);
