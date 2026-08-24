@@ -548,7 +548,7 @@ class GateSecurityModule {
                                 <th>اسم الزائر / المقاول</th>
                                 <th>الجهة / الشركة</th>
                                 <th>المصنع</th>
-                                <th>المكان / الصالة</th>
+                                <th>الموقع الفرعي</th>
                                 <th>الموظف المستضيف</th>
                                 <th style="width: 70px;">وقت الدخول</th>
                                 <th style="width: 140px; text-align: center;">التحقق عند نقطة التجمع (Muster Point)</th>

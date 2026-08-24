@@ -784,10 +784,9 @@
                         <div class="form-group">
                             <label class="form-label" for="visitorPhone">
                                 <i class="fas fa-phone text-blue-600"></i>
-                                <span id="lblVisitorPhone">رقم الهاتف المحمول</span>
-                                <span class="req">*</span>
+                                <span id="lblVisitorPhone">رقم الهاتف المحمول (اختياري)</span>
                             </label>
-                            <input type="tel" id="visitorPhone" class="form-control" placeholder="01XXXXXXXXX" required autocomplete="off">
+                            <input type="tel" id="visitorPhone" class="form-control" placeholder="01XXXXXXXXX (اختياري)" autocomplete="off">
                         </div>
                     </div>
 
@@ -800,43 +799,36 @@
                     </div>
                 </div>
 
-                <!-- القسم 2: المصنع والمكان المستهدف والمستضيف -->
+                <!-- القسم 2: المصنع والموقع الفرعي والمستضيف -->
                 <div class="form-section sec-theme-orange">
                     <div class="section-header">
                         <div class="section-badge">2</div>
-                        <div class="section-title" id="sec2Title">المصنع والمكان المستهدف والمستضيف</div>
+                        <div class="section-title" id="sec2Title">المصنع والموقع الفرعي والمستضيف</div>
                     </div>
-                    <div class="section-desc" id="sec2Desc">تحديد المصنع والصالة الدقيقة والشخص المسؤول لتتبع التواجد الميداني</div>
+                    <div class="section-desc" id="sec2Desc">تحديد المصنع والموقع الفرعي والإدارة والشخص المستضيف بدقة لتتبع التواجد الميداني</div>
 
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label" for="targetSite">
                                 <i class="fas fa-industry text-amber-600"></i>
-                                <span id="lblTargetSite">المصنع المستهدف</span>
+                                <span id="lblTargetSite">المصنع</span>
                                 <span class="req">*</span>
                             </label>
                             <select id="targetSite" class="form-select" required onchange="handleGateSiteChange(this.value)">
-                                <option value="">— اختر المصنع / الموقع —</option>
-                                <option value="ICAPP-1">ICAPP-1 (مصنع الفاكهة والتجفيد)</option>
-                                <option value="ICAPP-2">ICAPP-2 (مصنع الخضار والتجميد IQF)</option>
-                                <option value="ICAPP-3">ICAPP-3 (مصنع البطاطس نصف المقلية)</option>
-                                <option value="ICAPP-4">ICAPP-4 (مشروع التوسعات والثلاجات 400)</option>
-                                <option value="WH">المخازن العامة واللوجستيات (WH)</option>
-                                <option value="المبنى الإداري">المبنى الإداري الرئيسي</option>
-                                <option value="الموقع العام">الموقع العام والمرافق الخارجية</option>
+                                <option value="">— اختر المصنع —</option>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label" for="targetArea">
                                 <i class="fas fa-location-dot text-rose-600"></i>
-                                <span id="lblTargetArea">المكان / الصالة / العنبر المستهدف</span>
+                                <span id="lblTargetArea">الموقع الفرعي</span>
                                 <span class="req">*</span>
                             </label>
                             <select id="targetArea" class="form-select" required onchange="handleTargetAreaChange(this.value)">
                                 <option value="">— اختر المصنع أولاً —</option>
                             </select>
-                            <input type="text" id="customTargetAreaInput" class="form-control" placeholder="اكتب اسم الصالة / المكان يدوياً..." style="display: none; margin-top: 8px; border-color: #f59e0b;">
+                            <input type="text" id="customTargetAreaInput" class="form-control" placeholder="اكتب اسم الموقع الفرعي يدوياً..." style="display: none; margin-top: 8px; border-color: #f59e0b;">
                         </div>
                     </div>
 
@@ -844,34 +836,21 @@
                         <div class="form-group">
                             <label class="form-label" for="hostDept">
                                 <i class="fas fa-building-user text-blue-600"></i>
-                                <span id="lblHostDept">الإدارة المستضيفة المعتمدة</span>
+                                <span id="lblHostDept">الإدارة المستضيفة</span>
                                 <span class="req">*</span>
                             </label>
                             <select id="hostDept" class="form-select" required>
                                 <option value="">— اختر الإدارة المستضيفة —</option>
-                                <option value="إدارة السلامة والصحة المهنية">إدارة السلامة والصحة المهنية</option>
-                                <option value="إدارة الإنتاج والتصنيع">إدارة الإنتاج والتصنيع</option>
-                                <option value="إدارة الصيانة والكهرباء">إدارة الصيانة والكهرباء</option>
-                                <option value="إدارة الجودة والتوكيد">إدارة الجودة والتوكيد</option>
-                                <option value="إدارة المخازن واللوجستيات">إدارة المخازن واللوجستيات</option>
-                                <option value="إدارة الموارد البشرية والشؤون الإدارية">إدارة الموارد البشرية والشؤون الإدارية</option>
-                                <option value="الإدارة الهندسية والمشروعات">الإدارة الهندسية والمشروعات</option>
-                                <option value="الإدارة الزراعية">الإدارة الزراعية</option>
-                                <option value="إدارة المشتريات">إدارة المشتريات</option>
-                                <option value="إدارة تكنولوجيا المعلومات IT">إدارة تكنولوجيا المعلومات IT</option>
-                                <option value="الإدارة المالية والحسابات">الإدارة المالية والحسابات</option>
-                                <option value="إدارة المبيعات والتصدير">إدارة المبيعات والتصدير</option>
-                                <option value="الإدارة العليا / الإدارة العامة">الإدارة العليا / الإدارة العامة</option>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label" for="hostPerson">
                                 <i class="fas fa-user-tie text-emerald-600"></i>
-                                <span id="lblHostPerson">اسم الموظف / المهندس المستضيف</span>
+                                <span id="lblHostPerson">اسم المستضيف / الشخص المسؤول</span>
                                 <span class="req">*</span>
                             </label>
-                            <input type="text" id="hostPerson" class="form-control" placeholder="اسم الموظف المستضيف..." required list="hostSuggestionsList">
+                            <input type="text" id="hostPerson" class="form-control" placeholder="اسم الموظف أو المهندس المستضيف..." required list="hostSuggestionsList">
                             <datalist id="hostSuggestionsList"></datalist>
                         </div>
                     </div>
@@ -1034,13 +1013,14 @@
                 lblVisitorName: 'الاسم ثلاثي',
                 lblVisitorOrg: 'الجهة / الشركة التابع لها',
                 lblVisitorId: 'الرقم القومي / جواز السفر',
-                lblVisitorPhone: 'رقم الهاتف المحمول',
+                lblVisitorPhone: 'رقم الهاتف المحمول (اختياري)',
                 lblVisitorVehicle: 'رقم لوحة السيارة (اختياري في حال دخول مركبة)',
-                sec2Title: 'المصنع والمكان المستهدف والمستضيف',
-                sec2Desc: 'تحديد المصنع والصالة الدقيقة والشخص المسؤول لتتبع التواجد الميداني',
-                lblTargetSite: 'المصنع المستهدف',
-                lblTargetArea: 'المكان / الصالة / العنبر المستهدف',
-                lblHostPerson: 'اسم الشخص المستضيف / الإدارة',
+                sec2Title: 'المصنع والموقع الفرعي والمستضيف',
+                sec2Desc: 'تحديد المصنع والموقع الفرعي والإدارة والشخص المستضيف بدقة لتتبع التواجد الميداني',
+                lblTargetSite: 'المصنع',
+                lblTargetArea: 'الموقع الفرعي',
+                lblHostDept: 'الإدارة المستضيفة',
+                lblHostPerson: 'اسم المستضيف / الشخص المسؤول',
                 lblVisitPurpose: 'نوع وغرض الزيارة',
                 sec3Title: 'رقم كارت الزائر وإقرار السلامة',
                 sec3Desc: 'تسليم شارة الدخول وتوثيق التوقيع على تعليمات السلامة الإلزامية',
@@ -1064,9 +1044,9 @@
                 valName: 'يرجى إدخال اسم الزائر ثلاثي',
                 valOrg: 'يرجى إدخال جهة العمل أو الشركة',
                 valId: 'يرجى إدخال الرقم القومي أو الجواز',
-                valPhone: 'يرجى إدخال رقم الهاتف',
-                valSite: 'يرجى اختيار المصنع المستهدف',
-                valArea: 'يرجى اختيار المكان المستهدف',
+                valSite: 'يرجى اختيار المصنع',
+                valArea: 'يرجى اختيار الموقع الفرعي',
+                valHostDept: 'يرجى اختيار الإدارة المستضيفة',
                 valHost: 'يرجى كتابة اسم المستضيف',
                 valBadge: 'يرجى إدخال رقم كارت الزائر',
                 valSignature: 'يرجى توقيع الزائر في خانة الإقرار الرقمي'
@@ -1086,13 +1066,14 @@
                 lblVisitorName: 'Full Name',
                 lblVisitorOrg: 'Company / Organization',
                 lblVisitorId: 'National ID / Passport #',
-                lblVisitorPhone: 'Mobile Phone #',
+                lblVisitorPhone: 'Mobile Phone # (Optional)',
                 lblVisitorVehicle: 'Vehicle Plate # (Optional for vehicle entry)',
-                sec2Title: 'Target Destination & Host Details',
-                sec2Desc: 'Specify target factory, exact hall/area, and host person for accurate tracking',
-                lblTargetSite: 'Target Factory / Facility',
-                lblTargetArea: 'Target Area / Production Hall',
-                lblHostPerson: 'Host Employee / Department',
+                sec2Title: 'Factory, Sub-Location & Host',
+                sec2Desc: 'Specify target factory, sub-location, department and host employee',
+                lblTargetSite: 'Factory / Site',
+                lblTargetArea: 'Sub-Location / Area',
+                lblHostDept: 'Host Department',
+                lblHostPerson: 'Host Employee / In-Charge',
                 lblVisitPurpose: 'Visit Purpose & Type',
                 sec3Title: 'Visitor Badge & Safety Briefing',
                 sec3Desc: 'Assign security badge number and verify HSE & hygiene induction signature',
@@ -1116,9 +1097,9 @@
                 valName: 'Please enter visitor full name',
                 valOrg: 'Please enter visitor company / organization',
                 valId: 'Please enter National ID or Passport',
-                valPhone: 'Please enter mobile phone number',
                 valSite: 'Please select target factory',
-                valArea: 'Please select target specific area',
+                valArea: 'Please select sub-location',
+                valHostDept: 'Please select host department',
                 valHost: 'Please enter host employee name',
                 valBadge: 'Please enter assigned badge number',
                 valSignature: 'Please sign in the digital signature box'
@@ -1128,44 +1109,87 @@
         let currentLang = 'ar';
         let currentTheme = 'light';
 
-        const SITES_PLACES_DATA = {
-            'ICAPP-1': [
-                'صالة تصنيع الفاكهة (1)', 'صالة تصنيع الفاكهة (2)', 'صالة الفراولة بالسكر',
-                'صالة التعبئة الآلي', 'صالة التعبئة اليدوي', 'صالة التجهيز (1)',
-                'صالة البيوريه', 'مشروع التجفيد الجديد', 'ممر الثلاجات', 'ورشة الصيانة الميكانيكية',
-                'ورشة الحركة والرافعات', 'محطة ضواغط التبريد (أمونيا)', 'غرف المحولات والكهرباء',
-                'مكاتب الإدارة والمختبرات', 'رصيف استلام الخامات', 'منطقة التحميل والتعتيق'
-            ],
-            'ICAPP-2': [
-                'صالة الخضار (1)', 'صالة الخضار (2)', 'عنبر التجميد السريع IQF',
-                'صالة التعبئة والتغليف', 'رصيف استلام الخامات', 'محطة معالجة المياه والصرف',
-                'المخازن العامة وقطع الغيار', 'ورشة الصيانة والكهرباء', 'مكاتب إدارة الجودة',
-                'عنبر الاستلام والفرز الأولي'
-            ],
-            'ICAPP-3': [
-                'خط البطاطس نصف مقلية', 'صالة التجهيز والفرز', 'نفق التجميد الحلزوني',
-                'ثلاجات التخزين النهائي', 'غرفة الغلايات البخارية', 'مكاتب المهندسين',
-                'منطقة استلام البطاطس'
-            ],
-            'ICAPP-4': [
-                'مشروع التوسعات الجديد', 'عنبر التخزين المبرد 401', 'عنبر التخزين المبرد 402',
-                'محطة الطلمبات الرئيسية', 'منطقة تجميع المخلفات', 'منطقة التحميل الخارجي'
-            ],
-            'WH': [
-                'مخزن المواد الخام', 'مخزن مواد التعبئة والكرتون', 'مخزن قطع الغيار',
-                'مخزن الكيماويات والمنظفات', 'رصيف الشحن والتصدير', 'ساحة تفريغ الحاويات'
-            ],
-            'المبنى الإداري': [
-                'إدارة السلامة والصحة المهنية', 'إدارة الموارد البشرية والشؤون الإدارية', 'إدارة الإنتاج والتصنيع',
-                'إدارة الصيانة والكهرباء', 'إدارة الجودة والتوكيد', 'الإدارة المالية والحسابات',
-                'الإدارة الهندسية والمشروعات', 'الإدارة الزراعية', 'إدارة المشتريات',
-                'إدارة تكنولوجيا المعلومات IT', 'إدارة المبيعات والتصدير', 'قاعة الاجتماعات الرئيسية', 'المطعم والكافتيريا'
-            ],
-            'الموقع العام': [
-                'البوابة الرئيسية وغرفة الأمن', 'ساحة انتظار السيارات', 'طريق الخدمة المحيطي',
-                'محطة الدفاع المدني وخزانات الحريق', 'منطقة نقاط التجمع (Muster Points)'
-            ]
+        let currentSystemConfig = {
+            sites: [],
+            departments: [],
+            safetyMembers: []
         };
+
+        const DEFAULT_SYSTEM_SITES = [
+            {
+                name: 'ICAPP-1',
+                places: [
+                    'صالة تصنيع الفاكهة (1)', 'صالة تصنيع الفاكهة (2)', 'صالة الفراولة بالسكر',
+                    'صالة التعبئة الآلي', 'صالة التعبئة اليدوي', 'صالة التجهيز (1)',
+                    'صالة البيوريه', 'مشروع التجفيد الجديد', 'ممر الثلاجات', 'ورشة الصيانة الميكانيكية',
+                    'ورشة الحركة والرافعات', 'محطة ضواغط التبريد (أمونيا)', 'غرف المحولات والكهرباء',
+                    'مكاتب الإدارة والمختبرات', 'رصيف استلام الخامات', 'منطقة التحميل والتعتيق'
+                ]
+            },
+            {
+                name: 'ICAPP-2',
+                places: [
+                    'صالة الخضار (1)', 'صالة الخضار (2)', 'عنبر التجميد السريع IQF',
+                    'صالة التعبئة والتغليف', 'رصيف استلام الخامات', 'محطة معالجة المياه والصرف',
+                    'المخازن العامة وقطع الغيار', 'ورشة الصيانة والكهرباء', 'مكاتب إدارة الجودة',
+                    'عنبر الاستلام والفرز الأولي'
+                ]
+            },
+            {
+                name: 'ICAPP-3',
+                places: [
+                    'خط البطاطس نصف مقلية', 'صالة التجهيز والفرز', 'نفق التجميد الحلزوني',
+                    'ثلاجات التخزين النهائي', 'غرفة الغلايات البخارية', 'مكاتب المهندسين',
+                    'منطقة استلام البطاطس'
+                ]
+            },
+            {
+                name: 'ICAPP-4',
+                places: [
+                    'مشروع التوسعات الجديد', 'عنبر التخزين المبرد 401', 'عنبر التخزين المبرد 402',
+                    'محطة الطلمبات الرئيسية', 'منطقة تجميع المخلفات', 'منطقة التحميل الخارجي'
+                ]
+            },
+            {
+                name: 'WH',
+                places: [
+                    'مخزن المواد الخام', 'مخزن مواد التعبئة والكرتون', 'مخزن قطع الغيار',
+                    'مخزن الكيماويات والمنظفات', 'رصيف الشحن والتصدير', 'ساحة تفريغ الحاويات'
+                ]
+            },
+            {
+                name: 'المبنى الإداري',
+                places: [
+                    'إدارة السلامة والصحة المهنية', 'إدارة الموارد البشرية والشؤون الإدارية', 'إدارة الإنتاج والتصنيع',
+                    'إدارة الصيانة والكهرباء', 'إدارة الجودة والتوكيد', 'الإدارة المالية والحسابات',
+                    'الإدارة الهندسية والمشروعات', 'الإدارة الزراعية', 'إدارة المشتريات',
+                    'إدارة تكنولوجيا المعلومات IT', 'إدارة المبيعات والتصدير', 'قاعة الاجتماعات الرئيسية', 'المطعم والكافتيريا'
+                ]
+            },
+            {
+                name: 'الموقع العام',
+                places: [
+                    'البوابة الرئيسية وغرفة الأمن', 'ساحة انتظار السيارات', 'طريق الخدمة المحيطي',
+                    'محطة الدفاع المدني وخزانات الحريق', 'منطقة نقاط التجمع (Muster Points)'
+                ]
+            }
+        ];
+
+        const DEFAULT_SYSTEM_DEPARTMENTS = [
+            'إدارة السلامة والصحة المهنية',
+            'إدارة الإنتاج والتصنيع',
+            'إدارة الصيانة والكهرباء',
+            'إدارة الجودة والتوكيد',
+            'إدارة المخازن واللوجستيات',
+            'إدارة الموارد البشرية والشؤون الإدارية',
+            'الإدارة الهندسية والمشروعات',
+            'الإدارة الزراعية',
+            'إدارة المشتريات',
+            'إدارة تكنولوجيا المعلومات IT',
+            'الإدارة المالية والحسابات',
+            'إدارة المبيعات والتصدير',
+            'الإدارة العليا / الإدارة العامة'
+        ];
 
         function handleTargetAreaChange(val) {
             const customInput = document.getElementById('customTargetAreaInput');
@@ -1178,37 +1202,182 @@
             }
         }
 
-        function populateDynamicSystemData() {
+        async function loadGateSystemConfig() {
+            // 1. قراءة فورية من التخزين المحلي لضمان سرعة الاستجابة
+            let initialSites = DEFAULT_SYSTEM_SITES;
+            let initialDepts = DEFAULT_SYSTEM_DEPARTMENTS;
+            let initialMembers = [];
+
+            try {
+                const s1 = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
+                if (s1) {
+                    const p1 = JSON.parse(s1);
+                    if (p1 && Array.isArray(p1.sites) && p1.sites.length > 0) initialSites = p1.sites;
+                    if (p1 && Array.isArray(p1.departments) && p1.departments.length > 0) initialDepts = p1.departments;
+                    if (p1 && Array.isArray(p1.safetyMembers)) initialMembers = p1.safetyMembers;
+                }
+            } catch(e) {}
+
+            try {
+                const s2 = localStorage.getItem('appData');
+                if (s2) {
+                    const p2 = JSON.parse(s2);
+                    if (p2 && Array.isArray(p2.observationSites) && p2.observationSites.length > 0) {
+                        initialSites = p2.observationSites;
+                    }
+                    if (p2 && Array.isArray(p2.users) && p2.users.length > 0) {
+                        p2.users.forEach(u => {
+                            const un = u.name || u.displayName;
+                            if (un && !initialMembers.includes(un)) initialMembers.push(un);
+                        });
+                    }
+                }
+            } catch(e) {}
+
+            currentSystemConfig = {
+                sites: initialSites,
+                departments: initialDepts,
+                safetyMembers: initialMembers
+            };
+            renderGateConfigToUI(currentSystemConfig);
+
+            // 2. مزامنة حية مع الخادم السحابي وقاعدة البيانات
+            try {
+                const endpoint = GATE_CONFIG.cloudEndpoint;
+                if (endpoint) {
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        mode: 'cors',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'getPublicObservationConfig' })
+                    });
+                    const serverData = await res.json();
+                    if (serverData && serverData.success && Array.isArray(serverData.sites) && serverData.sites.length > 0) {
+                        currentSystemConfig.sites = serverData.sites;
+                        if (Array.isArray(serverData.departments) && serverData.departments.length > 0) {
+                            currentSystemConfig.departments = serverData.departments;
+                        }
+                        if (Array.isArray(serverData.safetyMembers) && serverData.safetyMembers.length > 0) {
+                            currentSystemConfig.safetyMembers = serverData.safetyMembers;
+                        }
+                        try {
+                            localStorage.setItem('HSE_PUBLIC_OBS_CONFIG', JSON.stringify(serverData));
+                        } catch(se) {}
+                        renderGateConfigToUI(currentSystemConfig);
+                    }
+                }
+            } catch(err) {
+                console.warn('Live server config fetch fallback to cache:', err);
+            }
+        }
+
+        function renderGateConfigToUI(cfg) {
+            if (!cfg) return;
+
+            // 1. قائمة المصانع والمواقع
+            const siteSelect = document.getElementById('targetSite');
+            if (siteSelect) {
+                const currentVal = siteSelect.value;
+                siteSelect.innerHTML = `<option value="">${currentLang === 'en' ? '— Select Factory / Site —' : '— اختر المصنع —'}</option>`;
+
+                const rawSites = Array.isArray(cfg.sites) && cfg.sites.length > 0 ? cfg.sites : DEFAULT_SYSTEM_SITES;
+                rawSites.forEach(s => {
+                    const sName = typeof s === 'string' ? s : (s.name || s.siteName || s.factoryName || '');
+                    if (sName && sName !== '__OTHER_SITE__') {
+                        const opt = document.createElement('option');
+                        opt.value = sName;
+                        opt.textContent = sName;
+                        if (currentVal && (currentVal === sName || currentVal.includes(sName))) {
+                            opt.selected = true;
+                        }
+                        siteSelect.appendChild(opt);
+                    }
+                });
+
+                if (siteSelect.value) {
+                    handleGateSiteChange(siteSelect.value);
+                }
+            }
+
+            // 2. قائمة الإدارات
+            const hostDeptSelect = document.getElementById('hostDept');
+            if (hostDeptSelect) {
+                const currentDept = hostDeptSelect.value;
+                hostDeptSelect.innerHTML = `<option value="">${currentLang === 'en' ? '— Select Host Department —' : '— اختر الإدارة المستضيفة —'}</option>`;
+
+                const depts = Array.isArray(cfg.departments) && cfg.departments.length > 0 ? cfg.departments : DEFAULT_SYSTEM_DEPARTMENTS;
+                depts.forEach(d => {
+                    const dName = typeof d === 'string' ? d.trim() : (d.name || '');
+                    if (dName && dName.length > 1) {
+                        const opt = document.createElement('option');
+                        opt.value = dName;
+                        opt.textContent = dName;
+                        if (currentDept && currentDept === dName) {
+                            opt.selected = true;
+                        }
+                        hostDeptSelect.appendChild(opt);
+                    }
+                });
+            }
+
+            // 3. قائمة مقترحات الموظفين والمستضيفين
             const datalist = document.getElementById('hostSuggestionsList');
             if (datalist) {
                 const names = new Set();
-                try {
-                    const s1 = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
-                    if (s1) {
-                        const p1 = JSON.parse(s1);
-                        if (p1 && Array.isArray(p1.safetyMembers)) {
-                            p1.safetyMembers.forEach(m => {
-                                const n = typeof m === 'string' ? m : (m.name || '');
-                                if (n && n.length > 2) names.add(n.trim());
-                            });
-                        }
-                    }
-                    const s2 = localStorage.getItem('appData');
-                    if (s2) {
-                        const p2 = JSON.parse(s2);
-                        if (p2 && Array.isArray(p2.users)) {
-                            p2.users.forEach(u => {
-                                const un = u.name || u.displayName || '';
-                                if (un && un.length > 2) names.add(un.trim());
-                            });
-                        }
-                    }
-                } catch(e) {}
-
-                ['م/ ياسر دياب (مدير السلامة والصحة المهنية)', 'م/ محمد حسن (مهندس السلامة)', 'م/ أحمد محمود (مسؤول السلامة)', 'إدارة المشروعات والهندسة', 'إدارة الصيانة والكهرباء', 'إدارة الإنتاج والتصنيع', 'إدارة الجودة والتوكيد'].forEach(n => names.add(n));
-
+                if (Array.isArray(cfg.safetyMembers)) {
+                    cfg.safetyMembers.forEach(m => {
+                        const n = typeof m === 'string' ? m : (m.name || '');
+                        if (n && n.length > 2) names.add(n.trim());
+                    });
+                }
+                DEFAULT_SYSTEM_DEPARTMENTS.forEach(d => names.add(d));
                 datalist.innerHTML = Array.from(names).map(n => `<option value="${n}">`).join('');
             }
+        }
+
+        function handleGateSiteChange(siteName) {
+            const areaSelect = document.getElementById('targetArea');
+            const customInput = document.getElementById('customTargetAreaInput');
+            if (customInput) customInput.style.display = 'none';
+            if (!areaSelect) return;
+
+            if (!siteName) {
+                areaSelect.innerHTML = `<option value="">${currentLang === 'en' ? '— Select Factory First —' : '— اختر المصنع أولاً —'}</option>`;
+                return;
+            }
+
+            areaSelect.innerHTML = `<option value="">${currentLang === 'en' ? '— Select Sub-Location / Area —' : '— اختر الموقع الفرعي —'}</option>`;
+
+            let places = [];
+            const rawSites = (currentSystemConfig && Array.isArray(currentSystemConfig.sites)) ? currentSystemConfig.sites : DEFAULT_SYSTEM_SITES;
+            const matchedSite = rawSites.find(s => {
+                const sName = typeof s === 'string' ? s : (s.name || s.siteName || s.factoryName || '');
+                return sName === siteName || siteName.startsWith(sName) || sName.startsWith(siteName);
+            });
+
+            if (matchedSite && Array.isArray(matchedSite.places)) {
+                places = matchedSite.places.map(p => typeof p === 'string' ? p : (p.name || p.placeName || ''));
+            }
+
+            if (!places || places.length === 0) {
+                const fallback = DEFAULT_SYSTEM_SITES.find(f => f.name === siteName);
+                if (fallback && Array.isArray(fallback.places)) places = fallback.places;
+            }
+
+            places.forEach(p => {
+                if (p && p.trim()) {
+                    const opt = document.createElement('option');
+                    opt.value = p.trim();
+                    opt.textContent = p.trim();
+                    areaSelect.appendChild(opt);
+                }
+            });
+
+            const otherOpt = document.createElement('option');
+            otherOpt.value = '__OTHER__';
+            otherOpt.textContent = currentLang === 'en' ? '➕ Other Sub-Location (Manual)...' : '➕ موقع فرعي آخر (إدخال يدوي)...';
+            areaSelect.appendChild(otherOpt);
         }
 
         function applyLanguage(lang) {
@@ -1261,6 +1430,8 @@
             if (lblSite) lblSite.textContent = t.lblTargetSite;
             const lblArea = document.getElementById('lblTargetArea');
             if (lblArea) lblArea.textContent = t.lblTargetArea;
+            const lblHDept = document.getElementById('lblHostDept');
+            if (lblHDept) lblHDept.textContent = t.lblHostDept;
             const lblHost = document.getElementById('lblHostPerson');
             if (lblHost) lblHost.textContent = t.lblHostPerson;
             const lblPurp = document.getElementById('lblVisitPurpose');
@@ -1289,19 +1460,20 @@
             if (succS) succS.textContent = t.succSubtitle;
             const btnNext = document.getElementById('btnNextVisitor');
             if (btnNext) btnNext.textContent = t.btnNextVisitor;
-            const btnGoAct = document.getElementById('btnGoActive');
+            const btnGoAct = document.getElementById('btnGoActiveList');
             if (btnGoAct) btnGoAct.textContent = t.btnGoActive;
 
-            const lblStAct = document.getElementById('lblStatActive');
-            if (lblStAct) lblStAct.textContent = t.lblStatActive;
-            const lblStTot = document.getElementById('lblStatTotal');
-            if (lblStTot) lblStTot.textContent = t.lblStatTotal;
-            const lblStExit = document.getElementById('lblStatExited');
-            if (lblStExit) lblStExit.textContent = t.lblStatExited;
+            const stAct = document.getElementById('lblStatActive');
+            if (stAct) stAct.textContent = t.lblStatActive;
+            const stTot = document.getElementById('lblStatTotal');
+            if (stTot) stTot.textContent = t.lblStatTotal;
+            const stEx = document.getElementById('lblStatExited');
+            if (stEx) stEx.textContent = t.lblStatExited;
 
             const searchInp = document.getElementById('visitorSearchInput');
             if (searchInp) searchInp.placeholder = t.searchPlaceholder;
 
+            renderGateConfigToUI(currentSystemConfig);
             renderActiveVisitorsList();
         }
 
@@ -1340,31 +1512,6 @@
                 if (successScreen) successScreen.style.display = 'none';
                 renderActiveVisitorsList();
             }
-        }
-
-        function handleGateSiteChange(siteName) {
-            const areaSelect = document.getElementById('targetArea');
-            if (!areaSelect) return;
-
-            if (!siteName) {
-                areaSelect.innerHTML = `<option value="">${currentLang === 'en' ? '— Select Factory First —' : '— اختر المصنع أولاً —'}</option>`;
-                return;
-            }
-
-            const places = SITES_PLACES_DATA[siteName] || [];
-            areaSelect.innerHTML = `<option value="">${currentLang === 'en' ? '— Select Specific Hall / Area —' : '— اختر الصالة أو المكان المستهدف —'}</option>`;
-            
-            places.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p;
-                opt.textContent = p;
-                areaSelect.appendChild(opt);
-            });
-
-            const otherOpt = document.createElement('option');
-            otherOpt.value = '__OTHER__';
-            otherOpt.textContent = currentLang === 'en' ? '➕ Other Place (Manual)...' : '➕ مكان آخر (إدخال يدوي)...';
-            areaSelect.appendChild(otherOpt);
         }
 
         // ==========================================
@@ -1496,7 +1643,8 @@
             const name = document.getElementById('visitorName').value.trim();
             const org = document.getElementById('visitorOrg').value.trim();
             const idNumber = document.getElementById('visitorId').value.trim();
-            const phone = document.getElementById('visitorPhone').value.trim();
+            const phone = document.getElementById('visitorPhone')?.value.trim() || '';
+            const vehicle = document.getElementById('visitorVehicle')?.value.trim() || '';
             const site = document.getElementById('targetSite').value;
             let area = document.getElementById('targetArea').value;
             if (area === '__OTHER__') {
@@ -1511,10 +1659,9 @@
             if (!name) { showToast(t.valName, 'error'); return; }
             if (!org) { showToast(t.valOrg, 'error'); return; }
             if (!idNumber) { showToast(t.valId, 'error'); return; }
-            if (!phone) { showToast(t.valPhone, 'error'); return; }
             if (!site) { showToast(t.valSite, 'error'); return; }
             if (!area) { showToast(t.valArea, 'error'); return; }
-            if (!dept) { showToast('يرجى اختيار الإدارة المستضيفة المعتمدة', 'error'); return; }
+            if (!dept) { showToast('يرجى اختيار الإدارة المستضيفة', 'error'); return; }
             if (!hostPersonName) { showToast(t.valHost, 'error'); return; }
             if (!badge) { showToast(t.valBadge, 'error'); return; }
             if (!hasSignature) { showToast(t.valSignature, 'error'); return; }
@@ -1855,7 +2002,7 @@
                 if (savedTheme === 'dark') toggleTheme();
             } catch(e) {}
             applyLanguage('ar');
-            populateDynamicSystemData();
+            loadGateSystemConfig();
             updateStatsBadges();
         });
     </script>
