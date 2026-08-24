@@ -1,9 +1,9 @@
-class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[],this.filterSite="all",this.filterStatus="all",this.searchQuery="",this.autoRefreshTimer=null,this.init()}init(){window.GateSecurity=this,document.addEventListener("DOMContentLoaded",()=>{this.checkAndApplyVisibility()})}checkAndApplyVisibility(){const t=this.isAdmin(),i=document.querySelector('a[data-section="gate-security"]');i&&(i.style.display=t?"flex":"none");const e=document.getElementById("gate-security-section");e&&!t&&(e.style.display="none")}isAdmin(){try{if(typeof Permissions<"u"&&typeof Permissions.isCurrentUserAdmin=="function"&&Permissions.isCurrentUserAdmin()||typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin())return!0;const t=AppState?.currentUser?.role;return t==="admin"||t==="hse_manager"||t==="general_manager"||t==="security_admin"}catch{return!1}}render(){const t=document.getElementById("gate-security-section");if(!t)return;if(!this.isAdmin()){t.innerHTML=`
+class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[],this.filterSite="all",this.filterStatus="all",this.searchQuery="",this.autoRefreshTimer=null,this.init()}init(){window.GateSecurity=this,document.addEventListener("DOMContentLoaded",()=>{this.checkAndApplyVisibility()})}checkAndApplyVisibility(){const e=this.isAdmin(),i=document.querySelector('a[data-section="gate-security"]');i&&(i.style.display=e?"flex":"none");const t=document.getElementById("gate-security-section");t&&!e&&(t.style.display="none")}isAdmin(){try{if(typeof Permissions<"u"&&typeof Permissions.isCurrentUserAdmin=="function"&&Permissions.isCurrentUserAdmin()||typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin())return!0;const e=AppState?.currentUser?.role;return e==="admin"||e==="hse_manager"||e==="general_manager"||e==="security_admin"}catch{return!1}}render(){const e=document.getElementById("gate-security-section");if(!e)return;if(!this.isAdmin()){e.innerHTML=`
                 <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
                     <i class="fas fa-lock text-rose-500" style="font-size: 3rem; margin-bottom: 12px; display:block;"></i>
                     <h3 style="font-size: 1.2rem; font-weight:800;">\u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0645\u062E\u0635\u0635 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0648\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0623\u0645\u0646 \u0641\u0642\u0637</h3>
                 </div>
-            `;return}const i=this.getGatePortalUrl();t.innerHTML=`
+            `;return}const i=this.getGatePortalUrl();e.innerHTML=`
             <div class="module-header" style="margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                     <div>
@@ -159,43 +159,43 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                     </table>
                 </div>
             </div>
-        `,this.loadVisitorsData(),this.startAutoRefresh()}getGatePortalUrl(){const t=window.location.origin||window.location.protocol+"//"+window.location.host,i=window.location.pathname;return i.includes("/Frontend/")?`${t}/Frontend/gate-visitor-entry.html`:i.includes("/dist/")?`${t}/dist/gate-visitor-entry.html`:`${t}/gate-visitor-entry.html`}copyGateLink(t){navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t).then(()=>{typeof Utils<"u"&&Utils.showNotification?Utils.showNotification("\u062A\u0645 \u0646\u0633\u062E \u0631\u0627\u0628\u0637 \u062A\u0633\u062C\u064A\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0628\u0646\u062C\u0627\u062D \u2705","success"):alert("\u062A\u0645 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0628\u0646\u062C\u0627\u062D: "+t)}):prompt("\u0627\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0623\u0645\u0646 \u0639\u0646\u062F \u0627\u0644\u0628\u0648\u0627\u0628\u0629:",t)}async loadVisitorsData(){try{const t=localStorage.getItem("HSE_GATE_VISITORS_REGISTRY");if(this.visitors=t?JSON.parse(t):[],navigator.onLine&&typeof GoogleIntegration<"u")try{const e=await(await fetch(this.getEffectiveApiUrl()+"?action=getActiveGateVisitors",{method:"GET",mode:"cors"})).json();if(e&&e.success&&Array.isArray(e.activeVisitors)){const r=e.activeVisitors.map(s=>({...s,entryTimestamp:new Date(s.entryDate+" "+s.entryTime).getTime()||Date.now()})),o=new Map;this.visitors.forEach(s=>o.set(s.id,s)),r.forEach(s=>o.set(s.id,s)),this.visitors=Array.from(o.values()).sort((s,n)=>(n.entryTimestamp||0)-(s.entryTimestamp||0)),localStorage.setItem("HSE_GATE_VISITORS_REGISTRY",JSON.stringify(this.visitors))}}catch{}this.applyFilters(),this.updateKpis()}catch{}}getEffectiveApiUrl(){const t="https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec";try{const i=localStorage.getItem("HSE_SETTINGS_CACHE");if(i){const e=JSON.parse(i);if(e&&e.scriptUrl&&e.scriptUrl.includes("script.google.com"))return e.scriptUrl}}catch{}return t}updateKpis(){const t=new Date().toISOString().split("T")[0],i=t.slice(0,7),e=this.visitors.filter(c=>c.entryDate===t),r=this.visitors.filter(c=>!c.exitTime),o=this.visitors.filter(c=>c.entryDate&&c.entryDate.startsWith(i)),s=Date.now(),n=r.filter(c=>(s-(c.entryTimestamp||0))/6e4>=240).length,d=document.getElementById("kpiActiveVisitors");d&&(d.textContent=r.length);const l=document.getElementById("kpiTodayVisitors");l&&(l.textContent=e.length);const f=document.getElementById("kpiOverstayVisitors");f&&(f.textContent=n);const a=document.getElementById("kpiMonthVisitors");a&&(a.textContent=o.length)}applyFilters(){let t=[...this.visitors];if(this.filterSite!=="all"&&(t=t.filter(i=>i.site===this.filterSite)),this.filterStatus==="active"?t=t.filter(i=>!i.exitTime):this.filterStatus==="exited"&&(t=t.filter(i=>!!i.exitTime)),this.searchQuery){const i=this.searchQuery.toLowerCase();t=t.filter(e=>e.name&&e.name.toLowerCase().includes(i)||e.org&&e.org.toLowerCase().includes(i)||e.badge&&e.badge.toLowerCase().includes(i)||e.host&&e.host.toLowerCase().includes(i)||e.phone&&e.phone.includes(i)||e.vehicle&&e.vehicle.toLowerCase().includes(i))}this.filteredVisitors=t,this.renderTable()}renderTable(){const t=document.getElementById("gateVisitorsTableBody");if(!t)return;if(this.filteredVisitors.length===0){t.innerHTML=`
+        `,this.loadVisitorsData(),this.startAutoRefresh()}getGatePortalUrl(){const e=window.location.origin||window.location.protocol+"//"+window.location.host,i=window.location.pathname;return i.includes("/Frontend/")?`${e}/Frontend/gate-visitor-entry.html`:i.includes("/dist/")?`${e}/dist/gate-visitor-entry.html`:`${e}/gate-visitor-entry.html`}copyGateLink(e){navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(e).then(()=>{typeof Utils<"u"&&Utils.showNotification?Utils.showNotification("\u062A\u0645 \u0646\u0633\u062E \u0631\u0627\u0628\u0637 \u062A\u0633\u062C\u064A\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0628\u0646\u062C\u0627\u062D \u2705","success"):alert("\u062A\u0645 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0628\u0646\u062C\u0627\u062D: "+e)}):prompt("\u0627\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0644\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0623\u0645\u0646 \u0639\u0646\u062F \u0627\u0644\u0628\u0648\u0627\u0628\u0629:",e)}async loadVisitorsData(){try{const e=localStorage.getItem("HSE_GATE_VISITORS_REGISTRY");if(this.visitors=e?JSON.parse(e):[],navigator.onLine&&typeof GoogleIntegration<"u")try{const t=await(await fetch(this.getEffectiveApiUrl()+"?action=getActiveGateVisitors",{method:"GET",mode:"cors"})).json();if(t&&t.success&&Array.isArray(t.activeVisitors)){const r=t.activeVisitors.map(n=>({...n,entryTimestamp:new Date(n.entryDate+" "+n.entryTime).getTime()||Date.now()})),o=new Map;this.visitors.forEach(n=>o.set(n.id,n)),r.forEach(n=>o.set(n.id,n)),this.visitors=Array.from(o.values()).sort((n,a)=>(a.entryTimestamp||0)-(n.entryTimestamp||0)),localStorage.setItem("HSE_GATE_VISITORS_REGISTRY",JSON.stringify(this.visitors))}}catch{}this.applyFilters(),this.updateKpis()}catch{}}getEffectiveApiUrl(){const e="https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec";try{const i=localStorage.getItem("HSE_SETTINGS_CACHE");if(i){const t=JSON.parse(i);if(t&&t.scriptUrl&&t.scriptUrl.includes("script.google.com"))return t.scriptUrl}}catch{}return e}updateKpis(){const e=new Date().toISOString().split("T")[0],i=e.slice(0,7),t=this.visitors.filter(c=>c.entryDate===e),r=this.visitors.filter(c=>!c.exitTime),o=this.visitors.filter(c=>c.entryDate&&c.entryDate.startsWith(i)),n=Date.now(),a=r.filter(c=>(n-(c.entryTimestamp||0))/6e4>=240).length,s=document.getElementById("kpiActiveVisitors");s&&(s.textContent=r.length);const l=document.getElementById("kpiTodayVisitors");l&&(l.textContent=t.length);const f=document.getElementById("kpiOverstayVisitors");f&&(f.textContent=a);const d=document.getElementById("kpiMonthVisitors");d&&(d.textContent=o.length)}applyFilters(){let e=[...this.visitors];if(this.filterSite!=="all"&&(e=e.filter(i=>i.site===this.filterSite)),this.filterStatus==="active"?e=e.filter(i=>!i.exitTime):this.filterStatus==="exited"&&(e=e.filter(i=>!!i.exitTime)),this.searchQuery){const i=this.searchQuery.toLowerCase();e=e.filter(t=>t.name&&t.name.toLowerCase().includes(i)||t.org&&t.org.toLowerCase().includes(i)||t.badge&&t.badge.toLowerCase().includes(i)||t.host&&t.host.toLowerCase().includes(i)||t.phone&&t.phone.includes(i)||t.vehicle&&t.vehicle.toLowerCase().includes(i))}this.filteredVisitors=e,this.renderTable()}renderTable(){const e=document.getElementById("gateVisitorsTableBody");if(!e)return;if(this.filteredVisitors.length===0){e.innerHTML=`
                 <tr>
                     <td colspan="9" style="text-align: center; padding: 36px 12px; color: var(--text-muted);">
                         <i class="fas fa-folder-open" style="font-size: 2rem; color: #94a3b8; display:block; margin-bottom: 8px;"></i>
                         <span style="font-weight: 700;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0632\u0648\u0627\u0631 \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0645\u0639\u0627\u064A\u064A\u0631 \u0627\u0644\u0628\u062D\u062B \u0627\u0644\u062D\u0627\u0644\u064A\u0629</span>
                     </td>
                 </tr>
-            `;return}const i=Date.now();t.innerHTML=this.filteredVisitors.map(e=>{const r=!e.exitTime,o=Math.round((i-(e.entryTimestamp||i))/6e4),s=Math.floor(o/60),n=o%60,d=r&&o>=240,l=r?s>0?`${s}\u0633 ${n}\u062F`:`${n}\u062F`:e.durationMinutes?`${e.durationMinutes} \u062F\u0642\u064A\u0642\u0629`:"\u0645\u0643\u062A\u0645\u0644";return`
-                <tr style="border-bottom: 1px solid var(--border-color); ${d?"background: rgba(254, 242, 242, 0.6);":""}">
+            `;return}const i=Date.now();e.innerHTML=this.filteredVisitors.map(t=>{const r=!t.exitTime,o=Math.round((i-(t.entryTimestamp||i))/6e4),n=Math.floor(o/60),a=o%60,s=r&&o>=240,l=r?n>0?`${n}\u0633 ${a}\u062F`:`${a}\u062F`:t.durationMinutes?`${t.durationMinutes} \u062F\u0642\u064A\u0642\u0629`:"\u0645\u0643\u062A\u0645\u0644";return`
+                <tr style="border-bottom: 1px solid var(--border-color); ${s?"background: rgba(254, 242, 242, 0.6);":""}">
                     <td style="padding: 10px 14px; font-weight: 900; color: #1e40af;">
                         <span style="background: #dbeafe; color: #1e40af; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; border: 1px solid #bfdbfe;">
-                            \u{1F3F7}\uFE0F ${e.badge||"\u0628\u062F\u0648\u0646"}
+                            \u{1F3F7}\uFE0F ${t.badge||"\u0628\u062F\u0648\u0646"}
                         </span>
                     </td>
                     <td style="padding: 10px 14px;">
-                        <div style="font-weight: 800; color: var(--text-primary);">${e.name}</div>
-                        <div style="font-size: 0.76rem; color: #2563eb; font-weight: 700;"><i class="fas fa-building"></i> ${e.org}</div>
+                        <div style="font-weight: 800; color: var(--text-primary);">${t.name}</div>
+                        <div style="font-size: 0.76rem; color: #2563eb; font-weight: 700;"><i class="fas fa-building"></i> ${t.org}</div>
                     </td>
                     <td style="padding: 10px 14px;">
-                        <div style="font-weight: 700;"><a href="tel:${e.phone}" style="color: inherit; text-decoration: none;">${e.phone||"-"}</a></div>
-                        <div style="font-size: 0.74rem; color: var(--text-muted);">\u0631\u0642\u0645 \u0627\u0644\u0642\u0648\u0645\u064A: ${e.idNumber||"-"}</div>
+                        <div style="font-weight: 700;"><a href="tel:${t.phone}" style="color: inherit; text-decoration: none;">${t.phone||"-"}</a></div>
+                        <div style="font-size: 0.74rem; color: var(--text-muted);">\u0631\u0642\u0645 \u0627\u0644\u0642\u0648\u0645\u064A: ${t.idNumber||"-"}</div>
                     </td>
                     <td style="padding: 10px 14px;">
-                        <div style="font-weight: 800; color: var(--text-primary);">${e.site}</div>
-                        <div style="font-size: 0.74rem; color: var(--text-muted);">${e.area}</div>
+                        <div style="font-weight: 800; color: var(--text-primary);">${t.site}</div>
+                        <div style="font-size: 0.74rem; color: var(--text-muted);">${t.area}</div>
                     </td>
                     <td style="padding: 10px 14px; font-weight: 700; color: var(--text-secondary);">
-                        <i class="fas fa-user-tie text-blue-500"></i> ${e.host}
+                        <i class="fas fa-user-tie text-blue-500"></i> ${t.host}
                     </td>
                     <td style="padding: 10px 14px; font-size: 0.78rem;">
-                        <div><strong style="color: #10b981;">\u062F\u062E\u0648\u0644:</strong> ${e.entryTime} (${e.entryDate})</div>
-                        <div><strong style="color: #64748b;">\u062E\u0631\u0648\u062C:</strong> ${e.exitTime||"\u2014"}</div>
+                        <div><strong style="color: #10b981;">\u062F\u062E\u0648\u0644:</strong> ${t.entryTime} (${t.entryDate})</div>
+                        <div><strong style="color: #64748b;">\u062E\u0631\u0648\u062C:</strong> ${t.exitTime||"\u2014"}</div>
                     </td>
                     <td style="padding: 10px 14px;">
-                        <span style="font-weight: 800; font-size: 0.78rem; ${d?"color: #dc2626; font-weight: 900;":"color: var(--text-secondary);"}">
+                        <span style="font-weight: 800; font-size: 0.78rem; ${s?"color: #dc2626; font-weight: 900;":"color: var(--text-secondary);"}">
                             ${l}
-                            ${d?'<span style="display:block; font-size: 0.68rem; color: #dc2626;">\u26A0\uFE0F \u062A\u0623\u062E\u064A\u0631 +4\u0633</span>':""}
+                            ${s?'<span style="display:block; font-size: 0.68rem; color: #dc2626;">\u26A0\uFE0F \u062A\u0623\u062E\u064A\u0631 +4\u0633</span>':""}
                         </span>
                     </td>
                     <td style="padding: 10px 14px;">
@@ -211,7 +211,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                     </td>
                     <td style="padding: 10px 14px; text-align: center; white-space: nowrap;">
                         ${r?`
-                            <button type="button" class="btn btn-sm" onclick="GateSecurity.adminForceCheckOut('${e.id}', '${e.badge}')" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 4px 10px;" title="\u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0625\u062F\u0627\u0631\u064A">
+                            <button type="button" class="btn btn-sm" onclick="GateSecurity.adminForceCheckOut('${t.id}', '${t.badge}')" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 800; font-size: 0.75rem; border-radius: 6px; padding: 4px 10px;" title="\u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0625\u062F\u0627\u0631\u064A">
                                 <i class="fas fa-door-open"></i> \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C
                             </button>
                         `:`
@@ -219,7 +219,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                         `}
                     </td>
                 </tr>
-            `}).join("")}handleSearch(t){this.searchQuery=t.trim(),this.applyFilters()}handleFilterSite(t){this.filterSite=t,this.applyFilters()}handleFilterStatus(t){this.filterStatus=t,this.applyFilters()}async adminForceCheckOut(t,i){if(!confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0647\u0630\u0627 \u0627\u0644\u0632\u0627\u0626\u0631 \u0625\u062F\u0627\u0631\u064A\u0627\u064B\u061F"))return;const e=this.visitors.findIndex(r=>r.id===t);if(e!==-1){const r=new Date,o=r.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});this.visitors[e].exitTime=o,this.visitors[e].exitTimestamp=r.getTime(),localStorage.setItem("HSE_GATE_VISITORS_REGISTRY",JSON.stringify(this.visitors)),this.applyFilters(),this.updateKpis();try{const s=this.getEffectiveApiUrl();await fetch(s,{method:"POST",mode:"cors",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"submitGateVisitorCheckOut",id:t,exitTime:o,badge:i})})}catch{}typeof Utils<"u"&&Utils.showNotification&&Utils.showNotification("\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0627\u0644\u0632\u0627\u0626\u0631 \u0628\u0646\u062C\u0627\u062D \u2705","success")}}refreshData(){this.loadVisitorsData(),typeof Utils<"u"&&Utils.showNotification&&Utils.showNotification("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0633\u062C\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0628\u0646\u062C\u0627\u062D \u{1F504}","info")}startAutoRefresh(){this.autoRefreshTimer&&clearInterval(this.autoRefreshTimer),this.autoRefreshTimer=setInterval(()=>{this.loadVisitorsData()},3e4)}printEmergencyMusterList(){const t=this.visitors.filter(r=>!r.exitTime),i=window.open("","_blank"),e=new Date;i.document.write(`
+            `}).join("")}handleSearch(e){this.searchQuery=e.trim(),this.applyFilters()}handleFilterSite(e){this.filterSite=e,this.applyFilters()}handleFilterStatus(e){this.filterStatus=e,this.applyFilters()}async adminForceCheckOut(e,i){if(!confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0647\u0630\u0627 \u0627\u0644\u0632\u0627\u0626\u0631 \u0625\u062F\u0627\u0631\u064A\u0627\u064B\u061F"))return;const t=this.visitors.findIndex(r=>r.id===e);if(t!==-1){const r=new Date,o=r.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});this.visitors[t].exitTime=o,this.visitors[t].exitTimestamp=r.getTime(),localStorage.setItem("HSE_GATE_VISITORS_REGISTRY",JSON.stringify(this.visitors)),this.applyFilters(),this.updateKpis();try{const n=this.getEffectiveApiUrl();await fetch(n,{method:"POST",mode:"cors",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"submitGateVisitorCheckOut",id:e,exitTime:o,badge:i})})}catch{}typeof Utils<"u"&&Utils.showNotification&&Utils.showNotification("\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C \u0627\u0644\u0632\u0627\u0626\u0631 \u0628\u0646\u062C\u0627\u062D \u2705","success")}}refreshData(){this.loadVisitorsData(),typeof Utils<"u"&&Utils.showNotification&&Utils.showNotification("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0633\u062C\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0628\u0646\u062C\u0627\u062D \u{1F504}","info")}startAutoRefresh(){this.autoRefreshTimer&&clearInterval(this.autoRefreshTimer),this.autoRefreshTimer=setInterval(()=>{this.loadVisitorsData()},3e4)}printEmergencyMusterList(){const e=this.visitors.filter(r=>!r.exitTime),i=window.open("","_blank"),t=new Date;i.document.write(`
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
@@ -379,16 +379,16 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                         </div>
                         <div class="meta-row">
                             <span>\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0637\u0628\u0627\u0639\u0629:</span>
-                            <strong>${e.toLocaleDateString("ar-EG")} ${e.toLocaleTimeString("ar-EG")}</strong>
+                            <strong>${t.toLocaleDateString("ar-EG")} ${t.toLocaleTimeString("ar-EG")}</strong>
                         </div>
                         <div class="meta-row">
                             <span>\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u062A\u0648\u0627\u062C\u062F\u064A\u0646:</span>
-                            <strong style="color: #b91c1c; font-size: 11px;">${t.length} \u0641\u0631\u062F</strong>
+                            <strong style="color: #b91c1c; font-size: 11px;">${e.length} \u0641\u0631\u062F</strong>
                         </div>
                     </div>
                 </div>
 
-                ${t.length===0?`
+                ${e.length===0?`
                     <div style="text-align: center; padding: 30px 20px; border: 2px dashed #059669; border-radius: 8px; margin: 20px 0; background: #f0fdf4;">
                         <h3 style="color: #059669; margin: 0 0 6px; font-size: 15px;">\u2705 \u0625\u0641\u0627\u062F\u0629 \u062E\u0644\u0648 \u0627\u0644\u0645\u0646\u0634\u0623\u0629 \u0645\u0646 \u0623\u064A \u0632\u0648\u0627\u0631 \u0623\u0648 \u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u062E\u0627\u0631\u062C\u064A\u064A\u0646</h3>
                         <p style="color: #166534; margin: 0; font-size: 12px; font-weight: 600;">\u062A\u0645 \u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0641\u062D\u0635 \u0627\u0644\u0644\u062D\u0638\u064A \u0644\u0633\u062C\u0644 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0648\u062A\u0623\u0643\u064A\u062F \u0639\u062F\u0645 \u0648\u062C\u0648\u062F \u0623\u064A \u0632\u0627\u0626\u0631 \u0623\u0648 \u0645\u0642\u0627\u0648\u0644 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u0628\u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A \u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0623\u0639\u0644\u0627\u0647.</p>
@@ -409,7 +409,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                             </tr>
                         </thead>
                         <tbody>
-                            ${t.map((r,o)=>`
+                            ${e.map((r,o)=>`
                                 <tr>
                                     <td style="text-align: center;">${o+1}</td>
                                     <td><strong>${r.badge||"-"}</strong></td>
@@ -450,7 +450,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                 </div>
             </body>
             </html>
-        `),i.document.close()}printGateQrPoster(){const t=this.getGatePortalUrl(),i=`https://api.qrserver.com/v1/create-qr-code/?size=480x480&format=png&margin=0&data=${encodeURIComponent(t)}`,e=window.open("","_blank");if(!e){alert("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0628\u0648\u0633\u062A\u0631 (Pop-ups)");return}e.document.write(`
+        `),i.document.close()}printGateQrPoster(){const e=this.getGatePortalUrl(),i=`https://api.qrserver.com/v1/create-qr-code/?size=480x480&format=png&margin=0&data=${encodeURIComponent(e)}`,t=window.open("","_blank");if(!t){alert("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0628\u0648\u0633\u062A\u0631 (Pop-ups)");return}t.document.write(`
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
@@ -751,7 +751,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                     <!-- \u0628\u0637\u0627\u0642\u0629 QR \u0627\u0644\u0645\u0631\u0643\u0632\u064A\u0629 -->
                     <div class="qr-card-center">
                         <div class="qr-frame">
-                            <img src="${i}" alt="Gate Entry QR Code" class="qr-img" onerror="this.src='https://chart.googleapis.com/chart?cht=qr&chs=450x450&chl=${encodeURIComponent(t)}';">
+                            <img src="${i}" alt="Gate Entry QR Code" class="qr-img" onerror="this.src='https://chart.googleapis.com/chart?cht=qr&chs=450x450&chl=${encodeURIComponent(e)}';">
                         </div>
                         <div class="qr-tagline">
                             \u{1F512} \u0645\u0633\u062D \u0622\u0645\u0646 \u0648\u0645\u0628\u0627\u0634\u0631 \u0639\u0628\u0631 \u0627\u0644\u0647\u0627\u062A\u0641 \u0627\u0644\u0645\u062D\u0645\u0648\u0644 | Direct Mobile Check-In
@@ -812,43 +812,50 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                 </div>
             </body>
             </html>
-        `),e.document.close()}getMapConfig(){const t=localStorage.getItem("icapp_visitor_map_config");if(t)try{return JSON.parse(t)}catch{}return{coords:`30\xB024'12.4"N 31\xB018'45.2"E`,siteName:"\u0645\u062C\u0645\u0639 \u0645\u0635\u0627\u0646\u0639 ICAPP \u0627\u0644\u0645\u0639\u0627\u062F\u064A \u0648\u0627\u0644\u0625\u0633\u0645\u0627\u0639\u064A\u0644\u064A\u0629",frameScale:100,frameBg:"#f1f5f9",musterPoints:[{id:"m1",name:"\u0646\u0642\u0637\u0629 1",desc:"\u0627\u0644\u0633\u0627\u062D\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 \u0623\u0645\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629",x:145,y:140},{id:"m2",name:"\u0646\u0642\u0637\u0629 2",desc:"\u0633\u0627\u062D\u0629 \u0631\u0635\u064A\u0641 \u0627\u0644\u0634\u062D\u0646 \u0648\u0627\u0644\u0645\u062E\u0627\u0632\u0646",x:410,y:240},{id:"m3",name:"\u0646\u0642\u0637\u0629 3",desc:"\u0628\u062C\u0648\u0627\u0631 \u0645\u062D\u0637\u0629 \u0627\u0644\u062E\u062F\u0645\u0627\u062A \u0648\u0627\u0644\u0641\u0646\u064A\u0629",x:110,y:310},{id:"m4",name:"\u0646\u0642\u0637\u0629 4",desc:"\u0627\u0644\u0633\u0627\u062D\u0629 \u0627\u0644\u0634\u0631\u0642\u064A\u0629 \u0644\u0644\u0645\u0635\u0646\u0639",x:270,y:30}],buildings:[{id:"b1",name:"\u0627\u0644\u0645\u0628\u0646\u0649 \u0627\u0644\u0625\u062F\u0627\u0631\u064A",sub:"\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0648\u0627\u0644\u0645\u062E\u062A\u0628\u0631",x:50,y:50,w:120,h:60,fill:"#dbeafe",stroke:"#1d4ed8",color:"#1e3a8a"},{id:"b2",name:"\u0645\u0635\u0646\u0639 ICAPP-1",sub:"\u062E\u0637\u0648\u0637 \u0627\u0644\u0641\u0627\u0643\u0647\u0629 \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639",x:190,y:50,w:160,h:120,fill:"#fef3c7",stroke:"#d97706",color:"#92400e"},{id:"b3",name:"\u0645\u0635\u0627\u0646\u0639 ICAPP-2 & 3",sub:"\u0627\u0644\u062A\u062C\u0645\u064A\u062F \u0648\u0627\u0644\u0645\u0631\u0643\u0632\u0627\u062A",x:190,y:190,w:160,h:115,fill:"#ede9fe",stroke:"#6d28d9",color:"#5b21b6"},{id:"b4",name:"\u0627\u0644\u0645\u062E\u0627\u0632\u0646 WH",sub:"\u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u062E\u0627\u0645 \u0648\u0627\u0644\u062A\u0639\u0628\u0626\u0629",x:370,y:50,w:80,h:160,fill:"#f1f5f9",stroke:"#475569",color:"#334155"},{id:"b5",name:"\u0645\u062D\u0637\u0629 \u0627\u0644\u062E\u062F\u0645\u0627\u062A \u0627\u0644\u0641\u0646\u064A\u0629",sub:"\u0648\u0627\u0644\u0637\u0627\u0642\u0629 (ICAPP-4)",x:50,y:190,w:120,h:115,fill:"#fce7f3",stroke:"#be185d",color:"#9d174d"}],safetyIcons:[{id:"s1",name:"\u0645\u0637\u0641\u0623\u0629 \u062D\u0631\u064A\u0642",icon:"\u{1F9EF}",x:360,y:220,color:"#dc2626"},{id:"s2",name:"\u0645\u062E\u0631\u062C \u0637\u0648\u0627\u0631\u0626",icon:"\u{1F6AA}",x:18,y:135,color:"#16a34a"},{id:"s3",name:"\u0625\u0633\u0639\u0627\u0641\u0627\u062A \u0623\u0648\u0644\u064A\u0629",icon:"\u2795",x:160,y:60,color:"#16a34a"},{id:"s4",name:"\u0645\u0646\u0637\u0642\u0629 \u062E\u0637\u0631\u0629",icon:"\u26A0\uFE0F",x:60,y:200,color:"#d97706"}]}}saveMapConfig(t){localStorage.setItem("icapp_visitor_map_config",JSON.stringify(t)),alert("\u062A\u0645 \u062D\u0641\u0638 \u0645\u062E\u0637\u0637 \u0627\u0644\u062E\u0631\u064A\u0637\u0629\u060C \u0627\u0644\u0623\u0645\u0627\u0643\u0646\u060C \u0627\u0644\u0639\u0644\u0627\u0645\u0627\u062A \u0648\u062A\u0643\u0628\u064A\u0631 \u0627\u0644\u0625\u0637\u0627\u0631 \u0628\u0646\u062C\u0627\u062D! \u0633\u064A\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F\u0647\u0627 \u0641\u064A \u0643\u0627\u0641\u0629 \u0627\u0644\u0643\u0631\u0648\u062A \u0627\u0644\u0645\u0637\u0628\u0648\u0639\u0629.")}openMapEditorModal(){const t=this.getMapConfig();window._currentEditorConfig=JSON.parse(JSON.stringify(t));let i=`
-            <div id="mapEditorModal" style="position: fixed; inset: 0; background: rgba(15,23,42,0.85); backdrop-filter: blur(6px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 10px;">
-                <div id="mapEditorContainer" style="background: #ffffff; width: 100%; max-width: 1180px; max-height: 95vh; transition: all 0.25s ease; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35); border: 1px solid #cbd5e1; direction: rtl; display: flex; flex-direction: column;">
+        `),t.document.close()}getMapConfig(){const e=localStorage.getItem("icapp_visitor_map_config");if(e)try{return JSON.parse(e)}catch{}return{coords:`30\xB024'12.4"N 31\xB018'45.2"E`,siteName:"\u0645\u062C\u0645\u0639 \u0645\u0635\u0627\u0646\u0639 ICAPP \u0627\u0644\u0645\u0639\u0627\u062F\u064A \u0648\u0627\u0644\u0625\u0633\u0645\u0627\u0639\u064A\u0644\u064A\u0629",frameScale:100,frameBg:"#f1f5f9",musterPoints:[{id:"m1",name:"\u0646\u0642\u0637\u0629 1",desc:"\u0627\u0644\u0633\u0627\u062D\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 \u0623\u0645\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629",x:145,y:140},{id:"m2",name:"\u0646\u0642\u0637\u0629 2",desc:"\u0633\u0627\u062D\u0629 \u0631\u0635\u064A\u0641 \u0627\u0644\u0634\u062D\u0646 \u0648\u0627\u0644\u0645\u062E\u0627\u0632\u0646",x:410,y:240},{id:"m3",name:"\u0646\u0642\u0637\u0629 3",desc:"\u0628\u062C\u0648\u0627\u0631 \u0645\u062D\u0637\u0629 \u0627\u0644\u062E\u062F\u0645\u0627\u062A \u0648\u0627\u0644\u0641\u0646\u064A\u0629",x:110,y:310},{id:"m4",name:"\u0646\u0642\u0637\u0629 4",desc:"\u0627\u0644\u0633\u0627\u062D\u0629 \u0627\u0644\u0634\u0631\u0642\u064A\u0629 \u0644\u0644\u0645\u0635\u0646\u0639",x:270,y:30}],buildings:[{id:"b1",name:"\u0627\u0644\u0645\u0628\u0646\u0649 \u0627\u0644\u0625\u062F\u0627\u0631\u064A",sub:"\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0648\u0627\u0644\u0645\u062E\u062A\u0628\u0631",x:50,y:50,w:120,h:60,fill:"#dbeafe",stroke:"#1d4ed8",color:"#1e3a8a"},{id:"b2",name:"\u0645\u0635\u0646\u0639 ICAPP-1",sub:"\u062E\u0637\u0648\u0637 \u0627\u0644\u0641\u0627\u0643\u0647\u0629 \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639",x:190,y:50,w:160,h:120,fill:"#fef3c7",stroke:"#d97706",color:"#92400e"},{id:"b3",name:"\u0645\u0635\u0627\u0646\u0639 ICAPP-2 & 3",sub:"\u0627\u0644\u062A\u062C\u0645\u064A\u062F \u0648\u0627\u0644\u0645\u0631\u0643\u0632\u0627\u062A",x:190,y:190,w:160,h:115,fill:"#ede9fe",stroke:"#6d28d9",color:"#5b21b6"},{id:"b4",name:"\u0627\u0644\u0645\u062E\u0627\u0632\u0646 WH",sub:"\u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u062E\u0627\u0645 \u0648\u0627\u0644\u062A\u0639\u0628\u0626\u0629",x:370,y:50,w:80,h:160,fill:"#f1f5f9",stroke:"#475569",color:"#334155"},{id:"b5",name:"\u0645\u062D\u0637\u0629 \u0627\u0644\u062E\u062F\u0645\u0627\u062A \u0627\u0644\u0641\u0646\u064A\u0629",sub:"\u0648\u0627\u0644\u0637\u0627\u0642\u0629 (ICAPP-4)",x:50,y:190,w:120,h:115,fill:"#fce7f3",stroke:"#be185d",color:"#9d174d"}],safetyIcons:[{id:"s1",name:"\u0645\u0637\u0641\u0623\u0629 \u062D\u0631\u064A\u0642",icon:"\u{1F9EF}",x:360,y:220,color:"#dc2626"},{id:"s2",name:"\u0645\u062E\u0631\u062C \u0637\u0648\u0627\u0631\u0626",icon:"\u{1F6AA}",x:18,y:135,color:"#16a34a"},{id:"s3",name:"\u0625\u0633\u0639\u0627\u0641\u0627\u062A \u0623\u0648\u0644\u064A\u0629",icon:"\u2795",x:160,y:60,color:"#16a34a"},{id:"s4",name:"\u0645\u0646\u0637\u0642\u0629 \u062E\u0637\u0631\u0629",icon:"\u26A0\uFE0F",x:60,y:200,color:"#d97706"}]}}saveMapConfig(e){localStorage.setItem("icapp_visitor_map_config",JSON.stringify(e)),alert("\u062A\u0645 \u062D\u0641\u0638 \u0645\u062E\u0637\u0637 \u0627\u0644\u062E\u0631\u064A\u0637\u0629\u060C \u0627\u0644\u0623\u0645\u0627\u0643\u0646\u060C \u0627\u0644\u0639\u0644\u0627\u0645\u0627\u062A \u0648\u062A\u0643\u0628\u064A\u0631 \u0627\u0644\u0625\u0637\u0627\u0631 \u0628\u0646\u062C\u0627\u062D! \u0633\u064A\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F\u0647\u0627 \u0641\u064A \u0643\u0627\u0641\u0629 \u0627\u0644\u0643\u0631\u0648\u062A \u0627\u0644\u0645\u0637\u0628\u0648\u0639\u0629.")}openMapEditorModal(){const e=this.getMapConfig();window._currentEditorConfig=JSON.parse(JSON.stringify(e)),window._selectedItem=null,window._drawMode=!1,window._mapEditorKeyHandler&&window.removeEventListener("keydown",window._mapEditorKeyHandler),window._mapEditorKeyHandler=t=>{if(document.getElementById("mapEditorModal")&&(t.key==="Delete"||t.key==="Backspace")){if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName))return;window._selectedItem&&(t.preventDefault(),GateSecurity.deleteSelectedItem())}},window.addEventListener("keydown",window._mapEditorKeyHandler);let i=`
+            <div id="mapEditorModal" style="position: fixed; inset: 0; background: rgba(15,23,42,0.85); backdrop-filter: blur(6px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 8px;">
+                <div id="mapEditorContainer" style="background: #ffffff; width: 100%; max-width: 1180px; max-height: 96vh; transition: all 0.25s ease; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35); border: 1px solid #cbd5e1; direction: rtl; display: flex; flex-direction: column;">
                     <!-- Modal Header -->
-                    <div style="background: #1e3a8a; color: #ffffff; padding: 12px 20px; border-top-left-radius: 16px; border-top-right-radius: 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="background: #1e3a8a; color: #ffffff; padding: 10px 18px; border-top-left-radius: 16px; border-top-right-radius: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <i class="fas fa-drafting-compass" style="font-size: 1.5rem; color: #60a5fa;"></i>
+                            <i class="fas fa-drafting-compass" style="font-size: 1.4rem; color: #60a5fa;"></i>
                             <div>
-                                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 900;">\u0645\u0635\u0645\u0645 \u0648\u0645\u062D\u0631\u0631 \u0627\u0644\u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A (Interactive Canvas & Layout Designer)</h3>
-                                <span style="font-size: 0.78rem; color: #bfdbfe;">\u0627\u0633\u062D\u0628 \u0648\u062D\u0631\u0643 \u0627\u0644\u0645\u0628\u0627\u0646\u064A \u0648\u0627\u0644\u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0645\u0628\u0627\u0634\u0631\u0629 \u0628\u0627\u0644\u0645\u0627\u0648\u0633 | \u0631\u0633\u0645 \u0645\u0631\u0628\u0639 \u0645\u0648\u0642\u0639\u060C \u0625\u0636\u0627\u0641\u0629 \u0648\u062D\u0630\u0641 \u0639\u0644\u0627\u0645\u0627\u062A\u060C \u0648\u062A\u0645\u0631\u064A\u0631 \u0645\u0644\u0621 \u0627\u0644\u0634\u0627\u0634\u0629</span>
+                                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 900;">\u0645\u0635\u0645\u0645 \u0648\u0645\u062D\u0631\u0631 \u0627\u0644\u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A (Interactive Canvas & Layout Designer)</h3>
+                                <span style="font-size: 0.75rem; color: #bfdbfe;">\u0627\u0633\u062D\u0628 \u0628\u0627\u0644\u0645\u0627\u0648\u0633 | \u0631\u0633\u0645 \u0645\u0648\u0642\u0639 \u062C\u062F\u064A\u062F | \u0627\u0636\u063A\u0637 \u0632\u0631 Delete \u0628\u0627\u0644\u0643\u064A\u0628\u0648\u0631\u062F \u0644\u0644\u062D\u0630\u0641 \u0627\u0644\u0633\u0631\u064A\u0639</span>
                             </div>
                         </div>
 
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <button type="button" onclick="GateSecurity.toggleEditorFullscreen()" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3); color: #ffffff; padding: 5px 14px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" id="toggleDrawModeBtn" onclick="GateSecurity.toggleDrawMode()" style="background: #0284c7; color: #ffffff; border: none; padding: 5px 12px; border-radius: 8px; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-pencil-alt"></i> <span id="drawModeBtnText">\u062A\u0641\u0639\u064A\u0644 \u0648\u0636\u0639 \u0631\u0633\u0645 \u0645\u0648\u0642\u0639 \u0628\u0627\u0644\u0645\u0627\u0648\u0633</span>
+                            </button>
+                            <button type="button" onclick="GateSecurity.toggleEditorFullscreen()" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3); color: #ffffff; padding: 5px 12px; border-radius: 8px; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
                                 <i id="fsIcon" class="fas fa-expand"></i> <span id="fsBtnText">\u0648\u0636\u0639 \u0645\u0644\u0621 \u0627\u0644\u0634\u0627\u0634\u0629</span>
                             </button>
-                            <button onclick="document.getElementById('mapEditorModal').remove()" style="background: rgba(255,255,255,0.15); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-weight: 900; font-size: 1.1rem;">\u2715</button>
+                            <button onclick="GateSecurity.closeMapEditorModal()" style="background: rgba(255,255,255,0.15); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-weight: 900; font-size: 1.1rem;">\u2715</button>
                         </div>
                     </div>
 
                     <!-- Modal Body Split Layout -->
-                    <div id="editorBodyGrid" style="padding: 14px; display: grid; grid-template-columns: 620px 1fr; gap: 14px; flex: 1; overflow: hidden;">
+                    <div id="editorBodyGrid" style="padding: 12px; display: grid; grid-template-columns: 640px 1fr; gap: 12px; flex: 1; overflow: hidden;">
                         <!-- \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0623\u064A\u0645\u0646: \u0644\u0648\u062D\u0629 \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629 MOUSE CANVAS -->
                         <div style="display: flex; flex-direction: column; gap: 8px; height: 100%;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
-                                <span style="font-weight: 900; font-size: 0.85rem; color: #1e3a8a;"><i class="fas fa-mouse-pointer"></i> \u0644\u0648\u062D\u0629 \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0645\u0628\u0627\u0634\u0631 (\u0627\u0633\u062D\u0628 \u0628\u0627\u0644\u0645\u0627\u0648\u0633):</span>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <label style="font-size: 0.75rem; font-weight: 800;">\u062A\u0643\u0628\u064A\u0631 \u0627\u0644\u0625\u0637\u0627\u0631 (Scale):</label>
-                                    <input type="range" id="frameScaleRange" min="80" max="150" value="${t.frameScale||100}" oninput="GateSecurity.updateEditorFrameScale(this.value)" style="width: 90px; cursor: pointer;">
-                                    <span id="scaleValText" style="font-size: 0.75rem; font-weight: 900; color: #15803d;">${t.frameScale||100}%</span>
+                            <!-- \u0634\u0631\u064A\u0637 \u0623\u062F\u0648\u0627\u062A \u0627\u0644\u062A\u0643\u0628\u064A\u0631 \u0648\u0627\u0644\u062A\u0635\u063A\u064A\u0631 \u0627\u0644\u0645\u0639\u062A\u0645\u062F \u0648\u0627\u0644\u0645\u062D\u0633\u0651\u0646 -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1; flex-wrap: wrap; gap: 6px;">
+                                <span style="font-weight: 900; font-size: 0.82rem; color: #1e3a8a;"><i class="fas fa-mouse-pointer"></i> \u0644\u0648\u062D\u0629 \u0627\u0644\u0631\u0633\u0645 \u0627\u0644\u0645\u0628\u0627\u0634\u0631:</span>
+                                
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <button type="button" onclick="GateSecurity.stepEditorFrameScale(-10)" style="background: #ffffff; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 4px; font-weight: 900; font-size: 0.8rem; cursor: pointer;">-</button>
+                                    <input type="range" id="frameScaleRange" min="50" max="200" value="${e.frameScale||100}" oninput="GateSecurity.updateEditorFrameScale(this.value)" style="width: 100px; cursor: pointer;">
+                                    <button type="button" onclick="GateSecurity.stepEditorFrameScale(10)" style="background: #ffffff; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 4px; font-weight: 900; font-size: 0.8rem; cursor: pointer;">+</button>
+                                    <button type="button" onclick="GateSecurity.updateEditorFrameScale(100)" style="background: #e2e8f0; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.7rem; cursor: pointer;">100%</button>
+                                    <span id="scaleValText" style="font-size: 0.78rem; font-weight: 900; color: #15803d; min-width: 40px; text-align: center;">${e.frameScale||100}%</span>
                                 </div>
                             </div>
 
-                            <!-- \u0627\u0644\u0640 SVG \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A \u0627\u0644\u0633\u062D\u0628 \u0648\u0627\u0644\u0625\u0641\u0644\u0627\u062A -->
-                            <div id="canvasViewport" style="border: 2px solid #334155; border-radius: 10px; background: ${t.frameBg||"#f1f5f9"}; overflow: hidden; position: relative; width: 100%; height: 420px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 6px rgba(0,0,0,0.1); transition: height 0.25s ease;">
-                                <svg id="interactiveCanvasSvg" viewBox="0 0 500 360" style="width: 100%; height: 100%; cursor: crosshair; user-select: none;" onmousedown="GateSecurity.handleCanvasMouseDown(event)" onmousemove="GateSecurity.handleCanvasMouseMove(event)" onmouseup="GateSecurity.handleCanvasMouseUp(event)">
+                            <!-- \u0627\u0644\u0640 SVG \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A \u0627\u0644\u0633\u062D\u0628 \u0648\u0627\u0644\u0625\u0641\u0644\u0627\u062A \u0648\u0627\u0644\u0631\u0633\u0645 -->
+                            <div id="canvasViewport" style="border: 2px solid #334155; border-radius: 10px; background: ${e.frameBg||"#f1f5f9"}; overflow: auto; position: relative; width: 100%; height: 420px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 6px rgba(0,0,0,0.1); transition: height 0.25s ease;">
+                                <svg id="interactiveCanvasSvg" viewBox="0 0 500 360" style="width: 100%; height: 100%; cursor: default; user-select: none;" onmousedown="GateSecurity.handleCanvasMouseDown(event)" onmousemove="GateSecurity.handleCanvasMouseMove(event)" onmouseup="GateSecurity.handleCanvasMouseUp(event)">
                                     <!-- background frame -->
                                     <rect x="10" y="10" width="480" height="340" rx="8" fill="#ffffff" stroke="#334155" stroke-width="2.5" stroke-dasharray="6,4"/>
                                     <rect x="20" y="20" width="460" height="320" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
@@ -857,6 +864,8 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                                     <g id="svgBuildingsGroup"></g>
                                     <g id="svgMusterPointsGroup"></g>
                                     <g id="svgSafetyIconsGroup"></g>
+                                    <g id="svgSelectionGroup"></g>
+                                    <g id="svgDrawingPreviewGroup"></g>
 
                                     <!-- North compass -->
                                     <g transform="translate(450, 45)">
@@ -867,8 +876,8 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                                     </g>
                                 </svg>
                             </div>
-                            <div style="font-size: 0.72rem; color: #64748b; text-align: center; font-weight: 700;">
-                                \u{1F4A1} \u0627\u0633\u062D\u0628 \u0623\u064A \u0645\u0628\u0646\u0649 \u0623\u0648 \u0623\u064A\u0642\u0648\u0646\u0629 \u0628\u0627\u0644\u0645\u0627\u0648\u0633 \u0644\u0645\u0648\u0642\u0639\u0647\u0627 \u0627\u0644\u062F\u0642\u064A\u0642. \u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u0627\u0644\u0623\u064A\u0642\u0648\u0646\u0629 \u0644\u0644\u062A\u062D\u0643\u0645 \u0641\u064A\u0647\u0627 \u0623\u0648 \u062D\u0630\u0641\u0647\u0627.
+                            <div style="font-size: 0.72rem; color: #475569; text-align: center; font-weight: 700; background: #f8fafc; padding: 4px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                \u2328\uFE0F \u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0623\u064A \u0639\u0646\u0635\u0631 \u0644\u062A\u062D\u062F\u064A\u062F\u0647 \u062B\u0645 \u0627\u0636\u063A\u0637 \u0632\u0631 <b style="color:#dc2626;">Delete</b> \u0628\u0627\u0644\u0643\u064A\u0628\u0648\u0631\u062F \u0644\u062D\u0630\u0641\u0647 | \u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0645\u0627\u0648\u0633 \u0644\u0644\u0633\u062D\u0628
                             </div>
                         </div>
 
@@ -879,23 +888,34 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                     <div>
                                         <label style="font-size: 0.75rem; font-weight: 800; color: #1e3a8a; display: block; margin-bottom: 2px;">\u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A GPS:</label>
-                                        <input type="text" id="editMapCoords" value="${t.coords}" style="width: 100%; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.8rem;">
+                                        <input type="text" id="editMapCoords" value="${e.coords}" style="width: 100%; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.8rem;">
                                     </div>
                                     <div>
                                         <label style="font-size: 0.75rem; font-weight: 800; color: #1e3a8a; display: block; margin-bottom: 2px;">\u0644\u0648\u0646 \u0625\u0637\u0627\u0631 \u0627\u0644\u062E\u0631\u064A\u0637\u0629:</label>
                                         <select id="editFrameBg" onchange="GateSecurity.updateEditorFrameBg(this.value)" style="width: 100%; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 0.8rem;">
-                                            <option value="#f1f5f9" ${t.frameBg==="#f1f5f9"?"selected":""}>\u0631\u0645\u0627\u062F\u064A \u0641\u0627\u062A\u062D (\u0627\u0641\u062A\u0631\u0627\u0636\u064A)</option>
-                                            <option value="#ffffff" ${t.frameBg==="#ffffff"?"selected":""}>\u0623\u0628\u064A\u0636 \u0646\u0627\u0635\u0639</option>
-                                            <option value="#e2e8f0" ${t.frameBg==="#e2e8f0"?"selected":""}>\u0631\u0645\u0627\u062F\u064A \u062F\u0627\u0641\u0626</option>
-                                            <option value="#ecfdf5" ${t.frameBg==="#ecfdf5"?"selected":""}>\u0623\u062E\u0636\u0631 \u0633\u0644\u0627\u0645\u0629 \u0647\u0627\u062F\u0626</option>
+                                            <option value="#f1f5f9" ${e.frameBg==="#f1f5f9"?"selected":""}>\u0631\u0645\u0627\u062F\u064A \u0641\u0627\u062A\u062D (\u0627\u0641\u062A\u0631\u0627\u0636\u064A)</option>
+                                            <option value="#ffffff" ${e.frameBg==="#ffffff"?"selected":""}>\u0623\u0628\u064A\u0636 \u0646\u0627\u0635\u0639</option>
+                                            <option value="#e2e8f0" ${e.frameBg==="#e2e8f0"?"selected":""}>\u0631\u0645\u0627\u062F\u064A \u062F\u0627\u0641\u0626</option>
+                                            <option value="#ecfdf5" ${e.frameBg==="#ecfdf5"?"selected":""}>\u0623\u062E\u0636\u0631 \u0633\u0644\u0627\u0645\u0629 \u0647\u0627\u062F\u0626</option>
                                         </select>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- \u0625\u0636\u0627\u0641\u0629 \u0639\u0644\u0627\u0645\u0627\u062A \u0648\u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 -->
+                            <!-- \u0625\u0636\u0627\u0641\u0629 \u0645\u0631\u0628\u0639 \u0631\u0633\u0645 \u0645\u0648\u0642\u0639 / \u0645\u0646\u0637\u0642\u0629 \u062C\u062F\u064A\u062F\u0629 -->
                             <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 8px 10px;">
-                                <h4 style="margin: 0 0 6px; font-size: 0.85rem; font-weight: 900; color: #1e40af; display: flex; align-items: center; gap: 6px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <span style="font-size: 0.84rem; font-weight: 900; color: #1e3a8a;"><i class="fas fa-vector-square"></i> \u0625\u0636\u0627\u0641\u0629 \u0648\u062A\u0635\u0645\u064A\u0645 \u0645\u0631\u0628\u0639 \u0631\u0633\u0645 \u0645\u0648\u0642\u0639:</span>
+                                    <button type="button" onclick="GateSecurity.addEditorBuildingZone()" style="background: #2563eb; color: #fff; border: none; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer; box-shadow: 0 2px 5px rgba(37,99,235,0.2);">
+                                        + \u0631\u0633\u0645 \u0645\u0631\u0628\u0639 \u0645\u0648\u0642\u0639 \u062C\u062F\u064A\u062F
+                                    </button>
+                                </div>
+                                <div id="editorBuildingsList" style="display: flex; flex-direction: column; gap: 5px; max-height: 160px; overflow-y: auto;"></div>
+                            </div>
+
+                            <!-- \u0625\u0636\u0627\u0641\u0629 \u0639\u0644\u0627\u0645\u0627\u062A \u0648\u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 -->
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px;">
+                                <h4 style="margin: 0 0 6px; font-size: 0.84rem; font-weight: 900; color: #1e40af; display: flex; align-items: center; gap: 6px;">
                                     <i class="fas fa-plus-circle"></i> \u0625\u0636\u0627\u0641\u0629 \u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0648\u0639\u0644\u0627\u0645\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 (Safety Signs)
                                 </h4>
                                 <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px;">
@@ -910,17 +930,6 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                                 <div id="editorSafetyIconsList" style="display: flex; flex-direction: column; gap: 4px; max-height: 100px; overflow-y: auto;"></div>
                             </div>
 
-                            <!-- \u0625\u0636\u0627\u0641\u0629 \u0645\u0631\u0628\u0639 \u0631\u0633\u0645 \u0645\u0648\u0642\u0639 / \u0645\u0646\u0637\u0642\u0629 \u062C\u062F\u064A\u062F\u0629 -->
-                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                    <span style="font-size: 0.84rem; font-weight: 900; color: #1e3a8a;"><i class="fas fa-vector-square"></i> \u0625\u0636\u0627\u0641\u0629 \u0648\u062A\u0635\u0645\u064A\u0645 \u0645\u0631\u0628\u0639 \u0631\u0633\u0645 \u0645\u0648\u0642\u0639:</span>
-                                    <button type="button" onclick="GateSecurity.addEditorBuildingZone()" style="background: #2563eb; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.74rem; cursor: pointer;">
-                                        + \u0631\u0633\u0645 \u0645\u0631\u0628\u0639 \u0645\u0648\u0642\u0639 \u062C\u062F\u064A\u062F
-                                    </button>
-                                </div>
-                                <div id="editorBuildingsList" style="display: flex; flex-direction: column; gap: 5px; max-height: 160px; overflow-y: auto;"></div>
-                            </div>
-
                             <!-- \u0642\u0627\u0626\u0645\u0629 \u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639 -->
                             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -929,19 +938,19 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                                         + \u0625\u0636\u0627\u0641\u0629 \u0646\u0642\u0637\u0629 \u062A\u062C\u0645\u0639
                                     </button>
                                 </div>
-                                <div id="editorMusterList" style="display: flex; flex-direction: column; gap: 5px; max-height: 120px; overflow-y: auto;"></div>
+                                <div id="editorMusterList" style="display: flex; flex-direction: column; gap: 5px; max-height: 110px; overflow-y: auto;"></div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Modal Footer -->
-                    <div style="background: #f1f5f9; padding: 10px 20px; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0;">
+                    <div style="background: #f1f5f9; padding: 10px 18px; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0;">
                         <button type="button" onclick="GateSecurity.resetMapConfigToDefault()" style="background: #cbd5e1; color: #334155; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; cursor: pointer;">
                             <i class="fas fa-rotate-left"></i> \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062E\u0637\u0637 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A
                         </button>
 
                         <div style="display: flex; gap: 10px;">
-                            <button type="button" onclick="document.getElementById('mapEditorModal').remove()" style="background: #ffffff; border: 1.5px solid #cbd5e1; color: #475569; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; cursor: pointer;">\u0625\u0644\u063A\u0627\u0621</button>
+                            <button type="button" onclick="GateSecurity.closeMapEditorModal()" style="background: #ffffff; border: 1.5px solid #cbd5e1; color: #475569; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; cursor: pointer;">\u0625\u0644\u063A\u0627\u0621</button>
                             <button type="button" onclick="GateSecurity.saveEditorMapConfig()" style="background: #15803d; color: #ffffff; border: none; padding: 8px 22px; border-radius: 8px; font-weight: 900; font-size: 0.88rem; cursor: pointer; box-shadow: 0 4px 12px rgba(21,128,61,0.25);">
                                 <i class="fas fa-save"></i> \u062D\u0641\u0638 \u0627\u0644\u0645\u062E\u0637\u0637 \u0648\u0627\u0644\u062A\u0635\u0645\u064A\u0645 \u0648\u0627\u0644\u0637\u0628\u0627\u0639\u0629
                             </button>
@@ -949,70 +958,91 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                     </div>
                 </div>
             </div>
-        `;document.body.insertAdjacentHTML("beforeend",i),this.renderEditorCanvas()}toggleEditorFullscreen(){const t=document.getElementById("mapEditorContainer"),i=document.getElementById("canvasViewport"),e=document.getElementById("editorBodyGrid"),r=document.getElementById("fsBtnText"),o=document.getElementById("fsIcon");t&&(t.classList.contains("is-fullscreen")?(t.classList.remove("is-fullscreen"),t.style.width="100%",t.style.height="auto",t.style.maxWidth="1180px",t.style.maxHeight="95vh",t.style.borderRadius="16px",i&&(i.style.height="420px"),e&&(e.style.gridTemplateColumns="620px 1fr"),r&&(r.textContent="\u0648\u0636\u0639 \u0645\u0644\u0621 \u0627\u0644\u0634\u0627\u0634\u0629"),o&&(o.className="fas fa-expand")):(t.classList.add("is-fullscreen"),t.style.width="99vw",t.style.height="98vh",t.style.maxWidth="100vw",t.style.maxHeight="100vh",t.style.borderRadius="0",i&&(i.style.height="calc(98vh - 140px)"),e&&(e.style.gridTemplateColumns="1fr 400px"),r&&(r.textContent="\u0625\u0644\u063A\u0627\u0621 \u0645\u0644\u0621 \u0627\u0644\u0634\u0627\u0634\u0629"),o&&(o.className="fas fa-compress")))}renderEditorCanvas(){const t=window._currentEditorConfig;if(!t)return;const i=(t.frameScale||100)/100,e=document.getElementById("interactiveCanvasSvg");e&&(e.style.transform=`scale(${i})`,e.style.transformOrigin="center center");const r=document.getElementById("svgBuildingsGroup");r&&(r.innerHTML=t.buildings.map((n,d)=>`
-                <g class="draggable-item" data-type="building" data-idx="${d}" transform="translate(${n.x}, ${n.y})" style="cursor: move;">
-                    <rect width="${n.w}" height="${n.h}" rx="4" fill="${n.fill}" stroke="${n.stroke}" stroke-width="2.5"/>
-                    <text x="${n.w/2}" y="${n.h/2-(n.sub?4:0)}" font-size="11.5" font-weight="900" fill="${n.color}" text-anchor="middle" font-family="Segoe UI">${n.name}</text>
-                    ${n.sub?`<text x="${n.w/2}" y="${n.h/2+12}" font-size="8.5" font-weight="700" fill="${n.stroke}" text-anchor="middle" font-family="Segoe UI">${n.sub}</text>`:""}
+        `;document.body.insertAdjacentHTML("beforeend",i),this.renderEditorCanvas()}closeMapEditorModal(){window._mapEditorKeyHandler&&(window.removeEventListener("keydown",window._mapEditorKeyHandler),window._mapEditorKeyHandler=null);const e=document.getElementById("mapEditorModal");e&&e.remove()}toggleDrawMode(){window._drawMode=!window._drawMode;const e=document.getElementById("toggleDrawModeBtn"),i=document.getElementById("drawModeBtnText"),t=document.getElementById("interactiveCanvasSvg");window._drawMode?(e&&(e.style.background="#dc2626"),i&&(i.textContent="\u0625\u064A\u0642\u0627\u0641 \u0648\u0636\u0639 \u0631\u0633\u0645 \u0645\u0648\u0642\u0639 (\u0627\u0646\u0642\u0631 \u0648\u0627\u0633\u062D\u0628 \u0644\u0631\u0633\u0645 \u0645\u0631\u0628\u0639)"),t&&(t.style.cursor="crosshair")):(e&&(e.style.background="#0284c7"),i&&(i.textContent="\u062A\u0641\u0639\u064A\u0644 \u0648\u0636\u0639 \u0631\u0633\u0645 \u0645\u0648\u0642\u0639 \u0628\u0627\u0644\u0645\u0627\u0648\u0633"),t&&(t.style.cursor="default"))}toggleEditorFullscreen(){const e=document.getElementById("mapEditorContainer"),i=document.getElementById("canvasViewport"),t=document.getElementById("editorBodyGrid"),r=document.getElementById("fsBtnText"),o=document.getElementById("fsIcon");e&&(e.classList.contains("is-fullscreen")?(e.classList.remove("is-fullscreen"),e.style.width="100%",e.style.height="auto",e.style.maxWidth="1180px",e.style.maxHeight="96vh",e.style.borderRadius="16px",i&&(i.style.height="420px"),t&&(t.style.gridTemplateColumns="640px 1fr"),r&&(r.textContent="\u0648\u0636\u0639 \u0645\u0644\u0621 \u0627\u0644\u0634\u0627\u0634\u0629"),o&&(o.className="fas fa-expand")):(e.classList.add("is-fullscreen"),e.style.width="98vw",e.style.height="96vh",e.style.maxWidth="100vw",e.style.maxHeight="100vh",e.style.borderRadius="0",i&&(i.style.height="calc(96vh - 150px)"),t&&(t.style.gridTemplateColumns="1fr 380px"),r&&(r.textContent="\u0625\u0644\u063A\u0627\u0621 \u0645\u0644\u0621 \u0627\u0644\u0634\u0627\u0634\u0629"),o&&(o.className="fas fa-compress")))}stepEditorFrameScale(e){if(!window._currentEditorConfig)return;const i=window._currentEditorConfig.frameScale||100,t=Math.max(50,Math.min(200,i+e)),r=document.getElementById("frameScaleRange");r&&(r.value=t),this.updateEditorFrameScale(t)}updateEditorFrameScale(e){if(!window._currentEditorConfig)return;window._currentEditorConfig.frameScale=parseInt(e)||100;const i=document.getElementById("scaleValText");i&&(i.textContent=e+"%"),this.renderEditorCanvas()}updateEditorFrameBg(e){if(!window._currentEditorConfig)return;window._currentEditorConfig.frameBg=e;const i=document.getElementById("canvasViewport");i&&(i.style.background=e)}deleteSelectedItem(){if(!window._selectedItem||!window._currentEditorConfig)return;const{type:e,idx:i}=window._selectedItem;e==="building"?this.removeBuilding(i):e==="muster"?this.removeMuster(i):e==="icon"&&this.removeSafetyIcon(i),window._selectedItem=null,this.renderEditorCanvas()}renderEditorCanvas(){const e=window._currentEditorConfig;if(!e)return;const i=(e.frameScale||100)/100,t=document.getElementById("interactiveCanvasSvg");t&&(t.style.transform=`scale(${i})`,t.style.transformOrigin="center center");const r=document.getElementById("svgBuildingsGroup");r&&(r.innerHTML=e.buildings.map((s,l)=>`
+                <g class="draggable-item" data-type="building" data-idx="${l}" transform="translate(${s.x}, ${s.y})" style="cursor: move;">
+                    <rect width="${s.w}" height="${s.h}" rx="4" fill="${s.fill}" stroke="${s.stroke}" stroke-width="2.5"/>
+                    <text x="${s.w/2}" y="${s.h/2-(s.sub?4:0)}" font-size="11.5" font-weight="900" fill="${s.color}" text-anchor="middle" font-family="Segoe UI">${s.name}</text>
+                    ${s.sub?`<text x="${s.w/2}" y="${s.h/2+12}" font-size="8.5" font-weight="700" fill="${s.stroke}" text-anchor="middle" font-family="Segoe UI">${s.sub}</text>`:""}
                 </g>
-            `).join(""));const o=document.getElementById("svgMusterPointsGroup");o&&(o.innerHTML=t.musterPoints.map((n,d)=>`
-                <g class="draggable-item" data-type="muster" data-idx="${d}" transform="translate(${n.x}, ${n.y})" style="cursor: move;">
+            `).join(""));const o=document.getElementById("svgMusterPointsGroup");o&&(o.innerHTML=e.musterPoints.map((s,l)=>`
+                <g class="draggable-item" data-type="muster" data-idx="${l}" transform="translate(${s.x}, ${s.y})" style="cursor: move;">
                     <rect x="-24" y="-14" width="48" height="28" rx="4" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
-                    <text x="0" y="3" font-size="9.5" font-weight="900" fill="#ffffff" text-anchor="middle" font-family="Segoe UI">${n.name}</text>
+                    <text x="0" y="3" font-size="9.5" font-weight="900" fill="#ffffff" text-anchor="middle" font-family="Segoe UI">${s.name}</text>
                 </g>
-            `).join(""));const s=document.getElementById("svgSafetyIconsGroup");s&&(s.innerHTML=(t.safetyIcons||[]).map((n,d)=>`
-                <g class="draggable-item" data-type="icon" data-idx="${d}" transform="translate(${n.x}, ${n.y})" style="cursor: move;">
-                    <circle cx="0" cy="0" r="14" fill="#ffffff" stroke="${n.color||"#dc2626"}" stroke-width="2"/>
-                    <text x="0" y="5" font-size="14" text-anchor="middle">${n.icon}</text>
+            `).join(""));const n=document.getElementById("svgSafetyIconsGroup");n&&(n.innerHTML=(e.safetyIcons||[]).map((s,l)=>`
+                <g class="draggable-item" data-type="icon" data-idx="${l}" transform="translate(${s.x}, ${s.y})" style="cursor: move;">
+                    <circle cx="0" cy="0" r="14" fill="#ffffff" stroke="${s.color||"#dc2626"}" stroke-width="2"/>
+                    <text x="0" y="5" font-size="14" text-anchor="middle">${s.icon}</text>
                 </g>
-            `).join("")),this.renderEditorLists()}renderEditorLists(){const t=window._currentEditorConfig;if(!t)return;const i=document.getElementById("editorBuildingsList");i&&(i.innerHTML=t.buildings.map((o,s)=>`
-                <div style="display: grid; grid-template-columns: 110px 1fr 45px 45px 50px 24px; gap: 4px; align-items: center; background: #fff; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 6px;">
-                    <input type="text" value="${o.name}" onchange="GateSecurity.updateBuildingProp(${s}, 'name', this.value)" style="padding: 2px 4px; font-size: 0.74rem; font-weight: 800;">
-                    <input type="text" value="${o.sub||""}" placeholder="\u0648\u0635\u0641 \u0627\u0644\u0641\u0631\u0639\u064A" onchange="GateSecurity.updateBuildingProp(${s}, 'sub', this.value)" style="padding: 2px 4px; font-size: 0.74rem;">
-                    <div><span style="font-size: 0.62rem;">W:</span><input type="number" value="${o.w}" onchange="GateSecurity.updateBuildingProp(${s}, 'w', parseInt(this.value))" style="width: 32px; font-size: 0.68rem;"></div>
-                    <div><span style="font-size: 0.62rem;">H:</span><input type="number" value="${o.h}" onchange="GateSecurity.updateBuildingProp(${s}, 'h', parseInt(this.value))" style="width: 32px; font-size: 0.68rem;"></div>
-                    <select onchange="GateSecurity.updateBuildingColor(${s}, this.value)" style="font-size: 0.65rem; padding: 1px;">
-                        <option value="#dbeafe" ${o.fill==="#dbeafe"?"selected":""}>\u0623\u0632\u0631\u0642</option>
-                        <option value="#fef3c7" ${o.fill==="#fef3c7"?"selected":""}>\u0623\u0635\u0641\u0631</option>
-                        <option value="#ede9fe" ${o.fill==="#ede9fe"?"selected":""}>\u0628\u0646\u0641\u0633\u062C\u064A</option>
-                        <option value="#fce7f3" ${o.fill==="#fce7f3"?"selected":""}>\u0648\u0631\u062F\u064A</option>
-                        <option value="#dcfce7" ${o.fill==="#dcfce7"?"selected":""}>\u0623\u062E\u0636\u0631</option>
-                        <option value="#f1f5f9" ${o.fill==="#f1f5f9"?"selected":""}>\u0631\u0645\u0627\u062F\u064A</option>
-                    </select>
-                    <button type="button" onclick="GateSecurity.removeBuilding(${s})" style="color: #dc2626; border: none; background: #fee2e2; border-radius: 4px; cursor: pointer; font-weight: 900; font-size: 0.75rem;">\u2715</button>
-                </div>
-            `).join(""));const e=document.getElementById("editorSafetyIconsList");e&&(e.innerHTML=(t.safetyIcons||[]).map((o,s)=>`
-                <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 8px;">
-                    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 800;">
-                        <span>${o.icon}</span>
-                        <span>${o.name}</span>
-                        <span style="font-size: 0.68rem; color: #64748b; font-weight: 600;">(${o.x}, ${o.y})</span>
+            `).join(""));const a=document.getElementById("svgSelectionGroup");if(a)if(window._selectedItem){const{type:s,idx:l}=window._selectedItem,f=s==="building"?"buildings":s==="muster"?"musterPoints":"safetyIcons",d=e[f]?e[f][l]:null;d?s==="building"?a.innerHTML=`
+                            <g transform="translate(${d.x}, ${d.y})">
+                                <rect x="-4" y="-4" width="${d.w+8}" height="${d.h+8}" rx="6" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="5,3"/>
+                                <circle cx="${d.w+4}" cy="-4" r="10" fill="#ef4444" cursor="pointer" onclick="GateSecurity.deleteSelectedItem()"/>
+                                <text x="${d.w+4}" y="-1" font-size="11" font-weight="900" fill="#ffffff" text-anchor="middle" cursor="pointer" onclick="GateSecurity.deleteSelectedItem()">\u2715</text>
+                            </g>
+                        `:s==="muster"?a.innerHTML=`
+                            <g transform="translate(${d.x}, ${d.y})">
+                                <rect x="-28" y="-18" width="56" height="36" rx="6" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="5,3"/>
+                                <circle cx="28" cy="-18" r="10" fill="#ef4444" cursor="pointer" onclick="GateSecurity.deleteSelectedItem()"/>
+                                <text x="28" y="-15" font-size="11" font-weight="900" fill="#ffffff" text-anchor="middle" cursor="pointer" onclick="GateSecurity.deleteSelectedItem()">\u2715</text>
+                            </g>
+                        `:s==="icon"&&(a.innerHTML=`
+                            <g transform="translate(${d.x}, ${d.y})">
+                                <circle cx="0" cy="0" r="18" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="4,3"/>
+                                <circle cx="14" cy="-14" r="9" fill="#ef4444" cursor="pointer" onclick="GateSecurity.deleteSelectedItem()"/>
+                                <text x="14" y="-11" font-size="10" font-weight="900" fill="#ffffff" text-anchor="middle" cursor="pointer" onclick="GateSecurity.deleteSelectedItem()">\u2715</text>
+                            </g>
+                        `):a.innerHTML=""}else a.innerHTML="";this.renderEditorLists()}renderEditorLists(){const e=window._currentEditorConfig;if(!e)return;const i=document.getElementById("editorBuildingsList");i&&(i.innerHTML=e.buildings.map((o,n)=>{const a=window._selectedItem&&window._selectedItem.type==="building"&&window._selectedItem.idx===n;return`
+                    <div style="display: grid; grid-template-columns: 110px 1fr 45px 45px 50px 24px; gap: 4px; align-items: center; background: ${a?"#fef2f2":"#fff"}; padding: 4px 6px; border: 1.5px solid ${a?"#ef4444":"#cbd5e1"}; border-radius: 6px;">
+                        <input type="text" value="${o.name}" onchange="GateSecurity.updateBuildingProp(${n}, 'name', this.value)" style="padding: 2px 4px; font-size: 0.74rem; font-weight: 800;">
+                        <input type="text" value="${o.sub||""}" placeholder="\u0648\u0635\u0641 \u0627\u0644\u0641\u0631\u0639\u064A" onchange="GateSecurity.updateBuildingProp(${n}, 'sub', this.value)" style="padding: 2px 4px; font-size: 0.74rem;">
+                        <div><span style="font-size: 0.62rem;">W:</span><input type="number" value="${o.w}" onchange="GateSecurity.updateBuildingProp(${n}, 'w', parseInt(this.value))" style="width: 32px; font-size: 0.68rem;"></div>
+                        <div><span style="font-size: 0.62rem;">H:</span><input type="number" value="${o.h}" onchange="GateSecurity.updateBuildingProp(${n}, 'h', parseInt(this.value))" style="width: 32px; font-size: 0.68rem;"></div>
+                        <select onchange="GateSecurity.updateBuildingColor(${n}, this.value)" style="font-size: 0.65rem; padding: 1px;">
+                            <option value="#dbeafe" ${o.fill==="#dbeafe"?"selected":""}>\u0623\u0632\u0631\u0642</option>
+                            <option value="#fef3c7" ${o.fill==="#fef3c7"?"selected":""}>\u0623\u0635\u0641\u0631</option>
+                            <option value="#ede9fe" ${o.fill==="#ede9fe"?"selected":""}>\u0628\u0646\u0641\u0633\u062C\u064A</option>
+                            <option value="#fce7f3" ${o.fill==="#fce7f3"?"selected":""}>\u0648\u0631\u062F\u064A</option>
+                            <option value="#dcfce7" ${o.fill==="#dcfce7"?"selected":""}>\u0623\u062E\u0636\u0631</option>
+                            <option value="#f1f5f9" ${o.fill==="#f1f5f9"?"selected":""}>\u0631\u0645\u0627\u062F\u064A</option>
+                        </select>
+                        <button type="button" onclick="GateSecurity.removeBuilding(${n})" style="color: #dc2626; border: none; background: #fee2e2; border-radius: 4px; cursor: pointer; font-weight: 900; font-size: 0.75rem;" title="\u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0642\u0639">\u2715</button>
                     </div>
-                    <button type="button" onclick="GateSecurity.removeSafetyIcon(${s})" style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 4px; padding: 1px 6px; font-weight: 900; font-size: 0.72rem; cursor: pointer;">
-                        \u2715 \u062D\u0630\u0641 \u0627\u0644\u0623\u064A\u0642\u0648\u0646\u0629
-                    </button>
-                </div>
-            `).join(""));const r=document.getElementById("editorMusterList");r&&(r.innerHTML=t.musterPoints.map((o,s)=>`
-                <div style="display: grid; grid-template-columns: 100px 1fr 24px; gap: 6px; align-items: center; background: #fff; padding: 3px 6px; border: 1px solid #cbd5e1; border-radius: 6px;">
-                    <input type="text" value="${o.name}" onchange="GateSecurity.updateMusterProp(${s}, 'name', this.value)" style="padding: 2px 4px; font-size: 0.74rem; font-weight: 800;">
-                    <span style="font-size: 0.7rem; color: #64748b;">\u0645\u0648\u0642\u0639: (${o.x}, ${o.y})</span>
-                    <button type="button" onclick="GateSecurity.removeMuster(${s})" style="color: #dc2626; border: none; background: #fee2e2; border-radius: 4px; cursor: pointer; font-weight: 900; font-size: 0.75rem;">\u2715</button>
-                </div>
-            `).join(""))}updateBuildingColor(t,i){if(!window._currentEditorConfig||!window._currentEditorConfig.buildings[t])return;const e={"#dbeafe":{fill:"#dbeafe",stroke:"#1d4ed8",color:"#1e3a8a"},"#fef3c7":{fill:"#fef3c7",stroke:"#d97706",color:"#92400e"},"#ede9fe":{fill:"#ede9fe",stroke:"#6d28d9",color:"#5b21b6"},"#fce7f3":{fill:"#fce7f3",stroke:"#be185d",color:"#9d174d"},"#dcfce7":{fill:"#dcfce7",stroke:"#15803d",color:"#14532d"},"#f1f5f9":{fill:"#f1f5f9",stroke:"#475569",color:"#334155"}},r=e[i]||e["#dbeafe"];window._currentEditorConfig.buildings[t].fill=r.fill,window._currentEditorConfig.buildings[t].stroke=r.stroke,window._currentEditorConfig.buildings[t].color=r.color,this.renderEditorCanvas()}removeSafetyIcon(t){!window._currentEditorConfig||!window._currentEditorConfig.safetyIcons||(window._currentEditorConfig.safetyIcons.splice(t,1),this.renderEditorCanvas())}addEditorMusterPoint(){if(!window._currentEditorConfig)return;const t=window._currentEditorConfig.musterPoints.length+1;window._currentEditorConfig.musterPoints.push({id:"m_"+Date.now(),name:`\u0646\u0642\u0637\u0629 ${t}`,desc:"\u0646\u0642\u0637\u0629 \u062A\u062C\u0645\u0639 \u0645\u062E\u0635\u0635\u0629",x:200,y:200}),this.renderEditorCanvas()}updateBuildingProp(t,i,e){!window._currentEditorConfig||!window._currentEditorConfig.buildings[t]||(window._currentEditorConfig.buildings[t][i]=e,this.renderEditorCanvas())}updateMusterProp(t,i,e){!window._currentEditorConfig||!window._currentEditorConfig.musterPoints[t]||(window._currentEditorConfig.musterPoints[t][i]=e,this.renderEditorCanvas())}removeBuilding(t){window._currentEditorConfig&&(window._currentEditorConfig.buildings.splice(t,1),this.renderEditorCanvas())}removeMuster(t){window._currentEditorConfig&&(window._currentEditorConfig.musterPoints.splice(t,1),this.renderEditorCanvas())}handleCanvasMouseDown(t){const i=t.target.closest(".draggable-item");if(!i)return;const e=i.getAttribute("data-type"),r=parseInt(i.getAttribute("data-idx")),s=document.getElementById("interactiveCanvasSvg").getBoundingClientRect(),n=(t.clientX-s.left)*(500/s.width),d=(t.clientY-s.top)*(360/s.height);window._dragState={type:e,idx:r,svgX:n,svgY:d,elemX:window._currentEditorConfig[e==="building"?"buildings":e==="muster"?"musterPoints":"safetyIcons"][r].x,elemY:window._currentEditorConfig[e==="building"?"buildings":e==="muster"?"musterPoints":"safetyIcons"][r].y}}handleCanvasMouseMove(t){if(!window._dragState)return;const{type:i,idx:e,svgX:r,svgY:o,elemX:s,elemY:n}=window._dragState,l=document.getElementById("interactiveCanvasSvg").getBoundingClientRect(),f=(t.clientX-l.left)*(500/l.width),a=(t.clientY-l.top)*(360/l.height),c=Math.round(f-r),p=Math.round(a-o),g=i==="building"?"buildings":i==="muster"?"musterPoints":"safetyIcons";window._currentEditorConfig[g][e].x=Math.max(15,Math.min(460,s+c)),window._currentEditorConfig[g][e].y=Math.max(15,Math.min(330,n+p)),this.renderEditorCanvas()}handleCanvasMouseUp(){window._dragState=null}saveEditorMapConfig(){if(!window._currentEditorConfig)return;const t=document.getElementById("editMapCoords")?.value||window._currentEditorConfig.coords;window._currentEditorConfig.coords=t,this.saveMapConfig(window._currentEditorConfig);const i=document.getElementById("mapEditorModal");i&&i.remove()}resetMapConfigToDefault(){if(confirm("\u0647\u0644 \u0623\u0646\u062A \u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062E\u0637\u0637 \u0627\u0644\u0647\u064A\u0643\u0644\u064A \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0644\u0644\u062E\u0631\u064A\u0637\u0629 \u0648\u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639\u061F")){localStorage.removeItem("icapp_visitor_map_config"),alert("\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062E\u0637\u0637 \u0627\u0644\u0647\u064A\u0643\u0644\u064A \u0644\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A.");const t=document.getElementById("mapEditorModal");t&&t.remove()}}printMasterVisitorBadges(t){const i=this.getGatePortalUrl(),e=this.getMapConfig(),r=this.visitors.length||0,o=t||`VIS-${new Date().getFullYear()}-${(r+1).toString().padStart(3,"0")}`,s=window.open("","_blank");if(!s){alert("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0637\u0628\u0627\u0639\u0629 \u0643\u0627\u0631\u062A \u0648\u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0632\u0627\u0626\u0631\u064A\u0646 (Pop-ups)");return}const n=e.musterPoints.map(a=>`
-            <g transform="translate(${a.x}, ${a.y})">
+                `}).join(""));const t=document.getElementById("editorSafetyIconsList");t&&(t.innerHTML=(e.safetyIcons||[]).map((o,n)=>{const a=window._selectedItem&&window._selectedItem.type==="icon"&&window._selectedItem.idx===n;return`
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: ${a?"#fef2f2":"#ffffff"}; border: 1.5px solid ${a?"#ef4444":"#cbd5e1"}; border-radius: 6px; padding: 3px 8px;">
+                        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 800;">
+                            <span>${o.icon}</span>
+                            <span>${o.name}</span>
+                            <span style="font-size: 0.68rem; color: #64748b; font-weight: 600;">(${o.x}, ${o.y})</span>
+                        </div>
+                        <button type="button" onclick="GateSecurity.removeSafetyIcon(${n})" style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 4px; padding: 1px 6px; font-weight: 900; font-size: 0.72rem; cursor: pointer;">
+                            \u2715 \u062D\u0630\u0641 \u0627\u0644\u0623\u064A\u0642\u0648\u0646\u0629
+                        </button>
+                    </div>
+                `}).join(""));const r=document.getElementById("editorMusterList");r&&(r.innerHTML=e.musterPoints.map((o,n)=>{const a=window._selectedItem&&window._selectedItem.type==="muster"&&window._selectedItem.idx===n;return`
+                    <div style="display: grid; grid-template-columns: 100px 1fr 24px; gap: 6px; align-items: center; background: ${a?"#fef2f2":"#fff"}; padding: 3px 6px; border: 1.5px solid ${a?"#ef4444":"#cbd5e1"}; border-radius: 6px;">
+                        <input type="text" value="${o.name}" onchange="GateSecurity.updateMusterProp(${n}, 'name', this.value)" style="padding: 2px 4px; font-size: 0.74rem; font-weight: 800;">
+                        <span style="font-size: 0.7rem; color: #64748b;">\u0645\u0648\u0642\u0639: (${o.x}, ${o.y})</span>
+                        <button type="button" onclick="GateSecurity.removeMuster(${n})" style="color: #dc2626; border: none; background: #fee2e2; border-radius: 4px; cursor: pointer; font-weight: 900; font-size: 0.75rem;" title="\u062D\u0630\u0641 \u0646\u0642\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u0639">\u2715</button>
+                    </div>
+                `}).join(""))}updateBuildingColor(e,i){if(!window._currentEditorConfig||!window._currentEditorConfig.buildings[e])return;const t={"#dbeafe":{fill:"#dbeafe",stroke:"#1d4ed8",color:"#1e3a8a"},"#fef3c7":{fill:"#fef3c7",stroke:"#d97706",color:"#92400e"},"#ede9fe":{fill:"#ede9fe",stroke:"#6d28d9",color:"#5b21b6"},"#fce7f3":{fill:"#fce7f3",stroke:"#be185d",color:"#9d174d"},"#dcfce7":{fill:"#dcfce7",stroke:"#15803d",color:"#14532d"},"#f1f5f9":{fill:"#f1f5f9",stroke:"#475569",color:"#334155"}},r=t[i]||t["#dbeafe"];window._currentEditorConfig.buildings[e].fill=r.fill,window._currentEditorConfig.buildings[e].stroke=r.stroke,window._currentEditorConfig.buildings[e].color=r.color,this.renderEditorCanvas()}removeSafetyIcon(e){!window._currentEditorConfig||!window._currentEditorConfig.safetyIcons||(window._currentEditorConfig.safetyIcons.splice(e,1),window._selectedItem&&window._selectedItem.type==="icon"&&window._selectedItem.idx===e&&(window._selectedItem=null),this.renderEditorCanvas())}addEditorSafetyIcon(e,i,t){if(!window._currentEditorConfig)return;window._currentEditorConfig.safetyIcons||(window._currentEditorConfig.safetyIcons=[]);const r=window._currentEditorConfig.safetyIcons.length;window._currentEditorConfig.safetyIcons.push({id:"s_"+Date.now(),name:i,icon:e,x:220+r*15,y:180,color:t}),window._selectedItem={type:"icon",idx:r},this.renderEditorCanvas()}addEditorBuildingZone(){if(!window._currentEditorConfig)return;const e=window._currentEditorConfig.buildings.length+1,i=window._currentEditorConfig.buildings.length;window._currentEditorConfig.buildings.push({id:"b_"+Date.now(),name:`\u0645\u0648\u0642\u0639 ${e}`,sub:"\u0645\u0646\u0637\u0642\u0629 \u062C\u062F\u064A\u062F\u0629",x:180,y:150,w:120,h:60,fill:"#dbeafe",stroke:"#1d4ed8",color:"#1e3a8a"}),window._selectedItem={type:"building",idx:i},this.renderEditorCanvas()}addEditorMusterPoint(){if(!window._currentEditorConfig)return;const e=window._currentEditorConfig.musterPoints.length+1,i=window._currentEditorConfig.musterPoints.length;window._currentEditorConfig.musterPoints.push({id:"m_"+Date.now(),name:`\u0646\u0642\u0637\u0629 ${e}`,desc:"\u0646\u0642\u0637\u0629 \u062A\u062C\u0645\u0639 \u0645\u062E\u0635\u0635\u0629",x:200,y:200}),window._selectedItem={type:"muster",idx:i},this.renderEditorCanvas()}updateBuildingProp(e,i,t){!window._currentEditorConfig||!window._currentEditorConfig.buildings[e]||(window._currentEditorConfig.buildings[e][i]=t,this.renderEditorCanvas())}updateMusterProp(e,i,t){!window._currentEditorConfig||!window._currentEditorConfig.musterPoints[e]||(window._currentEditorConfig.musterPoints[e][i]=t,this.renderEditorCanvas())}removeBuilding(e){window._currentEditorConfig&&(window._currentEditorConfig.buildings.splice(e,1),window._selectedItem&&window._selectedItem.type==="building"&&window._selectedItem.idx===e&&(window._selectedItem=null),this.renderEditorCanvas())}removeMuster(e){window._currentEditorConfig&&(window._currentEditorConfig.musterPoints.splice(e,1),window._selectedItem&&window._selectedItem.type==="muster"&&window._selectedItem.idx===e&&(window._selectedItem=null),this.renderEditorCanvas())}handleCanvasMouseDown(e){const i=document.getElementById("interactiveCanvasSvg");if(!i)return;const t=i.getBoundingClientRect(),r=Math.round((e.clientX-t.left)*(500/t.width)),o=Math.round((e.clientY-t.top)*(360/t.height));if(window._drawMode){window._drawingState={startX:r,startY:o};return}const n=e.target.closest(".draggable-item");if(!n){window._selectedItem=null,this.renderEditorCanvas();return}const a=n.getAttribute("data-type"),s=parseInt(n.getAttribute("data-idx"));window._selectedItem={type:a,idx:s},this.renderEditorCanvas();const l=a==="building"?"buildings":a==="muster"?"musterPoints":"safetyIcons";window._dragState={type:a,idx:s,svgX:r,svgY:o,elemX:window._currentEditorConfig[l][s].x,elemY:window._currentEditorConfig[l][s].y}}handleCanvasMouseMove(e){const i=document.getElementById("interactiveCanvasSvg");if(!i)return;const t=i.getBoundingClientRect(),r=Math.round((e.clientX-t.left)*(500/t.width)),o=Math.round((e.clientY-t.top)*(360/t.height));if(window._drawMode&&window._drawingState){const x=document.getElementById("svgDrawingPreviewGroup");if(x){const u=Math.min(window._drawingState.startX,r),h=Math.min(window._drawingState.startY,o),m=Math.max(15,Math.abs(r-window._drawingState.startX)),y=Math.max(15,Math.abs(o-window._drawingState.startY));x.innerHTML=`
+                    <rect x="${u}" y="${h}" width="${m}" height="${y}" rx="4" fill="rgba(37,99,235,0.25)" stroke="#2563eb" stroke-width="2" stroke-dasharray="4,3"/>
+                    <text x="${u+m/2}" y="${h+y/2}" font-size="10" font-weight="900" fill="#1e3a8a" text-anchor="middle">\u0645\u0648\u0642\u0639 \u062C\u062F\u064A\u062F</text>
+                `}return}if(!window._dragState)return;const{type:n,idx:a,svgX:s,svgY:l,elemX:f,elemY:d}=window._dragState,c=Math.round(r-s),p=Math.round(o-l),g=n==="building"?"buildings":n==="muster"?"musterPoints":"safetyIcons";window._currentEditorConfig[g][a].x=Math.max(15,Math.min(460,f+c)),window._currentEditorConfig[g][a].y=Math.max(15,Math.min(330,d+p)),this.renderEditorCanvas()}handleCanvasMouseUp(e){if(window._drawMode&&window._drawingState){const i=document.getElementById("interactiveCanvasSvg");if(i){const r=i.getBoundingClientRect(),o=Math.round((e.clientX-r.left)*(500/r.width)),n=Math.round((e.clientY-r.top)*(360/r.height)),a=Math.min(window._drawingState.startX,o),s=Math.min(window._drawingState.startY,n),l=Math.max(30,Math.abs(o-window._drawingState.startX)),f=Math.max(20,Math.abs(n-window._drawingState.startY)),d=window._currentEditorConfig.buildings.length+1,c=window._currentEditorConfig.buildings.length;window._currentEditorConfig.buildings.push({id:"b_"+Date.now(),name:`\u0645\u0648\u0642\u0639 ${d}`,sub:"\u0645\u0646\u0637\u0642\u0629 \u0645\u0631\u0633\u0648\u0645\u0629",x:a,y:s,w:l,h:f,fill:"#dbeafe",stroke:"#1d4ed8",color:"#1e3a8a"}),window._selectedItem={type:"building",idx:c}}window._drawingState=null;const t=document.getElementById("svgDrawingPreviewGroup");t&&(t.innerHTML=""),this.toggleDrawMode(),this.renderEditorCanvas();return}window._dragState=null}saveEditorMapConfig(){if(!window._currentEditorConfig)return;const e=document.getElementById("editMapCoords")?.value||window._currentEditorConfig.coords;window._currentEditorConfig.coords=e,this.saveMapConfig(window._currentEditorConfig);const i=document.getElementById("mapEditorModal");i&&i.remove()}resetMapConfigToDefault(){if(confirm("\u0647\u0644 \u0623\u0646\u062A \u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062E\u0637\u0637 \u0627\u0644\u0647\u064A\u0643\u0644\u064A \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0644\u0644\u062E\u0631\u064A\u0637\u0629 \u0648\u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639\u061F")){localStorage.removeItem("icapp_visitor_map_config"),alert("\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062E\u0637\u0637 \u0627\u0644\u0647\u064A\u0643\u0644\u064A \u0644\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A.");const e=document.getElementById("mapEditorModal");e&&e.remove()}}printMasterVisitorBadges(e){const i=this.getGatePortalUrl(),t=this.getMapConfig(),r=this.visitors.length||0,o=e||`VIS-${new Date().getFullYear()}-${(r+1).toString().padStart(3,"0")}`,n=window.open("","_blank");if(!n){alert("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0637\u0628\u0627\u0639\u0629 \u0643\u0627\u0631\u062A \u0648\u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0632\u0627\u0626\u0631\u064A\u0646 (Pop-ups)");return}const a=t.musterPoints.map(d=>`
+            <g transform="translate(${d.x}, ${d.y})">
                 <rect x="-24" y="-14" width="48" height="28" rx="4" fill="#15803d" stroke="#ffffff" stroke-width="1.5"/>
-                <text x="0" y="3" font-size="9.5" font-weight="900" fill="#ffffff" text-anchor="middle" font-family="Segoe UI">${a.name}</text>
+                <text x="0" y="3" font-size="9.5" font-weight="900" fill="#ffffff" text-anchor="middle" font-family="Segoe UI">${d.name}</text>
             </g>
-        `).join(""),d=e.buildings.map(a=>`
-            <rect x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="4" fill="${a.fill}" stroke="${a.stroke}" stroke-width="2"/>
-            <text x="${a.x+a.w/2}" y="${a.y+a.h/2-(a.sub?6:0)}" font-size="11.5" font-weight="900" fill="${a.color}" text-anchor="middle" font-family="Segoe UI">${a.name}</text>
-            ${a.sub?`<text x="${a.x+a.w/2}" y="${a.y+a.h/2+12}" font-size="8.5" font-weight="700" fill="${a.stroke}" text-anchor="middle" font-family="Segoe UI">${a.sub}</text>`:""}
-        `).join(""),l=(e.safetyIcons||[]).map(a=>`
-            <g transform="translate(${a.x}, ${a.y})">
-                <circle cx="0" cy="0" r="14" fill="#ffffff" stroke="${a.color||"#dc2626"}" stroke-width="2"/>
-                <text x="0" y="5" font-size="14" text-anchor="middle">${a.icon}</text>
+        `).join(""),s=t.buildings.map(d=>`
+            <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="4" fill="${d.fill}" stroke="${d.stroke}" stroke-width="2"/>
+            <text x="${d.x+d.w/2}" y="${d.y+d.h/2-(d.sub?6:0)}" font-size="11.5" font-weight="900" fill="${d.color}" text-anchor="middle" font-family="Segoe UI">${d.name}</text>
+            ${d.sub?`<text x="${d.x+d.w/2}" y="${d.y+d.h/2+12}" font-size="8.5" font-weight="700" fill="${d.stroke}" text-anchor="middle" font-family="Segoe UI">${d.sub}</text>`:""}
+        `).join(""),l=(t.safetyIcons||[]).map(d=>`
+            <g transform="translate(${d.x}, ${d.y})">
+                <circle cx="0" cy="0" r="14" fill="#ffffff" stroke="${d.color||"#dc2626"}" stroke-width="2"/>
+                <text x="0" y="5" font-size="14" text-anchor="middle">${d.icon}</text>
             </g>
-        `).join(""),f=`transform: scale(${(e.frameScale||100)/100}); transform-origin: center center;`;s.document.write(`
+        `).join(""),f=`transform: scale(${(t.frameScale||100)/100}); transform-origin: center center;`;n.document.write(`
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
@@ -1389,7 +1419,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
 
                         <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 10px;">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639:</span>
                         <select id="siteSelect" onchange="updateSiteMap(this.value)" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #94a3b8; font-weight: 700; font-size: 12px;">
-                            <option value="\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645" selected>${e.siteName}</option>
+                            <option value="\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645" selected>${t.siteName}</option>
                             <option value="ICAPP-1">\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A (ICAPP-1)</option>
                             <option value="ICAPP-2">\u0645\u0635\u0646\u0639 \u0627\u0644\u062A\u062C\u0645\u064A\u062F (ICAPP-2)</option>
                             <option value="ICAPP-3">\u0645\u0635\u0646\u0639 \u0627\u0644\u0645\u0631\u0643\u0632\u0627\u062A (ICAPP-3)</option>
@@ -1398,7 +1428,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                     </div>
 
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <input type="text" id="customCoords" value="${e.coords}" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 11px; width: 220px;" oninput="document.getElementById('displayCoords').textContent = '\u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0642\u0639: ' + this.value + ' | DOC-HSE-MAP-01 Rev.02'">
+                        <input type="text" id="customCoords" value="${t.coords}" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 11px; width: 220px;" oninput="document.getElementById('displayCoords').textContent = '\u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0642\u0639: ' + this.value + ' | DOC-HSE-MAP-01 Rev.02'">
                         <button onclick="window.print()" style="padding: 6px 18px; background: #1e40af; color: #fff; border:none; border-radius:6px; cursor:pointer; font-weight: 900; font-size: 12px; box-shadow: 0 2px 6px rgba(30,64,175,0.25);">\u{1F5A8}\uFE0F \u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0643\u0627\u0631\u062A \u0627\u0644\u0622\u0646</button>
                     </div>
                 </div>
@@ -1413,12 +1443,12 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
 
                         <div class="map-canvas-container" style="${f}">
                             <svg class="schematic-map" viewBox="0 0 500 360" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="10" y="10" width="480" height="340" rx="8" fill="${e.frameBg||"#f1f5f9"}" stroke="#334155" stroke-width="2.5" stroke-dasharray="6,4"/>
+                                <rect x="10" y="10" width="480" height="340" rx="8" fill="${t.frameBg||"#f1f5f9"}" stroke="#334155" stroke-width="2.5" stroke-dasharray="6,4"/>
                                 <rect x="20" y="20" width="460" height="320" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
                                 <rect x="35" y="35" width="430" height="290" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
 
                                 <!-- \u0627\u0644\u0645\u0628\u0627\u0646\u064A \u0648\u0627\u0644\u0645\u0631\u0627\u0641\u0642 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 \u0645\u0646 \u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 -->
-                                ${d}
+                                ${s}
 
                                 <!-- \u0645\u0633\u0627\u0631\u0627\u062A \u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0627\u0644\u062E\u0636\u0631\u0627\u0621 -->
                                 <path d="M 110 110 L 110 150 L 190 150" stroke="#16a34a" stroke-width="3.5" fill="none" stroke-dasharray="6,3"/>
@@ -1428,7 +1458,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                                 <path d="M 50 150 L 35 150" stroke="#16a34a" stroke-width="3.5" fill="none" stroke-dasharray="6,3"/>
 
                                 <!-- \u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u062C\u0645\u0639 \u0627\u0644\u0645\u0635\u0645\u0645\u0629 \u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0627\u064B -->
-                                ${n}
+                                ${a}
 
                                 <!-- \u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0639\u0644\u0627\u0645\u0627\u062A \u0627\u0644\u0645\u0635\u0645\u0645\u0629 \u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0627\u064B -->
                                 ${l}
@@ -1463,7 +1493,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                         </div>
 
                         <div class="site-coordinates-box" id="displayCoords">
-                            \u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0642\u0639: ${e.coords} | DOC-HSE-MAP-01 Rev.02
+                            \u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0642\u0639: ${t.coords} | DOC-HSE-MAP-01 Rev.02
                         </div>
                     </div>
 
@@ -1725,15 +1755,15 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                             'ICAPP-4': '30\xB024\\'10.2"N 31\xB018\\'42.5"E - \u0645\u062D\u0637\u0629 \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629 \u0648\u0627\u0644\u0637\u0627\u0642\u0629',
                             'WH': '30\xB024\\'18.0"N 31\xB018\\'52.3"E - \u0627\u0644\u0645\u062E\u0627\u0632\u0646 \u0627\u0644\u0639\u0627\u0645\u0629',
                             '\u0627\u0644\u0645\u0628\u0646\u0649 \u0627\u0644\u0625\u062F\u0627\u0631\u064A': '30\xB024\\'08.5"N 31\xB018\\'40.1"E - \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629',
-                            '\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645': '${e.coords}'
+                            '\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0639\u0627\u0645': '${t.coords}'
                         };
-                        const c = coordsMap[site] || '${e.coords}';
+                        const c = coordsMap[site] || '${t.coords}';
                         document.getElementById('customCoords').value = c;
                         document.getElementById('displayCoords').textContent = '\u0625\u062D\u062F\u0627\u062B\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0642\u0639: ' + c + ' | DOC-HSE-MAP-01 Rev.02';
                     }
                 <\/script>
             </body>
             </html>
-        `),s.document.close()}exportToExcel(){if(this.filteredVisitors.length===0){alert("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u062A\u0635\u062F\u064A\u0631\u0647\u0627");return}let t=`\uFEFF\u0631\u0642\u0645 \u0627\u0644\u0643\u0627\u0631\u062A,\u0627\u0633\u0645 \u0627\u0644\u0632\u0627\u0626\u0631,\u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0634\u0631\u0643\u0629,\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641,\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0642\u0648\u0645\u064A,\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641,\u0627\u0644\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641,\u0627\u0644\u0645\u0633\u062A\u0636\u064A\u0641,\u063A\u0631\u0636 \u0627\u0644\u0632\u064A\u0627\u0631\u0629,\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062F\u062E\u0648\u0644,\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644,\u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C,\u0627\u0644\u062D\u0627\u0644\u0629
-`;this.filteredVisitors.forEach(o=>{t+=`"${o.badge||""}","${o.name||""}","${o.org||""}","${o.phone||""}","${o.idNumber||""}","${o.site||""}","${o.area||""}","${o.host||""}","${o.purpose||""}","${o.entryDate||""}","${o.entryTime||""}","${o.exitTime||""}","${o.exitTime?"\u062A\u0645 \u0627\u0644\u062E\u0631\u0648\u062C":"\u0628\u0627\u0644\u062F\u0627\u062E\u0644"}"
-`});const i=new Blob([t],{type:"text/csv;charset=utf-8;"}),e=URL.createObjectURL(i),r=document.createElement("a");r.href=e,r.download=`Gate_Visitors_Log_${new Date().toISOString().slice(0,10)}.csv`,r.click(),URL.revokeObjectURL(e)}}new GateSecurityModule;
+        `),n.document.close()}exportToExcel(){if(this.filteredVisitors.length===0){alert("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u062A\u0635\u062F\u064A\u0631\u0647\u0627");return}let e=`\uFEFF\u0631\u0642\u0645 \u0627\u0644\u0643\u0627\u0631\u062A,\u0627\u0633\u0645 \u0627\u0644\u0632\u0627\u0626\u0631,\u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0634\u0631\u0643\u0629,\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641,\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0642\u0648\u0645\u064A,\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641,\u0627\u0644\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641,\u0627\u0644\u0645\u0633\u062A\u0636\u064A\u0641,\u063A\u0631\u0636 \u0627\u0644\u0632\u064A\u0627\u0631\u0629,\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062F\u062E\u0648\u0644,\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644,\u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C,\u0627\u0644\u062D\u0627\u0644\u0629
+`;this.filteredVisitors.forEach(o=>{e+=`"${o.badge||""}","${o.name||""}","${o.org||""}","${o.phone||""}","${o.idNumber||""}","${o.site||""}","${o.area||""}","${o.host||""}","${o.purpose||""}","${o.entryDate||""}","${o.entryTime||""}","${o.exitTime||""}","${o.exitTime?"\u062A\u0645 \u0627\u0644\u062E\u0631\u0648\u062C":"\u0628\u0627\u0644\u062F\u0627\u062E\u0644"}"
+`});const i=new Blob([e],{type:"text/csv;charset=utf-8;"}),t=URL.createObjectURL(i),r=document.createElement("a");r.href=t,r.download=`Gate_Visitors_Log_${new Date().toISOString().slice(0,10)}.csv`,r.click(),URL.revokeObjectURL(t)}}new GateSecurityModule;
