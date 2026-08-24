@@ -186,12 +186,24 @@
         html[dir="ltr"] .form-label,
         html[dir="ltr"] .form-group,
         html[dir="ltr"] .section-header,
+        html[dir="ltr"] .header-brand,
+        html[dir="ltr"] .brand-details,
         html[dir="ltr"] #successSummaryBox {
             text-align: left;
         }
         html[dir="ltr"] .form-label span.req {
             margin-right: 0;
             margin-left: 4px;
+        }
+        html[dir="ltr"] .floating-hub-btn {
+            right: auto;
+            left: 22px;
+        }
+        @media (max-width: 640px) {
+            html[dir="ltr"] .floating-hub-btn {
+                right: auto;
+                left: 14px;
+            }
         }
 
         .hub-link-btn {

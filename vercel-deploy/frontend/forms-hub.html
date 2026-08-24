@@ -93,6 +93,83 @@
             direction: rtl;
         }
 
+        /* LTR Overrides */
+        html[dir="ltr"] body {
+            direction: ltr;
+            text-align: left;
+        }
+
+        html[dir="ltr"] .header-content {
+            flex-direction: row;
+        }
+
+        html[dir="ltr"] .brand-section {
+            flex-direction: row;
+        }
+
+        html[dir="ltr"] .brand-info {
+            text-align: left;
+        }
+
+        html[dir="ltr"] .hero-banner {
+            text-align: left;
+        }
+
+        html[dir="ltr"] .hero-banner::before {
+            right: auto;
+            left: -20%;
+        }
+
+        html[dir="ltr"] .hero-title {
+            flex-direction: row;
+            text-align: left;
+        }
+
+        html[dir="ltr"] .hero-desc {
+            text-align: left;
+            direction: ltr;
+        }
+
+        html[dir="ltr"] .search-box input {
+            padding: 12px 16px 12px 42px;
+            text-align: left;
+        }
+
+        html[dir="ltr"] .search-box i {
+            right: auto;
+            left: 16px;
+        }
+
+        html[dir="ltr"] .section-header {
+            flex-direction: row;
+        }
+
+        html[dir="ltr"] .form-card {
+            flex-direction: row;
+        }
+
+        html[dir="ltr"] .form-card::after {
+            left: 0;
+            right: auto;
+            border-radius: 4px 0 0 4px;
+        }
+
+        html[dir="ltr"] .form-card-left {
+            flex-direction: row;
+        }
+
+        html[dir="ltr"] .form-text {
+            text-align: left;
+        }
+
+        html[dir="ltr"] .form-badges {
+            justify-content: flex-start;
+        }
+
+        html[dir="ltr"] .hub-footer {
+            text-align: center;
+        }
+
         /* Top Header */
         .hub-header {
             background: var(--header-bg);
