@@ -5727,8 +5727,12 @@
 
 
         // إرسال الملاحظة
+        // إرسال الملاحظة
         document.getElementById('observationForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
 
             try {
                 // فحص Honeypot ضد السبام
@@ -5743,16 +5747,22 @@
                     errorBox.style.display = 'none';
                 }
 
+                // إزالة أي تمييز خطأ سابق
+                ['siteSelect', 'placeSelect', 'customPlaceInput', 'detailsInput', 'responsibleDeptSelect', 'ownerSelect', 'customOwnerInput'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.borderColor = '';
+                });
+
                 let site = (document.getElementById('siteSelect')?.value || '').trim();
 
                 let place = document.getElementById('placeSelect')?.value || '';
                 if (place === '__OTHER__') {
-                    place = document.getElementById('customPlaceInput')?.value.trim() || 'مكان فرعي آخر';
+                    place = document.getElementById('customPlaceInput')?.value.trim() || '';
                 }
 
                 let subCat = document.getElementById('subCategorySelect')?.value || '';
                 if (subCat === '__OTHER_SUB__') {
-                    subCat = document.getElementById('customSubCategoryInput')?.value.trim() || 'تصنيف فرعي آخر';
+                    subCat = document.getElementById('customSubCategoryInput')?.value.trim() || '';
                 }
 
                 const details = (document.getElementById('detailsInput')?.value || '').trim();
@@ -5763,61 +5773,59 @@
                 const statusVal = document.getElementById('statusSelect')?.value || 'Open';
                 const expectedDateVal = document.getElementById('expectedDateInput')?.value || '';
                 
-                // التحقق من اسم صاحب الملاحظة (إلزامي *)
+                // اسم صاحب الملاحظة
                 let observerName = '';
                 const selOwner = document.getElementById('ownerSelect')?.value || '';
                 if (selOwner === '__OTHER_OWNER__') {
                     observerName = (document.getElementById('customOwnerInput')?.value || '').trim();
                 } else if (selOwner) {
                     observerName = selOwner.trim();
+                } else {
+                    observerName = (document.getElementById('customOwnerInput')?.value || '').trim() || 'راصد ميداني (فريق السلامة)';
                 }
 
+                // التحقق من الحقول الأساسية
                 if (!site) {
+                    const s = document.getElementById('siteSelect');
+                    if (s) { s.style.borderColor = '#ef4444'; s.focus(); s.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
                     showToast('يرجى اختيار المصنع / الموقع (*)', 'error', 3500);
-                    document.getElementById('siteSelect')?.focus();
                     return;
                 }
 
                 if (!place) {
+                    const p = document.getElementById('placeSelect');
+                    if (p) { p.style.borderColor = '#ef4444'; p.focus(); p.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
                     showToast('يرجى اختيار المكان الفرعي (*)', 'error', 3500);
-                    document.getElementById('placeSelect')?.focus();
                     return;
                 }
 
                 if (!details) {
+                    const d = document.getElementById('detailsInput');
+                    if (d) { d.style.borderColor = '#ef4444'; d.focus(); d.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
                     showToast('يرجى كتابة تفاصيل الملاحظة (*)', 'error', 3500);
-                    document.getElementById('detailsInput')?.focus();
                     return;
                 }
 
                 if (!dept) {
-                    showToast('يرجى اختيار الإدارة المعنية (*)', 'error', 3500);
-                    document.getElementById('responsibleDeptSelect')?.focus();
-                    return;
+                    dept = 'إدارة السلامة والصحة المهنية';
                 }
 
-                if (!observerName) {
-                    showToast('يرجى اختيار اسم صاحب الملاحظة (*)', 'error', 3500);
-                    document.getElementById('ownerSelect')?.focus();
-                    return;
+                // تفعيل حالة التحميل على زر الإرسال فوراً
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> <span>جاري حفظ وتوثيق الملاحظة...</span>';
                 }
-
-                // محاولة التقاط الموقع الجغرافي بشكل غير معطل (Non-blocking GPS)
-                let gpsData = window._currentGps;
-                if (!gpsData || !gpsData.latitude) {
-                    try {
-                        gpsData = await getQuickGpsPayloadStrict();
-                    } catch(_) {}
-                }
-
-                // تذكر بيانات المبلّغ إذا تم تحديد الخيار
-                try { saveReporterProfile(); } catch(_) {}
 
                 // 1. توليد كود الملاحظة المرجعي فوراً
                 const now = new Date();
                 const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
                 const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
                 const instantRefCode = 'OBS-' + yearMonth + '-' + randomSuffix;
+
+                // تذكر بيانات المبلّغ إذا تم تحديد الخيار
+                try { saveReporterProfile(); } catch(_) {}
+
+                let gpsData = window._currentGps || null;
 
                 const payload = {
                     action: 'submitPublicObservation',
@@ -5842,14 +5850,26 @@
                     mapsUrl: (gpsData && gpsData.mapsUrl) ? gpsData.mapsUrl : ''
                 };
 
+                // حفظ نسخة محلية احتياطية فورية
+                try {
+                    const localHistory = JSON.parse(localStorage.getItem('HSE_PUBLIC_OBS_LOCAL_HISTORY') || '[]');
+                    localHistory.unshift({ refCode: instantRefCode, timestamp: Date.now(), data: payload });
+                    if (localHistory.length > 30) localHistory.pop();
+                    localStorage.setItem('HSE_PUBLIC_OBS_LOCAL_HISTORY', JSON.stringify(localHistory));
+                } catch(le) {}
+
                 // 2. إظهار شاشة النجاح والإيصال فوراً في أقل من 50 مللي ثانية (Optimistic UI)
                 showSuccess(instantRefCode, payload);
 
-                // 3. المزامنة والرفع إلى قاعدة البيانات السحابية في الخلفية دون أي انتظار
+                // 3. المزامنة والرفع إلى قاعدة البيانات السحابية في الخلفية
                 syncObservationInBackground(payload, instantRefCode);
 
             } catch (err) {
                 console.error('Error submitting observation:', err);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHtml;
+                }
                 const now = new Date();
                 const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
                 const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
@@ -5864,7 +5884,6 @@
             }
         });
 
-        
         async function syncObservationInBackground(payload, refCode) {
             const targetApiUrl = getEffectiveApiUrl();
 
