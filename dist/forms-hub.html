@@ -2026,8 +2026,12 @@
                                 🔒 مسح آمن ومباشر عبر الهاتف المحمول | Direct Mobile Check-In
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
 
-             function printMasterVisitorBadges(paramBadgeNo) {
+            <script>
+            function printMasterVisitorBadges(paramBadgeNo) {
             const savedMap = localStorage.getItem('icapp_visitor_map_config');
             let mapConfig = {
                 coords: '30°24\'12.4"N 31°18\'45.2"E',
@@ -2505,15 +2509,15 @@
                     <script>
                         function updateSiteMap(site) {
                             const coordsMap = {
-                                'ICAPP-1': '30°24\\'12.4"N 31°18\\'45.2"E - مصنع 1 الفاكهة',
-                                'ICAPP-2': '30°24\\'14.1"N 31°18\\'48.6"E - مصنع 2 التجميد',
-                                'ICAPP-3': '30°24\\'15.8"N 31°18\\'50.1"E - مصنع 3 المركزات',
-                                'ICAPP-4': '30°24\\'10.2"N 31°18\\'42.5"E - محطة المعالجة والطاقة',
-                                'WH': '30°24\\'18.0"N 31°18\\'52.3"E - المخازن العامة',
-                                'المبنى الإداري': '30°24\\'08.5"N 31°18\\'40.1"E - الإدارة العامة',
-                                'الموقع العام': '30°24\\'12.4"N 31°18\\'45.2"E - مجمع مصانع ICAPP'
+                                "ICAPP-1": "30°24'12.4\"N 31°18'45.2\"E - مصنع 1 الفاكهة",
+                                "ICAPP-2": "30°24'14.1\"N 31°18'48.6\"E - مصنع 2 التجميد",
+                                "ICAPP-3": "30°24'15.8\"N 31°18'50.1\"E - مصنع 3 المركزات",
+                                "ICAPP-4": "30°24'10.2\"N 31°18'42.5\"E - محطة المعالجة والطاقة",
+                                "WH": "30°24'18.0\"N 31°18'52.3\"E - المخازن العامة",
+                                "المبنى الإداري": "30°24'08.5\"N 31°18'40.1\"E - الإدارة العامة",
+                                "الموقع العام": "30°24'12.4\"N 31°18'45.2\"E - مجمع مصانع ICAPP"
                             };
-                            const c = coordsMap[site] || '30°24\\'12.4"N 31°18\\'45.2"E';
+                            const c = coordsMap[site] || "30°24'12.4\"N 31°18'45.2\"E";
                             document.getElementById('customCoords').value = c;
                             document.getElementById('displayCoords').textContent = 'إحداثيات الموقع: ' + c + ' | DOC-HSE-MAP-01 Rev.02';
                         }
