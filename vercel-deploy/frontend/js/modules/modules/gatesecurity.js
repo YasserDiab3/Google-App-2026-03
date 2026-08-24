@@ -518,7 +518,7 @@ class GateSecurityModule {
             <html lang="ar" dir="rtl">
             <head>
                 <meta charset="UTF-8">
-                <title>كشف حصر الطوارئ والإخلاء للزوار والمقاولين - ICAPP</title>
+                <title>كشف اسماء الزائرين والمقاولين - ICAPP</title>
                 <style>
                     @page {
                         size: A4 portrait;
@@ -658,8 +658,8 @@ class GateSecurityModule {
                     </div>
 
                     <div class="iso-box-title">
-                        <h1 class="iso-main-title">🚨 كشف حصر الطوارئ والإخلاء الفوري للزوار والمقاولين</h1>
-                        <div class="iso-sub-title">Emergency Visitor & Contractor Evacuation Headcount Sheet</div>
+                        <h1 class="iso-main-title">🚨 كشف اسماء الزائرين والمقاولين</h1>
+                        <div class="iso-sub-title">Onsite Visitors & Contractors List</div>
                     </div>
 
                     <div class="iso-box-meta">

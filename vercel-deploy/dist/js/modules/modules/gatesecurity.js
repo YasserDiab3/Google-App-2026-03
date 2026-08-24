@@ -224,7 +224,7 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
             <html lang="ar" dir="rtl">
             <head>
                 <meta charset="UTF-8">
-                <title>\u0643\u0634\u0641 \u062D\u0635\u0631 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0648\u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0644\u0644\u0632\u0648\u0627\u0631 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 - ICAPP</title>
+                <title>\u0643\u0634\u0641 \u0627\u0633\u0645\u0627\u0621 \u0627\u0644\u0632\u0627\u0626\u0631\u064A\u0646 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 - ICAPP</title>
                 <style>
                     @page {
                         size: A4 portrait;
@@ -364,8 +364,8 @@ class GateSecurityModule{constructor(){this.visitors=[],this.filteredVisitors=[]
                     </div>
 
                     <div class="iso-box-title">
-                        <h1 class="iso-main-title">\u{1F6A8} \u0643\u0634\u0641 \u062D\u0635\u0631 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0648\u0627\u0644\u0625\u062E\u0644\u0627\u0621 \u0627\u0644\u0641\u0648\u0631\u064A \u0644\u0644\u0632\u0648\u0627\u0631 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</h1>
-                        <div class="iso-sub-title">Emergency Visitor & Contractor Evacuation Headcount Sheet</div>
+                        <h1 class="iso-main-title">\u{1F6A8} \u0643\u0634\u0641 \u0627\u0633\u0645\u0627\u0621 \u0627\u0644\u0632\u0627\u0626\u0631\u064A\u0646 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</h1>
+                        <div class="iso-sub-title">Onsite Visitors & Contractors List</div>
                     </div>
 
                     <div class="iso-box-meta">
