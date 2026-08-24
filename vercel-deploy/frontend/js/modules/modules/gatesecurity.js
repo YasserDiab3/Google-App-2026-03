@@ -2296,10 +2296,32 @@ class GateSecurityModule {
                         flex-wrap: wrap;
                         gap: 8px;
                     }
+
+                    /* نمط الطباعة المزدوجة الوجهين للرقبة */
+                    .double-sided-mode {
+                        grid-template-columns: 1fr !important;
+                        gap: 20px !important;
+                    }
+                    .double-sided-mode .left-panel {
+                        order: 2;
+                        border: 2px solid #1e3a8a !important;
+                        border-radius: 12px;
+                        padding: 14px;
+                    }
+                    .double-sided-mode .right-panel {
+                        order: 1;
+                        border: 2px solid #1e3a8a !important;
+                        border-radius: 12px;
+                        padding: 14px;
+                    }
+
                     @media print {
                         .toolbar-top { display: none !important; }
                         body { padding: 0; background: #ffffff; }
                         .card-container { min-height: 98vh; max-width: 100%; border: 2px solid #1e3a8a; }
+                        .double-sided-mode .right-panel {
+                            page-break-after: always !important;
+                        }
                     }
                 </style>
             </head>
@@ -2307,23 +2329,27 @@ class GateSecurityModule {
                 <div class="toolbar-top">
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                         <span style="font-weight: 800; font-size: 12px; color: #1e3a8a;">تسلسل الكارت:</span>
-                        <input type="text" id="badgeSerialInput" value="${defaultSerial}" style="padding: 4px 8px; border-radius: 6px; border: 1.5px solid #059669; font-weight: 900; font-size: 12px; color: #047857; width: 140px; font-family: monospace;" oninput="document.getElementById('badgeSerialBox').textContent = 'Badge: ' + this.value">
+                        <input type="text" id="badgeSerialInput" value="${defaultSerial}" style="padding: 4px 8px; border-radius: 6px; border: 1.5px solid #059669; font-weight: 900; font-size: 12px; color: #047857; width: 130px; font-family: monospace;" oninput="document.getElementById('badgeSerialBox').textContent = 'Badge: ' + this.value">
 
-                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 6px;">اختر الموقع:</span>
-                        <select id="siteSelect" onchange="updateSiteMap(this.value)" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #94a3b8; font-weight: 700; font-size: 12px;">
-                            <option value="الموقع العام" selected>${mapConfig.siteName}</option>
-                            <option value="ICAPP-1">المصنع الرئيسي (ICAPP-1)</option>
-                            <option value="ICAPP-2">مصنع التجميد (ICAPP-2)</option>
-                            <option value="ICAPP-3">مصنع المركزات (ICAPP-3)</option>
-                            <option value="ICAPP-4">محطة المعالجة والطاقة (ICAPP-4)</option>
+                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 4px;">نوع الزائر:</span>
+                        <select id="visitorTypeSelect" onchange="updateVisitorTypeHeader(this.value)" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #16a34a; font-weight: 900; font-size: 12px; background: #f0fdf4; color: #166534;">
+                            <option value="visitor" selected>🟢 زائر عادي (VISITOR)</option>
+                            <option value="contractor">🟠 مقاول / صيانة (CONTRACTOR)</option>
+                            <option value="vip">🔴 وفد رسمي / تفتيش (VIP)</option>
                         </select>
 
-                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 6px;">حجم الكارت عند الطباعة:</span>
+                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 4px;">نمط الطباعة:</span>
+                        <select id="doubleSidedSelect" onchange="toggleDoubleSidedLayout(this.value)" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #d97706; font-weight: 900; font-size: 12px; background: #fffbeb; color: #92400e;">
+                            <option value="single" selected>📄 وجه واحد مدمج</option>
+                            <option value="double">📄📄 وجهين للرقبة (Double-Sided)</option>
+                        </select>
+
+                        <span style="font-weight: 800; font-size: 12px; color: #1e3a8a; margin-right: 4px;">الحجم:</span>
                         <select id="cardSizeSelect" onchange="changeCardPrintSize(this.value)" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #2563eb; font-weight: 800; font-size: 12px; background: #eff6ff; color: #1e40af;">
-                            <option value="full" selected>حجم A4 كامل (افتراضي)</option>
-                            <option value="compact">حجم كارت جيب مدمج (Pocket ID)</option>
-                            <option value="medium">حجم متوسط (A5 Half Page)</option>
-                            <option value="custom-scale">تخصيص نسبة التكبير %</option>
+                            <option value="full" selected>A4 كامل</option>
+                            <option value="compact">كارت جيب مدمج (Pocket)</option>
+                            <option value="medium">حجم متوسط (A5)</option>
+                            <option value="custom-scale">تخصيص %</option>
                         </select>
 
                         <div id="customCardScaleWrap" style="display: none; align-items: center; gap: 4px;">
@@ -2333,7 +2359,7 @@ class GateSecurityModule {
                     </div>
 
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <input type="text" id="customCoords" value="${mapConfig.coords}" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 11px; width: 190px;" oninput="document.getElementById('displayCoords').textContent = 'إحداثيات الموقع: ' + this.value + ' | DOC-HSE-MAP-01 Rev.02'">
+                        <input type="text" id="customCoords" value="${mapConfig.coords}" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 11px; width: 170px;" oninput="document.getElementById('displayCoords').textContent = 'إحداثيات الموقع: ' + this.value + ' | DOC-HSE-MAP-01 Rev.02'">
                         <button onclick="window.print()" style="padding: 6px 18px; background: #1e40af; color: #fff; border:none; border-radius:6px; cursor:pointer; font-weight: 900; font-size: 12px; box-shadow: 0 2px 6px rgba(30,64,175,0.25);">🖨️ طباعة الكارت الآن</button>
                     </div>
                 </div>
@@ -2404,6 +2430,12 @@ class GateSecurityModule {
 
                     <!-- الجانب الأيمن: قواعد السلامة للزائرين -->
                     <div class="right-panel">
+                        <!-- شريط التمييز البصري الملون لنوع الزائر -->
+                        <div id="visitorTypeHeaderBanner" style="background: #16a34a; color: #ffffff; padding: 4px 10px; border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: 11px; border: 1.5px solid #15803d; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                            <span id="visitorTypeTitleAr" style="direction: rtl;">كارت زائر معتمد</span>
+                            <span id="visitorTypeTitleEn" style="direction: ltr;">VISITOR PASS</span>
+                        </div>
+
                         <!-- ترويسة الكارت مع شعار الشركة والتسلسل -->
                         <div class="right-header-top">
                             <div style="display: flex; align-items: center; gap: 10px;">
@@ -2652,6 +2684,41 @@ class GateSecurityModule {
                 </div>
 
                 \x3Cscript>
+                    function updateVisitorTypeHeader(type) {
+                        const headerBanner = document.getElementById('visitorTypeHeaderBanner');
+                        const badgeSerialBox = document.getElementById('badgeSerialBox');
+                        const typeTitleAr = document.getElementById('visitorTypeTitleAr');
+                        const typeTitleEn = document.getElementById('visitorTypeTitleEn');
+                        
+                        const config = {
+                            visitor: { bg: '#16a34a', border: '#15803d', textAr: 'كارت زائر معتمد', textEn: 'VISITOR PASS', color: '#047857', badgeBg: '#ecfdf5', badgeBorder: '#a7f3d0' },
+                            contractor: { bg: '#ea580c', border: '#c2410c', textAr: 'تصريح مقاول / صيانة', textEn: 'CONTRACTOR PASS', color: '#c2410c', badgeBg: '#fff7ed', badgeBorder: '#ffedd5' },
+                            vip: { bg: '#dc2626', border: '#b91c1c', textAr: 'تصريح كبار الزوار / تفتيش', textEn: 'VIP / INSPECTOR PASS', color: '#b91c1c', badgeBg: '#fef2f2', badgeBorder: '#fecaca' }
+                        }[type] || { bg: '#16a34a', border: '#15803d', textAr: 'كارت زائر معتمد', textEn: 'VISITOR PASS', color: '#047857', badgeBg: '#ecfdf5', badgeBorder: '#a7f3d0' };
+
+                        if (headerBanner) {
+                            headerBanner.style.background = config.bg;
+                            headerBanner.style.borderColor = config.border;
+                        }
+                        if (typeTitleAr) typeTitleAr.textContent = config.textAr;
+                        if (typeTitleEn) typeTitleEn.textContent = config.textEn;
+                        if (badgeSerialBox) {
+                            badgeSerialBox.style.color = config.color;
+                            badgeSerialBox.style.background = config.badgeBg;
+                            badgeSerialBox.style.borderColor = config.badgeBorder;
+                        }
+                    }
+
+                    function toggleDoubleSidedLayout(mode) {
+                        const container = document.querySelector('.card-container');
+                        if (!container) return;
+                        if (mode === 'double') {
+                            container.classList.add('double-sided-mode');
+                        } else {
+                            container.classList.remove('double-sided-mode');
+                        }
+                    }
+
                     function changeCardPrintSize(sizeMode) {
                         const container = document.querySelector('.card-container');
                         const scaleWrap = document.getElementById('customCardScaleWrap');

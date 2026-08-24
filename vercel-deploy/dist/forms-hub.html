@@ -2356,35 +2356,7 @@
                         .blue-text-ar { text-align: right; direction: rtl; font-size: 10.5px; font-weight: 900; line-height: 1.25; width: 48%; }
                         .blue-text-en { text-align: left; direction: ltr; font-size: 9px; font-weight: 800; line-height: 1.2; width: 48%; }
 
-                        .smoking-section { display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; border-bottom: 1.5px solid #cbd5e1; gap: 6px; }
-                        .smoke-ar { font-size: 9.5px; direction: rtl; text-align: right; line-height: 1.25; font-weight: 800; width: 42%; color: #000000; }
-                        .smoke-icon-box { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
-                        .smoke-en { font-size: 8.5px; direction: ltr; text-align: left; line-height: 1.2; font-weight: 700; width: 42%; color: #000000; }
-
-                        .basic-rules-section { padding: 4px 6px; border-bottom: 1.5px solid #cbd5e1; }
-                        .basic-rules-header { display: flex; justify-content: space-between; font-size: 10px; font-weight: 900; color: #000000; margin-bottom: 4px; padding: 0 4px; }
-                        .rules-icons-row { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px; }
-                        .rule-circle-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
-
-                        .siren-section { border-bottom: 1.5px solid #cbd5e1; }
-                        .siren-red-bar { background: #dc2626; color: #ffffff; padding: 4px 8px; display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 900; }
-                        .siren-steps-container { background: #facc15; padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; }
-                        .siren-step-row { display: grid; grid-template-columns: 1fr 40px 1fr; align-items: center; gap: 4px; background: #eab308; padding: 2px 6px; border-radius: 3px; }
-                        .s-text-ar { font-size: 9.5px; font-weight: 900; direction: rtl; text-align: right; color: #000000; }
-                        .s-icon-center { display: flex; align-items: center; justify-content: center; }
-                        .s-text-en { font-size: 8.5px; font-weight: 800; direction: ltr; text-align: left; color: #000000; }
-
-                        .ppe-section { padding: 4px 6px; border-bottom: 1.5px solid #cbd5e1; }
-                        .ppe-header-texts { display: flex; justify-content: space-between; font-size: 9px; font-weight: 800; color: #000000; margin-bottom: 4px; padding: 0 2px; }
-                        .ppe-icons-row { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
-                        .ppe-icon-circle { width: 30px; height: 30px; border-radius: 50%; background: #0f172a; display: flex; align-items: center; justify-content: center; color: #ffffff; }
-
-                        .emergency-footer { padding: 4px 8px 6px; text-align: center; }
-                        .emergency-top-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 900; color: #000000; margin-bottom: 2px; }
-                        .phone-icons-box { display: flex; gap: 6px; }
-                        .phone-pill { width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 13px; }
-                        .emergency-call-line { font-size: 10px; font-weight: 900; color: #000000; margin-top: 2px; direction: rtl; }
-
+                        /* أدوات التحكم العلوية للطباعة والتسلسل */
                         .toolbar-top {
                             background: #ffffff;
                             border: 1px solid #cbd5e1;
@@ -2488,7 +2460,12 @@
                         </div>
 
                         <div class="right-panel">
-                            <div class="right-header-top">
+                            <div id="visitorTypeHeaderBanner" style="background: #16a34a; color: #ffffff; padding: 4px 10px; border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: 11px; border: 1.5px solid #15803d; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                            <span id="visitorTypeTitleAr" style="direction: rtl;">كارت زائر معتمد</span>
+                            <span id="visitorTypeTitleEn" style="direction: ltr;">VISITOR PASS</span>
+                        </div>
+
+                        <div class="right-header-top">
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <img src="icons/icapp-logo.png" alt="ICAPP Logo" class="brand-logo-img" onerror="this.src='../icons/icapp-logo.png';">
                                     <div style="text-align: right; direction: rtl;">
@@ -2607,6 +2584,41 @@
                     </div>
 
                     \x3Cscript>
+                        function updateVisitorTypeHeader(type) {
+                            const headerBanner = document.getElementById('visitorTypeHeaderBanner');
+                            const badgeSerialBox = document.getElementById('badgeSerialBox');
+                            const typeTitleAr = document.getElementById('visitorTypeTitleAr');
+                            const typeTitleEn = document.getElementById('visitorTypeTitleEn');
+                            
+                            const config = {
+                                visitor: { bg: '#16a34a', border: '#15803d', textAr: 'كارت زائر معتمد', textEn: 'VISITOR PASS', color: '#047857', badgeBg: '#ecfdf5', badgeBorder: '#a7f3d0' },
+                                contractor: { bg: '#ea580c', border: '#c2410c', textAr: 'تصريح مقاول / صيانة', textEn: 'CONTRACTOR PASS', color: '#c2410c', badgeBg: '#fff7ed', badgeBorder: '#ffedd5' },
+                                vip: { bg: '#dc2626', border: '#b91c1c', textAr: 'تصريح كبار الزوار / تفتيش', textEn: 'VIP / INSPECTOR PASS', color: '#b91c1c', badgeBg: '#fef2f2', badgeBorder: '#fecaca' }
+                            }[type] || { bg: '#16a34a', border: '#15803d', textAr: 'كارت زائر معتمد', textEn: 'VISITOR PASS', color: '#047857', badgeBg: '#ecfdf5', badgeBorder: '#a7f3d0' };
+
+                            if (headerBanner) {
+                                headerBanner.style.background = config.bg;
+                                headerBanner.style.borderColor = config.border;
+                            }
+                            if (typeTitleAr) typeTitleAr.textContent = config.textAr;
+                            if (typeTitleEn) typeTitleEn.textContent = config.textEn;
+                            if (badgeSerialBox) {
+                                badgeSerialBox.style.color = config.color;
+                                badgeSerialBox.style.background = config.badgeBg;
+                                badgeSerialBox.style.borderColor = config.badgeBorder;
+                            }
+                        }
+
+                        function toggleDoubleSidedLayout(mode) {
+                            const container = document.querySelector('.card-container');
+                            if (!container) return;
+                            if (mode === 'double') {
+                                container.classList.add('double-sided-mode');
+                            } else {
+                                container.classList.remove('double-sided-mode');
+                            }
+                        }
+
                         function changeCardPrintSize(sizeMode) {
                             const container = document.querySelector('.card-container');
                             const scaleWrap = document.getElementById('customCardScaleWrap');
