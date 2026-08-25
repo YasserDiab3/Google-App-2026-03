@@ -1132,11 +1132,74 @@
             }
         }
 
+
+        .header-action-btn {
+            height: 34px;
+            padding: 0 11px;
+            border-radius: 8px;
+            border: 1.5px solid var(--border-color, #cbd5e1);
+            background: var(--bg-card, #ffffff);
+            color: var(--text-main, #1e293b);
+            font-weight: 800;
+            font-size: 0.78rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: all 0.2s ease;
+        }
+        .header-action-btn:hover {
+            border-color: #3b82f6;
+            color: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(37,99,235,0.15);
+        }
+        .header-action-btn i {
+            font-size: 0.85rem;
+        }
+        .header-brand-title {
+            font-size: 1.05rem;
+            font-weight: 900;
+            color: var(--text-main);
+            line-height: 1.2;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .header-brand-sub {
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: var(--text-muted, #64748b);
+            margin-top: 2px;
+        }
+        .header-tag-pill {
+            font-size: 0.68rem;
+            font-weight: 800;
+            background: #e0e7ff;
+            color: #4338ca;
+            padding: 1px 7px;
+            border-radius: 6px;
+            border: 1px solid #c7d2fe;
+        }
+        [data-theme="dark"] .header-action-btn {
+            background: #1e293b;
+            border-color: #334155;
+            color: #f8fafc;
+        }
+        [data-theme="dark"] .header-tag-pill {
+            background: #312e81;
+            color: #c7d2fe;
+            border-color: #4338ca;
+        }
+
 </style>
 </head>
 <body>
 
-    <!-- Header -->
+    <!-- Header الاحترافي الأنيق المعتمد -->
     <header class="hub-header">
         <div class="header-content">
             <div class="brand-section">
@@ -1144,26 +1207,36 @@
                     <img src="icons/icapp-logo.png" alt="ICAPP Logo" class="brand-logo" onerror="this.src='icons/icapp-logo.png'">
                 </div>
                 <div class="brand-info">
-                    <h1>بوابة النماذج الميدانية</h1>
-                    <p>إدارة السلامة والصحة المهنية والبيئة - ICAPP HSE</p>
+                    <div class="header-brand-title">
+                        <span id="txtHubMainTitle">بوابة النماذج الميدانية</span>
+                        <span class="header-tag-pill">ICAPP HSE Hub</span>
+                    </div>
+                    <div class="header-brand-sub" id="txtHubSubTitle">الشركة العالمية للانتاج والتصنيع الزراعي • ادارة السلامة والصحة المهنية وحماية البيئة</div>
                 </div>
             </div>
 
             <div class="header-actions">
+                <!-- زر التحديث الفوري المباشر من السحابة -->
+                <button type="button" id="hubRefreshBtn" class="header-action-btn" title="تحديث بيانات البوابة فورياً من السحابة" onclick="triggerHubManualRefresh()">
+                    <i class="fas fa-rotate text-blue-600" id="hubRefreshIcon"></i>
+                    <span id="txtHubRefreshBtn">تحديث</span>
+                </button>
+
                 <!-- زر تبديل اللغة (AR / EN) -->
-                <button id="langToggleBtn" class="lang-toggle-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()">
-                    <i class="fas fa-globe"></i>
+                <button id="langToggleBtn" class="header-action-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()">
+                    <i class="fas fa-globe text-indigo-600"></i>
                     <span id="langBtnText">EN</span>
                 </button>
 
                 <!-- زر تبديل الوضع الليلي / العادي -->
-                <button id="themeToggleBtn" class="theme-toggle-btn" title="تبديل المظهر (فاتح / ليلي)" onclick="toggleHubTheme()">
-                    <i class="fas fa-moon" id="themeIcon"></i>
+                <button id="themeToggleBtn" class="header-action-btn" title="تبديل المظهر (فاتح / ليلي)" onclick="toggleHubTheme()" style="padding: 0 10px;">
+                    <i class="fas fa-moon text-amber-500" id="themeIcon"></i>
                 </button>
 
-                <span id="onlineStatus" class="status-pill">
-                    <i class="fas fa-circle text-xs"></i>
-                    <span id="onlineStatusText">متصل</span>
+                <!-- مؤشر حالة الاتصال -->
+                <span id="onlineStatus" class="status-pill" style="height: 34px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-circle text-xs" style="color: #10b981;"></i>
+                    <span id="onlineStatusText">متصل بالسحابة</span>
                 </span>
 
                 <button id="pwaInstallBtn" class="install-btn" style="display: none;">
@@ -4338,7 +4411,42 @@
             document.body.classList.remove('printing-anl');
         }, 1200);
     }
-    </script>
+    
+    // ======================================================================
+    // Forms Hub Manual Cloud Refresh Engine
+    // ======================================================================
+    async function triggerHubManualRefresh() {
+        const icon = document.getElementById('hubRefreshIcon');
+        const btn = document.getElementById('hubRefreshBtn');
+        const txt = document.getElementById('txtHubRefreshBtn');
+
+        if (icon) icon.classList.add('fa-spin');
+        if (txt) txt.textContent = 'جاري...';
+        if (btn) btn.disabled = true;
+
+        try {
+            // 1. تحديث إحصائيات الزوار المتواجدين حالياً
+            if (typeof fetchLiveVisitorsCount === 'function') {
+                await fetchLiveVisitorsCount(true);
+            }
+            // 2. تحديث تحليلات الملاحظات الميدانية
+            if (typeof fetchObservationsAnalyticsFromCloud === 'function') {
+                await fetchObservationsAnalyticsFromCloud(true);
+            }
+            // إظهار إشعار تأكيد التحديث
+            if (typeof showToast === 'function') {
+                showToast('✅ تم تحديث بيانات المنظومة بنجاح', 'success');
+            }
+        } catch(err) {
+            console.error('Error refreshing hub data:', err);
+        } finally {
+            if (icon) icon.classList.remove('fa-spin');
+            if (txt) txt.textContent = 'تحديث';
+            if (btn) btn.disabled = false;
+        }
+    }
+
+</script>
 
 
     <!-- ======================================================================
