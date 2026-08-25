@@ -40,7 +40,7 @@ function runParityTests() {
     test('login with valid credentials returns user payload & session token', () => {
         const res = handleRpcRequest({
             action: 'login',
-            data: { email: 'admin@system.local', password: 'admin' }
+            data: { email: 'admin@system.local', password: 'admin123' }
         });
         assert.strictEqual(res.success, true);
         assert.ok(res.user);

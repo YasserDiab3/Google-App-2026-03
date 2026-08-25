@@ -269,6 +269,7 @@ function submitGateVisitorCheckOut(payload) {
 function getAllGateVisitors(payload) {
     try {
         var sheetName = 'GateVisitors';
+        repairAllGateVisitorsRows();
         var sheet = getOrCreateGateVisitorsSheet(sheetName);
         var data = sheet.getDataRange().getValues();
         if (data.length <= 1) return { success: true, allCount: 0, activeCount: 0, visitors: [] };
@@ -392,5 +393,144 @@ function getActiveGateVisitors(payload) {
     } catch(err) {
         Logger.log('❌ خطأ في getActiveGateVisitors: ' + err.toString());
         return { success: false, message: err.message, activeCount: 0, activeVisitors: [] };
+    }
+}
+
+
+/**
+ * تنظيف ومحاذاة كافة صفوف جدول GateVisitors لضمان مطابقة الـ 19 عموداً بدقة
+ */
+function repairAllGateVisitorsRows() {
+    try {
+        var sheetName = 'GateVisitors';
+        var ss = SpreadsheetApp.getActiveSpreadsheet() || (typeof getSpreadsheetId === 'function' ? SpreadsheetApp.openById(getSpreadsheetId()) : null);
+        if (!ss) return { success: false, message: 'Spreadsheet not found' };
+
+        var sheet = ss.getSheetByName(sheetName);
+        if (!sheet) return { success: false, message: 'Sheet not found' };
+
+        var canonicalHeaders = [
+            'Record ID',
+            'Entry Date',
+            'Entry Time',
+            'Visitor Name',
+            'Organization / Company',
+            'National ID / Passport',
+            'Phone Number',
+            'Vehicle Plate',
+            'Target Site',
+            'Target Hall / Area',
+            'Host Person & Dept',
+            'Visit Purpose',
+            'Badge #',
+            'Security Officer / Registered By',
+            'Status',
+            'Exit Time',
+            'Duration (Minutes)',
+            'Signature URL',
+            'Created At Timestamp'
+        ];
+
+        sheet.getRange(1, 1, 1, canonicalHeaders.length).setValues([canonicalHeaders]);
+        var lastCol = sheet.getLastColumn();
+        if (lastCol > 19) {
+            sheet.deleteColumns(20, lastCol - 19);
+        }
+
+        var dataRange = sheet.getDataRange();
+        var allData = dataRange.getValues();
+        if (allData.length <= 1) return { success: true, repairedCount: 0 };
+
+        var cleanedData = [canonicalHeaders];
+
+        for (var r = 1; r < allData.length; r++) {
+            var raw = allData[r];
+            var id = String(raw[0] || '').trim();
+            if (!id) continue;
+
+            var entryDate = (raw[1] instanceof Date) ? Utilities.formatDate(raw[1], 'GMT+2', 'yyyy-MM-dd') : String(raw[1] || '').trim();
+            var entryTime = (raw[2] instanceof Date) ? Utilities.formatDate(raw[2], 'GMT+2', 'HH:mm:ss') : String(raw[2] || '').trim();
+            var name = String(raw[3] || '').trim();
+            var org = String(raw[4] || '').trim();
+            var idNumber = String(raw[5] || '').trim();
+            var phone = String(raw[6] || '').trim();
+            var vehicle = String(raw[7] || 'بدون').trim();
+            var site = String(raw[8] || '').trim();
+            var area = String(raw[9] || '').trim();
+            var host = String(raw[10] || '').trim();
+            var purpose = String(raw[11] || '').trim();
+            var badge = String(raw[12] || '').trim();
+
+            // فحص الأعمدة المتبقية لاكتشاف مسؤول الأمن، الحالة، وقت الخروج، والمدة
+            var officer = 'مسؤول الأمن';
+            var status = 'تم الخروج (Departed)';
+            var exitTime = '';
+            var duration = 0;
+            var sigUrl = '';
+            var createdAt = '';
+
+            for (var c = 13; c < raw.length; c++) {
+                var cell = String(raw[c] || '').trim();
+                if (cell.indexOf('مسؤول') !== -1 || cell.indexOf('فرج') !== -1 || cell.indexOf('أمن') !== -1) {
+                    officer = cell;
+                } else if (cell.indexOf('بالداخل') !== -1) {
+                    status = 'بالداخل (Onsite)';
+                } else if (cell.indexOf('تم الخروج') !== -1) {
+                    status = 'تم الخروج (Departed)';
+                } else if (cell.indexOf(':') !== -1 && (cell.indexOf('ص') !== -1 || cell.indexOf('م') !== -1 || cell.indexOf('2026') !== -1)) {
+                    exitTime = cell;
+                } else if (cell.indexOf('T') !== -1 && cell.indexOf('Z') !== -1) {
+                    createdAt = cell;
+                } else if (cell.indexOf('http') !== -1 || cell.indexOf('drive.google') !== -1) {
+                    sigUrl = cell;
+                } else if (!isNaN(cell) && cell !== '') {
+                    duration = Number(cell);
+                }
+            }
+
+            if (!createdAt) {
+                createdAt = new Date().toISOString();
+            }
+
+            cleanedData.push([
+                id,
+                entryDate,
+                entryTime,
+                name,
+                org,
+                idNumber,
+                phone,
+                vehicle,
+                site,
+                area,
+                host,
+                purpose,
+                badge,
+                officer,
+                status,
+                exitTime,
+                duration,
+                sigUrl,
+                createdAt
+            ]);
+        }
+
+        // مسح النطاق القديم وإعادة كتابة البيانات المنظفة تماماً
+        sheet.clearContents();
+        sheet.getRange(1, 1, cleanedData.length, 19).setValues(cleanedData);
+
+        var headerRange = sheet.getRange(1, 1, 1, 19);
+        headerRange.setBackground('#1e40af');
+        headerRange.setFontColor('#ffffff');
+        headerRange.setFontWeight('bold');
+        headerRange.setHorizontalAlignment('center');
+        sheet.setFrozenRows(1);
+
+        Logger.log('✅ تم تنظيف وإعادة محاذاة كافة صفوف شيت GateVisitors بنجاح: ' + (cleanedData.length - 1) + ' سجل');
+        return { success: true, count: cleanedData.length - 1 };
+
+    } catch(err) {
+        Logger.log('❌ خطأ في repairAllGateVisitorsRows: ' + err.toString());
+        return { success: false, message: err.message };
     }
 }

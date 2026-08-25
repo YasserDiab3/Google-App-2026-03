@@ -37,7 +37,7 @@ async function runE2eSmoke() {
         console.log('  ✓ Health endpoint responded OK');
 
         // 2. Admin Login
-        const loginRes = await sendRpc('login', { email: 'admin@system.local', password: 'admin' });
+        const loginRes = await sendRpc('login', { email: 'admin@system.local', password: 'admin123' });
         assert.strictEqual(loginRes.success, true);
         const adminUser = loginRes.user;
         console.log('  ✓ Admin logged in over HTTP');

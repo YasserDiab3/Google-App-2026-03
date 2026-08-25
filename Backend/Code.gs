@@ -338,7 +338,7 @@ function doPost(e) {
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'getSecurityOfficersList'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -409,7 +409,7 @@ function doPost(e) {
             'submitPublicNearMiss', 'getPublicNearMissConfig',
             'submitPublicFireInspection', 'getPublicFireInspectionConfig',
             'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig',
-            'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'getSecurityOfficersList'
+            'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
         var needsSessionForWrite = !isReadOnlyAction;
@@ -545,6 +545,8 @@ function doPost(e) {
                 result = getActiveGateVisitors(payload || postData.data || postData || {});
             } else if (action === 'getAllGateVisitors' && typeof getAllGateVisitors === 'function') {
                 result = getAllGateVisitors(payload || postData.data || postData || {});
+            } else if (action === 'repairAllGateVisitorsRows' && typeof repairAllGateVisitorsRows === 'function') {
+                result = repairAllGateVisitorsRows(payload || postData.data || postData || {});
             } else if (action === 'getSecurityOfficersList' && typeof getSecurityOfficersList === 'function') {
                 result = getSecurityOfficersList(payload || postData.data || postData || {});
             } else if (typeof ActionHandlers[action] === 'function') {
