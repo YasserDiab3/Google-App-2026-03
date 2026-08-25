@@ -2229,6 +2229,7 @@
                 activeContainer.style.display = 'block';
                 if (successScreen) successScreen.style.display = 'none';
                 renderActiveVisitorsList();
+                fetchActiveVisitorsFromCloud();
             }
         }
 
@@ -2328,7 +2329,8 @@
             const todayStr = new Date().toISOString().split('T')[0];
             const todayList = list.filter(v => v.entryDate === todayStr);
 
-            const active = todayList.filter(v => !v.exitTime);
+            // Active onsite visitors: any visitor who has entered and not exited yet
+            const active = list.filter(v => !v.exitTime);
             const exited = todayList.filter(v => !!v.exitTime);
 
             const countBadge = document.getElementById('activeCountBadge');
@@ -2338,7 +2340,7 @@
             if (statAct) statAct.textContent = active.length;
 
             const statTot = document.getElementById('statTodayTotal');
-            if (statTot) statTot.textContent = todayList.length;
+            if (statTot) statTot.textContent = Math.max(todayList.length, active.length);
 
             const statExt = document.getElementById('statExitedTotal');
             if (statExt) statExt.textContent = exited.length;
@@ -2608,14 +2610,51 @@ function resetCheckInForm() {
             document.getElementById('checkInTabContainer').style.display = 'block';
         }
 
+        async function fetchActiveVisitorsFromCloud() {
+            if (!navigator.onLine) return;
+            try {
+                const targetUrl = getEffectiveApiUrl();
+                let json = null;
+                try {
+                    const res = await fetch(targetUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'getActiveGateVisitors', data: {} })
+                    });
+                    json = await res.json();
+                } catch(pErr) {
+                    const res = await fetch(targetUrl + '?action=getActiveGateVisitors', { method: 'GET', mode: 'cors' });
+                    json = await res.json();
+                }
+
+                if (json && json.success && Array.isArray(json.activeVisitors)) {
+                    const currentList = getVisitorsRegistry();
+                    const map = new Map();
+                    currentList.forEach(v => map.set(v.id, v));
+
+                    json.activeVisitors.forEach(v => {
+                        const ts = v.entryTimestamp || new Date(v.entryDate + ' ' + v.entryTime).getTime() || Date.now();
+                        map.set(v.id, {
+                            ...v,
+                            entryTimestamp: ts
+                        });
+                    });
+
+                    const merged = Array.from(map.values()).sort((a,b) => (b.entryTimestamp || 0) - (a.entryTimestamp || 0));
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+                    updateStatsBadges();
+                    renderActiveVisitorsList(document.getElementById('visitorSearchInput')?.value || '');
+                }
+            } catch(e) {}
+        }
+
         function renderActiveVisitorsList(query = '') {
             const container = document.getElementById('activeVisitorsList');
             if (!container) return;
 
             const t = GATE_I18N[currentLang] || GATE_I18N.ar;
             const list = getVisitorsRegistry();
-            const todayStr = new Date().toISOString().split('T')[0];
-            let active = list.filter(v => v.entryDate === todayStr && !v.exitTime);
+            let active = list.filter(v => !v.exitTime);
 
             if (query && query.trim().length > 0) {
                 const q = query.trim().toLowerCase();
@@ -3110,6 +3149,9 @@ function resetCheckInForm() {
             applyLanguage('ar');
             loadGateSystemConfig();
             updateStatsBadges();
+            fetchActiveVisitorsFromCloud();
+            setInterval(fetchActiveVisitorsFromCloud, 15000);
+            window.addEventListener('online', fetchActiveVisitorsFromCloud);
         });
 
         // ════════════════════════════════════════════════════
