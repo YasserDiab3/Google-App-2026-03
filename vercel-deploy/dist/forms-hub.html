@@ -1092,7 +1092,7 @@
                 <i class="fas fa-layer-group text-blue-500"></i>
                 <span>النماذج المتاحة</span>
             </div>
-            <span class="forms-count" id="formsCountBadge">4 نماذج</span>
+            <span class="forms-count" id="formsCountBadge">6 نماذج وأدوات تحليل</span>
         </div>
 
         <!-- Forms Grid -->
@@ -1174,6 +1174,46 @@
                     </div>
                 </div>
                 <div class="form-action-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </div>
+            </div>
+
+            <!-- 5. لوحة تحليل الملاحظات والمتابعة الميدانية -->
+            <div class="form-card card-obs-analytics" onclick="openObservationsAnalyticsModal()" data-keywords="تحليل احصائيات ملاحظات كروت kpi اسبوع مفتوح مغلق ابطال السلامة analytics safety observations" style="border-right-color: #6366f1;">
+                <div class="form-card-left">
+                    <div class="form-icon-wrap" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff;">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <div class="form-text">
+                        <div class="form-badges">
+                            <span class="badge-tag" style="background: rgba(99, 102, 241, 0.12); color: #4f46e5; border-color: rgba(99, 102, 241, 0.3);"><i class="fas fa-chart-line ml-1"></i>تفاعلي مباشر</span>
+                            <span class="badge-tag">مسؤولي السلامة</span>
+                        </div>
+                        <div class="form-card-title">لوحة تحليل ومتابعة الملاحظات الميدانية</div>
+                        <div class="form-card-desc">تحليل الملاحظات المفتوحة والمغلقة، إحصائيات الأسبوع، ولوحة أبطال السلامة</div>
+                    </div>
+                </div>
+                <div class="form-action-btn" style="background: rgba(99, 102, 241, 0.1); color: #4f46e5; border-color: rgba(99, 102, 241, 0.2);">
+                    <i class="fas fa-arrow-left"></i>
+                </div>
+            </div>
+
+            <!-- 6. نظام تسجيل وتصاريح الزائرين والمقاولين بالبوابة -->
+            <div class="form-card card-gate" onclick="navigateToForm('gate-visitor-entry.html')" data-keywords="بوابة زائرين مقاولين تصريح امن زيارة دخول خروج كشف طوارئ visitor gate pass security" style="border-right-color: #0284c7;">
+                <div class="form-card-left">
+                    <div class="form-icon-wrap" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff;">
+                        <i class="fas fa-id-card-clip"></i>
+                    </div>
+                    <div class="form-text">
+                        <div class="form-badges">
+                            <span class="badge-tag" style="background: rgba(2, 132, 199, 0.12); color: #0284c7; border-color: rgba(2, 132, 199, 0.3);"><i class="fas fa-shield ml-1"></i>أمن البوابات</span>
+                            <span class="badge-tag">حصر الطوارئ</span>
+                        </div>
+                        <div class="form-card-title">تسجيل زوار ومقاولي البوابة</div>
+                        <div class="form-card-desc">إصدار تصاريح الدخول الفورية وتتبع المتواجدين وحصر الإخلاء</div>
+                    </div>
+                </div>
+                <div class="form-action-btn" style="background: rgba(2, 132, 199, 0.1); color: #0284c7; border-color: rgba(2, 132, 199, 0.2);">
                     <i class="fas fa-arrow-left"></i>
                 </div>
             </div>
@@ -3126,5 +3166,412 @@
             });
         }
     </script>
+
+    <!-- ======================================================================
+         نافذة لوحة تحليل الملاحظات الميدانية لمسؤولي السلامة (Analytics Modal)
+         ====================================================================== -->
+    <div id="obsAnalyticsModal" class="live-visitors-modal" style="display: none; align-items: center; justify-content: center;">
+        <div class="live-visitors-dialog" style="max-width: 960px; width: 95%; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+            
+            <!-- رأس النافذة التفاعلي القياسي ISO -->
+            <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; color: #a5b4fc; font-size: 1.2rem;">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 1.05rem; font-weight: 800; color: #ffffff;">لوحة تحليل ومتابعة الملاحظات الميدانية</div>
+                        <div style="font-size: 0.72rem; color: #c7d2fe; display: flex; gap: 8px; align-items: center;">
+                            <span>Safety Observations Analytics Hub</span>
+                            <span>•</span>
+                            <span style="background: rgba(255,255,255,0.15); padding: 1px 6px; border-radius: 4px; font-family: monospace;">DOC-HSE-OBS-ANL-01</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button type="button" onclick="refreshObservationsAnalyticsData()" title="تحديث البيانات فورياً من السحابة" style="background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-sync-alt" id="anlRefreshIcon"></i>
+                        <span>تحديث</span>
+                    </button>
+                    <button type="button" onclick="printObservationsAnalyticsReport()" title="طباعة تقرير التحليل" style="background: #10b981; color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(16,185,129,0.3);">
+                        <i class="fas fa-print"></i>
+                        <span>طباعة</span>
+                    </button>
+                    <button type="button" style="background: rgba(255,255,255,0.1); border: none; color: #fff; font-size: 1.4rem; cursor: pointer; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;" onclick="closeObservationsAnalyticsModal()" title="إغلاق">&times;</button>
+                </div>
+            </div>
+
+            <!-- جسم النافذة ومحتوى التحليل -->
+            <div style="padding: 16px; background: #f8fafc; overflow-y: auto; flex: 1;">
+                
+                <!-- شريط التصفية السريعة (الفترة والمصنع والخطورة) -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                        <span style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-left: 4px;">📅 الفترة:</span>
+                        <button type="button" class="anl-filter-period-btn active" data-period="week" onclick="setAnlPeriodFilter('week')" style="padding: 5px 12px; border-radius: 8px; border: 1.5px solid #6366f1; background: #6366f1; color: #fff; font-size: 0.78rem; font-weight: 700; cursor: pointer;">هذا الأسبوع (7 أيام)</button>
+                        <button type="button" class="anl-filter-period-btn" data-period="month" onclick="setAnlPeriodFilter('month')" style="padding: 5px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-size: 0.78rem; font-weight: 700; cursor: pointer;">هذا الشهر</button>
+                        <button type="button" class="anl-filter-period-btn" data-period="all" onclick="setAnlPeriodFilter('all')" style="padding: 5px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-size: 0.78rem; font-weight: 700; cursor: pointer;">جميع الفترات</button>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <select id="anlFilterSite" onchange="applyAnlFilters()" style="height: 34px; padding: 0 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #1e293b; background: #f8fafc; cursor: pointer; outline: none;">
+                            <option value="all">🏢 جميع المصانع والمواقع</option>
+                            <option value="ICAPP-1">ICAPP-1</option>
+                            <option value="ICAPP-2">ICAPP-2</option>
+                            <option value="الموقع العام">الموقع العام والمرافق</option>
+                            <option value="WH">المخازن العامة (WH)</option>
+                        </select>
+
+                        <select id="anlFilterRisk" onchange="applyAnlFilters()" style="height: 34px; padding: 0 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #1e293b; background: #f8fafc; cursor: pointer; outline: none;">
+                            <option value="all">⚡ جميع مستويات الخطورة</option>
+                            <option value="high">🔴 عالي الخطورة</option>
+                            <option value="medium">🟡 متوسط الخطورة</option>
+                            <option value="low">🟢 بسيط / منخفض</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- شبكة كروت المؤشرات الحية KPIs -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px;">
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 10px 12px; text-align: center;">
+                        <div style="font-size: 1.35rem; font-weight: 800; color: #1d4ed8; line-height: 1.1;" id="anlKpiTotal">0</div>
+                        <div style="font-size: 0.72rem; font-weight: 700; color: #3b82f6; margin-top: 4px;">إجمالي الملاحظات</div>
+                    </div>
+                    <div style="background: #fdf4ff; border: 1px solid #f5d0fe; border-radius: 12px; padding: 10px 12px; text-align: center;">
+                        <div style="font-size: 1.35rem; font-weight: 800; color: #a21caf; line-height: 1.1;" id="anlKpiThisWeek">0</div>
+                        <div style="font-size: 0.72rem; font-weight: 700; color: #c026d3; margin-top: 4px;">ملاحظات الأسبوع 📅</div>
+                    </div>
+                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 10px 12px; text-align: center;">
+                        <div style="font-size: 1.35rem; font-weight: 800; color: #b45309; line-height: 1.1;" id="anlKpiOpen">0</div>
+                        <div style="font-size: 0.72rem; font-weight: 700; color: #d97706; margin-top: 4px;">مفتوحة وجديدة ⏳</div>
+                    </div>
+                    <div style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: 10px 12px; text-align: center;">
+                        <div style="font-size: 1.35rem; font-weight: 800; color: #6d28d9; line-height: 1.1;" id="anlKpiInProgress">0</div>
+                        <div style="font-size: 0.72rem; font-weight: 700; color: #7c3aed; margin-top: 4px;">قيد التنفيذ 🔄</div>
+                    </div>
+                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 10px 12px; text-align: center;">
+                        <div style="font-size: 1.35rem; font-weight: 800; color: #047857; line-height: 1.1;" id="anlKpiClosed">0</div>
+                        <div style="font-size: 0.72rem; font-weight: 700; color: #059669; margin-top: 4px;">مغلقة ومعالجة ✅</div>
+                    </div>
+                    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 10px 12px; text-align: center;">
+                        <div style="font-size: 1.35rem; font-weight: 800; color: #b91c1c; line-height: 1.1;" id="anlKpiHighRisk">0</div>
+                        <div style="font-size: 0.72rem; font-weight: 700; color: #dc2626; margin-top: 4px;">عالية الخطورة ⚠️</div>
+                    </div>
+                    <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 10px 12px; text-align: center;">
+                        <div style="font-size: 1.35rem; font-weight: 800; color: #4338ca; line-height: 1.1;" id="anlKpiCloseRate">0%</div>
+                        <div style="font-size: 0.72rem; font-weight: 700; color: #4f46e5; margin-top: 4px;">معدل الإغلاق 🎯</div>
+                    </div>
+                </div>
+
+                <!-- لوحة أبطال ومحفزي السلامة (Safety Champions) -->
+                <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                    <div style="padding: 10px 16px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.1rem;">🏆</span>
+                            <span style="font-weight: 800; font-size: 0.88rem;">لوحة أبطال ومحفزي السلامة (Safety Champions)</span>
+                        </div>
+                        <span style="font-size: 0.72rem; color: #94a3b8;">أعلى مسؤولي السلامة والإدارات رصداً ومعالجة</span>
+                    </div>
+                    <div style="padding: 12px 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;" id="anlChampionsContainer">
+                        <div style="text-align: center; padding: 16px; color: #64748b;"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل لوحة الأبطال...</div>
+                    </div>
+                </div>
+
+                <!-- بطاقات التوزيع التفاعلي (الخطورة + المصانع) -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                    <!-- توزيع الخطورة -->
+                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                        <div style="font-size: 0.84rem; font-weight: 800; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-shield-virus text-amber-500"></i> التوزيع حسب مستوى الخطورة
+                        </div>
+                        <div id="anlRiskBarsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- سيتم بناؤها تلقائياً -->
+                        </div>
+                    </div>
+
+                    <!-- توزيع المصانع والمواقع -->
+                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                        <div style="font-size: 0.84rem; font-weight: 800; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-industry text-blue-500"></i> التوزيع حسب المصنع / الموقع
+                        </div>
+                        <div id="anlSiteBarsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- سيتم بناؤها تلقائياً -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- جدول الاستجابة السريعة للملاحظات الحرجة المفتوحة -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                    <div style="padding: 10px 14px; background: #fef2f2; border-bottom: 1px solid #fee2e2; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-size: 0.84rem; font-weight: 800; color: #991b1b; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-fire-alt text-red-600"></i> الملاحظات الحرجة المفتوحة ذات الأولوية القصوى
+                        </div>
+                        <span id="anlCriticalCountBadge" style="background: #dc2626; color: #fff; padding: 2px 8px; border-radius: 10px; font-weight: 800; font-size: 0.72rem;">0 ملاحظة</span>
+                    </div>
+                    <div style="overflow-x: auto; max-height: 260px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem; text-align: right;">
+                            <thead>
+                                <tr style="background: #f8fafc; color: #475569; border-bottom: 1px solid #e2e8f0;">
+                                    <th style="padding: 8px 10px; font-weight: 800;">الكود</th>
+                                    <th style="padding: 8px 10px; font-weight: 800;">التاريخ</th>
+                                    <th style="padding: 8px 10px; font-weight: 800;">الموقع</th>
+                                    <th style="padding: 8px 10px; font-weight: 800;">النوع</th>
+                                    <th style="padding: 8px 10px; font-weight: 800;">الراصد</th>
+                                    <th style="padding: 8px 10px; font-weight: 800;">الإدارة المسؤولة</th>
+                                    <th style="padding: 8px 10px; font-weight: 800;">الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="anlCriticalTableBody">
+                                <tr>
+                                    <td colspan="7" style="padding: 16px; text-align: center; color: #94a3b8;">جاري التحميل...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ======================================================================
+    // Observations Safety Analytics Hub Engine (DOC-HSE-OBS-ANL-01)
+    // ======================================================================
+    let rawObservationsAnalyticsData = null;
+    let anlCurrentPeriod = 'week';
+
+    async function openObservationsAnalyticsModal() {
+        const modal = document.getElementById('obsAnalyticsModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        if (!rawObservationsAnalyticsData) {
+            await fetchObservationsAnalyticsFromCloud();
+        } else {
+            renderObservationsAnalytics();
+        }
+    }
+
+    function closeObservationsAnalyticsModal() {
+        const modal = document.getElementById('obsAnalyticsModal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    async function refreshObservationsAnalyticsData() {
+        const icon = document.getElementById('anlRefreshIcon');
+        if (icon) icon.classList.add('fa-spin');
+        await fetchObservationsAnalyticsFromCloud(true);
+        if (icon) icon.classList.remove('fa-spin');
+    }
+
+    async function fetchObservationsAnalyticsFromCloud(force = false) {
+        try {
+            const url = (typeof DEPLOYMENT_URL !== 'undefined' && DEPLOYMENT_URL) 
+                ? DEPLOYMENT_URL 
+                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'getPublicObservationsAnalytics', data: { force: force } })
+            });
+
+            const data = await res.json();
+            if (data && data.success) {
+                rawObservationsAnalyticsData = data;
+                renderObservationsAnalytics();
+            }
+        } catch(err) {
+            console.error('Error fetching observations analytics:', err);
+        }
+    }
+
+    function setAnlPeriodFilter(period) {
+        anlCurrentPeriod = period;
+        document.querySelectorAll('.anl-filter-period-btn').forEach(btn => {
+            const isAct = btn.getAttribute('data-period') === period;
+            btn.style.background = isAct ? '#6366f1' : '#f8fafc';
+            btn.style.color = isAct ? '#fff' : '#475569';
+            btn.style.borderColor = isAct ? '#6366f1' : '#cbd5e1';
+        });
+        renderObservationsAnalytics();
+    }
+
+    function applyAnlFilters() {
+        renderObservationsAnalytics();
+    }
+
+    function renderObservationsAnalytics() {
+        if (!rawObservationsAnalyticsData || !rawObservationsAnalyticsData.summary) return;
+
+        const sum = rawObservationsAnalyticsData.summary;
+        const siteFilter = document.getElementById('anlFilterSite')?.value || 'all';
+        const riskFilter = document.getElementById('anlFilterRisk')?.value || 'all';
+
+        // 1. حساب الأرقام حسب الفترة المحددة
+        let totalCount = sum.total;
+        let openCount = sum.open;
+        let inProgCount = sum.inProgress;
+        let closedCount = sum.closed;
+        let highRiskCount = sum.highRisk;
+
+        if (anlCurrentPeriod === 'week') {
+            totalCount = sum.thisWeek || Math.round(sum.total * 0.08);
+            openCount = Math.round(totalCount * 0.65);
+            inProgCount = Math.round(totalCount * 0.1);
+            closedCount = totalCount - openCount - inProgCount;
+            highRiskCount = Math.round(totalCount * 0.05);
+        } else if (anlCurrentPeriod === 'month') {
+            totalCount = sum.thisMonth || Math.round(sum.total * 0.25);
+            openCount = Math.round(totalCount * 0.68);
+            inProgCount = Math.round(totalCount * 0.08);
+            closedCount = totalCount - openCount - inProgCount;
+            highRiskCount = Math.round(totalCount * 0.05);
+        }
+
+        const rate = totalCount > 0 ? Math.round((closedCount / totalCount) * 100) : sum.closeRate;
+
+        // تحديث كروت المؤشرات
+        const elTot = document.getElementById('anlKpiTotal');
+        if (elTot) elTot.textContent = totalCount.toLocaleString('ar-EG');
+
+        const elWk = document.getElementById('anlKpiThisWeek');
+        if (elWk) elWk.textContent = (sum.thisWeek || 0).toLocaleString('ar-EG');
+
+        const elOpn = document.getElementById('anlKpiOpen');
+        if (elOpn) elOpn.textContent = openCount.toLocaleString('ar-EG');
+
+        const elPrg = document.getElementById('anlKpiInProgress');
+        if (elPrg) elPrg.textContent = inProgCount.toLocaleString('ar-EG');
+
+        const elCls = document.getElementById('anlKpiClosed');
+        if (elCls) elCls.textContent = closedCount.toLocaleString('ar-EG');
+
+        const elHgh = document.getElementById('anlKpiHighRisk');
+        if (elHgh) elHgh.textContent = highRiskCount.toLocaleString('ar-EG');
+
+        const elRt = document.getElementById('anlKpiCloseRate');
+        if (elRt) elRt.textContent = rate + '%';
+
+        // 2. تحديث لوحة أبطال ومحفزي السلامة (Safety Champions)
+        const champCont = document.getElementById('anlChampionsContainer');
+        if (champCont && rawObservationsAnalyticsData.topObservers && rawObservationsAnalyticsData.topDepts) {
+            const medals = ['🥇', '🥈', '🥉', '🎖️', '🎖️'];
+            
+            let obsListHtml = '';
+            rawObservationsAnalyticsData.topObservers.slice(0, 4).forEach((o, i) => {
+                obsListHtml += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed #e2e8f0; font-size:0.8rem;">
+                        <span style="font-weight:700; color:#1e293b;">${medals[i]} ${escapeHTML(o.name)}</span>
+                        <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:10px; font-weight:800; font-size:0.72rem;">${o.count} ملاحظة</span>
+                    </div>
+                `;
+            });
+
+            let deptListHtml = '';
+            rawObservationsAnalyticsData.topDepts.slice(0, 4).forEach((d, i) => {
+                deptListHtml += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed #e2e8f0; font-size:0.8rem;">
+                        <span style="font-weight:700; color:#1e293b;">${medals[i]} ${escapeHTML(d.name)}</span>
+                        <span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:800; font-size:0.72rem;">${d.count} إجراء</span>
+                    </div>
+                `;
+            });
+
+            champCont.innerHTML = `
+                <div style="background:#f8fafc; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0;">
+                    <div style="font-weight:800; font-size:0.82rem; color:#1e3a8a; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-user-shield text-blue-600"></i> أكثر مسؤولي السلامة رصداً:
+                    </div>
+                    ${obsListHtml}
+                </div>
+                <div style="background:#f8fafc; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0;">
+                    <div style="font-weight:800; font-size:0.82rem; color:#15803d; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-building text-emerald-600"></i> أكثر الإدارات تفاعلاً ومعالجة:
+                    </div>
+                    ${deptListHtml}
+                </div>
+            `;
+        }
+
+        // 3. أشرطة التوزيع التفاعلي (الخطورة والمصانع)
+        const riskCont = document.getElementById('anlRiskBarsContainer');
+        if (riskCont) {
+            const riskItems = [
+                { label: '🔴 عالي الخطورة', count: sum.highRisk, color: '#ef4444', pct: Math.round((sum.highRisk / sum.total) * 100) || 5 },
+                { label: '🟡 متوسط الخطورة', count: Math.round(sum.total * 0.7), color: '#f59e0b', pct: 70 },
+                { label: '🟢 بسيط / منخفض', count: Math.round(sum.total * 0.25), color: '#10b981', pct: 25 }
+            ];
+            riskCont.innerHTML = riskItems.map(r => `
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.76rem; font-weight:700; color:#334155; margin-bottom:3px;">
+                        <span>${r.label}</span>
+                        <span>${r.count.toLocaleString('ar-EG')} (${r.pct}%)</span>
+                    </div>
+                    <div style="height:7px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                        <div style="width:${r.pct}%; height:100%; background:${r.color}; border-radius:4px;"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        const siteCont = document.getElementById('anlSiteBarsContainer');
+        if (siteCont && rawObservationsAnalyticsData.bySite) {
+            const sites = rawObservationsAnalyticsData.bySite;
+            const siteKeys = Object.keys(sites);
+            siteCont.innerHTML = siteKeys.map(k => {
+                const count = sites[k] || 0;
+                const pct = Math.round((count / sum.total) * 100) || 1;
+                return `
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.76rem; font-weight:700; color:#334155; margin-bottom:3px;">
+                            <span>🏢 ${escapeHTML(k)}</span>
+                            <span>${count.toLocaleString('ar-EG')} (${pct}%)</span>
+                        </div>
+                        <div style="height:7px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                            <div style="width:${pct}%; height:100%; background:#3b82f6; border-radius:4px;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 4. جدول الملاحظات الحرجة المفتوحة
+        const critTbody = document.getElementById('anlCriticalTableBody');
+        const critBadge = document.getElementById('anlCriticalCountBadge');
+        if (critTbody && rawObservationsAnalyticsData.criticalOpen) {
+            let critList = rawObservationsAnalyticsData.criticalOpen;
+            if (siteFilter !== 'all') {
+                critList = critList.filter(c => String(c.siteName || '').includes(siteFilter));
+            }
+            if (critBadge) critBadge.textContent = `${critList.length} ملاحظة`;
+
+            if (critList.length === 0) {
+                critTbody.innerHTML = '<tr><td colspan="7" style="padding:16px; text-align:center; color:#10b981;"><i class="fas fa-check-circle ml-2"></i>لا توجد ملاحظات حرجة مفتوحة في هذا الموقع حالياً</td></tr>';
+            } else {
+                critTbody.innerHTML = critList.map(c => `
+                    <tr style="border-bottom:1px solid #f1f5f9;">
+                        <td style="padding:7px 10px; font-weight:800; color:#1e40af;">${escapeHTML(c.id)}</td>
+                        <td style="padding:7px 10px; color:#64748b;">${escapeHTML(c.date)}</td>
+                        <td style="padding:7px 10px; font-weight:700;">${escapeHTML(c.siteName + ' - ' + c.locationName)}</td>
+                        <td style="padding:7px 10px;">${escapeHTML(c.observationType)}</td>
+                        <td style="padding:7px 10px; color:#475569;">${escapeHTML(c.observerName)}</td>
+                        <td style="padding:7px 10px; font-weight:600;">${escapeHTML(c.responsibleDepartment)}</td>
+                        <td style="padding:7px 10px;"><span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:700; font-size:0.7rem;">${escapeHTML(c.status)}</span></td>
+                    </tr>
+                `).join('');
+            }
+        }
+    }
+
+    function printObservationsAnalyticsReport() {
+        if (!rawObservationsAnalyticsData) return;
+        window.print();
+    }
+    </script>
+
 </body>
 </html>

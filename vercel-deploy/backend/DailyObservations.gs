@@ -3360,3 +3360,137 @@ function sendWeeklyDailyObservationsDigest() {
         return { success: false, message: e.toString() };
     }
 }
+
+
+/**
+ * استرجاع التحليل الإحصائي السريع للملاحظات اليومية لبوابة النماذج ولوحة مسؤولي السلامة
+ */
+function getPublicObservationsAnalytics(payload) {
+    try {
+        var spreadsheetId = getSpreadsheetId();
+        var rawObs = [];
+        try {
+            rawObs = readFromSheet('DailyObservations', spreadsheetId) || [];
+        } catch(e) {
+            rawObs = [];
+        }
+
+        var now = new Date();
+        var todayStr = Utilities.formatDate(now, 'GMT+2', 'yyyy-MM-dd');
+        var thisMonthStr = todayStr.slice(0, 7);
+
+        // حساب بداية الأسبوع الحالي (منذ 7 أيام)
+        var sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+        var sevenDaysStr = Utilities.formatDate(sevenDaysAgo, 'GMT+2', 'yyyy-MM-dd');
+
+        var total = rawObs.length;
+        var open = 0;
+        var inProgress = 0;
+        var closed = 0;
+        var highRisk = 0;
+        var thisWeek = 0;
+        var thisMonth = 0;
+
+        var observerCounts = {};
+        var deptCounts = {};
+        var siteCounts = {};
+        var riskCounts = {};
+        var typeCounts = {};
+
+        var criticalOpen = [];
+
+        for (var i = 0; i < rawObs.length; i++) {
+            var o = rawObs[i];
+            if (!o) continue;
+
+            var st = String(o.status || o.actionStatus || 'مفتوح').trim();
+            var rk = String(o.riskLevel || o.risk || 'متوسط').trim();
+            var dt = String(o.date || o.observationDate || o.timestamp || '').trim();
+            var dtClean = dt.indexOf('T') !== -1 ? dt.split('T')[0] : dt.split(' ')[0];
+            var site = String(o.siteName || o.site || o.factory || 'الموقع العام').trim();
+            var dept = String(o.responsibleDepartment || o.targetDept || o.department || 'عام').trim();
+            var obsName = String(o.observerName || o.reporterName || o.recordedByName || '').trim();
+            var oType = String(o.observationType || o.type || 'سلوك غير آمن').trim();
+
+            if (st === 'مفتوح' || st === 'جديد' || st === 'Open' || st === 'New') {
+                open++;
+            } else if (st === 'مغلق' || st === 'Closed' || st === 'منتهي') {
+                closed++;
+            } else {
+                inProgress++;
+            }
+
+            var isHigh = (rk === 'عالي' || rk === 'عالية' || rk === 'High' || rk === 'حرج');
+            if (isHigh) highRisk++;
+
+            if (dtClean >= sevenDaysStr) thisWeek++;
+            if (dtClean.indexOf(thisMonthStr) === 0) thisMonth++;
+
+            if (obsName && obsName !== '-' && !obsName.includes('مجهول')) {
+                observerCounts[obsName] = (observerCounts[obsName] || 0) + 1;
+            }
+            if (dept && dept !== '-') {
+                deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+            }
+            if (site) {
+                siteCounts[site] = (siteCounts[site] || 0) + 1;
+            }
+            if (rk) {
+                riskCounts[rk] = (riskCounts[rk] || 0) + 1;
+            }
+            if (oType) {
+                typeCounts[oType] = (typeCounts[oType] || 0) + 1;
+            }
+
+            // تجميع الملاحظات الحرجة المفتوحة
+            if (st !== 'مغلق' && st !== 'Closed' && isHigh && criticalOpen.length < 15) {
+                criticalOpen.push({
+                    id: String(o.id || o.isoCode || o.code || ('OBS-' + (i + 1))),
+                    date: dtClean || todayStr,
+                    siteName: site,
+                    locationName: String(o.locationName || o.placeName || o.area || '-').trim(),
+                    observationType: oType,
+                    observerName: obsName || 'فريق السلامة',
+                    responsibleDepartment: dept,
+                    riskLevel: rk,
+                    status: st,
+                    photoUrl: String(o.photoUrl || o.imageBefore || o.photo || '')
+                });
+            }
+        }
+
+        var closeRate = total > 0 ? Math.round((closed / total) * 100) : 0;
+
+        // استخراج أبطال السلامة (أعلى 5)
+        var topObservers = Object.keys(observerCounts).map(function(k) { return { name: k, count: observerCounts[k] }; })
+            .sort(function(a,b) { return b.count - a.count; }).slice(0, 5);
+
+        var topDepts = Object.keys(deptCounts).map(function(k) { return { name: k, count: deptCounts[k] }; })
+            .sort(function(a,b) { return b.count - a.count; }).slice(0, 5);
+
+        return {
+            success: true,
+            summary: {
+                total: total,
+                open: open,
+                inProgress: inProgress,
+                closed: closed,
+                highRisk: highRisk,
+                thisWeek: thisWeek,
+                thisMonth: thisMonth,
+                closeRate: closeRate
+            },
+            topObservers: topObservers,
+            topDepts: topDepts,
+            bySite: siteCounts,
+            byRisk: riskCounts,
+            byType: typeCounts,
+            criticalOpen: criticalOpen,
+            timestamp: now.toISOString()
+        };
+
+    } catch(err) {
+        Logger.log('❌ خطأ في getPublicObservationsAnalytics: ' + err.toString());
+        return { success: false, message: err.message };
+    }
+}
