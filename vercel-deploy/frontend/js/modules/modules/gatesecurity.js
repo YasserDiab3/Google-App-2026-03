@@ -303,6 +303,7 @@ class GateSecurityModule {
                 } catch(e) {}
             }
 
+            this.populateSiteFilterOptions();
             this.applyFilters();
             this.updateKpis();
         } catch(err) {
@@ -349,11 +350,42 @@ class GateSecurityModule {
         if (kpiMon) kpiMon.textContent = monthList.length;
     }
 
+    populateSiteFilterOptions() {
+        const select = document.getElementById('gateFilterSite');
+        if (!select) return;
+
+        const currentVal = this.filterSite || 'all';
+        const uniqueSites = new Set();
+
+        // 1. استخراج المواقع الفعلية المسجلة بسجلات الزوار
+        (this.visitors || []).forEach(v => {
+            if (v.site && String(v.site).trim()) {
+                uniqueSites.add(String(v.site).trim());
+            }
+        });
+
+        // 2. إضافة مواقع ومصانع النظام الرسمية المعتمدة
+        const defaultSites = ['ICAPP-1', 'ICAPP-2', 'ICAPP-3', 'ICAPP-4', 'المخازن العامة (WH)', 'المبنى الإداري', 'الموقع العام والمرافق'];
+        defaultSites.forEach(s => uniqueSites.add(s));
+
+        let html = '<option value="all">🏢 جميع المصانع والمواقع</option>';
+        Array.from(uniqueSites).sort().forEach(site => {
+            const isSel = currentVal === site ? 'selected' : '';
+            html += `<option value="${site}" ${isSel}>${site}</option>`;
+        });
+
+        select.innerHTML = html;
+        select.value = currentVal;
+    }
+
     applyFilters() {
         let list = [...this.visitors];
 
         if (this.filterSite !== 'all') {
-            list = list.filter(v => v.site === this.filterSite);
+            list = list.filter(v => {
+                const s = (v.site || '').trim();
+                return s === this.filterSite.trim() || s.includes(this.filterSite.trim()) || this.filterSite.trim().includes(s);
+            });
         }
 
         if (this.filterStatus === 'active') {
