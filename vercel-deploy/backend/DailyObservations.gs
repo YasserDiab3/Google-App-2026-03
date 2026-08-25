@@ -3387,10 +3387,13 @@ function sendWeeklyDailyObservationsDigest() {
 /**
  * استرجاع التحليل الإحصائي للملاحظات الميدانية مع تنقية وتوحيد مواقع ومصانع الشركة المعتمدة
  */
+/**
+ * استرجاع التحليل الإحصائي للملاحظات الميدانية مع حصر المواقع حصرياً في (ICAPP-1, ICAPP-2, WH)
+ */
 function getPublicObservationsAnalytics(payload) {
     try {
         var force = payload && (payload.force === true || payload.force === 'true');
-        var cacheKey = 'PUBLIC_OBS_ANALYTICS_COMPACT_V7';
+        var cacheKey = 'PUBLIC_OBS_ANALYTICS_COMPACT_V8';
         var cache = null;
         try {
             cache = CacheService.getScriptCache();
@@ -3483,12 +3486,16 @@ function getPublicObservationsAnalytics(payload) {
         var observerCounts = {};
         var deptCounts = {};
         var deptClosedCounts = {};
-        var siteCounts = {};
+        var siteCounts = { 'ICAPP-1': 0, 'ICAPP-2': 0, 'WH': 0 };
         var riskCounts = {};
         var typeCounts = {};
 
         var observerStats = {};
-        var siteStats = {};
+        var siteStats = {
+            'ICAPP-1': { total: 0, open: 0, inProgress: 0, closed: 0, highRisk: 0, thisWeek: 0, thisMonth: 0, overdue: 0 },
+            'ICAPP-2': { total: 0, open: 0, inProgress: 0, closed: 0, highRisk: 0, thisWeek: 0, thisMonth: 0, overdue: 0 },
+            'WH': { total: 0, open: 0, inProgress: 0, closed: 0, highRisk: 0, thisWeek: 0, thisMonth: 0, overdue: 0 }
+        };
         var riskStats = {};
         var criticalOpen = [];
 
@@ -3514,23 +3521,17 @@ function getPublicObservationsAnalytics(payload) {
             var st = String(row[colStatus] || 'مفتوح').trim();
             var rk = String(row[colRisk] || 'متوسط').trim();
 
-            // توحيد وتنقية أسماء المصانع والمواقع الرسمية للشركة
+            // حصر وتوحيد الموقع حصرياً في: ICAPP-1, ICAPP-2, WH
             var rawSite = String(row[colSite] || '').trim();
             var rawLoc = String(row[colLoc] || '-').trim();
             var site = 'ICAPP-1';
             
             if (rawSite.toUpperCase().indexOf('ICAPP-2') !== -1 || rawSite === '2' || rawLoc.indexOf('ICAPP-2') !== -1) {
                 site = 'ICAPP-2';
-            } else if (rawSite.toUpperCase().indexOf('ICAPP-1') !== -1 || rawSite === '1' || rawLoc.indexOf('ICAPP-1') !== -1) {
-                site = 'ICAPP-1';
-            } else if (rawSite.toUpperCase().indexOf('WH') !== -1 || rawSite.indexOf('مخازن') !== -1 || rawSite.indexOf('مخزن') !== -1) {
-                site = 'المخازن (WH)';
-            } else if (rawSite.indexOf('إداري') !== -1 || rawSite.indexOf('اداري') !== -1 || rawSite.indexOf('إدارة') !== -1 || rawLoc.indexOf('إداري') !== -1) {
-                site = 'المبنى الإداري';
-            } else if (rawSite === 'الموقع العام' || rawSite === 'عام' || !rawSite) {
-                site = 'ICAPP-1'; // دمج أي سجلات قديمة غير محددة مع المصنع الأول
+            } else if (rawSite.toUpperCase().indexOf('WH') !== -1 || rawSite.indexOf('مخازن') !== -1 || rawSite.indexOf('مخزن') !== -1 || rawLoc.toUpperCase().indexOf('WH') !== -1) {
+                site = 'WH';
             } else {
-                site = rawSite;
+                site = 'ICAPP-1';
             }
 
             var loc = rawLoc;
@@ -3607,22 +3608,17 @@ function getPublicObservationsAnalytics(payload) {
                 if (isOverdue) ost.overdue++;
             }
 
-            // 2. إحصائيات المصانع والمواقع المعتمدة (بدون الموقع العام)
-            if (site && site !== '-' && site !== 'null') {
-                siteCounts[site] = (siteCounts[site] || 0) + 1;
-                if (!siteStats[site]) {
-                    siteStats[site] = { total: 0, open: 0, inProgress: 0, closed: 0, highRisk: 0, thisWeek: 0, thisMonth: 0, overdue: 0 };
-                }
-                var sst = siteStats[site];
-                sst.total++;
-                if (isOpen) sst.open++;
-                if (isClosed) sst.closed++;
-                if (isInProg) sst.inProgress++;
-                if (isHigh) sst.highRisk++;
-                if (isThisWeek) sst.thisWeek++;
-                if (isThisMonth) sst.thisMonth++;
-                if (isOverdue) sst.overdue++;
-            }
+            // 2. إحصائيات المواقع الثلاثة فقط (ICAPP-1, ICAPP-2, WH)
+            siteCounts[site] = (siteCounts[site] || 0) + 1;
+            var sst = siteStats[site];
+            sst.total++;
+            if (isOpen) sst.open++;
+            if (isClosed) sst.closed++;
+            if (isInProg) sst.inProgress++;
+            if (isHigh) sst.highRisk++;
+            if (isThisWeek) sst.thisWeek++;
+            if (isThisMonth) sst.thisMonth++;
+            if (isOverdue) sst.overdue++;
 
             // 3. إحصائيات الخطورة
             if (!riskStats[rkKey]) {
@@ -3686,27 +3682,24 @@ function getPublicObservationsAnalytics(payload) {
             rst.closeRate = rst.total > 0 ? Math.round((rst.closed / rst.total) * 100) : 0;
         });
 
-        // 4. بناء مؤشر المقارنة والتميز بين المصانع والمواقع المعتمدة فقط
-        var validSites = ['ICAPP-1', 'ICAPP-2', 'المخازن (WH)', 'المبنى الإداري'];
-        var plantBenchmark = Object.keys(siteStats)
-            .filter(function(sName) { return sName !== 'الموقع العام' && sName !== 'عام'; })
-            .map(function(sName) {
-                var s = siteStats[sName];
-                // حساب دقيق للنقاط يراعي حجم العمل ونسبة الإغلاق
-                var score = Math.max(60, Math.min(98, Math.round(s.closeRate + 68 - (s.overdue * 0.2))));
-                var speed = sName === 'ICAPP-1' ? '1.5' : (sName === 'ICAPP-2' ? '1.8' : '1.2');
-                return {
-                    site: sName,
-                    total: s.total,
-                    open: s.open,
-                    closed: s.closed,
-                    closeRate: s.closeRate,
-                    highRisk: s.highRisk,
-                    overdue: s.overdue,
-                    speedDays: speed,
-                    score: score
-                };
-            }).sort(function(a, b) { return b.score - a.score; });
+        // 4. بناء مؤشر المقارنة والتميز بين المصانع الثلاثة المعتمدة فقط
+        var validSites = ['ICAPP-1', 'ICAPP-2', 'WH'];
+        var plantBenchmark = validSites.map(function(sName) {
+            var s = siteStats[sName] || { total: 0, open: 0, closed: 0, closeRate: 0, highRisk: 0, overdue: 0 };
+            var score = Math.max(60, Math.min(98, Math.round(s.closeRate + 68 - (s.overdue * 0.2))));
+            var speed = sName === 'ICAPP-1' ? '1.5' : (sName === 'ICAPP-2' ? '1.8' : '1.2');
+            return {
+                site: sName,
+                total: s.total,
+                open: s.open,
+                closed: s.closed,
+                closeRate: s.closeRate,
+                highRisk: s.highRisk,
+                overdue: s.overdue,
+                speedDays: speed,
+                score: score
+            };
+        }).sort(function(a, b) { return b.score - a.score; });
 
         var observersList = Object.keys(observerStats).sort(function(a,b) {
             return observerStats[b].total - observerStats[a].total;
