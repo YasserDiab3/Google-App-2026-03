@@ -1491,6 +1491,7 @@
             } catch(e) {}
 
             updateLiveVisitorsCount();
+            fetchLiveVisitorsFromCloud();
         }
 
         // Live Visitors Monitor Logic
@@ -1498,8 +1499,7 @@
             try {
                 const raw = localStorage.getItem('HSE_GATE_VISITORS_REGISTRY');
                 const list = raw ? JSON.parse(raw) : [];
-                const todayStr = new Date().toISOString().split('T')[0];
-                return list.filter(v => v.entryDate === todayStr && !v.exitTime);
+                return list.filter(v => !v.exitTime);
             } catch(e) {
                 return [];
             }
@@ -1537,6 +1537,7 @@
                         localStorage.setItem('HSE_GATE_VISITORS_REGISTRY', JSON.stringify(merged));
                     } catch(e) {}
                     updateLiveVisitorsCount();
+            fetchLiveVisitorsFromCloud();
                 }
             } catch(e) {}
         }
