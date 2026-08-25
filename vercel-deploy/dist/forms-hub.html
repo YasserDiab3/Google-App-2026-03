@@ -5334,23 +5334,31 @@
             if (p.statusKey === 'pending') pendingCount++;
             if (p.statusKey === 'expiringSoon') expiringCount++;
 
-            if (p.site === 'ICAPP-1' && p.isActive) site1Count++;
-            else if (p.site === 'ICAPP-2' && p.isActive) site2Count++;
-            else if (p.site === 'WH' && p.isActive) siteWHCount++;
+            // حصر إجمالي التصاريح حسب كل مصنع للفترة المحددة
+            if (p.site === 'ICAPP-1') site1Count++;
+            else if (p.site === 'ICAPP-2') site2Count++;
+            else if (p.site === 'WH') siteWHCount++;
 
-            if (p.typeKey === 'hot' && p.isActive) hotCount++;
-            else if (p.typeKey === 'height' && p.isActive) heightCount++;
-            else if ((p.typeKey === 'confined' || p.typeKey === 'electrical') && p.isActive) confinedCount++;
-            else if (p.typeKey === 'cold' && p.isActive) coldCount++;
+            // حصر إجمالي التصاريح حسب نوع الخطورة للفترة المحددة
+            if (p.typeKey === 'hot') hotCount++;
+            else if (p.typeKey === 'height') heightCount++;
+            else if (p.typeKey === 'confined' || p.typeKey === 'electrical') confinedCount++;
+            else if (p.typeKey === 'cold') coldCount++;
         });
 
         // 1. تحديث العداد في الشريط الرئيسي
         const cntEl = document.getElementById('livePtwCountNum');
-        if (cntEl) cntEl.textContent = totalActive.toLocaleString('ar-EG');
+        const cntLbl = document.getElementById('livePtwCountLabel');
+        if (cntEl) {
+            cntEl.textContent = (totalActive > 0 ? totalActive : periodList.length).toLocaleString('ar-EG');
+        }
+        if (cntLbl) {
+            cntLbl.textContent = totalActive > 0 ? 'تصريح نشط' : 'تصريح اليوم';
+        }
 
         // 2. تحديث كروت الـ KPI المخصصة للأرقام الإجمالية والمصانع
         const kTot = document.getElementById('ptwKpiTotal');
-        if (kTot) kTot.textContent = totalActive.toLocaleString('ar-EG');
+        if (kTot) kTot.textContent = periodList.length.toLocaleString('ar-EG');
 
         const s1 = document.getElementById('ptwSiteCount1');
         if (s1) s1.textContent = site1Count.toLocaleString('ar-EG');
@@ -5824,28 +5832,28 @@
                 <div onclick="setPtwSiteQuickFilter('all')" style="background: linear-gradient(135deg, #1e3a8a, #1e40af); color: #fff; border-radius: 10px; padding: 9px 10px; text-align: center; cursor: pointer; box-shadow: 0 2px 6px rgba(30,58,138,0.25);">
                     <div style="font-size: 0.7rem; color: #bfdbfe; font-weight: 800;">⚡ إجمالي جميع المواقع</div>
                     <div style="font-size: 1.35rem; font-weight: 900; color: #fde047; margin-top: 1px;" id="ptwKpiTotal">0</div>
-                    <div style="font-size: 0.64rem; color: #dbeafe;">تصريح ساري ونشط</div>
+                    <div style="font-size: 0.64rem; color: #dbeafe;">تصريح للفترة المحددة</div>
                 </div>
 
                 <!-- 2. مصنع ICAPP-1 -->
                 <div onclick="setPtwSiteQuickFilter('ICAPP-1')" style="background: #ffffff; border: 1.5px solid #93c5fd; border-radius: 10px; padding: 9px 10px; text-align: center; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
                     <div style="font-size: 0.7rem; color: #1e40af; font-weight: 800;">🏭 مصنع ICAPP-1</div>
                     <div style="font-size: 1.35rem; font-weight: 900; color: #1d4ed8; margin-top: 1px;" id="ptwSiteCount1">0</div>
-                    <div style="font-size: 0.64rem; color: #64748b;">تصريح نشط</div>
+                    <div style="font-size: 0.64rem; color: #64748b;">تصريح مسجل</div>
                 </div>
 
                 <!-- 3. مصنع ICAPP-2 -->
                 <div onclick="setPtwSiteQuickFilter('ICAPP-2')" style="background: #ffffff; border: 1.5px solid #a5f3fc; border-radius: 10px; padding: 9px 10px; text-align: center; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
                     <div style="font-size: 0.7rem; color: #0e7490; font-weight: 800;">🏭 مصنع ICAPP-2</div>
                     <div style="font-size: 1.35rem; font-weight: 900; color: #0891b2; margin-top: 1px;" id="ptwSiteCount2">0</div>
-                    <div style="font-size: 0.64rem; color: #64748b;">تصريح نشط</div>
+                    <div style="font-size: 0.64rem; color: #64748b;">تصريح مسجل</div>
                 </div>
 
                 <!-- 4. المخازن WH -->
                 <div onclick="setPtwSiteQuickFilter('WH')" style="background: #ffffff; border: 1.5px solid #fed7aa; border-radius: 10px; padding: 9px 10px; text-align: center; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
                     <div style="font-size: 0.7rem; color: #c2410c; font-weight: 800;">📦 المخازن (WH)</div>
                     <div style="font-size: 1.35rem; font-weight: 900; color: #ea580c; margin-top: 1px;" id="ptwSiteCountWH">0</div>
-                    <div style="font-size: 0.64rem; color: #64748b;">تصريح نشط</div>
+                    <div style="font-size: 0.64rem; color: #64748b;">تصريح مسجل</div>
                 </div>
             </div>
 
