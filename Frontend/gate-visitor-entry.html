@@ -1249,7 +1249,7 @@
                                 <span id="lblVisitorName">الاسم ثلاثي</span>
                                 <span class="req">*</span>
                             </label>
-                            <input type="text" id="visitorName" class="form-control" placeholder="اكتب اسم الزائر بالكامل..." required autocomplete="off">
+                            <input type="text" id="visitorName" list="dlVisitorNames" class="form-control" placeholder="اكتب اسم الزائر بالكامل..." required autocomplete="off" oninput="handleVisitorFieldInput('name', this.value)" onchange="autofillVisitorDetails('name', this.value)">
                         </div>
 
                         <div class="form-group">
@@ -1258,7 +1258,7 @@
                                 <span id="lblVisitorOrg">الجهة / الشركة التابع لها</span>
                                 <span class="req">*</span>
                             </label>
-                            <input type="text" id="visitorOrg" class="form-control" placeholder="اسم الشركة أو جهة العمل أو مقاول..." required autocomplete="off">
+                            <input type="text" id="visitorOrg" list="dlVisitorOrgs" class="form-control" placeholder="اسم الشركة أو جهة العمل أو مقاول..." required autocomplete="off" oninput="handleVisitorFieldInput('org', this.value)" onchange="autofillVisitorDetails('org', this.value)">
                         </div>
                     </div>
 
@@ -1269,7 +1269,7 @@
                                 <span id="lblVisitorId">الرقم القومي / جواز السفر</span>
                                 <span class="req">*</span>
                             </label>
-                            <input type="text" id="visitorId" class="form-control" placeholder="14 رقم قومي أو رقم الجواز..." required autocomplete="off">
+                            <input type="text" id="visitorId" list="dlVisitorIds" class="form-control" placeholder="14 رقم قومي أو رقم الجواز..." required autocomplete="off" oninput="handleVisitorFieldInput('id', this.value)" onchange="autofillVisitorDetails('id', this.value)">
                         </div>
 
                         <div class="form-group">
@@ -1277,7 +1277,7 @@
                                 <i class="fas fa-phone text-blue-600"></i>
                                 <span id="lblVisitorPhone">رقم الهاتف المحمول (اختياري)</span>
                             </label>
-                            <input type="tel" id="visitorPhone" class="form-control" placeholder="01XXXXXXXXX (اختياري)" autocomplete="off">
+                            <input type="tel" id="visitorPhone" list="dlVisitorPhones" class="form-control" placeholder="01XXXXXXXXX (اختياري)" autocomplete="off" oninput="handleVisitorFieldInput('phone', this.value)" onchange="autofillVisitorDetails('phone', this.value)">
                         </div>
                     </div>
 
@@ -2303,11 +2303,117 @@
             }
         }
 
+        
+        // ==========================================
+        // Visitor Autocomplete & Smart Autofill Logic
+        // ==========================================
+        function populateVisitorAutocompleteDatalists() {
+            try {
+                const list = getVisitorsRegistry();
+                if (!Array.isArray(list)) return;
+
+                const namesSet = new Set();
+                const orgsSet = new Set();
+                const idsSet = new Set();
+                const phonesSet = new Set();
+
+                // Iterate from latest to oldest
+                list.forEach(v => {
+                    if (v.name && String(v.name).trim()) namesSet.add(String(v.name).trim());
+                    if (v.org && String(v.org).trim()) orgsSet.add(String(v.org).trim());
+                    if (v.idNumber && String(v.idNumber).trim()) idsSet.add(String(v.idNumber).trim());
+                    if (v.phone && String(v.phone).trim()) phonesSet.add(String(v.phone).trim());
+                });
+
+                const buildDatalist = (dlId, set) => {
+                    let dl = document.getElementById(dlId);
+                    if (!dl) {
+                        dl = document.createElement('datalist');
+                        dl.id = dlId;
+                        document.body.appendChild(dl);
+                    }
+                    dl.innerHTML = Array.from(set).map(val => `<option value="${escapeHTML(val)}">`).join('');
+                };
+
+                buildDatalist('dlVisitorNames', namesSet);
+                buildDatalist('dlVisitorOrgs', orgsSet);
+                buildDatalist('dlVisitorIds', idsSet);
+                buildDatalist('dlVisitorPhones', phonesSet);
+            } catch(e) {
+                console.warn('Error building visitor datalists:', e);
+            }
+        }
+
+        let _lastAutofillId = null;
+
+        function handleVisitorFieldInput(field, val) {
+            if (!val || val.trim().length < 3) return;
+            const cleanVal = val.trim().toLowerCase();
+            const list = getVisitorsRegistry();
+            if (!Array.isArray(list) || list.length === 0) return;
+
+            // Check if exact match exists in registry
+            let match = null;
+            if (field === 'name') {
+                match = list.find(v => (v.name || '').trim().toLowerCase() === cleanVal);
+            } else if (field === 'id') {
+                match = list.find(v => (v.idNumber || '').trim() === cleanVal);
+            } else if (field === 'phone') {
+                match = list.find(v => (v.phone || '').trim() === cleanVal);
+            }
+
+            if (match) {
+                autofillVisitorDetails(field, val, match);
+            }
+        }
+
+        function autofillVisitorDetails(field, val, matchedObj = null) {
+            if (!val || val.trim().length < 2) return;
+            const cleanVal = val.trim();
+            const list = getVisitorsRegistry();
+            if (!Array.isArray(list) || list.length === 0) return;
+
+            const match = matchedObj || list.find(v => {
+                if (field === 'name') return (v.name || '').trim().toLowerCase() === cleanVal.toLowerCase();
+                if (field === 'id') return (v.idNumber || '').trim() === cleanVal;
+                if (field === 'phone') return (v.phone || '').trim() === cleanVal;
+                if (field === 'org') return (v.org || '').trim().toLowerCase() === cleanVal.toLowerCase();
+                return false;
+            });
+
+            if (match && match.id !== _lastAutofillId) {
+                _lastAutofillId = match.id;
+                const nameEl = document.getElementById('visitorName');
+                const orgEl = document.getElementById('visitorOrg');
+                const idEl = document.getElementById('visitorId');
+                const phoneEl = document.getElementById('visitorPhone');
+                const vehicleEl = document.getElementById('visitorVehicle');
+                const hasVehCb = document.getElementById('hasVehicleCheckbox');
+
+                if (nameEl && match.name && field !== 'name') nameEl.value = match.name;
+                if (orgEl && match.org && field !== 'org') orgEl.value = match.org;
+                if (idEl && match.idNumber && field !== 'id') idEl.value = match.idNumber;
+                if (phoneEl && match.phone && field !== 'phone') phoneEl.value = match.phone;
+
+                if (match.vehiclePlate && vehicleEl) {
+                    vehicleEl.value = match.vehiclePlate;
+                    if (hasVehCb && !hasVehCb.checked) {
+                        hasVehCb.checked = true;
+                        handleHasVehicleChange(true);
+                    }
+                }
+
+                showToast('✨ تم استكمال بيانات الزائر السابقة تلقائياً', 'success', 2500);
+            }
+        }
+
         function saveVisitorsRegistry(data) {
+            populateVisitorAutocompleteDatalists();
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             } catch(e) {}
             updateStatsBadges();
+            populateVisitorAutocompleteDatalists();
         }
 
         function updateStatsBadges() {
