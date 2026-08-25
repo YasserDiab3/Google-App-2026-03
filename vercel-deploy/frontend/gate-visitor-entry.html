@@ -2497,27 +2497,27 @@
         }
 
         function updateStatsBadges() {
-            const list = getVisitorsRegistry();
+            const list = Array.isArray(getVisitorsRegistry()) ? getVisitorsRegistry() : [];
             const todayStr = new Date().toISOString().split('T')[0];
-            const todayList = list.filter(v => {
-                const d = String(v.entryDate || '').trim();
-                return d === todayStr || d.startsWith(todayStr);
-            });
 
-            // Active onsite visitors: any visitor who has entered and not exited yet
+            // 1. الزوار المتواجدون حالياً بالداخل
             const active = list.filter(v => {
                 if (!v) return false;
                 const ex = String(v.exitTime || '').trim();
                 const isDeparted = String(v.status || '').indexOf('تم الخروج') !== -1;
-                return (!ex || ex === '0' || ex === '-') && !isDeparted;
+                const isInside = String(v.status || '').indexOf('بالداخل') !== -1;
+                return (!ex || ex === '0' || ex === '-') && !isDeparted && (isInside || !v.status);
             });
 
-            const todayExited = todayList.filter(v => {
+            // 2. جميع من تم تسجيل خروجهم
+            const exited = list.filter(v => {
                 if (!v) return false;
                 const ex = String(v.exitTime || '').trim();
                 const isDeparted = String(v.status || '').indexOf('تم الخروج') !== -1;
                 return isDeparted || (ex && ex !== '0' && ex !== '-');
             });
+
+            const total = Math.max(list.length, active.length + exited.length);
 
             const countBadge = document.getElementById('activeCountBadge');
             if (countBadge) countBadge.textContent = active.length;
@@ -2526,10 +2526,10 @@
             if (statAct) statAct.textContent = active.length;
 
             const statTot = document.getElementById('statTodayTotal');
-            if (statTot) statTot.textContent = Math.max(todayList.length, active.length + todayExited.length);
+            if (statTot) statTot.textContent = total;
 
             const statExt = document.getElementById('statExitedTotal');
-            if (statExt) statExt.textContent = todayExited.length;
+            if (statExt) statExt.textContent = exited.length;
         }
 
         function showToast(msg, type = 'info', duration = 3000) {
