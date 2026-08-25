@@ -3567,10 +3567,10 @@
                         <div style="flex: 0.9; min-width: 150px;">
                             <select id="anlFilterSite" onchange="applyAnlFilters()" style="width: 100%; height: 36px; padding: 0 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #1e293b; background: #f8fafc; cursor: pointer; outline: none;">
                                 <option value="all">🏢 جميع المصانع والمواقع</option>
-                                <option value="ICAPP-1">ICAPP-1</option>
-                                <option value="ICAPP-2">ICAPP-2</option>
-                                <option value="الموقع العام">الموقع العام والمرافق</option>
-                                <option value="WH">المخازن العامة (WH)</option>
+                                <option value="ICAPP-1">🏭 مصنع ICAPP-1</option>
+                                <option value="ICAPP-2">🏭 مصنع ICAPP-2</option>
+                                <option value="المخازن (WH)">📦 المخازن (WH)</option>
+                                <option value="المبنى الإداري">🏢 المبنى الإداري</option>
                             </select>
                         </div>
 
@@ -4063,25 +4063,24 @@
             elOvd.textContent = Number(ovdVal).toLocaleString('ar-EG');
         }
 
-        // 🏆 تحديث مؤشر المقارنة والتميز بين المصانع (Plant Benchmarking)
+        // 🏆 تحديث مؤشر المقارنة والتميز بين المصانع والمواقع المعتمدة (Plant Benchmarking)
         const benchCont = document.getElementById('anlPlantBenchmarkContainer');
         if (benchCont && rawObservationsAnalyticsData.plantBenchmark) {
             const medals = ['🥇', '🥈', '🥉', '🎖️'];
-            const badges = ['الأكثر التزاماً 🌟', 'أداء متميز ⚡', 'قيد التحسين 📈', 'متابعة دورية 📋'];
+            const validBenchList = rawObservationsAnalyticsData.plantBenchmark.filter(p => p.site !== 'الموقع العام' && p.site !== 'عام');
             
             let benchHtml = '';
-            rawObservationsAnalyticsData.plantBenchmark.forEach((p, idx) => {
+            validBenchList.forEach((p, idx) => {
                 const medal = medals[idx] || '🎖️';
-                const badge = badges[idx] || 'معتمد';
-                const rateColor = p.closeRate >= 30 ? '#10b981' : (p.closeRate >= 20 ? '#f59e0b' : '#6366f1');
+                const rateColor = p.closeRate >= 25 ? '#10b981' : (p.closeRate >= 18 ? '#f59e0b' : '#6366f1');
                 
                 benchHtml += `
                     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span style="font-size:1.15rem;">${medal}</span>
                             <div>
-                                <div style="font-weight:800; font-size:0.84rem; color:#1e293b;">${escapeHTML(p.site)}</div>
-                                <div style="font-size:0.7rem; color:#64748b;">${p.total.toLocaleString('ar-EG')} ملاحظة • معالجة: <b>${p.speedDays} يوم</b></div>
+                                <div style="font-weight:800; font-size:0.84rem; color:#1e293b;">🏭 ${escapeHTML(p.site)}</div>
+                                <div style="font-size:0.7rem; color:#64748b;">${p.total.toLocaleString('ar-EG')} ملاحظة • سرعة المعالجة: <b>${p.speedDays} يوم</b></div>
                             </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;">
@@ -4210,18 +4209,19 @@
         const siteCont = document.getElementById('anlSiteBarsContainer');
         if (siteCont && rawObservationsAnalyticsData.bySite) {
             const sites = rawObservationsAnalyticsData.bySite;
-            const siteKeys = Object.keys(sites);
+            const siteKeys = Object.keys(sites).filter(k => k !== 'الموقع العام' && k !== 'عام' && k !== 'null' && k !== '-');
+            const maxS = Math.max(1, ...siteKeys.map(k => sites[k] || 0));
             siteCont.innerHTML = siteKeys.map(k => {
                 const count = sites[k] || 0;
-                const pct = Math.round((count / sum.total) * 100) || 1;
+                const pct = Math.round((count / (sum.total || 1)) * 100) || 1;
                 return `
                     <div>
                         <div style="display:flex; justify-content:space-between; font-size:0.76rem; font-weight:700; color:#334155; margin-bottom:3px;">
-                            <span>🏢 ${escapeHTML(k)}</span>
+                            <span>🏭 ${escapeHTML(k)}</span>
                             <span>${count.toLocaleString('ar-EG')} (${pct}%)</span>
                         </div>
                         <div style="height:7px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
-                            <div style="width:${pct}%; height:100%; background:#3b82f6; border-radius:4px;"></div>
+                            <div style="width:${Math.round((count/maxS)*100)}%; height:100%; background:#3b82f6; border-radius:4px;"></div>
                         </div>
                     </div>
                 `;
