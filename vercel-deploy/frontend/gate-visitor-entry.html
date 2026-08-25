@@ -1173,13 +1173,24 @@
     </div>
 
     <div class="container">
-        <!-- شريط أدوات تبديل الثيم واللغة -->
-        <div class="top-tools-bar" style="margin-bottom: 8px; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+        <!-- شريط أدوات الحالة والتحديث واللغة والثيم -->
+        <div class="top-tools-bar" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <!-- مؤشر حالة الاتصال بالسحابة -->
+            <div id="gateConnectionStatus" style="padding: 4px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; transition: all 0.2s;">
+                <span id="connIndicatorDot" style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 6px #10b981;"></span>
+                <span id="txtConnectionStatus">متصل بالسحابة</span>
+            </div>
+
+            <!-- أزرار الأدوات والتحديث والثيم واللغة -->
             <div class="tools-actions" style="display: flex; gap: 6px; align-items: center;">
-                <button type="button" class="tool-btn" onclick="toggleTheme()" title="تبديل الثيم" style="padding: 4px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer;">
+                <button type="button" id="btnManualRefresh" class="tool-btn" onclick="triggerManualSync()" title="تحديث البيانات فورياً من السحابة" style="padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #2563eb; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <i class="fas fa-rotate" id="refreshIcon"></i>
+                    <span id="txtRefreshBtn">تحديث</span>
+                </button>
+                <button type="button" class="tool-btn" onclick="toggleTheme()" title="تبديل الثيم" style="padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; font-size: 0.8rem;">
                     <i class="fas fa-moon" id="themeIcon"></i>
                 </button>
-                <button type="button" id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()" style="padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <button type="button" id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()" style="padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                     <i class="fas fa-globe"></i>
                     <span id="langBtnText">EN</span>
                 </button>
@@ -1578,6 +1589,10 @@
                 docTitle: 'نظام تسجيل الزائرين',
                 docSubtitle: 'Visitor Registration System',
                 deptName: 'إدارة السلامة والصحة المهنية',
+                txtConnected: 'متصل بالسحابة',
+                txtOffline: 'غير متصل (محلي)',
+                txtRefresh: 'تحديث',
+                txtSyncDone: '🔄 تم تحديث ومزامنة البيانات بنجاح',
                 gateBadge: 'بوابة الدخول الرئيسية (Main Gate Security)',
                 btnQrPosterText: 'بوستر QR (A4)',
                 tabCheckIn: 'تسجيل دخول جديد',
@@ -1644,6 +1659,10 @@
                 docTitle: 'Visitor & Contractor Registration System',
                 docSubtitle: 'Visitor Registration System',
                 deptName: 'Occupational Health & Safety Department',
+                txtConnected: 'Cloud Connected',
+                txtOffline: 'Offline (Local)',
+                txtRefresh: 'Refresh',
+                txtSyncDone: '🔄 Data synchronized successfully',
                 gateBadge: 'Main Gate Security Station',
                 btnQrPosterText: 'QR Poster (A4)',
                 tabCheckIn: 'New Check-In',
@@ -2179,6 +2198,56 @@
             renderVisitPurposeOptions(lang);
             renderGateConfigToUI(currentSystemConfig);
             renderActiveVisitorsList();
+        }
+
+        
+        function updateConnectionStatus() {
+            const isOnline = navigator.onLine;
+            const badge = document.getElementById('gateConnectionStatus');
+            const dot = document.getElementById('connIndicatorDot');
+            const text = document.getElementById('txtConnectionStatus');
+            const t = GATE_I18N[currentLang] || GATE_I18N.ar;
+
+            if (!badge || !dot || !text) return;
+
+            if (isOnline) {
+                badge.style.background = '#ecfdf5';
+                badge.style.color = '#047857';
+                badge.style.borderColor = '#a7f3d0';
+                dot.style.background = '#10b981';
+                dot.style.boxShadow = '0 0 6px #10b981';
+                text.textContent = t.txtConnected || 'متصل بالسحابة';
+            } else {
+                badge.style.background = '#fef2f2';
+                badge.style.color = '#b91c1c';
+                badge.style.borderColor = '#fecaca';
+                dot.style.background = '#ef4444';
+                dot.style.boxShadow = 'none';
+                text.textContent = t.txtOffline || 'غير متصل (محلي)';
+            }
+        }
+
+        async function triggerManualSync() {
+            const icon = document.getElementById('refreshIcon');
+            const t = GATE_I18N[currentLang] || GATE_I18N.ar;
+            if (icon) icon.classList.add('fa-spin');
+
+            try {
+                updateConnectionStatus();
+                await Promise.allSettled([
+                    fetchActiveVisitorsFromCloud(),
+                    loadGateSystemConfig()
+                ]);
+                updateStatsBadges();
+                renderActiveVisitorsList(document.getElementById('visitorSearchInput')?.value || '');
+                showToast(t.txtSyncDone || '🔄 تم تحديث ومزامنة البيانات بنجاح', 'success', 2000);
+            } catch(e) {
+                console.warn('Manual sync err:', e);
+            } finally {
+                if (icon) {
+                    setTimeout(() => icon.classList.remove('fa-spin'), 600);
+                }
+            }
         }
 
         function toggleLanguage() {
@@ -3300,7 +3369,9 @@ function resetCheckInForm() {
             updateStatsBadges();
             fetchActiveVisitorsFromCloud();
             setInterval(fetchActiveVisitorsFromCloud, 15000);
-            window.addEventListener('online', fetchActiveVisitorsFromCloud);
+            window.addEventListener('online', () => { updateConnectionStatus(); fetchActiveVisitorsFromCloud(); });
+            window.addEventListener('offline', updateConnectionStatus);
+            updateConnectionStatus();
         });
 
         // ════════════════════════════════════════════════════
