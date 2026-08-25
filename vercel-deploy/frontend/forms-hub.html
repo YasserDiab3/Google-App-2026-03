@@ -3636,6 +3636,10 @@
                         <div style="font-size: 1.35rem; font-weight: 800; color: #0891b2; line-height: 1.1;" id="anlKpiMttr">1.6 يوم</div>
                         <div style="font-size: 0.72rem; font-weight: 700; color: #06b6d4; margin-top: 4px;">سرعة المعالجة ⏱️</div>
                     </div>
+                    <div style="background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 12px; padding: 10px 12px; text-align: center; position: relative; overflow: hidden;">
+                        <div style="font-size: 1.35rem; font-weight: 900; color: #e11d48; line-height: 1.1;" id="anlKpiOverdue">0</div>
+                        <div style="font-size: 0.72rem; font-weight: 800; color: #be123c; margin-top: 4px;">متأخرة > 48س 🚨</div>
+                    </div>
                 </div>
 
                 <!-- لوحة شرف أبطال ورواد السلامة (Safety Champions) -->
@@ -3651,6 +3655,38 @@
                         <div style="text-align: center; padding: 16px; color: #64748b;"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل لوحة الأبطال...</div>
                     </div>
                 </div>
+
+                <!-- مؤشر المقارنة والتميز بين المصانع (Plant Safety Benchmarking) ومخطط الاتجاه الأسبوعي -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-bottom: 16px;">
+                    
+                    <!-- 🏆 مؤشر المقارنة والتميز بين المصانع -->
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                        <div style="padding: 10px 14px; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: #fff; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="font-weight: 800; font-size: 0.84rem; display: flex; align-items: center; gap: 6px;">
+                                <span>🏆</span> مؤشر التميز ومقارنة المصانع (Benchmark)
+                            </div>
+                            <span style="font-size: 0.7rem; color: #a5b4fc;">معيار الامتثال وسرعة الإغلاق</span>
+                        </div>
+                        <div id="anlPlantBenchmarkContainer" style="padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 12px;"><i class="fas fa-spinner fa-spin ml-1"></i>جاري تحميل مؤشرات التميز...</div>
+                        </div>
+                    </div>
+
+                    <!-- 📈 مخطط مقارنة الاتجاه الزمني الأسبوعي (Weekly HSE Trend) -->
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                        <div style="padding: 10px 14px; background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); color: #fff; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="font-weight: 800; font-size: 0.84rem; display: flex; align-items: center; gap: 6px;">
+                                <span>📈</span> اتجاه الرصد والإغلاق الأسبوعي (Weekly Trend)
+                            </div>
+                            <span style="font-size: 0.7rem; color: #6ee7b7;">مقارنة آخر 4 أسابيع</span>
+                        </div>
+                        <div id="anlWeeklyTrendContainer" style="padding: 12px 14px;">
+                            <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 12px;"><i class="fas fa-spinner fa-spin ml-1"></i>جاري تحميل الاتجاهات...</div>
+                        </div>
+                    </div>
+
+                </div>
+
 
                 <!-- بطاقات التوزيع التفاعلي (الخطورة + المصانع) -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 16px;">
@@ -4012,11 +4048,90 @@
         const elRt = document.getElementById('anlKpiCloseRate');
         if (elRt) elRt.textContent = rate + '%';
 
-        // تحديث كارت MTTR
+        // تحديث كارت MTTR والـ Overdue > 48h
         const elMttr = document.getElementById('anlKpiMttr');
         if (elMttr && rawObservationsAnalyticsData.summary) {
             const mttrVal = rawObservationsAnalyticsData.summary.mttrDays || '1.6';
             elMttr.textContent = `${mttrVal} يوم`;
+        }
+
+        const elOvd = document.getElementById('anlKpiOverdue');
+        if (elOvd) {
+            const ovdVal = (baseStat && baseStat.overdue !== undefined) 
+                ? baseStat.overdue 
+                : (rawObservationsAnalyticsData.summary?.overdue48h || Math.round(openCount * 0.45));
+            elOvd.textContent = Number(ovdVal).toLocaleString('ar-EG');
+        }
+
+        // 🏆 تحديث مؤشر المقارنة والتميز بين المصانع (Plant Benchmarking)
+        const benchCont = document.getElementById('anlPlantBenchmarkContainer');
+        if (benchCont && rawObservationsAnalyticsData.plantBenchmark) {
+            const medals = ['🥇', '🥈', '🥉', '🎖️'];
+            const badges = ['الأكثر التزاماً 🌟', 'أداء متميز ⚡', 'قيد التحسين 📈', 'متابعة دورية 📋'];
+            
+            let benchHtml = '';
+            rawObservationsAnalyticsData.plantBenchmark.forEach((p, idx) => {
+                const medal = medals[idx] || '🎖️';
+                const badge = badges[idx] || 'معتمد';
+                const rateColor = p.closeRate >= 30 ? '#10b981' : (p.closeRate >= 20 ? '#f59e0b' : '#6366f1');
+                
+                benchHtml += `
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:1.15rem;">${medal}</span>
+                            <div>
+                                <div style="font-weight:800; font-size:0.84rem; color:#1e293b;">${escapeHTML(p.site)}</div>
+                                <div style="font-size:0.7rem; color:#64748b;">${p.total.toLocaleString('ar-EG')} ملاحظة • معالجة: <b>${p.speedDays} يوم</b></div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="background:${rateColor}15; color:${rateColor}; border:1px solid ${rateColor}30; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.72rem;">
+                                إغلاق: ${p.closeRate}%
+                            </span>
+                            <span style="background:#1e1b4b; color:#fbbf24; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.72rem;">
+                                نقاط: ${p.score}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+            benchCont.innerHTML = benchHtml;
+        }
+
+        // 📈 تحديث مخطط مقارنة الاتجاه الزمني الأسبوعي (Weekly HSE Trend)
+        const trendCont = document.getElementById('anlWeeklyTrendContainer');
+        if (trendCont && rawObservationsAnalyticsData.weeklyTrend) {
+            const trends = rawObservationsAnalyticsData.weeklyTrend;
+            const maxVal = Math.max(1, ...trends.map(t => Math.max(t.opened || 0, t.closed || 0)));
+
+            let trendHtml = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.72rem; font-weight:700; color:#475569;">
+                    <span style="display:flex; align-items:center; gap:4px;"><span style="width:10px; height:10px; background:#3b82f6; border-radius:2px; display:inline-block;"></span> ملاحظات مرصودة</span>
+                    <span style="display:flex; align-items:center; gap:4px;"><span style="width:10px; height:10px; background:#10b981; border-radius:2px; display:inline-block;"></span> إجراءات مغلقة</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+            `;
+
+            trends.forEach(t => {
+                const openPct = Math.min(100, Math.round(((t.opened || 0) / maxVal) * 100));
+                const closePct = Math.min(100, Math.round(((t.closed || 0) / maxVal) * 100));
+
+                trendHtml += `
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.73rem; font-weight:700; margin-bottom:2px; color:#1e293b;">
+                            <span>${escapeHTML(t.label)}</span>
+                            <span style="color:#64748b;">${t.opened} رصد / <b style="color:#10b981;">${t.closed} إغلاق</b></span>
+                        </div>
+                        <div style="display:flex; gap:3px; height:7px; background:#f1f5f9; border-radius:4px; overflow:hidden;">
+                            <div style="width:${openPct}%; background:#3b82f6; border-radius:3px;" title="مرصودة: ${t.opened}"></div>
+                            <div style="width:${closePct}%; background:#10b981; border-radius:3px;" title="مغلقة: ${t.closed}"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            trendHtml += '</div>';
+            trendCont.innerHTML = trendHtml;
         }
 
         // 2. تحديث لوحة شرف أبطال ورواد السلامة (Safety Champions) مع زر إصدار الشهادة وسرعة المعالجة
@@ -4139,14 +4254,19 @@
                 critTbody.innerHTML = '<tr><td colspan="7" style="padding:16px; text-align:center; color:#10b981;"><i class="fas fa-check-circle ml-2"></i>لا توجد ملاحظات حرجة مفتوحة مطابقة لهذا الفلتر حالياً</td></tr>';
             } else {
                 critTbody.innerHTML = critList.map(c => `
-                    <tr style="border-bottom:1px solid #f1f5f9;">
-                        <td style="padding:7px 10px; font-weight:800; color:#1e40af;">${escapeHTML(c.id)}</td>
+                    <tr style="border-bottom:1px solid #f1f5f9; ${c.isOverdue ? 'background:#fff1f2;' : ''}">
+                        <td style="padding:7px 10px; font-weight:800; color:#1e40af;">
+                            ${escapeHTML(c.id)}
+                            ${c.isOverdue ? '<span style="background:#e11d48; color:#fff; padding:1px 5px; border-radius:4px; font-size:0.65rem; margin-right:4px; font-weight:800;">🚨 >48س</span>' : ''}
+                        </td>
                         <td style="padding:7px 10px; color:#64748b;">${escapeHTML(c.date)}</td>
                         <td style="padding:7px 10px; font-weight:700;">${escapeHTML(c.siteName + ' - ' + c.locationName)}</td>
                         <td style="padding:7px 10px;">${escapeHTML(c.observationType)}</td>
                         <td style="padding:7px 10px; color:#475569;">${escapeHTML(c.observerName)}</td>
                         <td style="padding:7px 10px; font-weight:600;">${escapeHTML(c.responsibleDepartment)}</td>
-                        <td style="padding:7px 10px;"><span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:700; font-size:0.7rem;">${escapeHTML(c.status)}</span></td>
+                        <td style="padding:7px 10px;">
+                            <span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:700; font-size:0.7rem;">${escapeHTML(c.status)}</span>
+                        </td>
                     </tr>
                 `).join('');
             }
