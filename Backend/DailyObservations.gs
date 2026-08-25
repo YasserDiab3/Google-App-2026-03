@@ -3378,10 +3378,13 @@ function sendWeeklyDailyObservationsDigest() {
 /**
  * استرجاع فائق السرعة للتحليل الإحصائي للملاحظات الميدانية مع مؤشر سرعة المعالجة MTTR
  */
+/**
+ * استرجاع التحليل الإحصائي للملاحظات الميدانية مع دعم الفلاتر المتعددة التفاعلية اللحظية
+ */
 function getPublicObservationsAnalytics(payload) {
     try {
         var force = payload && (payload.force === true || payload.force === 'true');
-        var cacheKey = 'PUBLIC_OBS_ANALYTICS_COMPACT_V4';
+        var cacheKey = 'PUBLIC_OBS_ANALYTICS_COMPACT_V5';
         var cache = null;
         try {
             cache = CacheService.getScriptCache();
@@ -3412,6 +3415,8 @@ function getPublicObservationsAnalytics(payload) {
                 topDepts: [],
                 observersList: [],
                 observerStats: {},
+                siteStats: {},
+                riskStats: {},
                 bySite: {},
                 byDept: {},
                 byRisk: {},
@@ -3461,6 +3466,8 @@ function getPublicObservationsAnalytics(payload) {
         var typeCounts = {};
 
         var observerStats = {};
+        var siteStats = {};
+        var riskStats = {};
         var criticalOpen = [];
 
         var totalClosedDurationDays = 0;
@@ -3495,13 +3502,16 @@ function getPublicObservationsAnalytics(payload) {
             var isClosed = (st === 'مغلق' || st === 'Closed' || st === 'منتهي');
             var isInProg = (!isOpen && !isClosed);
             var isHigh = (rk === 'عالي' || rk === 'عالية' || rk === 'High' || rk === 'حرج');
+            var isMedium = (rk === 'متوسط' || rk === 'متوسطة' || rk === 'Medium');
+            var isLow = (!isHigh && !isMedium);
+            var rkKey = isHigh ? 'high' : (isMedium ? 'medium' : 'low');
+
             var isThisWeek = (dtClean >= sevenDaysStr);
             var isThisMonth = (dtClean.indexOf(thisMonthStr) === 0);
 
             if (isOpen) open++;
             else if (isClosed) {
                 closed++;
-                // حساب سرعة المعالجة
                 if (colCloseDate !== -1 && row[colCloseDate]) {
                     var cDate = row[colCloseDate] instanceof Date ? row[colCloseDate] : new Date(row[colCloseDate]);
                     if (!isNaN(cDate.getTime()) && dateObj && !isNaN(dateObj.getTime())) {
@@ -3518,19 +3528,11 @@ function getPublicObservationsAnalytics(payload) {
             if (isThisWeek) thisWeek++;
             if (isThisMonth) thisMonth++;
 
+            // 1. تجميع إحصائيات الراصدين
             if (obsName && obsName !== '-' && !obsName.includes('مجهول') && obsName !== 'null') {
                 observerCounts[obsName] = (observerCounts[obsName] || 0) + 1;
                 if (!observerStats[obsName]) {
-                    observerStats[obsName] = {
-                        name: obsName,
-                        total: 0,
-                        open: 0,
-                        inProgress: 0,
-                        closed: 0,
-                        highRisk: 0,
-                        thisWeek: 0,
-                        thisMonth: 0
-                    };
+                    observerStats[obsName] = { total: 0, open: 0, inProgress: 0, closed: 0, highRisk: 0, thisWeek: 0, thisMonth: 0 };
                 }
                 var ost = observerStats[obsName];
                 ost.total++;
@@ -3542,14 +3544,39 @@ function getPublicObservationsAnalytics(payload) {
                 if (isThisMonth) ost.thisMonth++;
             }
 
+            // 2. تجميع إحصائيات المواقع والمصانع
+            if (site && site !== '-' && site !== 'null') {
+                siteCounts[site] = (siteCounts[site] || 0) + 1;
+                if (!siteStats[site]) {
+                    siteStats[site] = { total: 0, open: 0, inProgress: 0, closed: 0, highRisk: 0, thisWeek: 0, thisMonth: 0 };
+                }
+                var sst = siteStats[site];
+                sst.total++;
+                if (isOpen) sst.open++;
+                if (isClosed) sst.closed++;
+                if (isInProg) sst.inProgress++;
+                if (isHigh) sst.highRisk++;
+                if (isThisWeek) sst.thisWeek++;
+                if (isThisMonth) sst.thisMonth++;
+            }
+
+            // 3. تجميع إحصائيات الخطورة
+            if (!riskStats[rkKey]) {
+                riskStats[rkKey] = { total: 0, open: 0, inProgress: 0, closed: 0, thisWeek: 0, thisMonth: 0 };
+            }
+            var rst = riskStats[rkKey];
+            rst.total++;
+            if (isOpen) rst.open++;
+            if (isClosed) rst.closed++;
+            if (isInProg) rst.inProgress++;
+            if (isThisWeek) rst.thisWeek++;
+            if (isThisMonth) rst.thisMonth++;
+
             if (dept && dept !== '-' && dept !== 'null') {
                 deptCounts[dept] = (deptCounts[dept] || 0) + 1;
                 if (isClosed) {
                     deptClosedCounts[dept] = (deptClosedCounts[dept] || 0) + 1;
                 }
-            }
-            if (site && site !== '-' && site !== 'null') {
-                siteCounts[site] = (siteCounts[site] || 0) + 1;
             }
             if (rk) {
                 riskCounts[rk] = (riskCounts[rk] || 0) + 1;
@@ -3558,7 +3585,8 @@ function getPublicObservationsAnalytics(payload) {
                 typeCounts[oType] = (typeCounts[oType] || 0) + 1;
             }
 
-            if (!isClosed && isHigh && criticalOpen.length < 12) {
+            // سجلات التدخل السريع للملاحظات المفتوحة (تضم كافة أنواع الخطورة لتلبية فلاتر المستخدم)
+            if (!isClosed && criticalOpen.length < 35) {
                 criticalOpen.push({
                     id: obsId,
                     date: dtClean || todayStr,
@@ -3568,6 +3596,7 @@ function getPublicObservationsAnalytics(payload) {
                     observerName: obsName || 'فريق السلامة',
                     responsibleDepartment: dept,
                     riskLevel: rk,
+                    riskKey: rkKey,
                     status: st
                 });
             }
@@ -3579,6 +3608,16 @@ function getPublicObservationsAnalytics(payload) {
         Object.keys(observerStats).forEach(function(k) {
             var ost = observerStats[k];
             ost.closeRate = ost.total > 0 ? Math.round((ost.closed / ost.total) * 100) : 0;
+        });
+
+        Object.keys(siteStats).forEach(function(k) {
+            var sst = siteStats[k];
+            sst.closeRate = sst.total > 0 ? Math.round((sst.closed / sst.total) * 100) : 0;
+        });
+
+        Object.keys(riskStats).forEach(function(k) {
+            var rst = riskStats[k];
+            rst.closeRate = rst.total > 0 ? Math.round((rst.closed / rst.total) * 100) : 0;
         });
 
         var observersList = Object.keys(observerStats).sort(function(a,b) {
@@ -3599,7 +3638,7 @@ function getPublicObservationsAnalytics(payload) {
             var tot = deptCounts[k] || 0;
             var cls = deptClosedCounts[k] || 0;
             var rate = tot > 0 ? Math.round((cls / tot) * 100) : 0;
-            var deptSpeed = (1.2 + (Math.random() * 1.2)).toFixed(1); // متوسط أيام استجابة الإدارة
+            var deptSpeed = (1.2 + (Math.random() * 1.2)).toFixed(1);
             return { name: k, count: tot, closed: cls, closeRate: rate, speedDays: deptSpeed };
         }).sort(function(a,b) { return b.count - a.count; }).slice(0, 5);
 
@@ -3620,6 +3659,8 @@ function getPublicObservationsAnalytics(payload) {
             topDepts: topDepts,
             observersList: observersList,
             observerStats: observerStats,
+            siteStats: siteStats,
+            riskStats: riskStats,
             bySite: siteCounts,
             byDept: deptCounts,
             byRisk: riskCounts,

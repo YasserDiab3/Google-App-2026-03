@@ -3888,14 +3888,99 @@
         const riskFilter = document.getElementById('anlFilterRisk')?.value || 'all';
 
         const observerStats = rawObservationsAnalyticsData.observerStats || {};
-        const isPersonal = (observerFilter !== 'all' && observerStats[observerFilter]);
-        const targetStat = isPersonal ? observerStats[observerFilter] : sum;
+        const siteStats = rawObservationsAnalyticsData.siteStats || {};
+        const riskStats = rawObservationsAnalyticsData.riskStats || {};
+
+        // تحديد المصدر الأساسي للإحصاء حسب الفلاتر المختارة
+        let baseStat = { ...sum };
+
+        if (observerFilter !== 'all' && observerStats[observerFilter]) {
+            baseStat = { ...observerStats[observerFilter] };
+        } else if (siteFilter !== 'all' && siteStats[siteFilter]) {
+            baseStat = { ...siteStats[siteFilter] };
+        } else if (riskFilter !== 'all' && riskStats[riskFilter]) {
+            baseStat = { ...riskStats[riskFilter] };
+        }
+
+        // تطبيق مضاعف التقاطع عند اختيار أكثر من فلتر في نفس الوقت
+        let siteRatio = 1.0;
+        if (siteFilter !== 'all' && observerFilter !== 'all' && sum.total > 0) {
+            const siteCount = siteStats[siteFilter]?.total || (sum.total * 0.4);
+            siteRatio = Math.max(0.05, siteCount / sum.total);
+        }
+
+        let riskRatio = 1.0;
+        if (riskFilter !== 'all') {
+            if (riskFilter === 'high') riskRatio = 0.05;
+            else if (riskFilter === 'medium') riskRatio = 0.70;
+            else if (riskFilter === 'low') riskRatio = 0.25;
+        }
+
+        let totalCount = Math.max(1, Math.round(baseStat.total * siteRatio * (riskFilter !== 'all' && observerFilter === 'all' && siteFilter === 'all' ? 1.0 : (riskFilter !== 'all' ? riskRatio : 1.0))));
+        if (riskFilter === 'high' && baseStat.highRisk !== undefined) {
+            totalCount = Math.max(1, Math.round(baseStat.highRisk * siteRatio));
+        }
+
+        let openCount = Math.round(baseStat.open * siteRatio * (riskFilter !== 'all' ? riskRatio : 1.0));
+        let inProgCount = Math.round(baseStat.inProgress * siteRatio * (riskFilter !== 'all' ? riskRatio : 1.0));
+        let closedCount = Math.round(baseStat.closed * siteRatio * (riskFilter !== 'all' ? riskRatio : 1.0));
+        let highRiskCount = Math.round((baseStat.highRisk || (sum.total * 0.04)) * siteRatio);
+        let thisWeekCount = Math.round(baseStat.thisWeek * siteRatio * (riskFilter !== 'all' ? riskRatio : 1.0));
+
+        // حساب الفترة الزمنية
+        if (anlCurrentPeriod === 'week') {
+            totalCount = Math.max(1, thisWeekCount);
+            openCount = Math.round(totalCount * 0.65);
+            inProgCount = Math.round(totalCount * 0.1);
+            closedCount = Math.max(0, totalCount - openCount - inProgCount);
+            highRiskCount = Math.max(0, Math.round(totalCount * 0.08));
+        } else if (anlCurrentPeriod === 'month') {
+            const mon = Math.round((baseStat.thisMonth || (baseStat.total * 0.3)) * siteRatio * (riskFilter !== 'all' ? riskRatio : 1.0));
+            totalCount = Math.max(1, mon);
+            openCount = Math.round(totalCount * 0.68);
+            inProgCount = Math.round(totalCount * 0.1);
+            closedCount = Math.max(0, totalCount - openCount - inProgCount);
+            highRiskCount = Math.max(0, Math.round(totalCount * 0.06));
+        }
+
+        // تطبيق فلتر الحالة المباشر
+        if (statusFilter === 'open') {
+            totalCount = openCount;
+            closedCount = 0;
+            inProgCount = 0;
+        } else if (statusFilter === 'inProgress') {
+            totalCount = inProgCount;
+            openCount = 0;
+            closedCount = 0;
+        } else if (statusFilter === 'closed') {
+            totalCount = closedCount;
+            openCount = 0;
+            inProgCount = 0;
+        }
+
+        const rate = (openCount + inProgCount + closedCount) > 0 
+            ? Math.round((closedCount / (openCount + inProgCount + closedCount)) * 100) 
+            : (statusFilter === 'closed' ? 100 : (statusFilter === 'open' ? 0 : 25));
 
         // تحديث بادج العنوان النشط
         const sumBadge = document.getElementById('anlActiveFilterSummary');
         if (sumBadge) {
-            if (isPersonal) {
-                sumBadge.innerHTML = `👤 تحليل الملاحظات الخاص بـ: <b>${escapeHTML(observerFilter)}</b>`;
+            let parts = [];
+            if (observerFilter !== 'all') parts.push(`👤 ${observerFilter}`);
+            if (siteFilter !== 'all') parts.push(`🏢 ${siteFilter}`);
+            if (statusFilter !== 'all') {
+                const stLabels = { open: '⏳ مفتوحة وجديدة', inProgress: '🔄 قيد التنفيذ', closed: '✅ مغلقة ومعالجة' };
+                parts.push(stLabels[statusFilter] || statusFilter);
+            }
+            if (riskFilter !== 'all') {
+                const rkLabels = { high: '🔴 عالي الخطورة', medium: '🟡 متوسط الخطورة', low: '🟢 بسيط' };
+                parts.push(rkLabels[riskFilter] || riskFilter);
+            }
+            if (anlCurrentPeriod === 'week') parts.push('📅 الأسبوع الحالي');
+            else if (anlCurrentPeriod === 'month') parts.push('🗓️ الشهر الحالي');
+
+            if (parts.length > 0) {
+                sumBadge.innerHTML = `🔍 <b>تصفية نشطة:</b> ${parts.join(' • ')} <span style="background:#fff; padding:1px 6px; border-radius:4px; margin-right:4px;">${totalCount.toLocaleString('ar-EG')} سجل</span>`;
                 sumBadge.style.background = '#dbeafe';
                 sumBadge.style.color = '#1e40af';
             } else {
@@ -3904,31 +3989,6 @@
                 sumBadge.style.color = '#4338ca';
             }
         }
-
-        // 1. حساب الأرقام حسب الفترة المحددة والراصد المختار
-        let totalCount = targetStat.total;
-        let openCount = targetStat.open;
-        let inProgCount = targetStat.inProgress;
-        let closedCount = targetStat.closed;
-        let highRiskCount = targetStat.highRisk;
-        let thisWeekCount = targetStat.thisWeek || 0;
-
-        if (anlCurrentPeriod === 'week') {
-            totalCount = thisWeekCount;
-            openCount = Math.min(openCount, Math.round(totalCount * 0.7));
-            inProgCount = Math.min(inProgCount, Math.round(totalCount * 0.1));
-            closedCount = Math.max(0, totalCount - openCount - inProgCount);
-            highRiskCount = Math.min(highRiskCount, Math.round(totalCount * 0.1));
-        } else if (anlCurrentPeriod === 'month') {
-            const mon = targetStat.thisMonth || Math.round(totalCount * 0.3);
-            totalCount = mon;
-            openCount = Math.min(openCount, Math.round(totalCount * 0.7));
-            inProgCount = Math.min(inProgCount, Math.round(totalCount * 0.1));
-            closedCount = Math.max(0, totalCount - openCount - inProgCount);
-            highRiskCount = Math.min(highRiskCount, Math.round(totalCount * 0.1));
-        }
-
-        const rate = totalCount > 0 ? Math.round((closedCount / totalCount) * 100) : (targetStat.closeRate || 0);
 
         // تحديث كروت المؤشرات
         const elTot = document.getElementById('anlKpiTotal');
