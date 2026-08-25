@@ -1039,6 +1039,55 @@
             }
         }
 
+
+        /* أنماط الطباعة المعتمدة والاحترافية ISO لتقرير التحليل الإحصائي */
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+            #obsAnalyticsModal, #obsAnalyticsModal * {
+                visibility: visible !important;
+            }
+            #obsAnalyticsModal {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                background: #ffffff !important;
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                z-index: 99999 !important;
+            }
+            #obsAnalyticsModal .live-visitors-dialog {
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: none !important;
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+                overflow: visible !important;
+            }
+            .anl-no-print, .anl-modal-header button, #anlFilterObserver, #anlFilterStatus, #anlFilterSite, #anlFilterRisk, .anl-filter-period-btn {
+                display: none !important;
+            }
+            .anl-print-header {
+                display: block !important;
+            }
+            .anl-print-signatures {
+                display: flex !important;
+            }
+            .anl-kpi-grid {
+                grid-template-columns: repeat(7, 1fr) !important;
+                gap: 6px !important;
+            }
+        }
+        @media screen {
+            .anl-print-header, .anl-print-signatures {
+                display: none !important;
+            }
+        }
+
 </style>
 </head>
 <body>
@@ -1223,7 +1272,7 @@
                             <span class="badge-tag">مسؤولي السلامة</span>
                         </div>
                         <div class="form-card-title">لوحة تحليل ومتابعة الملاحظات الميدانية</div>
-                        <div class="form-card-desc">تحليل الملاحظات المفتوحة والمغلقة، إحصائيات الأسبوع، ولوحة أبطال السلامة</div>
+                        <div class="form-card-desc">تحليل الملاحظات المفتوحة والمغلقة، إحصائيات الأسبوع، ولوحة شرف أبطال السلامة</div>
                     </div>
                 </div>
                 <div class="form-action-btn" style="background: rgba(99, 102, 241, 0.1); color: #4f46e5; border-color: rgba(99, 102, 241, 0.2);">
@@ -3241,6 +3290,25 @@
             <!-- جسم النافذة ومحتوى التحليل -->
             <div style="padding: 16px; background: #f8fafc; overflow-y: auto; flex: 1;">
                 
+                <!-- ترويسة التقرير الرسمية للطباعة المعتمدة ISO -->
+                <div class="anl-print-header" style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="text-align: right;">
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">شركة الإسكندرية للمنتجات البترولية والإضافات (ICAPP)</div>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: #334155;">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة (HSE)</div>
+                            <div style="font-size: 0.82rem; font-weight: 800; color: #4338ca; margin-top: 4px;">📊 تقرير التحليل الإحصائي الميداني للملاحظات ونتائج السلامة</div>
+                        </div>
+                        <div style="text-align: left; font-size: 0.76rem; color: #475569; border-right: 1px solid #cbd5e1; padding-right: 12px;">
+                            <div><b>كود الوثيقة:</b> DOC-HSE-OBS-REP-01</div>
+                            <div><b>تاريخ الإصدار:</b> <span id="anlPrintDate"></span></div>
+                            <div><b>النظام:</b> منظومة السلامة الرقمية الموحدة</div>
+                        </div>
+                    </div>
+                    <div id="anlPrintScopeBadge" style="margin-top: 8px; font-size: 0.8rem; font-weight: 700; background: #f1f5f9; padding: 4px 10px; border-radius: 6px; color: #1e293b;">
+                        نطاق التقرير: كافة مواقع ومصانع الشركة
+                    </div>
+                </div>
+                
                 <!-- شريط التصفية السريعة المتقدم (مسؤول السلامة، الحالة، المصنع، الخطورة، الفترة) -->
                 <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
                     
@@ -3335,12 +3403,12 @@
                     </div>
                 </div>
 
-                <!-- لوحة أبطال ومحفزي السلامة (Safety Champions) -->
+                <!-- لوحة شرف أبطال ورواد السلامة (Safety Champions) -->
                 <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
                     <div style="padding: 10px 16px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 1.1rem;">🏆</span>
-                            <span style="font-weight: 800; font-size: 0.88rem;">لوحة أبطال ومحفزي السلامة (Safety Champions)</span>
+                            <span style="font-weight: 800; font-size: 0.88rem;">لوحة شرف أبطال ورواد السلامة (Safety Champions)</span>
                         </div>
                         <span style="font-size: 0.72rem; color: #94a3b8;">أعلى مسؤولي السلامة والإدارات رصداً ومعالجة</span>
                     </div>
@@ -3403,6 +3471,26 @@
                 </div>
 
             </div>
+
+            
+                <!-- صندوق التوقيعات والاعتماد الرسمي للطباعة ISO -->
+                <div class="anl-print-signatures" style="margin-top: 24px; border-top: 1.5px solid #0f172a; padding-top: 14px; display: flex; justify-content: space-between; text-align: center; font-size: 0.82rem;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 800; color: #1e293b;">إعداد / مسؤول السلامة</div>
+                        <div style="margin-top: 30px; border-bottom: 1px dotted #94a3b8; width: 80%; margin-left: auto; margin-right: auto;"></div>
+                        <div style="color: #64748b; font-size: 0.72rem; margin-top: 4px;">التوقيع والتاريخ</div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 800; color: #1e293b;">مراجعة / مشرف السلامة الميداني</div>
+                        <div style="margin-top: 30px; border-bottom: 1px dotted #94a3b8; width: 80%; margin-left: auto; margin-right: auto;"></div>
+                        <div style="color: #64748b; font-size: 0.72rem; margin-top: 4px;">التوقيع والتاريخ</div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 800; color: #1e293b;">اعتماد / مدير السلامة والصحة المهنية</div>
+                        <div style="margin-top: 30px; border-bottom: 1px dotted #94a3b8; width: 80%; margin-left: auto; margin-right: auto;"></div>
+                        <div style="color: #64748b; font-size: 0.72rem; margin-top: 4px;">الختم والاعتماد الرسمي</div>
+                    </div>
+                </div>
 
             <!-- شريط العودة السفلي للموبايل والشاشات اللمسية -->
             <div style="padding: 10px 16px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; justify-content: space-between; align-items: center;">
@@ -3629,7 +3717,7 @@
         const elRt = document.getElementById('anlKpiCloseRate');
         if (elRt) elRt.textContent = rate + '%';
 
-        // 2. تحديث لوحة أبطال ومحفزي السلامة (Safety Champions)
+        // 2. تحديث لوحة شرف أبطال ورواد السلامة (Safety Champions)
         const champCont = document.getElementById('anlChampionsContainer');
         if (champCont && rawObservationsAnalyticsData.topObservers && rawObservationsAnalyticsData.topDepts) {
             const medals = ['🥇', '🥈', '🥉', '🎖️', '🎖️'];
@@ -3754,6 +3842,25 @@
 
     function printObservationsAnalyticsReport() {
         if (!rawObservationsAnalyticsData) return;
+        
+        // تجهيز بيانات ترويسة الطباعة الرسمية
+        const printDateEl = document.getElementById('anlPrintDate');
+        if (printDateEl) {
+            const now = new Date();
+            printDateEl.textContent = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        const observerFilter = document.getElementById('anlFilterObserver')?.value || 'all';
+        const siteFilter = document.getElementById('anlFilterSite')?.value || 'all';
+        const scopeEl = document.getElementById('anlPrintScopeBadge');
+        if (scopeEl) {
+            let scopeTxt = 'نطاق التقرير: ';
+            scopeTxt += (observerFilter !== 'all') ? `مسؤول السلامة: [${observerFilter}] | ` : 'كافة المفتشين | ';
+            scopeTxt += (siteFilter !== 'all') ? `الموقع: [${siteFilter}] | ` : 'كافة المصانع | ';
+            scopeTxt += (anlCurrentPeriod === 'week') ? 'الفترة: الأسبوع الحالي (7 أيام)' : (anlCurrentPeriod === 'month' ? 'الفترة: الشهر الحالي' : 'الفترة: جميع السجلات التاريخية');
+            scopeEl.textContent = scopeTxt;
+        }
+
         window.print();
     }
     </script>
