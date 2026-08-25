@@ -323,14 +323,18 @@ function cleanupPtwRegistryDatabase_() {
  * ⚡ استرجاع الرادار الحي لتصاريح العمل السارية والميدانية لبوابة النماذج (Live PTW Radar Engine v3)
  * يقرأ ويدمج كافة التصاريح النشطة والمغلقة اليوم من (PTWRegistry و PTW) مع حساب دورة الحياة، أوقات الصلاحية، والتوزيع الجغرافي
  */
+/**
+ * ⚡ استرجاع الرادار الحي لتصاريح العمل السارية والميدانية لبوابة النماذج (Live PTW Radar Engine v4)
+ * يقرأ تصاريح العمل ويدعم التصفية الزمنية اللحظية (اليوم، آخر 7 أيام، الشهر، مخصص)
+ */
 function getPublicLivePTWSummary(payload) {
     try {
         var force = payload && (payload.force === true || payload.force === 'true');
-        var cacheKey = 'PUBLIC_LIVE_PTW_RADAR_V3';
+        var cacheKey = 'PUBLIC_LIVE_PTW_RADAR_V4';
         var cache = null;
         try {
             cache = CacheService.getScriptCache();
-            if (cache && !force) {
+            if (!force && cache) {
                 var cachedStr = cache.get(cacheKey);
                 if (cachedStr) {
                     var parsed = JSON.parse(cachedStr);
@@ -345,15 +349,7 @@ function getPublicLivePTWSummary(payload) {
         if (!ss) return { success: false, message: 'Spreadsheet not found' };
 
         var sheetNames = ['PTWRegistry', 'PTW'];
-        var activeList = [];
-        var siteCounts = { 'ICAPP-1': 0, 'ICAPP-2': 0, 'WH': 0 };
-        var statusCounts = { active: 0, pending: 0, expiringSoon: 0, closedToday: 0 };
-        var hotCount = 0;
-        var heightCount = 0;
-        var confinedCount = 0;
-        var electricalCount = 0;
-        var coldCount = 0;
-        var highRiskCount = 0;
+        var allPermitsList = [];
         var seenIds = {};
 
         var now = new Date();
@@ -413,11 +409,8 @@ function getPublicLivePTWSummary(payload) {
                 var closureVal = colClosure !== -1 ? row[colClosure] : null;
                 var isClosed = (st === 'مغلق' || st === 'منتهي' || st === 'ملغي' || st === 'Closed' || st === 'Cancelled' || st.indexOf('اكتمل') !== -1 || st.indexOf('مكتمل') !== -1 || st.indexOf('آمن') !== -1 || st.indexOf('جبري') !== -1 || st.indexOf('قسري') !== -1 || st.toLowerCase().indexOf('forced') !== -1 || (closureVal && String(closureVal).trim() !== '' && String(closureVal).trim() !== '-'));
                 
-                var isClosedToday = (isClosed && dtClean === todayStr);
                 var isPending = (st === 'جديد' || st === 'معلق' || st === 'قيد الاعتماد' || st === 'Pending' || st === 'Draft');
                 var isActive = (!isClosed && (st === 'مفتوح' || st === 'ساري' || st === 'نشط' || st === 'قيد التنفيذ' || st === 'معتمد' || st === 'Open' || st === 'Active' || st === 'In Progress' || (!isPending && st !== '')));
-
-                if (!isActive && !isPending && !isClosedToday) continue;
 
                 var paperNo = colPaper !== -1 ? String(row[colPaper] || '').trim() : '';
                 var pType = colType !== -1 ? String(row[colType] || 'تصريح عمل عام').trim() : 'تصريح عمل عام';
@@ -445,7 +438,7 @@ function getPublicLivePTWSummary(payload) {
                 var minutesRemaining = 999;
                 var timeRemainingText = 'ساري طوال الوردية';
 
-                if (tTo && tTo.indexOf(':') !== -1) {
+                if (tTo && tTo.indexOf(':') !== -1 && dtClean === todayStr) {
                     var parts = tTo.split(':');
                     var toH = parseInt(parts[0], 10);
                     var toM = parseInt(parts[1], 10) || 0;
@@ -473,48 +466,30 @@ function getPublicLivePTWSummary(payload) {
                 var isElectrical = (pType.indexOf('كهرب') !== -1 || pType.toLowerCase().indexOf('elect') !== -1);
 
                 if (isHot) {
-                    hotCount++;
-                    highRiskCount++;
                     typeKey = 'hot';
                 } else if (isHeight) {
-                    heightCount++;
-                    highRiskCount++;
                     typeKey = 'height';
                 } else if (isConfined) {
-                    confinedCount++;
-                    highRiskCount++;
                     typeKey = 'confined';
                 } else if (isElectrical) {
-                    electricalCount++;
                     typeKey = 'electrical';
                 } else {
-                    coldCount++;
                     typeKey = 'cold';
                 }
 
                 var statusKey = 'active';
                 if (isClosed) {
                     statusKey = 'closed';
-                    statusCounts.closedToday++;
                 } else if (isPending) {
                     statusKey = 'pending';
-                    statusCounts.pending++;
                 } else if (isExpiringSoon) {
                     statusKey = 'expiringSoon';
-                    statusCounts.expiringSoon++;
-                    statusCounts.active++;
-                } else {
-                    statusCounts.active++;
-                }
-
-                if (!isClosed) {
-                    siteCounts[site] = (siteCounts[site] || 0) + 1;
                 }
 
                 seenIds[pId] = true;
 
-                if (activeList.length < 75) {
-                    activeList.push({
+                if (allPermitsList.length < 250) {
+                    allPermitsList.push({
                         id: pId,
                         paperNo: paperNo,
                         type: pType,
@@ -529,6 +504,8 @@ function getPublicLivePTWSummary(payload) {
                         timeTo: tTo,
                         status: st || (isClosed ? 'مغلق' : 'ساري'),
                         statusKey: statusKey,
+                        isActive: isActive,
+                        isClosed: isClosed,
                         isExpiringSoon: isExpiringSoon,
                         minutesRemaining: minutesRemaining,
                         timeRemainingText: timeRemainingText,
@@ -540,20 +517,8 @@ function getPublicLivePTWSummary(payload) {
 
         var result = {
             success: true,
-            summary: {
-                activeTotal: statusCounts.active,
-                pending: statusCounts.pending,
-                expiringSoon: statusCounts.expiringSoon,
-                closedToday: statusCounts.closedToday,
-                hotWork: hotCount,
-                heightWork: heightCount,
-                confinedSpace: confinedCount,
-                electricalWork: electricalCount,
-                coldWork: coldCount,
-                highRisk: highRiskCount
-            },
-            bySite: siteCounts,
-            activeList: activeList,
+            activeList: allPermitsList,
+            todayDate: todayStr,
             timestamp: now.toISOString()
         };
 

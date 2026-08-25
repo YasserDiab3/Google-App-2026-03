@@ -5179,13 +5179,16 @@
 
 
     
+    
     // ======================================================================
-    // Live PTW Radar Engine (استعلام ومتابعة التصاريح الحية في 0 ثانية مع الطباعة ودورة الحياة)
+    // Live PTW Radar Engine (استعلام ومتابعة التصاريح الحية مع الفترات الزمنية وكروت الـ KPI)
     // ======================================================================
     let rawLivePtwData = null;
     let currentPtwStatusFilter = 'all';
+    let currentPtwTimePeriod = 'today';
+    let currentPtwCustomFrom = '';
+    let currentPtwCustomTo = '';
 
-    // استعادة البيانات فوراً من الكاش المحلي لحظة تحميل الصفحة
     (function hydratePtwFromLocalCache() {
         try {
             const cached = localStorage.getItem('HSE_PUBLIC_LIVE_PTW_CACHE');
@@ -5235,53 +5238,157 @@
         }
     }
 
+    function setPtwTimePeriod(period, btn) {
+        currentPtwTimePeriod = period;
+        document.querySelectorAll('.ptw-period-btn').forEach(b => {
+            b.style.background = 'rgba(255,255,255,0.1)';
+            b.style.color = '#cbd5e1';
+            b.style.borderColor = 'rgba(255,255,255,0.25)';
+        });
+        if (btn) {
+            btn.style.background = '#2563eb';
+            btn.style.color = '#fff';
+            btn.style.borderColor = '#3b82f6';
+        }
+        const customWrap = document.getElementById('ptwCustomDateWrap');
+        if (customWrap) customWrap.style.display = 'none';
+
+        updatePtwWidgetsAndModal();
+    }
+
+    function togglePtwCustomDateRange(btn) {
+        currentPtwTimePeriod = 'custom';
+        document.querySelectorAll('.ptw-period-btn').forEach(b => {
+            b.style.background = 'rgba(255,255,255,0.1)';
+            b.style.color = '#cbd5e1';
+            b.style.borderColor = 'rgba(255,255,255,0.25)';
+        });
+        if (btn) {
+            btn.style.background = '#2563eb';
+            btn.style.color = '#fff';
+            btn.style.borderColor = '#3b82f6';
+        }
+        const customWrap = document.getElementById('ptwCustomDateWrap');
+        if (customWrap) {
+            customWrap.style.display = 'flex';
+            if (!document.getElementById('ptwDateFrom').value) {
+                const now = new Date();
+                const past = new Date(now.getTime() - (7 * 86400000));
+                document.getElementById('ptwDateTo').value = now.toISOString().split('T')[0];
+                document.getElementById('ptwDateFrom').value = past.toISOString().split('T')[0];
+            }
+        }
+        applyPtwCustomDates();
+    }
+
+    function applyPtwCustomDates() {
+        currentPtwCustomFrom = document.getElementById('ptwDateFrom')?.value || '';
+        currentPtwCustomTo = document.getElementById('ptwDateTo')?.value || '';
+        updatePtwWidgetsAndModal();
+    }
+
+    function getFilteredPermitsByTimePeriod(list) {
+        if (!list || !Array.isArray(list)) return [];
+        const todayStr = rawLivePtwData?.todayDate || new Date().toISOString().split('T')[0];
+
+        if (currentPtwTimePeriod === 'today') {
+            return list.filter(p => p.date === todayStr || p.isActive);
+        } else if (currentPtwTimePeriod === '7days') {
+            const cutoff = new Date(Date.now() - (7 * 86400000)).toISOString().split('T')[0];
+            return list.filter(p => p.date >= cutoff || p.isActive);
+        } else if (currentPtwTimePeriod === 'month') {
+            const currentMonthPrefix = todayStr.substring(0, 7); // yyyy-MM
+            return list.filter(p => (p.date && p.date.startsWith(currentMonthPrefix)) || p.isActive);
+        } else if (currentPtwTimePeriod === 'custom') {
+            return list.filter(p => {
+                if (currentPtwCustomFrom && p.date < currentPtwCustomFrom) return false;
+                if (currentPtwCustomTo && p.date > currentPtwCustomTo) return false;
+                return true;
+            });
+        }
+        return list;
+    }
+
     function updatePtwWidgetsAndModal() {
-        if (!rawLivePtwData) return;
-        const sm = rawLivePtwData.summary || { activeTotal: 0, hotWork: 0, heightWork: 0, confinedSpace: 0, pending: 0, expiringSoon: 0, closedToday: 0 };
-        const sites = rawLivePtwData.bySite || { 'ICAPP-1': 0, 'ICAPP-2': 0, 'WH': 0 };
+        if (!rawLivePtwData || !rawLivePtwData.activeList) return;
 
-        // 1. تحديث العداد في الشريط الرئيسي فوراً
+        const allList = rawLivePtwData.activeList;
+        const periodList = getFilteredPermitsByTimePeriod(allList);
+
+        // حساب المؤشرات اللحظية للفترة المحددة
+        let totalActive = 0;
+        let site1Count = 0;
+        let site2Count = 0;
+        let siteWHCount = 0;
+        let hotCount = 0;
+        let heightCount = 0;
+        let confinedCount = 0;
+        let coldCount = 0;
+        let pendingCount = 0;
+        let expiringCount = 0;
+        let closedCount = 0;
+
+        periodList.forEach(p => {
+            if (p.isActive) totalActive++;
+            if (p.statusKey === 'closed') closedCount++;
+            if (p.statusKey === 'pending') pendingCount++;
+            if (p.statusKey === 'expiringSoon') expiringCount++;
+
+            if (p.site === 'ICAPP-1' && p.isActive) site1Count++;
+            else if (p.site === 'ICAPP-2' && p.isActive) site2Count++;
+            else if (p.site === 'WH' && p.isActive) siteWHCount++;
+
+            if (p.typeKey === 'hot' && p.isActive) hotCount++;
+            else if (p.typeKey === 'height' && p.isActive) heightCount++;
+            else if ((p.typeKey === 'confined' || p.typeKey === 'electrical') && p.isActive) confinedCount++;
+            else if (p.typeKey === 'cold' && p.isActive) coldCount++;
+        });
+
+        // 1. تحديث العداد في الشريط الرئيسي
         const cntEl = document.getElementById('livePtwCountNum');
-        if (cntEl) cntEl.textContent = (sm.activeTotal || 0).toLocaleString('ar-EG');
+        if (cntEl) cntEl.textContent = totalActive.toLocaleString('ar-EG');
 
-        // 2. تحديث كروت المؤشرات بالنافذة
+        // 2. تحديث كروت الـ KPI المخصصة للأرقام الإجمالية والمصانع
         const kTot = document.getElementById('ptwKpiTotal');
-        if (kTot) kTot.textContent = (sm.activeTotal || 0).toLocaleString('ar-EG');
+        if (kTot) kTot.textContent = totalActive.toLocaleString('ar-EG');
 
-        const kHot = document.getElementById('ptwKpiHot');
-        if (kHot) kHot.textContent = (sm.hotWork || 0).toLocaleString('ar-EG');
-
-        const kHgt = document.getElementById('ptwKpiHeight');
-        if (kHgt) kHgt.textContent = (sm.heightWork || 0).toLocaleString('ar-EG');
-
-        const kCnf = document.getElementById('ptwKpiConfined');
-        if (kCnf) kCnf.textContent = ((Number(sm.confinedSpace || 0) + Number(sm.electricalWork || 0)) || 0).toLocaleString('ar-EG');
-
-        // 3. تحديث أرقام تبويبات دورة الحياة
-        const tAll = document.getElementById('ptwTabCountAll');
-        if (tAll) tAll.textContent = (rawLivePtwData.activeList ? rawLivePtwData.activeList.length : 0);
-
-        const tAct = document.getElementById('ptwTabCountActive');
-        if (tAct) tAct.textContent = sm.activeTotal || '0';
-
-        const tExp = document.getElementById('ptwTabCountExpiring');
-        if (tExp) tExp.textContent = sm.expiringSoon || '0';
-
-        const tPnd = document.getElementById('ptwTabCountPending');
-        if (tPnd) tPnd.textContent = sm.pending || '0';
-
-        const tCls = document.getElementById('ptwTabCountClosed');
-        if (tCls) tCls.textContent = sm.closedToday || '0';
-
-        // 4. تحديث أرقام التوزيع على المصانع
         const s1 = document.getElementById('ptwSiteCount1');
-        if (s1) s1.textContent = (sites['ICAPP-1'] || 0).toLocaleString('ar-EG');
+        if (s1) s1.textContent = site1Count.toLocaleString('ar-EG');
 
         const s2 = document.getElementById('ptwSiteCount2');
-        if (s2) s2.textContent = (sites['ICAPP-2'] || 0).toLocaleString('ar-EG');
+        if (s2) s2.textContent = site2Count.toLocaleString('ar-EG');
 
         const sWH = document.getElementById('ptwSiteCountWH');
-        if (sWH) sWH.textContent = (sites['WH'] || 0).toLocaleString('ar-EG');
+        if (sWH) sWH.textContent = siteWHCount.toLocaleString('ar-EG');
+
+        // 3. تحديث كروت الخطورة
+        const kHot = document.getElementById('ptwKpiHot');
+        if (kHot) kHot.textContent = hotCount.toLocaleString('ar-EG');
+
+        const kHgt = document.getElementById('ptwKpiHeight');
+        if (kHgt) kHgt.textContent = heightCount.toLocaleString('ar-EG');
+
+        const kCnf = document.getElementById('ptwKpiConfined');
+        if (kCnf) kCnf.textContent = confinedCount.toLocaleString('ar-EG');
+
+        const kCld = document.getElementById('ptwKpiCold');
+        if (kCld) kCld.textContent = coldCount.toLocaleString('ar-EG');
+
+        // 4. تحديث أرقام تبويبات دورة الحياة
+        const tAll = document.getElementById('ptwTabCountAll');
+        if (tAll) tAll.textContent = periodList.length.toLocaleString('ar-EG');
+
+        const tAct = document.getElementById('ptwTabCountActive');
+        if (tAct) tAct.textContent = totalActive.toLocaleString('ar-EG');
+
+        const tExp = document.getElementById('ptwTabCountExpiring');
+        if (tExp) tExp.textContent = expiringCount.toLocaleString('ar-EG');
+
+        const tPnd = document.getElementById('ptwTabCountPending');
+        if (tPnd) tPnd.textContent = pendingCount.toLocaleString('ar-EG');
+
+        const tCls = document.getElementById('ptwTabCountClosed');
+        if (tCls) tCls.textContent = closedCount.toLocaleString('ar-EG');
 
         filterLivePtwList();
     }
@@ -5301,7 +5408,6 @@
         filterLivePtwList();
     }
 
-    
     function setPtwTypeQuickFilter(typeKey) {
         const typeSel = document.getElementById('ptwTypeFilter');
         if (typeSel) {
@@ -5359,7 +5465,7 @@
         const siteFilter = document.getElementById('ptwSiteFilter')?.value || 'all';
         const typeFilter = document.getElementById('ptwTypeFilter')?.value || 'all';
 
-        let list = [...rawLivePtwData.activeList];
+        let list = getFilteredPermitsByTimePeriod(rawLivePtwData.activeList);
 
         if (currentPtwStatusFilter !== 'all') {
             list = list.filter(p => p.statusKey === currentPtwStatusFilter);
@@ -5385,14 +5491,14 @@
             );
         }
 
-        if (countTxt) countTxt.textContent = `${list.length} تصريح مطابق للبحث`;
+        if (countTxt) countTxt.textContent = `${list.length.toLocaleString('ar-EG')} تصريح مطابق للبحث والفترة`;
 
         if (list.length === 0) {
             cont.innerHTML = `
                 <div style="text-align:center; padding:32px 16px; color:#64748b; background:#fff; border-radius:12px; border:1px dashed #cbd5e1;">
                     <div style="font-size:1.8rem; margin-bottom:6px;">📋</div>
-                    <div style="font-weight:700; font-size:0.88rem; color:#334155;">لا توجد تصاريح عمل مطابقة لمعايير البحث حالياً</div>
-                    <div style="font-size:0.75rem; color:#94a3b8; margin-top:4px;">يمكنك تعديل الفلتر أو البحث بالرقم والموقع</div>
+                    <div style="font-weight:700; font-size:0.88rem; color:#334155;">لا توجد تصاريح عمل مطابقة لمعايير البحث والفترة المحددة</div>
+                    <div style="font-size:0.75rem; color:#94a3b8; margin-top:4px;">يمكنك تغيير الفترة الزمنية أو تعديل الفلتر</div>
                 </div>
             `;
             return;
@@ -5411,14 +5517,11 @@
             const conf = typeColors[p.typeKey] || typeColors.general;
             const siteBadge = p.site === 'WH' ? '📦 المخازن (WH)' : `🏭 ${escapeHTML(p.site)}`;
 
-            // شارة وتنبيه عداد الصلاحية اللحظي
             let timeBadge = '';
             if (p.statusKey === 'closed' || String(p.status || '').indexOf('اكتمل') !== -1 || String(p.status || '').indexOf('مكتمل') !== -1 || String(p.status || '').indexOf('جبري') !== -1 || String(p.status || '').indexOf('قسري') !== -1) {
                 timeBadge = `<span style="background:#f1f5f9; color:#166534; border:1px solid #cbd5e1; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.7rem;">🏁 مكتمل ومغلق بشكل آمن</span>`;
             } else if (p.isExpiringSoon) {
                 timeBadge = `<span style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.7rem; display:inline-flex; align-items:center; gap:4px; animation: headerGlow 1.5s infinite;"><i class="fas fa-hourglass-half"></i> ⚠️ ${escapeHTML(p.timeRemainingText)}</span>`;
-            } else if (p.statusKey === 'closed') {
-                timeBadge = `<span style="background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.7rem;">🏁 تم الإغلاق</span>`;
             } else {
                 timeBadge = `<span style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.7rem; display:inline-flex; align-items:center; gap:4px;"><i class="fas fa-clock text-emerald-600"></i> ${escapeHTML(p.timeRemainingText || 'ساري')}</span>`;
             }
@@ -5452,6 +5555,7 @@
                             <i class="fas fa-hard-hat text-amber-600"></i> الجهة: <b>${escapeHTML(p.party)}</b> • المشرف: <b>${escapeHTML(p.supervisor)}</b>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="color:#475569; font-weight:700;"><i class="fas fa-calendar-alt text-slate-500 ml-1"></i> ${escapeHTML(p.date)}</span>
                             <span style="color:#475569; font-weight:700;"><i class="fas fa-clock text-blue-600"></i> ${formatPtwTimeDisplay(p.timeFrom)} - ${formatPtwTimeDisplay(p.timeTo)}</span>
                             <span style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:1px 6px; border-radius:4px; font-weight:800; font-size:0.68rem;">🟢 ${escapeHTML(p.status)}</span>
                         </div>
@@ -5461,8 +5565,6 @@
         }).join('');
     }
 
-    // 🖨️ وظيفة طباعة كشف الوردية والطوارئ
-    
     function formatPtwTimeDisplay(timeStr) {
         if (!timeStr) return '--:--';
         if (typeof timeStr !== 'string') timeStr = String(timeStr);
@@ -5480,28 +5582,36 @@
     function printPtwShiftLog() {
         if (!rawLivePtwData || !rawLivePtwData.activeList) return;
 
+        const periodList = getFilteredPermitsByTimePeriod(rawLivePtwData.activeList);
+
         const dateEl = document.getElementById('ptwPrintLogDate');
         if (dateEl) {
             const now = new Date();
             dateEl.textContent = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         }
 
-        const sm = rawLivePtwData.summary || {};
-        document.getElementById('ptwPrintTotal').textContent = (sm.activeTotal || 0);
-        document.getElementById('ptwPrintHot').textContent = (sm.hotWork || 0);
-        document.getElementById('ptwPrintHeight').textContent = (sm.heightWork || 0);
-        document.getElementById('ptwPrintConfined').textContent = (sm.confinedSpace || 0);
+        let totActive = 0, hot = 0, hgt = 0, cnf = 0;
+        periodList.forEach(p => {
+            if (p.isActive) totActive++;
+            if (p.typeKey === 'hot' && p.isActive) hot++;
+            if (p.typeKey === 'height' && p.isActive) hgt++;
+            if ((p.typeKey === 'confined' || p.typeKey === 'electrical') && p.isActive) cnf++;
+        });
+
+        document.getElementById('ptwPrintTotal').textContent = totActive;
+        document.getElementById('ptwPrintHot').textContent = hot;
+        document.getElementById('ptwPrintHeight').textContent = hgt;
+        document.getElementById('ptwPrintConfined').textContent = cnf;
 
         const tbody = document.getElementById('ptwPrintLogTbody');
         if (tbody) {
-            const list = rawLivePtwData.activeList;
-            if (list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="padding:16px; text-align:center; color:#10b981;">لا توجد تصاريح عمل سارية مسجلة حالياً</td></tr>';
+            if (periodList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="padding:16px; text-align:center; color:#10b981;">لا توجد تصاريح عمل مسجلة في هذه الفترة</td></tr>';
             } else {
-                tbody.innerHTML = list.map((p, idx) => `
+                tbody.innerHTML = periodList.map((p, idx) => `
                     <tr style="border-bottom:1px solid #cbd5e1; ${idx % 2 === 1 ? 'background:#f8fafc;' : ''}">
                         <td style="padding:6px; font-weight:800; color:#1e40af; border:1px solid #cbd5e1;">${escapeHTML(p.id)}</td>
-                        <td style="padding:6px; font-weight:700; border:1px solid #cbd5e1;">${escapeHTML(p.site)} - ${escapeHTML(p.location)}</td>
+                        <td style="padding:6px; font-weight:700; border:1px solid #cbd5e1;">${escapeHTML(p.location)}</td>
                         <td style="padding:6px; border:1px solid #cbd5e1;">${escapeHTML(p.type)}</td>
                         <td style="padding:6px; border:1px solid #cbd5e1;">${escapeHTML(p.party)}</td>
                         <td style="padding:6px; border:1px solid #cbd5e1;">${escapeHTML(p.supervisor)}</td>
@@ -5661,6 +5771,30 @@
                     <button type="button" onclick="closeLivePtwModal()" title="إغلاق" style="background: rgba(239,68,68,0.2); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); width: 32px; height: 32px; border-radius: 8px; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                         <i class="fas fa-times"></i>
                     </button>
+                </div>
+            </div>
+
+                        <!-- ⏱️ شريط تحديد الفترة الزمنية الذكية (Time Range Selector) -->
+            <div style="background: #1e1b4b; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 7px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 5px; overflow-x: auto;">
+                    <span style="font-weight: 800; font-size: 0.72rem; color: #fbbf24; white-space: nowrap;"><i class="fas fa-calendar-day ml-1"></i> الفترة:</span>
+                    <button type="button" class="ptw-period-btn active" onclick="setPtwTimePeriod('today', this)" style="padding: 3px 9px; border-radius: 14px; font-size: 0.72rem; font-weight: 800; border: 1.5px solid #3b82f6; background: #2563eb; color: #fff; cursor: pointer; white-space: nowrap;">
+                        وردية اليوم
+                    </button>
+                    <button type="button" class="ptw-period-btn" onclick="setPtwTimePeriod('7days', this)" style="padding: 3px 9px; border-radius: 14px; font-size: 0.72rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.1); color: #cbd5e1; cursor: pointer; white-space: nowrap;">
+                        آخر 7 أيام
+                    </button>
+                    <button type="button" class="ptw-period-btn" onclick="setPtwTimePeriod('month', this)" style="padding: 3px 9px; border-radius: 14px; font-size: 0.72rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.1); color: #cbd5e1; cursor: pointer; white-space: nowrap;">
+                        الشهر الحالي
+                    </button>
+                    <button type="button" class="ptw-period-btn" onclick="togglePtwCustomDateRange(this)" style="padding: 3px 9px; border-radius: 14px; font-size: 0.72rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.1); color: #cbd5e1; cursor: pointer; white-space: nowrap;">
+                        📅 مخصص...
+                    </button>
+                </div>
+                <div id="ptwCustomDateWrap" style="display: none; align-items: center; gap: 6px;">
+                    <input type="date" id="ptwDateFrom" onchange="applyPtwCustomDates()" style="padding: 2px 6px; border-radius: 6px; border: 1px solid #94a3b8; font-size: 0.7rem; background: #fff; color: #000;">
+                    <span style="color: #cbd5e1; font-size: 0.7rem;">إلى</span>
+                    <input type="date" id="ptwDateTo" onchange="applyPtwCustomDates()" style="padding: 2px 6px; border-radius: 6px; border: 1px solid #94a3b8; font-size: 0.7rem; background: #fff; color: #000;">
                 </div>
             </div>
 
