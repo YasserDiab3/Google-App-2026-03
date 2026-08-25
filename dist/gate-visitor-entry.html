@@ -2499,11 +2499,25 @@
         function updateStatsBadges() {
             const list = getVisitorsRegistry();
             const todayStr = new Date().toISOString().split('T')[0];
-            const todayList = list.filter(v => v.entryDate === todayStr);
+            const todayList = list.filter(v => {
+                const d = String(v.entryDate || '').trim();
+                return d === todayStr || d.startsWith(todayStr);
+            });
 
             // Active onsite visitors: any visitor who has entered and not exited yet
-            const active = list.filter(v => !v.exitTime);
-            const exited = todayList.filter(v => !!v.exitTime);
+            const active = list.filter(v => {
+                if (!v) return false;
+                const ex = String(v.exitTime || '').trim();
+                const isDeparted = String(v.status || '').indexOf('تم الخروج') !== -1;
+                return (!ex || ex === '0' || ex === '-') && !isDeparted;
+            });
+
+            const todayExited = todayList.filter(v => {
+                if (!v) return false;
+                const ex = String(v.exitTime || '').trim();
+                const isDeparted = String(v.status || '').indexOf('تم الخروج') !== -1;
+                return isDeparted || (ex && ex !== '0' && ex !== '-');
+            });
 
             const countBadge = document.getElementById('activeCountBadge');
             if (countBadge) countBadge.textContent = active.length;
@@ -2512,10 +2526,10 @@
             if (statAct) statAct.textContent = active.length;
 
             const statTot = document.getElementById('statTodayTotal');
-            if (statTot) statTot.textContent = Math.max(todayList.length, active.length);
+            if (statTot) statTot.textContent = Math.max(todayList.length, active.length + todayExited.length);
 
             const statExt = document.getElementById('statExitedTotal');
-            if (statExt) statExt.textContent = exited.length;
+            if (statExt) statExt.textContent = todayExited.length;
         }
 
         function showToast(msg, type = 'info', duration = 3000) {
@@ -2792,27 +2806,18 @@ function resetCheckInForm() {
                     const res = await fetch(targetUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: 'getActiveGateVisitors', data: {} })
+                        body: JSON.stringify({ action: 'getAllGateVisitors', data: {} })
                     });
                     json = await res.json();
                 } catch(pErr) {
-                    const res = await fetch(targetUrl + '?action=getActiveGateVisitors', { method: 'GET', mode: 'cors' });
+                    const res = await fetch(targetUrl + '?action=getAllGateVisitors', { method: 'GET', mode: 'cors' });
                     json = await res.json();
                 }
 
-                if (json && json.success && Array.isArray(json.activeVisitors)) {
-                    const currentList = getVisitorsRegistry();
-                    const map = new Map();
-                    currentList.forEach(v => { if (v && v.id) map.set(v.id, v); });
-
+                const cloudList = (json && json.success) ? (json.visitors || json.activeVisitors || []) : null;
+                if (Array.isArray(cloudList)) {
                     const now = Date.now();
-                    json.activeVisitors.forEach(v => {
-                        if (!v || !v.id) return;
-                        const existing = map.get(v.id);
-                        if (existing && existing.exitTime) {
-                            // Keep locally checked-out status
-                            return;
-                        }
+                    const listWithTs = cloudList.map(v => {
                         let ts = v.entryTimestamp;
                         if (!ts || isNaN(ts)) {
                             try {
@@ -2823,16 +2828,13 @@ function resetCheckInForm() {
                                 }
                             } catch(e) {}
                         }
-                        if (!ts || isNaN(ts)) ts = now;
-
-                        map.set(v.id, {
+                        return {
                             ...v,
-                            entryTimestamp: ts
-                        });
+                            entryTimestamp: ts || now
+                        };
                     });
 
-                    const merged = Array.from(map.values()).sort((a,b) => (b.entryTimestamp || 0) - (a.entryTimestamp || 0));
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(listWithTs));
                     updateStatsBadges();
                     populateVisitorAutocompleteDatalists();
                     renderActiveVisitorsList(document.getElementById('visitorSearchInput')?.value || '');
