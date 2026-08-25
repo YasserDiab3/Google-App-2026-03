@@ -171,6 +171,317 @@
         }
 
         
+                
+        /* ════════════════════════════════════════════════════
+           ترويسة ISO المعتمدة ثلاثية الأعمدة للبوابة الرئيسية
+        ════════════════════════════════════════════════════ */
+        .top-tools-bar {
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .iso-header-table {
+            position: sticky;
+            top: 6px;
+            z-index: 100;
+            display: grid;
+            grid-template-columns: minmax(130px, 150px) 1fr minmax(150px, 185px);
+            width: 100%;
+            min-width: 0;
+            background: #ffffff;
+            border: 1.5px solid #c7d2e5;
+            border-top: 4px solid #1e3a8a;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15,23,42,0.04);
+            margin-bottom: 16px;
+        }
+
+        [data-theme="dark"] .iso-header-table {
+            background: #131d33;
+            border-color: #334155;
+            border-top-color: #4338ca;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+        }
+
+        /* 1. عمود الشعار */
+        .iso-col-brand {
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            border-inline-end: 1.5px solid #e2e8f0;
+            background: linear-gradient(160deg, #f8fafc 0%, #eef2ff 100%);
+            min-width: 130px;
+            max-width: 150px;
+        }
+
+        [data-theme="dark"] .iso-col-brand {
+            background: linear-gradient(160deg, #1e293b 0%, #1a1f3a 100%);
+            border-inline-end-color: #334155;
+        }
+
+        .iso-logo-wrap {
+            width: 76px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 2px 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        [data-theme="dark"] .iso-logo-wrap {
+            background: #0f172a;
+            border-color: #334155;
+        }
+
+        .iso-logo-img {
+            max-height: 36px;
+            max-width: 68px;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .iso-dept-name {
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: #1e3a8a;
+            text-align: center;
+            line-height: 1.2;
+            white-space: normal;
+            max-width: 100%;
+        }
+
+        [data-theme="dark"] .iso-dept-name { color: #818cf8; }
+
+        /* 2. عمود العنوان */
+        .iso-col-title {
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: #ffffff;
+            gap: 2px;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        [data-theme="dark"] .iso-col-title { background: #131d33; }
+
+        .iso-doc-title {
+            font-size: clamp(0.95rem, 2.4vw, 1.25rem);
+            font-weight: 900;
+            color: #1e1b4b;
+            margin: 0;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+            width: 100%;
+            letter-spacing: -0.01em;
+        }
+
+        [data-theme="dark"] .iso-doc-title { color: #e0e7ff; }
+
+        .iso-doc-subtitle {
+            font-size: clamp(0.6rem, 1.4vw, 0.74rem);
+            font-weight: 700;
+            color: #4338ca;
+            margin-top: 2px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        [data-theme="dark"] .iso-doc-subtitle { color: #a5b4fc; }
+
+        /* 3. عمود البيانات الوصفية */
+        .iso-col-meta {
+            padding: 8px 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            border-inline-start: 1.5px solid #e2e8f0;
+            background: #f8fafc;
+            min-width: 150px;
+            max-width: 185px;
+        }
+
+        [data-theme="dark"] .iso-col-meta {
+            background: #1e293b;
+            border-inline-start-color: #334155;
+        }
+
+        .iso-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+            width: 100%;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 2px;
+        }
+        .iso-meta-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+        [data-theme="dark"] .iso-meta-row { border-bottom-color: #334155; }
+
+        .iso-meta-key {
+            font-weight: 700;
+            color: #64748b;
+            font-size: 0.68rem;
+            white-space: nowrap;
+        }
+
+        .iso-meta-val {
+            font-weight: 800;
+            color: #1e1b4b;
+            font-family: monospace, inherit;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        [data-theme="dark"] .iso-meta-key { color: #94a3b8; }
+        [data-theme="dark"] .iso-meta-val {
+            background: #0f172a;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+
+        /* ═══ ريسبونسف الموبايل للهيدر المعتمد ═══ */
+        @media (max-width: 640px) {
+            .iso-header-table {
+                grid-template-columns: minmax(80px, 95px) 1fr minmax(105px, 125px);
+                border-radius: 10px;
+                margin-bottom: 12px;
+                border-top-width: 3px;
+            }
+            .iso-col-brand {
+                padding: 4px 6px;
+                min-width: 80px;
+                max-width: 95px;
+            }
+            .iso-logo-wrap {
+                width: 52px;
+                height: 32px;
+                padding: 1px 3px;
+                border-radius: 6px;
+            }
+            .iso-logo-img {
+                max-height: 28px;
+                max-width: 48px;
+            }
+            .iso-dept-name {
+                font-size: 0.58rem;
+            }
+            .iso-col-title {
+                padding: 4px 6px;
+            }
+            .iso-doc-title {
+                font-size: 0.88rem;
+            }
+            .iso-doc-subtitle {
+                font-size: 0.58rem;
+            }
+            .iso-col-meta {
+                padding: 4px 8px;
+                min-width: 105px;
+                max-width: 125px;
+            }
+            .iso-meta-key {
+                font-size: 0.58rem;
+            }
+            .iso-meta-val {
+                font-size: 0.58rem;
+                padding: 1px 4px;
+            }
+            .top-tools-bar {
+                margin-bottom: 6px;
+            }
+        }
+
+        .hero-banner {
+            text-align: left;
+        }
+
+        html[dir="ltr"] .hero-banner::before {
+            right: auto;
+            left: -20%;
+        }
+
+        html[dir="ltr"] .hero-title {
+            flex-direction: row;
+            text-align: left;
+        }
+
+        html[dir="ltr"] .hero-desc {
+            text-align: left;
+            direction: ltr;
+        }
+
+        html[dir="ltr"] .search-box input {
+            padding: 12px 16px 12px 42px;
+            text-align: left;
+        }
+
+        html[dir="ltr"] .search-box i {
+            right: auto;
+            left: 16px;
+        }
+
+        html[dir="ltr"] .section-header {
+            flex-direction: row;
+        }
+
+        html[dir="ltr"] .form-card {
+            flex-direction: row;
+        }
+
+        html[dir="ltr"] .form-card::after {
+            left: 0;
+            right: auto;
+            border-radius: 4px 0 0 4px;
+        }
+
+        html[dir="ltr"] .form-card-left {
+            flex-direction: row;
+        }
+
+        html[dir="ltr"] .form-text {
+            text-align: left;
+        }
+
+        html[dir="ltr"] .form-badges {
+            justify-content: flex-start;
+        }
+
+        html[dir="ltr"] .hub-footer {
+            text-align: center;
+        }
+
+        
                 /* ══════════════════════════════════════════════════════════
            Master Executive Responsive Header & Page Layout
            ══════════════════════════════════════════════════════════ */
@@ -1557,70 +1868,67 @@
 </head>
 <body>
 
-    <!-- Header المؤسسي الاحترافي الأنيق المعتمد (Responsive Executive Header) -->
-    <header class="hub-header">
-        <div class="header-container">
-            
-            <!-- السطر الأول: الشعار + العنوان الرئيسي + شريط الأدوات -->
-            <div class="header-top-row">
-                <div class="brand-section">
-                    <div class="logo-wrapper">
-                        <img src="icons/icapp-logo.png" alt="ICAPP Logo" class="brand-logo" onerror="this.src='icons/icapp-logo.png'">
-                    </div>
-                    <div class="brand-info">
-                        <div class="header-brand-title">
-                            <span id="txtHubMainTitle">بوابة النماذج الميدانية</span>
-                            <span class="header-tag-pill">ICAPP HSE</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="header-actions">
-                    <!-- زر التحديث السحابي الفوري -->
-                    <button type="button" id="hubRefreshBtn" class="header-action-btn" title="تحديث بيانات البوابة فورياً من السحابة" onclick="triggerHubManualRefresh()">
-                        <i class="fas fa-rotate text-blue-600" id="hubRefreshIcon"></i>
-                        <span class="btn-text" id="txtHubRefreshBtn">تحديث</span>
-                    </button>
-
-                    <!-- زر تبديل اللغة -->
-                    <button id="langToggleBtn" class="header-action-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()">
-                        <i class="fas fa-globe text-indigo-600"></i>
-                        <span id="langBtnText">EN</span>
-                    </button>
-
-                    <!-- زر تبديل المظهر -->
-                    <button id="themeToggleBtn" class="header-action-btn" title="تبديل المظهر (فاتح / ليلي)" onclick="toggleHubTheme()">
-                        <i class="fas fa-moon text-amber-500" id="themeIcon"></i>
-                    </button>
-
-                    <!-- مؤشر حالة الاتصال -->
-                    <span id="onlineStatus" class="status-pill" title="حالة الاتصال بالخادم السحابي">
-                        <span class="status-dot"></span>
-                        <span class="status-text" id="onlineStatusText">متصل</span>
-                    </span>
-
-                    <button id="pwaInstallBtn" class="install-btn" style="display: none;">
-                        <i class="fas fa-download"></i>
-                        <span id="pwaInstallText">تثبيت</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- السطر الثاني: اسم المنشأة والإدارة المعتمدة (تصميم احترافي بدون أي تشويه) -->
-            <div class="header-sub-strip">
-                <div class="company-dept-tag">
-                    <i class="fas fa-shield-halved text-emerald-600"></i>
-                    <span id="txtHubSubTitle">الشركة العالمية للانتاج والتصنيع الزراعي • ادارة السلامة والصحة المهنية وحماية البيئة</span>
-                </div>
-            </div>
-
-        </div>
-    </header>
-
     <!-- Main Container -->
     <main class="hub-container">
-        
-        <!-- Hero Banner -->
+
+        <!-- شريط أدوات الحالة والتحديث واللغة والثيم المعتمد -->
+        <div class="top-tools-bar">
+            <!-- مؤشر حالة الاتصال بالسحابة -->
+            <div id="onlineStatus" style="padding: 4px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; transition: all 0.2s;">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 6px #10b981;"></span>
+                <span id="onlineStatusText">متصل بالسحابة</span>
+            </div>
+
+            <!-- أزرار الأدوات والتحديث والثيم واللغة -->
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <button type="button" id="hubRefreshBtn" onclick="triggerHubManualRefresh()" title="تحديث البيانات فورياً من السحابة" style="padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #2563eb; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <i class="fas fa-rotate" id="hubRefreshIcon"></i>
+                    <span id="txtHubRefreshBtn">تحديث</span>
+                </button>
+                <button type="button" id="themeToggleBtn" onclick="toggleHubTheme()" title="تبديل الثيم" style="padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; font-size: 0.8rem;">
+                    <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
+                <button type="button" id="langToggleBtn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()" style="padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <i class="fas fa-globe"></i>
+                    <span id="langBtnText">EN</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             ترويسة ISO المعتمدة ثلاثية الأعمدة (المطابقة لجميع النماذج)
+        ══════════════════════════════════════════════════════ -->
+        <div class="iso-header-table">
+            <div class="iso-col-brand">
+                <div class="iso-logo-wrap">
+                    <img id="isoLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
+                </div>
+                <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
+            </div>
+
+            <div class="iso-col-title">
+                <h1 class="iso-doc-title" id="isoDocTitle">بوابة النماذج الميدانية</h1>
+                <div class="iso-doc-subtitle" id="isoDocSubtitle">Field Forms & Digital HSE Hub</div>
+            </div>
+
+            <div class="iso-col-meta">
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">كود المنظومة:</span>
+                    <span class="iso-meta-val">DOC-HSE-HUB-01</span>
+                </div>
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">رقم الإصدار:</span>
+                    <span class="iso-meta-val">Rev. 02</span>
+                </div>
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">درجة السرية:</span>
+                    <span class="iso-meta-val" style="color: #047857;">عام داخلي</span>
+                </div>
+            </div>
+        </div>
+
+    <!-- Main Container -->
+    <!-- Hero Banner -->
         <div class="hero-banner">
             <div class="hero-title">
                 <i class="fas fa-shield-halved"></i>
@@ -4138,11 +4446,11 @@
                     
                     <!-- 🏆 مؤشر المقارنة والتميز بين المصانع -->
                     <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
-                        <div style="padding: 10px 14px; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: #fff; display: flex; align-items: center; justify-content: space-between;">
-                            <div style="font-weight: 800; font-size: 0.84rem; display: flex; align-items: center; gap: 6px;">
-                                <span>🏆</span> مؤشر التميز ومقارنة المصانع (Benchmark)
+                        <div style="padding: 10px 14px; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: #fff; display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 8px;">
+                            <div style="font-weight: 800; font-size: 0.84rem; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                <span>🏆</span> مؤشر مقارنة المصانع (Benchmark)
                             </div>
-                            <span style="font-size: 0.7rem; color: #a5b4fc;">معيار الامتثال وسرعة الإغلاق</span>
+                            <span style="font-size: 0.72rem; color: #a5b4fc; font-weight: 700; white-space: nowrap; flex-shrink: 0;">معيار الامتثال وسرعة الإغلاق</span>
                         </div>
                         <div id="anlPlantBenchmarkContainer" style="padding: 12px; display: flex; flex-direction: column; gap: 8px;">
                             <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 12px;"><i class="fas fa-spinner fa-spin ml-1"></i>جاري تحميل مؤشرات التميز...</div>
