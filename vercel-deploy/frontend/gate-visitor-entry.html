@@ -2215,7 +2215,8 @@
                 activeContainer.style.display = 'block';
                 if (successScreen) successScreen.style.display = 'none';
                 renderActiveVisitorsList();
-                fetchActiveVisitorsFromCloud();
+                renderActiveVisitorsList();
+            fetchActiveVisitorsFromCloud();
             }
         }
 
@@ -2703,7 +2704,7 @@ function resetCheckInForm() {
             document.getElementById('checkInTabContainer').style.display = 'block';
         }
 
-        async function fetchActiveVisitorsFromCloud() {
+                async function fetchActiveVisitorsFromCloud() {
             if (!navigator.onLine) return;
             try {
                 const targetUrl = getEffectiveApiUrl();
@@ -2723,10 +2724,23 @@ function resetCheckInForm() {
                 if (json && json.success && Array.isArray(json.activeVisitors)) {
                     const currentList = getVisitorsRegistry();
                     const map = new Map();
-                    currentList.forEach(v => map.set(v.id, v));
+                    currentList.forEach(v => { if (v && v.id) map.set(v.id, v); });
 
+                    const now = Date.now();
                     json.activeVisitors.forEach(v => {
-                        const ts = v.entryTimestamp || new Date(v.entryDate + ' ' + v.entryTime).getTime() || Date.now();
+                        if (!v || !v.id) return;
+                        let ts = v.entryTimestamp;
+                        if (!ts || isNaN(ts)) {
+                            try {
+                                const cleanTime = String(v.entryTime || '').replace(/[^0-9:]/g, ' ').trim();
+                                const cleanDate = String(v.entryDate || '').replace(/[^0-9-]/g, '').trim();
+                                if (cleanDate && cleanTime) {
+                                    ts = new Date(cleanDate + 'T' + (cleanTime.length === 5 ? cleanTime + ':00' : cleanTime)).getTime();
+                                }
+                            } catch(e) {}
+                        }
+                        if (!ts || isNaN(ts)) ts = now;
+
                         map.set(v.id, {
                             ...v,
                             entryTimestamp: ts
@@ -2736,9 +2750,12 @@ function resetCheckInForm() {
                     const merged = Array.from(map.values()).sort((a,b) => (b.entryTimestamp || 0) - (a.entryTimestamp || 0));
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
                     updateStatsBadges();
+                    populateVisitorAutocompleteDatalists();
                     renderActiveVisitorsList(document.getElementById('visitorSearchInput')?.value || '');
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.warn('Error fetching cloud visitors:', e);
+            }
         }
 
         function renderActiveVisitorsList(query = '') {
@@ -2747,16 +2764,22 @@ function resetCheckInForm() {
 
             const t = GATE_I18N[currentLang] || GATE_I18N.ar;
             const list = getVisitorsRegistry();
-            let active = list.filter(v => !v.exitTime);
+            let active = (Array.isArray(list) ? list : []).filter(v => {
+                if (!v) return false;
+                const ex = String(v.exitTime || '').trim();
+                return !ex || ex === '0' || ex === '-';
+            });
 
             if (query && query.trim().length > 0) {
                 const q = query.trim().toLowerCase();
                 active = active.filter(v => 
-                    v.name.toLowerCase().includes(q) || 
-                    v.org.toLowerCase().includes(q) || 
-                    v.badge.toLowerCase().includes(q) || 
-                    v.site.toLowerCase().includes(q) ||
-                    v.host.toLowerCase().includes(q)
+                    String(v.name || '').toLowerCase().includes(q) || 
+                    String(v.org || '').toLowerCase().includes(q) || 
+                    String(v.badge || '').toLowerCase().includes(q) || 
+                    String(v.site || '').toLowerCase().includes(q) ||
+                    String(v.host || '').toLowerCase().includes(q) ||
+                    String(v.phone || '').toLowerCase().includes(q) ||
+                    String(v.idNumber || '').toLowerCase().includes(q)
                 );
             }
 
@@ -2764,7 +2787,7 @@ function resetCheckInForm() {
                 container.innerHTML = `
                     <div style="text-align:center; padding: 36px 12px; color: var(--text-muted); font-weight:700;">
                         <i class="fas fa-user-check" style="font-size: 2.5rem; color: #10b981; margin-bottom: 10px; display:block;"></i>
-                        <div>${t.noActiveVisitors}</div>
+                        <div>${t.noActiveVisitors || 'لا يوجد زوار متواجدون داخل المصنع حالياً 👍'}</div>
                     </div>
                 `;
                 return;
@@ -2773,41 +2796,54 @@ function resetCheckInForm() {
             const nowTs = Date.now();
 
             container.innerHTML = active.map(v => {
-                const elapsedMin = Math.round((nowTs - v.entryTimestamp) / 60000);
+                const entryTs = (typeof v.entryTimestamp === 'number' && !isNaN(v.entryTimestamp) && v.entryTimestamp > 0) 
+                    ? v.entryTimestamp 
+                    : nowTs;
+                const elapsedMin = Math.max(0, Math.round((nowTs - entryTs) / 60000));
                 const hours = Math.floor(elapsedMin / 60);
                 const mins = elapsedMin % 60;
                 const timeElapsedText = hours > 0 ? `${hours} س و ${mins} د` : `${mins} دقيقة`;
                 const isOverstay = hours >= 4;
 
+                const nameStr = escapeHTML(v.name || 'زائر');
+                const orgStr = escapeHTML(v.org || '-');
+                const badgeStr = escapeHTML(v.badge || '-');
+                const siteStr = escapeHTML(v.site || 'الموقع العام');
+                const areaStr = escapeHTML(v.area || '-');
+                const hostStr = escapeHTML(v.host || '-');
+                const timeStr = escapeHTML(v.entryTime || '-');
+                const phoneStr = escapeHTML(v.phone || '-');
+                const idStr = escapeHTML(v.id || '');
+
                 return `
                     <div class="visitor-card">
                         <div class="visitor-card-header">
                             <div>
-                                <div class="visitor-name">${v.name}</div>
-                                <div class="visitor-org"><i class="fas fa-building"></i> ${v.org}</div>
+                                <div class="visitor-name">${nameStr}</div>
+                                <div class="visitor-org"><i class="fas fa-building"></i> ${orgStr}</div>
                             </div>
                             <div class="visitor-badge-code">
                                 <i class="fas fa-id-badge"></i>
-                                <span>${v.badge}</span>
+                                <span>${badgeStr}</span>
                             </div>
                         </div>
 
                         <div class="visitor-info-grid">
                             <div class="visitor-info-item">
                                 <i class="fas fa-industry text-slate-400"></i>
-                                <span><strong>${v.site}</strong> — ${v.area}</span>
+                                <span><strong>${siteStr}</strong> — ${areaStr}</span>
                             </div>
                             <div class="visitor-info-item">
                                 <i class="fas fa-user-tie text-slate-400"></i>
-                                <span>المستضيف: <strong>${v.host}</strong></span>
+                                <span>المستضيف: <strong>${hostStr}</strong></span>
                             </div>
                             <div class="visitor-info-item">
                                 <i class="fas fa-clock text-slate-400"></i>
-                                <span>دخول: <strong>${v.entryTime}</strong></span>
+                                <span>دخول: <strong>${timeStr}</strong></span>
                             </div>
                             <div class="visitor-info-item">
                                 <i class="fas fa-phone text-slate-400"></i>
-                                <span><a href="tel:${v.phone}" style="color:inherit; text-decoration:none;">${v.phone}</a></span>
+                                <span><a href="tel:${phoneStr}" style="color:inherit; text-decoration:none;">${phoneStr}</a></span>
                             </div>
                         </div>
 
@@ -2815,9 +2851,9 @@ function resetCheckInForm() {
                             <span class="time-badge ${isOverstay ? 'overstay' : ''}">
                                 <i class="fas fa-stopwatch"></i> بالداخل منذ: ${timeElapsedText}
                             </span>
-                            <button type="button" class="btn-checkout" onclick="executeCheckOut('${v.id}')">
+                            <button type="button" class="btn-checkout" onclick="executeCheckOut('${idStr}')">
                                 <i class="fas fa-door-open"></i>
-                                <span>${t.btnCheckOut}</span>
+                                <span>${t.btnCheckOut || 'تسجيل خروج 🚪'}</span>
                             </button>
                         </div>
                     </div>
