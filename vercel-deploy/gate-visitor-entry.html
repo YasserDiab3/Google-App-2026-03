@@ -105,44 +105,44 @@
         }
 
         /* ═════════════════════════════════════════════════�        /* ════════════════════════════════════════════════════
-           ترويسة ISO المعتمدة ثلاثية الأعمدة - تصميم احترافي
+           ترويسة ISO المعتمدة ثلاثية الأعمدة - تناسق تام وبدون تكسير
         ════════════════════════════════════════════════════ */
-                .iso-header-table {
+        .iso-header-table {
             position: sticky;
             top: 6px;
             z-index: 100;
             display: grid;
-            grid-template-columns: minmax(76px, 96px) 1fr minmax(96px, 120px);
+            grid-template-columns: minmax(130px, 150px) 1fr minmax(150px, 185px);
             width: 100%;
             min-width: 0;
             background: #ffffff;
-            border: 1px solid #c7d2e5;
-            border-top: 3.5px solid #312e81;
+            border: 1.5px solid #c7d2e5;
+            border-top: 4px solid #1e3a8a;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 3px 14px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15,23,42,0.04);
-            margin-bottom: 14px;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15,23,42,0.04);
+            margin-bottom: 16px;
         }
 
         [data-theme="dark"] .iso-header-table {
             background: #131d33;
             border-color: #334155;
             border-top-color: #4338ca;
-            box-shadow: 0 3px 14px rgba(0,0,0,0.35);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.35);
         }
 
         /* 1. عمود الشعار - منسق ومتناسب */
         .iso-col-brand {
-            padding: 6px 8px;
+            padding: 8px 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 3px;
-            border-inline-end: 1px solid #e2e8f0;
+            gap: 4px;
+            border-inline-end: 1.5px solid #e2e8f0;
             background: linear-gradient(160deg, #f8fafc 0%, #eef2ff 100%);
-            min-width: 76px;
-            max-width: 96px;
+            min-width: 130px;
+            max-width: 150px;
         }
 
         [data-theme="dark"] .iso-col-brand {
@@ -151,15 +151,15 @@
         }
 
         .iso-logo-wrap {
-            width: 60px;
-            height: 38px;
+            width: 76px;
+            height: 42px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #ffffff;
             border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            padding: 2px 4px;
+            border-radius: 8px;
+            padding: 2px 6px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
@@ -169,30 +169,28 @@
         }
 
         .iso-logo-img {
-            max-height: 32px;
-            max-width: 52px;
+            max-height: 36px;
+            max-width: 68px;
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
         .iso-dept-name {
-            font-size: 0.56rem;
+            font-size: 0.68rem;
             font-weight: 800;
-            color: #312e81;
+            color: #1e3a8a;
             text-align: center;
-            line-height: 1.15;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 86px;
+            line-height: 1.2;
+            white-space: normal;
+            max-width: 100%;
         }
 
         [data-theme="dark"] .iso-dept-name { color: #818cf8; }
 
         /* 2. عمود العنوان - المركز الواسع والمستقر */
         .iso-col-title {
-            padding: 6px 8px;
+            padding: 8px 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -207,11 +205,11 @@
         [data-theme="dark"] .iso-col-title { background: #131d33; }
 
         .iso-doc-title {
-            font-size: clamp(0.72rem, 2.2vw, 1.05rem);
+            font-size: clamp(0.9rem, 2.2vw, 1.2rem);
             font-weight: 900;
             color: #1e1b4b;
             margin: 0;
-            line-height: 1.2;
+            line-height: 1.25;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -223,10 +221,10 @@
         [data-theme="dark"] .iso-doc-title { color: #e0e7ff; }
 
         .iso-doc-subtitle {
-            font-size: clamp(0.5rem, 1.4vw, 0.66rem);
+            font-size: clamp(0.6rem, 1.4vw, 0.74rem);
             font-weight: 700;
             color: #4338ca;
-            margin-top: 1px;
+            margin-top: 2px;
             text-align: center;
             white-space: nowrap;
             overflow: hidden;
@@ -236,19 +234,18 @@
 
         [data-theme="dark"] .iso-doc-subtitle { color: #a5b4fc; }
 
-        /* 3. عمود البيانات الوصفية - موسع ومُوسط بالكامل */
+        /* 3. عمود البيانات الوصفية - موسع ومُوسط بالكامل بدون تكسير */
         .iso-col-meta {
-            padding: 6px 8px;
+            padding: 8px 14px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            text-align: center;
-            gap: 3px;
-            border-inline-start: 1px solid #e2e8f0;
+            gap: 4px;
+            border-inline-start: 1.5px solid #e2e8f0;
             background: #f8fafc;
-            min-width: 96px;
-            max-width: 120px;
+            min-width: 150px;
+            max-width: 185px;
         }
 
         [data-theme="dark"] .iso-col-meta {
@@ -258,9 +255,9 @@
 
         .iso-meta-row {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
             width: 100%;
             border-bottom: 1px dashed #e2e8f0;
             padding-bottom: 2px;
@@ -272,9 +269,8 @@
         .iso-meta-key {
             font-weight: 700;
             color: #64748b;
-            font-size: 0.56rem;
+            font-size: 0.68rem;
             white-space: nowrap;
-            text-align: center;
         }
 
         .iso-meta-val {
@@ -283,9 +279,9 @@
             font-family: monospace, inherit;
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            padding: 1px 4px;
+            padding: 1px 6px;
             border-radius: 4px;
-            font-size: 0.58rem;
+            font-size: 0.68rem;
             white-space: nowrap;
             text-align: center;
         }
@@ -297,92 +293,80 @@
             color: #e2e8f0;
         }
 
-        /* ═══ ريسبونسف: موبايل وشاشات صغيرة (تناسق مثالي وسطر واحد 100%) ═══ */
-        @media (max-width: 540px) {
+        /* ═══ ريسبونسف: موبايل وشاشات متوسطة وصغيرة ═══ */
+        @media (max-width: 640px) {
             body {
                 padding: 8px 6px 36px;
             }
             .iso-header-table {
-                grid-template-columns: minmax(58px, 68px) 1fr minmax(78px, 94px);
+                grid-template-columns: minmax(80px, 95px) 1fr minmax(105px, 125px);
                 border-radius: 10px;
                 margin-bottom: 10px;
                 border-top-width: 3px;
             }
             .iso-col-brand {
-                padding: 4px;
-                min-width: 58px;
-                max-width: 68px;
+                padding: 4px 6px;
+                min-width: 80px;
+                max-width: 95px;
             }
             .iso-logo-wrap {
-                width: 48px;
-                height: 30px;
-                padding: 1px 2px;
-                border-radius: 5px;
+                width: 52px;
+                height: 32px;
+                padding: 1px 3px;
+                border-radius: 6px;
             }
             .iso-logo-img {
-                max-height: 26px;
-                max-width: 42px;
+                max-height: 28px;
+                max-width: 48px;
             }
             .iso-dept-name {
-                display: none !important;
+                font-size: 0.52rem !important;
+                line-height: 1.15;
             }
             .iso-col-title {
-                padding: 3px 2px;
+                padding: 4px;
                 gap: 1px;
             }
             .iso-doc-title {
-                font-size: clamp(0.58rem, 2.4vw, 0.76rem) !important;
-                white-space: nowrap !important;
-                overflow: hidden !important;
-                text-overflow: ellipsis !important;
+                font-size: clamp(0.64rem, 2.4vw, 0.85rem) !important;
                 line-height: 1.2 !important;
             }
             .iso-doc-subtitle {
-                font-size: clamp(0.42rem, 1.5vw, 0.50rem) !important;
-                white-space: nowrap !important;
-                overflow: hidden !important;
-                text-overflow: ellipsis !important;
+                font-size: clamp(0.46rem, 1.5vw, 0.56rem) !important;
             }
             .iso-col-meta {
-                padding: 3px 4px;
-                min-width: 78px;
-                max-width: 94px;
-                gap: 1px;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
+                padding: 4px 6px;
+                min-width: 105px;
+                max-width: 125px;
+                gap: 2px;
             }
             .iso-meta-row {
-                justify-content: center;
                 gap: 3px;
             }
-            .iso-meta-key { font-size: 0.46rem !important; }
-            .iso-meta-val { font-size: 0.50rem !important; padding: 0 2px !important; }
+            .iso-meta-key { font-size: 0.52rem !important; }
+            .iso-meta-val { font-size: 0.54rem !important; padding: 0 3px !important; }
         }
 
         @media (max-width: 375px) {
             .iso-header-table {
-                grid-template-columns: 50px 1fr 72px;
+                grid-template-columns: 70px 1fr 95px;
             }
             .iso-col-brand {
-                min-width: 50px;
-                max-width: 50px;
+                min-width: 70px;
+                max-width: 70px;
                 padding: 2px;
             }
             .iso-logo-wrap {
-                width: 42px;
+                width: 44px;
                 height: 28px;
             }
             .iso-doc-title {
-                font-size: 0.60rem !important;
+                font-size: 0.62rem !important;
             }
             .iso-col-meta {
-                min-width: 72px;
-                max-width: 72px;
+                min-width: 95px;
+                max-width: 95px;
                 padding: 2px;
-            }
-            .iso-meta-row:last-child {
-                display: none;
             }
         }
 
