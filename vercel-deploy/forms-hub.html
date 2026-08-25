@@ -5452,7 +5452,7 @@
                             <i class="fas fa-hard-hat text-amber-600"></i> الجهة: <b>${escapeHTML(p.party)}</b> • المشرف: <b>${escapeHTML(p.supervisor)}</b>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="color:#64748b;"><i class="fas fa-clock text-blue-600"></i> ${escapeHTML(p.timeFrom)} - ${escapeHTML(p.timeTo)}</span>
+                            <span style="color:#475569; font-weight:700;"><i class="fas fa-clock text-blue-600"></i> ${formatPtwTimeDisplay(p.timeFrom)} - ${formatPtwTimeDisplay(p.timeTo)}</span>
                             <span style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:1px 6px; border-radius:4px; font-weight:800; font-size:0.68rem;">🟢 ${escapeHTML(p.status)}</span>
                         </div>
                     </div>
@@ -5462,6 +5462,21 @@
     }
 
     // 🖨️ وظيفة طباعة كشف الوردية والطوارئ
+    
+    function formatPtwTimeDisplay(timeStr) {
+        if (!timeStr) return '--:--';
+        if (typeof timeStr !== 'string') timeStr = String(timeStr);
+        const match = timeStr.match(/(\d{1,2}):(\d{2})(?::\d{2})?/);
+        if (match) {
+            let h = parseInt(match[1], 10);
+            const m = match[2];
+            const ampm = h >= 12 ? 'م' : 'ص';
+            const h12 = h % 12 || 12;
+            return `${(h12 < 10 ? '0' : '') + h12}:${m} ${ampm}`;
+        }
+        return timeStr;
+    }
+
     function printPtwShiftLog() {
         if (!rawLivePtwData || !rawLivePtwData.activeList) return;
 
@@ -5490,7 +5505,7 @@
                         <td style="padding:6px; border:1px solid #cbd5e1;">${escapeHTML(p.type)}</td>
                         <td style="padding:6px; border:1px solid #cbd5e1;">${escapeHTML(p.party)}</td>
                         <td style="padding:6px; border:1px solid #cbd5e1;">${escapeHTML(p.supervisor)}</td>
-                        <td style="padding:6px; border:1px solid #cbd5e1;">${escapeHTML(p.timeFrom)} - ${escapeHTML(p.timeTo)}</td>
+                        <td style="padding:6px; border:1px solid #cbd5e1; font-weight:700; white-space:nowrap; text-align:center;">${formatPtwTimeDisplay(p.timeFrom)} - ${formatPtwTimeDisplay(p.timeTo)}</td>
                         <td style="padding:6px; font-weight:800; border:1px solid #cbd5e1;">${escapeHTML(p.status)}</td>
                     </tr>
                 `).join('');

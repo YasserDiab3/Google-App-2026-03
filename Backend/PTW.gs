@@ -426,8 +426,8 @@ function getPublicLivePTWSummary(payload) {
                 var party = colParty !== -1 ? String(row[colParty] || 'مقاول / قسم منفذ').trim() : 'مقاول / قسم منفذ';
                 var desc = colDesc !== -1 ? String(row[colDesc] || '').trim() : '';
                 var supervisor = colSupervisor !== -1 ? String(row[colSupervisor] || '').trim() : '';
-                var tFrom = colTimeFrom !== -1 ? String(row[colTimeFrom] || '08:00').trim() : '08:00';
-                var tTo = colTimeTo !== -1 ? String(row[colTimeTo] || '17:00').trim() : '17:00';
+                var tFrom = colTimeFrom !== -1 ? formatPtwTimeString_(row[colTimeFrom]) : '08:00';
+                var tTo = colTimeTo !== -1 ? formatPtwTimeString_(row[colTimeTo]) : '17:00';
 
                 // حصر الموقع في: ICAPP-1, ICAPP-2, WH
                 var site = 'ICAPP-1';
@@ -520,7 +520,7 @@ function getPublicLivePTWSummary(payload) {
                         type: pType,
                         typeKey: typeKey,
                         site: site,
-                        location: (rawLoc || site) + (rawSubLoc ? (' - ' + rawSubLoc) : ''),
+                        location: cleanPtwLocationName_(rawLoc, rawSubLoc, site),
                         party: party,
                         description: desc || pType,
                         supervisor: supervisor || 'مشرف السلامة والعمليات',
@@ -574,4 +574,46 @@ function getPublicLivePTWSummary(payload) {
         Logger.log('❌ خطأ في getPublicLivePTWSummary: ' + err.toString());
         return { success: false, message: err.message };
     }
+}
+
+
+/**
+ * تنسيق التوقيت النظيف بتنسيق (HH:mm) واستبعاد نصوص التاريخ الكاملة لـ JS Date
+ */
+function formatPtwTimeString_(val) {
+    if (!val) return '08:00';
+    if (val instanceof Date) {
+        var h = val.getHours();
+        var m = val.getMinutes();
+        return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+    }
+    var str = String(val).trim();
+    var match = str.match(/(\d{1,2}):(\d{2})(?::\d{2})?/);
+    if (match) {
+        var h = parseInt(match[1], 10);
+        var m = parseInt(match[2], 10);
+        return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+    }
+    return str;
+}
+
+/**
+ * تنظيف اسم الموقع وإزالة التكرارات المزدوجة لكود المصنع
+ */
+function cleanPtwLocationName_(rawLoc, rawSubLoc, site) {
+    var combined = ((rawLoc || '') + ' ' + (rawSubLoc || '')).trim();
+    if (!combined) return site;
+    
+    var cleaned = combined
+        .replace(/ICAPP[-_ ]*1/gi, '')
+        .replace(/ICAPP[-_ ]*2/gi, '')
+        .replace(/1[-_ ]*ICAPP/gi, '')
+        .replace(/2[-_ ]*ICAPP/gi, '')
+        .replace(/WH[-_ ]*/gi, '')
+        .replace(/[-_\|:\/]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (!cleaned) return site;
+    return site + ' - ' + cleaned;
 }
