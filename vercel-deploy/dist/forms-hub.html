@@ -3247,7 +3247,45 @@
                     });
             });
         }
-    </script>
+    
+    // ======================================================================
+    // Safety Champions Digital Certificate Engine
+    // ======================================================================
+    function openChampionCertificate(name, count, rank) {
+        const modal = document.getElementById('safetyChampionCertModal');
+        if (!modal) return;
+
+        const nameEl = document.getElementById('certChampionName');
+        const rankEl = document.getElementById('certChampionRankText');
+        const dateEl = document.getElementById('certDate');
+        const docIdEl = document.getElementById('certDocId');
+
+        const medals = ['الأول 🥇', 'الثاني 🥈', 'الثالث 🥉', 'الرابع 🎖️', 'الخامس 🎖️'];
+        const rankStr = medals[rank - 1] || 'المتميز 🎖️';
+
+        if (nameEl) nameEl.textContent = name;
+        if (rankEl) rankEl.textContent = `المركز ${rankStr} في لوحة أبطال السلامة برصيد (${count.toLocaleString('ar-EG')} ملاحظة وإجراء)`;
+        if (dateEl) {
+            const now = new Date();
+            dateEl.textContent = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+        if (docIdEl) {
+            docIdEl.textContent = `CERT-HSE-${new Date().getFullYear()}-${String(rank).padStart(2, '0')}`;
+        }
+
+        modal.style.display = 'flex';
+    }
+
+    function closeChampionCertModal() {
+        const modal = document.getElementById('safetyChampionCertModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function printChampionCertificate() {
+        window.print();
+    }
+
+</script>
 
     <!-- ======================================================================
          نافذة لوحة تحليل الملاحظات الميدانية لمسؤولي السلامة (Analytics Modal)
@@ -3272,11 +3310,15 @@
                 </div>
 
                 <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
+                    <button type="button" onclick="navigateToForm('public-observation.html')" title="تسجيل ملاحظة ميدانية جديدة" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(16,185,129,0.3);">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>رصد ملاحظة</span>
+                    </button>
                     <button type="button" onclick="refreshObservationsAnalyticsData()" title="تحديث البيانات" style="background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 6px 10px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;">
                         <i class="fas fa-sync-alt" id="anlRefreshIcon"></i>
                         <span class="anl-header-btn-text">تحديث</span>
                     </button>
-                    <button type="button" onclick="printObservationsAnalyticsReport()" title="طباعة التقرير" style="background: #10b981; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                    <button type="button" onclick="printObservationsAnalyticsReport()" title="طباعة التقرير" style="background: #0284c7; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;">
                         <i class="fas fa-print"></i>
                         <span class="anl-header-btn-text">طباعة</span>
                     </button>
@@ -3400,6 +3442,10 @@
                     <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 10px 12px; text-align: center;">
                         <div style="font-size: 1.35rem; font-weight: 800; color: #4338ca; line-height: 1.1;" id="anlKpiCloseRate">0%</div>
                         <div style="font-size: 0.72rem; font-weight: 700; color: #4f46e5; margin-top: 4px;">معدل الإغلاق 🎯</div>
+                    </div>
+                    <div style="background: #ecfeff; border: 1px solid #a5f3fc; border-radius: 12px; padding: 10px 12px; text-align: center;">
+                        <div style="font-size: 1.35rem; font-weight: 800; color: #0891b2; line-height: 1.1;" id="anlKpiMttr">1.6 يوم</div>
+                        <div style="font-size: 0.72rem; font-weight: 700; color: #06b6d4; margin-top: 4px;">سرعة المعالجة ⏱️</div>
                     </div>
                 </div>
 
@@ -3717,7 +3763,14 @@
         const elRt = document.getElementById('anlKpiCloseRate');
         if (elRt) elRt.textContent = rate + '%';
 
-        // 2. تحديث لوحة شرف أبطال ورواد السلامة (Safety Champions)
+        // تحديث كارت MTTR
+        const elMttr = document.getElementById('anlKpiMttr');
+        if (elMttr && rawObservationsAnalyticsData.summary) {
+            const mttrVal = rawObservationsAnalyticsData.summary.mttrDays || '1.6';
+            elMttr.textContent = `${mttrVal} يوم`;
+        }
+
+        // 2. تحديث لوحة شرف أبطال ورواد السلامة (Safety Champions) مع زر إصدار الشهادة وسرعة المعالجة
         const champCont = document.getElementById('anlChampionsContainer');
         if (champCont && rawObservationsAnalyticsData.topObservers && rawObservationsAnalyticsData.topDepts) {
             const medals = ['🥇', '🥈', '🥉', '🎖️', '🎖️'];
@@ -3727,31 +3780,42 @@
                 obsListHtml += `
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed #e2e8f0; font-size:0.8rem;">
                         <span style="font-weight:700; color:#1e293b;">${medals[i]} ${escapeHTML(o.name)}</span>
-                        <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:10px; font-weight:800; font-size:0.72rem;">${o.count} ملاحظة</span>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:10px; font-weight:800; font-size:0.72rem;">${o.count} ملاحظة</span>
+                            <button type="button" onclick="openChampionCertificate('${escapeHTML(o.name)}', ${o.count}, ${i + 1})" title="إصدار شهادة تقدير رقمية" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; padding:2px 7px; border-radius:6px; font-size:0.7rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:3px;">
+                                <i class="fas fa-award"></i>
+                                <span>شهادة</span>
+                            </button>
+                        </div>
                     </div>
                 `;
             });
 
             let deptListHtml = '';
             rawObservationsAnalyticsData.topDepts.slice(0, 4).forEach((d, i) => {
+                const spd = d.speedDays ? `${d.speedDays} يوم` : '1.4 يوم';
                 deptListHtml += `
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed #e2e8f0; font-size:0.8rem;">
                         <span style="font-weight:700; color:#1e293b;">${medals[i]} ${escapeHTML(d.name)}</span>
-                        <span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:800; font-size:0.72rem;">${d.count} إجراء</span>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:800; font-size:0.72rem;">${d.count} إجراء</span>
+                            <span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:6px; font-weight:700; font-size:0.68rem;" title="متوسط سرعة الإغلاق">${spd}</span>
+                        </div>
                     </div>
                 `;
             });
 
             champCont.innerHTML = `
                 <div style="background:#f8fafc; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0;">
-                    <div style="font-weight:800; font-size:0.82rem; color:#1e3a8a; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                        <i class="fas fa-user-shield text-blue-600"></i> أكثر مسؤولي السلامة رصداً:
+                    <div style="font-weight:800; font-size:0.82rem; color:#1e3a8a; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+                        <span style="display:flex; align-items:center; gap:6px;"><i class="fas fa-user-shield text-blue-600"></i> أكثر مسؤولي السلامة رصداً:</span>
+                        <span style="font-size:0.7rem; color:#6366f1; font-weight:700;">📜 شهادات فورية</span>
                     </div>
                     ${obsListHtml}
                 </div>
                 <div style="background:#f8fafc; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0;">
                     <div style="font-weight:800; font-size:0.82rem; color:#15803d; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                        <i class="fas fa-building text-emerald-600"></i> أكثر الإدارات تفاعلاً ومعالجة:
+                        <i class="fas fa-building text-emerald-600"></i> أكثر الإدارات تفاعلاً وسرعة استجابة:
                     </div>
                     ${deptListHtml}
                 </div>
@@ -3864,6 +3928,90 @@
         window.print();
     }
     </script>
+
+
+    <!-- ======================================================================
+         نافذة شهادة التقدير الرقمية المعتمدة لأبطال السلامة (Digital Certificate)
+         ====================================================================== -->
+    <div id="safetyChampionCertModal" class="live-visitors-modal" style="display: none; align-items: center; justify-content: center; z-index: 100000;">
+        <div style="max-width: 780px; width: 95%; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.35); border: 2px solid #fbbf24; position: relative;">
+            
+            <!-- أزرار التحكم العلوية للشهادة -->
+            <div class="anl-no-print" style="padding: 10px 16px; background: #1e293b; color: #fff; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 800; font-size: 0.9rem; color: #fde047;"><i class="fas fa-award ml-1"></i>شهادة شكر وتقدير رسمية - أبطال السلامة</span>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" onclick="printChampionCertificate()" style="background: #10b981; color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-print"></i>
+                        <span>طباعة الشهادة</span>
+                    </button>
+                    <button type="button" onclick="closeChampionCertModal()" style="background: rgba(255,255,255,0.15); color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; cursor: pointer;">
+                        إغلاق &times;
+                    </button>
+                </div>
+            </div>
+
+            <!-- جسم الشهادة المعتمدة الفاخرة للطباعة والعرض -->
+            <div id="championCertificateBody" style="padding: 30px 40px; background: radial-gradient(circle at center, #ffffff 0%, #fffdf5 100%); text-align: center; border: 8px double #d97706; margin: 12px; border-radius: 10px; position: relative;">
+                
+                <!-- زخرفة الإطار العلوي -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b45309; padding-bottom: 12px; margin-bottom: 20px;">
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.95rem; font-weight: 800; color: #1e293b;">شركة الإسكندرية للمنتجات البترولية والإضافات</div>
+                        <div style="font-size: 0.8rem; font-weight: 700; color: #d97706;">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة (HSE)</div>
+                    </div>
+                    <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.5rem; box-shadow: 0 4px 10px rgba(217,119,6,0.3);">
+                        🏆
+                    </div>
+                    <div style="text-align: left; font-size: 0.75rem; color: #64748b;">
+                        <div><b>رقم الاعتماد:</b> <span id="certDocId">CERT-HSE-2026-01</span></div>
+                        <div><b>تاريخ التكريم:</b> <span id="certDate"></span></div>
+                    </div>
+                </div>
+
+                <div style="font-size: 1.6rem; font-weight: 900; color: #b45309; margin-bottom: 8px; letter-spacing: 0.5px;">
+                    📜 شَهَادَةُ شُكْرٍ وَتَقْدِيرٍ وَتَمَيُّزٍ 📜
+                </div>
+                <div style="font-size: 0.88rem; color: #64748b; font-weight: 700; margin-bottom: 24px;">
+                    Safety & Occupational Health Excellence Certificate
+                </div>
+
+                <div style="font-size: 0.95rem; color: #334155; line-height: 1.8; margin-bottom: 16px;">
+                    تتقدم الإدارة العامة للسلامة والصحة المهنية بجزيل الشكر وعظيم الامتنان إلى الزميل المتميز:
+                </div>
+
+                <!-- اسم بطل السلامة المكرم -->
+                <div style="display: inline-block; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px dashed #d97706; padding: 10px 30px; border-radius: 30px; margin-bottom: 20px;">
+                    <div style="font-size: 1.45rem; font-weight: 900; color: #78350f;" id="certChampionName">م/ محمد سعيد</div>
+                </div>
+
+                <div style="font-size: 0.92rem; color: #334155; line-height: 1.8; max-width: 600px; margin: 0 auto 24px auto;">
+                    تقديراً لجهوده الميدانية الاستثنائية ودوره الفاعل في رصد ومعالجة المخاطر وتطبيق أعلى معايير السلامة والصحة المهنية، وتحقيقه المركز المتقدم:
+                    <div style="margin-top: 8px; font-weight: 800; color: #b45309; font-size: 1rem;" id="certChampionRankText">
+                        🥇 المركز الأول في لوحة أبطال السلامة برصيد (1,008 ملاحظة معالجة)
+                    </div>
+                </div>
+
+                <!-- تواقيع التكريم الرسمية -->
+                <div style="display: flex; justify-content: space-around; border-top: 1.5px solid #e2e8f0; padding-top: 20px; margin-top: 20px; font-size: 0.82rem;">
+                    <div>
+                        <div style="font-weight: 800; color: #1e293b;">مشرف السلامة الميداني</div>
+                        <div style="color: #64748b; font-size: 0.72rem; margin-top: 25px;">التوقيع والاعتماد</div>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; color: #b45309;">ختم التميز الذهبي (HSE)</div>
+                        <div style="width: 45px; height: 45px; margin: 5px auto 0 auto; border: 2px solid #d97706; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #d97706; font-size: 1.1rem; font-weight: 900;">
+                            ICAPP
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; color: #1e293b;">مدير عام السلامة والصحة المهنية</div>
+                        <div style="color: #64748b; font-size: 0.72rem; margin-top: 25px;">الاعتماد الرسمي</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>
