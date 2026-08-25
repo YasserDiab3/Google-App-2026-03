@@ -757,27 +757,29 @@
         }
 
         .hse-ack-banner {
-            background: #ffffff;
-            border: 1.5px dashed #059669;
+            background: #f0fdf4;
+            border: 1.5px solid #10b981;
             border-radius: 10px;
-            padding: 10px 12px;
+            padding: 11px 16px;
             display: flex;
             align-items: center;
+            box-shadow: 0 1px 4px rgba(16, 185, 129, 0.12);
         }
         [data-theme="dark"] .hse-ack-banner {
-            background: #1e293b;
-            border-color: #10b981;
+            background: #064e3b;
+            border-color: #34d399;
         }
 
         .hse-ack-label {
             display: flex;
             align-items: center;
             gap: 10px;
-            font-size: 0.76rem;
+            font-size: 0.86rem;
             font-weight: 800;
-            color: #065f46;
+            color: #064e3b;
             cursor: pointer;
-            line-height: 1.35;
+            line-height: 1.4;
+            width: 100%;
         }
         [data-theme="dark"] .hse-ack-label { color: #6ee7b7; }
 
@@ -1500,7 +1502,7 @@
                         <div class="hse-ack-banner">
                             <label class="hse-ack-label">
                                 <input type="checkbox" id="hseAckCheckbox" required checked class="hse-ack-check">
-                                <span id="hseAckText">أقر بأنني اطلعت وتعهدت بالالتزام الكامل بتعليمات السلامة والصحة المهنية وسلامة الغذاء الواردة أعلاه أثناء تواجدي بالمنشأة.</span>
+                                <span id="hseAckText">أقر بأنني اطلعت وتعهدت بالالتزام الكامل بتعليمات السلامة والصحة المهنية وسلامة الغذاء الواردة أعلاه أثناء تواجدي بالمصنع</span>
                             </label>
                         </div>
                     </div>
@@ -1628,7 +1630,7 @@
                 hseRule5: 'الالتزام بالسير في الممرات المحددة بالأصفر، عدم التجول الفردي، ومرافقة الشخص المسؤول طوال الزيارة.',
                 hseRule6Title: 'إجراءات الطوارئ والإخلاء الآمن',
                 hseRule6: 'عند سماع صفارة الإنذار، التوجه فوراً مع المستضيف لأقرب نقطة تجمع آمنة (Muster Point) واتباع التعليمات.',
-                hseAckText: 'أقر بأنني اطلعت وتعهدت بالالتزام الكامل بتعليمات السلامة والصحة المهنية وسلامة الغذاء الواردة أعلاه أثناء تواجدي بالمنشأة.',
+                hseAckText: 'أقر بأنني اطلعت وتعهدت بالالتزام الكامل بتعليمات السلامة والصحة المهنية وسلامة الغذاء الواردة أعلاه أثناء تواجدي بالمصنع',
                 btnSubmitText: 'تسجيل الدخول وإصدار تصريح الزيارة 🛡️',
                 succTitle: 'تم تسجيل دخول الزائر بنجاح!',
                 succSubtitle: 'تم توثيق الزيارة وحفظها بسجل المتواجدين الفعلي بالمصنع.',
