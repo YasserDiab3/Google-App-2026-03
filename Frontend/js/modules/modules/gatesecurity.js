@@ -296,7 +296,13 @@ class GateSecurityModule {
                         // Merge
                         const map = new Map();
                         this.visitors.forEach(v => map.set(v.id, v));
-                        cloudActive.forEach(v => map.set(v.id, v));
+                        cloudActive.forEach(v => {
+                            const existing = map.get(v.id);
+                            if (existing && existing.exitTime) {
+                                return; // Don't revert local checkout
+                            }
+                            map.set(v.id, v);
+                        });
                         this.visitors = Array.from(map.values()).sort((a,b) => (b.entryTimestamp || 0) - (a.entryTimestamp || 0));
                         localStorage.setItem('HSE_GATE_VISITORS_REGISTRY', JSON.stringify(this.visitors));
                     }

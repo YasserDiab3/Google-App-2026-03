@@ -91,6 +91,94 @@ function submitGateVisitorCheckIn(payload) {
 /**
  * تسجيل خروج الزائر وتحديث السجل وحساب مدة الزيارة
  */
+/**
+ * تهيئة وتصحيح شيت GateVisitors مع الترويسة المعتمدة وتنسيق الأعمدة (19 عموداً قانونياً)
+ */
+function getOrCreateGateVisitorsSheet(sheetName) {
+    sheetName = sheetName || 'GateVisitors';
+    var ss = SpreadsheetApp.getActiveSpreadsheet() || (typeof getSpreadsheetId === 'function' ? SpreadsheetApp.openById(getSpreadsheetId()) : null);
+    if (!ss) throw new Error('تعذر الوصول إلى Google Spreadsheet');
+
+    var sheet = ss.getSheetByName(sheetName);
+    var canonicalHeaders = [
+        'Record ID',
+        'Entry Date',
+        'Entry Time',
+        'Visitor Name',
+        'Organization / Company',
+        'National ID / Passport',
+        'Phone Number',
+        'Vehicle Plate',
+        'Target Site',
+        'Target Hall / Area',
+        'Host Person & Dept',
+        'Visit Purpose',
+        'Badge #',
+        'Security Officer / Registered By',
+        'Status',
+        'Exit Time',
+        'Duration (Minutes)',
+        'Signature URL',
+        'Created At Timestamp'
+    ];
+
+    if (!sheet) {
+        sheet = ss.insertSheet(sheetName);
+        sheet.appendRow(canonicalHeaders);
+        var headerRange = sheet.getRange(1, 1, 1, canonicalHeaders.length);
+        headerRange.setBackground('#1e40af');
+        headerRange.setFontColor('#ffffff');
+        headerRange.setFontWeight('bold');
+        headerRange.setHorizontalAlignment('center');
+        sheet.setFrozenRows(1);
+        Logger.log('✅ تم إنشاء وتهيئة شيت GateVisitors بنجاح');
+    } else {
+        // فحص وتصحيح الترويسة وترحيل الأعمدة تلقائياً
+        var headerValues = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), canonicalHeaders.length)).getValues()[0];
+        var needsHeaderRepair = false;
+        if (headerValues.length < 19 || String(headerValues[13] || '').indexOf('Security Officer') === -1) {
+            needsHeaderRepair = true;
+        }
+
+        if (needsHeaderRepair) {
+            sheet.getRange(1, 1, 1, canonicalHeaders.length).setValues([canonicalHeaders]);
+            var headerRange = sheet.getRange(1, 1, 1, canonicalHeaders.length);
+            headerRange.setBackground('#1e40af');
+            headerRange.setFontColor('#ffffff');
+            headerRange.setFontWeight('bold');
+            headerRange.setHorizontalAlignment('center');
+            sheet.setFrozenRows(1);
+
+            // إصلاح الصفوف القديمة التي كانت 18 عموداً
+            var dataRange = sheet.getDataRange();
+            var allData = dataRange.getValues();
+            if (allData.length > 1) {
+                var repaired = false;
+                for (var r = 1; r < allData.length; r++) {
+                    var row = allData[r];
+                    // إذا كان العمود 14 به بالداخل أو تم الخروج بدلاً من اسم مسؤول الأمن
+                    var val14 = String(row[13] || '');
+                    if (val14.indexOf('بالداخل') !== -1 || val14.indexOf('تم الخروج') !== -1) {
+                        row.splice(13, 0, 'مسؤول الأمن');
+                        repaired = true;
+                    }
+                    while (row.length < 19) row.push('');
+                    if (row.length > 19) row = row.slice(0, 19);
+                    allData[r] = row;
+                }
+                if (repaired) {
+                    sheet.getRange(1, 1, allData.length, 19).setValues(allData);
+                    Logger.log('✅ تم تصليح ترحيل البيانات وضبط 19 عموداً لجميع الصفوف المسجلة');
+                }
+            }
+        }
+    }
+    return sheet;
+}
+
+/**
+ * تسجيل خروج الزائر وتحديث السجل وحساب مدة الزيارة
+ */
 function submitGateVisitorCheckOut(payload) {
     try {
         if (!payload || !payload.id) {
@@ -98,12 +186,7 @@ function submitGateVisitorCheckOut(payload) {
         }
 
         var sheetName = 'GateVisitors';
-        var ss = SpreadsheetApp.getActiveSpreadsheet() || (typeof getSpreadsheetId === 'function' ? SpreadsheetApp.openById(getSpreadsheetId()) : null);
-        if (!ss) return { success: false, message: 'تعذر فتح جدول البيانات' };
-
-        var sheet = ss.getSheetByName(sheetName);
-        if (!sheet) return { success: false, message: 'جدول الزوار غير موجود' };
-
+        var sheet = getOrCreateGateVisitorsSheet(sheetName);
         var data = sheet.getDataRange().getValues();
         if (data.length <= 1) {
             return { success: false, message: 'لا توجد بيانات مسجلة بالجدول' };
@@ -116,20 +199,19 @@ function submitGateVisitorCheckOut(payload) {
         var foundRow = -1;
         var entryDateStr = '';
         var entryTimeStr = '';
-        var rowLength = 19;
 
         for (var i = 1; i < data.length; i++) {
-            var rowId = String(data[i][0]).trim();
-            if (rowId === targetId) {
+            var rowId = String(data[i][0] || '').trim();
+            if (rowId === targetId || rowId.toLowerCase() === targetId.toLowerCase() || (targetId.indexOf(rowId) !== -1 && rowId.length > 3)) {
                 foundRow = i + 1; // 1-indexed row in sheet
-                rowLength = data[i].length;
-                entryDateStr = String(data[i][1]).trim();
-                entryTimeStr = String(data[i][2]).trim();
+                entryDateStr = (data[i][1] instanceof Date) ? Utilities.formatDate(data[i][1], 'GMT+2', 'yyyy-MM-dd') : String(data[i][1] || '').trim();
+                entryTimeStr = (data[i][2] instanceof Date) ? Utilities.formatDate(data[i][2], 'GMT+2', 'HH:mm:ss') : String(data[i][2] || '').trim();
                 break;
             }
         }
 
         if (foundRow === -1) {
+            Logger.log('⚠️ لم يتم العثور على الزائر برقم: ' + targetId);
             return { success: false, message: 'لم يتم العثور على سجل الزائر برقم: ' + targetId };
         }
 
@@ -137,7 +219,9 @@ function submitGateVisitorCheckOut(payload) {
         var durationMinutes = 0;
         try {
             if (entryDateStr && entryTimeStr) {
-                var entryDateTime = new Date(entryDateStr + 'T' + entryTimeStr);
+                var cleanTime = entryTimeStr.replace(/[^0-9:]/g, ' ').trim();
+                var cleanDate = entryDateStr.replace(/[^0-9-]/g, '').trim();
+                var entryDateTime = new Date(cleanDate + 'T' + (cleanTime.length === 5 ? cleanTime + ':00' : cleanTime));
                 if (!isNaN(entryDateTime.getTime())) {
                     var diffMs = now.getTime() - entryDateTime.getTime();
                     durationMinutes = Math.max(1, Math.round(diffMs / (1000 * 60)));
@@ -147,32 +231,21 @@ function submitGateVisitorCheckOut(payload) {
             durationMinutes = 0;
         }
 
-        // تحديد موضع أعمدة الحالة والخروج والمدة بذكاء
+        // تحديث الأعمدة القانونية المعتمدة (العمود 15 للحالة، 16 لوقت الخروج، 17 للمدة)
         var statusCol = 15;
         var exitCol = 16;
         var durationCol = 17;
-        
-        var targetRow = data[foundRow - 1];
-        for (var colIdx = 0; colIdx < targetRow.length; colIdx++) {
-            var cellVal = String(targetRow[colIdx] || '');
-            if (cellVal.indexOf('بالداخل') !== -1) {
-                statusCol = colIdx + 1;
-                exitCol = colIdx + 2;
-                durationCol = colIdx + 3;
-                break;
-            }
-        }
 
         sheet.getRange(foundRow, statusCol).setValue('تم الخروج (Departed)');
         sheet.getRange(foundRow, exitCol).setValue(exitTime + ' (' + exitDate + ')');
         sheet.getRange(foundRow, durationCol).setValue(durationMinutes);
 
-        Logger.log('✅ تم تسجيل خروج الزائر بنجاح: ' + targetId + ' - مدة الزيارة: ' + durationMinutes + ' دقيقة');
+        Logger.log('✅ تم تسجيل خروج الزائر بنجاح في قاعدة البيانات: ' + targetId + ' - صف: ' + foundRow);
 
         return {
             success: true,
             id: targetId,
-            exitTime: exitTime,
+            exitTime: exitTime + ' (' + exitDate + ')',
             durationMinutes: durationMinutes,
             message: 'تم تسجيل خروج الزائر بنجاح وتحديث مدة التواجد (' + durationMinutes + ' دقيقة)'
         };
@@ -192,12 +265,7 @@ function submitGateVisitorCheckOut(payload) {
 function getActiveGateVisitors(payload) {
     try {
         var sheetName = 'GateVisitors';
-        var ss = SpreadsheetApp.getActiveSpreadsheet() || (typeof getSpreadsheetId === 'function' ? SpreadsheetApp.openById(getSpreadsheetId()) : null);
-        if (!ss) return { success: true, activeCount: 0, activeVisitors: [] };
-
-        var sheet = ss.getSheetByName(sheetName);
-        if (!sheet) return { success: true, activeCount: 0, activeVisitors: [] };
-
+        var sheet = getOrCreateGateVisitorsSheet(sheetName);
         var data = sheet.getDataRange().getValues();
         if (data.length <= 1) return { success: true, activeCount: 0, activeVisitors: [] };
 
@@ -205,27 +273,24 @@ function getActiveGateVisitors(payload) {
 
         for (var i = 1; i < data.length; i++) {
             var row = data[i];
-            
-            // فحص وجود حالة 'بالداخل' في أي من أعمدة الصف
-            var isInside = false;
-            var statusColIdx = -1;
-            for (var c = 0; c < row.length; c++) {
-                var val = String(row[c] || '').trim();
-                if (val.indexOf('بالداخل') !== -1) {
-                    isInside = true;
-                    statusColIdx = c;
-                    break;
-                }
-            }
+            var rowId = String(row[0] || '').trim();
+            if (!rowId) continue;
 
-            // فحص هل تم الخروج
-            var exitVal = (statusColIdx !== -1 && statusColIdx + 1 < row.length) ? String(row[statusColIdx + 1] || '').trim() : '';
+            var statusVal = String(row[14] || row[13] || '').trim();
+            var exitVal = String(row[15] || '').trim();
 
-            if (isInside && (!exitVal || exitVal === '' || exitVal === '0')) {
+            // فحص هل الزائر لا يزال بالداخل
+            var isInside = (statusVal.indexOf('بالداخل') !== -1) && (statusVal.indexOf('تم الخروج') === -1);
+            var hasNotExited = (!exitVal || exitVal === '' || exitVal === '0' || exitVal === '-');
+
+            if (isInside && hasNotExited) {
+                var entryD = (row[1] instanceof Date) ? Utilities.formatDate(row[1], 'GMT+2', 'yyyy-MM-dd') : String(row[1] || '');
+                var entryT = (row[2] instanceof Date) ? Utilities.formatDate(row[2], 'GMT+2', 'HH:mm:ss') : String(row[2] || '');
+
                 activeVisitors.push({
-                    id: String(row[0] || ''),
-                    entryDate: (row[1] instanceof Date) ? Utilities.formatDate(row[1], 'GMT+2', 'yyyy-MM-dd') : String(row[1] || ''),
-                    entryTime: (row[2] instanceof Date) ? Utilities.formatDate(row[2], 'GMT+2', 'HH:mm:ss') : String(row[2] || ''),
+                    id: rowId,
+                    entryDate: entryD,
+                    entryTime: entryT,
                     name: String(row[3] || ''),
                     org: String(row[4] || ''),
                     idNumber: String(row[5] || ''),
@@ -236,9 +301,9 @@ function getActiveGateVisitors(payload) {
                     host: String(row[10] || ''),
                     purpose: String(row[11] || ''),
                     badge: String(row[12] || ''),
-                    registeredBy: String(statusColIdx === 14 ? row[13] : 'مسؤول الأمن'),
+                    registeredBy: String(row[13] || 'مسؤول الأمن'),
                     status: 'بالداخل (Onsite)',
-                    signatureUrl: String(row[row.length - 2] || '')
+                    signatureUrl: String(row[17] || '')
                 });
             }
         }
@@ -253,181 +318,4 @@ function getActiveGateVisitors(payload) {
         Logger.log('❌ خطأ في getActiveGateVisitors: ' + err.toString());
         return { success: false, message: err.message, activeCount: 0, activeVisitors: [] };
     }
-}
-
-/**
- * استرجاع قائمة مسؤولي الأمن الإداري والقائمين بالتسجيل
- */
-function getSecurityOfficersList() {
-    try {
-        var sheetName = 'SecurityOfficers';
-        var ss = SpreadsheetApp.getActiveSpreadsheet() || (typeof getSpreadsheetId === 'function' ? SpreadsheetApp.openById(getSpreadsheetId()) : null);
-        if (!ss) return { success: true, officers: getDefaultSecurityOfficers_() };
-
-        var sheet = getOrCreateSecurityOfficersSheet(sheetName);
-        var data = sheet.getDataRange().getValues();
-        
-        if (data.length <= 1) {
-            seedDefaultSecurityOfficers_(sheet);
-            return { success: true, officers: getDefaultSecurityOfficers_() };
-        }
-
-        var officers = [];
-        for (var i = 1; i < data.length; i++) {
-            var row = data[i];
-            var name = String(row[1] || '').trim();
-            var isActive = row[5] !== false && String(row[5]).toLowerCase() !== 'false';
-            if (name && isActive) {
-                officers.push({
-                    id: String(row[0] || ('SEC-' + i)),
-                    name: name,
-                    role: String(row[2] || 'مسؤول أمن إداري'),
-                    site: String(row[3] || 'جميع المواقع'),
-                    phone: String(row[4] || '')
-                });
-            }
-        }
-
-        return {
-            success: true,
-            officers: officers.length > 0 ? officers : getDefaultSecurityOfficers_()
-        };
-
-    } catch(err) {
-        Logger.log('❌ خطأ في getSecurityOfficersList: ' + err.toString());
-        return { success: true, officers: getDefaultSecurityOfficers_() };
-    }
-}
-
-function getDefaultSecurityOfficers_() {
-    return [
-        { id: 'SEC-01', name: 'أ/ مسعد فرج', role: 'مسؤول أمن إداري', site: 'الموقع العام' },
-        { id: 'SEC-02', name: 'أ/ محمود عبد النبي', role: 'مسؤول أمن إداري', site: 'ICAPP-1' },
-        { id: 'SEC-03', name: 'أ/ أحمد عبد الحميد', role: 'أمن البوابة الرئيسية', site: 'ICAPP-2' },
-        { id: 'SEC-04', name: 'أ/ رجب إبراهيم', role: 'أمن البوابة', site: 'WH' },
-        { id: 'SEC-05', name: 'أ/ إبراهيم حسن', role: 'أمن البوابة', site: 'الموقع العام' },
-        { id: 'SEC-06', name: 'أ/ أحمد سالم', role: 'مشرف أمن إداري', site: 'ICAPP-1' },
-        { id: 'SEC-07', name: 'أ/ طارق فتحي', role: 'مشرف أمن', site: 'ICAPP-2' },
-        { id: 'SEC-08', name: 'مسؤول الأمن المناوب (بوابة الدخول)', role: 'أمن مناوب', site: 'جميع المواقع' }
-    ];
-}
-
-function seedDefaultSecurityOfficers_(sheet) {
-    var defs = getDefaultSecurityOfficers_();
-    defs.forEach(function(o) {
-        sheet.appendRow([
-            o.id,
-            o.name,
-            o.role,
-            o.site,
-            o.phone || '',
-            true,
-            new Date().toISOString(),
-            new Date().toISOString()
-        ]);
-    });
-}
-
-/**
- * تهيئة وإنشاء شيت SecurityOfficers
- */
-function getOrCreateSecurityOfficersSheet(sheetName) {
-    var ss = SpreadsheetApp.getActiveSpreadsheet() || (typeof getSpreadsheetId === 'function' ? SpreadsheetApp.openById(getSpreadsheetId()) : null);
-    if (!ss) throw new Error('تعذر الوصول إلى Google Spreadsheet');
-
-    var sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-        sheet = ss.insertSheet(sheetName);
-        var headers = [
-            'ID',
-            'Name',
-            'Role',
-            'Site',
-            'Phone',
-            'Is Active',
-            'Created At',
-            'Updated At'
-        ];
-
-        sheet.appendRow(headers);
-        var headerRange = sheet.getRange(1, 1, 1, headers.length);
-        headerRange.setBackground('#047857');
-        headerRange.setFontColor('#ffffff');
-        headerRange.setFontWeight('bold');
-        headerRange.setHorizontalAlignment('center');
-        sheet.setFrozenRows(1);
-        seedDefaultSecurityOfficers_(sheet);
-        Logger.log('✅ تم إنشاء وتهيئة شيت SecurityOfficers بنجاح');
-    }
-    return sheet;
-}
-
-/**
- * تهيئة وإنشاء شيت GateVisitors مع الترويسة المعتمدة وتنسيق الأعمدة
- */
-function getOrCreateGateVisitorsSheet(sheetName) {
-    var ss = SpreadsheetApp.getActiveSpreadsheet() || (typeof getSpreadsheetId === 'function' ? SpreadsheetApp.openById(getSpreadsheetId()) : null);
-    if (!ss) throw new Error('تعذر الوصول إلى Google Spreadsheet');
-
-    var sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-        sheet = ss.insertSheet(sheetName);
-        var headers = [
-            'Record ID',
-            'Entry Date',
-            'Entry Time',
-            'Visitor Name',
-            'Organization / Company',
-            'National ID / Passport',
-            'Phone Number',
-            'Vehicle Plate',
-            'Target Site',
-            'Target Hall / Area',
-            'Host Person & Dept',
-            'Visit Purpose',
-            'Badge #',
-            'Security Officer / Registered By',
-            'Status',
-            'Exit Time',
-            'Duration (Minutes)',
-            'Signature URL',
-            'Created At Timestamp'
-        ];
-
-        sheet.appendRow(headers);
-        var headerRange = sheet.getRange(1, 1, 1, headers.length);
-        headerRange.setBackground('#1e40af');
-        headerRange.setFontColor('#ffffff');
-        headerRange.setFontWeight('bold');
-        headerRange.setHorizontalAlignment('center');
-        sheet.setFrozenRows(1);
-        Logger.log('✅ تم إنشاء وتهيئة شيت GateVisitors بنجاح');
-    } else {
-        // إذا كان الشيت موجوداً، تأكد من تحديث الرؤوس إذا كانت أقل من 19 عمود
-        var lastCol = sheet.getLastColumn();
-        if (lastCol < 19) {
-            sheet.getRange(1, 1, 1, 19).setValues([[
-                'Record ID',
-                'Entry Date',
-                'Entry Time',
-                'Visitor Name',
-                'Organization / Company',
-                'National ID / Passport',
-                'Phone Number',
-                'Vehicle Plate',
-                'Target Site',
-                'Target Hall / Area',
-                'Host Person & Dept',
-                'Visit Purpose',
-                'Badge #',
-                'Security Officer / Registered By',
-                'Status',
-                'Exit Time',
-                'Duration (Minutes)',
-                'Signature URL',
-                'Created At Timestamp'
-            ]]);
-        }
-    }
-    return sheet;
 }
