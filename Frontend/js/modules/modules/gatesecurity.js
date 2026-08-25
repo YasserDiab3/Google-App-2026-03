@@ -124,54 +124,77 @@ class GateSecurityModule {
                 </div>
             </div>
 
-            <!-- بطاقات الإحصائيات الحية (KPIs) -->
-            <div class="grid-4" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px;">
-                <div class="kpi-card" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; border-right: 4px solid #10b981;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">المتواجدون حالياً بالمصانع</span>
-                        <i class="fas fa-users text-emerald-500" style="font-size: 1.2rem;"></i>
+            <!-- بطاقات الإحصائيات الحية فائقة الوضوح (High-Contrast KPIs) -->
+            <div class="grid-4" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                <!-- بطاقة المتواجدين حالياً -->
+                <div class="kpi-card" style="background: #ffffff; border: 1.5px solid #a7f3d0; border-top: 4px solid #059669; border-radius: 14px; padding: 18px 20px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08); transition: transform 0.2s ease;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <span style="font-size: 0.88rem; font-weight: 800; color: #0f172a; display: block;">المتواجدون حالياً بالمصانع</span>
+                            <span style="font-size: 0.76rem; color: #059669; font-weight: 800; margin-top: 2px; display: inline-flex; align-items: center; gap: 4px;">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                                بالداخل الآن (Onsite)
+                            </span>
+                        </div>
+                        <div style="width: 42px; height: 42px; border-radius: 10px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                            <i class="fas fa-users"></i>
+                        </div>
                     </div>
-                    <div id="kpiActiveVisitors" style="font-size: 1.8rem; font-weight: 900; color: #10b981; margin-top: 6px;">0</div>
-                    <span style="font-size: 0.72rem; color: #059669; font-weight: 700;">🟢 بالداخل الآن (Onsite)</span>
+                    <div id="kpiActiveVisitors" style="font-size: 2.3rem; font-weight: 900; color: #047857; line-height: 1.1; margin-top: 10px;">0</div>
                 </div>
 
-                <div class="kpi-card" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; border-right: 4px solid #3b82f6;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">إجمالي زوار اليوم</span>
-                        <i class="fas fa-calendar-day text-blue-500" style="font-size: 1.2rem;"></i>
+                <!-- بطاقة زوار اليوم -->
+                <div class="kpi-card" style="background: #ffffff; border: 1.5px solid #bfdbfe; border-top: 4px solid #2563eb; border-radius: 14px; padding: 18px 20px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08); transition: transform 0.2s ease;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <span style="font-size: 0.88rem; font-weight: 800; color: #0f172a; display: block;">إجمالي زوار اليوم</span>
+                            <span style="font-size: 0.76rem; color: #1d4ed8; font-weight: 700; margin-top: 2px; display: block;">حركات الدخول الموثقة اليوم</span>
+                        </div>
+                        <div style="width: 42px; height: 42px; border-radius: 10px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                            <i class="fas fa-calendar-day"></i>
+                        </div>
                     </div>
-                    <div id="kpiTodayVisitors" style="font-size: 1.8rem; font-weight: 900; color: #3b82f6; margin-top: 6px;">0</div>
-                    <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">حركات الدخول الموثقة</span>
+                    <div id="kpiTodayVisitors" style="font-size: 2.3rem; font-weight: 900; color: #1e40af; line-height: 1.1; margin-top: 10px;">0</div>
                 </div>
 
-                <div class="kpi-card" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; border-right: 4px solid #f59e0b;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">تنبيه مدة الزيارة (+4 ساعات)</span>
-                        <i class="fas fa-stopwatch text-amber-500" style="font-size: 1.2rem;"></i>
+                <!-- بطاقة تنبيه التواجد المطول -->
+                <div class="kpi-card" style="background: #ffffff; border: 1.5px solid #fde68a; border-top: 4px solid #d97706; border-radius: 14px; padding: 18px 20px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.08); transition: transform 0.2s ease;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <span style="font-size: 0.88rem; font-weight: 800; color: #0f172a; display: block;">تنبيه مدة الزيارة (+4 ساعات)</span>
+                            <span style="font-size: 0.76rem; color: #b45309; font-weight: 800; margin-top: 2px; display: block;">تحتاج متابعة وتدقيق أمني</span>
+                        </div>
+                        <div style="width: 42px; height: 42px; border-radius: 10px; background: #fffbeb; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                            <i class="fas fa-stopwatch"></i>
+                        </div>
                     </div>
-                    <div id="kpiOverstayVisitors" style="font-size: 1.8rem; font-weight: 900; color: #f59e0b; margin-top: 6px;">0</div>
-                    <span style="font-size: 0.72rem; color: #d97706; font-weight: 700;">تحتاج متابعة أمنية</span>
+                    <div id="kpiOverstayVisitors" style="font-size: 2.3rem; font-weight: 900; color: #b45309; line-height: 1.1; margin-top: 10px;">0</div>
                 </div>
 
-                <div class="kpi-card" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; border-right: 4px solid #6366f1;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">إجمالي زيارات الشهر</span>
-                        <i class="fas fa-chart-line text-indigo-500" style="font-size: 1.2rem;"></i>
+                <!-- بطاقة زيارات الشهر -->
+                <div class="kpi-card" style="background: #ffffff; border: 1.5px solid #ddd6fe; border-top: 4px solid #6366f1; border-radius: 14px; padding: 18px 20px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08); transition: transform 0.2s ease;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <span style="font-size: 0.88rem; font-weight: 800; color: #0f172a; display: block;">إجمالي زيارات الشهر</span>
+                            <span style="font-size: 0.76rem; color: #4338ca; font-weight: 700; margin-top: 2px; display: block;">سجل شهر ${new Date().toLocaleDateString('ar-EG', { month: 'long' })}</span>
+                        </div>
+                        <div style="width: 42px; height: 42px; border-radius: 10px; background: #f5f3ff; color: #6366f1; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
                     </div>
-                    <div id="kpiMonthVisitors" style="font-size: 1.8rem; font-weight: 900; color: #6366f1; margin-top: 6px;">0</div>
-                    <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">سجل شهر ${new Date().toLocaleDateString('ar-EG', { month: 'long' })}</span>
+                    <div id="kpiMonthVisitors" style="font-size: 2.3rem; font-weight: 900; color: #4338ca; line-height: 1.1; margin-top: 10px;">0</div>
                 </div>
             </div>
 
-            <!-- شريط الفلاتر والبحث -->
-            <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
-                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; flex: 1; min-width: 300px;">
-                    <div style="position: relative; flex: 1; min-width: 200px;">
-                        <i class="fas fa-search" style="position: absolute; right: 12px; top: 12px; color: var(--text-muted);"></i>
-                        <input type="text" id="gateVisitorSearchInput" class="form-control" placeholder="بحث بالاسم، الشركة، رقم الكارت، المستضيف..." style="padding-right: 34px; font-size: 0.85rem;" oninput="GateSecurity.handleSearch(this.value)">
+            <!-- شريط الفلاتر والبحث عالي الوضوح -->
+            <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 16px 20px; margin-bottom: 22px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; flex: 1; min-width: 300px;">
+                    <div style="position: relative; flex: 1; min-width: 220px;">
+                        <i class="fas fa-search" style="position: absolute; right: 14px; top: 13px; color: #2563eb; font-size: 0.95rem;"></i>
+                        <input type="text" id="gateVisitorSearchInput" class="form-control" placeholder="بحث بالاسم، الشركة، رقم الكارت، المستضيف..." style="padding-right: 38px; font-size: 0.88rem; font-weight: 700; color: #0f172a; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; height: 42px;" oninput="GateSecurity.handleSearch(this.value)">
                     </div>
 
-                    <select id="gateFilterSite" class="form-select" style="width: auto; min-width: 150px; font-size: 0.85rem;" onchange="GateSecurity.handleFilterSite(this.value)">
+                    <select id="gateFilterSite" class="form-select" style="width: auto; min-width: 160px; font-size: 0.88rem; font-weight: 800; color: #0f172a; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; height: 42px;" onchange="GateSecurity.handleFilterSite(this.value)">
                         <option value="all">🏢 جميع المصانع والمواقع</option>
                         <option value="ICAPP-1">ICAPP-1</option>
                         <option value="ICAPP-2">ICAPP-2</option>
@@ -182,7 +205,7 @@ class GateSecurityModule {
                         <option value="الموقع العام">الموقع العام والمرافق</option>
                     </select>
 
-                    <select id="gateFilterStatus" class="form-select" style="width: auto; min-width: 150px; font-size: 0.85rem;" onchange="GateSecurity.handleFilterStatus(this.value)">
+                    <select id="gateFilterStatus" class="form-select" style="width: auto; min-width: 160px; font-size: 0.88rem; font-weight: 800; color: #0f172a; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; height: 42px;" onchange="GateSecurity.handleFilterStatus(this.value)">
                         <option value="all">⚡ جميع الحالات</option>
                         <option value="active" selected>🟢 بالداخل حالياً (Onsite)</option>
                         <option value="exited">🚪 تم الخروج (Checked Out)</option>
@@ -190,8 +213,8 @@ class GateSecurityModule {
                 </div>
 
                 <div style="display: flex; gap: 8px;">
-                    <button type="button" class="btn btn-outline-secondary" onclick="GateSecurity.exportToExcel()" style="font-weight: 700; font-size: 0.82rem;">
-                        <i class="fas fa-file-excel text-emerald-600"></i> تصدير Excel
+                    <button type="button" class="btn" onclick="GateSecurity.exportToExcel()" style="background: #059669; color: #ffffff; font-weight: 800; font-size: 0.85rem; padding: 10px 18px; border-radius: 10px; border: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3); cursor: pointer;">
+                        <i class="fas fa-file-excel"></i> تصدير Excel
                     </button>
                 </div>
             </div>
@@ -200,17 +223,17 @@ class GateSecurityModule {
             <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm);">
                 <div style="overflow-x: auto;">
                     <table class="table" style="width: 100%; margin-bottom: 0; font-size: 0.84rem; text-align: right;">
-                        <thead style="background: var(--bg-card); color: var(--text-secondary); font-weight: 800; border-bottom: 2px solid var(--border-color);">
+                        <thead style="background: #1e3a8a; color: #ffffff; font-weight: 900; border-bottom: 2px solid #1e40af;">
                             <tr>
-                                <th style="padding: 12px 14px;">رقم الكارت</th>
-                                <th style="padding: 12px 14px;">الزائر والجهة</th>
-                                <th style="padding: 12px 14px;">الهاتف / الرقم القومي</th>
-                                <th style="padding: 12px 14px;">المصنع والصالة المستهدفة</th>
-                                <th style="padding: 12px 14px;">الموظف المستضيف</th>
-                                <th style="padding: 12px 14px;">وقت الدخول / الخروج</th>
-                                <th style="padding: 12px 14px;">المدة المنقضية</th>
-                                <th style="padding: 12px 14px;">الحالة</th>
-                                <th style="padding: 12px 14px; text-align: center;">إجراء</th>
+                                <th style="padding: 13px 14px; color: #ffffff;">رقم الكارت</th>
+                                <th style="padding: 13px 14px; color: #ffffff;">الزائر والجهة</th>
+                                <th style="padding: 13px 14px; color: #ffffff;">الهاتف / الرقم القومي</th>
+                                <th style="padding: 13px 14px; color: #ffffff;">المصنع والصالة المستهدفة</th>
+                                <th style="padding: 13px 14px; color: #ffffff;">الموظف المستضيف</th>
+                                <th style="padding: 13px 14px; color: #ffffff;">وقت الدخول / الخروج</th>
+                                <th style="padding: 13px 14px; color: #ffffff;">المدة المنقضية</th>
+                                <th style="padding: 13px 14px; color: #ffffff;">الحالة</th>
+                                <th style="padding: 13px 14px; text-align: center; color: #ffffff;">إجراء</th>
                             </tr>
                         </thead>
                         <tbody id="gateVisitorsTableBody">
