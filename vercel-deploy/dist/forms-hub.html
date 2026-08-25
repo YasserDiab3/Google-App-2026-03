@@ -3292,10 +3292,14 @@
             });
         }
     
+
     // ======================================================================
-    // Safety Champions Digital Certificate Engine
+    // Safety Champions Digital Certificate Engine with Direct Canvas Download
     // ======================================================================
+    let currentCertData = { name: '', count: 0, rank: 1 };
+
     function openChampionCertificate(name, count, rank) {
+        currentCertData = { name: name, count: count, rank: rank };
         const modal = document.getElementById('safetyChampionCertModal');
         if (!modal) return;
 
@@ -3333,6 +3337,142 @@
             document.body.classList.remove('printing-cert');
         }, 1200);
     }
+
+    function downloadCurrentChampionCert() {
+        downloadChampionCertificateImage(currentCertData.name, currentCertData.count, currentCertData.rank);
+    }
+
+    function downloadChampionCertificateImage(name, count, rank) {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1200;
+            canvas.height = 800;
+            const ctx = canvas.getContext('2d');
+
+            // خلفية فاخرة
+            const bgGrad = ctx.createRadialGradient(600, 400, 50, 600, 400, 600);
+            bgGrad.addColorStop(0, '#ffffff');
+            bgGrad.addColorStop(1, '#fffcf0');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, 1200, 800);
+
+            // إطار ذهبي ملكي مزدوج
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 14;
+            ctx.strokeRect(25, 25, 1150, 750);
+
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(45, 45, 1110, 710);
+
+            // رأس الشهادة
+            ctx.fillStyle = '#1e293b';
+            ctx.font = 'bold 24px "Tajawal", "Segoe UI", sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText('الشركة العالمية للانتاج والتصنيع الزراعي', 1100, 95);
+
+            ctx.fillStyle = '#b45309';
+            ctx.font = 'bold 18px "Tajawal", "Segoe UI", sans-serif';
+            ctx.fillText('ادارة السلامة والصحة المهنية وحماية البيئة', 1100, 125);
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#64748b';
+            ctx.font = '14px "Tajawal", "Segoe UI", sans-serif';
+            const now = new Date();
+            ctx.fillText(`كود الاعتماد: CERT-HSE-${now.getFullYear()}-0${rank || 1}`, 80, 95);
+            ctx.fillText(`تاريخ التكريم: ${now.toLocaleDateString('ar-EG')}`, 80, 125);
+
+            // فاصل ذهبي
+            ctx.strokeStyle = '#fde68a';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(80, 145);
+            ctx.lineTo(1120, 145);
+            ctx.stroke();
+
+            // عنوان الشهادة الرئيسي
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#b45309';
+            ctx.font = '900 42px "Tajawal", "Segoe UI", sans-serif';
+            ctx.fillText('📜 شَهَادَةُ شُكْرٍ وَتَقْدِيرٍ وَتَمَيُّزٍ 📜', 600, 220);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = 'bold 18px "Segoe UI", sans-serif';
+            ctx.fillText('Safety & Occupational Health Excellence Certificate', 600, 255);
+
+            ctx.fillStyle = '#334155';
+            ctx.font = 'bold 22px "Tajawal", "Segoe UI", sans-serif';
+            ctx.fillText('تتقدم إدارة السلامة والصحة المهنية وحماية البيئة بجزيل الشكر والتقدير إلى الزميل المتميز:', 600, 310);
+
+            // صندوق اسم المكرم
+            ctx.fillStyle = '#fef3c7';
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(300, 345, 600, 70, 35);
+            } else {
+                ctx.rect(300, 345, 600, 70);
+            }
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#78350f';
+            ctx.font = '900 32px "Tajawal", "Segoe UI", sans-serif';
+            ctx.fillText(name || 'بطل السلامة', 600, 392);
+
+            // تفاصيل الإنجاز والمركز
+            const medals = ['الأول 🥇', 'الثاني 🥈', 'الثالث 🥉', 'الرابع 🎖️', 'الخامس 🎖️'];
+            const rankStr = medals[(rank || 1) - 1] || 'المتميز 🎖️';
+            ctx.fillStyle = '#334155';
+            ctx.font = 'bold 20px "Tajawal", "Segoe UI", sans-serif';
+            ctx.fillText('تقديراً لجهوده الميدانية الاستثنائية ودوره الفاعل في رصد ومعالجة المخاطر وتحقيقه:', 600, 465);
+
+            ctx.fillStyle = '#b45309';
+            ctx.font = '900 24px "Tajawal", "Segoe UI", sans-serif';
+            ctx.fillText(`المركز ${rankStr} في لوحة أبطال السلامة برصيد (${Number(count || 0).toLocaleString('ar-EG')} ملاحظة وإجراء)`, 600, 505);
+
+            // خط الاعتمادات
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.beginPath();
+            ctx.moveTo(100, 575);
+            ctx.lineTo(1100, 575);
+            ctx.stroke();
+
+            ctx.fillStyle = '#1e293b';
+            ctx.font = 'bold 18px "Tajawal", "Segoe UI", sans-serif';
+            ctx.fillText('مشرف السلامة الميداني', 250, 615);
+            ctx.fillText('ختم التميز الذهبي (HSE)', 600, 615);
+            ctx.fillText('مدير إدارة السلامة والصحة المهنية', 950, 615);
+
+            // ختم التميز الذهبي
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(600, 675, 40, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 18px sans-serif';
+            ctx.fillText('ICAPP', 600, 680);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '14px "Tajawal", sans-serif';
+            ctx.fillText('معتمد رقمياً', 250, 685);
+            ctx.fillText('الاعتماد الرسمي', 950, 685);
+
+            // بدء التنزيل المباشر
+            const link = document.createElement('a');
+            const cleanFileName = `شهادة_شكر_وتقدير_${(name || 'بطل_السلامة').replace(/[\s\/\:]+/g, '_')}.png`;
+            link.download = cleanFileName;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch(err) {
+            console.error('Error generating certificate image:', err);
+            printChampionCertificate();
+        }
+    }
+
 
 </script>
 
@@ -3991,15 +4131,20 @@
         <div style="max-width: 780px; width: 95%; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.35); border: 2px solid #fbbf24; position: relative;">
             
             <!-- أزرار التحكم العلوية للشهادة -->
-            <div class="anl-no-print" style="padding: 10px 16px; background: #1e293b; color: #fff; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-weight: 800; font-size: 0.9rem; color: #fde047;"><i class="fas fa-award ml-1"></i>شهادة شكر وتقدير رسمية - أبطال السلامة</span>
-                <div style="display: flex; gap: 8px;">
-                    <button type="button" onclick="printChampionCertificate()" style="background: #10b981; color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                        <i class="fas fa-print"></i>
-                        <span>طباعة الشهادة</span>
+            <div class="anl-no-print" style="padding: 10px 14px; background: #1e293b; color: #fff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <span style="font-weight: 800; font-size: 0.88rem; color: #fde047;"><i class="fas fa-award ml-1"></i>شهادة شكر وتقدير رسمية</span>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <button type="button" onclick="downloadCurrentChampionCert()" title="تنزيل مباشر كصورة عالية الدقة" style="background: #d97706; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(217,119,6,0.3);">
+                        <i class="fas fa-download"></i>
+                        <span>تنزيل الشهادة 📥</span>
                     </button>
-                    <button type="button" onclick="closeChampionCertModal()" style="background: rgba(255,255,255,0.15); color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; cursor: pointer;">
-                        إغلاق &times;
+                    <button type="button" onclick="printChampionCertificate()" title="طباعة أو حفظ PDF" style="background: #10b981; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-print"></i>
+                        <span>طباعة</span>
+                    </button>
+                    <button type="button" onclick="closeChampionCertModal()" style="background: #ef4444; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-times"></i>
+                        <span>إغلاق</span>
                     </button>
                 </div>
             </div>
@@ -4064,6 +4209,19 @@
                 </div>
 
             </div>
+
+            <!-- شريط سفلي ثابت وسريع للهواتف الذكية -->
+            <div class="anl-no-print" style="padding: 10px 14px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; justify-content: space-between; align-items: center;">
+                <button type="button" onclick="closeChampionCertModal()" style="flex: 1; height: 40px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <i class="fas fa-arrow-right text-indigo-600"></i>
+                    <span>العودة للوحة التحليل</span>
+                </button>
+                <button type="button" onclick="downloadCurrentChampionCert()" style="flex: 1.2; height: 40px; background: #d97706; color: #fff; border: none; border-radius: 8px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(217,119,6,0.3);">
+                    <i class="fas fa-download"></i>
+                    <span>تحميل الشهادة للجهاز 📥</span>
+                </button>
+            </div>
+
         </div>
     </div>
 
