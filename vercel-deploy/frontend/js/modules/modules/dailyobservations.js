@@ -5335,6 +5335,72 @@ const DailyObservations = {
         });
     },
 
+
+    _renderSafetyChampionsLeaderboard(obs) {
+        const leaderboardContainer = document.getElementById('obs-leaderboard-container');
+        if (!leaderboardContainer) return;
+
+        const observerCounts = {};
+        const deptCounts = {};
+
+        (obs || []).forEach(o => {
+            const obsName = String(o.observerName || o.recordedByName || o.reporterName || '').trim();
+            const deptName = String(o.responsibleDepartment || o.targetDept || o.department || '').trim();
+            if (obsName && !obsName.includes('مجهول') && obsName !== '-' && obsName !== 'null') {
+                observerCounts[obsName] = (observerCounts[obsName] || 0) + 1;
+            }
+            if (deptName && deptName !== '-' && deptName !== 'null') {
+                deptCounts[deptName] = (deptCounts[deptName] || 0) + 1;
+            }
+        });
+
+        const topObservers = Object.entries(observerCounts).sort((a,b) => b[1] - a[1]).slice(0, 4);
+        const topDepts = Object.entries(deptCounts).sort((a,b) => b[1] - a[1]).slice(0, 4);
+
+        const medals = ['🥇', '🥈', '🥉', '🎖️'];
+        let lHtml = `
+            <div style="background:#f8fafc;padding:14px;border-radius:12px;border:1.5px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                <div style="font-weight:800;font-size:0.88rem;color:#1e3a8a;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-user-shield text-blue-600"></i> أكثر المفتشين رصداً (ميدانياً):
+                </div>
+        `;
+        if (topObservers.length === 0) {
+            lHtml += '<div style="font-size:0.8rem;color:#94a3b8;padding:8px 0;text-align:center;">لا توجد بيانات كافية خلال الفترة المحددة</div>';
+        } else {
+            topObservers.forEach(([name, count], i) => {
+                lHtml += `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed #e2e8f0;font-size:0.84rem;">
+                        <span style="font-weight:700;color:#1e293b;">${medals[i] || '🎖️'} ${Utils.escapeHTML(name)}</span>
+                        <span style="background:#dbeafe;color:#1e40af;padding:3px 10px;border-radius:12px;font-weight:800;font-size:0.75rem;">${count} ملاحظة</span>
+                    </div>
+                `;
+            });
+        }
+        lHtml += '</div>';
+
+        lHtml += `
+            <div style="background:#f8fafc;padding:14px;border-radius:12px;border:1.5px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                <div style="font-weight:800;font-size:0.88rem;color:#15803d;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-building text-emerald-600"></i> أكثر الإدارات تفاعلاً ومعالجة:
+                </div>
+        `;
+        if (topDepts.length === 0) {
+            lHtml += '<div style="font-size:0.8rem;color:#94a3b8;padding:8px 0;text-align:center;">لا توجد بيانات كافية خلال الفترة المحددة</div>';
+        } else {
+            topDepts.forEach(([dept, count], i) => {
+                lHtml += `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed #e2e8f0;font-size:0.84rem;">
+                        <span style="font-weight:700;color:#1e293b;">${medals[i] || '🎖️'} ${Utils.escapeHTML(dept)}</span>
+                        <span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:12px;font-weight:800;font-size:0.75rem;">${count} إجراء</span>
+                    </div>
+                `;
+            });
+        }
+        lHtml += '</div>';
+
+        leaderboardContainer.innerHTML = lHtml;
+    },
+
     // ── تحديث لوحة التحليل بالكامل ──
     async updateAnalysisResults() {
         const root = document.getElementById('obs-analytics-root');
@@ -5400,6 +5466,9 @@ const DailyObservations = {
                     </div>
                 </div>`).join('');
         }
+
+        // ── 5.5. بناء لوحة أبطال السلامة فورياً ──
+        this._renderSafetyChampionsLeaderboard(obs);
 
         // ── 6. تحميل Chart.js ──
         const loaded = await this.ensureChartJSLoaded();

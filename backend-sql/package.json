@@ -1,0 +1,24 @@
+{
+  "name": "hse-backend-sql",
+  "version": "1.0.0",
+  "private": true,
+  "description": "High-performance isolated SQL Backend for HSE Clinic System with 100% Google Apps Script protocol parity",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "seed": "node scripts/seed-demo-data.js",
+    "migrate:sheets": "node scripts/migrate-from-sheets.js",
+    "test": "node tests/run-all-tests.js",
+    "test:parity": "node tests/parity-engine.test.js",
+    "test:security": "node tests/security-guard.test.js",
+    "test:benchmark": "node tests/benchmark.test.js",
+    "test:e2e": "node tests/e2e-smoke.test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {}
+}
