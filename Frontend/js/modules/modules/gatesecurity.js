@@ -280,30 +280,31 @@ class GateSecurityModule {
                         const res = await fetch(targetUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify({ action: 'getActiveGateVisitors', data: {} })
+                            body: JSON.stringify({ action: 'getAllGateVisitors', data: {} })
                         });
                         json = await res.json();
                     } catch(pErr) {
-                        const res = await fetch(targetUrl + '?action=getActiveGateVisitors', { method: 'GET', mode: 'cors' });
+                        const res = await fetch(targetUrl + '?action=getAllGateVisitors', { method: 'GET', mode: 'cors' });
                         json = await res.json();
                     }
 
-                    if (json && json.success && Array.isArray(json.activeVisitors)) {
-                        const cloudActive = json.activeVisitors.map(v => ({
-                            ...v,
-                            entryTimestamp: new Date(v.entryDate + ' ' + v.entryTime).getTime() || Date.now()
-                        }));
-                        // Merge
-                        const map = new Map();
-                        this.visitors.forEach(v => map.set(v.id, v));
-                        cloudActive.forEach(v => {
-                            const existing = map.get(v.id);
-                            if (existing && existing.exitTime) {
-                                return; // Don't revert local checkout
+                    if (json && json.success && Array.isArray(json.visitors)) {
+                        this.visitors = json.visitors.map(v => {
+                            let ts = v.entryTimestamp;
+                            if (!ts || isNaN(ts)) {
+                                try {
+                                    const cleanTime = String(v.entryTime || '').replace(/[^0-9:]/g, ' ').trim();
+                                    const cleanDate = String(v.entryDate || '').replace(/[^0-9-]/g, '').trim();
+                                    if (cleanDate && cleanTime) {
+                                        ts = new Date(cleanDate + 'T' + (cleanTime.length === 5 ? cleanTime + ':00' : cleanTime)).getTime();
+                                    }
+                                } catch(e) {}
                             }
-                            map.set(v.id, v);
+                            return {
+                                ...v,
+                                entryTimestamp: ts || Date.now()
+                            };
                         });
-                        this.visitors = Array.from(map.values()).sort((a,b) => (b.entryTimestamp || 0) - (a.entryTimestamp || 0));
                         localStorage.setItem('HSE_GATE_VISITORS_REGISTRY', JSON.stringify(this.visitors));
                     }
                 } catch(e) {}
@@ -333,9 +334,21 @@ class GateSecurityModule {
         const todayStr = new Date().toISOString().split('T')[0];
         const thisMonthStr = todayStr.slice(0, 7);
 
-        const todayList = this.visitors.filter(v => v.entryDate === todayStr);
-        const activeList = this.visitors.filter(v => !v.exitTime);
-        const monthList = this.visitors.filter(v => v.entryDate && v.entryDate.startsWith(thisMonthStr));
+        const activeList = this.visitors.filter(v => {
+            const ex = String(v.exitTime || '').trim();
+            const isInside = String(v.status || '').indexOf('بالداخل') !== -1;
+            return isInside && (!ex || ex === '0' || ex === '-');
+        });
+
+        const todayList = this.visitors.filter(v => {
+            const d = String(v.entryDate || '').trim();
+            return d === todayStr || d.startsWith(todayStr);
+        });
+
+        const monthList = this.visitors.filter(v => {
+            const d = String(v.entryDate || '').trim();
+            return d.startsWith(thisMonthStr);
+        });
 
         const nowTs = Date.now();
         const overstayCount = activeList.filter(v => {

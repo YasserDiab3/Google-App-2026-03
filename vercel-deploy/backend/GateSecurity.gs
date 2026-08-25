@@ -262,6 +262,81 @@ function submitGateVisitorCheckOut(payload) {
 /**
  * استرجاع قائمة الزوار المتواجدين حالياً بالمصانع
  */
+
+/**
+ * استرجاع سجل جميع الزوار والمقاولين (المتواجدين والذين غادروا)
+ */
+function getAllGateVisitors(payload) {
+    try {
+        var sheetName = 'GateVisitors';
+        var sheet = getOrCreateGateVisitorsSheet(sheetName);
+        var data = sheet.getDataRange().getValues();
+        if (data.length <= 1) return { success: true, allCount: 0, activeCount: 0, visitors: [] };
+
+        var visitors = [];
+        var activeCount = 0;
+        var todayStr = Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd');
+        var todayCount = 0;
+        var monthPrefix = todayStr.slice(0, 7);
+        var monthCount = 0;
+
+        for (var i = 1; i < data.length; i++) {
+            var row = data[i];
+            var rowId = String(row[0] || '').trim();
+            if (!rowId) continue;
+
+            var statusVal = String(row[14] || row[13] || '').trim();
+            var exitVal = String(row[15] || '').trim();
+
+            var isInside = (statusVal.indexOf('بالداخل') !== -1) && (statusVal.indexOf('تم الخروج') === -1);
+            var hasNotExited = (!exitVal || exitVal === '' || exitVal === '0' || exitVal === '-');
+            var isActive = isInside && hasNotExited;
+
+            var entryD = (row[1] instanceof Date) ? Utilities.formatDate(row[1], 'GMT+2', 'yyyy-MM-dd') : String(row[1] || '').trim();
+            var entryT = (row[2] instanceof Date) ? Utilities.formatDate(row[2], 'GMT+2', 'HH:mm:ss') : String(row[2] || '').trim();
+            var exitT = (row[15] instanceof Date) ? Utilities.formatDate(row[15], 'GMT+2', 'HH:mm:ss') : String(row[15] || '').trim();
+
+            if (isActive) activeCount++;
+            if (entryD === todayStr) todayCount++;
+            if (entryD.indexOf(monthPrefix) === 0) monthCount++;
+
+            visitors.push({
+                id: rowId,
+                entryDate: entryD,
+                entryTime: entryT,
+                name: String(row[3] || ''),
+                org: String(row[4] || ''),
+                idNumber: String(row[5] || ''),
+                phone: String(row[6] || ''),
+                vehicle: String(row[7] || ''),
+                site: String(row[8] || ''),
+                area: String(row[9] || ''),
+                host: String(row[10] || ''),
+                purpose: String(row[11] || ''),
+                badge: String(row[12] || ''),
+                registeredBy: String(row[13] || 'مسؤول الأمن'),
+                status: isActive ? 'بالداخل (Onsite)' : (statusVal || 'تم الخروج (Departed)'),
+                exitTime: exitT,
+                durationMinutes: Number(row[16]) || 0,
+                signatureUrl: String(row[17] || '')
+            });
+        }
+
+        return {
+            success: true,
+            allCount: visitors.length,
+            activeCount: activeCount,
+            todayCount: todayCount,
+            monthCount: monthCount,
+            visitors: visitors
+        };
+
+    } catch(err) {
+        Logger.log('❌ خطأ في getAllGateVisitors: ' + err.toString());
+        return { success: false, message: err.message, allCount: 0, activeCount: 0, visitors: [] };
+    }
+}
+
 function getActiveGateVisitors(payload) {
     try {
         var sheetName = 'GateVisitors';
