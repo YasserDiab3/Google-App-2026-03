@@ -310,3 +310,212 @@ function cleanupPtwRegistryDatabase_() {
     };
 }
 
+
+/**
+ * ⚡ استرجاع الرادار الحي لتصاريح العمل السارية والميدانية لبوابة النماذج (Live PTW Radar)
+ * متاح للاستعلام الخفيف السريع مع كاش لمدة 60 ثانية وحصر المواقع في (ICAPP-1, ICAPP-2, WH)
+ */
+function getPublicLivePTWSummary(payload) {
+    try {
+        var force = payload && (payload.force === true || payload.force === 'true');
+        var cacheKey = 'PUBLIC_LIVE_PTW_RADAR_V1';
+        var cache = null;
+        try {
+            cache = CacheService.getScriptCache();
+            if (cache && !force) {
+                var cachedStr = cache.get(cacheKey);
+                if (cachedStr) {
+                    var parsed = JSON.parse(cachedStr);
+                    parsed.fromCache = true;
+                    return parsed;
+                }
+            }
+        } catch(cErr) {}
+
+        var spreadsheetId = getSpreadsheetId();
+        var ss = SpreadsheetApp.getActiveSpreadsheet() || (spreadsheetId ? SpreadsheetApp.openById(spreadsheetId) : null);
+        if (!ss) return { success: false, message: 'Spreadsheet not found' };
+
+        var sheet = ss.getSheetByName('PTWRegistry') || ss.getSheetByName('PTW');
+        if (!sheet) {
+            return {
+                success: true,
+                summary: { activeTotal: 0, hotWork: 0, heightWork: 0, confinedSpace: 0, electricalWork: 0, coldWork: 0, highRisk: 0 },
+                bySite: { 'ICAPP-1': 0, 'ICAPP-2': 0, 'WH': 0 },
+                activeList: [],
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        var lastRow = sheet.getLastRow();
+        var lastCol = sheet.getLastColumn();
+        if (lastRow <= 1) {
+            return {
+                success: true,
+                summary: { activeTotal: 0, hotWork: 0, heightWork: 0, confinedSpace: 0, electricalWork: 0, coldWork: 0, highRisk: 0 },
+                bySite: { 'ICAPP-1': 0, 'ICAPP-2': 0, 'WH': 0 },
+                activeList: [],
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        var headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+        var colMap = {};
+        for (var h = 0; h < headerRow.length; h++) {
+            colMap[String(headerRow[h] || '').trim().toLowerCase()] = h;
+        }
+
+        var colId = colMap['permitid'] !== undefined ? colMap['permitid'] : (colMap['id'] !== undefined ? colMap['id'] : 0);
+        var colPaper = colMap['paperpermitnumber'] !== undefined ? colMap['paperpermitnumber'] : -1;
+        var colDate = colMap['opendate'] !== undefined ? colMap['opendate'] : (colMap['startdate'] !== undefined ? colMap['startdate'] : (colMap['date'] !== undefined ? colMap['date'] : 1));
+        var colType = colMap['permittype'] !== undefined ? colMap['permittype'] : (colMap['permittypedisplay'] !== undefined ? colMap['permittypedisplay'] : (colMap['worktype'] !== undefined ? colMap['worktype'] : 4));
+        var colLoc = colMap['location'] !== undefined ? colMap['location'] : (colMap['locationid'] !== undefined ? colMap['locationid'] : 8);
+        var colSubLoc = colMap['sublocation'] !== undefined ? colMap['sublocation'] : -1;
+        var colParty = colMap['requestingparty'] !== undefined ? colMap['requestingparty'] : (colMap['authorizedparty'] !== undefined ? colMap['authorizedparty'] : (colMap['department'] !== undefined ? colMap['department'] : 6));
+        var colDesc = colMap['workdescription'] !== undefined ? colMap['workdescription'] : -1;
+        var colSupervisor = colMap['supervisor1'] !== undefined ? colMap['supervisor1'] : (colMap['responsible'] !== undefined ? colMap['responsible'] : -1);
+        var colTimeFrom = colMap['timefrom'] !== undefined ? colMap['timefrom'] : -1;
+        var colTimeTo = colMap['timeto'] !== undefined ? colMap['timeto'] : -1;
+        var colStatus = colMap['status'] !== undefined ? colMap['status'] : -1;
+        var colClosure = colMap['closuredate'] !== undefined ? colMap['closuredate'] : (colMap['enddate'] !== undefined ? colMap['enddate'] : -1);
+
+        var allValues = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+        var now = new Date();
+        var todayStr = Utilities.formatDate(now, 'GMT+2', 'yyyy-MM-dd');
+
+        var activeList = [];
+        var siteCounts = { 'ICAPP-1': 0, 'ICAPP-2': 0, 'WH': 0 };
+        var hotCount = 0;
+        var heightCount = 0;
+        var confinedCount = 0;
+        var electricalCount = 0;
+        var coldCount = 0;
+        var highRiskCount = 0;
+
+        for (var i = allValues.length - 1; i >= 0; i--) {
+            var row = allValues[i];
+            if (!row) continue;
+
+            var st = colStatus !== -1 ? String(row[colStatus] || '').trim() : '';
+            var closureVal = colClosure !== -1 ? row[colClosure] : null;
+            var isClosed = (st === 'مغلق' || st === 'منتهي' || st === 'ملغي' || st === 'Closed' || st === 'Cancelled' || (closureVal && String(closureVal).trim() !== ''));
+            
+            // نأخذ التصاريح السارية فقط
+            var isOpen = (st === 'مفتوح' || st === 'ساري' || st === 'نشط' || st === 'قيد التنفيذ' || st === 'معتمد' || st === 'Open' || st === 'Active' || (!isClosed && st !== ''));
+            if (!isOpen && isClosed) continue;
+
+            var rawDate = colDate !== -1 ? row[colDate] : null;
+            var dtClean = '';
+            if (rawDate instanceof Date) {
+                dtClean = Utilities.formatDate(rawDate, 'GMT+2', 'yyyy-MM-dd');
+            } else {
+                var ds = String(rawDate || '').trim();
+                dtClean = ds.indexOf('T') !== -1 ? ds.split('T')[0] : ds.split(' ')[0];
+            }
+
+            var pId = String(row[colId] || ('PTW-' + (i + 1))).trim();
+            var paperNo = colPaper !== -1 ? String(row[colPaper] || '').trim() : '';
+            var pType = colType !== -1 ? String(row[colType] || 'تصريح عمل عام').trim() : 'تصريح عمل عام';
+            var rawLoc = colLoc !== -1 ? String(row[colLoc] || '').trim() : '';
+            var rawSubLoc = colSubLoc !== -1 ? String(row[colSubLoc] || '').trim() : '';
+            var party = colParty !== -1 ? String(row[colParty] || 'مقاول / جهة منفذة').trim() : 'مقاول / جهة منفذة';
+            var desc = colDesc !== -1 ? String(row[colDesc] || '').trim() : '';
+            var supervisor = colSupervisor !== -1 ? String(row[colSupervisor] || '').trim() : '';
+            var tFrom = colTimeFrom !== -1 ? String(row[colTimeFrom] || '08:00').trim() : '08:00';
+            var tTo = colTimeTo !== -1 ? String(row[colTimeTo] || '17:00').trim() : '17:00';
+
+            // حصر الموقع في: ICAPP-1, ICAPP-2, WH
+            var site = 'ICAPP-1';
+            var combinedLoc = (rawLoc + ' ' + rawSubLoc).toUpperCase();
+            if (combinedLoc.indexOf('ICAPP-2') !== -1 || combinedLoc.indexOf('مصنع 2') !== -1 || combinedLoc.indexOf('مصنع2') !== -1) {
+                site = 'ICAPP-2';
+            } else if (combinedLoc.indexOf('WH') !== -1 || combinedLoc.indexOf('مخازن') !== -1 || combinedLoc.indexOf('مخزن') !== -1) {
+                site = 'WH';
+            } else {
+                site = 'ICAPP-1';
+            }
+
+            // تصنيف نوع التصريح والخطورة
+            var typeKey = 'general';
+            var isHot = (pType.indexOf('ساخن') !== -1 || pType.indexOf('لحام') !== -1 || pType.indexOf('قطع') !== -1 || pType.toLowerCase().indexOf('hot') !== -1);
+            var isHeight = (pType.indexOf('ارتفاع') !== -1 || pType.toLowerCase().indexOf('height') !== -1);
+            var isConfined = (pType.indexOf('مغلق') !== -1 || pType.toLowerCase().indexOf('confined') !== -1);
+            var isElectrical = (pType.indexOf('كهرب') !== -1 || pType.toLowerCase().indexOf('elect') !== -1);
+
+            if (isHot) {
+                hotCount++;
+                highRiskCount++;
+                typeKey = 'hot';
+            } else if (isHeight) {
+                heightCount++;
+                highRiskCount++;
+                typeKey = 'height';
+            } else if (isConfined) {
+                confinedCount++;
+                highRiskCount++;
+                typeKey = 'confined';
+            } else if (isElectrical) {
+                electricalCount++;
+                typeKey = 'electrical';
+            } else {
+                coldCount++;
+                typeKey = 'cold';
+            }
+
+            siteCounts[site] = (siteCounts[site] || 0) + 1;
+
+            if (activeList.length < 50) {
+                activeList.push({
+                    id: pId,
+                    paperNo: paperNo,
+                    type: pType,
+                    typeKey: typeKey,
+                    site: site,
+                    location: (rawLoc || site) + (rawSubLoc ? (' - ' + rawSubLoc) : ''),
+                    party: party,
+                    description: desc || pType,
+                    supervisor: supervisor || 'مشرف السلامة والعمليات',
+                    date: dtClean || todayStr,
+                    timeFrom: tFrom,
+                    timeTo: tTo,
+                    status: st || 'ساري',
+                    isHighRisk: (isHot || isHeight || isConfined)
+                });
+            }
+        }
+
+        var result = {
+            success: true,
+            summary: {
+                activeTotal: activeList.length,
+                hotWork: hotCount,
+                heightWork: heightCount,
+                confinedSpace: confinedCount,
+                electricalWork: electricalCount,
+                coldWork: coldCount,
+                highRisk: highRiskCount
+            },
+            bySite: siteCounts,
+            activeList: activeList,
+            timestamp: now.toISOString()
+        };
+
+        try {
+            if (cache) {
+                var jsonStr = JSON.stringify(result);
+                if (jsonStr.length < 90000) {
+                    cache.put(cacheKey, jsonStr, 60);
+                }
+            }
+        } catch(cPutErr) {
+            Logger.log('Cache put error in live PTW: ' + cPutErr.toString());
+        }
+
+        return result;
+
+    } catch(err) {
+        Logger.log('❌ خطأ في getPublicLivePTWSummary: ' + err.toString());
+        return { success: false, message: err.message };
+    }
+}

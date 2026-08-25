@@ -1957,6 +1957,24 @@
             </div>
         </div>
 
+        <!-- شريط الرادار الحي لتصاريح العمل السارية والميدانية (Live PTW Radar) -->
+        <div id="livePtwWidget" class="live-visitors-widget" style="margin-top: 10px; border-color: rgba(245, 158, 11, 0.4); background: linear-gradient(135deg, rgba(254, 243, 199, 0.45) 0%, rgba(255, 255, 255, 0.95) 100%); cursor: pointer;" onclick="openLivePtwModal()">
+            <div class="live-visitors-content">
+                <div class="live-visitors-left">
+                    <div style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 8px #f59e0b; display: inline-block; animation: headerGlow 2s infinite;"></div>
+                    <div>
+                        <div class="live-visitors-title" style="color: #92400e; font-weight: 800;" id="txtLivePtwTitle">⚡ تصاريح العمل السارية بالمواقع (Live PTW Radar)</div>
+                        <div class="live-visitors-subtitle" id="txtLivePtwSubtitle">رادار ميداني لحظي للأعمال الساخنة، الارتفاعات، والأماكن المغلقة</div>
+                    </div>
+                </div>
+                <div class="live-visitors-badge" id="livePtwCountBadge" style="background: #fef3c7; color: #b45309; border: 1.5px solid #fde68a;">
+                    <i class="fas fa-file-signature"></i>
+                    <span id="livePtwCountNum">0</span>
+                    <span id="livePtwCountLabel">تصريح نشط</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Search Bar -->
         <div class="search-box">
             <i class="fas fa-search"></i>
@@ -5107,6 +5125,10 @@
             if (typeof fetchLiveVisitorsCount === 'function') {
                 await fetchLiveVisitorsCount(true);
             }
+            // 1.2 تحديث رادار تصاريح العمل السارية
+            if (typeof fetchLivePtwData === 'function') {
+                await fetchLivePtwData(true);
+            }
             // 2. تحديث تحليلات الملاحظات الميدانية
             if (typeof fetchObservationsAnalyticsFromCloud === 'function') {
                 await fetchObservationsAnalyticsFromCloud(true);
@@ -5122,6 +5144,200 @@
             if (txt) txt.textContent = 'تحديث';
             if (btn) btn.disabled = false;
         }
+    }
+
+
+    // ======================================================================
+    // Live PTW Radar Engine (استعلام ومتابعة التصاريح الحية في البوابة)
+    // ======================================================================
+    let rawLivePtwData = null;
+
+    async function fetchLivePtwData(force = false) {
+        const refreshIcon = document.getElementById('ptwModalRefreshIcon');
+        if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+        try {
+            // محاولة القراءة من الكاش المحلي للسرعة الفائقة
+            if (!force && !rawLivePtwData) {
+                const cached = localStorage.getItem('HSE_PUBLIC_LIVE_PTW_CACHE');
+                if (cached) {
+                    try {
+                        const parsed = JSON.parse(cached);
+                        if (Date.now() - (parsed.time || 0) < 60000) {
+                            rawLivePtwData = parsed.data;
+                            updatePtwWidgetsAndModal();
+                        }
+                    } catch(cErr) {}
+                }
+            }
+
+            const response = await fetch(HSE_GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'getPublicLivePTWSummary', force: force })
+            });
+
+            if (response.ok) {
+                const resData = await response.json();
+                if (resData && resData.success) {
+                    rawLivePtwData = resData;
+                    try {
+                        localStorage.setItem('HSE_PUBLIC_LIVE_PTW_CACHE', JSON.stringify({ time: Date.now(), data: resData }));
+                    } catch(sErr) {}
+                    updatePtwWidgetsAndModal();
+                }
+            }
+        } catch(err) {
+            console.warn('Live PTW fetch notice:', err);
+        } finally {
+            if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+        }
+    }
+
+    function updatePtwWidgetsAndModal() {
+        if (!rawLivePtwData) return;
+        const sm = rawLivePtwData.summary || { activeTotal: 0, hotWork: 0, heightWork: 0, confinedSpace: 0 };
+
+        // تحديث العداد في الشريط الرئيسي
+        const cntEl = document.getElementById('livePtwCountNum');
+        if (cntEl) cntEl.textContent = sm.activeTotal || '0';
+
+        // تحديث كروت المؤشرات بالنافذة
+        const kTot = document.getElementById('ptwKpiTotal');
+        if (kTot) kTot.textContent = sm.activeTotal || '0';
+
+        const kHot = document.getElementById('ptwKpiHot');
+        if (kHot) kHot.textContent = sm.hotWork || '0';
+
+        const kHgt = document.getElementById('ptwKpiHeight');
+        if (kHgt) kHgt.textContent = sm.heightWork || '0';
+
+        const kCnf = document.getElementById('ptwKpiConfined');
+        if (kCnf) kCnf.textContent = (Number(sm.confinedSpace || 0) + Number(sm.electricalWork || 0)) || '0';
+
+        filterLivePtwList();
+    }
+
+    function openLivePtwModal() {
+        const modal = document.getElementById('livePtwModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        if (!rawLivePtwData) {
+            fetchLivePtwData(false);
+        } else {
+            filterLivePtwList();
+        }
+    }
+
+    function closeLivePtwModal() {
+        const modal = document.getElementById('livePtwModal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    function handlePtwBackdropClick(event) {
+        if (event && event.target && event.target.id === 'livePtwModal') {
+            closeLivePtwModal();
+        }
+    }
+
+    function filterLivePtwList() {
+        const cont = document.getElementById('livePtwCardsContainer');
+        const countTxt = document.getElementById('ptwListCountText');
+        if (!cont) return;
+
+        if (!rawLivePtwData || !rawLivePtwData.activeList) {
+            cont.innerHTML = '<div style="text-align:center; padding:24px; color:#64748b;">لا توجد تصاريح عمل مسجلة حالياً</div>';
+            if (countTxt) countTxt.textContent = '0 تصريح';
+            return;
+        }
+
+        const query = (document.getElementById('ptwSearchInput')?.value || '').trim().toLowerCase();
+        const siteFilter = document.getElementById('ptwSiteFilter')?.value || 'all';
+        const typeFilter = document.getElementById('ptwTypeFilter')?.value || 'all';
+
+        let list = [...rawLivePtwData.activeList];
+
+        if (siteFilter !== 'all') {
+            list = list.filter(p => p.site === siteFilter);
+        }
+
+        if (typeFilter !== 'all') {
+            list = list.filter(p => p.typeKey === typeFilter);
+        }
+
+        if (query) {
+            list = list.filter(p => 
+                String(p.id || '').toLowerCase().includes(query) ||
+                String(p.paperNo || '').toLowerCase().includes(query) ||
+                String(p.location || '').toLowerCase().includes(query) ||
+                String(p.party || '').toLowerCase().includes(query) ||
+                String(p.description || '').toLowerCase().includes(query) ||
+                String(p.type || '').toLowerCase().includes(query) ||
+                String(p.supervisor || '').toLowerCase().includes(query)
+            );
+        }
+
+        if (countTxt) countTxt.textContent = `${list.length} تصريح مطابق للبحث`;
+
+        if (list.length === 0) {
+            cont.innerHTML = `
+                <div style="text-align:center; padding:32px 16px; color:#64748b; background:#fff; border-radius:12px; border:1px dashed #cbd5e1;">
+                    <div style="font-size:1.8rem; margin-bottom:6px;">📋</div>
+                    <div style="font-weight:700; font-size:0.88rem; color:#334155;">لا توجد تصاريح عمل مطابقة لمعايير البحث حالياً</div>
+                    <div style="font-size:0.75rem; color:#94a3b8; margin-top:4px;">يمكنك تعديل الفلتر أو البحث بالرقم والموقع</div>
+                </div>
+            `;
+            return;
+        }
+
+        const typeColors = {
+            hot: { bg: '#fee2e2', border: '#fca5a5', text: '#b91c1c', icon: '🔥' },
+            height: { bg: '#fef3c7', border: '#fde68a', text: '#b45309', icon: '🪜' },
+            confined: { bg: '#ede9fe', border: '#ddd6fe', text: '#6d28d9', icon: '🕳️' },
+            electrical: { bg: '#e0f2fe', border: '#bae6fd', text: '#0369a1', icon: '⚡' },
+            cold: { bg: '#f1f5f9', border: '#cbd5e1', text: '#334155', icon: '❄️' },
+            general: { bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d', icon: '📝' }
+        };
+
+        cont.innerHTML = list.map(p => {
+            const conf = typeColors[p.typeKey] || typeColors.general;
+            const siteBadge = p.site === 'WH' ? '📦 المخازن (WH)' : `🏭 ${escapeHTML(p.site)}`;
+
+            return `
+                <div style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:12px; padding:12px 14px; box-shadow:0 1px 3px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-weight:900; font-size:0.88rem; color:#1e3a8a;">${escapeHTML(p.id)}</span>
+                            ${p.paperNo ? `<span style="background:#f1f5f9; color:#475569; padding:1px 6px; border-radius:4px; font-size:0.7rem; font-weight:700;">ورقي: ${escapeHTML(p.paperNo)}</span>` : ''}
+                            <span style="background:${conf.bg}; color:${conf.text}; border:1px solid ${conf.border}; padding:1px 8px; border-radius:6px; font-size:0.72rem; font-weight:800;">
+                                ${conf.icon} ${escapeHTML(p.type)}
+                            </span>
+                        </div>
+                        <span style="background:#1e1b4b; color:#fbbf24; padding:2px 8px; border-radius:6px; font-size:0.72rem; font-weight:800;">
+                            ${siteBadge}
+                        </span>
+                    </div>
+
+                    <div style="font-weight:700; font-size:0.84rem; color:#1e293b; line-height:1.4;">
+                        📍 ${escapeHTML(p.location)}
+                    </div>
+
+                    ${p.description ? `<div style="font-size:0.78rem; color:#475569; background:#f8fafc; padding:6px 10px; border-radius:6px; border:1px solid #f1f5f9;">${escapeHTML(p.description)}</div>` : ''}
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-top:1px dashed #f1f5f9; padding-top:8px; font-size:0.74rem;">
+                        <div style="color:#64748b;">
+                            <i class="fas fa-hard-hat text-amber-600"></i> الجهة: <b>${escapeHTML(p.party)}</b>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="color:#64748b;"><i class="fas fa-clock text-blue-600"></i> ${escapeHTML(p.timeFrom)} - ${escapeHTML(p.timeTo)}</span>
+                            <span style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:1px 6px; border-radius:4px; font-weight:800; font-size:0.68rem;">🟢 ${escapeHTML(p.status)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
 </script>
@@ -5228,6 +5444,99 @@
                 <button type="button" onclick="downloadCurrentChampionCert()" style="flex: 1.3; height: 42px; background: linear-gradient(135deg, #d97706, #b45309); color: #fff; border: none; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(217,119,6,0.3);">
                     <i class="fas fa-download"></i>
                     <span>تحميل الشهادة للجهاز 📥</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ======================================================================
+         نافذة الرادار الحي لتصاريح العمل السارية بالمواقع (Live PTW Modal)
+         ====================================================================== -->
+    <div id="livePtwModal" class="live-visitors-modal" style="display: none; align-items: center; justify-content: center; z-index: 99999;" onclick="handlePtwBackdropClick(event)">
+        <div class="live-visitors-dialog" style="max-width: 860px; max-height: 90vh; display: flex; flex-direction: column;" onclick="event.stopPropagation()">
+            
+            <!-- رأس النافذة -->
+            <div class="live-visitors-header" style="background: linear-gradient(135deg, #78350f 0%, #b45309 100%); color: #fff; flex-shrink: 0; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                        ⚡
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.96rem; color: #fef3c7;">رادار تصاريح العمل الميدانية السارية</div>
+                        <div style="font-size: 0.72rem; color: #fde68a;">متابعة فورية للأعمال الساخنة والخطرة والمقاولين المنفذين</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button type="button" onclick="fetchLivePtwData(true)" title="تحديث من السحابة" style="background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-rotate" id="ptwModalRefreshIcon"></i>
+                        <span>تحديث</span>
+                    </button>
+                    <button type="button" onclick="closeLivePtwModal()" style="background: rgba(0,0,0,0.25); color: #fff; border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- بطاقات ملخص المؤشرات اللحظية -->
+            <div style="background: #fafaf9; border-bottom: 1px solid #e7e5e4; padding: 10px 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; flex-shrink: 0;">
+                <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; text-align: center;">
+                    <div style="font-size: 0.68rem; color: #64748b; font-weight: 700;">إجمالي الساري</div>
+                    <div style="font-size: 1.15rem; font-weight: 900; color: #0f172a;" id="ptwKpiTotal">0</div>
+                </div>
+                <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 8px; text-align: center;">
+                    <div style="font-size: 0.68rem; color: #be123c; font-weight: 700;">🔥 عمل ساخن ولحام</div>
+                    <div style="font-size: 1.15rem; font-weight: 900; color: #e11d48;" id="ptwKpiHot">0</div>
+                </div>
+                <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 8px; text-align: center;">
+                    <div style="font-size: 0.68rem; color: #a16207; font-weight: 700;">🪜 ارتفاعات وسقالات</div>
+                    <div style="font-size: 1.15rem; font-weight: 900; color: #ca8a04;" id="ptwKpiHeight">0</div>
+                </div>
+                <div style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 8px; text-align: center;">
+                    <div style="font-size: 0.68rem; color: #6d28d9; font-weight: 700;">🕳️ مغلق وكهرباء</div>
+                    <div style="font-size: 1.15rem; font-weight: 900; color: #7c3aed;" id="ptwKpiConfined">0</div>
+                </div>
+            </div>
+
+            <!-- شريط البحث والتصفية -->
+            <div style="padding: 10px 16px; background: #fff; border-bottom: 1px solid #f1f5f9; display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0;">
+                <div style="flex: 1.5; min-width: 180px; position: relative;">
+                    <i class="fas fa-search" style="position: absolute; right: 10px; top: 11px; color: #94a3b8; font-size: 0.8rem;"></i>
+                    <input type="text" id="ptwSearchInput" placeholder="بحث برقم التصريح، المقاول، الموقع، الوصف..." oninput="filterLivePtwList()" style="width: 100%; height: 34px; padding: 0 30px 0 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; box-sizing: border-box; outline: none;">
+                </div>
+                <div style="flex: 1; min-width: 130px;">
+                    <select id="ptwSiteFilter" onchange="filterLivePtwList()" style="width: 100%; height: 34px; padding: 0 8px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #1e293b; outline: none;">
+                        <option value="all">🏢 جميع المصانع</option>
+                        <option value="ICAPP-1">🏭 مصنع ICAPP-1</option>
+                        <option value="ICAPP-2">🏭 مصنع ICAPP-2</option>
+                        <option value="WH">📦 المخازن (WH)</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 130px;">
+                    <select id="ptwTypeFilter" onchange="filterLivePtwList()" style="width: 100%; height: 34px; padding: 0 8px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #1e293b; outline: none;">
+                        <option value="all">📑 جميع أنواع التصاريح</option>
+                        <option value="hot">🔥 عمل ساخن ولحام</option>
+                        <option value="height">🪜 عمل على ارتفاعات</option>
+                        <option value="confined">🕳️ دخول أماكن مغلقة</option>
+                        <option value="electrical">⚡ أعمال كهربائية</option>
+                        <option value="cold">❄️ أعمال عامة وباردة</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- قائمة كروت التصاريح الميدانية -->
+            <div id="livePtwCardsContainer" style="padding: 12px 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; background: #fafaf9;">
+                <div style="text-align: center; padding: 24px; color: #64748b;">
+                    <i class="fas fa-spinner fa-spin ml-2"></i>جاري استعلام رادار تصاريح العمل...
+                </div>
+            </div>
+
+            <!-- التذييل -->
+            <div style="padding: 10px 16px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font-size: 0.76rem; color: #64748b;">
+                <span id="ptwListCountText">0 تصريح مطابق للفلتر</span>
+                <button type="button" onclick="closeLivePtwModal()" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 6px 16px; border-radius: 8px; font-weight: 800; cursor: pointer;">
+                    إغلاق
                 </button>
             </div>
 

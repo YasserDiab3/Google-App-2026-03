@@ -312,7 +312,7 @@ function doPost(e) {
             // تشخيص دخان موظفين (عدادات فقط — بدون قائمة كاملة)
             'getEmployeesSheetHealth',
             'getEmployeesLoadSmoke',
-            'getPublicObservationConfig', 'getPublicObservationsAnalytics',
+            'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'getPublicLivePTWSummary',
             // تقرير الجلسات اليومي (قراءة فقط — يتطلب CSRF + مدير)
             // getDailyUserSessionActivityReport, getAllUserActivityLogs, getUserActivityLogs, getLogStatistics, getAllAuditLogs
             // ✅ P2.2: قراءات PPE أُخرجت — تتطلب CSRF + جلسة (مثل باقي القراءات الحساسة)
@@ -338,7 +338,7 @@ function doPost(e) {
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'getPublicLivePTWSummary', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -405,7 +405,7 @@ function doPost(e) {
             'login', 'verifyMfaLogin', 'initializeSheets',
             'testConnection', 'warmup', 'getPublicIP', 'invalidateServerSession',
             'getAuthBootstrapPolicy', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke',
-            'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics',
+            'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'getPublicLivePTWSummary',
             'submitPublicNearMiss', 'getPublicNearMissConfig',
             'submitPublicFireInspection', 'getPublicFireInspectionConfig',
             'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig',
@@ -531,6 +531,8 @@ function doPost(e) {
                 result = getPublicObservationConfig();
             } else if (action === 'getPublicObservationsAnalytics' && typeof getPublicObservationsAnalytics === 'function') {
                 result = getPublicObservationsAnalytics(payload || postData.data || postData || {});
+            } else if (action === 'getPublicLivePTWSummary' && typeof getPublicLivePTWSummary === 'function') {
+                result = getPublicLivePTWSummary(payload || postData.data || postData || {});
             } else if (action === 'submitPublicFireInspection' && typeof submitPublicFireInspection === 'function') {
                 result = submitPublicFireInspection(payload || postData.data || postData || {});
             } else if (action === 'getPublicFireInspectionConfig' && typeof getPublicFireInspectionConfig === 'function') {
