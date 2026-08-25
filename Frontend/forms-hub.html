@@ -170,17 +170,21 @@
             text-align: center;
         }
 
-        /* Top Header Executive Styling */
+        
+        /* ══════════════════════════════════════════════════════════
+           Executive Responsive Forms Hub Header
+           ══════════════════════════════════════════════════════════ */
         .hub-header {
-            background: var(--header-bg);
+            background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-glass);
-            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
+            border-bottom: 1.5px solid rgba(203, 213, 225, 0.6);
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
             position: sticky;
             top: 0;
-            z-index: 50;
-            padding: 10px 16px;
+            z-index: 100;
+            padding: 8px 14px 6px;
+            transition: all 0.3s ease;
         }
 
         .hub-header::before {
@@ -189,9 +193,9 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #1e3a8a, #2563eb, #059669, #2563eb, #1e3a8a);
-            background-size: 200% 100%;
+            height: 3.5px;
+            background: linear-gradient(90deg, #1e3a8a, #2563eb, #059669, #f59e0b, #2563eb, #1e3a8a);
+            background-size: 300% 100%;
             animation: headerGlow 8s ease infinite;
         }
 
@@ -201,253 +205,242 @@
             100% { background-position: 0% 50%; }
         }
 
-        .header-content {
-            max-width: 760px;
+        [data-theme="dark"] .hub-header {
+            background: rgba(15, 23, 42, 0.92);
+            border-bottom-color: rgba(51, 65, 85, 0.8);
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-container {
+            max-width: 840px;
             margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .header-top-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
+            gap: 10px;
+            width: 100%;
         }
 
         .brand-section {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
+            min-width: 0;
+            flex: 1;
         }
 
         .logo-wrapper {
             position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            flex-shrink: 0;
         }
 
         .brand-logo {
-            width: 46px;
-            height: 46px;
-            border-radius: 12px;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
             object-fit: contain;
             background: #ffffff;
-            padding: 3px;
-            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.15);
+            padding: 2.5px;
+            box-shadow: 0 3px 10px rgba(30, 58, 138, 0.12);
             border: 1.5px solid rgba(37, 99, 235, 0.2);
-            transition: transform 0.25s ease;
+            transition: transform 0.2s ease;
         }
 
         .brand-logo:hover {
-            transform: scale(1.05);
+            transform: scale(1.04);
         }
 
-        .title-row {
+        .brand-info {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-brand-title {
+            font-size: 1.02rem;
+            font-weight: 900;
+            color: var(--text-main, #0f172a);
+            line-height: 1.2;
+            margin: 0;
             display: flex;
             align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
+            gap: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .brand-info h1 {
-            font-size: 17px;
-            font-weight: 900;
-            color: var(--text-main);
-            line-height: 1.25;
-            letter-spacing: -0.3px;
-            margin: 0;
-        }
-
-        .iso-badge {
-            font-size: 9.5px;
+        .header-tag-pill {
+            font-size: 0.65rem;
             font-weight: 800;
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(16, 185, 129, 0.12));
-            color: #1e40af;
-            border: 1px solid rgba(37, 99, 235, 0.25);
-            padding: 2px 7px;
-            border-radius: 20px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            line-height: 1;
+            background: #e0e7ff;
+            color: #4338ca;
+            padding: 1.5px 7px;
+            border-radius: 6px;
+            border: 1px solid #c7d2fe;
+            flex-shrink: 0;
+            letter-spacing: 0.3px;
         }
 
-        [data-theme="dark"] .iso-badge {
-            color: #93c5fd;
-            border-color: rgba(147, 197, 253, 0.3);
-            background: rgba(30, 58, 138, 0.35);
-        }
-
-        .brand-info p {
-            font-size: 11px;
-            color: var(--text-muted);
-            font-weight: 700;
-            margin: 2px 0 0 0;
+        [data-theme="dark"] .header-tag-pill {
+            background: #312e81;
+            color: #c7d2fe;
+            border-color: #4338ca;
         }
 
         .header-actions {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 5px;
+            flex-shrink: 0;
         }
 
-        /* Theme & Language Toggle Buttons */
-        .theme-toggle-btn, .lang-toggle-btn {
-            background: var(--theme-btn-bg);
-            color: var(--theme-btn-color);
-            border: 1px solid var(--theme-btn-border);
-            height: 36px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .theme-toggle-btn {
-            width: 36px;
-            font-size: 14px;
-        }
-
-        .lang-toggle-btn {
+        .header-action-btn {
+            height: 33px;
             padding: 0 10px;
-            gap: 6px;
-            font-size: 12px;
+            border-radius: 8px;
+            border: 1.5px solid #cbd5e1;
+            background: #ffffff;
+            color: #1e293b;
             font-weight: 800;
-            letter-spacing: 0.5px;
-        }
-
-        .theme-toggle-btn:hover, .lang-toggle-btn:hover {
-            border-color: #3b82f6;
-            color: #3b82f6;
-        }
-
-        .theme-toggle-btn:active, .lang-toggle-btn:active {
-            transform: scale(0.92);
-        }
-
-        /* Status & Install Badges */
-        .status-pill {
+            font-size: 0.76rem;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            background: rgba(16, 185, 129, 0.15);
-            color: #059669;
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            justify-content: center;
+            gap: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .header-action-btn:hover {
+            border-color: #3b82f6;
+            color: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(37,99,235,0.15);
+        }
+
+        [data-theme="dark"] .header-action-btn {
+            background: #1e293b;
+            border-color: #334155;
+            color: #f8fafc;
+        }
+
+        .status-pill {
+            height: 33px;
+            padding: 0 9px;
+            border-radius: 8px;
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+            font-size: 0.74rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10b981;
+            display: inline-block;
+            box-shadow: 0 0 6px #10b981;
         }
 
         [data-theme="dark"] .status-pill {
-            color: #34d399;
+            background: rgba(6, 78, 59, 0.35);
+            border-color: #065f46;
+            color: #6ee7b7;
         }
 
-        .status-pill.offline {
-            background: rgba(239, 68, 68, 0.15);
-            color: #dc2626;
-            border-color: rgba(239, 68, 68, 0.3);
-        }
-
-        [data-theme="dark"] .status-pill.offline {
-            color: #f87171;
-        }
-
-        .install-btn {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #ffffff;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 10px;
-            font-size: 12px;
+        /* Sub-Strip Bar */
+        .header-sub-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 3px 8px;
+            background: linear-gradient(90deg, rgba(238, 242, 255, 0.6) 0%, rgba(240, 253, 244, 0.6) 100%);
+            border-radius: 6px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            font-size: 0.73rem;
+            color: #334155;
             font-weight: 700;
-            cursor: pointer;
-            display: inline-flex;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        [data-theme="dark"] .header-sub-strip {
+            background: rgba(30, 41, 59, 0.6);
+            border-color: rgba(51, 65, 85, 0.8);
+            color: #cbd5e1;
+        }
+
+        .company-dept-tag {
+            display: flex;
             align-items: center;
             gap: 6px;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            width: 100%;
         }
 
-        .install-btn:active {
-            transform: scale(0.96);
+        .company-dept-tag i {
+            color: #2563eb;
+            font-size: 0.75rem;
+            flex-shrink: 0;
         }
 
-        /* Mobile Header Responsive Enhancements */
         @media (max-width: 640px) {
             .hub-header {
-                padding: 8px 12px;
+                padding: 6px 10px 5px;
             }
-
-            .header-content {
-                gap: 8px;
-            }
-
-            .brand-section {
-                gap: 8px;
-                min-width: 0;
-            }
-
             .brand-logo {
-                width: 38px;
-                height: 38px;
-                padding: 2px;
-                border-radius: 10px;
-            }
-
-            .title-row {
-                gap: 4px;
-            }
-
-            .brand-info h1 {
-                font-size: 14.5px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-            .iso-badge {
-                font-size: 8.5px;
-                padding: 1px 5px;
-                border-radius: 12px;
-            }
-
-            .brand-info p {
-                font-size: 9.5px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 165px;
-            }
-
-            .header-actions {
-                gap: 5px;
-            }
-
-            .theme-toggle-btn, .lang-toggle-btn {
-                height: 32px;
-                font-size: 11px;
+                width: 36px;
+                height: 36px;
                 border-radius: 8px;
+            }
+            .header-brand-title {
+                font-size: 0.88rem;
+            }
+            .header-tag-pill {
+                font-size: 0.6rem;
+                padding: 1px 5px;
+            }
+            .header-action-btn {
+                height: 30px;
                 padding: 0 7px;
+                font-size: 0.72rem;
             }
-
-            .theme-toggle-btn {
-                width: 32px;
+            .header-action-btn .btn-text {
+                display: none;
             }
-
             .status-pill {
-                padding: 3px 7px;
-                font-size: 10px;
+                height: 30px;
+                padding: 0 6px;
+                font-size: 0.7rem;
+            }
+            .status-pill .status-text {
+                display: none;
+            }
+            .header-sub-strip {
+                font-size: 0.67rem;
+                padding: 2px 6px;
             }
         }
 
-        /* Main Container */
-        .hub-container {
-            max-width: 720px;
-            margin: 0 auto;
-            padding: 16px;
-        }
-
-        /* Hero Banner */
-        .hero-banner {
+.hero-banner {
             background: var(--hero-bg);
             border: 1px solid var(--border-glass-hover);
             border-radius: 18px;
@@ -1199,51 +1192,63 @@
 </head>
 <body>
 
-    <!-- Header الاحترافي الأنيق المعتمد -->
+    <!-- Header المؤسسي الاحترافي الأنيق المعتمد (Responsive Executive Header) -->
     <header class="hub-header">
-        <div class="header-content">
-            <div class="brand-section">
-                <div class="logo-wrapper">
-                    <img src="icons/icapp-logo.png" alt="ICAPP Logo" class="brand-logo" onerror="this.src='icons/icapp-logo.png'">
-                </div>
-                <div class="brand-info">
-                    <div class="header-brand-title">
-                        <span id="txtHubMainTitle">بوابة النماذج الميدانية</span>
-                        <span class="header-tag-pill">ICAPP HSE Hub</span>
+        <div class="header-container">
+            
+            <!-- السطر الأول: الشعار + العنوان الرئيسي + شريط الأدوات -->
+            <div class="header-top-row">
+                <div class="brand-section">
+                    <div class="logo-wrapper">
+                        <img src="icons/icapp-logo.png" alt="ICAPP Logo" class="brand-logo" onerror="this.src='icons/icapp-logo.png'">
                     </div>
-                    <div class="header-brand-sub" id="txtHubSubTitle">الشركة العالمية للانتاج والتصنيع الزراعي • ادارة السلامة والصحة المهنية وحماية البيئة</div>
+                    <div class="brand-info">
+                        <div class="header-brand-title">
+                            <span id="txtHubMainTitle">بوابة النماذج الميدانية</span>
+                            <span class="header-tag-pill">ICAPP HSE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <!-- زر التحديث السحابي الفوري -->
+                    <button type="button" id="hubRefreshBtn" class="header-action-btn" title="تحديث بيانات البوابة فورياً من السحابة" onclick="triggerHubManualRefresh()">
+                        <i class="fas fa-rotate text-blue-600" id="hubRefreshIcon"></i>
+                        <span class="btn-text" id="txtHubRefreshBtn">تحديث</span>
+                    </button>
+
+                    <!-- زر تبديل اللغة -->
+                    <button id="langToggleBtn" class="header-action-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()">
+                        <i class="fas fa-globe text-indigo-600"></i>
+                        <span id="langBtnText">EN</span>
+                    </button>
+
+                    <!-- زر تبديل المظهر -->
+                    <button id="themeToggleBtn" class="header-action-btn" title="تبديل المظهر (فاتح / ليلي)" onclick="toggleHubTheme()">
+                        <i class="fas fa-moon text-amber-500" id="themeIcon"></i>
+                    </button>
+
+                    <!-- مؤشر حالة الاتصال -->
+                    <span id="onlineStatus" class="status-pill" title="حالة الاتصال بالخادم السحابي">
+                        <span class="status-dot"></span>
+                        <span class="status-text" id="onlineStatusText">متصل</span>
+                    </span>
+
+                    <button id="pwaInstallBtn" class="install-btn" style="display: none;">
+                        <i class="fas fa-download"></i>
+                        <span id="pwaInstallText">تثبيت</span>
+                    </button>
                 </div>
             </div>
 
-            <div class="header-actions">
-                <!-- زر التحديث الفوري المباشر من السحابة -->
-                <button type="button" id="hubRefreshBtn" class="header-action-btn" title="تحديث بيانات البوابة فورياً من السحابة" onclick="triggerHubManualRefresh()">
-                    <i class="fas fa-rotate text-blue-600" id="hubRefreshIcon"></i>
-                    <span id="txtHubRefreshBtn">تحديث</span>
-                </button>
-
-                <!-- زر تبديل اللغة (AR / EN) -->
-                <button id="langToggleBtn" class="header-action-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()">
-                    <i class="fas fa-globe text-indigo-600"></i>
-                    <span id="langBtnText">EN</span>
-                </button>
-
-                <!-- زر تبديل الوضع الليلي / العادي -->
-                <button id="themeToggleBtn" class="header-action-btn" title="تبديل المظهر (فاتح / ليلي)" onclick="toggleHubTheme()" style="padding: 0 10px;">
-                    <i class="fas fa-moon text-amber-500" id="themeIcon"></i>
-                </button>
-
-                <!-- مؤشر حالة الاتصال -->
-                <span id="onlineStatus" class="status-pill" style="height: 34px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px;">
-                    <i class="fas fa-circle text-xs" style="color: #10b981;"></i>
-                    <span id="onlineStatusText">متصل بالسحابة</span>
-                </span>
-
-                <button id="pwaInstallBtn" class="install-btn" style="display: none;">
-                    <i class="fas fa-download"></i>
-                    <span id="pwaInstallText">تثبيت</span>
-                </button>
+            <!-- السطر الثاني: اسم المنشأة والإدارة المعتمدة (تصميم احترافي بدون أي تشويه) -->
+            <div class="header-sub-strip">
+                <div class="company-dept-tag">
+                    <i class="fas fa-shield-halved text-emerald-600"></i>
+                    <span id="txtHubSubTitle">الشركة العالمية للانتاج والتصنيع الزراعي • ادارة السلامة والصحة المهنية وحماية البيئة</span>
+                </div>
             </div>
+
         </div>
     </header>
 
