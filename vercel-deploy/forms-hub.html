@@ -3470,6 +3470,25 @@
         }
     }
 
+    function populateObserverFilterOptions() {
+        const select = document.getElementById('anlFilterObserver');
+        if (!select || !rawObservationsAnalyticsData) return;
+
+        const currentVal = select.value || 'all';
+        const list = rawObservationsAnalyticsData.observersList || [];
+        const stats = rawObservationsAnalyticsData.observerStats || {};
+
+        let html = '<option value="all">👤 جميع مسؤولي السلامة والمفتشين</option>';
+        list.forEach(name => {
+            const count = stats[name]?.total || 0;
+            const isSel = currentVal === name ? 'selected' : '';
+            html += `<option value="${escapeHTML(name)}" ${isSel}>👤 ${escapeHTML(name)} (${count} ملاحظة)</option>`;
+        });
+
+        select.innerHTML = html;
+        select.value = currentVal;
+    }
+
     function setAnlPeriodFilter(period) {
         anlCurrentPeriod = period;
         document.querySelectorAll('.anl-filter-period-btn').forEach(btn => {
