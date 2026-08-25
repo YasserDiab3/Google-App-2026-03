@@ -319,10 +319,14 @@ function cleanupPtwRegistryDatabase_() {
  * ⚡ استرجاع الرادار الحي لتصاريح العمل السارية والميدانية لبوابة النماذج (Live PTW Radar)
  * يقرأ ويدمج كافة التصاريح النشطة من جدولي (PTWRegistry و PTW) مع كاش 60 ثانية وحصر المواقع في (ICAPP-1, ICAPP-2, WH)
  */
+/**
+ * ⚡ استرجاع الرادار الحي لتصاريح العمل السارية والميدانية لبوابة النماذج (Live PTW Radar Engine v3)
+ * يقرأ ويدمج كافة التصاريح النشطة والمغلقة اليوم من (PTWRegistry و PTW) مع حساب دورة الحياة، أوقات الصلاحية، والتوزيع الجغرافي
+ */
 function getPublicLivePTWSummary(payload) {
     try {
         var force = payload && (payload.force === true || payload.force === 'true');
-        var cacheKey = 'PUBLIC_LIVE_PTW_RADAR_V2';
+        var cacheKey = 'PUBLIC_LIVE_PTW_RADAR_V3';
         var cache = null;
         try {
             cache = CacheService.getScriptCache();
@@ -343,6 +347,7 @@ function getPublicLivePTWSummary(payload) {
         var sheetNames = ['PTWRegistry', 'PTW'];
         var activeList = [];
         var siteCounts = { 'ICAPP-1': 0, 'ICAPP-2': 0, 'WH': 0 };
+        var statusCounts = { active: 0, pending: 0, expiringSoon: 0, closedToday: 0 };
         var hotCount = 0;
         var heightCount = 0;
         var confinedCount = 0;
@@ -353,6 +358,9 @@ function getPublicLivePTWSummary(payload) {
 
         var now = new Date();
         var todayStr = Utilities.formatDate(now, 'GMT+2', 'yyyy-MM-dd');
+        var currentHours = now.getHours();
+        var currentMinutes = now.getMinutes();
+        var currentTimeTotalMinutes = (currentHours * 60) + currentMinutes;
 
         for (var sIdx = 0; sIdx < sheetNames.length; sIdx++) {
             var sName = sheetNames[sIdx];
@@ -392,14 +400,6 @@ function getPublicLivePTWSummary(payload) {
                 var pId = String(row[colId] || ('PTW-' + sName + '-' + (i + 1))).trim();
                 if (!pId || seenIds[pId]) continue;
 
-                var st = colStatus !== -1 ? String(row[colStatus] || '').trim() : '';
-                var closureVal = colClosure !== -1 ? row[colClosure] : null;
-                var isClosed = (st === 'مغلق' || st === 'منتهي' || st === 'ملغي' || st === 'Closed' || st === 'Cancelled' || (closureVal && String(closureVal).trim() !== '' && String(closureVal).trim() !== '-'));
-                
-                // تصاريح سارية فقط
-                var isOpen = (st === 'مفتوح' || st === 'ساري' || st === 'نشط' || st === 'قيد التنفيذ' || st === 'معتمد' || st === 'Open' || st === 'Active' || st === 'In Progress' || (!isClosed && st !== ''));
-                if (!isOpen && isClosed) continue;
-
                 var rawDate = colDate !== -1 ? row[colDate] : null;
                 var dtClean = '';
                 if (rawDate instanceof Date) {
@@ -408,6 +408,16 @@ function getPublicLivePTWSummary(payload) {
                     var ds = String(rawDate || '').trim();
                     dtClean = ds.indexOf('T') !== -1 ? ds.split('T')[0] : ds.split(' ')[0];
                 }
+
+                var st = colStatus !== -1 ? String(row[colStatus] || '').trim() : '';
+                var closureVal = colClosure !== -1 ? row[colClosure] : null;
+                var isClosed = (st === 'مغلق' || st === 'منتهي' || st === 'ملغي' || st === 'Closed' || st === 'Cancelled' || (closureVal && String(closureVal).trim() !== '' && String(closureVal).trim() !== '-'));
+                
+                var isClosedToday = (isClosed && dtClean === todayStr);
+                var isPending = (st === 'جديد' || st === 'معلق' || st === 'قيد الاعتماد' || st === 'Pending' || st === 'Draft');
+                var isActive = (!isClosed && (st === 'مفتوح' || st === 'ساري' || st === 'نشط' || st === 'قيد التنفيذ' || st === 'معتمد' || st === 'Open' || st === 'Active' || st === 'In Progress' || (!isPending && st !== '')));
+
+                if (!isActive && !isPending && !isClosedToday) continue;
 
                 var paperNo = colPaper !== -1 ? String(row[colPaper] || '').trim() : '';
                 var pType = colType !== -1 ? String(row[colType] || 'تصريح عمل عام').trim() : 'تصريح عمل عام';
@@ -428,6 +438,31 @@ function getPublicLivePTWSummary(payload) {
                     site = 'WH';
                 } else {
                     site = 'ICAPP-1';
+                }
+
+                // حساب وقت انتهاء الصلاحية
+                var isExpiringSoon = false;
+                var minutesRemaining = 999;
+                var timeRemainingText = 'ساري طوال الوردية';
+
+                if (tTo && tTo.indexOf(':') !== -1) {
+                    var parts = tTo.split(':');
+                    var toH = parseInt(parts[0], 10);
+                    var toM = parseInt(parts[1], 10) || 0;
+                    if (!isNaN(toH)) {
+                        var targetTotalMinutes = (toH * 60) + toM;
+                        minutesRemaining = targetTotalMinutes - currentTimeTotalMinutes;
+                        if (minutesRemaining > 0 && minutesRemaining <= 120) {
+                            isExpiringSoon = true;
+                            timeRemainingText = 'متبقي ' + minutesRemaining + ' دقيقة';
+                        } else if (minutesRemaining <= 0 && isActive) {
+                            timeRemainingText = 'منتهي - بانتظار الإغلاق';
+                        } else if (minutesRemaining > 120) {
+                            var remH = Math.floor(minutesRemaining / 60);
+                            var remM = minutesRemaining % 60;
+                            timeRemainingText = 'متبقي ' + remH + ' س و ' + remM + ' د';
+                        }
+                    }
                 }
 
                 // تصنيف نوع التصريح والخطورة
@@ -457,10 +492,28 @@ function getPublicLivePTWSummary(payload) {
                     typeKey = 'cold';
                 }
 
-                siteCounts[site] = (siteCounts[site] || 0) + 1;
+                var statusKey = 'active';
+                if (isClosed) {
+                    statusKey = 'closed';
+                    statusCounts.closedToday++;
+                } else if (isPending) {
+                    statusKey = 'pending';
+                    statusCounts.pending++;
+                } else if (isExpiringSoon) {
+                    statusKey = 'expiringSoon';
+                    statusCounts.expiringSoon++;
+                    statusCounts.active++;
+                } else {
+                    statusCounts.active++;
+                }
+
+                if (!isClosed) {
+                    siteCounts[site] = (siteCounts[site] || 0) + 1;
+                }
+
                 seenIds[pId] = true;
 
-                if (activeList.length < 60) {
+                if (activeList.length < 75) {
                     activeList.push({
                         id: pId,
                         paperNo: paperNo,
@@ -474,7 +527,11 @@ function getPublicLivePTWSummary(payload) {
                         date: dtClean || todayStr,
                         timeFrom: tFrom,
                         timeTo: tTo,
-                        status: st || 'ساري',
+                        status: st || (isClosed ? 'مغلق' : 'ساري'),
+                        statusKey: statusKey,
+                        isExpiringSoon: isExpiringSoon,
+                        minutesRemaining: minutesRemaining,
+                        timeRemainingText: timeRemainingText,
                         isHighRisk: (isHot || isHeight || isConfined)
                     });
                 }
@@ -484,7 +541,10 @@ function getPublicLivePTWSummary(payload) {
         var result = {
             success: true,
             summary: {
-                activeTotal: activeList.length,
+                activeTotal: statusCounts.active,
+                pending: statusCounts.pending,
+                expiringSoon: statusCounts.expiringSoon,
+                closedToday: statusCounts.closedToday,
                 hotWork: hotCount,
                 heightWork: heightCount,
                 confinedSpace: confinedCount,
