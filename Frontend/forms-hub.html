@@ -4607,7 +4607,11 @@
     } catch(e) {}
 
     // جلب التحديثات في الخلفية فور فتح البوابة
-    window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', () => {
+        if (typeof updatePtwWidgetsAndModal === 'function') {
+            updatePtwWidgetsAndModal();
+        }
+
         setTimeout(() => {
             fetchObservationsAnalyticsFromCloud(false);
         }, 500);
@@ -5148,30 +5152,38 @@
 
 
     // ======================================================================
-    // Live PTW Radar Engine (استعلام ومتابعة التصاريح الحية في البوابة)
+    // Live PTW Radar Engine (استعلام ومتابعة التصاريح الحية في 0 ثانية)
     // ======================================================================
     let rawLivePtwData = null;
+
+    // استعادة البيانات فوراً من الكاش المحلي لحظة تحميل الصفحة
+    (function hydratePtwFromLocalCache() {
+        try {
+            const cached = localStorage.getItem('HSE_PUBLIC_LIVE_PTW_CACHE');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed && parsed.data) {
+                    rawLivePtwData = parsed.data;
+                }
+            }
+        } catch(e) {}
+    })();
 
     async function fetchLivePtwData(force = false) {
         const refreshIcon = document.getElementById('ptwModalRefreshIcon');
         if (refreshIcon) refreshIcon.classList.add('fa-spin');
 
         try {
-            // محاولة القراءة من الكاش المحلي للسرعة الفائقة
-            if (!force && !rawLivePtwData) {
-                const cached = localStorage.getItem('HSE_PUBLIC_LIVE_PTW_CACHE');
-                if (cached) {
-                    try {
-                        const parsed = JSON.parse(cached);
-                        if (Date.now() - (parsed.time || 0) < 60000) {
-                            rawLivePtwData = parsed.data;
-                            updatePtwWidgetsAndModal();
-                        }
-                    } catch(cErr) {}
-                }
+            // تحديث فوري إذا كانت البيانات بالكاش
+            if (rawLivePtwData && !force) {
+                updatePtwWidgetsAndModal();
             }
 
-            const response = await fetch(HSE_GAS_URL, {
+            const url = (typeof HSE_GAS_URL !== 'undefined' && HSE_GAS_URL) 
+                ? HSE_GAS_URL 
+                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: 'getPublicLivePTWSummary', force: force })
@@ -5189,6 +5201,7 @@
             }
         } catch(err) {
             console.warn('Live PTW fetch notice:', err);
+            if (rawLivePtwData) updatePtwWidgetsAndModal();
         } finally {
             if (refreshIcon) refreshIcon.classList.remove('fa-spin');
         }
@@ -5196,24 +5209,24 @@
 
     function updatePtwWidgetsAndModal() {
         if (!rawLivePtwData) return;
-        const sm = rawLivePtwData.summary || { activeTotal: 0, hotWork: 0, heightWork: 0, confinedSpace: 0 };
+        const sm = rawLivePtwData.summary || { activeTotal: 0, hotWork: 0, heightWork: 0, confinedSpace: 0, electricalWork: 0 };
 
-        // تحديث العداد في الشريط الرئيسي
+        // تحديث العداد في الشريط الرئيسي فوراً
         const cntEl = document.getElementById('livePtwCountNum');
-        if (cntEl) cntEl.textContent = sm.activeTotal || '0';
+        if (cntEl) cntEl.textContent = (sm.activeTotal || 0).toLocaleString('ar-EG');
 
-        // تحديث كروت المؤشرات بالنافذة
+        // تحديث كروت المؤشرات بالنافذة فوراً
         const kTot = document.getElementById('ptwKpiTotal');
-        if (kTot) kTot.textContent = sm.activeTotal || '0';
+        if (kTot) kTot.textContent = (sm.activeTotal || 0).toLocaleString('ar-EG');
 
         const kHot = document.getElementById('ptwKpiHot');
-        if (kHot) kHot.textContent = sm.hotWork || '0';
+        if (kHot) kHot.textContent = (sm.hotWork || 0).toLocaleString('ar-EG');
 
         const kHgt = document.getElementById('ptwKpiHeight');
-        if (kHgt) kHgt.textContent = sm.heightWork || '0';
+        if (kHgt) kHgt.textContent = (sm.heightWork || 0).toLocaleString('ar-EG');
 
         const kCnf = document.getElementById('ptwKpiConfined');
-        if (kCnf) kCnf.textContent = (Number(sm.confinedSpace || 0) + Number(sm.electricalWork || 0)) || '0';
+        if (kCnf) kCnf.textContent = (Number(sm.confinedSpace || 0) + Number(sm.electricalWork || 0)).toLocaleString('ar-EG');
 
         filterLivePtwList();
     }
@@ -5223,10 +5236,13 @@
         if (!modal) return;
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
-        if (!rawLivePtwData) {
-            fetchLivePtwData(false);
+
+        // عرض فوري في 0 ثانية من الذاكرة المحلية
+        if (rawLivePtwData) {
+            updatePtwWidgetsAndModal();
+            fetchLivePtwData(false); // مزامنة صامتة في الخلفية
         } else {
-            filterLivePtwList();
+            fetchLivePtwData(false);
         }
     }
 
