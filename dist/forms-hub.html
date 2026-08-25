@@ -3384,7 +3384,22 @@
     }
 
     let rawObservationsAnalyticsData = null;
-    let anlCurrentPeriod = 'week';
+    let anlCurrentPeriod = 'all';
+
+    // تحميل الذاكرة المؤقتة المحلية فور فتح الصفحة للاستجابة اللحظية في 0 جزء من الثانية
+    try {
+        const localCached = localStorage.getItem('HSE_PUBLIC_OBS_ANALYTICS_CACHE');
+        if (localCached) {
+            rawObservationsAnalyticsData = JSON.parse(localCached);
+        }
+    } catch(e) {}
+
+    // جلب التحديثات في الخلفية فور فتح البوابة
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            fetchObservationsAnalyticsFromCloud(false);
+        }, 500);
+    });
 
     async function openObservationsAnalyticsModal() {
         const modal = document.getElementById('obsAnalyticsModal');
@@ -3392,10 +3407,25 @@
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
 
-        if (!rawObservationsAnalyticsData) {
-            await fetchObservationsAnalyticsFromCloud();
-        } else {
+        // إذا كانت البيانات موجودة في الكاش المحلي، نعرضها فوراً في 0 ثانية
+        if (rawObservationsAnalyticsData) {
+            populateObserverFilterOptions();
             renderObservationsAnalytics();
+            // تحديث صامت في الخلفية
+            fetchObservationsAnalyticsFromCloud(false);
+        } else {
+            showAnlLoadingState(true);
+            await fetchObservationsAnalyticsFromCloud(false);
+            showAnlLoadingState(false);
+        }
+    }
+
+    function showAnlLoadingState(show) {
+        const champCont = document.getElementById('anlChampionsContainer');
+        const critTbody = document.getElementById('anlCriticalTableBody');
+        if (show) {
+            if (champCont) champCont.innerHTML = '<div style="text-align:center; padding:20px; color:#6366f1; font-weight:700;"><i class="fas fa-spinner fa-spin ml-2"></i>جاري استرجاع تحليلات أبطال ومحفزي السلامة...</div>';
+            if (critTbody) critTbody.innerHTML = '<tr><td colspan="7" style="padding:20px; text-align:center; color:#6366f1; font-weight:700;"><i class="fas fa-spinner fa-spin ml-2"></i>جاري مزامنة الملاحظات الحرجة...</td></tr>';
         }
     }
 
@@ -3408,7 +3438,9 @@
     async function refreshObservationsAnalyticsData() {
         const icon = document.getElementById('anlRefreshIcon');
         if (icon) icon.classList.add('fa-spin');
+        showAnlLoadingState(true);
         await fetchObservationsAnalyticsFromCloud(true);
+        showAnlLoadingState(false);
         if (icon) icon.classList.remove('fa-spin');
     }
 
@@ -3427,6 +3459,10 @@
             const data = await res.json();
             if (data && data.success) {
                 rawObservationsAnalyticsData = data;
+                try {
+                    localStorage.setItem('HSE_PUBLIC_OBS_ANALYTICS_CACHE', JSON.stringify(data));
+                } catch(e) {}
+                populateObserverFilterOptions();
                 renderObservationsAnalytics();
             }
         } catch(err) {
