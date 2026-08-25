@@ -5398,7 +5398,9 @@
 
             // شارة وتنبيه عداد الصلاحية اللحظي
             let timeBadge = '';
-            if (p.isExpiringSoon) {
+            if (p.statusKey === 'closed' || String(p.status || '').indexOf('اكتمل') !== -1 || String(p.status || '').indexOf('مكتمل') !== -1) {
+                timeBadge = `<span style="background:#f1f5f9; color:#166534; border:1px solid #cbd5e1; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.7rem;">🏁 مكتمل ومغلق بشكل آمن</span>`;
+            } else if (p.isExpiringSoon) {
                 timeBadge = `<span style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.7rem; display:inline-flex; align-items:center; gap:4px; animation: headerGlow 1.5s infinite;"><i class="fas fa-hourglass-half"></i> ⚠️ ${escapeHTML(p.timeRemainingText)}</span>`;
             } else if (p.statusKey === 'closed') {
                 timeBadge = `<span style="background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.7rem;">🏁 تم الإغلاق</span>`;

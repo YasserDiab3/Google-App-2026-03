@@ -411,7 +411,7 @@ function getPublicLivePTWSummary(payload) {
 
                 var st = colStatus !== -1 ? String(row[colStatus] || '').trim() : '';
                 var closureVal = colClosure !== -1 ? row[colClosure] : null;
-                var isClosed = (st === 'مغلق' || st === 'منتهي' || st === 'ملغي' || st === 'Closed' || st === 'Cancelled' || (closureVal && String(closureVal).trim() !== '' && String(closureVal).trim() !== '-'));
+                var isClosed = (st === 'مغلق' || st === 'منتهي' || st === 'ملغي' || st === 'Closed' || st === 'Cancelled' || st.indexOf('اكتمل') !== -1 || st.indexOf('مكتمل') !== -1 || st.indexOf('آمن') !== -1 || (closureVal && String(closureVal).trim() !== '' && String(closureVal).trim() !== '-'));
                 
                 var isClosedToday = (isClosed && dtClean === todayStr);
                 var isPending = (st === 'جديد' || st === 'معلق' || st === 'قيد الاعتماد' || st === 'Pending' || st === 'Draft');
