@@ -1578,6 +1578,16 @@
     </div>
 
     <script>
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         // ==========================================
         // Full Bilingual Translation Dictionary (i18n)
         // ==========================================
@@ -3351,6 +3361,7 @@ function resetCheckInForm() {
                 registry[index].exitTime = exitTime;
                 registry[index].exitTimestamp = now.getTime();
                 saveVisitorsRegistry(registry);
+                updateStatsBadges();
                 renderActiveVisitorsList(document.getElementById('visitorSearchInput')?.value || '');
                 showToast(t.checkOutSuccess, 'success');
 
