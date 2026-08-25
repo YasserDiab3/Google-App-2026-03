@@ -3293,8 +3293,9 @@
         }
     
 
+
     // ======================================================================
-    // Safety Champions Digital Certificate Engine with Direct Canvas Download
+    // Safety Champions Digital Certificate Engine with Bulletproof Mobile Download
     // ======================================================================
     let currentCertData = { name: '', count: 0, rank: 1 };
 
@@ -3312,7 +3313,7 @@
         const rankStr = medals[rank - 1] || 'المتميز 🎖️';
 
         if (nameEl) nameEl.textContent = name;
-        if (rankEl) rankEl.textContent = `المركز ${rankStr} في لوحة أبطال السلامة برصيد (${count.toLocaleString('ar-EG')} ملاحظة وإجراء)`;
+        if (rankEl) rankEl.textContent = `المركز ${rankStr} في لوحة أبطال السلامة برصيد (${Number(count || 0).toLocaleString('ar-EG')} ملاحظة وإجراء)`;
         if (dateEl) {
             const now = new Date();
             dateEl.textContent = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -3322,11 +3323,19 @@
         }
 
         modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
     }
 
     function closeChampionCertModal() {
         const modal = document.getElementById('safetyChampionCertModal');
         if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    function handleCertModalBackdropClick(event) {
+        if (event && event.target && event.target.id === 'safetyChampionCertModal') {
+            closeChampionCertModal();
+        }
     }
 
     function printChampionCertificate() {
@@ -3459,19 +3468,45 @@
             ctx.fillText('معتمد رقمياً', 250, 685);
             ctx.fillText('الاعتماد الرسمي', 950, 685);
 
-            // بدء التنزيل المباشر
-            const link = document.createElement('a');
-            const cleanFileName = `شهادة_شكر_وتقدير_${(name || 'بطل_السلامة').replace(/[\s\/\:]+/g, '_')}.png`;
-            link.download = cleanFileName;
-            link.href = canvas.toDataURL('image/png');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // بدء التنزيل المباشر المتوافق مع كافة متصفحات الهواتف
+            const fileName = `شهادة_شكر_وتقدير_${(name || 'بطل_السلامة').replace(/[\s\/\\:]+/g, '_')}.png`;
+
+            if (canvas.toBlob) {
+                canvas.toBlob(blob => {
+                    if (!blob) {
+                        fallbackDownload(canvas.toDataURL('image/png'), fileName);
+                        return;
+                    }
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = fileName;
+                    link.href = url;
+                    link.target = '_blank';
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    }, 500);
+                }, 'image/png');
+            } else {
+                fallbackDownload(canvas.toDataURL('image/png'), fileName);
+            }
         } catch(err) {
             console.error('Error generating certificate image:', err);
             printChampionCertificate();
         }
     }
+
+    function fallbackDownload(dataUrl, fileName) {
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => document.body.removeChild(link), 300);
+    }
+
 
 
 </script>
@@ -4306,97 +4341,103 @@
 
     <!-- ======================================================================
          نافذة شهادة التقدير الرقمية المعتمدة لأبطال السلامة (Digital Certificate)
+         مجهزة بالكامل للاستجابة والتحميل الفوري على كافة الهواتف والشاشات
          ====================================================================== -->
-    <div id="safetyChampionCertModal" class="live-visitors-modal" style="display: none; align-items: center; justify-content: center; z-index: 100000;">
-        <div style="max-width: 780px; width: 95%; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.35); border: 2px solid #fbbf24; position: relative;">
+    <div id="safetyChampionCertModal" onclick="handleCertModalBackdropClick(event)" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px); z-index: 100000; align-items: center; justify-content: center; padding: 12px; box-sizing: border-box; overflow-y: auto;">
+        
+        <div id="certModalContentCard" style="max-width: 780px; width: 100%; max-height: 94vh; display: flex; flex-direction: column; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.5); border: 2.5px solid #fbbf24; position: relative;" onclick="event.stopPropagation()">
             
             <!-- أزرار التحكم العلوية للشهادة -->
-            <div class="anl-no-print" style="padding: 10px 14px; background: #1e293b; color: #fff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <span style="font-weight: 800; font-size: 0.88rem; color: #fde047;"><i class="fas fa-award ml-1"></i>شهادة شكر وتقدير رسمية</span>
+            <div class="anl-no-print" style="flex-shrink: 0; padding: 10px 14px; background: #1e293b; color: #fff; display: flex; justify-content: space-between; align-items: center; gap: 8px; z-index: 10;">
+                <span style="font-weight: 800; font-size: 0.88rem; color: #fde047; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <i class="fas fa-award ml-1"></i>شهادة شكر وتقدير رسمية
+                </span>
                 <div style="display: flex; gap: 6px; align-items: center;">
-                    <button type="button" onclick="downloadCurrentChampionCert()" title="تنزيل مباشر كصورة عالية الدقة" style="background: #d97706; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(217,119,6,0.3);">
+                    <button type="button" onclick="downloadCurrentChampionCert()" title="تنزيل مباشر كصورة عالية الدقة" style="background: linear-gradient(135deg, #d97706, #b45309); color: #fff; border: none; padding: 7px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(217,119,6,0.3);">
                         <i class="fas fa-download"></i>
-                        <span>تنزيل الشهادة 📥</span>
+                        <span>تنزيل 📥</span>
                     </button>
-                    <button type="button" onclick="printChampionCertificate()" title="طباعة أو حفظ PDF" style="background: #10b981; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                    <button type="button" onclick="printChampionCertificate()" title="طباعة أو حفظ PDF" style="background: #10b981; color: #fff; border: none; padding: 7px 10px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                         <i class="fas fa-print"></i>
                         <span>طباعة</span>
                     </button>
-                    <button type="button" onclick="closeChampionCertModal()" style="background: #ef4444; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                    <button type="button" onclick="closeChampionCertModal()" title="إغلاق والعودة" style="background: #ef4444; color: #fff; border: none; padding: 7px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                         <i class="fas fa-times"></i>
                         <span>إغلاق</span>
                     </button>
                 </div>
             </div>
 
-            <!-- جسم الشهادة المعتمدة الفاخرة للطباعة والعرض -->
-            <div id="championCertificateBody" style="padding: 30px 40px; background: radial-gradient(circle at center, #ffffff 0%, #fffdf5 100%); text-align: center; border: 8px double #d97706; margin: 12px; border-radius: 10px; position: relative;">
-                
-                <!-- زخرفة الإطار العلوي -->
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b45309; padding-bottom: 12px; margin-bottom: 20px;">
-                    <div style="text-align: right;">
-                        <div style="font-size: 0.95rem; font-weight: 800; color: #1e293b;">الشركة العالمية للانتاج والتصنيع الزراعي</div>
-                        <div style="font-size: 0.8rem; font-weight: 700; color: #d97706;">ادارة السلامة والصحة المهنية وحماية البيئة</div>
-                    </div>
-                    <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.5rem; box-shadow: 0 4px 10px rgba(217,119,6,0.3);">
-                        🏆
-                    </div>
-                    <div style="text-align: left; font-size: 0.75rem; color: #64748b;">
-                        <div><b>رقم الاعتماد:</b> <span id="certDocId">CERT-HSE-2026-01</span></div>
-                        <div><b>تاريخ التكريم:</b> <span id="certDate"></span></div>
-                    </div>
-                </div>
-
-                <div style="font-size: 1.6rem; font-weight: 900; color: #b45309; margin-bottom: 8px; letter-spacing: 0.5px;">
-                    📜 شَهَادَةُ شُكْرٍ وَتَقْدِيرٍ وَتَمَيُّزٍ 📜
-                </div>
-                <div style="font-size: 0.88rem; color: #64748b; font-weight: 700; margin-bottom: 24px;">
-                    Safety & Occupational Health Excellence Certificate
-                </div>
-
-                <div style="font-size: 0.95rem; color: #334155; line-height: 1.8; margin-bottom: 16px;">
-                    تتقدم إدارة السلامة والصحة المهنية وحماية البيئة بجزيل الشكر وعظيم الامتنان إلى الزميل المتميز:
-                </div>
-
-                <!-- اسم بطل السلامة المكرم -->
-                <div style="display: inline-block; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px dashed #d97706; padding: 10px 30px; border-radius: 30px; margin-bottom: 20px;">
-                    <div style="font-size: 1.45rem; font-weight: 900; color: #78350f;" id="certChampionName">م/ محمد سعيد</div>
-                </div>
-
-                <div style="font-size: 0.92rem; color: #334155; line-height: 1.8; max-width: 600px; margin: 0 auto 24px auto;">
-                    تقديراً لجهوده الميدانية الاستثنائية ودوره الفاعل في رصد ومعالجة المخاطر وتطبيق أعلى معايير السلامة والصحة المهنية، وتحقيقه المركز المتقدم:
-                    <div style="margin-top: 8px; font-weight: 800; color: #b45309; font-size: 1rem;" id="certChampionRankText">
-                        🥇 المركز الأول في لوحة أبطال السلامة برصيد (1,008 ملاحظة معالجة)
-                    </div>
-                </div>
-
-                <!-- تواقيع التكريم الرسمية -->
-                <div style="display: flex; justify-content: space-around; border-top: 1.5px solid #e2e8f0; padding-top: 20px; margin-top: 20px; font-size: 0.82rem;">
-                    <div>
-                        <div style="font-weight: 800; color: #1e293b;">مشرف السلامة الميداني</div>
-                        <div style="color: #64748b; font-size: 0.72rem; margin-top: 25px;">التوقيع والاعتماد</div>
-                    </div>
-                    <div>
-                        <div style="font-weight: 800; color: #b45309;">ختم التميز الذهبي (HSE)</div>
-                        <div style="width: 45px; height: 45px; margin: 5px auto 0 auto; border: 2px solid #d97706; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #d97706; font-size: 1.1rem; font-weight: 900;">
-                            ICAPP
+            <!-- جسم الشهادة القابل للتمرير السلس على الموبايل -->
+            <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; background: #fafaf9;">
+                <div id="championCertificateBody" style="padding: 24px 20px; background: radial-gradient(circle at center, #ffffff 0%, #fffdf5 100%); text-align: center; border: 6px double #d97706; border-radius: 12px; position: relative; box-shadow: 0 4px 15px rgba(217,119,6,0.08);">
+                    
+                    <!-- زخرفة الإطار العلوي -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b45309; padding-bottom: 12px; margin-bottom: 16px;">
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.88rem; font-weight: 800; color: #1e293b;">الشركة العالمية للانتاج والتصنيع الزراعي</div>
+                            <div style="font-size: 0.75rem; font-weight: 700; color: #d97706;">ادارة السلامة والصحة المهنية وحماية البيئة</div>
+                        </div>
+                        <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem; box-shadow: 0 4px 10px rgba(217,119,6,0.3); flex-shrink: 0; margin: 0 8px;">
+                            🏆
+                        </div>
+                        <div style="text-align: left; font-size: 0.72rem; color: #64748b;">
+                            <div><b>الكود:</b> <span id="certDocId">CERT-HSE-2026-01</span></div>
+                            <div><b>التاريخ:</b> <span id="certDate"></span></div>
                         </div>
                     </div>
-                    <div>
-                        <div style="font-weight: 800; color: #1e293b;">مدير إدارة السلامة والصحة المهنية</div>
-                        <div style="color: #64748b; font-size: 0.72rem; margin-top: 25px;">الاعتماد الرسمي</div>
-                    </div>
-                </div>
 
+                    <div style="font-size: 1.35rem; font-weight: 900; color: #b45309; margin-bottom: 4px; letter-spacing: 0.5px;">
+                        📜 شَهَادَةُ شُكْرٍ وَتَقْدِيرٍ وَتَمَيُّزٍ 📜
+                    </div>
+                    <div style="font-size: 0.78rem; color: #64748b; font-weight: 700; margin-bottom: 16px;">
+                        Safety & Occupational Health Excellence Certificate
+                    </div>
+
+                    <div style="font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 12px;">
+                        تتقدم إدارة السلامة والصحة المهنية وحماية البيئة بجزيل الشكر وعظيم الامتنان إلى الزميل المتميز:
+                    </div>
+
+                    <!-- اسم بطل السلامة المكرم -->
+                    <div style="display: inline-block; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px dashed #d97706; padding: 8px 24px; border-radius: 25px; margin-bottom: 14px;">
+                        <div style="font-size: 1.25rem; font-weight: 900; color: #78350f;" id="certChampionName">م/ محمد سعيد</div>
+                    </div>
+
+                    <div style="font-size: 0.85rem; color: #334155; line-height: 1.7; max-width: 580px; margin: 0 auto 16px auto;">
+                        تقديراً لجهوده الميدانية الاستثنائية ودوره الفاعل في رصد ومعالجة المخاطر وتطبيق أعلى معايير السلامة والصحة المهنية، وتحقيقه:
+                        <div style="margin-top: 6px; font-weight: 800; color: #b45309; font-size: 0.92rem;" id="certChampionRankText">
+                            🥇 المركز الأول في لوحة أبطال السلامة برصيد (1,008 ملاحظة معالجة)
+                        </div>
+                    </div>
+
+                    <!-- تواقيع التكريم الرسمية -->
+                    <div style="display: flex; justify-content: space-around; border-top: 1.5px solid #e2e8f0; padding-top: 14px; margin-top: 14px; font-size: 0.76rem;">
+                        <div>
+                            <div style="font-weight: 800; color: #1e293b;">مشرف السلامة الميداني</div>
+                            <div style="color: #64748b; font-size: 0.68rem; margin-top: 18px;">التوقيع والاعتماد</div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 800; color: #b45309;">ختم التميز الذهبي</div>
+                            <div style="width: 38px; height: 38px; margin: 4px auto 0 auto; border: 2px solid #d97706; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #d97706; font-size: 0.95rem; font-weight: 900;">
+                                ICAPP
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 800; color: #1e293b;">مدير إدارة السلامة</div>
+                            <div style="color: #64748b; font-size: 0.68rem; margin-top: 18px;">الاعتماد الرسمي</div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
 
             <!-- شريط سفلي ثابت وسريع للهواتف الذكية -->
-            <div class="anl-no-print" style="padding: 10px 14px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; justify-content: space-between; align-items: center;">
-                <button type="button" onclick="closeChampionCertModal()" style="flex: 1; height: 40px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <div class="anl-no-print" style="flex-shrink: 0; padding: 10px 14px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; justify-content: space-between; align-items: center; z-index: 10;">
+                <button type="button" onclick="closeChampionCertModal()" style="flex: 1; height: 42px; background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
                     <i class="fas fa-arrow-right text-indigo-600"></i>
                     <span>العودة للوحة التحليل</span>
                 </button>
-                <button type="button" onclick="downloadCurrentChampionCert()" style="flex: 1.2; height: 40px; background: #d97706; color: #fff; border: none; border-radius: 8px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(217,119,6,0.3);">
+                <button type="button" onclick="downloadCurrentChampionCert()" style="flex: 1.3; height: 42px; background: linear-gradient(135deg, #d97706, #b45309); color: #fff; border: none; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(217,119,6,0.3);">
                     <i class="fas fa-download"></i>
                     <span>تحميل الشهادة للجهاز 📥</span>
                 </button>
