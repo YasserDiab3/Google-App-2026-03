@@ -3365,6 +3365,9 @@ function sendWeeklyDailyObservationsDigest() {
 /**
  * استرجاع التحليل الإحصائي السريع للملاحظات اليومية لبوابة النماذج ولوحة مسؤولي السلامة
  */
+/**
+ * استرجاع التحليل الإحصائي السريع للملاحظات اليومية لبوابة النماذج ولوحة مسؤولي السلامة
+ */
 function getPublicObservationsAnalytics(payload) {
     try {
         var spreadsheetId = getSpreadsheetId();
@@ -3397,6 +3400,7 @@ function getPublicObservationsAnalytics(payload) {
         var riskCounts = {};
         var typeCounts = {};
 
+        var observerStats = {};
         var criticalOpen = [];
 
         for (var i = 0; i < rawObs.length; i++) {
@@ -3412,23 +3416,51 @@ function getPublicObservationsAnalytics(payload) {
             var obsName = String(o.observerName || o.reporterName || o.recordedByName || '').trim();
             var oType = String(o.observationType || o.type || 'سلوك غير آمن').trim();
 
-            if (st === 'مفتوح' || st === 'جديد' || st === 'Open' || st === 'New') {
-                open++;
-            } else if (st === 'مغلق' || st === 'Closed' || st === 'منتهي') {
-                closed++;
-            } else {
-                inProgress++;
-            }
-
+            var isOpen = (st === 'مفتوح' || st === 'جديد' || st === 'Open' || st === 'New');
+            var isClosed = (st === 'مغلق' || st === 'Closed' || st === 'منتهي');
+            var isInProg = (!isOpen && !isClosed);
             var isHigh = (rk === 'عالي' || rk === 'عالية' || rk === 'High' || rk === 'حرج');
-            if (isHigh) highRisk++;
+            var isThisWeek = (dtClean >= sevenDaysStr);
+            var isThisMonth = (dtClean.indexOf(thisMonthStr) === 0);
 
-            if (dtClean >= sevenDaysStr) thisWeek++;
-            if (dtClean.indexOf(thisMonthStr) === 0) thisMonth++;
+            if (isOpen) open++;
+            else if (isClosed) closed++;
+            else inProgress++;
+
+            if (isHigh) highRisk++;
+            if (isThisWeek) thisWeek++;
+            if (isThisMonth) thisMonth++;
 
             if (obsName && obsName !== '-' && !obsName.includes('مجهول')) {
                 observerCounts[obsName] = (observerCounts[obsName] || 0) + 1;
+                if (!observerStats[obsName]) {
+                    observerStats[obsName] = {
+                        name: obsName,
+                        total: 0,
+                        open: 0,
+                        inProgress: 0,
+                        closed: 0,
+                        highRisk: 0,
+                        thisWeek: 0,
+                        thisMonth: 0,
+                        bySite: {},
+                        byDept: {},
+                        byRisk: {}
+                    };
+                }
+                var ost = observerStats[obsName];
+                ost.total++;
+                if (isOpen) ost.open++;
+                if (isClosed) ost.closed++;
+                if (isInProg) ost.inProgress++;
+                if (isHigh) ost.highRisk++;
+                if (isThisWeek) ost.thisWeek++;
+                if (isThisMonth) ost.thisMonth++;
+                if (site) ost.bySite[site] = (ost.bySite[site] || 0) + 1;
+                if (dept) ost.byDept[dept] = (ost.byDept[dept] || 0) + 1;
+                if (rk) ost.byRisk[rk] = (ost.byRisk[rk] || 0) + 1;
             }
+
             if (dept && dept !== '-') {
                 deptCounts[dept] = (deptCounts[dept] || 0) + 1;
             }
@@ -3443,7 +3475,7 @@ function getPublicObservationsAnalytics(payload) {
             }
 
             // تجميع الملاحظات الحرجة المفتوحة
-            if (st !== 'مغلق' && st !== 'Closed' && isHigh && criticalOpen.length < 15) {
+            if (!isClosed && isHigh && criticalOpen.length < 25) {
                 criticalOpen.push({
                     id: String(o.id || o.isoCode || o.code || ('OBS-' + (i + 1))),
                     date: dtClean || todayStr,
@@ -3461,9 +3493,20 @@ function getPublicObservationsAnalytics(payload) {
 
         var closeRate = total > 0 ? Math.round((closed / total) * 100) : 0;
 
-        // استخراج أبطال السلامة (أعلى 5)
-        var topObservers = Object.keys(observerCounts).map(function(k) { return { name: k, count: observerCounts[k] }; })
-            .sort(function(a,b) { return b.count - a.count; }).slice(0, 5);
+        // حساب نسبة إغلاق كل راصد
+        Object.keys(observerStats).forEach(function(k) {
+            var st = observerStats[k];
+            st.closeRate = st.total > 0 ? Math.round((st.closed / st.total) * 100) : 0;
+        });
+
+        // استخراج أبطال السلامة وقائمة الراصدين كاملة
+        var observersList = Object.keys(observerStats).sort(function(a,b) {
+            return observerStats[b].total - observerStats[a].total;
+        });
+
+        var topObservers = observersList.slice(0, 5).map(function(k) {
+            return { name: k, count: observerStats[k].total };
+        });
 
         var topDepts = Object.keys(deptCounts).map(function(k) { return { name: k, count: deptCounts[k] }; })
             .sort(function(a,b) { return b.count - a.count; }).slice(0, 5);
@@ -3482,7 +3525,10 @@ function getPublicObservationsAnalytics(payload) {
             },
             topObservers: topObservers,
             topDepts: topDepts,
+            observersList: observersList,
+            observerStats: observerStats,
             bySite: siteCounts,
+            byDept: deptCounts,
             byRisk: riskCounts,
             byType: typeCounts,
             criticalOpen: criticalOpen,

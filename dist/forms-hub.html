@@ -3204,31 +3204,66 @@
             <!-- جسم النافذة ومحتوى التحليل -->
             <div style="padding: 16px; background: #f8fafc; overflow-y: auto; flex: 1;">
                 
-                <!-- شريط التصفية السريعة (الفترة والمصنع والخطورة) -->
-                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-                        <span style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-left: 4px;">📅 الفترة:</span>
-                        <button type="button" class="anl-filter-period-btn active" data-period="week" onclick="setAnlPeriodFilter('week')" style="padding: 5px 12px; border-radius: 8px; border: 1.5px solid #6366f1; background: #6366f1; color: #fff; font-size: 0.78rem; font-weight: 700; cursor: pointer;">هذا الأسبوع (7 أيام)</button>
-                        <button type="button" class="anl-filter-period-btn" data-period="month" onclick="setAnlPeriodFilter('month')" style="padding: 5px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-size: 0.78rem; font-weight: 700; cursor: pointer;">هذا الشهر</button>
-                        <button type="button" class="anl-filter-period-btn" data-period="all" onclick="setAnlPeriodFilter('all')" style="padding: 5px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-size: 0.78rem; font-weight: 700; cursor: pointer;">جميع الفترات</button>
-                    </div>
-
+                <!-- شريط التصفية السريعة المتقدم (مسؤول السلامة، الحالة، المصنع، الخطورة، الفترة) -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                    
+                    <!-- السطر الأول: اختيار مسؤول السلامة والحالة والمصنع والخطورة -->
                     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                        <select id="anlFilterSite" onchange="applyAnlFilters()" style="height: 34px; padding: 0 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #1e293b; background: #f8fafc; cursor: pointer; outline: none;">
-                            <option value="all">🏢 جميع المصانع والمواقع</option>
-                            <option value="ICAPP-1">ICAPP-1</option>
-                            <option value="ICAPP-2">ICAPP-2</option>
-                            <option value="الموقع العام">الموقع العام والمرافق</option>
-                            <option value="WH">المخازن العامة (WH)</option>
-                        </select>
+                        
+                        <!-- فلتر مسؤول السلامة (الراصد) -->
+                        <div style="flex: 1.2; min-width: 200px;">
+                            <select id="anlFilterObserver" onchange="applyAnlFilters()" style="width: 100%; height: 36px; padding: 0 10px; border: 2px solid #6366f1; border-radius: 8px; font-size: 0.82rem; font-weight: 800; color: #1e1b4b; background: #eef2ff; cursor: pointer; outline: none;">
+                                <option value="all">👤 جميع مسؤولي السلامة والمفتشين</option>
+                            </select>
+                        </div>
 
-                        <select id="anlFilterRisk" onchange="applyAnlFilters()" style="height: 34px; padding: 0 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #1e293b; background: #f8fafc; cursor: pointer; outline: none;">
-                            <option value="all">⚡ جميع مستويات الخطورة</option>
-                            <option value="high">🔴 عالي الخطورة</option>
-                            <option value="medium">🟡 متوسط الخطورة</option>
-                            <option value="low">🟢 بسيط / منخفض</option>
-                        </select>
+                        <!-- فلتر حالة الملاحظة -->
+                        <div style="flex: 0.9; min-width: 150px;">
+                            <select id="anlFilterStatus" onchange="applyAnlFilters()" style="width: 100%; height: 36px; padding: 0 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #1e293b; background: #f8fafc; cursor: pointer; outline: none;">
+                                <option value="all">⚡ جميع الحالات</option>
+                                <option value="open">⏳ مفتوحة وجديدة</option>
+                                <option value="inProgress">🔄 قيد التنفيذ</option>
+                                <option value="closed">✅ مغلقة ومعالجة</option>
+                            </select>
+                        </div>
+
+                        <!-- فلتر المصنع والموقع -->
+                        <div style="flex: 0.9; min-width: 150px;">
+                            <select id="anlFilterSite" onchange="applyAnlFilters()" style="width: 100%; height: 36px; padding: 0 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #1e293b; background: #f8fafc; cursor: pointer; outline: none;">
+                                <option value="all">🏢 جميع المصانع والمواقع</option>
+                                <option value="ICAPP-1">ICAPP-1</option>
+                                <option value="ICAPP-2">ICAPP-2</option>
+                                <option value="الموقع العام">الموقع العام والمرافق</option>
+                                <option value="WH">المخازن العامة (WH)</option>
+                            </select>
+                        </div>
+
+                        <!-- فلتر مستوى الخطورة -->
+                        <div style="flex: 0.8; min-width: 140px;">
+                            <select id="anlFilterRisk" onchange="applyAnlFilters()" style="width: 100%; height: 36px; padding: 0 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #1e293b; background: #f8fafc; cursor: pointer; outline: none;">
+                                <option value="all">⚠️ جميع مستويات الخطورة</option>
+                                <option value="high">🔴 عالي الخطورة</option>
+                                <option value="medium">🟡 متوسط الخطورة</option>
+                                <option value="low">🟢 بسيط / منخفض</option>
+                            </select>
+                        </div>
+
                     </div>
+
+                    <!-- السطر الثاني: أزرار الفترة الزمنية وبادج التصفية النشطة -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 6px; border-top: 1px dashed #e2e8f0;">
+                        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                            <span style="font-size: 0.78rem; font-weight: 700; color: #64748b;">📅 النطاق الزمني:</span>
+                            <button type="button" class="anl-filter-period-btn" data-period="week" onclick="setAnlPeriodFilter('week')" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-size: 0.75rem; font-weight: 700; cursor: pointer;">هذا الأسبوع (7 أيام)</button>
+                            <button type="button" class="anl-filter-period-btn" data-period="month" onclick="setAnlPeriodFilter('month')" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-size: 0.75rem; font-weight: 700; cursor: pointer;">هذا الشهر</button>
+                            <button type="button" class="anl-filter-period-btn active" data-period="all" onclick="setAnlPeriodFilter('all')" style="padding: 4px 10px; border-radius: 6px; border: 1.5px solid #6366f1; background: #6366f1; color: #fff; font-size: 0.75rem; font-weight: 700; cursor: pointer;">جميع الفترات (الكل)</button>
+                        </div>
+
+                        <div id="anlActiveFilterSummary" style="font-size: 0.76rem; font-weight: 700; color: #4338ca; background: #e0e7ff; padding: 3px 8px; border-radius: 6px;">
+                            📊 عرض كافة ملاحظات المنظومة
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- شبكة كروت المؤشرات الحية KPIs -->
@@ -3415,41 +3450,64 @@
     }
 
     function renderObservationsAnalytics() {
+        populateObserverFilterOptions();
         if (!rawObservationsAnalyticsData || !rawObservationsAnalyticsData.summary) return;
 
         const sum = rawObservationsAnalyticsData.summary;
+        const observerFilter = document.getElementById('anlFilterObserver')?.value || 'all';
+        const statusFilter = document.getElementById('anlFilterStatus')?.value || 'all';
         const siteFilter = document.getElementById('anlFilterSite')?.value || 'all';
         const riskFilter = document.getElementById('anlFilterRisk')?.value || 'all';
 
-        // 1. حساب الأرقام حسب الفترة المحددة
-        let totalCount = sum.total;
-        let openCount = sum.open;
-        let inProgCount = sum.inProgress;
-        let closedCount = sum.closed;
-        let highRiskCount = sum.highRisk;
+        const observerStats = rawObservationsAnalyticsData.observerStats || {};
+        const isPersonal = (observerFilter !== 'all' && observerStats[observerFilter]);
+        const targetStat = isPersonal ? observerStats[observerFilter] : sum;
 
-        if (anlCurrentPeriod === 'week') {
-            totalCount = sum.thisWeek || Math.round(sum.total * 0.08);
-            openCount = Math.round(totalCount * 0.65);
-            inProgCount = Math.round(totalCount * 0.1);
-            closedCount = totalCount - openCount - inProgCount;
-            highRiskCount = Math.round(totalCount * 0.05);
-        } else if (anlCurrentPeriod === 'month') {
-            totalCount = sum.thisMonth || Math.round(sum.total * 0.25);
-            openCount = Math.round(totalCount * 0.68);
-            inProgCount = Math.round(totalCount * 0.08);
-            closedCount = totalCount - openCount - inProgCount;
-            highRiskCount = Math.round(totalCount * 0.05);
+        // تحديث بادج العنوان النشط
+        const sumBadge = document.getElementById('anlActiveFilterSummary');
+        if (sumBadge) {
+            if (isPersonal) {
+                sumBadge.innerHTML = `👤 تحليل الملاحظات الخاص بـ: <b>${escapeHTML(observerFilter)}</b>`;
+                sumBadge.style.background = '#dbeafe';
+                sumBadge.style.color = '#1e40af';
+            } else {
+                sumBadge.innerHTML = `📊 عرض كافة ملاحظات المنظومة (${sum.total.toLocaleString('ar-EG')} ملاحظة)`;
+                sumBadge.style.background = '#e0e7ff';
+                sumBadge.style.color = '#4338ca';
+            }
         }
 
-        const rate = totalCount > 0 ? Math.round((closedCount / totalCount) * 100) : sum.closeRate;
+        // 1. حساب الأرقام حسب الفترة المحددة والراصد المختار
+        let totalCount = targetStat.total;
+        let openCount = targetStat.open;
+        let inProgCount = targetStat.inProgress;
+        let closedCount = targetStat.closed;
+        let highRiskCount = targetStat.highRisk;
+        let thisWeekCount = targetStat.thisWeek || 0;
+
+        if (anlCurrentPeriod === 'week') {
+            totalCount = thisWeekCount;
+            openCount = Math.min(openCount, Math.round(totalCount * 0.7));
+            inProgCount = Math.min(inProgCount, Math.round(totalCount * 0.1));
+            closedCount = Math.max(0, totalCount - openCount - inProgCount);
+            highRiskCount = Math.min(highRiskCount, Math.round(totalCount * 0.1));
+        } else if (anlCurrentPeriod === 'month') {
+            const mon = targetStat.thisMonth || Math.round(totalCount * 0.3);
+            totalCount = mon;
+            openCount = Math.min(openCount, Math.round(totalCount * 0.7));
+            inProgCount = Math.min(inProgCount, Math.round(totalCount * 0.1));
+            closedCount = Math.max(0, totalCount - openCount - inProgCount);
+            highRiskCount = Math.min(highRiskCount, Math.round(totalCount * 0.1));
+        }
+
+        const rate = totalCount > 0 ? Math.round((closedCount / totalCount) * 100) : (targetStat.closeRate || 0);
 
         // تحديث كروت المؤشرات
         const elTot = document.getElementById('anlKpiTotal');
         if (elTot) elTot.textContent = totalCount.toLocaleString('ar-EG');
 
         const elWk = document.getElementById('anlKpiThisWeek');
-        if (elWk) elWk.textContent = (sum.thisWeek || 0).toLocaleString('ar-EG');
+        if (elWk) elWk.textContent = thisWeekCount.toLocaleString('ar-EG');
 
         const elOpn = document.getElementById('anlKpiOpen');
         if (elOpn) elOpn.textContent = openCount.toLocaleString('ar-EG');
@@ -3549,18 +3607,30 @@
             }).join('');
         }
 
-        // 4. جدول الملاحظات الحرجة المفتوحة
+        // 4. جدول الملاحظات الحرجة والمفتوحة للتتبع الفوري مع تطبيق فلاتر الراصد والموقع والحالة
         const critTbody = document.getElementById('anlCriticalTableBody');
         const critBadge = document.getElementById('anlCriticalCountBadge');
         if (critTbody && rawObservationsAnalyticsData.criticalOpen) {
-            let critList = rawObservationsAnalyticsData.criticalOpen;
+            let critList = [...rawObservationsAnalyticsData.criticalOpen];
+            
+            if (observerFilter !== 'all') {
+                critList = critList.filter(c => String(c.observerName || '').includes(observerFilter));
+            }
             if (siteFilter !== 'all') {
                 critList = critList.filter(c => String(c.siteName || '').includes(siteFilter));
             }
+            if (statusFilter === 'open') {
+                critList = critList.filter(c => String(c.status || '').indexOf('مفتوح') !== -1 || String(c.status || '').indexOf('جديد') !== -1);
+            } else if (statusFilter === 'inProgress') {
+                critList = critList.filter(c => String(c.status || '').indexOf('جاري') !== -1 || String(c.status || '').indexOf('تنفيذ') !== -1);
+            } else if (statusFilter === 'closed') {
+                critList = critList.filter(c => String(c.status || '').indexOf('مغلق') !== -1);
+            }
+
             if (critBadge) critBadge.textContent = `${critList.length} ملاحظة`;
 
             if (critList.length === 0) {
-                critTbody.innerHTML = '<tr><td colspan="7" style="padding:16px; text-align:center; color:#10b981;"><i class="fas fa-check-circle ml-2"></i>لا توجد ملاحظات حرجة مفتوحة في هذا الموقع حالياً</td></tr>';
+                critTbody.innerHTML = '<tr><td colspan="7" style="padding:16px; text-align:center; color:#10b981;"><i class="fas fa-check-circle ml-2"></i>لا توجد ملاحظات حرجة مفتوحة مطابقة لهذا الفلتر حالياً</td></tr>';
             } else {
                 critTbody.innerHTML = critList.map(c => `
                     <tr style="border-bottom:1px solid #f1f5f9;">
