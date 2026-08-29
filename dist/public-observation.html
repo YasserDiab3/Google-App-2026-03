@@ -3739,6 +3739,8 @@
                 }
             } catch (cErr) {}
 
+            applyLanguage(savedLang);
+
             // 3. قراءة التكوين المشفر الممرر بالرابط أو رمز الـ QR
             try {
                 const hash = window.location.hash || '';
@@ -3928,13 +3930,14 @@
 
         function renderConfigData(cfg) {
             if (!cfg) return;
+            const t = PUBLIC_OBS_I18N[currentLang] || PUBLIC_OBS_I18N.ar;
 
             // 1. تطبيع واستخراج قائمة المصانع والمواقع
             const rawSites = (Array.isArray(cfg.sites) && cfg.sites.length > 0) ? cfg.sites : ((Array.isArray(cfg.factories) && cfg.factories.length > 0) ? cfg.factories : []);
             
             const siteSelect = document.getElementById('siteSelect');
             const previousSelectedSite = siteSelect.value;
-            siteSelect.innerHTML = '<option value="">— اختر المصنع / الموقع —</option>';
+            siteSelect.innerHTML = `<option value="">${t.sitePlaceholder || '— اختر المصنع / الموقع —'}</option>`;
             
             if (rawSites.length > 0) {
                 rawSites.forEach(site => {
@@ -3971,7 +3974,7 @@
             // 2. الإدارات الفعلية الشاملة المطابقة للنظام بالكامل
             const deptSelect = document.getElementById('responsibleDeptSelect');
             const previousDept = deptSelect.value;
-            deptSelect.innerHTML = '<option value="">— اختر الإدارة المسؤولة عن التنفيذ —</option>';
+            deptSelect.innerHTML = `<option value="">${t.deptPlaceholder || '— اختر الإدارة المسؤولة عن التنفيذ —'}</option>`;
             
             // دمج الإدارات الافتراضية مع ما جاء من الخادم لضمان عدم نقص أي إدارة
             const combinedDepts = [...ALL_SYSTEM_DEPARTMENTS];

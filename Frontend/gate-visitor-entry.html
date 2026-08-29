@@ -2186,6 +2186,45 @@
             const lblBadge = document.getElementById('lblBadgeNumber');
             if (lblBadge) lblBadge.textContent = t.lblBadgeNumber;
 
+            // HSE Briefing Rules
+            const hseBTitle = document.getElementById('hseBriefTitle');
+            if (hseBTitle) hseBTitle.textContent = t.hseBriefTitle;
+            const hseBDesc = document.getElementById('hseBriefDesc');
+            if (hseBDesc) hseBDesc.textContent = t.hseBriefDesc;
+
+            const r1T = document.getElementById('hseRule1Title');
+            if (r1T) r1T.textContent = t.hseRule1Title;
+            const r1 = document.getElementById('hseRule1');
+            if (r1) r1.textContent = t.hseRule1;
+
+            const r2T = document.getElementById('hseRule2Title');
+            if (r2T) r2T.textContent = t.hseRule2Title;
+            const r2 = document.getElementById('hseRule2');
+            if (r2) r2.textContent = t.hseRule2;
+
+            const r3T = document.getElementById('hseRule3Title');
+            if (r3T) r3T.textContent = t.hseRule3Title;
+            const r3 = document.getElementById('hseRule3');
+            if (r3) r3.textContent = t.hseRule3;
+
+            const r4T = document.getElementById('hseRule4Title');
+            if (r4T) r4T.textContent = t.hseRule4Title;
+            const r4 = document.getElementById('hseRule4');
+            if (r4) r4.textContent = t.hseRule4;
+
+            const r5T = document.getElementById('hseRule5Title');
+            if (r5T) r5T.textContent = t.hseRule5Title;
+            const r5 = document.getElementById('hseRule5');
+            if (r5) r5.textContent = t.hseRule5;
+
+            const r6T = document.getElementById('hseRule6Title');
+            if (r6T) r6T.textContent = t.hseRule6Title;
+            const r6 = document.getElementById('hseRule6');
+            if (r6) r6.textContent = t.hseRule6;
+
+            const ackText = document.getElementById('hseAckText');
+            if (ackText) ackText.textContent = t.hseAckText;
+
             const btnSubmit = document.getElementById('btnSubmitText');
             if (btnSubmit) btnSubmit.textContent = t.btnSubmitText;
 
@@ -2195,7 +2234,9 @@
             if (succS) succS.textContent = t.succSubtitle;
             const btnNext = document.getElementById('btnNextVisitor');
             if (btnNext) btnNext.textContent = t.btnNextVisitor;
-            const btnGoAct = document.getElementById('btnGoActiveList');
+            const btnShareWa = document.getElementById('btnShareWhatsApp');
+            if (btnShareWa) btnShareWa.textContent = lang === 'en' ? 'Share Pass via WhatsApp 📲' : 'مشاركة التصريح عبر واتساب 📲';
+            const btnGoAct = document.getElementById('btnGoActiveList') || document.getElementById('btnGoActive');
             if (btnGoAct) btnGoAct.textContent = t.btnGoActive;
 
             const stAct = document.getElementById('lblStatActive');
@@ -2207,6 +2248,11 @@
 
             const searchInp = document.getElementById('visitorSearchInput');
             if (searchInp) searchInp.placeholder = t.searchPlaceholder;
+
+            try {
+                localStorage.setItem('HSE_PORTAL_LANG', lang);
+                localStorage.setItem('language', lang);
+            } catch(e) {}
 
             renderVisitPurposeOptions(lang);
             renderGateConfigToUI(currentSystemConfig);
@@ -3380,7 +3426,13 @@ function resetCheckInForm() {
                 const savedTheme = localStorage.getItem('HSE_GATE_THEME') || 'light';
                 if (savedTheme === 'dark') toggleTheme();
             } catch(e) {}
-            applyLanguage('ar');
+            let initialLang = 'ar';
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const qLang = urlParams.get('lang');
+                initialLang = qLang || localStorage.getItem('HSE_PORTAL_LANG') || localStorage.getItem('language') || 'ar';
+            } catch(e) {}
+            applyLanguage(initialLang);
             loadGateSystemConfig();
             updateStatsBadges();
             fetchActiveVisitorsFromCloud();
