@@ -2528,6 +2528,12 @@
             // iOS Modal
             const iosTitle = document.querySelector('.ios-guide-title');
             if (iosTitle) iosTitle.innerHTML = `<i class="fab fa-apple text-blue-500 mr-1"></i> ${t.iosTitle}`;
+
+            // Champions Board dynamic updates on language switch
+            if (typeof updateChampionsPeriodSelectOptions === 'function' && typeof rawObservationsAnalyticsData !== 'undefined' && rawObservationsAnalyticsData) {
+                updateChampionsPeriodSelectOptions();
+                renderChampionsBoard();
+            }
             const iosSteps = document.querySelectorAll('.ios-step span');
             if (iosSteps[0]) iosSteps[0].innerHTML = t.iosStep1;
             if (iosSteps[1]) iosSteps[1].innerHTML = t.iosStep2;
@@ -4181,10 +4187,40 @@
     // ======================================================================
     // Safety Champions Digital Certificate Engine with Bulletproof Mobile Download
     // ======================================================================
-    let currentCertData = { name: '', count: 0, rank: 1 };
+    let currentCertData = { name: '', count: 0, rank: 1, periodLabel: '' };
+    let currentChampionsPeriodType = 'monthly';
+    let currentChampionsPeriodKey = '';
 
-    function openChampionCertificate(name, count, rank) {
-        currentCertData = { name: name, count: count, rank: rank };
+    function getPeriodDisplayLabel(periodType, periodKey, lang = 'ar') {
+        const arMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+        const enMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        if (periodType === 'monthly') {
+            if (!periodKey || !periodKey.includes('-')) return lang === 'en' ? 'Current Month' : 'عن الشهر الحالي';
+            const parts = periodKey.split('-');
+            const y = parts[0];
+            const m = parts[1];
+            const mIdx = parseInt(m, 10) - 1;
+            const mName = lang === 'en' ? (enMonths[mIdx] || m) : (arMonths[mIdx] || m);
+            return lang === 'en' ? `for the Month of ${mName} ${y}` : `عن شهر ${mName} ${y}`;
+        } else if (periodType === 'quarterly') {
+            if (!periodKey || !periodKey.includes('-Q')) return lang === 'en' ? 'Current Quarter' : 'عن الربع الحالي';
+            const parts = periodKey.split('-Q');
+            const y = parts[0];
+            const q = parts[1];
+            const qNamesAr = { '1': 'عن الربع الأول Q1 (يناير - مارس)', '2': 'عن الربع الثاني Q2 (أبريل - يونيو)', '3': 'عن الربع الثالث Q3 (يوليو - سبتمبر)', '4': 'عن الربع الرابع Q4 (أكتوبر - ديسمبر)' };
+            const qNamesEn = { '1': 'for Q1 (Jan - Mar)', '2': 'for Q2 (Apr - Jun)', '3': 'for Q3 (Jul - Sep)', '4': 'for Q4 (Oct - Dec)' };
+            return lang === 'en' ? `${qNamesEn[q] || ('for Q' + q)} ${y}` : `${qNamesAr[q] || ('عن الربع ' + q)} ${y}`;
+        } else if (periodType === 'annual') {
+            return lang === 'en' ? `for the Year ${periodKey}` : `عن حصاد عام ${periodKey}`;
+        } else {
+            return lang === 'en' ? 'for All-Time Record' : 'عن الإجمالي التراكمي العام';
+        }
+    }
+
+    function openChampionCertificate(name, count, rank, customPeriodLabel = '') {
+        const periodText = customPeriodLabel || getPeriodDisplayLabel(currentChampionsPeriodType, currentChampionsPeriodKey, currentLang);
+        currentCertData = { name: name, count: count, rank: rank, periodLabel: periodText };
         const modal = document.getElementById('safetyChampionCertModal');
         if (!modal) return;
 
@@ -4197,7 +4233,9 @@
         const rankStr = medals[rank - 1] || 'المتميز 🎖️';
 
         if (nameEl) nameEl.textContent = name;
-        if (rankEl) rankEl.textContent = `المركز ${rankStr} في لوحة أبطال السلامة برصيد (${Number(count || 0).toLocaleString('ar-EG')} ملاحظة وإجراء)`;
+        if (rankEl) {
+            rankEl.textContent = `المركز ${rankStr} في لوحة أبطال السلامة (${periodText}) برصيد (${Number(count || 0).toLocaleString('ar-EG')} ملاحظة وإجراء)`;
+        }
         if (dateEl) {
             const now = new Date();
             dateEl.textContent = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -4232,15 +4270,17 @@
     }
 
     function downloadCurrentChampionCert() {
-        downloadChampionCertificateImage(currentCertData.name, currentCertData.count, currentCertData.rank);
+        downloadChampionCertificateImage(currentCertData.name, currentCertData.count, currentCertData.rank, currentCertData.periodLabel);
     }
 
-    function downloadChampionCertificateImage(name, count, rank) {
+    function downloadChampionCertificateImage(name, count, rank, periodLabel = '') {
         try {
             const canvas = document.createElement('canvas');
             canvas.width = 1200;
             canvas.height = 800;
             const ctx = canvas.getContext('2d');
+
+            const pLabel = periodLabel || currentCertData.periodLabel || 'عن الشهر الحالي';
 
             // خلفية فاخرة
             const bgGrad = ctx.createRadialGradient(600, 400, 50, 600, 400, 600);
@@ -4262,7 +4302,7 @@
             ctx.fillStyle = '#1e293b';
             ctx.font = 'bold 24px "Tajawal", "Segoe UI", sans-serif';
             ctx.textAlign = 'right';
-            ctx.fillText('الشركة العالمية للانتاج والتصنيع الزراعي', 1100, 95);
+            ctx.fillText('الشركة العالمية للانتاج والتصنيع الزراعي (ICAPP)', 1100, 95);
 
             ctx.fillStyle = '#b45309';
             ctx.font = 'bold 18px "Tajawal", "Segoe UI", sans-serif';
@@ -4314,12 +4354,12 @@
             ctx.font = '900 32px "Tajawal", "Segoe UI", sans-serif';
             ctx.fillText(name || 'بطل السلامة', 600, 392);
 
-            // تفاصيل الإنجاز والمركز
+            // تفاصيل الإنجاز والمركز والفترة
             const medals = ['الأول 🥇', 'الثاني 🥈', 'الثالث 🥉', 'الرابع 🎖️', 'الخامس 🎖️'];
             const rankStr = medals[(rank || 1) - 1] || 'المتميز 🎖️';
             ctx.fillStyle = '#334155';
             ctx.font = 'bold 20px "Tajawal", "Segoe UI", sans-serif';
-            ctx.fillText('تقديراً لجهوده الميدانية الاستثنائية ودوره الفاعل في رصد ومعالجة المخاطر وتحقيقه:', 600, 465);
+            ctx.fillText(`تقديراً لجهوده الميدانية الاستثنائية ودوره الفاعل في رصد ومعالجة المخاطر (${pLabel}) وتحقيقه:`, 600, 465);
 
             ctx.fillStyle = '#b45309';
             ctx.font = '900 24px "Tajawal", "Segoe UI", sans-serif';
@@ -4389,6 +4429,273 @@
         document.body.appendChild(link);
         link.click();
         setTimeout(() => document.body.removeChild(link), 300);
+    }
+
+    function setChampionsPeriodType(type) {
+        currentChampionsPeriodType = type;
+        document.querySelectorAll('#championsPeriodTypeBtns .champ-p-btn').forEach(btn => {
+            if (btn.getAttribute('data-type') === type) {
+                btn.classList.add('active');
+                btn.style.background = '#ffffff';
+                btn.style.color = '#1e40af';
+                btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.06)';
+            } else {
+                btn.classList.remove('active');
+                btn.style.background = 'transparent';
+                btn.style.color = '#475569';
+                btn.style.boxShadow = 'none';
+            }
+        });
+        updateChampionsPeriodSelectOptions();
+        renderChampionsBoard();
+    }
+
+    function setChampionsPeriodKey(key) {
+        currentChampionsPeriodKey = key;
+        renderChampionsBoard();
+    }
+
+    function updateChampionsPeriodSelectOptions() {
+        const select = document.getElementById('championsPeriodSelect');
+        if (!select || !rawObservationsAnalyticsData) return;
+        
+        const ch = rawObservationsAnalyticsData.champions || {};
+        const avail = ch.availablePeriods || {};
+        const cur = ch.currentPeriods || {};
+        const lang = currentLang || 'ar';
+        
+        select.innerHTML = '';
+        
+        if (currentChampionsPeriodType === 'monthly') {
+            const list = avail.months && avail.months.length > 0 ? avail.months : [cur.month || new Date().toISOString().slice(0, 7)];
+            list.forEach(k => {
+                const opt = document.createElement('option');
+                opt.value = k;
+                const isCur = (k === cur.month);
+                const label = getPeriodDisplayLabel('monthly', k, lang);
+                opt.textContent = isCur ? `${label} ⭐ (${lang === 'en' ? 'Current' : 'الشهر الحالي'})` : label;
+                select.appendChild(opt);
+            });
+            if (!currentChampionsPeriodKey || !list.includes(currentChampionsPeriodKey)) {
+                currentChampionsPeriodKey = list[0];
+            }
+            select.value = currentChampionsPeriodKey;
+            select.style.display = 'inline-block';
+        } else if (currentChampionsPeriodType === 'quarterly') {
+            const list = avail.quarters && avail.quarters.length > 0 ? avail.quarters : [cur.quarter || (new Date().getFullYear() + '-Q' + Math.ceil((new Date().getMonth() + 1) / 3))];
+            list.forEach(k => {
+                const opt = document.createElement('option');
+                opt.value = k;
+                const isCur = (k === cur.quarter);
+                const label = getPeriodDisplayLabel('quarterly', k, lang);
+                opt.textContent = isCur ? `${label} ⭐ (${lang === 'en' ? 'Current' : 'الربع الحالي'})` : label;
+                select.appendChild(opt);
+            });
+            if (!currentChampionsPeriodKey || !list.includes(currentChampionsPeriodKey)) {
+                currentChampionsPeriodKey = list[0];
+            }
+            select.value = currentChampionsPeriodKey;
+            select.style.display = 'inline-block';
+        } else if (currentChampionsPeriodType === 'annual') {
+            const list = avail.years && avail.years.length > 0 ? avail.years : [cur.year || String(new Date().getFullYear())];
+            list.forEach(k => {
+                const opt = document.createElement('option');
+                opt.value = k;
+                const isCur = (k === cur.year);
+                const label = getPeriodDisplayLabel('annual', k, lang);
+                opt.textContent = isCur ? `${label} ⭐ (${lang === 'en' ? 'Current' : 'العام الحالي'})` : label;
+                select.appendChild(opt);
+            });
+            if (!currentChampionsPeriodKey || !list.includes(currentChampionsPeriodKey)) {
+                currentChampionsPeriodKey = list[0];
+            }
+            select.value = currentChampionsPeriodKey;
+            select.style.display = 'inline-block';
+        } else {
+            const opt = document.createElement('option');
+            opt.value = 'all';
+            opt.textContent = lang === 'en' ? 'All-Time Record' : 'جميع الفترات (سجل تراكمي)';
+            select.appendChild(opt);
+            currentChampionsPeriodKey = 'all';
+            select.value = 'all';
+            select.style.display = 'none';
+        }
+    }
+
+    async function toggleChampionsOfficialApproval() {
+        if (!rawObservationsAnalyticsData) return;
+        const ch = rawObservationsAnalyticsData.champions || {};
+        const approvals = ch.officialApprovals || {};
+        const isApproved = !!approvals[currentChampionsPeriodKey];
+        const newStatus = !isApproved;
+        const targetUrl = (typeof DEPLOYMENT_URL !== 'undefined' && DEPLOYMENT_URL) ? DEPLOYMENT_URL : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+
+        try {
+            const btn = document.getElementById('btnToggleCertApproval');
+            if (btn) btn.disabled = true;
+            
+            const res = await fetch(targetUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'setOfficialChampionsApproval',
+                    data: {
+                        periodKey: currentChampionsPeriodKey,
+                        isApproved: newStatus,
+                        approvedBy: 'مدير إدارة السلامة والصحة المهنية'
+                    }
+                })
+            });
+            const data = await res.json();
+            if (data && data.success) {
+                if (!rawObservationsAnalyticsData.champions) rawObservationsAnalyticsData.champions = {};
+                rawObservationsAnalyticsData.champions.officialApprovals = data.approvals;
+                renderChampionsBoard();
+                alert(newStatus ? '✅ تم اعتماد وتثبيت أبطال هذه الفترة رسمياً!' : 'ℹ️ تم إلغاء الاعتماد والعودة للحساب الآلي التلقائي.');
+            }
+        } catch(e) {
+            console.error('Error toggling champions approval:', e);
+        } finally {
+            const btn = document.getElementById('btnToggleCertApproval');
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    function renderChampionsBoard() {
+        const champCont = document.getElementById('anlChampionsContainer');
+        if (!champCont || !rawObservationsAnalyticsData) return;
+
+        const ch = rawObservationsAnalyticsData.champions || {};
+        const approvals = ch.officialApprovals || {};
+        const isApproved = !!approvals[currentChampionsPeriodKey];
+        const lang = currentLang || 'ar';
+
+        // Update Approval Badge & Button
+        const badge = document.getElementById('championsApprovalBadge');
+        const statusTxt = document.getElementById('txtChampionsApprovalStatus');
+        const btnApprove = document.getElementById('btnToggleCertApproval');
+        const txtBtnApprove = document.getElementById('txtBtnApprovePeriod');
+
+        if (isApproved) {
+            if (badge) {
+                badge.style.background = 'rgba(245, 158, 11, 0.2)';
+                badge.style.color = '#fde047';
+                badge.style.border = '1px solid rgba(245, 158, 11, 0.5)';
+            }
+            if (statusTxt) {
+                statusTxt.textContent = lang === 'en' ? '🛡️ Certified by HSE Admin' : '🛡️ معتمد رسمياً من الإدارة';
+            }
+            if (btnApprove) {
+                btnApprove.style.background = '#fef2f2';
+                btnApprove.style.color = '#dc2626';
+                btnApprove.style.borderColor = '#fca5a5';
+            }
+            if (txtBtnApprove) {
+                txtBtnApprove.textContent = lang === 'en' ? 'Revoke Approval' : 'إلغاء الاعتماد';
+            }
+        } else {
+            if (badge) {
+                badge.style.background = 'rgba(16, 185, 129, 0.2)';
+                badge.style.color = '#6ee7b7';
+                badge.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+            }
+            if (statusTxt) {
+                statusTxt.textContent = lang === 'en' ? '⚡ Live Auto-Calculated' : '⚡ حساب آلي مباشر';
+            }
+            if (btnApprove) {
+                btnApprove.style.background = '#fffbeb';
+                btnApprove.style.color = '#b45309';
+                btnApprove.style.borderColor = '#f59e0b';
+            }
+            if (txtBtnApprove) {
+                txtBtnApprove.textContent = lang === 'en' ? 'Certify Period' : 'اعتماد رسمي';
+            }
+        }
+
+        // Get Top Observers & Top Departments for the active period
+        let topObs = [];
+        let topD = [];
+
+        if (currentChampionsPeriodType === 'allTime') {
+            topObs = (ch.allTime && ch.allTime.topObservers) || rawObservationsAnalyticsData.topObservers || [];
+            topD = (ch.allTime && ch.allTime.topDepts) || rawObservationsAnalyticsData.topDepts || [];
+        } else {
+            const periodGroup = ch[currentChampionsPeriodType] || {};
+            const periodData = periodGroup[currentChampionsPeriodKey] || {};
+            topObs = periodData.topObservers || [];
+            topD = periodData.topDepts || [];
+
+            if (topObs.length === 0 && rawObservationsAnalyticsData.topObservers) {
+                topObs = rawObservationsAnalyticsData.topObservers;
+            }
+            if (topD.length === 0 && rawObservationsAnalyticsData.topDepts) {
+                topD = rawObservationsAnalyticsData.topDepts;
+            }
+        }
+
+        const medals = ['🥇', '🥈', '🥉', '🎖️', '🎖️', '🎖️'];
+        const periodDisplay = getPeriodDisplayLabel(currentChampionsPeriodType, currentChampionsPeriodKey, lang);
+
+        let obsListHtml = '';
+        if (topObs && topObs.length > 0) {
+            topObs.slice(0, 5).forEach((o, i) => {
+                const highTxt = o.highRisk ? `<span style="background:#fee2e2; color:#b91c1c; padding:1px 5px; border-radius:4px; font-size:0.65rem; font-weight:700;">${o.highRisk} حرج</span>` : '';
+                obsListHtml += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed #e2e8f0; font-size:0.8rem;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-size:1.05rem;">${medals[i] || '🎖️'}</span>
+                            <div>
+                                <div style="font-weight:700; color:#1e293b;">${escapeHTML(o.name)}</div>
+                                <div style="font-size:0.68rem; color:#64748b;">نسبة الإغلاق: <b>${o.closeRate || 100}%</b> ${highTxt}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:10px; font-weight:800; font-size:0.72rem;">${o.count} ملاحظة</span>
+                            <button type="button" onclick="openChampionCertificate('${escapeHTML(o.name).replace(/'/g, "\\'")}', ${o.count}, ${i + 1}, '${escapeHTML(periodDisplay).replace(/'/g, "\\'")}')" title="إصدار شهادة تقدير رقمية" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 1px 3px rgba(217,119,6,0.15);">
+                                <i class="fas fa-award text-amber-600"></i>
+                                <span>شهادة</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            obsListHtml = `<div style="text-align:center; padding:12px; color:#94a3b8; font-size:0.75rem;">لا توجد ملاحظات مسجلة لهذه الفترة حتى الآن</div>`;
+        }
+
+        let deptListHtml = '';
+        if (topD && topD.length > 0) {
+            topD.slice(0, 5).forEach((d, i) => {
+                const spd = d.speedDays ? `${d.speedDays} يوم` : '1.4 يوم';
+                deptListHtml += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed #e2e8f0; font-size:0.8rem;">
+                        <span style="font-weight:700; color:#1e293b;">${medals[i] || '🎖️'} ${escapeHTML(d.name)}</span>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:800; font-size:0.72rem;">${d.count} إجراء</span>
+                            <span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:6px; font-weight:700; font-size:0.68rem;" title="متوسط سرعة الإغلاق">${spd}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            deptListHtml = `<div style="text-align:center; padding:12px; color:#94a3b8; font-size:0.75rem;">لا توجد إجراءات مسجلة لهذه الفترة</div>`;
+        }
+
+        champCont.innerHTML = `
+            <div style="background:#f8fafc; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0;">
+                <div style="font-weight:800; font-size:0.82rem; color:#1e3a8a; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+                    <span style="display:flex; align-items:center; gap:6px;"><i class="fas fa-user-shield text-blue-600"></i> أكثر مسؤولي السلامة رصداً (${periodDisplay}):</span>
+                    <span style="font-size:0.7rem; color:#6366f1; font-weight:700;">📜 شهادات فورية</span>
+                </div>
+                ${obsListHtml}
+            </div>
+            <div style="background:#f8fafc; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0;">
+                <div style="font-weight:800; font-size:0.82rem; color:#15803d; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                    <i class="fas fa-building text-emerald-600"></i> أكثر الإدارات تفاعلاً وسرعة استجابة (${periodDisplay}):
+                </div>
+                ${deptListHtml}
+            </div>
+        `;
     }
 
 
@@ -4562,13 +4869,40 @@
 
                 <!-- لوحة شرف أبطال ورواد السلامة (Safety Champions) -->
                 <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
-                    <div style="padding: 10px 16px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="padding: 10px 16px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 1.1rem;">🏆</span>
-                            <span style="font-weight: 800; font-size: 0.88rem;">لوحة شرف أبطال ورواد السلامة (Safety Champions)</span>
+                            <span style="font-weight: 800; font-size: 0.88rem;" id="txtChampionsHeaderTitle">لوحة شرف أبطال ورواد السلامة (Safety Champions)</span>
                         </div>
-                        <span style="font-size: 0.72rem; color: #94a3b8;">أعلى مسؤولي السلامة والإدارات رصداً ومعالجة</span>
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.72rem;">
+                            <span id="championsApprovalBadge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); padding: 2px 8px; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-bolt"></i> <span id="txtChampionsApprovalStatus">حساب آلي مباشر</span>
+                            </span>
+                        </div>
                     </div>
+
+                    <!-- شريط أدوات التبديل الزمني (شهري / ربع سنوي / سنوي / تراكمي) -->
+                    <div style="padding: 8px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                        <!-- أزرار نوع الفترة -->
+                        <div style="display: inline-flex; background: #e2e8f0; padding: 2px; border-radius: 8px; gap: 2px;" id="championsPeriodTypeBtns">
+                            <button type="button" onclick="setChampionsPeriodType('monthly')" class="champ-p-btn active" data-type="monthly" style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.72rem; font-weight: 800; cursor: pointer; background: #ffffff; color: #1e40af; box-shadow: 0 1px 2px rgba(0,0,0,0.06);">📅 شهري</button>
+                            <button type="button" onclick="setChampionsPeriodType('quarterly')" class="champ-p-btn" data-type="quarterly" style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.72rem; font-weight: 800; cursor: pointer; background: transparent; color: #475569;">📊 ربع سنوي</button>
+                            <button type="button" onclick="setChampionsPeriodType('annual')" class="champ-p-btn" data-type="annual" style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.72rem; font-weight: 800; cursor: pointer; background: transparent; color: #475569;">🏆 سنوي</button>
+                            <button type="button" onclick="setChampionsPeriodType('allTime')" class="champ-p-btn" data-type="allTime" style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.72rem; font-weight: 800; cursor: pointer; background: transparent; color: #475569;">🌐 تراكمي</button>
+                        </div>
+
+                        <!-- اختيار الفترة المحددة + زر اعتماد المدير -->
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <select id="championsPeriodSelect" onchange="setChampionsPeriodKey(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.75rem; font-weight: 800; color: #1e293b; background: #ffffff; cursor: pointer; max-width: 220px; outline: none;">
+                                <!-- ديناميكي -->
+                            </select>
+                            <button type="button" id="btnToggleCertApproval" onclick="toggleChampionsOfficialApproval()" title="اعتماد وتثبيت بطل هذه الفترة رسمياً كمدير للنظام" style="padding: 4px 8px; border-radius: 8px; border: 1px solid #f59e0b; background: #fffbeb; color: #b45309; font-size: 0.72rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-stamp"></i>
+                                <span id="txtBtnApprovePeriod">اعتماد رسمي</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <div style="padding: 12px 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;" id="anlChampionsContainer">
                         <div style="text-align: center; padding: 16px; color: #64748b;"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل لوحة الأبطال...</div>
                     </div>
@@ -5057,57 +5391,9 @@
             trendCont.innerHTML = trendHtml;
         }
 
-        // 2. تحديث لوحة شرف أبطال ورواد السلامة (Safety Champions) مع زر إصدار الشهادة وسرعة المعالجة
-        const champCont = document.getElementById('anlChampionsContainer');
-        if (champCont && rawObservationsAnalyticsData.topObservers && rawObservationsAnalyticsData.topDepts) {
-            const medals = ['🥇', '🥈', '🥉', '🎖️', '🎖️'];
-            
-            let obsListHtml = '';
-            rawObservationsAnalyticsData.topObservers.slice(0, 4).forEach((o, i) => {
-                obsListHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed #e2e8f0; font-size:0.8rem;">
-                        <span style="font-weight:700; color:#1e293b;">${medals[i]} ${escapeHTML(o.name)}</span>
-                        <div style="display:flex; gap:6px; align-items:center;">
-                            <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:10px; font-weight:800; font-size:0.72rem;">${o.count} ملاحظة</span>
-                            <button type="button" onclick="openChampionCertificate('${escapeHTML(o.name)}', ${o.count}, ${i + 1})" title="إصدار شهادة تقدير رقمية" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; padding:2px 7px; border-radius:6px; font-size:0.7rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:3px;">
-                                <i class="fas fa-award"></i>
-                                <span>شهادة</span>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
-
-            let deptListHtml = '';
-            rawObservationsAnalyticsData.topDepts.slice(0, 4).forEach((d, i) => {
-                const spd = d.speedDays ? `${d.speedDays} يوم` : '1.4 يوم';
-                deptListHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed #e2e8f0; font-size:0.8rem;">
-                        <span style="font-weight:700; color:#1e293b;">${medals[i]} ${escapeHTML(d.name)}</span>
-                        <div style="display:flex; gap:6px; align-items:center;">
-                            <span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:800; font-size:0.72rem;">${d.count} إجراء</span>
-                            <span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:6px; font-weight:700; font-size:0.68rem;" title="متوسط سرعة الإغلاق">${spd}</span>
-                        </div>
-                    </div>
-                `;
-            });
-
-            champCont.innerHTML = `
-                <div style="background:#f8fafc; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0;">
-                    <div style="font-weight:800; font-size:0.82rem; color:#1e3a8a; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
-                        <span style="display:flex; align-items:center; gap:6px;"><i class="fas fa-user-shield text-blue-600"></i> أكثر مسؤولي السلامة رصداً:</span>
-                        <span style="font-size:0.7rem; color:#6366f1; font-weight:700;">📜 شهادات فورية</span>
-                    </div>
-                    ${obsListHtml}
-                </div>
-                <div style="background:#f8fafc; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0;">
-                    <div style="font-weight:800; font-size:0.82rem; color:#15803d; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                        <i class="fas fa-building text-emerald-600"></i> أكثر الإدارات تفاعلاً وسرعة استجابة:
-                    </div>
-                    ${deptListHtml}
-                </div>
-            `;
-        }
+        // 2. تحديث لوحة شرف أبطال ورواد السلامة (Safety Champions) مع الفترات والشهادات
+        updateChampionsPeriodSelectOptions();
+        renderChampionsBoard();
 
         // 3. أشرطة التوزيع التفاعلي (الخطورة والمصانع)
         const riskCont = document.getElementById('anlRiskBarsContainer');

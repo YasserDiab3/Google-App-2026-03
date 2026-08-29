@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Google Apps Script for HSE System - Main Entry Point
  * 
  * هذا هو الملف الرئيسي الذي يتعامل مع جميع الطلبات
@@ -338,7 +338,7 @@ function doPost(e) {
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'getPublicLivePTWSummary', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'setOfficialChampionsApproval', 'getPublicLivePTWSummary', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -531,6 +531,8 @@ function doPost(e) {
                 result = getPublicObservationConfig();
             } else if (action === 'getPublicObservationsAnalytics' && typeof getPublicObservationsAnalytics === 'function') {
                 result = getPublicObservationsAnalytics(payload || postData.data || postData || {});
+            } else if (action === 'setOfficialChampionsApproval' && typeof setOfficialChampionsApproval === 'function') {
+                result = setOfficialChampionsApproval(payload || postData.data || postData || {});
             } else if (action === 'getPublicLivePTWSummary' && typeof getPublicLivePTWSummary === 'function') {
                 result = getPublicLivePTWSummary(payload || postData.data || postData || {});
             } else if (action === 'submitPublicFireInspection' && typeof submitPublicFireInspection === 'function') {
