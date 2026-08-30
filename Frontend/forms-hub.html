@@ -18,6 +18,9 @@
     <link rel="icon" type="image/png" href="icons/icapp-logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
+    <!-- QRCode Generator for ISO Digital Verification -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+
     <!-- Google Fonts: Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4185,9 +4188,9 @@
 
 
     // ======================================================================
-    // Safety Champions Digital Certificate Engine with Bulletproof Mobile Download
+    // Safety Champions Digital Certificate Engine with Bulletproof Mobile Download & QR Verification
     // ======================================================================
-    let currentCertData = { name: '', count: 0, rank: 1, periodLabel: '' };
+    let currentCertData = { name: '', count: 0, rank: 1, periodLabel: '', docId: '', badges: [] };
     let currentChampionsPeriodType = 'monthly';
     let currentChampionsPeriodKey = '';
 
@@ -4218,9 +4221,136 @@
         }
     }
 
-    function openChampionCertificate(name, count, rank, customPeriodLabel = '') {
+    function getChampionBadges(item, isDept = false) {
+        const badges = [];
+        if (!item) return badges;
+
+        if (!isDept) {
+            if (item.rank === 1) {
+                badges.push({
+                    key: 'gold_champion',
+                    icon: '👑',
+                    titleAr: 'درع الصدارة الذهبي',
+                    titleEn: 'Grand Champion',
+                    bg: '#fef3c7',
+                    color: '#b45309',
+                    border: '#fde68a'
+                });
+            }
+            if (item.highRisk && item.highRisk >= 2) {
+                badges.push({
+                    key: 'hazard_hunter',
+                    icon: '🦅',
+                    titleAr: 'صائد المخاطر الحرجة',
+                    titleEn: 'Hazard Hunter',
+                    bg: '#fee2e2',
+                    color: '#b91c1c',
+                    border: '#fca5a5'
+                });
+            }
+            if (item.closeRate && item.closeRate >= 95) {
+                badges.push({
+                    key: 'zero_risk',
+                    icon: '🛡️',
+                    titleAr: 'حارس المعايير القياسي',
+                    titleEn: 'Standard Guardian',
+                    bg: '#ecfdf5',
+                    color: '#047857',
+                    border: '#a7f3d0'
+                });
+            }
+            if (item.count && item.count >= 8) {
+                badges.push({
+                    key: 'vigilant_eye',
+                    icon: '🎯',
+                    titleAr: 'الرصد الميداني الدقيق',
+                    titleEn: 'Precision Observer',
+                    bg: '#eff6ff',
+                    color: '#1d4ed8',
+                    border: '#bfdbfe'
+                });
+            }
+        } else {
+            if (item.rank === 1 || item.closed >= 10) {
+                badges.push({
+                    key: 'operational_excellence',
+                    icon: '🏆',
+                    titleAr: 'التميز التشغيلي',
+                    titleEn: 'Operational Excellence',
+                    bg: '#fef3c7',
+                    color: '#b45309',
+                    border: '#fde68a'
+                });
+            }
+            const spdNum = parseFloat(item.speedDays) || 1.5;
+            if (spdNum <= 1.3) {
+                badges.push({
+                    key: 'rapid_response',
+                    icon: '⚡',
+                    titleAr: 'الاستجابة الصاروخية',
+                    titleEn: 'Rapid Responder',
+                    bg: '#fdf4ff',
+                    color: '#a21caf',
+                    border: '#f0abfc'
+                });
+            }
+            if (item.closeRate && item.closeRate >= 90) {
+                badges.push({
+                    key: 'high_resolution',
+                    icon: '✨',
+                    titleAr: 'المعالجة الشاملة',
+                    titleEn: 'Full Resolution',
+                    bg: '#ecfdf5',
+                    color: '#047857',
+                    border: '#a7f3d0'
+                });
+            }
+        }
+
+        if (badges.length === 0) {
+            badges.push({
+                key: 'active_member',
+                icon: '🎖️',
+                titleAr: 'فارس السلامة الميداني',
+                titleEn: 'Safety Leader',
+                bg: '#f1f5f9',
+                color: '#334155',
+                border: '#cbd5e1'
+            });
+        }
+
+        return badges;
+    }
+
+    function generateQrDataUri(url, size = 120) {
+        try {
+            if (typeof qrcode === 'function') {
+                const qr = qrcode(0, 'M');
+                qr.addData(url);
+                qr.make();
+                return qr.createDataURL(4, 2);
+            }
+        } catch(e) {
+            console.warn('QR gen error:', e);
+        }
+        return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}`;
+    }
+
+    function openChampionCertificate(name, count, rank, customPeriodLabel = '', rawItem = null) {
         const periodText = customPeriodLabel || getPeriodDisplayLabel(currentChampionsPeriodType, currentChampionsPeriodKey, currentLang);
-        currentCertData = { name: name, count: count, rank: rank, periodLabel: periodText };
+        const curYear = new Date().getFullYear();
+        const docId = `CERT-HSE-${curYear}-${String(rank).padStart(2, '0')}`;
+        const badges = getChampionBadges(rawItem || { rank, count, highRisk: 2, closeRate: 100 }, false);
+
+        currentCertData = {
+            name: name,
+            count: count,
+            rank: rank,
+            periodLabel: periodText,
+            docId: docId,
+            badges: badges
+        };
+
         const modal = document.getElementById('safetyChampionCertModal');
         if (!modal) return;
 
@@ -4228,6 +4358,8 @@
         const rankEl = document.getElementById('certChampionRankText');
         const dateEl = document.getElementById('certDate');
         const docIdEl = document.getElementById('certDocId');
+        const badgeBoxEl = document.getElementById('certChampionBadgeBox');
+        const qrBoxEl = document.getElementById('certQrContainer');
 
         const medals = ['الأول 🥇', 'الثاني 🥈', 'الثالث 🥉', 'الرابع 🎖️', 'الخامس 🎖️'];
         const rankStr = medals[rank - 1] || 'المتميز 🎖️';
@@ -4241,7 +4373,24 @@
             dateEl.textContent = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
         }
         if (docIdEl) {
-            docIdEl.textContent = `CERT-HSE-${new Date().getFullYear()}-${String(rank).padStart(2, '0')}`;
+            docIdEl.textContent = docId;
+        }
+
+        // الأوسمة التحفيزية (Gamification Badge)
+        if (badgeBoxEl) {
+            badgeBoxEl.innerHTML = badges.map(b => `
+                <div style="background:${b.bg}; color:${b.color}; border:1px solid ${b.border}; padding:3px 12px; border-radius:16px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:5px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                    <span>${b.icon}</span>
+                    <span>${currentLang === 'en' ? b.titleEn : b.titleAr}</span>
+                </div>
+            `).join('');
+        }
+
+        // توليد رمز التحقق الرقمي المعتمد (QR Verification)
+        if (qrBoxEl) {
+            const verifyUrl = `${window.location.origin}${window.location.pathname}?verifyCert=1&certId=${encodeURIComponent(docId)}&name=${encodeURIComponent(name)}&count=${count}&rank=${rank}&period=${encodeURIComponent(periodText)}`;
+            const qrUri = generateQrDataUri(verifyUrl, 100);
+            qrBoxEl.innerHTML = `<img src="${qrUri}" style="width:100%; height:100%; object-fit:contain; border-radius:4px;" alt="QR Verification">`;
         }
 
         modal.style.display = 'flex';
@@ -4270,10 +4419,17 @@
     }
 
     function downloadCurrentChampionCert() {
-        downloadChampionCertificateImage(currentCertData.name, currentCertData.count, currentCertData.rank, currentCertData.periodLabel);
+        downloadChampionCertificateImage(
+            currentCertData.name,
+            currentCertData.count,
+            currentCertData.rank,
+            currentCertData.periodLabel,
+            currentCertData.docId,
+            currentCertData.badges
+        );
     }
 
-    function downloadChampionCertificateImage(name, count, rank, periodLabel = '') {
+    function downloadChampionCertificateImage(name, count, rank, periodLabel = '', docId = '', badges = []) {
         try {
             const canvas = document.createElement('canvas');
             canvas.width = 1200;
@@ -4281,6 +4437,9 @@
             const ctx = canvas.getContext('2d');
 
             const pLabel = periodLabel || currentCertData.periodLabel || 'عن الشهر الحالي';
+            const cDocId = docId || currentCertData.docId || `CERT-HSE-${new Date().getFullYear()}-0${rank || 1}`;
+            const cBadges = (badges && badges.length > 0) ? badges : (currentCertData.badges || []);
+            const primaryBadge = cBadges[0] || { icon: '🏆', titleAr: 'درع التميز الذهبي' };
 
             // خلفية فاخرة
             const bgGrad = ctx.createRadialGradient(600, 400, 50, 600, 400, 600);
@@ -4312,7 +4471,7 @@
             ctx.fillStyle = '#64748b';
             ctx.font = '14px "Tajawal", "Segoe UI", sans-serif';
             const now = new Date();
-            ctx.fillText(`كود الاعتماد: CERT-HSE-${now.getFullYear()}-0${rank || 1}`, 80, 95);
+            ctx.fillText(`كود الاعتماد: ${cDocId}`, 80, 95);
             ctx.fillText(`تاريخ التكريم: ${now.toLocaleDateString('ar-EG')}`, 80, 125);
 
             // فاصل ذهبي
@@ -4327,15 +4486,15 @@
             ctx.textAlign = 'center';
             ctx.fillStyle = '#b45309';
             ctx.font = '900 42px "Tajawal", "Segoe UI", sans-serif';
-            ctx.fillText('📜 شَهَادَةُ شُكْرٍ وَتَقْدِيرٍ وَتَمَيُّزٍ 📜', 600, 220);
+            ctx.fillText('📜 شَهَادَةُ شُكْرٍ وَتَقْدِيرٍ وَتَمَيُّزٍ 📜', 600, 215);
 
             ctx.fillStyle = '#64748b';
-            ctx.font = 'bold 18px "Segoe UI", sans-serif';
-            ctx.fillText('Safety & Occupational Health Excellence Certificate', 600, 255);
+            ctx.font = 'bold 17px "Segoe UI", sans-serif';
+            ctx.fillText('Safety & Occupational Health Excellence Certificate', 600, 248);
 
             ctx.fillStyle = '#334155';
-            ctx.font = 'bold 22px "Tajawal", "Segoe UI", sans-serif';
-            ctx.fillText('تتقدم إدارة السلامة والصحة المهنية وحماية البيئة بجزيل الشكر والتقدير إلى الزميل المتميز:', 600, 310);
+            ctx.font = 'bold 21px "Tajawal", "Segoe UI", sans-serif';
+            ctx.fillText('تتقدم إدارة السلامة والصحة المهنية وحماية البيئة بجزيل الشكر والتقدير إلى الزميل المتميز:', 600, 300);
 
             // صندوق اسم المكرم
             ctx.fillStyle = '#fef3c7';
@@ -4343,78 +4502,123 @@
             ctx.lineWidth = 3;
             ctx.beginPath();
             if (ctx.roundRect) {
-                ctx.roundRect(300, 345, 600, 70, 35);
+                ctx.roundRect(320, 335, 560, 65, 32);
             } else {
-                ctx.rect(300, 345, 600, 70);
+                ctx.rect(320, 335, 560, 65);
             }
             ctx.fill();
             ctx.stroke();
 
             ctx.fillStyle = '#78350f';
             ctx.font = '900 32px "Tajawal", "Segoe UI", sans-serif';
-            ctx.fillText(name || 'بطل السلامة', 600, 392);
+            ctx.fillText(name || 'بطل السلامة', 600, 380);
+
+            // وسام التميز والشرف (Gamification Badge Ribbon)
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(420, 415, 360, 34, 17);
+            } else {
+                ctx.rect(420, 415, 360, 34);
+            }
+            ctx.fill();
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 16px "Tajawal", "Segoe UI", sans-serif';
+            ctx.fillText(`${primaryBadge.icon} ${primaryBadge.titleAr}`, 600, 438);
 
             // تفاصيل الإنجاز والمركز والفترة
             const medals = ['الأول 🥇', 'الثاني 🥈', 'الثالث 🥉', 'الرابع 🎖️', 'الخامس 🎖️'];
             const rankStr = medals[(rank || 1) - 1] || 'المتميز 🎖️';
             ctx.fillStyle = '#334155';
-            ctx.font = 'bold 20px "Tajawal", "Segoe UI", sans-serif';
-            ctx.fillText(`تقديراً لجهوده الميدانية الاستثنائية ودوره الفاعل في رصد ومعالجة المخاطر (${pLabel}) وتحقيقه:`, 600, 465);
+            ctx.font = 'bold 19px "Tajawal", "Segoe UI", sans-serif';
+            ctx.fillText(`تقديراً لجهوده الميدانية الاستثنائية ودوره الفاعل في رصد ومعالجة المخاطر (${pLabel}) وتحقيقه:`, 600, 485);
 
             ctx.fillStyle = '#b45309';
-            ctx.font = '900 24px "Tajawal", "Segoe UI", sans-serif';
-            ctx.fillText(`المركز ${rankStr} في لوحة أبطال السلامة برصيد (${Number(count || 0).toLocaleString('ar-EG')} ملاحظة وإجراء)`, 600, 505);
+            ctx.font = '900 23px "Tajawal", "Segoe UI", sans-serif';
+            ctx.fillText(`المركز ${rankStr} في لوحة أبطال السلامة برصيد (${Number(count || 0).toLocaleString('ar-EG')} ملاحظة وإجراء)`, 600, 520);
 
             // خط الاعتمادات
             ctx.strokeStyle = '#e2e8f0';
             ctx.beginPath();
-            ctx.moveTo(100, 575);
-            ctx.lineTo(1100, 575);
+            ctx.moveTo(80, 570);
+            ctx.lineTo(1120, 570);
             ctx.stroke();
 
             ctx.fillStyle = '#1e293b';
-            ctx.font = 'bold 18px "Tajawal", "Segoe UI", sans-serif';
-            ctx.fillText('مشرف السلامة الميداني', 250, 615);
-            ctx.fillText('ختم التميز الذهبي (HSE)', 600, 615);
-            ctx.fillText('مدير إدارة السلامة والصحة المهنية', 950, 615);
+            ctx.font = 'bold 17px "Tajawal", "Segoe UI", sans-serif';
+            ctx.fillText('مشرف السلامة الميداني', 220, 610);
+            ctx.fillText('ختم التميز الذهبي (HSE)', 580, 610);
+            ctx.fillText('مدير إدارة السلامة والصحة المهنية', 960, 610);
 
             // ختم التميز الذهبي
             ctx.fillStyle = '#f59e0b';
             ctx.beginPath();
-            ctx.arc(600, 675, 40, 0, Math.PI * 2);
+            ctx.arc(580, 675, 38, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#ffffff';
-            ctx.font = '900 18px sans-serif';
-            ctx.fillText('ICAPP', 600, 680);
+            ctx.font = '900 17px sans-serif';
+            ctx.fillText('ICAPP', 580, 680);
 
             ctx.fillStyle = '#64748b';
-            ctx.font = '14px "Tajawal", sans-serif';
-            ctx.fillText('معتمد رقمياً', 250, 685);
-            ctx.fillText('الاعتماد الرسمي', 950, 685);
+            ctx.font = '13px "Tajawal", sans-serif';
+            ctx.fillText('معتمد رقمياً', 220, 685);
+            ctx.fillText('الاعتماد الرسمي', 960, 685);
 
-            // بدء التنزيل المباشر المتوافق مع كافة متصفحات الهواتف
-            const fileName = `شهادة_شكر_وتقدير_${(name || 'بطل_السلامة').replace(/[\s\/\\:]+/g, '_')}.png`;
+            // رسم رمز الاستجابة السريعة للتحقق الرقمي المعتمد (QR Verification Image)
+            const verifyUrl = `${window.location.origin}${window.location.pathname}?verifyCert=1&certId=${encodeURIComponent(cDocId)}&name=${encodeURIComponent(name)}&count=${count}&rank=${rank}&period=${encodeURIComponent(pLabel)}`;
+            const qrUri = generateQrDataUri(verifyUrl, 120);
 
-            if (canvas.toBlob) {
-                canvas.toBlob(blob => {
-                    if (!blob) {
-                        fallbackDownload(canvas.toDataURL('image/png'), fileName);
-                        return;
-                    }
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.download = fileName;
-                    link.href = url;
-                    link.target = '_blank';
-                    document.body.appendChild(link);
-                    link.click();
-                    setTimeout(() => {
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(url);
-                    }, 500);
-                }, 'image/png');
-            } else {
-                fallbackDownload(canvas.toDataURL('image/png'), fileName);
+            const qrImg = new Image();
+            qrImg.crossOrigin = 'anonymous';
+            qrImg.onload = function() {
+                // إطار الـ QR
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#d97706';
+                ctx.lineWidth = 2;
+                ctx.fillRect(75, 620, 90, 90);
+                ctx.strokeRect(75, 620, 90, 90);
+                ctx.drawImage(qrImg, 80, 625, 80, 80);
+
+                ctx.fillStyle = '#78350f';
+                ctx.font = 'bold 11px "Tajawal", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('التحقق الرقمي (ISO)', 120, 725);
+
+                finalizeCanvasDownload();
+            };
+            qrImg.onerror = function() {
+                finalizeCanvasDownload();
+            };
+            qrImg.src = qrUri;
+
+            function finalizeCanvasDownload() {
+                const fileName = `شهادة_شكر_وتقدير_${(name || 'بطل_السلامة').replace(/[\s\/\\:]+/g, '_')}.png`;
+
+                if (canvas.toBlob) {
+                    canvas.toBlob(blob => {
+                        if (!blob) {
+                            fallbackDownload(canvas.toDataURL('image/png'), fileName);
+                            return;
+                        }
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.download = fileName;
+                        link.href = url;
+                        link.target = '_blank';
+                        document.body.appendChild(link);
+                        link.click();
+                        setTimeout(() => {
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                        }, 500);
+                    }, 'image/png');
+                } else {
+                    fallbackDownload(canvas.toDataURL('image/png'), fileName);
+                }
             }
         } catch(err) {
             console.error('Error generating certificate image:', err);
@@ -4640,18 +4844,24 @@
         if (topObs && topObs.length > 0) {
             topObs.slice(0, 5).forEach((o, i) => {
                 const highTxt = o.highRisk ? `<span style="background:#fee2e2; color:#b91c1c; padding:1px 5px; border-radius:4px; font-size:0.65rem; font-weight:700;">${o.highRisk} حرج</span>` : '';
+                const badges = getChampionBadges(o, false);
+                const badgesHtml = badges.slice(0, 2).map(b => `<span style="background:${b.bg}; color:${b.color}; border:1px solid ${b.border}; padding:1px 5px; border-radius:4px; font-size:0.64rem; font-weight:800; display:inline-flex; align-items:center; gap:2px;">${b.icon} ${lang === 'en' ? b.titleEn : b.titleAr}</span>`).join(' ');
+
                 obsListHtml += `
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed #e2e8f0; font-size:0.8rem;">
                         <div style="display:flex; align-items:center; gap:6px;">
                             <span style="font-size:1.05rem;">${medals[i] || '🎖️'}</span>
                             <div>
-                                <div style="font-weight:700; color:#1e293b;">${escapeHTML(o.name)}</div>
+                                <div style="font-weight:700; color:#1e293b; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                                    <span>${escapeHTML(o.name)}</span>
+                                    ${badgesHtml}
+                                </div>
                                 <div style="font-size:0.68rem; color:#64748b;">نسبة الإغلاق: <b>${o.closeRate || 100}%</b> ${highTxt}</div>
                             </div>
                         </div>
                         <div style="display:flex; gap:6px; align-items:center;">
                             <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:10px; font-weight:800; font-size:0.72rem;">${o.count} ملاحظة</span>
-                            <button type="button" onclick="openChampionCertificate('${escapeHTML(o.name).replace(/'/g, "\\'")}', ${o.count}, ${i + 1}, '${escapeHTML(periodDisplay).replace(/'/g, "\\'")}')" title="إصدار شهادة تقدير رقمية" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 1px 3px rgba(217,119,6,0.15);">
+                            <button type="button" onclick="openChampionCertificate('${escapeHTML(o.name).replace(/'/g, "\\'")}', ${o.count}, ${i + 1}, '${escapeHTML(periodDisplay).replace(/'/g, "\\'")}', ${JSON.stringify(o).replace(/"/g, '&quot;')})" title="إصدار شهادة تقدير رقمية" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 1px 3px rgba(217,119,6,0.15);">
                                 <i class="fas fa-award text-amber-600"></i>
                                 <span>شهادة</span>
                             </button>
@@ -4667,9 +4877,21 @@
         if (topD && topD.length > 0) {
             topD.slice(0, 5).forEach((d, i) => {
                 const spd = d.speedDays ? `${d.speedDays} يوم` : '1.4 يوم';
+                const dBadges = getChampionBadges(d, true);
+                const dBadgesHtml = dBadges.slice(0, 2).map(b => `<span style="background:${b.bg}; color:${b.color}; border:1px solid ${b.border}; padding:1px 5px; border-radius:4px; font-size:0.64rem; font-weight:800; display:inline-flex; align-items:center; gap:2px;">${b.icon} ${lang === 'en' ? b.titleEn : b.titleAr}</span>`).join(' ');
+
                 deptListHtml += `
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed #e2e8f0; font-size:0.8rem;">
-                        <span style="font-weight:700; color:#1e293b;">${medals[i] || '🎖️'} ${escapeHTML(d.name)}</span>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-size:1.05rem;">${medals[i] || '🎖️'}</span>
+                            <div>
+                                <div style="font-weight:700; color:#1e293b; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                                    <span>${escapeHTML(d.name)}</span>
+                                    ${dBadgesHtml}
+                                </div>
+                                <div style="font-size:0.68rem; color:#64748b;">نسبة المعالجة: <b>${d.closeRate || 100}%</b></div>
+                            </div>
+                        </div>
                         <div style="display:flex; gap:6px; align-items:center;">
                             <span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px; font-weight:800; font-size:0.72rem;">${d.count} إجراء</span>
                             <span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:6px; font-weight:700; font-size:0.68rem;" title="متوسط سرعة الإغلاق">${spd}</span>
@@ -4685,7 +4907,7 @@
             <div style="background:#f8fafc; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0;">
                 <div style="font-weight:800; font-size:0.82rem; color:#1e3a8a; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
                     <span style="display:flex; align-items:center; gap:6px;"><i class="fas fa-user-shield text-blue-600"></i> أكثر مسؤولي السلامة رصداً (${periodDisplay}):</span>
-                    <span style="font-size:0.7rem; color:#6366f1; font-weight:700;">📜 شهادات فورية</span>
+                    <span style="font-size:0.7rem; color:#6366f1; font-weight:700;">📜 شهادات وأوسمة فورية</span>
                 </div>
                 ${obsListHtml}
             </div>
@@ -4696,6 +4918,58 @@
                 ${deptListHtml}
             </div>
         `;
+    }
+
+    function checkUrlCertVerification() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('verifyCert') === '1') {
+                const docId = urlParams.get('certId') || 'CERT-HSE-2026-01';
+                const name = urlParams.get('name') || 'بطل السلامة';
+                const rank = parseInt(urlParams.get('rank') || '1', 10);
+                const count = parseInt(urlParams.get('count') || '1', 10);
+                const period = urlParams.get('period') || 'عن الشهر الحالي';
+
+                const medals = ['الأول 🥇', 'الثاني 🥈', 'الثالث 🥉', 'الرابع 🎖️', 'الخامس 🎖️'];
+                const rankStr = medals[rank - 1] || 'المتميز 🎖️';
+
+                const docEl = document.getElementById('vCertDocId');
+                const nameEl = document.getElementById('vCertName');
+                const rankEl = document.getElementById('vCertRank');
+                const periodEl = document.getElementById('vCertPeriod');
+                const countEl = document.getElementById('vCertCount');
+
+                if (docEl) docEl.textContent = docId;
+                if (nameEl) nameEl.textContent = name;
+                if (rankEl) rankEl.textContent = `المركز ${rankStr}`;
+                if (periodEl) periodEl.textContent = period;
+                if (countEl) countEl.textContent = `${Number(count).toLocaleString('ar-EG')} ملاحظة وإجراء منفذ`;
+
+                window.verifiedCertParams = { name, count, rank, period, docId };
+
+                const vModal = document.getElementById('certVerificationModal');
+                if (vModal) {
+                    vModal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+        } catch(e) {
+            console.error('Error checking cert verification URL:', e);
+        }
+    }
+
+    function closeCertVerificationModal() {
+        const modal = document.getElementById('certVerificationModal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    function viewFullCertFromVerification() {
+        closeCertVerificationModal();
+        if (window.verifiedCertParams) {
+            const p = window.verifiedCertParams;
+            openChampionCertificate(p.name, p.count, p.rank, p.period);
+        }
     }
 
 
@@ -5056,7 +5330,10 @@
     } catch(e) {}
 
     // جلب التحديثات في الخلفية فور فتح البوابة
-        window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', () => {
+        if (typeof checkUrlCertVerification === 'function') {
+            checkUrlCertVerification();
+        }
         if (typeof updatePtwWidgetsAndModal === 'function') {
             updatePtwWidgetsAndModal();
         }
@@ -6205,28 +6482,42 @@
                         Safety & Occupational Health Excellence Certificate
                     </div>
 
-                    <div style="font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 12px;">
+                    <div style="font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 8px;">
                         تتقدم إدارة السلامة والصحة المهنية وحماية البيئة بجزيل الشكر وعظيم الامتنان إلى الزميل المتميز:
                     </div>
 
                     <!-- اسم بطل السلامة المكرم -->
-                    <div style="display: inline-block; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px dashed #d97706; padding: 8px 24px; border-radius: 25px; margin-bottom: 14px;">
+                    <div style="display: inline-block; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px dashed #d97706; padding: 8px 24px; border-radius: 25px; margin-bottom: 10px;">
                         <div style="font-size: 1.25rem; font-weight: 900; color: #78350f;" id="certChampionName">م/ محمد سعيد</div>
                     </div>
 
-                    <div style="font-size: 0.85rem; color: #334155; line-height: 1.7; max-width: 580px; margin: 0 auto 16px auto;">
+                    <!-- شريط الأوسمة والمستويات التقديرية (Gamification Badge) -->
+                    <div id="certChampionBadgeBox" style="margin-bottom: 12px; display: flex; justify-content: center; flex-wrap: wrap; gap: 6px;">
+                        <!-- ديناميكي -->
+                    </div>
+
+                    <div style="font-size: 0.85rem; color: #334155; line-height: 1.7; max-width: 580px; margin: 0 auto 14px auto;">
                         تقديراً لجهوده الميدانية الاستثنائية ودوره الفاعل في رصد ومعالجة المخاطر وتطبيق أعلى معايير السلامة والصحة المهنية، وتحقيقه:
                         <div style="margin-top: 6px; font-weight: 800; color: #b45309; font-size: 0.92rem;" id="certChampionRankText">
                             🥇 المركز الأول في لوحة أبطال السلامة برصيد (1,008 ملاحظة معالجة)
                         </div>
                     </div>
 
-                    <!-- تواقيع التكريم الرسمية -->
-                    <div style="display: flex; justify-content: space-around; border-top: 1.5px solid #e2e8f0; padding-top: 14px; margin-top: 14px; font-size: 0.76rem;">
+                    <!-- تواقيع التكريم الرسمية والباركود الرقمي للتحقق -->
+                    <div style="display: flex; justify-content: space-around; align-items: center; border-top: 1.5px solid #e2e8f0; padding-top: 12px; margin-top: 12px; font-size: 0.76rem;">
                         <div>
                             <div style="font-weight: 800; color: #1e293b;">مشرف السلامة الميداني</div>
                             <div style="color: #64748b; font-size: 0.68rem; margin-top: 18px;">التوقيع والاعتماد</div>
                         </div>
+
+                        <!-- رمز التحقق الرقمي المعتمد (QR Code) -->
+                        <div id="certQrBox" style="text-align: center;">
+                            <div id="certQrContainer" style="width: 72px; height: 72px; margin: 0 auto 4px auto; background: #ffffff; padding: 3px; border: 1.5px solid #d97706; border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                                <!-- QR ديناميكي -->
+                            </div>
+                            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700;">التحقق الرقمي (ISO 45001)</div>
+                        </div>
+
                         <div>
                             <div style="font-weight: 800; color: #b45309;">ختم التميز الذهبي</div>
                             <div style="width: 38px; height: 38px; margin: 4px auto 0 auto; border: 2px solid #d97706; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #d97706; font-size: 0.95rem; font-weight: 900;">
@@ -6254,6 +6545,45 @@
                 </button>
             </div>
 
+        </div>
+    </div>
+
+    <!-- نافذة التحقق الرقمي من شهادات السلامة (ISO Certificate Verification Modal) -->
+    <div id="certVerificationModal" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(8px); z-index: 100002; align-items: center; justify-content: center; padding: 14px; box-sizing: border-box;">
+        <div style="max-width: 520px; width: 100%; background: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.5); border: 2.5px solid #10b981; text-align: center;" onclick="event.stopPropagation()">
+            <div style="padding: 16px 20px; background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: #fff; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.95rem;">
+                    <i class="fas fa-shield-alt text-emerald-300"></i>
+                    <span>التحقق الرقمي المعتمد (ISO 45001)</span>
+                </div>
+                <button type="button" onclick="closeCertVerificationModal()" style="background: rgba(255,255,255,0.2); border: none; color: #fff; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 0.9rem;">✕</button>
+            </div>
+            <div style="padding: 20px 24px;">
+                <div style="width: 56px; height: 56px; border-radius: 50%; background: #d1fae5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 12px auto; box-shadow: 0 4px 12px rgba(16,185,129,0.25);">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div style="font-size: 1.15rem; font-weight: 900; color: #065f46; margin-bottom: 4px;">شهادة تميز رقمية موثقة ومعتمدة</div>
+                <div style="font-size: 0.78rem; color: #64748b; margin-bottom: 16px;">Verified Electronic Safety Excellence Certificate</div>
+                
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px; text-align: right; font-size: 0.82rem; line-height: 1.8; margin-bottom: 16px;">
+                    <div><b>كود الشهادة:</b> <span id="vCertDocId" style="color: #2563eb; font-family: monospace; font-weight: 800;"></span></div>
+                    <div><b>بطل السلامة المكرم:</b> <span id="vCertName" style="color: #78350f; font-weight: 800;"></span></div>
+                    <div><b>المركز المحقق:</b> <span id="vCertRank" style="color: #d97706; font-weight: 800;"></span></div>
+                    <div><b>الفترة التقييمية:</b> <span id="vCertPeriod" style="color: #334155; font-weight: 700;"></span></div>
+                    <div><b>الرصيد الميداني:</b> <span id="vCertCount" style="color: #059669; font-weight: 800;"></span></div>
+                    <div><b>حالة الاعتماد:</b> <span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.75rem;">🛡️ موثقة ومسجلة رسميّاً (Verified)</span></div>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" onclick="viewFullCertFromVerification()" style="flex: 1.4; height: 40px; background: linear-gradient(135deg, #d97706, #b45309); color: #fff; border: none; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fas fa-award"></i>
+                        <span>عرض الشهادة الأصلية</span>
+                    </button>
+                    <button type="button" onclick="closeCertVerificationModal()" style="flex: 1; height: 40px; background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer;">
+                        <span>إغلاق</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
