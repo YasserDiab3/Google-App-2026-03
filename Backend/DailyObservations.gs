@@ -3947,3 +3947,47 @@ function setOfficialChampionsApproval(payload) {
         return { success: false, message: err.message };
     }
 }
+
+function getHseBroadcastMessages() {
+    try {
+        var props = PropertiesService.getScriptProperties();
+        var raw = props.getProperty('HSE_BROADCAST_MESSAGES');
+        if (raw) {
+            var parsed = JSON.parse(raw);
+            return { success: true, broadcast: parsed };
+        }
+        var defaultBroadcast = {
+            messageAr: '🛡️ مرحباً بكم في بوابة السلامة الرقمية الموحدة • 🏆 تهنئة خاصة لأبطال السلامة لشهر أغسطس 2026 • ⚡ يرجى مراجعة كافة تصاريح العمل الساخنة والارتفاعات (PTW) قبل البدء • 🌡️ الالتزام بتعليمات الإجهاد الحراري وشرب السوائل • 🦺 مهمات الوقاية الشخصية (PPE) إلزامية في كافة المواقع',
+            messageEn: '🛡️ Welcome to Digital HSE Hub • 🏆 Congratulations to Safety Champions of August 2026 • ⚡ Review all High-Risk & Hot Work Permits (PTW) before execution • 🌡️ Follow Heat Stress hydration advisories in all plants • 🦺 PPE compliance is mandatory across all zones',
+            updatedAt: new Date().toISOString(),
+            updatedBy: 'النظام'
+        };
+        return { success: true, broadcast: defaultBroadcast };
+    } catch(err) {
+        return { success: false, message: err.message };
+    }
+}
+
+function saveHseBroadcastMessages(payload) {
+    try {
+        var messageAr = payload && payload.messageAr;
+        var messageEn = payload && payload.messageEn;
+        var updatedBy = (payload && payload.updatedBy) || 'مدير إدارة السلامة والصحة المهنية';
+        if (!messageAr && !messageEn) return { success: false, message: 'محتوى الرسالة مطلوب' };
+        
+        var broadcast = {
+            messageAr: String(messageAr || '').trim(),
+            messageEn: String(messageEn || messageAr || '').trim(),
+            updatedAt: new Date().toISOString(),
+            updatedBy: updatedBy
+        };
+        
+        var props = PropertiesService.getScriptProperties();
+        props.setProperty('HSE_BROADCAST_MESSAGES', JSON.stringify(broadcast));
+        
+        return { success: true, broadcast: broadcast };
+    } catch(err) {
+        return { success: false, message: err.message };
+    }
+}
+

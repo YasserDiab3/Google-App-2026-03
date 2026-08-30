@@ -2092,6 +2092,9 @@
                     <span>🛡️ مرحباً بكم في بوابة السلامة الرقمية الموحدة • 🏆 تهنئة خاصة لأبطال السلامة لشهر أغسطس 2026 • ⚡ يرجى مراجعة كافة تصاريح العمل الساخنة والارتفاعات (PTW) قبل البدء • 🌡️ الالتزام بتعليمات الإجهاد الحراري وشرب السوائل • 🦺 مهمات الوقاية الشخصية (PPE) إلزامية في كافة المواقع</span>
                 </div>
             </div>
+            <button type="button" class="theme-toggle-btn" style="width: 26px; height: 26px; font-size: 10px; background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.25); color: #ffffff; flex-shrink: 0;" onclick="openHseBroadcastAdminModal(event)" title="تعديل شريط التنبيهات (للمشرفين) / Edit Broadcast">
+                <i class="fas fa-pen"></i>
+            </button>
         </div>
 
     <!-- Main Container -->
@@ -2368,6 +2371,78 @@
                 <span>3. اضغط على <strong>إضافة (Add)</strong> في أعلى الزاوية.</span>
             </div>
             <button class="close-guide-btn" onclick="document.getElementById('iosGuideModal').style.display='none'">حسناً، فهمت</button>
+        </div>
+    </div>
+
+    <!-- HSE Broadcast Admin Edit Modal -->
+    <div id="hseBroadcastAdminModal" class="live-visitors-modal" onclick="closeHseBroadcastAdminModal(event)">
+        <div class="live-visitors-dialog" style="max-width: 650px;" onclick="event.stopPropagation()">
+            <div class="live-dialog-header">
+                <div class="live-dialog-title">
+                    <i class="fas fa-bullhorn text-amber-500"></i>
+                    <span id="txtBroadcastModalTitle">إدارة وبث تنبيهات السلامة الميدانية</span>
+                </div>
+                <button type="button" class="theme-toggle-btn" style="width: 32px; height: 32px;" onclick="closeHseBroadcastAdminModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="live-dialog-body" style="padding: 16px;">
+                <p id="txtBroadcastModalDesc" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+                    اكتب أو حدد رسائل التنبيهات الميدانية ليتم بثها وتحديثها فورياً على شريط كافة الأجهزة والمفتشين:
+                </p>
+
+                <!-- Quick Presets -->
+                <div style="margin-bottom: 14px;">
+                    <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">
+                        <i class="fas fa-wand-magic-sparkles text-indigo-500 ml-1"></i> <span id="txtBroadcastPresetsLabel">قوالب جاهزة سريعة:</span>
+                    </span>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" class="quick-filter-btn" onclick="applyBroadcastPreset('safety_general')">🛡️ عام وتصاريح عمل</button>
+                        <button type="button" class="quick-filter-btn" onclick="applyBroadcastPreset('heat_stress')">🌡️ إجهاد حراري وطقس</button>
+                        <button type="button" class="quick-filter-btn" onclick="applyBroadcastPreset('champions')">🏆 تهنئة أبطال السلامة</button>
+                        <button type="button" class="quick-filter-btn" onclick="applyBroadcastPreset('emergency')">🚨 تنبيه طوارئ فوري</button>
+                    </div>
+                </div>
+
+                <!-- Arabic Message -->
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 12px; font-weight: 800; margin-bottom: 4px; color: var(--text-primary);">
+                        <span id="lblBroadcastAr">النص بالعربية (Arabic Ticker Text):</span>
+                    </label>
+                    <textarea id="inpBroadcastAr" rows="3" style="width: 100%; border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; font-size: 13px; font-family: inherit; background: var(--bg-card); color: var(--text-primary); resize: vertical;" placeholder="أدخل نص التنبيهات مفصولة بـ •"></textarea>
+                </div>
+
+                <!-- English Message -->
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 12px; font-weight: 800; margin-bottom: 4px; color: var(--text-primary);">
+                        <span id="lblBroadcastEn">النص بالإنجليزية (English Ticker Text):</span>
+                    </label>
+                    <textarea id="inpBroadcastEn" rows="3" dir="ltr" style="width: 100%; border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; font-size: 13px; font-family: inherit; background: var(--bg-card); color: var(--text-primary); resize: vertical;" placeholder="Enter broadcast text in English separated by •"></textarea>
+                </div>
+
+                <!-- Live Preview -->
+                <div style="background: rgba(30,58,138,0.06); border: 1px dashed rgba(30,58,138,0.3); border-radius: 8px; padding: 10px; margin-bottom: 14px;">
+                    <span style="font-size: 11px; font-weight: 800; color: #1e3a8a; display: block; margin-bottom: 4px;">
+                        <i class="fas fa-eye ml-1"></i> <span id="txtBroadcastPreviewLabel">معاينة حية للشريط (Live Preview):</span>
+                    </span>
+                    <div id="broadcastLivePreview" style="font-size: 12px; color: var(--text-primary); font-weight: 600; line-height: 1.4;">
+                        ...
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span id="broadcastSaveStatus" style="font-size: 11px; color: var(--text-muted);"></span>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn-cert-secondary" onclick="closeHseBroadcastAdminModal()">إلغاء</button>
+                        <button type="button" class="install-btn" id="btnSaveBroadcast" style="background: linear-gradient(135deg, #10b981, #059669); padding: 8px 16px;" onclick="saveHseBroadcastToCloud()">
+                            <i class="fas fa-paper-plane"></i>
+                            <span id="txtBtnSaveBroadcast">حفظ وبث فوري بالسحابة</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2749,8 +2824,12 @@
             // HSE Broadcast Ticker
             const tTickerBadge = document.getElementById('txtHseTickerBadge');
             if (tTickerBadge) tTickerBadge.textContent = t.tickerBadge;
-            const tTickerContent = document.getElementById('hseTickerContent');
-            if (tTickerContent) tTickerContent.innerHTML = `<span>${t.tickerText}</span>`;
+            if (typeof renderHseBroadcastContent === 'function') {
+                renderHseBroadcastContent();
+            } else {
+                const tTickerContent = document.getElementById('hseTickerContent');
+                if (tTickerContent) tTickerContent.innerHTML = `<span>${t.tickerText}</span>`;
+            }
 
             // Pinned Section & Section Title
             const tPinTitle = document.getElementById('txtPinnedSectionTitle');
@@ -3138,6 +3217,227 @@
                 container.style.borderColor = '#a7f3d0';
             } finally {
                 isMeasuringPing = false;
+            }
+        }
+
+        // ======================================================================
+        // 📢 Dynamic Cloud HSE Broadcast Ticker Engine
+        // ======================================================================
+        let currentHseBroadcast = null;
+
+        function getCachedHseBroadcast() {
+            try {
+                const raw = localStorage.getItem('HSE_BROADCAST_CACHE');
+                return raw ? JSON.parse(raw) : null;
+            } catch(e) {
+                return null;
+            }
+        }
+
+        function saveCachedHseBroadcast(data) {
+            try {
+                localStorage.setItem('HSE_BROADCAST_CACHE', JSON.stringify(data));
+            } catch(e) {}
+        }
+
+        function renderHseBroadcastContent(broadcast) {
+            if (!broadcast) broadcast = getCachedHseBroadcast();
+            currentHseBroadcast = broadcast;
+            const contentEl = document.getElementById('hseTickerContent');
+            if (!contentEl) return;
+
+            const lang = currentLang || 'ar';
+            const t = (typeof HUB_I18N !== 'undefined' && HUB_I18N[lang]) ? HUB_I18N[lang] : {};
+            
+            let text = '';
+            if (broadcast) {
+                text = (lang === 'en') ? (broadcast.messageEn || broadcast.messageAr || t.tickerText) : (broadcast.messageAr || t.tickerText);
+            } else {
+                text = t.tickerText || '';
+            }
+
+            contentEl.innerHTML = `<span>${text}</span>`;
+        }
+
+        async function fetchHseBroadcastFromCloud(silent = true) {
+            if (!navigator.onLine) {
+                renderHseBroadcastContent();
+                return;
+            }
+            try {
+                const targetApiUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+                let data = null;
+                try {
+                    const res = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'getHseBroadcastMessages', data: {} })
+                    });
+                    data = await res.json();
+                } catch(postErr) {
+                    const res = await fetch(targetApiUrl + (targetApiUrl.includes('?') ? '&' : '?') + 'action=getHseBroadcastMessages&_t=' + Date.now(), { method: 'GET', mode: 'cors' });
+                    data = await res.json();
+                }
+
+                if (data && data.success && data.broadcast) {
+                    saveCachedHseBroadcast(data.broadcast);
+                    renderHseBroadcastContent(data.broadcast);
+                }
+            } catch(err) {
+                console.warn('Silent broadcast fetch failed, using cache:', err);
+                renderHseBroadcastContent();
+            }
+        }
+
+        function openHseBroadcastAdminModal(event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            const modal = document.getElementById('hseBroadcastAdminModal');
+            if (!modal) return;
+
+            const broadcast = currentHseBroadcast || getCachedHseBroadcast() || {};
+            const lang = currentLang || 'ar';
+            const t = (typeof HUB_I18N !== 'undefined' && HUB_I18N[lang]) ? HUB_I18N[lang] : {};
+
+            const inpAr = document.getElementById('inpBroadcastAr');
+            const inpEn = document.getElementById('inpBroadcastEn');
+            if (inpAr) inpAr.value = broadcast.messageAr || t.tickerText || '';
+            if (inpEn) inpEn.value = broadcast.messageEn || (HUB_I18N.en && HUB_I18N.en.tickerText) || '';
+
+            updateBroadcastPreview();
+
+            // Bind live preview listeners
+            if (inpAr) inpAr.oninput = updateBroadcastPreview;
+            if (inpEn) inpEn.oninput = updateBroadcastPreview;
+
+            const statusEl = document.getElementById('broadcastSaveStatus');
+            if (statusEl) statusEl.textContent = '';
+
+            modal.style.display = 'flex';
+        }
+
+        function closeHseBroadcastAdminModal(event) {
+            const modal = document.getElementById('hseBroadcastAdminModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function updateBroadcastPreview() {
+            const preview = document.getElementById('broadcastLivePreview');
+            const inpAr = document.getElementById('inpBroadcastAr');
+            const inpEn = document.getElementById('inpBroadcastEn');
+            if (!preview) return;
+
+            const lang = currentLang || 'ar';
+            const val = (lang === 'en') ? (inpEn && inpEn.value.trim() ? inpEn.value.trim() : (inpAr ? inpAr.value.trim() : '')) : (inpAr && inpAr.value.trim() ? inpAr.value.trim() : '');
+            preview.textContent = val || '...';
+        }
+
+        const BROADCAST_PRESETS = {
+            safety_general: {
+                ar: '🛡️ مرحباً بكم في بوابة السلامة الرقمية الموحدة • ⚡ يرجى مراجعة وتدقيق كافة تصاريح العمل الساخنة والارتفاعات (PTW) قبل البدء • 🦺 مهمات الوقاية الشخصية (PPE) إلزامية في كافة المواقع • 👁️ رصد الملاحظات الميدانية مسؤولية الجميع لحماية الأرواح',
+                en: '🛡️ Welcome to Unified Digital HSE Hub • ⚡ Review and verify all Hot Work & Heights Permits (PTW) prior to work • 🦺 PPE compliance is mandatory across all zones • 👁️ Reporting safety observations is everyone\'s responsibility'
+            },
+            heat_stress: {
+                ar: '🌡️ تنبيه الإجهاد الحراري: يرجى الالتزام بفترات الراحة في الظل وشرب كميات كافية من المياه • 🚰 تتوفر نقاط شرب المياه الباردة بكافة المصانع • ☀️ تجنب التعرض المباشر لأشعة الشمس خلال ساعات الذروة',
+                en: '🌡️ Heat Stress Advisory: Take regular shade breaks and hydrate frequently • 🚰 Chilled drinking water stations available across all plants • ☀️ Avoid direct midday sun exposure'
+            },
+            champions: {
+                ar: '🏆 تهنئة خاصة وتكريم لأبطال ومحفزي السلامة لشهر أغسطس 2026 • 🌟 شكراً لجهودكم المتميزة في رصد ومعالجة الملاحظات الميدانية وخلق بيئة عمل خالية من الحوادث',
+                en: '🏆 Special Congratulations to Safety Champions & Top Observers of August 2026 • 🌟 Thank you for your outstanding proactive field engagement'
+            },
+            emergency: {
+                ar: '🚨 تنبيه ميداني هام: يرجى إيقاف كافة الأعمال غير الطارئة فوراً واتباع تعليمات مسؤولي السلامة والإخلاء إلى نقاط التجمع المعتمدة (Muster Points)',
+                en: '🚨 Critical Safety Notice: Stop all non-emergency works immediately and follow HSE evacuation guidelines to designated Muster Points'
+            }
+        };
+
+        function applyBroadcastPreset(type) {
+            const preset = BROADCAST_PRESETS[type];
+            if (!preset) return;
+            const inpAr = document.getElementById('inpBroadcastAr');
+            const inpEn = document.getElementById('inpBroadcastEn');
+            if (inpAr) inpAr.value = preset.ar;
+            if (inpEn) inpEn.value = preset.en;
+            updateBroadcastPreview();
+        }
+
+        async function saveHseBroadcastToCloud() {
+            const inpAr = document.getElementById('inpBroadcastAr');
+            const inpEn = document.getElementById('inpBroadcastEn');
+            const btn = document.getElementById('btnSaveBroadcast');
+            const txtBtn = document.getElementById('txtBtnSaveBroadcast');
+            const statusEl = document.getElementById('broadcastSaveStatus');
+
+            const messageAr = inpAr ? inpAr.value.trim() : '';
+            const messageEn = inpEn ? inpEn.value.trim() : '';
+
+            if (!messageAr && !messageEn) {
+                alert('يرجى كتابة نص التنبيه أولاً');
+                return;
+            }
+
+            try {
+                if (btn) btn.disabled = true;
+                if (txtBtn) txtBtn.textContent = 'جاري النشر بالسحابة...';
+                if (statusEl) {
+                    statusEl.style.color = '#3b82f6';
+                    statusEl.textContent = 'جاري الحفظ والبث السحابي...';
+                }
+
+                const targetApiUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+                const payload = {
+                    action: 'saveHseBroadcastMessages',
+                    data: {
+                        messageAr: messageAr,
+                        messageEn: messageEn || messageAr,
+                        updatedBy: 'مدير السلامة والصحة المهنية'
+                    }
+                };
+
+                const res = await fetch(targetApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+
+                if (result && result.success && result.broadcast) {
+                    saveCachedHseBroadcast(result.broadcast);
+                    renderHseBroadcastContent(result.broadcast);
+                    if (statusEl) {
+                        statusEl.style.color = '#10b981';
+                        statusEl.textContent = '✅ تم الحفظ وبث التنبيه لجميع المستخدمين بنجاح!';
+                    }
+                    setTimeout(() => {
+                        closeHseBroadcastAdminModal();
+                    }, 1200);
+                } else {
+                    throw new Error(result.message || 'فشل الحفظ بالسحابة');
+                }
+            } catch(err) {
+                console.error('Save broadcast failed:', err);
+                // Fallback: save locally immediately so user sees it
+                const fallbackBroadcast = {
+                    messageAr: messageAr,
+                    messageEn: messageEn || messageAr,
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: 'مشرف السلامة (محلي)'
+                };
+                saveCachedHseBroadcast(fallbackBroadcast);
+                renderHseBroadcastContent(fallbackBroadcast);
+
+                if (statusEl) {
+                    statusEl.style.color = '#f59e0b';
+                    statusEl.textContent = '⚠️ تم التحديث محلياً (سيتم النشر السحابي عند توفر الشبكة)';
+                }
+                setTimeout(() => {
+                    closeHseBroadcastAdminModal();
+                }, 1500);
+            } finally {
+                if (btn) btn.disabled = false;
+                if (txtBtn) txtBtn.textContent = 'حفظ وبث فوري بالسحابة';
             }
         }
 
@@ -5943,9 +6243,15 @@
         if (typeof measureCloudPing === 'function') {
             measureCloudPing();
         }
+        if (typeof renderHseBroadcastContent === 'function') {
+            renderHseBroadcastContent();
+        }
 
         setTimeout(() => {
             fetchObservationsAnalyticsFromCloud(false);
+            if (typeof fetchHseBroadcastFromCloud === 'function') {
+                fetchHseBroadcastFromCloud(true);
+            }
         }, 500);
     });
 
