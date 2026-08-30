@@ -5966,7 +5966,7 @@
         window.addEventListener('offline', updateOnlineStatus);
         updateOnlineStatus();
 
-        const LIVE_BACKEND_URL = 'https://ent-measured-weighted-deaf.trycloudflare.com/exec';
+        const LIVE_BACKEND_URL = 'https://radios-replied-globe-reduction.trycloudflare.com/exec';
         const GAS_FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
         const DEFAULT_API_URL = LIVE_BACKEND_URL;
 
@@ -6781,7 +6781,7 @@
         const approvals = ch.officialApprovals || {};
         const isApproved = !!approvals[currentChampionsPeriodKey];
         const newStatus = !isApproved;
-        const targetUrl = (typeof DEPLOYMENT_URL !== 'undefined' && DEPLOYMENT_URL) ? DEPLOYMENT_URL : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+        const targetUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://radios-replied-globe-reduction.trycloudflare.com/exec';
 
         try {
             const btn = document.getElementById('btnToggleCertApproval');
@@ -6899,8 +6899,8 @@
                 const badgeHtml = `<span style="background:${primaryBadge.bg}; color:${primaryBadge.color}; border:1px solid ${primaryBadge.border}; padding:1px 6px; border-radius:10px; font-size:0.63rem; font-weight:800; display:inline-flex; align-items:center; gap:3px; flex-shrink:0;" title="${badgeTitle}"><span>${primaryBadge.icon}</span><span>${badgeTitle}</span></span>`;
 
                 obsListHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 10px; border-radius:8px; margin-bottom:6px; background:#ffffff; border:1px solid #e2e8f0; font-size:0.8rem; box-shadow:0 1px 2px rgba(0,0,0,0.02); transition:transform 0.15s ease;">
-                        <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; padding:8px 10px; border-radius:8px; margin-bottom:6px; background:#ffffff; border:1px solid #e2e8f0; font-size:0.8rem; box-shadow:0 1px 2px rgba(0,0,0,0.02); transition:transform 0.15s ease;">
+                        <div style="display:flex; align-items:center; gap:8px; min-width:140px; flex:1 1 auto;">
                             <span style="font-size:1.15rem; flex-shrink:0; line-height:1;">${medals[i] || '🎖️'}</span>
                             <div style="min-width:0; flex:1;">
                                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
@@ -6913,7 +6913,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div style="display:flex; gap:6px; align-items:center; flex-shrink:0; margin-inline-start:8px;">
+                        <div style="display:flex; gap:6px; align-items:center; flex-shrink:0; margin-inline-start:auto;">
                             <span style="background:#eff6ff; color:#1e40af; border:1px solid #dbeafe; padding:3px 8px; border-radius:8px; font-weight:800; font-size:0.72rem; white-space:nowrap;">${o.count} ${lang === 'en' ? 'Obs' : 'ملاحظة'}</span>
                             <button type="button" onclick="openChampionCertificate('${escapeHTML(o.name).replace(/'/g, "\\'")}', ${o.count}, ${i + 1}, '${escapeHTML(periodDisplay).replace(/'/g, "\\'")}', ${JSON.stringify(o).replace(/"/g, '&quot;')})" title="${lang === 'en' ? 'Digital Certificate' : 'إصدار شهادة تقدير رقمية'}" style="background:linear-gradient(135deg, #fef3c7, #fde68a); color:#b45309; border:1px solid #f59e0b; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; box-shadow:0 1px 3px rgba(217,119,6,0.15);">
                                 <i class="fas fa-award text-amber-600"></i>
@@ -6937,8 +6937,8 @@
                 const badgeHtml = `<span style="background:${primaryBadge.bg}; color:${primaryBadge.color}; border:1px solid ${primaryBadge.border}; padding:1px 6px; border-radius:10px; font-size:0.63rem; font-weight:800; display:inline-flex; align-items:center; gap:3px; flex-shrink:0;" title="${badgeTitle}"><span>${primaryBadge.icon}</span><span>${badgeTitle}</span></span>`;
 
                 deptListHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 10px; border-radius:8px; margin-bottom:6px; background:#ffffff; border:1px solid #e2e8f0; font-size:0.8rem; box-shadow:0 1px 2px rgba(0,0,0,0.02); transition:transform 0.15s ease;">
-                        <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; padding:8px 10px; border-radius:8px; margin-bottom:6px; background:#ffffff; border:1px solid #e2e8f0; font-size:0.8rem; box-shadow:0 1px 2px rgba(0,0,0,0.02); transition:transform 0.15s ease;">
+                        <div style="display:flex; align-items:center; gap:8px; min-width:140px; flex:1 1 auto;">
                             <span style="font-size:1.15rem; flex-shrink:0; line-height:1;">${medals[i] || '🎖️'}</span>
                             <div style="min-width:0; flex:1;">
                                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
@@ -6950,7 +6950,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div style="display:flex; gap:6px; align-items:center; flex-shrink:0; margin-inline-start:8px;">
+                        <div style="display:flex; gap:6px; align-items:center; flex-shrink:0; margin-inline-start:auto;">
                             <span style="background:#ecfdf5; color:#166534; border:1px solid #d1fae5; padding:3px 8px; border-radius:8px; font-weight:800; font-size:0.72rem; white-space:nowrap;">${d.count} ${lang === 'en' ? 'Actions' : 'إجراء'}</span>
                             <span style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; padding:3px 6px; border-radius:6px; font-weight:800; font-size:0.68rem; white-space:nowrap;" title="${lang === 'en' ? 'Average Resolution Speed' : 'متوسط سرعة الإغلاق'}">⚡ ${spd}</span>
                         </div>
@@ -7217,28 +7217,28 @@
                     </div>
 
                     <!-- شريط أدوات التبديل الزمني (شهري / ربع سنوي / سنوي / تراكمي) -->
-                    <div style="padding: 8px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                    <div style="padding: 10px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
                         <!-- أزرار نوع الفترة -->
-                        <div style="display: inline-flex; background: #e2e8f0; padding: 2px; border-radius: 8px; gap: 2px;" id="championsPeriodTypeBtns">
-                            <button type="button" onclick="setChampionsPeriodType('monthly')" class="champ-p-btn active" data-type="monthly" style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.72rem; font-weight: 800; cursor: pointer; background: #ffffff; color: #1e40af; box-shadow: 0 1px 2px rgba(0,0,0,0.06);">📅 شهري</button>
-                            <button type="button" onclick="setChampionsPeriodType('quarterly')" class="champ-p-btn" data-type="quarterly" style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.72rem; font-weight: 800; cursor: pointer; background: transparent; color: #475569;">📊 ربع سنوي</button>
-                            <button type="button" onclick="setChampionsPeriodType('annual')" class="champ-p-btn" data-type="annual" style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.72rem; font-weight: 800; cursor: pointer; background: transparent; color: #475569;">🏆 سنوي</button>
-                            <button type="button" onclick="setChampionsPeriodType('allTime')" class="champ-p-btn" data-type="allTime" style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.72rem; font-weight: 800; cursor: pointer; background: transparent; color: #475569;">🌐 تراكمي</button>
+                        <div style="display: flex; background: #e2e8f0; padding: 2px; border-radius: 8px; gap: 2px; flex-wrap: wrap; max-width: 100%;" id="championsPeriodTypeBtns">
+                            <button type="button" onclick="setChampionsPeriodType('monthly')" class="champ-p-btn active" data-type="monthly" style="padding: 5px 10px; border-radius: 6px; border: none; font-size: 0.72rem; font-weight: 800; cursor: pointer; background: #ffffff; color: #1e40af; box-shadow: 0 1px 2px rgba(0,0,0,0.06);">📅 شهري</button>
+                            <button type="button" onclick="setChampionsPeriodType('quarterly')" class="champ-p-btn" data-type="quarterly" style="padding: 5px 10px; border-radius: 6px; border: none; font-size: 0.72rem; font-weight: 800; cursor: pointer; background: transparent; color: #475569;">📊 ربع سنوي</button>
+                            <button type="button" onclick="setChampionsPeriodType('annual')" class="champ-p-btn" data-type="annual" style="padding: 5px 10px; border-radius: 6px; border: none; font-size: 0.72rem; font-weight: 800; cursor: pointer; background: transparent; color: #475569;">🏆 سنوي</button>
+                            <button type="button" onclick="setChampionsPeriodType('allTime')" class="champ-p-btn" data-type="allTime" style="padding: 5px 10px; border-radius: 6px; border: none; font-size: 0.72rem; font-weight: 800; cursor: pointer; background: transparent; color: #475569;">🌐 تراكمي</button>
                         </div>
 
                         <!-- اختيار الفترة المحددة + زر اعتماد المدير -->
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <select id="championsPeriodSelect" onchange="setChampionsPeriodKey(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.75rem; font-weight: 800; color: #1e293b; background: #ffffff; cursor: pointer; max-width: 320px; outline: none;">
+                        <div style="display: flex; align-items: center; gap: 6px; flex: 1 1 220px; justify-content: flex-end; flex-wrap: nowrap;">
+                            <select id="championsPeriodSelect" onchange="setChampionsPeriodKey(this.value)" style="padding: 5px 8px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.75rem; font-weight: 800; color: #1e293b; background: #ffffff; cursor: pointer; flex: 1; max-width: 260px; min-width: 130px; outline: none;">
                                 <!-- ديناميكي -->
                             </select>
-                            <button type="button" id="btnToggleCertApproval" onclick="toggleChampionsOfficialApproval()" title="اعتماد وتثبيت بطل هذه الفترة رسمياً كمدير للنظام" style="padding: 4px 8px; border-radius: 8px; border: 1px solid #f59e0b; background: #fffbeb; color: #b45309; font-size: 0.72rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                            <button type="button" id="btnToggleCertApproval" onclick="toggleChampionsOfficialApproval()" title="اعتماد وتثبيت بطل هذه الفترة رسمياً كمدير للنظام" style="padding: 5px 8px; border-radius: 8px; border: 1px solid #f59e0b; background: #fffbeb; color: #b45309; font-size: 0.72rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; white-space: nowrap;">
                                 <i class="fas fa-stamp"></i>
                                 <span id="txtBtnApprovePeriod">اعتماد رسمي</span>
                             </button>
                         </div>
                     </div>
 
-                    <div style="padding: 12px 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;" id="anlChampionsContainer">
+                    <div style="padding: 12px 14px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;" id="anlChampionsContainer">
                         <div style="text-align: center; padding: 16px; color: #64748b;"><i class="fas fa-spinner fa-spin ml-2"></i>جاري تحميل لوحة الأبطال...</div>
                     </div>
                 </div>
@@ -7477,7 +7477,7 @@
 
     async function fetchObservationsAnalyticsFromCloud(force = false) {
         try {
-            const url = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://ent-measured-weighted-deaf.trycloudflare.com/exec';
+            const url = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://radios-replied-globe-reduction.trycloudflare.com/exec';
 
             const res = await fetch(url, {
                 method: 'POST',
@@ -7957,7 +7957,7 @@
                 updatePtwWidgetsAndModal();
             }
 
-            const url = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://ent-measured-weighted-deaf.trycloudflare.com/exec';
+            const url = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://radios-replied-globe-reduction.trycloudflare.com/exec';
 
             const response = await fetch(url, {
                 method: 'POST',

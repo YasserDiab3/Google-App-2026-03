@@ -1,489 +1,67 @@
-/**
- * Investigation RCA Wizard — معالج تحليل السبب الجذري
- * منهجيات: 5 Whys | ICAM | Fishbone 6M | ISO 45001 + حواجز
- */
-const InvestigationRCA = {
-    METHODS: {
-        'five-whys': {
-            id: 'five-whys',
-            label: '5 Whys',
-            reference: 'ISO 45001 / Toyota',
-            steps: [
-                { id: 'problem', title: 'تعريف المشكلة', hint: 'صف المشكلة أو الحادث بشكل واضح وموضوعي — ماذا حدث؟ أين؟ متى؟', fields: [{ id: 'problem', type: 'textarea', label: 'وصف المشكلة', required: true, rows: 4 }] },
-                { id: 'why1', title: 'لماذا 1', hint: 'لماذا حدثت هذه المشكلة؟ ابحث عن السبب المباشر الأول.', fields: [{ id: 'why1', type: 'textarea', label: 'السبب المباشر الأول', required: true, rows: 3 }] },
-                { id: 'why2', title: 'لماذا 2', hint: 'لماذا حدث السبب السابق؟ تعمّق مستوى واحد.', fields: [{ id: 'why2', type: 'textarea', label: 'السبب الثاني', required: true, rows: 3 }] },
-                { id: 'why3', title: 'لماذا 3', hint: 'استمر في السؤال «لماذا» حتى تصل لسبب يمكن التحكم به.', fields: [{ id: 'why3', type: 'textarea', label: 'السبب الثالث', required: true, rows: 3 }] },
-                { id: 'why4', title: 'لماذا 4', hint: 'هل ما زال السبب سطحياً؟ واصل التحليل.', fields: [{ id: 'why4', type: 'textarea', label: 'السبب الرابع (اختياري)', required: false, rows: 3 }] },
-                { id: 'why5', title: 'لماذا 5', hint: 'السبب الجذري عادة عند مستوى نظام الإدارة أو الثقافة التنظيمية.', fields: [{ id: 'why5', type: 'textarea', label: 'السبب الخامس (اختياري)', required: false, rows: 3 }] },
-                { id: 'rootCause', title: 'تأكيد السبب الجذري', hint: 'لخّص السبب الجذري النهائي وصنّفه.', fields: [
-                    { id: 'rootCauseSummary', type: 'textarea', label: 'السبب الجذري المؤكد', required: true, rows: 4 },
-                    { id: 'rootCauseCategory', type: 'select', label: 'تصنيف السبب', required: true, options: ['نظام إدارة', 'بشري / سلوك', 'تقني / معدات', 'بيئة عمل', 'إجراءات / تدريب', 'أخرى'] }
-                ]}
-            ]
-        },
-        icam: {
-            id: 'icam',
-            label: 'ICAM',
-            reference: 'Incident Cause Analysis Method',
-            steps: [
-                { id: 'timeline', title: 'الخط الزمني للأحداث', hint: 'رتّب الأحداث زمنياً من ما سبق الحادث حتى وقوعه.', fields: [{ id: 'timeline', type: 'textarea', label: 'تسلسل الأحداث', required: true, rows: 6 }] },
-                { id: 'barriers', title: 'الحواجز الفاشلة أو الغائبة', hint: 'ما الحواجز (فيزيائية، إدارية، إجرائية) التي كان يجب أن تمنع الحادث؟', fields: [{ id: 'failedBarriers', type: 'list', label: 'الحواجز', required: true, placeholder: 'مثال: حاجز واقٍ — غير موجود' }] },
-                { id: 'contributing', title: 'العوامل المساهمة (PEESO)', hint: 'صنّف العوامل: أشخاص، معدات، بيئة، هيكل، منظمة.', fields: [
-                    { id: 'people', type: 'list', label: 'أشخاص (People)', required: false, placeholder: 'عامل مساهم متعلق بالأشخاص' },
-                    { id: 'equipment', type: 'list', label: 'معدات (Equipment)', required: false, placeholder: 'عامل مساهم متعلق بالمعدات' },
-                    { id: 'environment', type: 'list', label: 'بيئة (Environment)', required: false, placeholder: 'عامل مساهم متعلق بالبيئة' },
-                    { id: 'structure', type: 'list', label: 'هيكل (Structure)', required: false, placeholder: 'عامل مساهم متعلق بالهيكل' },
-                    { id: 'organization', type: 'list', label: 'منظمة (Organization)', required: false, placeholder: 'عامل مساهم متعلق بالمنظمة' }
-                ]},
-                { id: 'rootCauses', title: 'الأسباب الجذرية', hint: 'حدد الأسباب الجذرية على مستوى نظام الإدارة — ليست أعراضاً.', fields: [
-                    { id: 'rootCausesList', type: 'list', label: 'الأسباب الجذرية', required: true, placeholder: 'سبب جذري' },
-                    { id: 'rootCauseSummary', type: 'textarea', label: 'ملخص السبب الجذري', required: true, rows: 4 },
-                    { id: 'rootCauseCategory', type: 'select', label: 'تصنيف السبب', required: true, options: ['نظام إدارة', 'بشري / سلوك', 'تقني / معدات', 'بيئة عمل', 'إجراءات / تدريب', 'أخرى'] }
-                ]}
-            ]
-        },
-        fishbone: {
-            id: 'fishbone',
-            label: 'Fishbone / Ishikawa 6M',
-            reference: 'تحليل سببي — 6M',
-            steps: [
-                { id: 'problem', title: 'المشكلة (رأس العظم)', hint: 'عرّف المشكلة أو تأثير الحادث بوضوح.', fields: [{ id: 'problem', type: 'textarea', label: 'وصف المشكلة', required: true, rows: 3 }] },
-                { id: 'sixM', title: 'فروع 6M', hint: 'أدرج الأسباب المحتملة تحت كل فئة — فرع واحد على الأقل مطلوب.', fields: [
-                    { id: 'man', type: 'list', label: 'Man — الإنسان', required: false, placeholder: 'سبب متعلق بالإنسان' },
-                    { id: 'machine', type: 'list', label: 'Machine — الآلات', required: false, placeholder: 'سبب متعلق بالآلات' },
-                    { id: 'method', type: 'list', label: 'Method — الطريقة', required: false, placeholder: 'سبب متعلق بالطريقة' },
-                    { id: 'material', type: 'list', label: 'Material — المواد', required: false, placeholder: 'سبب متعلق بالمواد' },
-                    { id: 'measurement', type: 'list', label: 'Measurement — القياس', required: false, placeholder: 'سبب متعلق بالقياس' },
-                    { id: 'environment', type: 'list', label: 'Mother Nature — البيئة', required: false, placeholder: 'سبب متعلق بالبيئة' }
-                ]},
-                { id: 'primaryCause', title: 'اختيار السبب الرئيسي', hint: 'اختر السبب الأكثر احتمالاً من الفروع المدخلة.', fields: [{ id: 'primaryCause', type: 'textarea', label: 'السبب الرئيسي المختار', required: true, rows: 3 }] },
-                { id: 'whys', title: 'تحليل 5 Whys على السبب الرئيسي', hint: 'طبّق 5 Whys على السبب الرئيسي للوصول للسبب الجذري.', fields: [
-                    { id: 'why1', type: 'textarea', label: 'لماذا 1', required: true, rows: 2 },
-                    { id: 'why2', type: 'textarea', label: 'لماذا 2', required: true, rows: 2 },
-                    { id: 'why3', type: 'textarea', label: 'لماذا 3', required: true, rows: 2 }
-                ]},
-                { id: 'rootCause', title: 'السبب الجذري', hint: 'لخّص السبب الجذري النهائي.', fields: [
-                    { id: 'rootCauseSummary', type: 'textarea', label: 'السبب الجذري المؤكد', required: true, rows: 4 },
-                    { id: 'rootCauseCategory', type: 'select', label: 'تصنيف السبب', required: true, options: ['نظام إدارة', 'بشري / سلوك', 'تقني / معدات', 'بيئة عمل', 'إجراءات / تدريب', 'أخرى'] }
-                ]}
-            ]
-        },
-        'iso-barrier': {
-            id: 'iso-barrier',
-            label: 'ISO 45001 + تحليل الحواجز',
-            reference: 'ISO 45001:2018 — بند 10.2',
-            steps: [
-                { id: 'facts', title: 'الوقائع الموضوعية', hint: 'ما الذي حدث فعلاً؟ بدون افتراضات أو لوم.', fields: [{ id: 'facts', type: 'textarea', label: 'الوقائع', required: true, rows: 5 }] },
-                { id: 'immediate', title: 'السبب المباشر', hint: 'السلوك غير الآمن أو الوضع غير الآمن المباشر.', fields: [
-                    { id: 'immediateCause', type: 'textarea', label: 'السبب المباشر', required: true, rows: 3 },
-                    { id: 'unsafeAct', type: 'select', label: 'سلوك غير آمن؟', required: true, options: ['نعم', 'لا', 'غير محدد'] },
-                    { id: 'unsafeCondition', type: 'select', label: 'وضع غير آمن؟', required: true, options: ['نعم', 'لا', 'غير محدد'] }
-                ]},
-                { id: 'barriers', title: 'تحليل الحواجز', hint: 'ما الحواجز التي فشلت أو كانت غائبة؟', fields: [{ id: 'failedBarriers', type: 'list', label: 'الحواجز الفاشلة/الغائبة', required: true, placeholder: 'وصف الحاجز' }] },
-                { id: 'contributing', title: 'العوامل المساهمة', hint: 'عوامل ساعدت على وقوع الحادث دون أن تكون السبب المباشر.', fields: [{ id: 'contributingFactors', type: 'list', label: 'عوامل مساهمة', required: true, placeholder: 'عامل مساهم' }] },
-                { id: 'whys', title: '5 Whys — التعمق', hint: 'اسأل «لماذا» على الأقل 3 مرات للوصول للسبب الجذري.', fields: [
-                    { id: 'why1', type: 'textarea', label: 'لماذا 1', required: true, rows: 2 },
-                    { id: 'why2', type: 'textarea', label: 'لماذا 2', required: true, rows: 2 },
-                    { id: 'why3', type: 'textarea', label: 'لماذا 3', required: true, rows: 2 }
-                ]},
-                { id: 'managementGap', title: 'فجوة نظام الإدارة', hint: 'اربط السبب الجذري بفجوة في نظام إدارة السلامة والصحة المهنية.', fields: [
-                    { id: 'managementGap', type: 'select', label: 'فجوة نظام الإدارة', required: true, options: ['تدريب', 'إجراءات وتعليمات', 'إشراف ومتابعة', 'صيانة ومعدات', 'تصميم هندسي', 'تواصل', 'تخطيط مخاطر', 'أخرى'] },
-                    { id: 'rootCauseSummary', type: 'textarea', label: 'السبب الجذري المؤكد', required: true, rows: 4 },
-                    { id: 'rootCauseCategory', type: 'select', label: 'تصنيف السبب', required: true, options: ['نظام إدارة', 'بشري / سلوك', 'تقني / معدات', 'بيئة عمل', 'إجراءات / تدريب', 'أخرى'] }
-                ]}
-            ]
-        }
-    },
-
-    ROOT_CAUSE_CATEGORIES: ['نظام إدارة', 'بشري / سلوك', 'تقني / معدات', 'بيئة عمل', 'إجراءات / تدريب', 'أخرى'],
-
-    _esc(v) {
-        return (typeof Utils !== 'undefined' && Utils.escapeHTML)
-            ? Utils.escapeHTML(String(v ?? ''))
-            : String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    },
-
-    getMethodList() {
-        return Object.values(this.METHODS).map(m => ({ id: m.id, label: m.label, reference: m.reference }));
-    },
-
-    _getState(container) {
-        if (!container._rcaState) {
-            container._rcaState = { method: '', currentStep: 0, stepsData: {}, startedAt: null };
-        }
-        return container._rcaState;
-    },
-
-    _getMethod(methodId) {
-        return this.METHODS[methodId] || null;
-    },
-
-    _collectStepData(container, stepDef) {
-        const data = {};
-        (stepDef.fields || []).forEach(field => {
-            if (field.type === 'list') {
-                const items = [];
-                container.querySelectorAll(`[data-rca-list="${field.id}"] .rca-list-input`).forEach(inp => {
-                    const v = (inp.value || '').trim();
-                    if (v) items.push(v);
-                });
-                data[field.id] = items;
-            } else {
-                const el = container.querySelector(`[data-rca-field="${field.id}"]`);
-                data[field.id] = el ? (el.value || '').trim() : '';
-            }
-        });
-        return data;
-    },
-
-    _mergeStepIntoState(state, stepId, stepData) {
-        if (!state.stepsData[stepId]) state.stepsData[stepId] = {};
-        Object.assign(state.stepsData[stepId], stepData);
-    },
-
-    validateStep(methodId, stepIndex, stepsData) {
-        const method = this._getMethod(methodId);
-        if (!method) return { valid: false, message: 'منهجية غير معروفة' };
-
-        const step = method.steps[stepIndex];
-        if (!step) return { valid: false, message: 'خطوة غير موجودة' };
-
-        const stepData = stepsData[step.id] || {};
-
-        for (const field of (step.fields || [])) {
-            if (!field.required) continue;
-            if (field.type === 'list') {
-                const items = stepData[field.id];
-                if (!Array.isArray(items) || items.length === 0) {
-                    return { valid: false, message: `يرجى إدخال عنصر واحد على الأقل في: ${field.label}` };
-                }
-            } else {
-                const val = stepData[field.id];
-                if (!val || !String(val).trim()) {
-                    return { valid: false, message: `يرجى إكمال الحقل: ${field.label}` };
-                }
-            }
-        }
-
-        if (methodId === 'fishbone' && step.id === 'sixM') {
-            const branches = ['man', 'machine', 'method', 'material', 'measurement', 'environment'];
-            const hasAny = branches.some(b => {
-                const items = stepData[b];
-                return Array.isArray(items) && items.length > 0;
-            });
-            if (!hasAny) {
-                return { valid: false, message: 'يرجى إدخال سبب واحد على الأقل في فروع 6M' };
-            }
-        }
-
-        if (methodId === 'icam' && step.id === 'contributing') {
-            const cats = ['people', 'equipment', 'environment', 'structure', 'organization'];
-            const hasAny = cats.some(c => {
-                const items = stepData[c];
-                return Array.isArray(items) && items.length > 0;
-            });
-            if (!hasAny) {
-                return { valid: false, message: 'يرجى إدخال عامل مساهم واحد على الأقل (PEESO)' };
-            }
-        }
-
-        return { valid: true };
-    },
-
-    suggestNextPrompt(methodId, stepIndex, priorAnswers) {
-        const method = this._getMethod(methodId);
-        if (!method || !method.steps[stepIndex]) return '';
-        const step = method.steps[stepIndex];
-        let hint = step.hint || '';
-
-        if (methodId === 'five-whys' && stepIndex >= 1 && stepIndex <= 5) {
-            const prevKey = stepIndex === 1 ? 'problem' : `why${stepIndex - 1}`;
-            const prevStep = method.steps.find(s => s.id === (stepIndex === 1 ? 'problem' : `why${stepIndex - 1}`));
-            const prevId = prevStep ? prevStep.fields[0].id : prevKey;
-            const prevData = priorAnswers[prevStep?.id] || priorAnswers[stepIndex === 1 ? 'problem' : `why${stepIndex - 1}`] || {};
-            const prevAnswer = prevData[prevId] || '';
-            if (prevAnswer) {
-                hint = `بناءً على: «${prevAnswer.substring(0, 80)}${prevAnswer.length > 80 ? '...' : ''}» — ${hint}`;
-            }
-        }
-
-        return hint;
-    },
-
-    buildRootCauseSummary(rcaData) {
-        if (!rcaData || !rcaData.stepsData) return '';
-
-        const parts = [];
-        const method = rcaData.method;
-        const sd = rcaData.stepsData;
-
-        if (rcaData.rootCauseSummary) return rcaData.rootCauseSummary;
-
-        const findSummary = () => {
-            for (const stepId of Object.keys(sd)) {
-                if (sd[stepId].rootCauseSummary) return sd[stepId].rootCauseSummary;
-            }
-            return '';
-        };
-
-        const summary = findSummary();
-        if (summary) return summary;
-
-        if (method === 'five-whys') {
-            const whys = ['why5', 'why4', 'why3', 'why2', 'why1'];
-            for (const w of whys) {
-                const val = sd[w]?.[`${w}`] || sd[w]?.why;
-                if (val) { parts.push(val); break; }
-            }
-        } else if (method === 'icam') {
-            const list = sd.rootCauses?.rootCausesList;
-            if (Array.isArray(list) && list.length) parts.push(list.join('؛ '));
-        } else if (method === 'fishbone') {
-            const rc = sd.rootCause?.rootCauseSummary;
-            if (rc) parts.push(rc);
-            else if (sd.whys?.why3) parts.push(sd.whys.why3);
-        } else if (method === 'iso-barrier') {
-            const gap = sd.managementGap?.managementGap;
-            const rc = sd.managementGap?.rootCauseSummary;
-            if (rc) parts.push(rc);
-            else if (gap) parts.push(`فجوة: ${gap}`);
-        }
-
-        return parts.join(' ') || '';
-    },
-
-    _extractContributingFactors(stepsData, methodId) {
-        const factors = [];
-        if (!stepsData) return factors;
-
-        if (methodId === 'icam' && stepsData.contributing) {
-            ['people', 'equipment', 'environment', 'structure', 'organization'].forEach(k => {
-                const items = stepsData.contributing[k];
-                if (Array.isArray(items)) factors.push(...items);
-            });
-        } else if (methodId === 'iso-barrier' && stepsData.contributing) {
-            const items = stepsData.contributing.contributingFactors;
-            if (Array.isArray(items)) factors.push(...items);
-        }
-        return factors;
-    },
-
-    _extractFailedBarriers(stepsData, methodId) {
-        if (!stepsData) return [];
-        if (methodId === 'icam' && stepsData.barriers?.failedBarriers) return stepsData.barriers.failedBarriers;
-        if (methodId === 'iso-barrier' && stepsData.barriers?.failedBarriers) return stepsData.barriers.failedBarriers;
-        return [];
-    },
-
-    _extractImmediateCauses(stepsData, methodId) {
-        if (!stepsData) return [];
-        if (methodId === 'iso-barrier' && stepsData.immediate?.immediateCause) {
-            return [stepsData.immediate.immediateCause];
-        }
-        if (methodId === 'five-whys' && stepsData.why1?.why1) {
-            return [stepsData.why1.why1];
-        }
-        return [];
-    },
-
-    collect(container) {
-        if (!container) return null;
-
-        const state = this._getState(container);
-        const method = this._getMethod(state.method);
-        if (!method) return null;
-
-        const methodDef = method;
-        const currentStepDef = methodDef.steps[state.currentStep];
-        if (currentStepDef) {
-            const stepData = this._collectStepData(container, currentStepDef);
-            this._mergeStepIntoState(state, currentStepDef.id, stepData);
-        }
-
-        let rootCauseSummary = '';
-        let rootCauseCategory = '';
-
-        Object.values(state.stepsData).forEach(stepObj => {
-            if (stepObj.rootCauseSummary) rootCauseSummary = stepObj.rootCauseSummary;
-            if (stepObj.rootCauseCategory) rootCauseCategory = stepObj.rootCauseCategory;
-        });
-
-        const isLastStep = state.currentStep >= methodDef.steps.length - 1;
-        const lastValidation = isLastStep
-            ? this.validateStep(state.method, state.currentStep, state.stepsData)
-            : { valid: false };
-
-        const rca = {
-            method: state.method,
-            methodLabel: methodDef.label,
-            status: (isLastStep && lastValidation.valid) ? 'complete' : 'in-progress',
-            currentStep: state.currentStep,
-            startedAt: state.startedAt || new Date().toISOString(),
-            completedAt: (isLastStep && lastValidation.valid) ? new Date().toISOString() : null,
-            stepsData: state.stepsData,
-            rootCauseSummary: rootCauseSummary || this.buildRootCauseSummary({ method: state.method, stepsData: state.stepsData }),
-            rootCauseCategory,
-            contributingFactors: this._extractContributingFactors(state.stepsData, state.method),
-            immediateCauses: this._extractImmediateCauses(state.stepsData, state.method),
-            failedBarriers: this._extractFailedBarriers(state.stepsData, state.method)
-        };
-
-        return rca;
-    },
-
-    _renderListField(field, savedItems, canEdit) {
-        const items = Array.isArray(savedItems) && savedItems.length ? savedItems : [''];
-        const rows = items.map((item, i) => `
+const InvestigationRCA={METHODS:{"five-whys":{id:"five-whys",label:"5 Whys",reference:"ISO 45001 / Toyota",steps:[{id:"problem",title:"\u062A\u0639\u0631\u064A\u0641 \u0627\u0644\u0645\u0634\u0643\u0644\u0629",hint:"\u0635\u0641 \u0627\u0644\u0645\u0634\u0643\u0644\u0629 \u0623\u0648 \u0627\u0644\u062D\u0627\u062F\u062B \u0628\u0634\u0643\u0644 \u0648\u0627\u0636\u062D \u0648\u0645\u0648\u0636\u0648\u0639\u064A \u2014 \u0645\u0627\u0630\u0627 \u062D\u062F\u062B\u061F \u0623\u064A\u0646\u061F \u0645\u062A\u0649\u061F",fields:[{id:"problem",type:"textarea",label:"\u0648\u0635\u0641 \u0627\u0644\u0645\u0634\u0643\u0644\u0629",required:!0,rows:4}]},{id:"why1",title:"\u0644\u0645\u0627\u0630\u0627 1",hint:"\u0644\u0645\u0627\u0630\u0627 \u062D\u062F\u062B\u062A \u0647\u0630\u0647 \u0627\u0644\u0645\u0634\u0643\u0644\u0629\u061F \u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0645\u0628\u0627\u0634\u0631 \u0627\u0644\u0623\u0648\u0644.",fields:[{id:"why1",type:"textarea",label:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0645\u0628\u0627\u0634\u0631 \u0627\u0644\u0623\u0648\u0644",required:!0,rows:3}]},{id:"why2",title:"\u0644\u0645\u0627\u0630\u0627 2",hint:"\u0644\u0645\u0627\u0630\u0627 \u062D\u062F\u062B \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0633\u0627\u0628\u0642\u061F \u062A\u0639\u0645\u0651\u0642 \u0645\u0633\u062A\u0648\u0649 \u0648\u0627\u062D\u062F.",fields:[{id:"why2",type:"textarea",label:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062B\u0627\u0646\u064A",required:!0,rows:3}]},{id:"why3",title:"\u0644\u0645\u0627\u0630\u0627 3",hint:"\u0627\u0633\u062A\u0645\u0631 \u0641\u064A \u0627\u0644\u0633\u0624\u0627\u0644 \xAB\u0644\u0645\u0627\u0630\u0627\xBB \u062D\u062A\u0649 \u062A\u0635\u0644 \u0644\u0633\u0628\u0628 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u062D\u0643\u0645 \u0628\u0647.",fields:[{id:"why3",type:"textarea",label:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062B\u0627\u0644\u062B",required:!0,rows:3}]},{id:"why4",title:"\u0644\u0645\u0627\u0630\u0627 4",hint:"\u0647\u0644 \u0645\u0627 \u0632\u0627\u0644 \u0627\u0644\u0633\u0628\u0628 \u0633\u0637\u062D\u064A\u0627\u064B\u061F \u0648\u0627\u0635\u0644 \u0627\u0644\u062A\u062D\u0644\u064A\u0644.",fields:[{id:"why4",type:"textarea",label:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0631\u0627\u0628\u0639 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)",required:!1,rows:3}]},{id:"why5",title:"\u0644\u0645\u0627\u0630\u0627 5",hint:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A \u0639\u0627\u062F\u0629 \u0639\u0646\u062F \u0645\u0633\u062A\u0648\u0649 \u0646\u0638\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0623\u0648 \u0627\u0644\u062B\u0642\u0627\u0641\u0629 \u0627\u0644\u062A\u0646\u0638\u064A\u0645\u064A\u0629.",fields:[{id:"why5",type:"textarea",label:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062E\u0627\u0645\u0633 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)",required:!1,rows:3}]},{id:"rootCause",title:"\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A",hint:"\u0644\u062E\u0651\u0635 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A \u0627\u0644\u0646\u0647\u0627\u0626\u064A \u0648\u0635\u0646\u0651\u0641\u0647.",fields:[{id:"rootCauseSummary",type:"textarea",label:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A \u0627\u0644\u0645\u0624\u0643\u062F",required:!0,rows:4},{id:"rootCauseCategory",type:"select",label:"\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u0633\u0628\u0628",required:!0,options:["\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629","\u0628\u0634\u0631\u064A / \u0633\u0644\u0648\u0643","\u062A\u0642\u0646\u064A / \u0645\u0639\u062F\u0627\u062A","\u0628\u064A\u0626\u0629 \u0639\u0645\u0644","\u0625\u062C\u0631\u0627\u0621\u0627\u062A / \u062A\u062F\u0631\u064A\u0628","\u0623\u062E\u0631\u0649"]}]}]},icam:{id:"icam",label:"ICAM",reference:"Incident Cause Analysis Method",steps:[{id:"timeline",title:"\u0627\u0644\u062E\u0637 \u0627\u0644\u0632\u0645\u0646\u064A \u0644\u0644\u0623\u062D\u062F\u0627\u062B",hint:"\u0631\u062A\u0651\u0628 \u0627\u0644\u0623\u062D\u062F\u0627\u062B \u0632\u0645\u0646\u064A\u0627\u064B \u0645\u0646 \u0645\u0627 \u0633\u0628\u0642 \u0627\u0644\u062D\u0627\u062F\u062B \u062D\u062A\u0649 \u0648\u0642\u0648\u0639\u0647.",fields:[{id:"timeline",type:"textarea",label:"\u062A\u0633\u0644\u0633\u0644 \u0627\u0644\u0623\u062D\u062F\u0627\u062B",required:!0,rows:6}]},{id:"barriers",title:"\u0627\u0644\u062D\u0648\u0627\u062C\u0632 \u0627\u0644\u0641\u0627\u0634\u0644\u0629 \u0623\u0648 \u0627\u0644\u063A\u0627\u0626\u0628\u0629",hint:"\u0645\u0627 \u0627\u0644\u062D\u0648\u0627\u062C\u0632 (\u0641\u064A\u0632\u064A\u0627\u0626\u064A\u0629\u060C \u0625\u062F\u0627\u0631\u064A\u0629\u060C \u0625\u062C\u0631\u0627\u0626\u064A\u0629) \u0627\u0644\u062A\u064A \u0643\u0627\u0646 \u064A\u062C\u0628 \u0623\u0646 \u062A\u0645\u0646\u0639 \u0627\u0644\u062D\u0627\u062F\u062B\u061F",fields:[{id:"failedBarriers",type:"list",label:"\u0627\u0644\u062D\u0648\u0627\u062C\u0632",required:!0,placeholder:"\u0645\u062B\u0627\u0644: \u062D\u0627\u062C\u0632 \u0648\u0627\u0642\u064D \u2014 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F"}]},{id:"contributing",title:"\u0627\u0644\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u0645\u0633\u0627\u0647\u0645\u0629 (PEESO)",hint:"\u0635\u0646\u0651\u0641 \u0627\u0644\u0639\u0648\u0627\u0645\u0644: \u0623\u0634\u062E\u0627\u0635\u060C \u0645\u0639\u062F\u0627\u062A\u060C \u0628\u064A\u0626\u0629\u060C \u0647\u064A\u0643\u0644\u060C \u0645\u0646\u0638\u0645\u0629.",fields:[{id:"people",type:"list",label:"\u0623\u0634\u062E\u0627\u0635 (People)",required:!1,placeholder:"\u0639\u0627\u0645\u0644 \u0645\u0633\u0627\u0647\u0645 \u0645\u062A\u0639\u0644\u0642 \u0628\u0627\u0644\u0623\u0634\u062E\u0627\u0635"},{id:"equipment",type:"list",label:"\u0645\u0639\u062F\u0627\u062A (Equipment)",required:!1,placeholder:"\u0639\u0627\u0645\u0644 \u0645\u0633\u0627\u0647\u0645 \u0645\u062A\u0639\u0644\u0642 \u0628\u0627\u0644\u0645\u0639\u062F\u0627\u062A"},{id:"environment",type:"list",label:"\u0628\u064A\u0626\u0629 (Environment)",required:!1,placeholder:"\u0639\u0627\u0645\u0644 \u0645\u0633\u0627\u0647\u0645 \u0645\u062A\u0639\u0644\u0642 \u0628\u0627\u0644\u0628\u064A\u0626\u0629"},{id:"structure",type:"list",label:"\u0647\u064A\u0643\u0644 (Structure)",required:!1,placeholder:"\u0639\u0627\u0645\u0644 \u0645\u0633\u0627\u0647\u0645 \u0645\u062A\u0639\u0644\u0642 \u0628\u0627\u0644\u0647\u064A\u0643\u0644"},{id:"organization",type:"list",label:"\u0645\u0646\u0638\u0645\u0629 (Organization)",required:!1,placeholder:"\u0639\u0627\u0645\u0644 \u0645\u0633\u0627\u0647\u0645 \u0645\u062A\u0639\u0644\u0642 \u0628\u0627\u0644\u0645\u0646\u0638\u0645\u0629"}]},{id:"rootCauses",title:"\u0627\u0644\u0623\u0633\u0628\u0627\u0628 \u0627\u0644\u062C\u0630\u0631\u064A\u0629",hint:"\u062D\u062F\u062F \u0627\u0644\u0623\u0633\u0628\u0627\u0628 \u0627\u0644\u062C\u0630\u0631\u064A\u0629 \u0639\u0644\u0649 \u0645\u0633\u062A\u0648\u0649 \u0646\u0638\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u2014 \u0644\u064A\u0633\u062A \u0623\u0639\u0631\u0627\u0636\u0627\u064B.",fields:[{id:"rootCausesList",type:"list",label:"\u0627\u0644\u0623\u0633\u0628\u0627\u0628 \u0627\u0644\u062C\u0630\u0631\u064A\u0629",required:!0,placeholder:"\u0633\u0628\u0628 \u062C\u0630\u0631\u064A"},{id:"rootCauseSummary",type:"textarea",label:"\u0645\u0644\u062E\u0635 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A",required:!0,rows:4},{id:"rootCauseCategory",type:"select",label:"\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u0633\u0628\u0628",required:!0,options:["\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629","\u0628\u0634\u0631\u064A / \u0633\u0644\u0648\u0643","\u062A\u0642\u0646\u064A / \u0645\u0639\u062F\u0627\u062A","\u0628\u064A\u0626\u0629 \u0639\u0645\u0644","\u0625\u062C\u0631\u0627\u0621\u0627\u062A / \u062A\u062F\u0631\u064A\u0628","\u0623\u062E\u0631\u0649"]}]}]},fishbone:{id:"fishbone",label:"Fishbone / Ishikawa 6M",reference:"\u062A\u062D\u0644\u064A\u0644 \u0633\u0628\u0628\u064A \u2014 6M",steps:[{id:"problem",title:"\u0627\u0644\u0645\u0634\u0643\u0644\u0629 (\u0631\u0623\u0633 \u0627\u0644\u0639\u0638\u0645)",hint:"\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u0634\u0643\u0644\u0629 \u0623\u0648 \u062A\u0623\u062B\u064A\u0631 \u0627\u0644\u062D\u0627\u062F\u062B \u0628\u0648\u0636\u0648\u062D.",fields:[{id:"problem",type:"textarea",label:"\u0648\u0635\u0641 \u0627\u0644\u0645\u0634\u0643\u0644\u0629",required:!0,rows:3}]},{id:"sixM",title:"\u0641\u0631\u0648\u0639 6M",hint:"\u0623\u062F\u0631\u062C \u0627\u0644\u0623\u0633\u0628\u0627\u0628 \u0627\u0644\u0645\u062D\u062A\u0645\u0644\u0629 \u062A\u062D\u062A \u0643\u0644 \u0641\u0626\u0629 \u2014 \u0641\u0631\u0639 \u0648\u0627\u062D\u062F \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0645\u0637\u0644\u0648\u0628.",fields:[{id:"man",type:"list",label:"Man \u2014 \u0627\u0644\u0625\u0646\u0633\u0627\u0646",required:!1,placeholder:"\u0633\u0628\u0628 \u0645\u062A\u0639\u0644\u0642 \u0628\u0627\u0644\u0625\u0646\u0633\u0627\u0646"},{id:"machine",type:"list",label:"Machine \u2014 \u0627\u0644\u0622\u0644\u0627\u062A",required:!1,placeholder:"\u0633\u0628\u0628 \u0645\u062A\u0639\u0644\u0642 \u0628\u0627\u0644\u0622\u0644\u0627\u062A"},{id:"method",type:"list",label:"Method \u2014 \u0627\u0644\u0637\u0631\u064A\u0642\u0629",required:!1,placeholder:"\u0633\u0628\u0628 \u0645\u062A\u0639\u0644\u0642 \u0628\u0627\u0644\u0637\u0631\u064A\u0642\u0629"},{id:"material",type:"list",label:"Material \u2014 \u0627\u0644\u0645\u0648\u0627\u062F",required:!1,placeholder:"\u0633\u0628\u0628 \u0645\u062A\u0639\u0644\u0642 \u0628\u0627\u0644\u0645\u0648\u0627\u062F"},{id:"measurement",type:"list",label:"Measurement \u2014 \u0627\u0644\u0642\u064A\u0627\u0633",required:!1,placeholder:"\u0633\u0628\u0628 \u0645\u062A\u0639\u0644\u0642 \u0628\u0627\u0644\u0642\u064A\u0627\u0633"},{id:"environment",type:"list",label:"Mother Nature \u2014 \u0627\u0644\u0628\u064A\u0626\u0629",required:!1,placeholder:"\u0633\u0628\u0628 \u0645\u062A\u0639\u0644\u0642 \u0628\u0627\u0644\u0628\u064A\u0626\u0629"}]},{id:"primaryCause",title:"\u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0631\u0626\u064A\u0633\u064A",hint:"\u0627\u062E\u062A\u0631 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0623\u0643\u062B\u0631 \u0627\u062D\u062A\u0645\u0627\u0644\u0627\u064B \u0645\u0646 \u0627\u0644\u0641\u0631\u0648\u0639 \u0627\u0644\u0645\u062F\u062E\u0644\u0629.",fields:[{id:"primaryCause",type:"textarea",label:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0631\u0626\u064A\u0633\u064A \u0627\u0644\u0645\u062E\u062A\u0627\u0631",required:!0,rows:3}]},{id:"whys",title:"\u062A\u062D\u0644\u064A\u0644 5 Whys \u0639\u0644\u0649 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0631\u0626\u064A\u0633\u064A",hint:"\u0637\u0628\u0651\u0642 5 Whys \u0639\u0644\u0649 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0631\u0626\u064A\u0633\u064A \u0644\u0644\u0648\u0635\u0648\u0644 \u0644\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A.",fields:[{id:"why1",type:"textarea",label:"\u0644\u0645\u0627\u0630\u0627 1",required:!0,rows:2},{id:"why2",type:"textarea",label:"\u0644\u0645\u0627\u0630\u0627 2",required:!0,rows:2},{id:"why3",type:"textarea",label:"\u0644\u0645\u0627\u0630\u0627 3",required:!0,rows:2}]},{id:"rootCause",title:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A",hint:"\u0644\u062E\u0651\u0635 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A \u0627\u0644\u0646\u0647\u0627\u0626\u064A.",fields:[{id:"rootCauseSummary",type:"textarea",label:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A \u0627\u0644\u0645\u0624\u0643\u062F",required:!0,rows:4},{id:"rootCauseCategory",type:"select",label:"\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u0633\u0628\u0628",required:!0,options:["\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629","\u0628\u0634\u0631\u064A / \u0633\u0644\u0648\u0643","\u062A\u0642\u0646\u064A / \u0645\u0639\u062F\u0627\u062A","\u0628\u064A\u0626\u0629 \u0639\u0645\u0644","\u0625\u062C\u0631\u0627\u0621\u0627\u062A / \u062A\u062F\u0631\u064A\u0628","\u0623\u062E\u0631\u0649"]}]}]},"iso-barrier":{id:"iso-barrier",label:"ISO 45001 + \u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u062D\u0648\u0627\u062C\u0632",reference:"ISO 45001:2018 \u2014 \u0628\u0646\u062F 10.2",steps:[{id:"facts",title:"\u0627\u0644\u0648\u0642\u0627\u0626\u0639 \u0627\u0644\u0645\u0648\u0636\u0648\u0639\u064A\u0629",hint:"\u0645\u0627 \u0627\u0644\u0630\u064A \u062D\u062F\u062B \u0641\u0639\u0644\u0627\u064B\u061F \u0628\u062F\u0648\u0646 \u0627\u0641\u062A\u0631\u0627\u0636\u0627\u062A \u0623\u0648 \u0644\u0648\u0645.",fields:[{id:"facts",type:"textarea",label:"\u0627\u0644\u0648\u0642\u0627\u0626\u0639",required:!0,rows:5}]},{id:"immediate",title:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0645\u0628\u0627\u0634\u0631",hint:"\u0627\u0644\u0633\u0644\u0648\u0643 \u063A\u064A\u0631 \u0627\u0644\u0622\u0645\u0646 \u0623\u0648 \u0627\u0644\u0648\u0636\u0639 \u063A\u064A\u0631 \u0627\u0644\u0622\u0645\u0646 \u0627\u0644\u0645\u0628\u0627\u0634\u0631.",fields:[{id:"immediateCause",type:"textarea",label:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0645\u0628\u0627\u0634\u0631",required:!0,rows:3},{id:"unsafeAct",type:"select",label:"\u0633\u0644\u0648\u0643 \u063A\u064A\u0631 \u0622\u0645\u0646\u061F",required:!0,options:["\u0646\u0639\u0645","\u0644\u0627","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"]},{id:"unsafeCondition",type:"select",label:"\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646\u061F",required:!0,options:["\u0646\u0639\u0645","\u0644\u0627","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"]}]},{id:"barriers",title:"\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u062D\u0648\u0627\u062C\u0632",hint:"\u0645\u0627 \u0627\u0644\u062D\u0648\u0627\u062C\u0632 \u0627\u0644\u062A\u064A \u0641\u0634\u0644\u062A \u0623\u0648 \u0643\u0627\u0646\u062A \u063A\u0627\u0626\u0628\u0629\u061F",fields:[{id:"failedBarriers",type:"list",label:"\u0627\u0644\u062D\u0648\u0627\u062C\u0632 \u0627\u0644\u0641\u0627\u0634\u0644\u0629/\u0627\u0644\u063A\u0627\u0626\u0628\u0629",required:!0,placeholder:"\u0648\u0635\u0641 \u0627\u0644\u062D\u0627\u062C\u0632"}]},{id:"contributing",title:"\u0627\u0644\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u0645\u0633\u0627\u0647\u0645\u0629",hint:"\u0639\u0648\u0627\u0645\u0644 \u0633\u0627\u0639\u062F\u062A \u0639\u0644\u0649 \u0648\u0642\u0648\u0639 \u0627\u0644\u062D\u0627\u062F\u062B \u062F\u0648\u0646 \u0623\u0646 \u062A\u0643\u0648\u0646 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0645\u0628\u0627\u0634\u0631.",fields:[{id:"contributingFactors",type:"list",label:"\u0639\u0648\u0627\u0645\u0644 \u0645\u0633\u0627\u0647\u0645\u0629",required:!0,placeholder:"\u0639\u0627\u0645\u0644 \u0645\u0633\u0627\u0647\u0645"}]},{id:"whys",title:"5 Whys \u2014 \u0627\u0644\u062A\u0639\u0645\u0642",hint:"\u0627\u0633\u0623\u0644 \xAB\u0644\u0645\u0627\u0630\u0627\xBB \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 3 \u0645\u0631\u0627\u062A \u0644\u0644\u0648\u0635\u0648\u0644 \u0644\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A.",fields:[{id:"why1",type:"textarea",label:"\u0644\u0645\u0627\u0630\u0627 1",required:!0,rows:2},{id:"why2",type:"textarea",label:"\u0644\u0645\u0627\u0630\u0627 2",required:!0,rows:2},{id:"why3",type:"textarea",label:"\u0644\u0645\u0627\u0630\u0627 3",required:!0,rows:2}]},{id:"managementGap",title:"\u0641\u062C\u0648\u0629 \u0646\u0638\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629",hint:"\u0627\u0631\u0628\u0637 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A \u0628\u0641\u062C\u0648\u0629 \u0641\u064A \u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629.",fields:[{id:"managementGap",type:"select",label:"\u0641\u062C\u0648\u0629 \u0646\u0638\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629",required:!0,options:["\u062A\u062F\u0631\u064A\u0628","\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0648\u062A\u0639\u0644\u064A\u0645\u0627\u062A","\u0625\u0634\u0631\u0627\u0641 \u0648\u0645\u062A\u0627\u0628\u0639\u0629","\u0635\u064A\u0627\u0646\u0629 \u0648\u0645\u0639\u062F\u0627\u062A","\u062A\u0635\u0645\u064A\u0645 \u0647\u0646\u062F\u0633\u064A","\u062A\u0648\u0627\u0635\u0644","\u062A\u062E\u0637\u064A\u0637 \u0645\u062E\u0627\u0637\u0631","\u0623\u062E\u0631\u0649"]},{id:"rootCauseSummary",type:"textarea",label:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A \u0627\u0644\u0645\u0624\u0643\u062F",required:!0,rows:4},{id:"rootCauseCategory",type:"select",label:"\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u0633\u0628\u0628",required:!0,options:["\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629","\u0628\u0634\u0631\u064A / \u0633\u0644\u0648\u0643","\u062A\u0642\u0646\u064A / \u0645\u0639\u062F\u0627\u062A","\u0628\u064A\u0626\u0629 \u0639\u0645\u0644","\u0625\u062C\u0631\u0627\u0621\u0627\u062A / \u062A\u062F\u0631\u064A\u0628","\u0623\u062E\u0631\u0649"]}]}]}},ROOT_CAUSE_CATEGORIES:["\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629","\u0628\u0634\u0631\u064A / \u0633\u0644\u0648\u0643","\u062A\u0642\u0646\u064A / \u0645\u0639\u062F\u0627\u062A","\u0628\u064A\u0626\u0629 \u0639\u0645\u0644","\u0625\u062C\u0631\u0627\u0621\u0627\u062A / \u062A\u062F\u0631\u064A\u0628","\u0623\u062E\u0631\u0649"],_esc(e){return typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(String(e??"")):String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")},getMethodList(){return Object.values(this.METHODS).map(e=>({id:e.id,label:e.label,reference:e.reference}))},_getState(e){return e._rcaState||(e._rcaState={method:"",currentStep:0,stepsData:{},startedAt:null}),e._rcaState},_getMethod(e){return this.METHODS[e]||null},_collectStepData(e,t){const r={};return(t.fields||[]).forEach(i=>{if(i.type==="list"){const s=[];e.querySelectorAll(`[data-rca-list="${i.id}"] .rca-list-input`).forEach(a=>{const o=(a.value||"").trim();o&&s.push(o)}),r[i.id]=s}else{const s=e.querySelector(`[data-rca-field="${i.id}"]`);r[i.id]=s?(s.value||"").trim():""}}),r},_mergeStepIntoState(e,t,r){e.stepsData[t]||(e.stepsData[t]={}),Object.assign(e.stepsData[t],r)},validateStep(e,t,r){const i=this._getMethod(e);if(!i)return{valid:!1,message:"\u0645\u0646\u0647\u062C\u064A\u0629 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641\u0629"};const s=i.steps[t];if(!s)return{valid:!1,message:"\u062E\u0637\u0648\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629"};const a=r[s.id]||{};for(const o of s.fields||[])if(o.required)if(o.type==="list"){const l=a[o.id];if(!Array.isArray(l)||l.length===0)return{valid:!1,message:`\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0639\u0646\u0635\u0631 \u0648\u0627\u062D\u062F \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0641\u064A: ${o.label}`}}else{const l=a[o.id];if(!l||!String(l).trim())return{valid:!1,message:`\u064A\u0631\u062C\u0649 \u0625\u0643\u0645\u0627\u0644 \u0627\u0644\u062D\u0642\u0644: ${o.label}`}}return e==="fishbone"&&s.id==="sixM"&&!["man","machine","method","material","measurement","environment"].some(c=>{const n=a[c];return Array.isArray(n)&&n.length>0})?{valid:!1,message:"\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0633\u0628\u0628 \u0648\u0627\u062D\u062F \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0641\u064A \u0641\u0631\u0648\u0639 6M"}:e==="icam"&&s.id==="contributing"&&!["people","equipment","environment","structure","organization"].some(c=>{const n=a[c];return Array.isArray(n)&&n.length>0})?{valid:!1,message:"\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0639\u0627\u0645\u0644 \u0645\u0633\u0627\u0647\u0645 \u0648\u0627\u062D\u062F \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 (PEESO)"}:{valid:!0}},suggestNextPrompt(e,t,r){const i=this._getMethod(e);if(!i||!i.steps[t])return"";let a=i.steps[t].hint||"";if(e==="five-whys"&&t>=1&&t<=5){const o=t===1?"problem":`why${t-1}`,l=i.steps.find(p=>p.id===(t===1?"problem":`why${t-1}`)),c=l?l.fields[0].id:o,d=(r[l?.id]||r[t===1?"problem":`why${t-1}`]||{})[c]||"";d&&(a=`\u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649: \xAB${d.substring(0,80)}${d.length>80?"...":""}\xBB \u2014 ${a}`)}return a},buildRootCauseSummary(e){if(!e||!e.stepsData)return"";const t=[],r=e.method,i=e.stepsData;if(e.rootCauseSummary)return e.rootCauseSummary;const a=(()=>{for(const o of Object.keys(i))if(i[o].rootCauseSummary)return i[o].rootCauseSummary;return""})();if(a)return a;if(r==="five-whys"){const o=["why5","why4","why3","why2","why1"];for(const l of o){const c=i[l]?.[`${l}`]||i[l]?.why;if(c){t.push(c);break}}}else if(r==="icam"){const o=i.rootCauses?.rootCausesList;Array.isArray(o)&&o.length&&t.push(o.join("\u061B "))}else if(r==="fishbone"){const o=i.rootCause?.rootCauseSummary;o?t.push(o):i.whys?.why3&&t.push(i.whys.why3)}else if(r==="iso-barrier"){const o=i.managementGap?.managementGap,l=i.managementGap?.rootCauseSummary;l?t.push(l):o&&t.push(`\u0641\u062C\u0648\u0629: ${o}`)}return t.join(" ")||""},_extractContributingFactors(e,t){const r=[];if(!e)return r;if(t==="icam"&&e.contributing)["people","equipment","environment","structure","organization"].forEach(i=>{const s=e.contributing[i];Array.isArray(s)&&r.push(...s)});else if(t==="iso-barrier"&&e.contributing){const i=e.contributing.contributingFactors;Array.isArray(i)&&r.push(...i)}return r},_extractFailedBarriers(e,t){return e?t==="icam"&&e.barriers?.failedBarriers||t==="iso-barrier"&&e.barriers?.failedBarriers?e.barriers.failedBarriers:[]:[]},_extractImmediateCauses(e,t){return e?t==="iso-barrier"&&e.immediate?.immediateCause?[e.immediate.immediateCause]:t==="five-whys"&&e.why1?.why1?[e.why1.why1]:[]:[]},collect(e){if(!e)return null;const t=this._getState(e),r=this._getMethod(t.method);if(!r)return null;const i=r,s=i.steps[t.currentStep];if(s){const d=this._collectStepData(e,s);this._mergeStepIntoState(t,s.id,d)}let a="",o="";Object.values(t.stepsData).forEach(d=>{d.rootCauseSummary&&(a=d.rootCauseSummary),d.rootCauseCategory&&(o=d.rootCauseCategory)});const l=t.currentStep>=i.steps.length-1,c=l?this.validateStep(t.method,t.currentStep,t.stepsData):{valid:!1};return{method:t.method,methodLabel:i.label,status:l&&c.valid?"complete":"in-progress",currentStep:t.currentStep,startedAt:t.startedAt||new Date().toISOString(),completedAt:l&&c.valid?new Date().toISOString():null,stepsData:t.stepsData,rootCauseSummary:a||this.buildRootCauseSummary({method:t.method,stepsData:t.stepsData}),rootCauseCategory:o,contributingFactors:this._extractContributingFactors(t.stepsData,t.method),immediateCauses:this._extractImmediateCauses(t.stepsData,t.method),failedBarriers:this._extractFailedBarriers(t.stepsData,t.method)}},_renderListField(e,t,r){const s=(Array.isArray(t)&&t.length?t:[""]).map((a,o)=>`
             <div class="rca-list-row flex gap-2 mb-2" style="display:flex;gap:8px;margin-bottom:8px;">
-                <input type="text" class="form-input rca-list-input flex-1" value="${this._esc(item)}"
-                    placeholder="${this._esc(field.placeholder || '')}" ${canEdit ? '' : 'disabled'}
+                <input type="text" class="form-input rca-list-input flex-1" value="${this._esc(a)}"
+                    placeholder="${this._esc(e.placeholder||"")}" ${r?"":"disabled"}
                     style="flex:1;">
-                ${canEdit ? `<button type="button" class="btn-icon btn-icon-danger rca-list-remove" title="حذف"><i class="fas fa-minus"></i></button>` : ''}
+                ${r?'<button type="button" class="btn-icon btn-icon-danger rca-list-remove" title="\u062D\u0630\u0641"><i class="fas fa-minus"></i></button>':""}
             </div>
-        `).join('');
-
-        return `
-            <div data-rca-list="${field.id}" class="rca-list-field mb-4">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">${this._esc(field.label)}${field.required ? ' *' : ''}</label>
-                <div class="rca-list-items">${rows}</div>
-                ${canEdit ? `<button type="button" class="btn-secondary btn-sm rca-list-add" data-list-id="${field.id}" style="margin-top:6px;font-size:0.85rem;padding:6px 12px;"><i class="fas fa-plus ml-1"></i> إضافة</button>` : ''}
+        `).join("");return`
+            <div data-rca-list="${e.id}" class="rca-list-field mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">${this._esc(e.label)}${e.required?" *":""}</label>
+                <div class="rca-list-items">${s}</div>
+                ${r?`<button type="button" class="btn-secondary btn-sm rca-list-add" data-list-id="${e.id}" style="margin-top:6px;font-size:0.85rem;padding:6px 12px;"><i class="fas fa-plus ml-1"></i> \u0625\u0636\u0627\u0641\u0629</button>`:""}
             </div>
-        `;
-    },
-
-    _renderField(field, savedData, canEdit) {
-        const val = savedData[field.id] ?? '';
-        const disabled = canEdit ? '' : 'disabled';
-
-        if (field.type === 'list') {
-            return this._renderListField(field, val, canEdit);
-        }
-        if (field.type === 'select') {
-            const opts = (field.options || []).map(o =>
-                `<option value="${this._esc(o)}" ${val === o ? 'selected' : ''}>${this._esc(o)}</option>`
-            ).join('');
-            return `
+        `},_renderField(e,t,r){const i=t[e.id]??"",s=r?"":"disabled";if(e.type==="list")return this._renderListField(e,i,r);if(e.type==="select"){const o=(e.options||[]).map(l=>`<option value="${this._esc(l)}" ${i===l?"selected":""}>${this._esc(l)}</option>`).join("");return`
                 <div class="mb-4">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">${this._esc(field.label)}${field.required ? ' *' : ''}</label>
-                    <select data-rca-field="${field.id}" class="form-input" ${disabled}>
-                        <option value="">اختر...</option>
-                        ${opts}
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">${this._esc(e.label)}${e.required?" *":""}</label>
+                    <select data-rca-field="${e.id}" class="form-input" ${s}>
+                        <option value="">\u0627\u062E\u062A\u0631...</option>
+                        ${o}
                     </select>
                 </div>
-            `;
-        }
-        const rows = field.rows || 3;
-        return `
+            `}const a=e.rows||3;return`
             <div class="mb-4">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">${this._esc(field.label)}${field.required ? ' *' : ''}</label>
-                <textarea data-rca-field="${field.id}" class="form-input" rows="${rows}" ${disabled}
-                    placeholder="${this._esc(field.placeholder || '')}">${this._esc(val)}</textarea>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">${this._esc(e.label)}${e.required?" *":""}</label>
+                <textarea data-rca-field="${e.id}" class="form-input" rows="${a}" ${s}
+                    placeholder="${this._esc(e.placeholder||"")}">${this._esc(i)}</textarea>
             </div>
-        `;
-    },
-
-    _renderStepper(method, currentStep) {
-        const steps = method.steps;
-        const items = steps.map((s, i) => {
-            const done = i < currentStep;
-            const active = i === currentStep;
-            const cls = done ? 'rca-step-done' : (active ? 'rca-step-active' : 'rca-step-pending');
-            return `
-                <div class="rca-step-item ${cls}" style="flex:1;text-align:center;position:relative;">
-                    <div class="rca-step-circle" style="width:32px;height:32px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;
-                        background:${done ? '#7c3aed' : (active ? '#5b21b6' : '#e5e7eb')};color:${done || active ? '#fff' : '#6b7280'};">
-                        ${done ? '<i class="fas fa-check" style="font-size:0.75rem;"></i>' : (i + 1)}
-                    </div>
-                    <div style="font-size:0.7rem;color:${active ? '#5b21b6' : '#6b7280'};font-weight:${active ? '700' : '500'};line-height:1.2;">${this._esc(s.title)}</div>
-                </div>
-            `;
-        }).join('');
-
-        return `
+        `},_renderStepper(e,t){const r=e.steps;return`
             <div class="rca-stepper" style="display:flex;gap:4px;margin-bottom:20px;padding:12px;background:#faf5ff;border-radius:10px;border:1px solid #ddd6fe;">
-                ${items}
+                ${r.map((s,a)=>{const o=a<t,l=a===t;return`
+                <div class="rca-step-item ${o?"rca-step-done":l?"rca-step-active":"rca-step-pending"}" style="flex:1;text-align:center;position:relative;">
+                    <div class="rca-step-circle" style="width:32px;height:32px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;
+                        background:${o?"#7c3aed":l?"#5b21b6":"#e5e7eb"};color:${o||l?"#fff":"#6b7280"};">
+                        ${o?'<i class="fas fa-check" style="font-size:0.75rem;"></i>':a+1}
+                    </div>
+                    <div style="font-size:0.7rem;color:${l?"#5b21b6":"#6b7280"};font-weight:${l?"700":"500"};line-height:1.2;">${this._esc(s.title)}</div>
+                </div>
+            `}).join("")}
             </div>
             <div style="text-align:center;font-size:0.85rem;color:#6b7280;margin-bottom:16px;">
-                الخطوة ${currentStep + 1} من ${steps.length}
+                \u0627\u0644\u062E\u0637\u0648\u0629 ${t+1} \u0645\u0646 ${r.length}
             </div>
-        `;
-    },
-
-    _renderStepContent(method, stepIndex, stepsData, canEdit) {
-        const step = method.steps[stepIndex];
-        if (!step) return '';
-
-        const saved = stepsData[step.id] || {};
-        const hint = this.suggestNextPrompt(method.id, stepIndex, stepsData);
-
-        const fieldsHtml = (step.fields || []).map(f => this._renderField(f, saved, canEdit)).join('');
-
-        return `
-            <div class="rca-step-content" data-rca-step="${step.id}">
-                <h4 style="font-size:1.1rem;font-weight:700;color:#5b21b6;margin:0 0 8px;">${this._esc(step.title)}</h4>
-                ${hint ? `<div class="rca-hint" style="background:#ede9fe;border:1px solid #c4b5fd;border-radius:8px;padding:12px;margin-bottom:16px;font-size:0.9rem;color:#4c1d95;"><i class="fas fa-lightbulb ml-2"></i>${this._esc(hint)}</div>` : ''}
-                ${fieldsHtml}
+        `},_renderStepContent(e,t,r,i){const s=e.steps[t];if(!s)return"";const a=r[s.id]||{},o=this.suggestNextPrompt(e.id,t,r),l=(s.fields||[]).map(c=>this._renderField(c,a,i)).join("");return`
+            <div class="rca-step-content" data-rca-step="${s.id}">
+                <h4 style="font-size:1.1rem;font-weight:700;color:#5b21b6;margin:0 0 8px;">${this._esc(s.title)}</h4>
+                ${o?`<div class="rca-hint" style="background:#ede9fe;border:1px solid #c4b5fd;border-radius:8px;padding:12px;margin-bottom:16px;font-size:0.9rem;color:#4c1d95;"><i class="fas fa-lightbulb ml-2"></i>${this._esc(o)}</div>`:""}
+                ${l}
             </div>
-        `;
-    },
-
-    render(container, options = {}) {
-        if (!container) return;
-
-        const { savedRca = null, defaultDescription = '', canEdit = true } = options;
-        const state = this._getState(container);
-
-        if (savedRca) {
-            state.method = savedRca.method || '';
-            state.currentStep = typeof savedRca.currentStep === 'number' ? savedRca.currentStep : 0;
-            state.stepsData = savedRca.stepsData ? JSON.parse(JSON.stringify(savedRca.stepsData)) : {};
-            state.startedAt = savedRca.startedAt || null;
-        }
-
-        if (!state.startedAt && state.method) {
-            state.startedAt = new Date().toISOString();
-        }
-
-        if (state.method === 'five-whys' && defaultDescription && !state.stepsData.problem?.problem) {
-            if (!state.stepsData.problem) state.stepsData.problem = {};
-            state.stepsData.problem.problem = defaultDescription;
-        }
-        if (state.method === 'fishbone' && defaultDescription && !state.stepsData.problem?.problem) {
-            if (!state.stepsData.problem) state.stepsData.problem = {};
-            state.stepsData.problem.problem = defaultDescription;
-        }
-        if (state.method === 'iso-barrier' && defaultDescription && !state.stepsData.facts?.facts) {
-            if (!state.stepsData.facts) state.stepsData.facts = {};
-            state.stepsData.facts.facts = defaultDescription;
-        }
-
-        const methodOptions = this.getMethodList().map(m =>
-            `<option value="${m.id}" ${state.method === m.id ? 'selected' : ''}>${this._esc(m.label)} — ${this._esc(m.reference)}</option>`
-        ).join('');
-
-        const method = state.method ? this._getMethod(state.method) : null;
-        const wizardHtml = method
-            ? `${this._renderStepper(method, state.currentStep)}${this._renderStepContent(method, state.currentStep, state.stepsData, canEdit)}`
-            : `<div class="text-center text-gray-500 py-8" style="padding:32px;color:#6b7280;"><i class="fas fa-route" style="font-size:2rem;margin-bottom:12px;display:block;color:#a78bfa;"></i>اختر منهجية التحليل لبدء المعالج المتسلسل</div>`;
-
-        const navHtml = method ? `
+        `},render(e,t={}){if(!e)return;const{savedRca:r=null,defaultDescription:i="",canEdit:s=!0}=t,a=this._getState(e);r&&(a.method=r.method||"",a.currentStep=typeof r.currentStep=="number"?r.currentStep:0,a.stepsData=r.stepsData?JSON.parse(JSON.stringify(r.stepsData)):{},a.startedAt=r.startedAt||null),!a.startedAt&&a.method&&(a.startedAt=new Date().toISOString()),a.method==="five-whys"&&i&&!a.stepsData.problem?.problem&&(a.stepsData.problem||(a.stepsData.problem={}),a.stepsData.problem.problem=i),a.method==="fishbone"&&i&&!a.stepsData.problem?.problem&&(a.stepsData.problem||(a.stepsData.problem={}),a.stepsData.problem.problem=i),a.method==="iso-barrier"&&i&&!a.stepsData.facts?.facts&&(a.stepsData.facts||(a.stepsData.facts={}),a.stepsData.facts.facts=i);const o=this.getMethodList().map(d=>`<option value="${d.id}" ${a.method===d.id?"selected":""}>${this._esc(d.label)} \u2014 ${this._esc(d.reference)}</option>`).join(""),l=a.method?this._getMethod(a.method):null,c=l?`${this._renderStepper(l,a.currentStep)}${this._renderStepContent(l,a.currentStep,a.stepsData,s)}`:'<div class="text-center text-gray-500 py-8" style="padding:32px;color:#6b7280;"><i class="fas fa-route" style="font-size:2rem;margin-bottom:12px;display:block;color:#a78bfa;"></i>\u0627\u062E\u062A\u0631 \u0645\u0646\u0647\u062C\u064A\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0644\u0628\u062F\u0621 \u0627\u0644\u0645\u0639\u0627\u0644\u062C \u0627\u0644\u0645\u062A\u0633\u0644\u0633\u0644</div>',n=l?`
             <div class="rca-nav flex justify-between gap-3 mt-4 pt-4" style="display:flex;justify-content:space-between;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb;">
-                <button type="button" class="btn-secondary rca-btn-prev" ${state.currentStep === 0 ? 'disabled' : ''} ${canEdit ? '' : 'disabled'}>
-                    <i class="fas fa-arrow-right ml-2"></i> السابق
+                <button type="button" class="btn-secondary rca-btn-prev" ${a.currentStep===0?"disabled":""} ${s?"":"disabled"}>
+                    <i class="fas fa-arrow-right ml-2"></i> \u0627\u0644\u0633\u0627\u0628\u0642
                 </button>
-                ${state.currentStep < method.steps.length - 1 ? `
-                    <button type="button" class="btn-primary rca-btn-next" ${canEdit ? '' : 'disabled'}>
-                        التالي <i class="fas fa-arrow-left mr-2"></i>
+                ${a.currentStep<l.steps.length-1?`
+                    <button type="button" class="btn-primary rca-btn-next" ${s?"":"disabled"}>
+                        \u0627\u0644\u062A\u0627\u0644\u064A <i class="fas fa-arrow-left mr-2"></i>
                     </button>
-                ` : `
+                `:`
                     <div class="rca-summary-preview" style="flex:1;text-align:left;font-size:0.85rem;color:#059669;padding:8px 12px;background:#ecfdf5;border-radius:8px;border:1px solid #a7f3d0;">
-                        <i class="fas fa-check-circle ml-1"></i> آخر خطوة — أكمل الحقول ثم احفظ التحقيق
+                        <i class="fas fa-check-circle ml-1"></i> \u0622\u062E\u0631 \u062E\u0637\u0648\u0629 \u2014 \u0623\u0643\u0645\u0644 \u0627\u0644\u062D\u0642\u0648\u0644 \u062B\u0645 \u0627\u062D\u0641\u0638 \u0627\u0644\u062A\u062D\u0642\u064A\u0642
                     </div>
                 `}
             </div>
-        ` : '';
-
-        container.innerHTML = `
+        `:"";e.innerHTML=`
             <style>
                 .rca-wizard-wrap { direction: rtl; }
                 .rca-method-select { border: 2px solid #7c3aed !important; font-weight: 600; }
@@ -492,189 +70,20 @@ const InvestigationRCA = {
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         <i class="fas fa-microscope ml-2" style="color:#7c3aed;"></i>
-                        منهجية تحليل السبب الجذري
+                        \u0645\u0646\u0647\u062C\u064A\u0629 \u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A
                     </label>
-                    <select id="rca-method-select" class="form-input rca-method-select" ${canEdit ? '' : 'disabled'}>
-                        <option value="">— اختر المنهجية —</option>
-                        ${methodOptions}
+                    <select id="rca-method-select" class="form-input rca-method-select" ${s?"":"disabled"}>
+                        <option value="">\u2014 \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0646\u0647\u062C\u064A\u0629 \u2014</option>
+                        ${o}
                     </select>
                 </div>
-                <div id="rca-wizard-body">${wizardHtml}</div>
-                ${navHtml}
+                <div id="rca-wizard-body">${c}</div>
+                ${n}
             </div>
-        `;
-    },
-
-    bindEvents(container, callbacks = {}) {
-        if (!container) return;
-
-        const self = this;
-        const { canEdit = true, onUpdate } = callbacks;
-
-        const rerender = () => {
-            const state = self._getState(container);
-            const descEl = document.getElementById('investigation-description');
-            const defaultDescription = descEl ? descEl.value : '';
-            self.render(container, { savedRca: {
-                method: state.method,
-                currentStep: state.currentStep,
-                stepsData: state.stepsData,
-                startedAt: state.startedAt
-            }, defaultDescription, canEdit });
-            self.bindEvents(container, callbacks);
-            if (typeof onUpdate === 'function') onUpdate(self.collect(container));
-        };
-
-        const methodSelect = container.querySelector('#rca-method-select');
-        if (methodSelect && canEdit) {
-            methodSelect.addEventListener('change', (e) => {
-                const newMethod = e.target.value;
-                const state = self._getState(container);
-                if (state.method && state.method !== newMethod && Object.keys(state.stepsData).length > 0) {
-                    if (!confirm('تغيير المنهجية سيمسح البيانات المدخلة. هل تريد المتابعة؟')) {
-                        e.target.value = state.method;
-                        return;
-                    }
-                }
-                state.method = newMethod;
-                state.currentStep = 0;
-                state.stepsData = {};
-                state.startedAt = newMethod ? new Date().toISOString() : null;
-                rerender();
-            });
-        }
-
-        container.querySelectorAll('.rca-list-add').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const listId = btn.getAttribute('data-list-id');
-                const listWrap = container.querySelector(`[data-rca-list="${listId}"] .rca-list-items`);
-                if (!listWrap) return;
-                const row = document.createElement('div');
-                row.className = 'rca-list-row flex gap-2 mb-2';
-                row.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;';
-                row.innerHTML = `
+        `},bindEvents(e,t={}){if(!e)return;const r=this,{canEdit:i=!0,onUpdate:s}=t,a=()=>{const n=r._getState(e),d=document.getElementById("investigation-description"),p=d?d.value:"";r.render(e,{savedRca:{method:n.method,currentStep:n.currentStep,stepsData:n.stepsData,startedAt:n.startedAt},defaultDescription:p,canEdit:i}),r.bindEvents(e,t),typeof s=="function"&&s(r.collect(e))},o=e.querySelector("#rca-method-select");o&&i&&o.addEventListener("change",n=>{const d=n.target.value,p=r._getState(e);if(p.method&&p.method!==d&&Object.keys(p.stepsData).length>0&&!confirm("\u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0645\u0646\u0647\u062C\u064A\u0629 \u0633\u064A\u0645\u0633\u062D \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062F\u062E\u0644\u0629. \u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F")){n.target.value=p.method;return}p.method=d,p.currentStep=0,p.stepsData={},p.startedAt=d?new Date().toISOString():null,a()}),e.querySelectorAll(".rca-list-add").forEach(n=>{n.addEventListener("click",()=>{const d=n.getAttribute("data-list-id"),p=e.querySelector(`[data-rca-list="${d}"] .rca-list-items`);if(!p)return;const u=document.createElement("div");u.className="rca-list-row flex gap-2 mb-2",u.style.cssText="display:flex;gap:8px;margin-bottom:8px;",u.innerHTML=`
                     <input type="text" class="form-input rca-list-input flex-1" value="" style="flex:1;">
-                    <button type="button" class="btn-icon btn-icon-danger rca-list-remove" title="حذف"><i class="fas fa-minus"></i></button>
-                `;
-                listWrap.appendChild(row);
-                row.querySelector('.rca-list-remove').addEventListener('click', () => row.remove());
-            });
-        });
-
-        container.querySelectorAll('.rca-list-remove').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const row = btn.closest('.rca-list-row');
-                const listWrap = btn.closest('.rca-list-items');
-                if (row && listWrap && listWrap.querySelectorAll('.rca-list-row').length > 1) {
-                    row.remove();
-                } else if (row) {
-                    row.querySelector('.rca-list-input').value = '';
-                }
-            });
-        });
-
-        const btnNext = container.querySelector('.rca-btn-next');
-        if (btnNext && canEdit) {
-            btnNext.addEventListener('click', () => {
-                const state = self._getState(container);
-                const method = self._getMethod(state.method);
-                if (!method) return;
-
-                const stepDef = method.steps[state.currentStep];
-                const stepData = self._collectStepData(container, stepDef);
-                self._mergeStepIntoState(state, stepDef.id, stepData);
-
-                const validation = self.validateStep(state.method, state.currentStep, state.stepsData);
-                if (!validation.valid) {
-                    if (typeof Notification !== 'undefined') Notification.warning(validation.message);
-                    else alert(validation.message);
-                    return;
-                }
-
-                state.currentStep = Math.min(state.currentStep + 1, method.steps.length - 1);
-                rerender();
-            });
-        }
-
-        const btnPrev = container.querySelector('.rca-btn-prev');
-        if (btnPrev && canEdit) {
-            btnPrev.addEventListener('click', () => {
-                const state = self._getState(container);
-                const method = self._getMethod(state.method);
-                if (!method || state.currentStep === 0) return;
-
-                const stepDef = method.steps[state.currentStep];
-                const stepData = self._collectStepData(container, stepDef);
-                self._mergeStepIntoState(state, stepDef.id, stepData);
-
-                state.currentStep = Math.max(0, state.currentStep - 1);
-                rerender();
-            });
-        }
-    },
-
-    /**
-     * تعبئة معالج RCA من اقتراح Gemini
-     * @param {HTMLElement} container
-     * @param {Object} rcaPayload - { method, stepsData, rootCauseSummary, rootCauseCategory }
-     * @param {Object} options - { recommendedMethod, canEdit, callbacks }
-     */
-    applySuggestion(container, rcaPayload, options = {}) {
-        if (!container || !rcaPayload) return;
-
-        const state = this._getState(container);
-        const method = rcaPayload.method || options.recommendedMethod || 'five-whys';
-        const methodDef = this._getMethod(method);
-
-        state.method = methodDef ? method : '';
-        state.stepsData = rcaPayload.stepsData
-            ? JSON.parse(JSON.stringify(rcaPayload.stepsData))
-            : {};
-        state.startedAt = state.startedAt || new Date().toISOString();
-
-        const summary = String(rcaPayload.rootCauseSummary || '').trim();
-        const category = String(rcaPayload.rootCauseCategory || '').trim();
-
-        if (methodDef && summary) {
-            const rootStep = methodDef.steps.find(s =>
-                (s.fields || []).some(f => f.id === 'rootCauseSummary')
-            ) || methodDef.steps[methodDef.steps.length - 1];
-
-            if (rootStep) {
-                if (!state.stepsData[rootStep.id]) state.stepsData[rootStep.id] = {};
-                state.stepsData[rootStep.id].rootCauseSummary = summary;
-                if (category) state.stepsData[rootStep.id].rootCauseCategory = category;
-            }
-        }
-
-        state.currentStep = methodDef ? methodDef.steps.length - 1 : 0;
-
-        const canEdit = options.canEdit !== false;
-        const descEl = document.getElementById('investigation-description');
-        const defaultDescription = descEl ? descEl.value : '';
-
-        this.render(container, {
-            savedRca: {
-                method: state.method,
-                currentStep: state.currentStep,
-                stepsData: state.stepsData,
-                startedAt: state.startedAt
-            },
-            defaultDescription,
-            canEdit
-        });
-        this.bindEvents(container, options.callbacks || { canEdit });
-    },
-
-    PRINT_THEMES: {
-        'five-whys': { accent: '#1d4ed8', light: '#eff6ff', border: '#93c5fd', badge: '#1e40af' },
-        icam: { accent: '#c2410c', light: '#fff7ed', border: '#fdba74', badge: '#9a3412' },
-        fishbone: { accent: '#0f766e', light: '#f0fdfa', border: '#5eead4', badge: '#115e59' },
-        'iso-barrier': { accent: '#4338ca', light: '#eef2ff', border: '#a5b4fc', badge: '#3730a3' }
-    },
-
-    getPrintStyles() {
-        return `
+                    <button type="button" class="btn-icon btn-icon-danger rca-list-remove" title="\u062D\u0630\u0641"><i class="fas fa-minus"></i></button>
+                `,p.appendChild(u),u.querySelector(".rca-list-remove").addEventListener("click",()=>u.remove())})}),e.querySelectorAll(".rca-list-remove").forEach(n=>{n.addEventListener("click",()=>{const d=n.closest(".rca-list-row"),p=n.closest(".rca-list-items");d&&p&&p.querySelectorAll(".rca-list-row").length>1?d.remove():d&&(d.querySelector(".rca-list-input").value="")})});const l=e.querySelector(".rca-btn-next");l&&i&&l.addEventListener("click",()=>{const n=r._getState(e),d=r._getMethod(n.method);if(!d)return;const p=d.steps[n.currentStep],u=r._collectStepData(e,p);r._mergeStepIntoState(n,p.id,u);const m=r.validateStep(n.method,n.currentStep,n.stepsData);if(!m.valid){typeof Notification<"u"?Notification.warning(m.message):alert(m.message);return}n.currentStep=Math.min(n.currentStep+1,d.steps.length-1),a()});const c=e.querySelector(".rca-btn-prev");c&&i&&c.addEventListener("click",()=>{const n=r._getState(e),d=r._getMethod(n.method);if(!d||n.currentStep===0)return;const p=d.steps[n.currentStep],u=r._collectStepData(e,p);r._mergeStepIntoState(n,p.id,u),n.currentStep=Math.max(0,n.currentStep-1),a()})},applySuggestion(e,t,r={}){if(!e||!t)return;const i=this._getState(e),s=t.method||r.recommendedMethod||"five-whys",a=this._getMethod(s);i.method=a?s:"",i.stepsData=t.stepsData?JSON.parse(JSON.stringify(t.stepsData)):{},i.startedAt=i.startedAt||new Date().toISOString();const o=String(t.rootCauseSummary||"").trim(),l=String(t.rootCauseCategory||"").trim();if(a&&o){const p=a.steps.find(u=>(u.fields||[]).some(m=>m.id==="rootCauseSummary"))||a.steps[a.steps.length-1];p&&(i.stepsData[p.id]||(i.stepsData[p.id]={}),i.stepsData[p.id].rootCauseSummary=o,l&&(i.stepsData[p.id].rootCauseCategory=l))}i.currentStep=a?a.steps.length-1:0;const c=r.canEdit!==!1,n=document.getElementById("investigation-description"),d=n?n.value:"";this.render(e,{savedRca:{method:i.method,currentStep:i.currentStep,stepsData:i.stepsData,startedAt:i.startedAt},defaultDescription:d,canEdit:c}),this.bindEvents(e,r.callbacks||{canEdit:c})},PRINT_THEMES:{"five-whys":{accent:"#1d4ed8",light:"#eff6ff",border:"#93c5fd",badge:"#1e40af"},icam:{accent:"#c2410c",light:"#fff7ed",border:"#fdba74",badge:"#9a3412"},fishbone:{accent:"#0f766e",light:"#f0fdfa",border:"#5eead4",badge:"#115e59"},"iso-barrier":{accent:"#4338ca",light:"#eef2ff",border:"#a5b4fc",badge:"#3730a3"}},getPrintStyles(){return`
             .rca-print-section { border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; border: 2px solid; page-break-inside: avoid; }
             .rca-print-section h3 { font-size: 18px; font-weight: 700; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 3px solid; }
             .rca-print-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
@@ -720,347 +129,103 @@ const InvestigationRCA = {
                 .rca-print-section { box-shadow: none !important; }
                 .rca-peeso-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
             }
-        `;
-    },
-
-    _printRootCauseBox(summary, category, esc) {
-        if (!summary) return '';
-        return `
+        `},_printRootCauseBox(e,t,r){return e?`
             <div class="rca-root-box">
-                <div class="rca-root-title">&#9670; السبب الجذري المؤكد${category ? ` — ${esc(category)}` : ''}</div>
-                <div class="rca-root-text">${esc(summary)}</div>
+                <div class="rca-root-title">&#9670; \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A \u0627\u0644\u0645\u0624\u0643\u062F${t?` \u2014 ${r(t)}`:""}</div>
+                <div class="rca-root-text">${r(e)}</div>
             </div>
-        `;
-    },
-
-    _printSectionHeader(methodLabel, reference, rca, theme, esc) {
-        const status = rca.status === 'complete' ? 'مكتمل' : 'قيد التنفيذ';
-        const statusBg = rca.status === 'complete' ? '#059669' : '#d97706';
-        return `
-            <h3 style="color:${theme.accent};border-color:${theme.accent};">
-                5.5) تحليل السبب الجذري — ${esc(methodLabel)}
+        `:""},_printSectionHeader(e,t,r,i,s){const a=r.status==="complete"?"\u0645\u0643\u062A\u0645\u0644":"\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630",o=r.status==="complete"?"#059669":"#d97706";return`
+            <h3 style="color:${i.accent};border-color:${i.accent};">
+                5.5) \u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062C\u0630\u0631\u064A \u2014 ${s(e)}
             </h3>
             <div class="rca-print-meta">
-                <span class="rca-print-badge" style="background:${theme.badge};">${esc(methodLabel)}</span>
-                <span class="rca-print-badge-outline" style="border-color:${theme.border};color:${theme.accent};">${esc(reference)}</span>
-                <span class="rca-print-badge" style="background:${statusBg};">${esc(status)}</span>
+                <span class="rca-print-badge" style="background:${i.badge};">${s(e)}</span>
+                <span class="rca-print-badge-outline" style="border-color:${i.border};color:${i.accent};">${s(t)}</span>
+                <span class="rca-print-badge" style="background:${o};">${s(a)}</span>
             </div>
-        `;
-    },
-
-    _printWhyChain(nodes, theme, esc, rootSummary) {
-        const items = nodes.filter(n => n.text);
-        if (!items.length && !rootSummary) return '';
-
-        let html = '<div class="rca-why-chain">';
-        items.forEach((node, i) => {
-            if (i > 0) html += '<div class="rca-why-arrow">&#8595;</div>';
-            const isLast = i === items.length - 1 && !rootSummary;
-            html += `
-                <div class="rca-why-node${isLast ? ' rca-why-root' : ''}" style="border-color:${isLast ? '#10b981' : theme.border};">
-                    <div class="rca-why-label" style="color:${theme.accent};">${esc(node.label)}</div>
-                    <div class="rca-why-text">${esc(node.text)}</div>
+        `},_printWhyChain(e,t,r,i){const s=e.filter(o=>o.text);if(!s.length&&!i)return"";let a='<div class="rca-why-chain">';return s.forEach((o,l)=>{l>0&&(a+='<div class="rca-why-arrow">&#8595;</div>');const c=l===s.length-1&&!i;a+=`
+                <div class="rca-why-node${c?" rca-why-root":""}" style="border-color:${c?"#10b981":t.border};">
+                    <div class="rca-why-label" style="color:${t.accent};">${r(o.label)}</div>
+                    <div class="rca-why-text">${r(o.text)}</div>
                 </div>
-            `;
-        });
-        if (rootSummary && items.length) html += '<div class="rca-why-arrow">&#8595;</div>';
-        html += '</div>';
-        return html;
-    },
-
-    _buildPrintFiveWhys(sd, rca, esc, theme) {
-        const problem = sd.problem?.problem || '';
-        const whys = [
-            { label: 'المشكلة / الحادث', text: problem },
-            { label: 'لماذا 1 — السبب المباشر', text: sd.why1?.why1 },
-            { label: 'لماذا 2', text: sd.why2?.why2 },
-            { label: 'لماذا 3', text: sd.why3?.why3 },
-            { label: 'لماذا 4', text: sd.why4?.why4 },
-            { label: 'لماذا 5', text: sd.why5?.why5 }
-        ].filter(w => w.text);
-
-        const summary = rca.rootCauseSummary || sd.rootCause?.rootCauseSummary || this.buildRootCauseSummary(rca);
-        const category = rca.rootCauseCategory || sd.rootCause?.rootCauseCategory || '';
-
-        return `
+            `}),i&&s.length&&(a+='<div class="rca-why-arrow">&#8595;</div>'),a+="</div>",a},_buildPrintFiveWhys(e,t,r,i){const a=[{label:"\u0627\u0644\u0645\u0634\u0643\u0644\u0629 / \u0627\u0644\u062D\u0627\u062F\u062B",text:e.problem?.problem||""},{label:"\u0644\u0645\u0627\u0630\u0627 1 \u2014 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0645\u0628\u0627\u0634\u0631",text:e.why1?.why1},{label:"\u0644\u0645\u0627\u0630\u0627 2",text:e.why2?.why2},{label:"\u0644\u0645\u0627\u0630\u0627 3",text:e.why3?.why3},{label:"\u0644\u0645\u0627\u0630\u0627 4",text:e.why4?.why4},{label:"\u0644\u0645\u0627\u0630\u0627 5",text:e.why5?.why5}].filter(c=>c.text),o=t.rootCauseSummary||e.rootCause?.rootCauseSummary||this.buildRootCauseSummary(t),l=t.rootCauseCategory||e.rootCause?.rootCauseCategory||"";return`
             <div class="rca-block">
                 <div class="rca-block-title">
-                    <span class="rca-block-num" style="background:${theme.accent};">&#8635;</span>
-                    سلسلة التحليل — 5 Whys
+                    <span class="rca-block-num" style="background:${i.accent};">&#8635;</span>
+                    \u0633\u0644\u0633\u0644\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u2014 5 Whys
                 </div>
-                ${this._printWhyChain(whys, theme, esc)}
+                ${this._printWhyChain(a,i,r)}
             </div>
-            ${this._printRootCauseBox(summary, category, esc)}
-        `;
-    },
-
-    _buildPrintIcam(sd, rca, esc, theme) {
-        const peesoCols = [
-            { key: 'people', label: 'أشخاص', color: '#2563eb' },
-            { key: 'equipment', label: 'معدات', color: '#7c3aed' },
-            { key: 'environment', label: 'بيئة', color: '#059669' },
-            { key: 'structure', label: 'هيكل', color: '#d97706' },
-            { key: 'organization', label: 'منظمة', color: '#dc2626' }
-        ];
-
-        const peesoHtml = peesoCols.map(col => {
-            const items = sd.contributing?.[col.key];
-            const list = Array.isArray(items) && items.length
-                ? `<ul>${items.map(v => `<li>${esc(v)}</li>`).join('')}</ul>`
-                : '<span style="color:#9ca3af;font-size:11px;">—</span>';
-            return `
+            ${this._printRootCauseBox(o,l,r)}
+        `},_buildPrintIcam(e,t,r,i){const a=[{key:"people",label:"\u0623\u0634\u062E\u0627\u0635",color:"#2563eb"},{key:"equipment",label:"\u0645\u0639\u062F\u0627\u062A",color:"#7c3aed"},{key:"environment",label:"\u0628\u064A\u0626\u0629",color:"#059669"},{key:"structure",label:"\u0647\u064A\u0643\u0644",color:"#d97706"},{key:"organization",label:"\u0645\u0646\u0638\u0645\u0629",color:"#dc2626"}].map(p=>{const u=e.contributing?.[p.key],m=Array.isArray(u)&&u.length?`<ul>${u.map(b=>`<li>${r(b)}</li>`).join("")}</ul>`:'<span style="color:#9ca3af;font-size:11px;">\u2014</span>';return`
                 <div class="rca-peeso-col">
-                    <div class="rca-peeso-head" style="background:${col.color};">${esc(col.label)}</div>
-                    <div class="rca-peeso-body">${list}</div>
+                    <div class="rca-peeso-head" style="background:${p.color};">${r(p.label)}</div>
+                    <div class="rca-peeso-body">${m}</div>
                 </div>
-            `;
-        }).join('');
-
-        const barriers = sd.barriers?.failedBarriers || rca.failedBarriers || [];
-        const barriersHtml = barriers.length
-            ? `<div class="rca-barrier-tags">${barriers.map(b =>
-                `<span class="rca-barrier-tag" style="border-color:${theme.border};color:${theme.accent};">&#9888; ${esc(b)}</span>`
-            ).join('')}</div>`
-            : '<span style="color:#9ca3af;">—</span>';
-
-        const rootList = sd.rootCauses?.rootCausesList || [];
-        const summary = rca.rootCauseSummary || sd.rootCauses?.rootCauseSummary || this.buildRootCauseSummary(rca);
-        const category = rca.rootCauseCategory || sd.rootCauses?.rootCauseCategory || '';
-
-        return `
-            ${sd.timeline?.timeline ? `
+            `}).join(""),o=e.barriers?.failedBarriers||t.failedBarriers||[],l=o.length?`<div class="rca-barrier-tags">${o.map(p=>`<span class="rca-barrier-tag" style="border-color:${i.border};color:${i.accent};">&#9888; ${r(p)}</span>`).join("")}</div>`:'<span style="color:#9ca3af;">\u2014</span>',c=e.rootCauses?.rootCausesList||[],n=t.rootCauseSummary||e.rootCauses?.rootCauseSummary||this.buildRootCauseSummary(t),d=t.rootCauseCategory||e.rootCauses?.rootCauseCategory||"";return`
+            ${e.timeline?.timeline?`
             <div class="rca-block">
-                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">1</span>الخط الزمني للأحداث</div>
-                <div class="rca-text-panel">${esc(sd.timeline.timeline)}</div>
-            </div>` : ''}
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${i.accent};">1</span>\u0627\u0644\u062E\u0637 \u0627\u0644\u0632\u0645\u0646\u064A \u0644\u0644\u0623\u062D\u062F\u0627\u062B</div>
+                <div class="rca-text-panel">${r(e.timeline.timeline)}</div>
+            </div>`:""}
             <div class="rca-block">
-                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">2</span>الحواجز الفاشلة / الغائبة</div>
-                ${barriersHtml}
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${i.accent};">2</span>\u0627\u0644\u062D\u0648\u0627\u062C\u0632 \u0627\u0644\u0641\u0627\u0634\u0644\u0629 / \u0627\u0644\u063A\u0627\u0626\u0628\u0629</div>
+                ${l}
             </div>
             <div class="rca-block">
-                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">3</span>العوامل المساهمة — PEESO</div>
-                <div class="rca-peeso-grid">${peesoHtml}</div>
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${i.accent};">3</span>\u0627\u0644\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u0645\u0633\u0627\u0647\u0645\u0629 \u2014 PEESO</div>
+                <div class="rca-peeso-grid">${a}</div>
             </div>
-            ${rootList.length ? `
+            ${c.length?`
             <div class="rca-block">
-                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">4</span>قائمة الأسباب الجذرية</div>
-                <ul class="rca-list-print">${rootList.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
-            </div>` : ''}
-            ${this._printRootCauseBox(summary, category, esc)}
-        `;
-    },
-
-    _buildPrintFishbone(sd, rca, esc, theme) {
-        const branches = [
-            { key: 'man', label: 'Man — الإنسان', color: '#2563eb' },
-            { key: 'machine', label: 'Machine — الآلات', color: '#7c3aed' },
-            { key: 'method', label: 'Method — الطريقة', color: '#0891b2' },
-            { key: 'material', label: 'Material — المواد', color: '#d97706' },
-            { key: 'measurement', label: 'Measurement — القياس', color: '#db2777' },
-            { key: 'environment', label: 'Environment — البيئة', color: '#059669' }
-        ];
-
-        const problem = sd.problem?.problem || '';
-        const sixM = sd.sixM || {};
-
-        const branchHtml = branches.map(b => {
-            const items = sixM[b.key];
-            const list = Array.isArray(items) && items.length
-                ? `<ul class="rca-list-print" style="padding-right:14px;">${items.map(v => `<li>${esc(v)}</li>`).join('')}</ul>`
-                : '<span style="color:#9ca3af;font-size:11px;">لا توجد أسباب</span>';
-            return `
-                <div class="rca-fishbone-branch" style="border-color:${b.color};">
-                    <div class="rca-fishbone-branch-title" style="color:${b.color};">${esc(b.label)}</div>
-                    ${list}
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${i.accent};">4</span>\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0623\u0633\u0628\u0627\u0628 \u0627\u0644\u062C\u0630\u0631\u064A\u0629</div>
+                <ul class="rca-list-print">${c.map(p=>`<li>${r(p)}</li>`).join("")}</ul>
+            </div>`:""}
+            ${this._printRootCauseBox(n,d,r)}
+        `},_buildPrintFishbone(e,t,r,i){const s=[{key:"man",label:"Man \u2014 \u0627\u0644\u0625\u0646\u0633\u0627\u0646",color:"#2563eb"},{key:"machine",label:"Machine \u2014 \u0627\u0644\u0622\u0644\u0627\u062A",color:"#7c3aed"},{key:"method",label:"Method \u2014 \u0627\u0644\u0637\u0631\u064A\u0642\u0629",color:"#0891b2"},{key:"material",label:"Material \u2014 \u0627\u0644\u0645\u0648\u0627\u062F",color:"#d97706"},{key:"measurement",label:"Measurement \u2014 \u0627\u0644\u0642\u064A\u0627\u0633",color:"#db2777"},{key:"environment",label:"Environment \u2014 \u0627\u0644\u0628\u064A\u0626\u0629",color:"#059669"}],a=e.problem?.problem||"",o=e.sixM||{},l=s.map(p=>{const u=o[p.key],m=Array.isArray(u)&&u.length?`<ul class="rca-list-print" style="padding-right:14px;">${u.map(b=>`<li>${r(b)}</li>`).join("")}</ul>`:'<span style="color:#9ca3af;font-size:11px;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0633\u0628\u0627\u0628</span>';return`
+                <div class="rca-fishbone-branch" style="border-color:${p.color};">
+                    <div class="rca-fishbone-branch-title" style="color:${p.color};">${r(p.label)}</div>
+                    ${m}
                 </div>
-            `;
-        }).join('');
-
-        const whys = [
-            { label: 'لماذا 1', text: sd.whys?.why1 },
-            { label: 'لماذا 2', text: sd.whys?.why2 },
-            { label: 'لماذا 3', text: sd.whys?.why3 }
-        ];
-
-        const summary = rca.rootCauseSummary || sd.rootCause?.rootCauseSummary || this.buildRootCauseSummary(rca);
-        const category = rca.rootCauseCategory || sd.rootCause?.rootCauseCategory || '';
-
-        return `
-            ${problem ? `
-            <div class="rca-fishbone-problem" style="border-color:${theme.accent};color:${theme.accent};margin-bottom:14px;">
-                &#9670; المشكلة: ${esc(problem)}
-            </div>` : ''}
-            <div class="rca-fishbone-wrap">${branchHtml}</div>
-            ${sd.primaryCause?.primaryCause ? `
-            <div class="rca-block" style="border:2px solid ${theme.accent};">
-                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">&#9733;</span>السبب الرئيسي المختار</div>
-                <div class="rca-text-panel">${esc(sd.primaryCause.primaryCause)}</div>
-            </div>` : ''}
+            `}).join(""),c=[{label:"\u0644\u0645\u0627\u0630\u0627 1",text:e.whys?.why1},{label:"\u0644\u0645\u0627\u0630\u0627 2",text:e.whys?.why2},{label:"\u0644\u0645\u0627\u0630\u0627 3",text:e.whys?.why3}],n=t.rootCauseSummary||e.rootCause?.rootCauseSummary||this.buildRootCauseSummary(t),d=t.rootCauseCategory||e.rootCause?.rootCauseCategory||"";return`
+            ${a?`
+            <div class="rca-fishbone-problem" style="border-color:${i.accent};color:${i.accent};margin-bottom:14px;">
+                &#9670; \u0627\u0644\u0645\u0634\u0643\u0644\u0629: ${r(a)}
+            </div>`:""}
+            <div class="rca-fishbone-wrap">${l}</div>
+            ${e.primaryCause?.primaryCause?`
+            <div class="rca-block" style="border:2px solid ${i.accent};">
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${i.accent};">&#9733;</span>\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0631\u0626\u064A\u0633\u064A \u0627\u0644\u0645\u062E\u062A\u0627\u0631</div>
+                <div class="rca-text-panel">${r(e.primaryCause.primaryCause)}</div>
+            </div>`:""}
             <div class="rca-block">
-                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">5W</span>تحليل 5 Whys على السبب الرئيسي</div>
-                ${this._printWhyChain(whys, theme, esc)}
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${i.accent};">5W</span>\u062A\u062D\u0644\u064A\u0644 5 Whys \u0639\u0644\u0649 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0631\u0626\u064A\u0633\u064A</div>
+                ${this._printWhyChain(c,i,r)}
             </div>
-            ${this._printRootCauseBox(summary, category, esc)}
-        `;
-    },
-
-    _buildPrintIsoBarrier(sd, rca, esc, theme) {
-        const steps = [
-            {
-                num: '1', title: 'الوقائع الموضوعية', body: sd.facts?.facts
-                    ? `<div class="rca-text-panel">${esc(sd.facts.facts)}</div>` : ''
-            },
-            {
-                num: '2', title: 'السبب المباشر', body: sd.immediate?.immediateCause ? `
-                    <div class="rca-text-panel">${esc(sd.immediate.immediateCause)}</div>
+            ${this._printRootCauseBox(n,d,r)}
+        `},_buildPrintIsoBarrier(e,t,r,i){const a=[{num:"1",title:"\u0627\u0644\u0648\u0642\u0627\u0626\u0639 \u0627\u0644\u0645\u0648\u0636\u0648\u0639\u064A\u0629",body:e.facts?.facts?`<div class="rca-text-panel">${r(e.facts.facts)}</div>`:""},{num:"2",title:"\u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u0645\u0628\u0627\u0634\u0631",body:e.immediate?.immediateCause?`
+                    <div class="rca-text-panel">${r(e.immediate.immediateCause)}</div>
                     <div class="rca-kv-row">
-                        <div class="rca-kv"><strong>سلوك غير آمن</strong>${esc(sd.immediate.unsafeAct || '—')}</div>
-                        <div class="rca-kv"><strong>وضع غير آمن</strong>${esc(sd.immediate.unsafeCondition || '—')}</div>
-                    </div>` : ''
-            },
-            {
-                num: '3', title: 'الحواجز الفاشلة / الغائبة',
-                body: (sd.barriers?.failedBarriers || []).length
-                    ? `<div class="rca-barrier-tags">${sd.barriers.failedBarriers.map(b =>
-                        `<span class="rca-barrier-tag" style="border-color:${theme.border};color:${theme.accent};">&#9888; ${esc(b)}</span>`
-                    ).join('')}</div>` : ''
-            },
-            {
-                num: '4', title: 'العوامل المساهمة',
-                body: (sd.contributing?.contributingFactors || []).length
-                    ? `<ul class="rca-list-print">${sd.contributing.contributingFactors.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : ''
-            },
-            {
-                num: '5', title: '5 Whys — التعمق',
-                body: this._printWhyChain([
-                    { label: 'لماذا 1', text: sd.whys?.why1 },
-                    { label: 'لماذا 2', text: sd.whys?.why2 },
-                    { label: 'لماذا 3', text: sd.whys?.why3 }
-                ], theme, esc)
-            },
-            {
-                num: '6', title: 'فجوة نظام الإدارة (ISO 45001)',
-                body: sd.managementGap?.managementGap
-                    ? `<div class="rca-kv" style="margin-top:0;border:2px solid ${theme.accent};background:${theme.light};"><strong>نوع الفجوة</strong>${esc(sd.managementGap.managementGap)}</div>` : ''
-            }
-        ].filter(s => s.body);
-
-        const flowHtml = steps.map(s => `
+                        <div class="rca-kv"><strong>\u0633\u0644\u0648\u0643 \u063A\u064A\u0631 \u0622\u0645\u0646</strong>${r(e.immediate.unsafeAct||"\u2014")}</div>
+                        <div class="rca-kv"><strong>\u0648\u0636\u0639 \u063A\u064A\u0631 \u0622\u0645\u0646</strong>${r(e.immediate.unsafeCondition||"\u2014")}</div>
+                    </div>`:""},{num:"3",title:"\u0627\u0644\u062D\u0648\u0627\u062C\u0632 \u0627\u0644\u0641\u0627\u0634\u0644\u0629 / \u0627\u0644\u063A\u0627\u0626\u0628\u0629",body:(e.barriers?.failedBarriers||[]).length?`<div class="rca-barrier-tags">${e.barriers.failedBarriers.map(c=>`<span class="rca-barrier-tag" style="border-color:${i.border};color:${i.accent};">&#9888; ${r(c)}</span>`).join("")}</div>`:""},{num:"4",title:"\u0627\u0644\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u0645\u0633\u0627\u0647\u0645\u0629",body:(e.contributing?.contributingFactors||[]).length?`<ul class="rca-list-print">${e.contributing.contributingFactors.map(c=>`<li>${r(c)}</li>`).join("")}</ul>`:""},{num:"5",title:"5 Whys \u2014 \u0627\u0644\u062A\u0639\u0645\u0642",body:this._printWhyChain([{label:"\u0644\u0645\u0627\u0630\u0627 1",text:e.whys?.why1},{label:"\u0644\u0645\u0627\u0630\u0627 2",text:e.whys?.why2},{label:"\u0644\u0645\u0627\u0630\u0627 3",text:e.whys?.why3}],i,r)},{num:"6",title:"\u0641\u062C\u0648\u0629 \u0646\u0638\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 (ISO 45001)",body:e.managementGap?.managementGap?`<div class="rca-kv" style="margin-top:0;border:2px solid ${i.accent};background:${i.light};"><strong>\u0646\u0648\u0639 \u0627\u0644\u0641\u062C\u0648\u0629</strong>${r(e.managementGap.managementGap)}</div>`:""}].filter(c=>c.body).map(c=>`
             <div class="rca-flow-step">
-                <div class="rca-flow-icon" style="background:${theme.accent};">${s.num}</div>
+                <div class="rca-flow-icon" style="background:${i.accent};">${c.num}</div>
                 <div class="rca-flow-body">
-                    <div class="rca-flow-step-title" style="color:${theme.accent};">${esc(s.title)}</div>
-                    ${s.body}
+                    <div class="rca-flow-step-title" style="color:${i.accent};">${r(c.title)}</div>
+                    ${c.body}
                 </div>
             </div>
-        `).join('');
-
-        const summary = rca.rootCauseSummary || sd.managementGap?.rootCauseSummary || this.buildRootCauseSummary(rca);
-        const category = rca.rootCauseCategory || sd.managementGap?.rootCauseCategory || '';
-
-        return `
+        `).join(""),o=t.rootCauseSummary||e.managementGap?.rootCauseSummary||this.buildRootCauseSummary(t),l=t.rootCauseCategory||e.managementGap?.rootCauseCategory||"";return`
             <div class="rca-block">
-                <div class="rca-block-title"><span class="rca-block-num" style="background:${theme.accent};">ISO</span>مسار التحليل — ISO 45001 + الحواجز</div>
-                <div class="rca-flow">${flowHtml}</div>
+                <div class="rca-block-title"><span class="rca-block-num" style="background:${i.accent};">ISO</span>\u0645\u0633\u0627\u0631 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u2014 ISO 45001 + \u0627\u0644\u062D\u0648\u0627\u062C\u0632</div>
+                <div class="rca-flow">${a}</div>
             </div>
-            ${this._printRootCauseBox(summary, category, esc)}
-        `;
-    },
-
-    inferMethodIdFromStepsData(stepsData) {
-        if (!stepsData || typeof stepsData !== 'object') return '';
-        const keys = Object.keys(stepsData);
-        if (keys.some((k) => k === 'why1' || k === 'rootCause' || /^why\d/.test(k))) return 'five-whys';
-        if (keys.includes('timeline') || keys.includes('barriers') || keys.includes('contributing') || keys.includes('rootCauses')) return 'icam';
-        if (keys.includes('sixM') || ['man', 'machine', 'method', 'material', 'measurement', 'environment'].some((k) => keys.includes(k))) return 'fishbone';
-        if (keys.includes('immediate') || keys.includes('managementGap') || keys.includes('barrierAnalysis')) return 'iso-barrier';
-        return '';
-    },
-
-    inferMethodIdFromLabel(label) {
-        const t = String(label || '').toLowerCase();
-        if (t.includes('whys') || t.includes('5 why')) return 'five-whys';
-        if (t.includes('icam')) return 'icam';
-        if (t.includes('fishbone') || t.includes('ishikawa') || t.includes('6m')) return 'fishbone';
-        if (t.includes('iso') || t.includes('barrier') || t.includes('حاجز')) return 'iso-barrier';
-        return '';
-    },
-
-    normalizeRcaForExport(rca) {
-        if (!rca) return null;
-
-        if (typeof rca === 'string') {
-            const trimmed = rca.trim();
-            if (!trimmed) return null;
-            if (trimmed.startsWith('{')) {
-                try { rca = JSON.parse(trimmed); } catch { return null; }
-            } else {
-                const method = this.inferMethodIdFromLabel(trimmed) || 'five-whys';
-                return {
-                    method,
-                    methodLabel: trimmed,
-                    stepsData: {},
-                    rootCauseSummary: ''
-                };
-            }
-        }
-
-        if (typeof rca !== 'object') return null;
-
-        let stepsData = rca.stepsData || {};
-        if (typeof stepsData === 'string') {
-            try { stepsData = JSON.parse(stepsData); } catch { stepsData = {}; }
-        }
-
-        let method = rca.method || this.inferMethodIdFromStepsData(stepsData) || this.inferMethodIdFromLabel(rca.methodLabel);
-        if (!method && (rca.rootCauseSummary || Object.keys(stepsData).length)) {
-            method = 'five-whys';
-        }
-        if (!method) return null;
-
-        const methodDef = this.METHODS[method] || this.METHODS['five-whys'];
-        return {
-            ...rca,
-            method,
-            methodLabel: rca.methodLabel || methodDef.label,
-            stepsData,
-            rootCauseSummary: rca.rootCauseSummary || this.buildRootCauseSummary({ method, stepsData })
-        };
-    },
-
-    buildPrintSection(rca, opts = {}) {
-        const normalized = this.normalizeRcaForExport(rca);
-        if (!normalized || !normalized.method) return '';
-
-        const esc = (v) => this._esc(v);
-        const method = this.METHODS[normalized.method];
-        if (!method) return '';
-
-        const methodLabel = normalized.methodLabel || method.label;
-        const reference = method.reference || '';
-        const theme = this.PRINT_THEMES[normalized.method] || this.PRINT_THEMES['five-whys'];
-        const sd = normalized.stepsData || {};
-
-        const builders = {
-            'five-whys': () => this._buildPrintFiveWhys(sd, normalized, esc, theme),
-            icam: () => this._buildPrintIcam(sd, normalized, esc, theme),
-            fishbone: () => this._buildPrintFishbone(sd, normalized, esc, theme),
-            'iso-barrier': () => this._buildPrintIsoBarrier(sd, normalized, esc, theme)
-        };
-
-        const bodyHtml = (builders[normalized.method] || builders['five-whys'])();
-        const wrapStyles = opts.includeStyles !== false ? `<style>${this.getPrintStyles()}</style>` : '';
-
-        return `
-            ${wrapStyles}
-            <div class="inv-print-section rca-print-section inv-s-rca" style="background:linear-gradient(135deg,${theme.light} 0%,#fff 100%);border-color:${theme.accent};">
-                ${this._printSectionHeader(methodLabel, reference, normalized, theme, esc)}
-                ${bodyHtml}
+            ${this._printRootCauseBox(o,l,r)}
+        `},inferMethodIdFromStepsData(e){if(!e||typeof e!="object")return"";const t=Object.keys(e);return t.some(r=>r==="why1"||r==="rootCause"||/^why\d/.test(r))?"five-whys":t.includes("timeline")||t.includes("barriers")||t.includes("contributing")||t.includes("rootCauses")?"icam":t.includes("sixM")||["man","machine","method","material","measurement","environment"].some(r=>t.includes(r))?"fishbone":t.includes("immediate")||t.includes("managementGap")||t.includes("barrierAnalysis")?"iso-barrier":""},inferMethodIdFromLabel(e){const t=String(e||"").toLowerCase();return t.includes("whys")||t.includes("5 why")?"five-whys":t.includes("icam")?"icam":t.includes("fishbone")||t.includes("ishikawa")||t.includes("6m")?"fishbone":t.includes("iso")||t.includes("barrier")||t.includes("\u062D\u0627\u062C\u0632")?"iso-barrier":""},normalizeRcaForExport(e){if(!e)return null;if(typeof e=="string"){const s=e.trim();if(!s)return null;if(s.startsWith("{"))try{e=JSON.parse(s)}catch{return null}else return{method:this.inferMethodIdFromLabel(s)||"five-whys",methodLabel:s,stepsData:{},rootCauseSummary:""}}if(typeof e!="object")return null;let t=e.stepsData||{};if(typeof t=="string")try{t=JSON.parse(t)}catch{t={}}let r=e.method||this.inferMethodIdFromStepsData(t)||this.inferMethodIdFromLabel(e.methodLabel);if(!r&&(e.rootCauseSummary||Object.keys(t).length)&&(r="five-whys"),!r)return null;const i=this.METHODS[r]||this.METHODS["five-whys"];return{...e,method:r,methodLabel:e.methodLabel||i.label,stepsData:t,rootCauseSummary:e.rootCauseSummary||this.buildRootCauseSummary({method:r,stepsData:t})}},buildPrintSection(e,t={}){const r=this.normalizeRcaForExport(e);if(!r||!r.method)return"";const i=u=>this._esc(u),s=this.METHODS[r.method];if(!s)return"";const a=r.methodLabel||s.label,o=s.reference||"",l=this.PRINT_THEMES[r.method]||this.PRINT_THEMES["five-whys"],c=r.stepsData||{},n={"five-whys":()=>this._buildPrintFiveWhys(c,r,i,l),icam:()=>this._buildPrintIcam(c,r,i,l),fishbone:()=>this._buildPrintFishbone(c,r,i,l),"iso-barrier":()=>this._buildPrintIsoBarrier(c,r,i,l)},d=(n[r.method]||n["five-whys"])();return`
+            ${t.includeStyles!==!1?`<style>${this.getPrintStyles()}</style>`:""}
+            <div class="inv-print-section rca-print-section inv-s-rca" style="background:linear-gradient(135deg,${l.light} 0%,#fff 100%);border-color:${l.accent};">
+                ${this._printSectionHeader(a,o,r,l,i)}
+                ${d}
             </div>
-        `;
-    }
-};
-
-if (typeof window !== 'undefined') {
-    window.InvestigationRCA = InvestigationRCA;
-}
+        `}};typeof window<"u"&&(window.InvestigationRCA=InvestigationRCA);
