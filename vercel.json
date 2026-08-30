@@ -5,19 +5,6 @@
       "includeFiles": "api/lib/data/**"
     }
   },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/forms", "dest": "/forms-hub.html" },
-    { "src": "/forms-hub", "dest": "/forms-hub.html" },
-    { "src": "/gate", "dest": "/gate-visitor-entry.html" },
-    { "src": "/visitors", "dest": "/gate-visitor-entry.html" },
-    { "src": "/gate-visitor-entry", "dest": "/gate-visitor-entry.html" },
-    { "src": "/observation", "dest": "/public-observation.html" },
-    { "src": "/near-miss", "dest": "/public-near-miss.html" },
-    { "src": "/fire-inspection", "dest": "/public-fire-inspection.html" },
-    { "src": "/daily-safety", "dest": "/public-daily-safety.html" },
-    { "handle": "filesystem" }
-  ],
   "headers": [
     {
       "source": "/service-worker.js",
