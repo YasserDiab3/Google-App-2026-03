@@ -2,12 +2,12 @@
   "name": "نموذج الإبلاغ عن وشيكة وقوع حادث | ICAPP",
   "short_name": "الإبلاغ عن وشيكة",
   "description": "الإبلاغ السريع عن الحوادث الوشيكة (Near Miss) بدون تسجيل دخول",
-  "start_url": "./public-near-miss.html",
+  "start_url": "/near-miss?source=pwa",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "orientation": "portrait-primary",
-  "scope": "./",
+  "scope": "/near-miss",
   "icons": [
     {
       "src": "./icons/icon-72x72.png",

@@ -2,12 +2,12 @@
   "name": "نموذج فحص مهمات ومعدات الحريق | ICAPP",
   "short_name": "فحص مهمات الحريق",
   "description": "فحص طفايات وشبكات الحريق الميدانية بدون تسجيل دخول",
-  "start_url": "./public-fire-inspection.html",
+  "start_url": "/fire-inspection?source=pwa",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "orientation": "portrait-primary",
-  "scope": "./",
+  "scope": "/fire-inspection",
   "icons": [
     {
       "src": "./icons/icon-72x72.png",

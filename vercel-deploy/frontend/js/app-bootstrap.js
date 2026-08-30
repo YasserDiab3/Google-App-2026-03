@@ -15,6 +15,39 @@
             if (h === 'safetyicapp-ecru.vercel.app' || (h.endsWith('.vercel.app') && !h.includes('localhost'))) {
                 const targetUrl = 'https://www.safety-icapp.com' + window.location.pathname + window.location.search + window.location.hash;
                 window.location.replace(targetUrl);
+                return;
+            }
+        } catch (_) {}
+    })();
+
+    // 🚀 توجيه تلقائي فوري للمسارات العامة إذا تم فتحها من index.html (تجاوز تسجيل الدخول تماماً)
+    (function redirectPublicRoutesFromIndex() {
+        try {
+            const hash = (window.location.hash || '').toLowerCase();
+            const search = (window.location.search || '').toLowerCase();
+            if (hash.includes('forms-hub') || hash === '#forms' || search.includes('page=forms-hub')) {
+                window.location.replace('/forms-hub');
+                return;
+            }
+            if (hash.includes('gate') || hash.includes('visitor') || search.includes('page=gate')) {
+                window.location.replace('/gate-visitor-entry');
+                return;
+            }
+            if (hash.includes('observation') || search.includes('page=observation')) {
+                window.location.replace('/observation');
+                return;
+            }
+            if (hash.includes('near-miss') || search.includes('page=near-miss')) {
+                window.location.replace('/near-miss');
+                return;
+            }
+            if (hash.includes('fire-inspection') || search.includes('page=fire-inspection')) {
+                window.location.replace('/fire-inspection');
+                return;
+            }
+            if (hash.includes('daily-safety') || search.includes('page=daily-safety')) {
+                window.location.replace('/daily-safety');
+                return;
             }
         } catch (_) {}
     })();

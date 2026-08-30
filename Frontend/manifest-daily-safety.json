@@ -2,11 +2,12 @@
   "name": "نموذج المرور اليومي لمسئولي السلامة - ICAPP",
   "short_name": "المرور اليومي",
   "description": "المرور اليومي الميداني لقائمة التحقق الشاملة لمسؤولي السلامة والصحة المهنية",
-  "start_url": "./public-daily-safety.html",
+  "start_url": "/daily-safety?source=pwa",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#059669",
   "orientation": "portrait-primary",
+  "scope": "/daily-safety",
   "lang": "ar",
   "dir": "rtl",
   "icons": [

@@ -2,12 +2,12 @@
   "name": "نموذج تسجيل الملاحظات اليومية | ICAPP",
   "short_name": "الملاحظات اليومية",
   "description": "تسجيل الملاحظات الميدانية ومخاطر السلامة والصحة المهنية فورياً وبدون تسجيل دخول",
-  "start_url": "./public-observation.html",
+  "start_url": "/observation?source=pwa",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "orientation": "portrait-primary",
-  "scope": "./",
+  "scope": "/observation",
   "icons": [
     {
       "src": "./icons/icon-72x72.png",
