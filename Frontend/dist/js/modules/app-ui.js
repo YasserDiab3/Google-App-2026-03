@@ -1,11 +1,196 @@
-(function(){try{const i=typeof localStorage<"u"&&localStorage.getItem("theme")||"light",t="emerald";if(document.documentElement&&(document.documentElement.setAttribute("data-theme",i),document.documentElement.setAttribute("data-color-theme",t)),document.body&&document.body.setAttribute("data-color-theme",t),typeof localStorage<"u")try{localStorage.setItem("color-theme",t)}catch{}}catch{}})(),window.UI={_notificationsInterval:null,_notificationsClickHandler:null,_loginScreenRetryCount:0,_backgroundSyncInterval:null,_backgroundSyncIntervalTime:120*1e3,showLoginScreen(){const e=sessionStorage.getItem("hse_current_session"),i=localStorage.getItem("hse_remember_user");if(e||i)try{const d=JSON.parse(e||i);if(d&&d.email){if(AppState.debugMode&&Utils.safeLog("\u26A0\uFE0F \u062A\u0645 \u0645\u062D\u0627\u0648\u0644\u0629 \u0639\u0631\u0636 \u0634\u0627\u0634\u0629 \u0627\u0644\u062F\u062E\u0648\u0644 \u0631\u063A\u0645 \u0648\u062C\u0648\u062F \u062C\u0644\u0633\u0629 \u0646\u0634\u0637\u0629 - \u0645\u062D\u0627\u0648\u0644\u0629 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u062C\u0644\u0633\u0629"),!AppState.currentUser&&typeof window.Auth<"u"&&typeof window.Auth.checkRememberedUser=="function"&&window.Auth.checkRememberedUser()){AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u062C\u0644\u0633\u0629 \u0628\u0646\u062C\u0627\u062D - \u0639\u0631\u0636 \u0627\u0644\u062A\u0637\u0628\u064A\u0642"),typeof window.UI<"u"&&typeof window.UI.showMainApp=="function"&&window.UI.showMainApp();return}if(AppState.currentUser){AppState.debugMode&&Utils.safeLog("\u2705 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0633\u062C\u0644 \u062F\u062E\u0648\u0644 \u0628\u0627\u0644\u0641\u0639\u0644 - \u0639\u0631\u0636 \u0627\u0644\u062A\u0637\u0628\u064A\u0642"),typeof window.UI<"u"&&typeof window.UI.showMainApp=="function"&&window.UI.showMainApp();return}if(this._loginScreenRetryCount<3){this._loginScreenRetryCount++,AppState.debugMode&&Utils.safeLog(`\u23F3 \u0627\u0646\u062A\u0638\u0627\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0642\u0628\u0644 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u062C\u0644\u0633\u0629... (\u0645\u062D\u0627\u0648\u0644\u0629 ${this._loginScreenRetryCount}/3)`);const p=this._loginScreenRetryCount;setTimeout(()=>{if(typeof window.Auth<"u"&&typeof window.Auth.checkRememberedUser=="function"){const f=window.Auth.checkRememberedUser();f&&typeof window.UI<"u"&&typeof window.UI.showMainApp=="function"?(window.UI._loginScreenRetryCount=0,window.UI.showMainApp()):!f&&p>=3&&(window.UI._loginScreenRetryCount=0,typeof window.UI<"u"&&typeof window.UI.showLoginScreen=="function"&&window.UI.showLoginScreen())}},300);return}else this._loginScreenRetryCount=0,AppState.debugMode&&Utils.safeLog("\u26A0\uFE0F \u0641\u0634\u0644 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u062C\u0644\u0633\u0629 \u0628\u0639\u062F 3 \u0645\u062D\u0627\u0648\u0644\u0627\u062A - \u0639\u0631\u0636 \u0634\u0627\u0634\u0629 \u0627\u0644\u062F\u062E\u0648\u0644")}}catch(d){AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0644\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062C\u0644\u0633\u0629:",d)}if(AppState.currentUser){AppState.debugMode&&Utils.safeLog("\u26A0\uFE0F \u062A\u0645 \u0645\u062D\u0627\u0648\u0644\u0629 \u0639\u0631\u0636 \u0634\u0627\u0634\u0629 \u0627\u0644\u062F\u062E\u0648\u0644 \u0631\u063A\u0645 \u0648\u062C\u0648\u062F \u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0633\u062C\u0644 \u062F\u062E\u0648\u0644 - \u062A\u0645 \u0627\u0644\u062A\u062C\u0627\u0647\u0644"),this._loginScreenRetryCount=0;return}this._loginScreenRetryCount=0;const t=document.getElementById("hse-session-restore-overlay");t&&t.parentNode&&t.remove();const n=document.getElementById("login-screen"),a=document.getElementById("main-app"),s=document.getElementById("username"),o=document.getElementById("password"),r=document.getElementById("remember-me"),l=document.getElementById("login-form");if(s&&(s.value=""),o&&(o.value=""),r&&(r.checked=!1),l){const d=l.querySelector("#login-submit-btn")||document.getElementById("login-submit-btn")||l.querySelector('button[type="submit"]');if(d){d.disabled=!1,d.removeAttribute("aria-busy");const p=localStorage.getItem("language")==="en"?"Log in":"\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644";d.innerHTML='<i class="fas fa-sign-in-alt ml-2" aria-hidden="true"></i><span id="login-submit-text">'+p+"</span>"}}n&&(n.style.display="flex"),a&&(a.style.display="none"),s&&s.focus(),document.body.classList.remove("app-active"),this.updateLoginLogo(),this.updateCompanyBranding(),AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u0639\u0631\u0636 \u0634\u0627\u0634\u0629 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 - \u062A\u0645 \u0645\u0633\u062D \u0627\u0644\u062D\u0642\u0648\u0644 \u0648\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0632\u0631")},renderSummary(){const e=document.getElementById("emergency-summary");if(!e)return;const t=this.getAlerts().filter(o=>o.status!=="\u0645\u063A\u0644\u0642"),n=t.filter(o=>o.severity==="\u0639\u0627\u0644\u064A\u0629"),a=t.filter(o=>!o.acknowledgedAt),s=t.filter(o=>{if(!o.autoEscalateMinutes||o.acknowledgedAt)return!1;const r=new Date(o.createdAt||o.date||new Date);return(new Date-r)/(1e3*60)>=o.autoEscalateMinutes});e.innerHTML=`
+// تطبيق الوضع الليلي فوراً عند تحميل الصفحة (قبل تعريف UI)
+(function applyThemeImmediately() {
+    try {
+        const savedTheme = (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) || 'light';
+        const savedColorTheme = 'emerald';
+        if (document.documentElement) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.documentElement.setAttribute('data-color-theme', savedColorTheme);
+        }
+        if (document.body) {
+            document.body.setAttribute('data-color-theme', savedColorTheme);
+        }
+        if (typeof localStorage !== 'undefined') {
+            try {
+                localStorage.setItem('color-theme', savedColorTheme);
+            } catch (_) {}
+        }
+    } catch (_) {}
+})();
+
+// تعريف UI كمتغير عام (global) ليكون متاحاً لجميع الملفات
+window.UI = {
+    // مراجع للـ intervals والـ listeners للتنظيف
+    _notificationsInterval: null,
+    _notificationsClickHandler: null,
+    _loginScreenRetryCount: 0, // عداد محاولات استعادة الجلسة
+    _backgroundSyncInterval: null, // ✅ مزامنة تلقائية دورية في الخلفية
+    _backgroundSyncIntervalTime: 2 * 60 * 1000, // 2 دقيقة (120000 مللي ثانية) - محسّن ليتناسب مع عمليات التسجيل والحفظ والاستدعاء
+    /**
+     * عرض شاشة تسجيل الدخول
+     */
+    showLoginScreen() {
+        // التحقق من وجود جلسة نشطة قبل العودة لشاشة الدخول
+        // هذا يمنع تسجيل الخروج التلقائي عن طريق الخطأ
+        const sessionData = sessionStorage.getItem('hse_current_session');
+        const rememberData = localStorage.getItem('hse_remember_user');
+
+        // ✅ إصلاح: التحقق من وجود بيانات الجلسة أولاً (حتى لو لم يكن AppState.currentUser معيّناً بعد)
+        // هذا مهم عند إعادة تحميل الصفحة حيث قد تكون البيانات موجودة لكن AppState.currentUser لم يُعيّن بعد
+        if (sessionData || rememberData) {
+            try {
+                // التحقق من صحة بيانات الجلسة
+                const userData = sessionData ? JSON.parse(sessionData) : JSON.parse(rememberData);
+                if (userData && userData.email) {
+                    // هناك جلسة صالحة - لا نعرض شاشة الدخول
+                    if (AppState.debugMode) Utils.safeLog('⚠️ تم محاولة عرض شاشة الدخول رغم وجود جلسة نشطة - محاولة استعادة الجلسة');
+                    
+                    // إذا كان AppState.currentUser غير معيّن بعد، نحاول استعادته
+                    if (!AppState.currentUser && typeof window.Auth !== 'undefined' && typeof window.Auth.checkRememberedUser === 'function') {
+                        // محاولة استعادة الجلسة فوراً
+                        const isLoggedIn = window.Auth.checkRememberedUser();
+                        if (isLoggedIn) {
+                            // تم استعادة الجلسة بنجاح - عرض التطبيق
+                            if (AppState.debugMode) Utils.safeLog('✅ تم استعادة الجلسة بنجاح - عرض التطبيق');
+                            if (typeof window.UI !== 'undefined' && typeof window.UI.showMainApp === 'function') {
+                                window.UI.showMainApp();
+                            }
+                            return;
+                        }
+                    }
+                    
+                    // إذا كان AppState.currentUser معيّناً بالفعل، نعرض التطبيق مباشرة
+                    if (AppState.currentUser) {
+                        if (AppState.debugMode) Utils.safeLog('✅ المستخدم مسجل دخول بالفعل - عرض التطبيق');
+                        if (typeof window.UI !== 'undefined' && typeof window.UI.showMainApp === 'function') {
+                            window.UI.showMainApp();
+                        }
+                        return;
+                    }
+                    
+                    // إذا لم نتمكن من استعادة الجلسة بعد، ننتظر قليلاً ثم نحاول مرة أخرى
+                    // هذا يمنع عرض شاشة الدخول مؤقتاً إذا كانت هناك جلسة لكن البيانات لم تُحمّل بعد
+                    // نحد من عدد المحاولات لتجنب الحلقات اللانهائية
+                    if (this._loginScreenRetryCount < 3) {
+                        this._loginScreenRetryCount++;
+                        if (AppState.debugMode) Utils.safeLog(`⏳ انتظار تحميل البيانات قبل استعادة الجلسة... (محاولة ${this._loginScreenRetryCount}/3)`);
+                        const retryCount = this._loginScreenRetryCount; // حفظ قيمة العداد للاستخدام في setTimeout
+                        setTimeout(() => {
+                            if (typeof window.Auth !== 'undefined' && typeof window.Auth.checkRememberedUser === 'function') {
+                                const isLoggedIn = window.Auth.checkRememberedUser();
+                                if (isLoggedIn && typeof window.UI !== 'undefined' && typeof window.UI.showMainApp === 'function') {
+                                    window.UI._loginScreenRetryCount = 0; // إعادة تعيين العداد عند النجاح
+                                    window.UI.showMainApp();
+                                } else if (!isLoggedIn && retryCount >= 3) {
+                                    // إذا فشلت استعادة الجلسة بعد 3 محاولات، نعرض شاشة الدخول
+                                    window.UI._loginScreenRetryCount = 0; // إعادة تعيين العداد
+                                    // نستدعي showLoginScreen مرة أخرى لعرض شاشة الدخول
+                                    if (typeof window.UI !== 'undefined' && typeof window.UI.showLoginScreen === 'function') {
+                                        window.UI.showLoginScreen();
+                                    }
+                                }
+                            }
+                        }, 300);
+                        return; // لا نعرض شاشة الدخول الآن - ننتظر استعادة الجلسة
+                    } else {
+                        // تم تجاوز عدد المحاولات - نستمر في عرض شاشة الدخول
+                        this._loginScreenRetryCount = 0; // إعادة تعيين العداد
+                        if (AppState.debugMode) Utils.safeLog('⚠️ فشل استعادة الجلسة بعد 3 محاولات - عرض شاشة الدخول');
+                    }
+                }
+            } catch (e) {
+                // إذا كانت البيانات تالفة، نستمر في عرض شاشة الدخول
+                if (AppState.debugMode) Utils.safeWarn('⚠️ خطأ في تحليل بيانات الجلسة:', e);
+            }
+        }
+
+        // التحقق الإضافي: إذا كان AppState.currentUser معيّناً بالفعل، لا نعرض شاشة الدخول
+        if (AppState.currentUser) {
+            if (AppState.debugMode) Utils.safeLog('⚠️ تم محاولة عرض شاشة الدخول رغم وجود مستخدم مسجل دخول - تم التجاهل');
+            this._loginScreenRetryCount = 0; // إعادة تعيين العداد
+            return;
+        }
+
+        // إعادة تعيين العداد عند عرض شاشة الدخول فعلياً
+        this._loginScreenRetryCount = 0;
+
+        // إزالة overlay استعادة الجلسة عند عرض شاشة الدخول فعلياً
+        const restoreOverlay = document.getElementById('hse-session-restore-overlay');
+        if (restoreOverlay && restoreOverlay.parentNode) restoreOverlay.remove();
+
+        const loginScreen = document.getElementById('login-screen');
+        const mainApp = document.getElementById('main-app');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const rememberCheckbox = document.getElementById('remember-me');
+        const loginForm = document.getElementById('login-form');
+
+        // مسح حقول النموذج
+        if (usernameInput) {
+            usernameInput.value = '';
+        }
+        if (passwordInput) {
+            passwordInput.value = '';
+        }
+        if (rememberCheckbox) {
+            rememberCheckbox.checked = false;
+        }
+
+        // إعادة تعيين حالة زر تسجيل الدخول (مع مراعاة اللغة المحفوظة)
+        // الزر الفعلي في index.html هو #login-submit-btn و type="button" وليس submit
+        if (loginForm) {
+            const submitBtn = loginForm.querySelector('#login-submit-btn')
+                || document.getElementById('login-submit-btn')
+                || loginForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.removeAttribute('aria-busy');
+                const loginText = (localStorage.getItem('language') === 'en') ? 'Log in' : 'تسجيل الدخول';
+                submitBtn.innerHTML = '<i class="fas fa-sign-in-alt ml-2" aria-hidden="true"></i><span id="login-submit-text">' + loginText + '</span>';
+            }
+        }
+
+        if (loginScreen) loginScreen.style.display = 'flex';
+        if (mainApp) mainApp.style.display = 'none';
+        if (usernameInput) usernameInput.focus();
+        document.body.classList.remove('app-active');
+
+        // تحديث شعار الشركة في شاشة تسجيل الدخول
+        this.updateLoginLogo();
+
+        // تحديث معلومات الشركة (الاسم)
+        this.updateCompanyBranding();
+
+        // ملاحظة: تهيئة الأحداث تتم الآن في login-init-fixed.js
+        // لا حاجة لإعادة تهيئة الأحداث هنا لتجنب التعارض
+        // إذا كان login-init-fixed.js محملاً، سيعيد تهيئة الأحداث تلقائياً
+        if (AppState.debugMode) Utils.safeLog('✅ تم عرض شاشة تسجيل الدخول - تم مسح الحقول وإعادة تعيين الزر');
+    },
+
+    renderSummary() {
+        const container = document.getElementById('emergency-summary');
+        if (!container) return;
+
+        const alerts = this.getAlerts();
+        const activeAlerts = alerts.filter(alert => alert.status !== 'مغلق');
+        const highSeverity = activeAlerts.filter(alert => alert.severity === 'عالية');
+        const unacknowledged = activeAlerts.filter(alert => !alert.acknowledgedAt);
+        const escalated = activeAlerts.filter(alert => {
+            if (!alert.autoEscalateMinutes) return false;
+            if (alert.acknowledgedAt) return false;
+            const createdAt = new Date(alert.createdAt || alert.date || new Date());
+            const minutesSince = (new Date() - createdAt) / (1000 * 60);
+            return minutesSince >= alert.autoEscalateMinutes;
+        });
+
+        container.innerHTML = `
             <div class="summary-card">
                 <div class="summary-card-icon bg-red-100 text-red-600">
                     <i class="fas fa-bolt"></i>
                 </div>
                 <div>
-                    <p class="summary-card-label">\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0646\u0634\u0637\u0629</p>
-                    <p class="summary-card-value">${t.length}</p>
+                    <p class="summary-card-label">تنبيهات نشطة</p>
+                    <p class="summary-card-value">${activeAlerts.length}</p>
                 </div>
             </div>
             <div class="summary-card">
@@ -13,8 +198,8 @@
                     <i class="fas fa-exclamation"></i>
                 </div>
                 <div>
-                    <p class="summary-card-label">\u062E\u0637\u0648\u0631\u0629 \u0639\u0627\u0644\u064A\u0629</p>
-                    <p class="summary-card-value">${n.length}</p>
+                    <p class="summary-card-label">خطورة عالية</p>
+                    <p class="summary-card-value">${highSeverity.length}</p>
                 </div>
             </div>
             <div class="summary-card">
@@ -22,8 +207,8 @@
                     <i class="fas fa-user-clock"></i>
                 </div>
                 <div>
-                    <p class="summary-card-label">\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F</p>
-                    <p class="summary-card-value">${a.length}</p>
+                    <p class="summary-card-label">بانتظار الاعتماد</p>
+                    <p class="summary-card-value">${unacknowledged.length}</p>
                 </div>
             </div>
             <div class="summary-card">
@@ -31,330 +216,3214 @@
                     <i class="fas fa-arrow-up"></i>
                 </div>
                 <div>
-                    <p class="summary-card-label">\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0645\u062A\u0635\u0627\u0639\u062F\u0629</p>
-                    <p class="summary-card-value">${s.length}</p>
+                    <p class="summary-card-label">تنبيهات متصاعدة</p>
+                    <p class="summary-card-value">${escalated.length}</p>
                 </div>
             </div>
-        `},renderAll(){if(typeof Emergency<"u"&&typeof Emergency.renderAll=="function"){Emergency.renderAll();return}this.renderSummary();const e=document.querySelector("#emergency-section .tab-btn.active");if(e){const i=e.getAttribute("data-tab");i==="alerts"?(this.renderAlertsBoard(),this.renderTimelineBoard()):i==="plans"&&this.renderPlansBoard()}else this.renderAlertsBoard(),this.renderTimelineBoard(),this.renderPlansBoard();typeof NotificationsManager<"u"&&NotificationsManager.updateBadge()},renderAlertsBoard(){const e=document.getElementById("emergency-alerts-board");if(!e)return;const i=this.getFilteredAlerts();if(i.length===0){e.innerHTML=`
+        `;
+    },
+
+    /** تحديث لوحة الطوارئ؛ يُفوَّض إلى Emergency عند التوفر (رسم مؤجّل بين الإطارات). */
+    renderAll() {
+        if (typeof Emergency !== 'undefined' && typeof Emergency.renderAll === 'function') {
+            Emergency.renderAll();
+            return;
+        }
+        this.renderSummary();
+        const activeTab = document.querySelector('#emergency-section .tab-btn.active');
+        if (activeTab) {
+            const tabId = activeTab.getAttribute('data-tab');
+            if (tabId === 'alerts') {
+                this.renderAlertsBoard();
+                this.renderTimelineBoard();
+            } else if (tabId === 'plans') {
+                this.renderPlansBoard();
+            }
+        } else {
+            this.renderAlertsBoard();
+            this.renderTimelineBoard();
+            this.renderPlansBoard();
+        }
+        if (typeof NotificationsManager !== 'undefined') {
+            NotificationsManager.updateBadge();
+        }
+    },
+
+    renderAlertsBoard() {
+        const container = document.getElementById('emergency-alerts-board');
+        if (!container) return;
+
+        const alerts = this.getFilteredAlerts();
+        if (alerts.length === 0) {
+            container.innerHTML = `
                 <div class="empty-state py-10 text-center">
                     <i class="fas fa-check-circle text-4xl text-green-400 mb-3"></i>
-                    <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629</p>
+                    <p class="text-gray-500">لا توجد تنبيهات مطابقة لعوامل التصفية الحالية</p>
                 </div>
-            `;return}e.innerHTML=`
+            `;
+            return;
+        }
+
+        container.innerHTML = `
             <div class="table-wrapper" style="overflow-x: auto;">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>\u0627\u0644\u062A\u0646\u0628\u064A\u0647</th>
-                            <th>\u0627\u0644\u062E\u0637\u0648\u0631\u0629</th>
-                            <th>\u0627\u0644\u0642\u0646\u0648\u0627\u062A</th>
-                            <th>\u0627\u0644\u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u0645\u062A\u0623\u062B\u0631\u0629</th>
-                            <th>\u0641\u0631\u0642 \u0627\u0644\u0627\u0633\u062A\u062C\u0627\u0628\u0629</th>
-                            <th>\u0627\u0644\u062D\u0627\u0644\u0629</th>
-                            <th>\u0627\u0644\u0645\u062F\u0629</th>
-                            <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                            <th>التنبيه</th>
+                            <th>الخطورة</th>
+                            <th>القنوات</th>
+                            <th>المنطقة المتأثرة</th>
+                            <th>فرق الاستجابة</th>
+                            <th>الحالة</th>
+                            <th>المدة</th>
+                            <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${i.map(t=>this.renderAlertRow(t)).join("")}
+                        ${alerts.map(alert => this.renderAlertRow(alert)).join('')}
                     </tbody>
                 </table>
             </div>
-        `},renderAlertRow(e){const i=e.severity==="\u0639\u0627\u0644\u064A\u0629"?"badge-danger":e.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"badge-warning":"badge-info",t=e.status==="\u0645\u063A\u0644\u0642"?"badge-success":e.status==="\u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629"?"badge-warning":"badge-danger",n=(e.assignedTeams||[]).map(c=>`
-            <span class="badge badge-info">${Utils.escapeHTML(c)}</span>
-        `).join(""),a=(e.channels||[]).map(c=>`
-            <span class="badge badge-secondary">${Utils.escapeHTML(c)}</span>
-        `).join(""),s=new Date(e.createdAt||e.date||new Date),o=Math.floor((new Date-s)/(1e3*60)),r=Math.floor(o/60),l=o%60,d=r>0?`${r} \u0633 ${l} \u062F`:`${l} \u062F`,p=e.acknowledgedAt?`<span class="text-xs text-gray-500">\u062A\u0645 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F ${Utils.formatDateTime(e.acknowledgedAt)}</span>`:'<span class="text-xs text-red-500">\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F</span>',f=e.isEscalated?'<span class="badge badge-danger ml-2"><i class="fas fa-arrow-up ml-1"></i>\u0645\u062A\u0635\u0627\u0639\u062F</span>':"";return`
+        `;
+    },
+
+    renderAlertRow(alert) {
+        const severityClass = alert.severity === 'عالية'
+            ? 'badge-danger'
+            : alert.severity === 'متوسطة'
+                ? 'badge-warning'
+                : 'badge-info';
+        const statusClass = alert.status === 'مغلق'
+            ? 'badge-success'
+            : alert.status === 'قيد المعالجة'
+                ? 'badge-warning'
+                : 'badge-danger';
+        const assignedTeams = (alert.assignedTeams || []).map(team => `
+            <span class="badge badge-info">${Utils.escapeHTML(team)}</span>
+        `).join('');
+        const channels = (alert.channels || []).map(channel => `
+            <span class="badge badge-secondary">${Utils.escapeHTML(channel)}</span>
+        `).join('');
+        const createdAt = new Date(alert.createdAt || alert.date || new Date());
+        const minutesSince = Math.floor((new Date() - createdAt) / (1000 * 60));
+        const hours = Math.floor(minutesSince / 60);
+        const mins = minutesSince % 60;
+        const durationLabel = hours > 0 ? `${hours} س ${mins} د` : `${mins} د`;
+        const ackLabel = alert.acknowledgedAt
+            ? `<span class="text-xs text-gray-500">تم الاعتماد ${Utils.formatDateTime(alert.acknowledgedAt)}</span>`
+            : '<span class="text-xs text-red-500">بانتظار الاعتماد</span>';
+        const escalationBadge = alert.isEscalated
+            ? '<span class="badge badge-danger ml-2"><i class="fas fa-arrow-up ml-1"></i>متصاعد</span>'
+            : '';
+
+        return `
             <tr>
                 <td>
                     <div class="font-semibold text-gray-900 flex items-center gap-2">
-                        ${Utils.escapeHTML(e.title||"")}
-                        ${e.requiresEvacuation?'<span class="badge badge-danger">\u0625\u062E\u0644\u0627\u0621</span>':""}
-                        ${f}
+                        ${Utils.escapeHTML(alert.title || '')}
+                        ${alert.requiresEvacuation ? '<span class="badge badge-danger">إخلاء</span>' : ''}
+                        ${escalationBadge}
                     </div>
                     <div class="text-xs text-gray-500 mt-1">
-                        ${Utils.escapeHTML(e.description||"").substring(0,140)}${e.description&&e.description.length>140?"...":""}
+                        ${Utils.escapeHTML(alert.description || '').substring(0, 140)}${alert.description && alert.description.length > 140 ? '...' : ''}
                     </div>
                     <div class="text-xs text-gray-400 mt-1">
-                        \u0623\u064F\u0637\u0644\u0642 \u0628\u0648\u0627\u0633\u0637\u0629 ${Utils.escapeHTML(e.createdBy?.name||"\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641")} \u0641\u064A ${Utils.formatDateTime(e.createdAt||e.date)}
+                        أُطلق بواسطة ${Utils.escapeHTML(alert.createdBy?.name || 'غير معروف')} في ${Utils.formatDateTime(alert.createdAt || alert.date)}
                     </div>
                 </td>
                 <td>
-                    <span class="badge ${i}">${e.severity||"-"}</span>
+                    <span class="badge ${severityClass}">${alert.severity || '-'}</span>
                 </td>
                 <td>
-                    <div class="flex flex-wrap gap-1">${a||'<span class="text-xs text-gray-400">\u063A\u064A\u0631 \u0645\u062D\u062F\u062F</span>'}</div>
+                    <div class="flex flex-wrap gap-1">${channels || '<span class="text-xs text-gray-400">غير محدد</span>'}</div>
                 </td>
                 <td>
-                    <div class="text-sm text-gray-800">${Utils.escapeHTML(e.impactArea||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F")}</div>
+                    <div class="text-sm text-gray-800">${Utils.escapeHTML(alert.impactArea || 'غير محدد')}</div>
                 </td>
                 <td>
-                    <div class="flex flex-wrap gap-1">${n||'<span class="text-xs text-gray-400">\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u064A\u064A\u0646</span>'}</div>
+                    <div class="flex flex-wrap gap-1">${assignedTeams || '<span class="text-xs text-gray-400">لم يتم التعيين</span>'}</div>
                 </td>
                 <td>
                     <div class="flex flex-col gap-1">
-                        <span class="badge ${t}">${e.status||"\u0646\u0634\u0637"}</span>
-                        ${p}
+                        <span class="badge ${statusClass}">${alert.status || 'نشط'}</span>
+                        ${ackLabel}
                     </div>
                 </td>
                 <td>
-                    <div class="text-sm text-gray-800">${d}</div>
-                    ${e.autoEscalateMinutes?`<div class="text-xs text-gray-500">\u0627\u0644\u062A\u0635\u0639\u064A\u062F \u0628\u0639\u062F ${e.autoEscalateMinutes} \u062F</div>`:""}
+                    <div class="text-sm text-gray-800">${durationLabel}</div>
+                    ${alert.autoEscalateMinutes ? `<div class="text-xs text-gray-500">التصعيد بعد ${alert.autoEscalateMinutes} د</div>` : ''}
                 </td>
                 <td>
                     <div class="flex flex-wrap gap-2">
-                        <button class="btn-icon btn-icon-info" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644" onclick="Emergency.viewAlert('${e.id}')">
+                        <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Emergency.viewAlert('${alert.id}')">
                             <i class="fas fa-eye"></i>
                         </button>
-                        ${e.acknowledgedAt?"":`
-                            <button class="btn-icon btn-icon-success" title="\u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u062A\u0646\u0628\u064A\u0647" onclick="Emergency.acknowledgeAlert('${e.id}')">
+                        ${!alert.acknowledgedAt ? `
+                            <button class="btn-icon btn-icon-success" title="اعتماد التنبيه" onclick="Emergency.acknowledgeAlert('${alert.id}')">
                                 <i class="fas fa-check"></i>
                             </button>
-                        `}
-                        ${e.status!=="\u0645\u063A\u0644\u0642"?`
-                            <button class="btn-icon btn-icon-primary" title="\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u062A\u0646\u0628\u064A\u0647" onclick="Emergency.resolveAlert('${e.id}')">
+                        ` : ''}
+                        ${alert.status !== 'مغلق' ? `
+                            <button class="btn-icon btn-icon-primary" title="إغلاق التنبيه" onclick="Emergency.resolveAlert('${alert.id}')">
                                 <i class="fas fa-flag-checkered"></i>
                             </button>
-                        `:""}
+                        ` : ''}
                     </div>
                 </td>
             </tr>
-        `},renderTimelineBoard(){const e=document.getElementById("emergency-timeline-board");if(!e)return;const i=this.buildTimeline().slice(0,12);if(i.length===0){e.innerHTML=`
+        `;
+    },
+
+    renderTimelineBoard() {
+        const container = document.getElementById('emergency-timeline-board');
+        if (!container) return;
+
+        const timeline = this.buildTimeline().slice(0, 12);
+        if (timeline.length === 0) {
+            container.innerHTML = `
                 <div class="text-center text-gray-500 text-sm py-4">
-                    \u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0646\u0634\u0637\u0629 \u062D\u062F\u064A\u062B\u0629
+                    لا توجد أنشطة حديثة
                 </div>
-            `;return}e.innerHTML=`
+            `;
+            return;
+        }
+
+        container.innerHTML = `
             <div class="space-y-4">
-                ${i.map(t=>`
-                    <div class="timeline-entry border-l-4 pl-4 ${this.getTimelineColor(t.type)}">
+                ${timeline.map(entry => `
+                    <div class="timeline-entry border-l-4 pl-4 ${this.getTimelineColor(entry.type)}">
                         <div class="flex items-center justify-between">
-                            <div class="font-semibold text-gray-800">${Utils.escapeHTML(t.title)}</div>
-                            <div class="text-xs text-gray-500">${Utils.formatDateTime(t.timestamp)}</div>
+                            <div class="font-semibold text-gray-800">${Utils.escapeHTML(entry.title)}</div>
+                            <div class="text-xs text-gray-500">${Utils.formatDateTime(entry.timestamp)}</div>
                         </div>
-                        <div class="text-sm text-gray-600 mt-1">${Utils.escapeHTML(t.description||"")}</div>
+                        <div class="text-sm text-gray-600 mt-1">${Utils.escapeHTML(entry.description || '')}</div>
                         <div class="text-xs text-gray-500 mt-1 flex items-center gap-2">
-                            <span><i class="fas fa-user ml-1"></i>${Utils.escapeHTML(t.actor||"\u0627\u0644\u0646\u0638\u0627\u0645")}</span>
-                            <span><i class="fas fa-bolt ml-1"></i>${Utils.escapeHTML(t.severity||"")}</span>
-                            <button class="text-blue-600 hover:text-blue-800" onclick="Emergency.viewAlert('${t.alertId}')">\u0639\u0631\u0636 \u0627\u0644\u062A\u0646\u0628\u064A\u0647</button>
+                            <span><i class="fas fa-user ml-1"></i>${Utils.escapeHTML(entry.actor || 'النظام')}</span>
+                            <span><i class="fas fa-bolt ml-1"></i>${Utils.escapeHTML(entry.severity || '')}</span>
+                            <button class="text-blue-600 hover:text-blue-800" onclick="Emergency.viewAlert('${entry.alertId}')">عرض التنبيه</button>
                         </div>
                     </div>
-                `).join("")}
+                `).join('')}
             </div>
-        `},getTimelineColor(e){switch(e){case"created":return"border-blue-400";case"acknowledged":return"border-green-400";case"resolved":return"border-teal-400";case"escalated":return"border-red-400";default:return"border-gray-300"}},buildTimeline(){const e=this.getAlerts(),i=[];return e.forEach(t=>{const n=t.severity||"",a=t.title||"\u062A\u0646\u0628\u064A\u0647",s=t.createdBy?.name||"\u0627\u0644\u0646\u0638\u0627\u0645";i.push({id:`${t.id}-created`,alertId:t.id,timestamp:t.createdAt||t.date||new Date().toISOString(),type:"created",title:`${a} \u2022 \u0625\u0646\u0634\u0627\u0621`,description:t.description||"",actor:s,severity:n}),(t.timeline||[]).forEach(o=>{i.push({id:o.id||Utils.generateId("TIMELINE"),alertId:t.id,timestamp:o.timestamp||new Date().toISOString(),type:o.type||"update",title:`${a} \u2022 ${o.label||"\u062A\u062D\u062F\u064A\u062B"}`,description:o.description||"",actor:o.actor?.name||o.actor||"\u0627\u0644\u0646\u0638\u0627\u0645",severity:n})})}),i.sort((t,n)=>new Date(n.timestamp)-new Date(t.timestamp))},renderPlansBoard(){const e=document.getElementById("emergency-plans-board");if(!e)return;const i=this.getPlans();if(i.length===0){e.innerHTML=`
+        `;
+    },
+
+    getTimelineColor(type) {
+        switch (type) {
+            case 'created':
+                return 'border-blue-400';
+            case 'acknowledged':
+                return 'border-green-400';
+            case 'resolved':
+                return 'border-teal-400';
+            case 'escalated':
+                return 'border-red-400';
+            default:
+                return 'border-gray-300';
+        }
+    },
+
+    buildTimeline() {
+        const alerts = this.getAlerts();
+        const entries = [];
+        alerts.forEach(alert => {
+            const severity = alert.severity || '';
+            const baseTitle = alert.title || 'تنبيه';
+            const actor = alert.createdBy?.name || 'النظام';
+            entries.push({
+                id: `${alert.id}-created`,
+                alertId: alert.id,
+                timestamp: alert.createdAt || alert.date || new Date().toISOString(),
+                type: 'created',
+                title: `${baseTitle} • إنشاء`,
+                description: alert.description || '',
+                actor,
+                severity
+            });
+            (alert.timeline || []).forEach(step => {
+                entries.push({
+                    id: step.id || Utils.generateId('TIMELINE'),
+                    alertId: alert.id,
+                    timestamp: step.timestamp || new Date().toISOString(),
+                    type: step.type || 'update',
+                    title: `${baseTitle} • ${step.label || 'تحديث'}`,
+                    description: step.description || '',
+                    actor: step.actor?.name || step.actor || 'النظام',
+                    severity
+                });
+            });
+        });
+        return entries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    },
+
+    renderPlansBoard() {
+        const container = document.getElementById('emergency-plans-board');
+        if (!container) return;
+
+        const plans = this.getPlans();
+        if (plans.length === 0) {
+            container.innerHTML = `
                 <div class="empty-state py-8 text-center">
-                    <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u062E\u0637\u0637 \u0637\u0648\u0627\u0631\u0626 \u0645\u0633\u062C\u0644\u0629 \u062D\u062A\u0649 \u0627\u0644\u0622\u0646</p>
+                    <p class="text-gray-500">لا توجد خطط طوارئ مسجلة حتى الآن</p>
                     <button class="btn-primary mt-3" onclick="Emergency.showPlanForm()">
-                        <i class="fas fa-plus ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u062E\u0637\u0629 \u0637\u0648\u0627\u0631\u0626
+                        <i class="fas fa-plus ml-2"></i>إضافة خطة طوارئ
                     </button>
                 </div>
-            `;return}e.innerHTML=`
+            `;
+            return;
+        }
+
+        container.innerHTML = `
             <div class="table-wrapper" style="overflow-x: auto;">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>\u0627\u0644\u062E\u0637\u0629</th>
-                            <th>\u0627\u0644\u0646\u0648\u0639</th>
-                            <th>\u0627\u0644\u0641\u0631\u064A\u0642 \u0627\u0644\u0645\u0633\u0624\u0648\u0644</th>
-                            <th>\u0622\u062E\u0631 \u0627\u062E\u062A\u0628\u0627\u0631</th>
-                            <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                            <th>الخطة</th>
+                            <th>النوع</th>
+                            <th>الفريق المسؤول</th>
+                            <th>آخر اختبار</th>
+                            <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${i.map(t=>`
+                        ${plans.map(plan => `
                             <tr>
                                 <td>
-                                    <div class="font-semibold text-gray-900">${Utils.escapeHTML(t.name||"")}</div>
-                                    <div class="text-xs text-gray-500 mt-1">${Utils.escapeHTML(t.description||"").substring(0,80)}${t.description&&t.description.length>80?"...":""}</div>
+                                    <div class="font-semibold text-gray-900">${Utils.escapeHTML(plan.name || '')}</div>
+                                    <div class="text-xs text-gray-500 mt-1">${Utils.escapeHTML(plan.description || '').substring(0, 80)}${plan.description && plan.description.length > 80 ? '...' : ''}</div>
                                 </td>
                                 <td>
-                                    <span class="badge badge-secondary">${Utils.escapeHTML(t.type||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F")}</span>
+                                    <span class="badge badge-secondary">${Utils.escapeHTML(plan.type || 'غير محدد')}</span>
                                 </td>
                                 <td>
-                                    <div class="text-sm text-gray-800">${Utils.escapeHTML(t.ownerTeam||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F")}</div>
-                                    ${t.contactPerson?`<div class="text-xs text-gray-500">${Utils.escapeHTML(t.contactPerson)} \u2022 ${Utils.escapeHTML(t.contactPhone||"")}</div>`:""}
+                                    <div class="text-sm text-gray-800">${Utils.escapeHTML(plan.ownerTeam || 'غير محدد')}</div>
+                                    ${plan.contactPerson ? `<div class="text-xs text-gray-500">${Utils.escapeHTML(plan.contactPerson)} • ${Utils.escapeHTML(plan.contactPhone || '')}</div>` : ''}
                                 </td>
-                                <td>${t.lastTested?Utils.formatDate(t.lastTested):'<span class="text-xs text-gray-400">\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0627\u062E\u062A\u0628\u0627\u0631</span>'}</td>
+                                <td>${plan.lastTested ? Utils.formatDate(plan.lastTested) : '<span class="text-xs text-gray-400">لم يتم الاختبار</span>'}</td>
                                 <td>
                                     <div class="flex gap-2">
-                                        <button class="btn-icon btn-icon-info" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644" data-plan-id="${Utils.escapeHTML(t.id)}" data-action="view-plan">
+                                        <button class="btn-icon btn-icon-info" title="عرض التفاصيل" data-plan-id="${Utils.escapeHTML(plan.id)}" data-action="view-plan">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button class="btn-icon btn-icon-primary" title="\u062A\u0639\u062F\u064A\u0644" data-plan-id="${Utils.escapeHTML(t.id)}" data-action="edit-plan">
+                                        <button class="btn-icon btn-icon-primary" title="تعديل" data-plan-id="${Utils.escapeHTML(plan.id)}" data-action="edit-plan">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                     </div>
                                 </td>
                             </tr>
-                        `).join("")}
+                        `).join('')}
                     </tbody>
                 </table>
             </div>
-        `,e.addEventListener("click",function(n){const a=n.target.closest("[data-action]");if(!a)return;const s=a.dataset.planId,o=a.dataset.action;if(o==="view-plan")typeof Emergency<"u"&&Emergency.viewPlan&&Emergency.viewPlan(s);else if(o==="edit-plan"){const r=(typeof Emergency<"u"&&Emergency.getPlans?Emergency.getPlans():[]).find(function(l){return l.id===s});r&&typeof Emergency<"u"&&Emergency.showPlanForm&&Emergency.showPlanForm(r)}},{once:!1})},buildTimelineEntry(e,i,t){return{id:Utils.generateId("ALOG"),type:e,label:this.getTimelineLabel(e),description:t,actor:this.getCurrentUserSummary(),timestamp:new Date().toISOString(),severity:i.severity}},getTimelineLabel(e){switch(e){case"created":return"\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062A\u0646\u0628\u064A\u0647";case"acknowledged":return"\u062A\u0645 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F";case"resolved":return"\u062A\u0645 \u0627\u0644\u0625\u063A\u0644\u0627\u0642";case"escalated":return"\u062A\u0645 \u0627\u0644\u062A\u0635\u0639\u064A\u062F";default:return"\u062A\u062D\u062F\u064A\u062B"}},setupAffectedAutocomplete(e=null){setTimeout(()=>{typeof EmployeeHelper<"u"&&(EmployeeHelper.setupEmployeeCodeSearch("incident-affected-code","incident-affected-name",t=>{if(!t)return;const n=document.getElementById("incident-affected-name"),a=document.getElementById("incident-affected-job"),s=document.getElementById("incident-affected-department"),o=document.getElementById("incident-affected-contact"),r=document.getElementById("incident-affected-type");r&&(r.value="employee"),n&&(n.value=t.name||t.fullName||""),a&&(a.value=t.position||t.jobTitle||""),s&&(s.value=t.department||t.section||""),o&&(o.value=t.phone||t.mobile||t.email||"")}),EmployeeHelper.setupAutocomplete("incident-affected-name",t=>{if(!t)return;const n=document.getElementById("incident-affected-code"),a=document.getElementById("incident-affected-job"),s=document.getElementById("incident-affected-department"),o=document.getElementById("incident-affected-contact"),r=document.getElementById("incident-affected-type");r&&(r.value="employee"),n&&(n.value=t.code||""),a&&(a.value=t.position||t.jobTitle||""),s&&(s.value=t.department||t.section||""),o&&(o.value=t.phone||t.mobile||t.email||"")}));const i=e?.affectedType||"employee";this.handleAffectedTypeChange(i)},200)},handleAffectedTypeChange(e="employee"){const i=document.getElementById("incident-affected-code"),t=document.getElementById("incident-affected-name"),n=document.getElementById("incident-affected-job"),a=document.getElementById("incident-affected-department"),s=document.getElementById("incident-affected-contact");t&&(e==="employee"?(i&&(i.disabled=!1,i.placeholder="\u0627\u062F\u062E\u0644 \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A"),t.readOnly=!0,n&&(n.readOnly=!0),a&&(a.readOnly=!0)):(i&&(i.disabled=!0,i.value="",i.placeholder="\u0644\u0627 \u064A\u062A\u0637\u0644\u0628 \u0643\u0648\u062F\u0627\u064B"),t.readOnly=!1,n&&(n.readOnly=!1),a&&(a.readOnly=!1)),e!=="employee"&&(n&&!n.value&&(n.value=""),a&&!a.value&&(a.value=""),s&&!s.value&&(s.value="")))},populateActionPlanRows(e=[]){const i=document.getElementById("incident-action-plan-body");if(i){if(i.innerHTML="",!Array.isArray(e)||e.length===0){this.addActionPlanRow();return}e.forEach(t=>this.addActionPlanRow(t))}},addActionPlanRow(e={}){const i=document.getElementById("incident-action-plan-body");if(!i)return;const t=e.id||Utils.generateId("ACTPLAN"),n=document.createElement("tr");n.className="incident-action-row",n.setAttribute("data-row-id",t),n.innerHTML=`
+        `;
+        // delegate listener آمن بدلاً من onclick attributes
+        container.addEventListener('click', function _planDelegate(e) {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const planId = btn.dataset.planId;
+            const act = btn.dataset.action;
+            if (act === 'view-plan') {
+                if (typeof Emergency !== 'undefined' && Emergency.viewPlan) Emergency.viewPlan(planId);
+            } else if (act === 'edit-plan') {
+                const planData = (typeof Emergency !== 'undefined' && Emergency.getPlans ? Emergency.getPlans() : [])
+                    .find(function(p){ return p.id === planId; });
+                if (planData && typeof Emergency !== 'undefined' && Emergency.showPlanForm) Emergency.showPlanForm(planData);
+            }
+        }, { once: false });
+    },
+
+    buildTimelineEntry(type, alert, description) {
+        return {
+            id: Utils.generateId('ALOG'),
+            type,
+            label: this.getTimelineLabel(type),
+            description,
+            actor: this.getCurrentUserSummary(),
+            timestamp: new Date().toISOString(),
+            severity: alert.severity
+        };
+    },
+
+    getTimelineLabel(type) {
+        switch (type) {
+            case 'created':
+                return 'تم إنشاء التنبيه';
+            case 'acknowledged':
+                return 'تم الاعتماد';
+            case 'resolved':
+                return 'تم الإغلاق';
+            case 'escalated':
+                return 'تم التصعيد';
+            default:
+                return 'تحديث';
+        }
+    },
+
+    setupAffectedAutocomplete(incidentData = null) {
+        setTimeout(() => {
+            if (typeof EmployeeHelper !== 'undefined') {
+                EmployeeHelper.setupEmployeeCodeSearch('incident-affected-code', 'incident-affected-name', (employee) => {
+                    if (!employee) return;
+                    const nameInput = document.getElementById('incident-affected-name');
+                    const jobInput = document.getElementById('incident-affected-job');
+                    const deptInput = document.getElementById('incident-affected-department');
+                    const contactInput = document.getElementById('incident-affected-contact');
+                    const affectedTypeSelect = document.getElementById('incident-affected-type');
+
+                    if (affectedTypeSelect) affectedTypeSelect.value = 'employee';
+                    if (nameInput) nameInput.value = employee.name || employee.fullName || '';
+                    if (jobInput) jobInput.value = employee.position || employee.jobTitle || '';
+                    if (deptInput) deptInput.value = employee.department || employee.section || '';
+                    if (contactInput) {
+                        contactInput.value = employee.phone || employee.mobile || employee.email || '';
+                    }
+                });
+
+                EmployeeHelper.setupAutocomplete('incident-affected-name', (employee) => {
+                    if (!employee) return;
+                    const codeInput = document.getElementById('incident-affected-code');
+                    const jobInput = document.getElementById('incident-affected-job');
+                    const deptInput = document.getElementById('incident-affected-department');
+                    const contactInput = document.getElementById('incident-affected-contact');
+                    const affectedTypeSelect = document.getElementById('incident-affected-type');
+
+                    if (affectedTypeSelect) affectedTypeSelect.value = 'employee';
+                    if (codeInput) codeInput.value = employee.code || '';
+                    if (jobInput) jobInput.value = employee.position || employee.jobTitle || '';
+                    if (deptInput) deptInput.value = employee.department || employee.section || '';
+                    if (contactInput) {
+                        contactInput.value = employee.phone || employee.mobile || employee.email || '';
+                    }
+                });
+            }
+
+            const initialType = incidentData?.affectedType || 'employee';
+            this.handleAffectedTypeChange(initialType);
+        }, 200);
+    },
+
+    handleAffectedTypeChange(selectedType = 'employee') {
+        const codeInput = document.getElementById('incident-affected-code');
+        const nameInput = document.getElementById('incident-affected-name');
+        const jobInput = document.getElementById('incident-affected-job');
+        const deptInput = document.getElementById('incident-affected-department');
+        const contactInput = document.getElementById('incident-affected-contact');
+
+        if (!nameInput) return;
+
+        if (selectedType === 'employee') {
+            if (codeInput) {
+                codeInput.disabled = false;
+                codeInput.placeholder = 'ادخل الكود الوظيفي';
+            }
+            nameInput.readOnly = true;
+            if (jobInput) jobInput.readOnly = true;
+            if (deptInput) deptInput.readOnly = true;
+        } else {
+            if (codeInput) {
+                codeInput.disabled = true;
+                codeInput.value = '';
+                codeInput.placeholder = 'لا يتطلب كوداً';
+            }
+            nameInput.readOnly = false;
+            if (jobInput) jobInput.readOnly = false;
+            if (deptInput) deptInput.readOnly = false;
+        }
+
+        if (selectedType !== 'employee') {
+            if (jobInput && !jobInput.value) jobInput.value = '';
+            if (deptInput && !deptInput.value) deptInput.value = '';
+            if (contactInput && !contactInput.value) contactInput.value = '';
+        }
+    },
+
+    populateActionPlanRows(plan = []) {
+        const tbody = document.getElementById('incident-action-plan-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        if (!Array.isArray(plan) || plan.length === 0) {
+            this.addActionPlanRow();
+            return;
+        }
+
+        plan.forEach(item => this.addActionPlanRow(item));
+    },
+
+    addActionPlanRow(data = {}) {
+        const tbody = document.getElementById('incident-action-plan-body');
+        if (!tbody) return;
+
+        const rowId = data.id || Utils.generateId('ACTPLAN');
+        const tr = document.createElement('tr');
+        tr.className = 'incident-action-row';
+        tr.setAttribute('data-row-id', rowId);
+        tr.innerHTML = `
             <td>
                 <select class="form-input" name="action-type">
-                    <option value="corrective" ${e.actionType==="corrective"?"selected":""}>\u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A</option>
-                    <option value="preventive" ${e.actionType==="preventive"?"selected":""}>\u0625\u062C\u0631\u0627\u0621 \u0648\u0642\u0627\u0626\u064A</option>
+                    <option value="corrective" ${data.actionType === 'corrective' ? 'selected' : ''}>إجراء تصحيحي</option>
+                    <option value="preventive" ${data.actionType === 'preventive' ? 'selected' : ''}>إجراء وقائي</option>
                 </select>
             </td>
             <td>
-                <input type="text" class="form-input" name="action-description" value="${Utils.escapeHTML(e.description||"")}" placeholder="\u0648\u0635\u0641 \u0627\u0644\u0625\u062C\u0631\u0627\u0621">
+                <input type="text" class="form-input" name="action-description" value="${Utils.escapeHTML(data.description || '')}" placeholder="وصف الإجراء">
             </td>
             <td>
-                <input type="text" class="form-input" name="action-owner" value="${Utils.escapeHTML(e.owner||"")}" placeholder="\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0624\u0648\u0644">
+                <input type="text" class="form-input" name="action-owner" value="${Utils.escapeHTML(data.owner || '')}" placeholder="اسم المسؤول">
             </td>
             <td>
-                <input type="date" class="form-input" name="action-due" value="${e.dueDate?new Date(e.dueDate).toISOString().slice(0,10):""}">
+                <input type="date" class="form-input" name="action-due" value="${data.dueDate ? new Date(data.dueDate).toISOString().slice(0, 10) : ''}">
             </td>
             <td>
-                <input type="date" class="form-input" name="action-closed" value="${e.closedDate?new Date(e.closedDate).toISOString().slice(0,10):""}">
+                <input type="date" class="form-input" name="action-closed" value="${data.closedDate ? new Date(data.closedDate).toISOString().slice(0, 10) : ''}">
             </td>
             <td>
                 <select class="form-input" name="action-status">
-                    <option value="pending" ${e.status==="pending"?"selected":""}>\u062C\u0627\u0631</option>
-                    <option value="in_progress" ${e.status==="in_progress"?"selected":""}>\u062A\u062D\u062A \u0627\u0644\u062A\u0646\u064A\u0630</option>
-                    <option value="completed" ${e.status==="completed"?"selected":""}>\u062A\u0645 \u0625\u0646\u062C\u0627\u0632\u0647</option>
+                    <option value="pending" ${data.status === 'pending' ? 'selected' : ''}>جار</option>
+                    <option value="in_progress" ${data.status === 'in_progress' ? 'selected' : ''}>تحت التنيذ</option>
+                    <option value="completed" ${data.status === 'completed' ? 'selected' : ''}>تم إنجازه</option>
                 </select>
             </td>
             <td>
-                <button type="button" class="btn-icon btn-icon-danger" data-remove-action="${t}">
+                <button type="button" class="btn-icon btn-icon-danger" data-remove-action="${rowId}">
                     <i class="fas fa-times"></i>
                 </button>
             </td>
-        `,i.appendChild(n);const a=n.querySelector(`[data-remove-action="${t}"]`);a&&a.addEventListener("click",()=>this.removeActionPlanRow(t))},removeActionPlanRow(e){const i=document.getElementById("incident-action-plan-body");if(!i)return;if(i.querySelectorAll(".incident-action-row").length<=1){Notification.warning("\u0644\u0627 \u064A\u0645\u0643\u0646 \u062D\u0630\u0641 \u0627\u0644\u0635\u0641 \u0627\u0644\u0623\u062E\u064A\u0631 \u0645\u0646 \u062E\u0637\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A.");return}const n=i.querySelector(`.incident-action-row[data-row-id="${e}"]`);n&&n.remove()},collectActionPlanRows(){return Array.from(document.querySelectorAll("#incident-action-plan-body .incident-action-row")).map(i=>{const t=i.getAttribute("data-row-id")||Utils.generateId("ACTPLAN"),n=i.querySelector('[name="action-type"]')?.value||"corrective",a=i.querySelector('[name="action-description"]')?.value?.trim()||"",s=i.querySelector('[name="action-owner"]')?.value?.trim()||"",o=i.querySelector('[name="action-due"]')?.value||"",r=i.querySelector('[name="action-closed"]')?.value||"",l=i.querySelector('[name="action-status"]')?.value||"pending";return{id:t,actionType:n,description:a,owner:s,dueDate:o?new Date(o).toISOString():null,closedDate:r?new Date(r).toISOString():null,status:l,updatedAt:new Date().toISOString()}}).filter(i=>i.description||i.owner||i.dueDate)},async handleAttachmentsChange(e){if(!e||e.length===0)return;const i=Array.from(e),t=[];for(const n of i){if(n.size>5*1024*1024){Notification.error(`\u0627\u0644\u0645\u0644\u0641 ${n.name} \u064A\u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 (5MB)`);continue}t.push(n)}if(t.length!==0){Loading.show("\u062C\u0627\u0631\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A...");try{for(const a of t){const s=await this.readFileAsBase64(a),o=this.normalizeAttachment({id:Utils.generateId("ATT"),name:a.name,type:a.type,data:s,size:Math.round(a.size/1024)});this.currentAttachments.push(o)}this.renderAttachmentsList();const n=document.getElementById("incident-attachments-input");n&&(n.value="")}catch(n){Notification.error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0631\u0642\u0627\u062A: "+n.message)}finally{Loading.hide()}}},async readFileAsBase64(e){return new Promise((i,t)=>{const n=new FileReader;n.onload=()=>i(n.result),n.onerror=a=>t(a),n.readAsDataURL(e)})},normalizeAttachment(e){if(!e)return null;const i=e.data||e.base64||"",t=e.size||(i?Math.round(i.length*3/4/1024):0);return{id:e.id||Utils.generateId("ATT"),name:e.name||"attachment",type:e.type||"application/octet-stream",data:i,size:t,createdAt:e.createdAt||new Date().toISOString()}},renderCloudStorageUploadButtons(e){const i=CloudStorageIntegration?.getAvailableServices()||[];return i.length===0?"":`
+        `;
+
+        tbody.appendChild(tr);
+
+        const removeBtn = tr.querySelector(`[data-remove-action="${rowId}"]`);
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => this.removeActionPlanRow(rowId));
+        }
+    },
+
+    removeActionPlanRow(rowId) {
+        const tbody = document.getElementById('incident-action-plan-body');
+        if (!tbody) return;
+
+        const rows = tbody.querySelectorAll('.incident-action-row');
+        if (rows.length <= 1) {
+            Notification.warning('لا يمكن حذف الصف الأخير من خطة الإجراءات.');
+            return;
+        }
+
+        const row = tbody.querySelector(`.incident-action-row[data-row-id="${rowId}"]`);
+        if (row) {
+            row.remove();
+        }
+    },
+
+    collectActionPlanRows() {
+        const rows = Array.from(document.querySelectorAll('#incident-action-plan-body .incident-action-row'));
+        return rows.map(row => {
+            const id = row.getAttribute('data-row-id') || Utils.generateId('ACTPLAN');
+            const type = row.querySelector('[name="action-type"]')?.value || 'corrective';
+            const description = row.querySelector('[name="action-description"]')?.value?.trim() || '';
+            const owner = row.querySelector('[name="action-owner"]')?.value?.trim() || '';
+            const dueDate = row.querySelector('[name="action-due"]')?.value || '';
+            const closedDate = row.querySelector('[name="action-closed"]')?.value || '';
+            const status = row.querySelector('[name="action-status"]')?.value || 'pending';
+
+            return {
+                id,
+                actionType: type,
+                description,
+                owner,
+                dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+                closedDate: closedDate ? new Date(closedDate).toISOString() : null,
+                status,
+                updatedAt: new Date().toISOString()
+            };
+        }).filter(item => item.description || item.owner || item.dueDate);
+    },
+
+    async handleAttachmentsChange(fileList) {
+        if (!fileList || fileList.length === 0) return;
+
+        const files = Array.from(fileList);
+        const validFiles = [];
+
+        for (const file of files) {
+            if (file.size > 5 * 1024 * 1024) {
+                Notification.error(`الملف ${file.name} يتجاوز الحد الأقصى (5MB)`);
+                continue;
+            }
+            validFiles.push(file);
+        }
+
+        if (validFiles.length === 0) {
+            return;
+        }
+
+        Loading.show('جاري معالجة المرفقات...');
+        try {
+            for (const file of validFiles) {
+                const base64 = await this.readFileAsBase64(file);
+                const attachment = this.normalizeAttachment({
+                    id: Utils.generateId('ATT'),
+                    name: file.name,
+                    type: file.type,
+                    data: base64,
+                    size: Math.round(file.size / 1024)
+                });
+                this.currentAttachments.push(attachment);
+            }
+            this.renderAttachmentsList();
+            const input = document.getElementById('incident-attachments-input');
+            if (input) input.value = '';
+        } catch (error) {
+            Notification.error('فشل تحميل المرقات: ' + error.message);
+        } finally {
+            Loading.hide();
+        }
+    },
+
+    async readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = (err) => reject(err);
+            reader.readAsDataURL(file);
+        });
+    },
+
+    normalizeAttachment(attachment) {
+        if (!attachment) return null;
+        const data = attachment.data || attachment.base64 || '';
+        const size = attachment.size || (data ? Math.round((data.length * 3) / 4 / 1024) : 0);
+        return {
+            id: attachment.id || Utils.generateId('ATT'),
+            name: attachment.name || 'attachment',
+            type: attachment.type || 'application/octet-stream',
+            data,
+            size,
+            createdAt: attachment.createdAt || new Date().toISOString()
+        };
+    },
+
+    renderCloudStorageUploadButtons(prefix) {
+        const availableServices = CloudStorageIntegration?.getAvailableServices() || [];
+        if (availableServices.length === 0) {
+            return '';
+        }
+
+        return `
             <div class="mt-3 mb-3 p-2 bg-blue-50 border border-blue-200 rounded">
                 <label class="block text-xs font-semibold text-gray-700 mb-2">
                     <i class="fas fa-cloud ml-1"></i>
-                    \u0631\u0641\u0639 \u0625\u0644\u0649 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0633\u062D\u0627\u0628\u064A
+                    رفع إلى التخزين السحابي
                 </label>
                 <div class="flex items-center gap-2 flex-wrap">
-                    ${i.map(t=>`
+                    ${availableServices.map(service => `
                         <button type="button" 
                                 class="btn-secondary text-xs px-2 py-1" 
-                                id="${e}-cloud-upload-${t}"
-                                data-service="${t}"
-                                title="\u0631\u0641\u0639 \u0625\u0644\u0649 ${CloudStorageIntegration.getServiceName(t)}">
+                                id="${prefix}-cloud-upload-${service}"
+                                data-service="${service}"
+                                title="رفع إلى ${CloudStorageIntegration.getServiceName(service)}">
                             <i class="fas fa-cloud-upload-alt ml-1"></i>
-                            ${CloudStorageIntegration.getServiceName(t)}
+                            ${CloudStorageIntegration.getServiceName(service)}
                         </button>
-                    `).join("")}
+                    `).join('')}
                 </div>
             </div>
-        `},async handleCloudUpload(e,i){const t=document.getElementById(`${e}-attachments-input`);if(!t||!t.files||t.files.length===0){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0644\u0641 \u0623\u0648\u0644\u0627\u064B");return}const n=t.files[0];try{const a=await CloudStorageIntegration.uploadFile(i,n,n.name),s={id:Utils.generateId("ATT"),name:n.name,type:n.type,size:Math.round(n.size/1024),cloudLink:{id:a.id,url:a.url,service:a.service,fileName:a.fileName,uploadedAt:a.uploadedAt},isCloud:!0,createdAt:new Date().toISOString()};this.currentAttachments||(this.currentAttachments=[]),this.currentAttachments.push(s),this.renderAttachmentsList(),t.value="",Notification.success(`\u062A\u0645 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641 \u0625\u0644\u0649 ${CloudStorageIntegration.getServiceName(i)} \u0628\u0646\u062C\u0627\u062D`)}catch(a){Utils.safeError("Cloud upload error:",a),Notification.error(a.message||"\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641 \u0625\u0644\u0649 \u0627\u0644\u0633\u062D\u0627\u0628\u0629")}},renderAttachmentsList(){const e=document.getElementById("incident-attachments-list");if(e){if(!this.currentAttachments||this.currentAttachments.length===0){e.innerHTML='<p class="text-sm text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0631\u0641\u0642\u0627\u062A \u0645\u0636\u0627\u0641\u0629.</p>';return}e.innerHTML=this.currentAttachments.map((i,t)=>{const n=i.cloudLink||i.isCloud,a=n?`
+        `;
+    },
+
+    async handleCloudUpload(prefix, service) {
+        const input = document.getElementById(`${prefix}-attachments-input`);
+        if (!input || !input.files || input.files.length === 0) {
+            Notification.warning('يرجى اختيار ملف أولاً');
+            return;
+        }
+
+        const file = input.files[0];
+        try {
+            const result = await CloudStorageIntegration.uploadFile(service, file, file.name);
+
+            // Add cloud link to attachments
+            const attachment = {
+                id: Utils.generateId('ATT'),
+                name: file.name,
+                type: file.type,
+                size: Math.round(file.size / 1024),
+                cloudLink: {
+                    id: result.id,
+                    url: result.url,
+                    service: result.service,
+                    fileName: result.fileName,
+                    uploadedAt: result.uploadedAt
+                },
+                isCloud: true,
+                createdAt: new Date().toISOString()
+            };
+
+            if (!this.currentAttachments) {
+                this.currentAttachments = [];
+            }
+            this.currentAttachments.push(attachment);
+            this.renderAttachmentsList();
+            input.value = '';
+
+            Notification.success(`تم رفع الملف إلى ${CloudStorageIntegration.getServiceName(service)} بنجاح`);
+        } catch (error) {
+            Utils.safeError('Cloud upload error:', error);
+            Notification.error(error.message || 'فشل رفع الملف إلى السحابة');
+        }
+    },
+
+    renderAttachmentsList() {
+        const container = document.getElementById('incident-attachments-list');
+        if (!container) return;
+
+        if (!this.currentAttachments || this.currentAttachments.length === 0) {
+            container.innerHTML = '<p class="text-sm text-gray-500">لا توجد مرفقات مضافة.</p>';
+            return;
+        }
+
+        container.innerHTML = this.currentAttachments.map((attachment, index) => {
+            const isCloud = attachment.cloudLink || attachment.isCloud;
+            const cloudBadge = isCloud ? `
                 <span class="badge badge-info text-xs">
                     <i class="fas fa-cloud ml-1"></i>
-                    ${CloudStorageIntegration?.getServiceName(i.cloudLink?.service)||"\u0633\u062D\u0627\u0628\u064A"}
+                    ${CloudStorageIntegration?.getServiceName(attachment.cloudLink?.service) || 'سحابي'}
                 </span>
-            `:"";return`
-                <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded px-3 py-2" data-attachment-index="${t}">
+            ` : '';
+
+            return `
+                <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded px-3 py-2" data-attachment-index="${index}">
                     <div class="flex items-center gap-2">
-                        <i class="fas ${n?"fa-cloud":"fa-paperclip"} text-blue-500"></i>
+                        <i class="fas ${isCloud ? 'fa-cloud' : 'fa-paperclip'} text-blue-500"></i>
                         <div>
                             <div class="flex items-center gap-2">
-                                <div class="text-sm font-medium text-gray-700">${Utils.escapeHTML(i.name||"attachment")}</div>
-                                ${a}
+                                <div class="text-sm font-medium text-gray-700">${Utils.escapeHTML(attachment.name || 'attachment')}</div>
+                                ${cloudBadge}
                             </div>
                             <div class="text-xs text-gray-500">
-                                ${i.size||0} KB
-                                ${n&&i.cloudLink?.url?`
-                                    <a href="${i.cloudLink.url}" target="_blank" class="text-blue-600 hover:underline mr-2">
-                                        <i class="fas fa-external-link-alt ml-1"></i>\u0641\u062A\u062D
+                                ${attachment.size || 0} KB
+                                ${isCloud && attachment.cloudLink?.url ? `
+                                    <a href="${attachment.cloudLink.url}" target="_blank" class="text-blue-600 hover:underline mr-2">
+                                        <i class="fas fa-external-link-alt ml-1"></i>فتح
                                     </a>
-                                `:""}
+                                ` : ''}
                             </div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        ${n?`
-                            <button type="button" class="btn-icon btn-icon-info" title="\u062A\u062D\u0645\u064A\u0644 \u0645\u0646 \u0627\u0644\u0633\u062D\u0627\u0628\u0629" data-attachment-cloud-download="${t}">
+                        ${isCloud ? `
+                            <button type="button" class="btn-icon btn-icon-info" title="تحميل من السحابة" data-attachment-cloud-download="${index}">
                                 <i class="fas fa-cloud-download-alt"></i>
                             </button>
-                        `:""}
-                        <button type="button" class="btn-icon btn-icon-success" title="\u062A\u062D\u0645\u064A\u0644" data-attachment-download="${t}">
+                        ` : ''}
+                        <button type="button" class="btn-icon btn-icon-success" title="تحميل" data-attachment-download="${index}">
                             <i class="fas fa-download"></i>
                         </button>
-                        <button type="button" class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641" data-attachment-remove="${t}">
+                        <button type="button" class="btn-icon btn-icon-danger" title="حذف" data-attachment-remove="${index}">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                 </div>
-            `}).join(""),e.querySelectorAll("[data-attachment-remove]").forEach(i=>{i.addEventListener("click",t=>{const n=parseInt(i.getAttribute("data-attachment-remove"),10);this.removeAttachment(n)})}),e.querySelectorAll("[data-attachment-download]").forEach(i=>{i.addEventListener("click",()=>{const t=parseInt(i.getAttribute("data-attachment-download"),10);this.downloadAttachment(t)})}),e.querySelectorAll("[data-attachment-cloud-download]").forEach(i=>{i.addEventListener("click",async()=>{const t=parseInt(i.getAttribute("data-attachment-cloud-download"),10),n=this.currentAttachments?.[t];if(n&&n.cloudLink)try{await CloudStorageIntegration.downloadFile(n.cloudLink),Notification.success("\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641 \u0628\u0646\u062C\u0627\u062D")}catch(a){Notification.error(a.message||"\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0644\u0641 \u0645\u0646 \u0627\u0644\u0633\u062D\u0627\u0628\u0629")}})})}},removeAttachment(e){this.currentAttachments&&(this.currentAttachments.splice(e,1),this.renderAttachmentsList())},downloadAttachment(e){const i=this.currentAttachments?.[e];if(!i||!i.data)return;const t=document.createElement("a");t.href=i.data,t.download=i.name||`attachment-${e+1}`,document.body.appendChild(t),t.click(),setTimeout(()=>t.remove(),0)},async showMainApp(){const e=document.getElementById("login-screen"),i=document.getElementById("main-app");if(this.cleanupStaleStartupLayers(),!AppState.currentUser){AppState.debugMode&&Utils.safeLog("\u26A0\uFE0F \u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0633\u062C\u0644 \u062F\u062E\u0648\u0644 - \u0644\u0627 \u064A\u0645\u0643\u0646 \u0639\u0631\u0636 \u0627\u0644\u062A\u0637\u0628\u064A\u0642");return}typeof Permissions<"u"&&typeof Permissions.updateNavigation=="function"&&Permissions.updateNavigation(),this._installUiRecoveryWatchdog();const t=document.getElementById("hse-session-restore-overlay");t&&t.parentNode&&t.remove(),e&&(e.style.display="none",e.classList.remove("active","show")),i&&(i.style.display="flex"),document.body.classList.add("app-active");try{window._hseAppVisible=!0}catch{}if(AppState._suppressSyncProgressOverlayUntil=Date.now()+120*1e3,AppState.isPageRefresh){document.documentElement.classList.remove("hse-post-login-overlay-active"),document.body.classList.remove("hse-post-login-overlay-active");try{this._continueMainAppSetup()}catch(l){AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0647\u064A\u0626\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642:",l)}typeof DataManager<"u"&&DataManager.loadCompanySettings&&DataManager.loadCompanySettings(!1).then(()=>{AppState._companySettingsLoadedAfterLogin=!0}).catch(()=>{});return}(!AppState.companySettings||typeof AppState.companySettings!="object")&&(AppState.companySettings={});const n=!Array.isArray(AppState.companySettings.postLoginItems)||AppState.companySettings.postLoginItems.length===0;if(typeof DataManager<"u"&&DataManager.loadCompanySettings&&(AppState.companySettings.postLoginItems===void 0||n&&!AppState._companySettingsLoadedAfterLogin))try{const l=DataManager.loadCompanySettings(!0).then(()=>{AppState._companySettingsLoadedAfterLogin=!0}).catch(d=>{AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0644\u0639\u0631\u0636 \u0627\u0644\u0633\u064A\u0627\u0633\u0629:",d)});await Promise.race([l,new Promise(d=>setTimeout(d,900))])}catch(l){AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u062A\u0648\u0642\u0639 \u0623\u062B\u0646\u0627\u0621 \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A:",l)}if(AppState.companySettings.postLoginItems===void 0&&(AppState.companySettings.postLoginItems=[]),!Array.isArray(AppState.companySettings.postLoginItems)||AppState.companySettings.postLoginItems.length===0)try{const l=typeof localStorage<"u"&&localStorage.getItem("hse_company_settings");if(l){const d=JSON.parse(l),p=d&&d.postLoginItems;if(p!=null){const f=Array.isArray(p)?p:typeof p=="string"&&p.trim()?(()=>{try{const c=JSON.parse(p);return Array.isArray(c)?c:[]}catch{return[]}})():[];f.length>0&&(AppState.companySettings.postLoginItems=f)}}}catch{}const s=!this._currentUserHasSeenPostLoginPolicy();let o=this._getPostLoginItemsForDisplay();s&&(!o||o.length===0)&&(o=[{title:"\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645",body:"\u0645\u0631\u062D\u0628\u0627\u064B \u0628\u0643. \u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0637\u0644\u0627\u0639 \u0639\u0644\u0649 \u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0648\u0633\u064A\u0627\u0633\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0648\u0627\u0644\u0627\u0644\u062A\u0632\u0627\u0645 \u0628\u0647\u0627.",active:!0,order:0,durationSeconds:10}]);const r=o.length>0&&s;if(i&&(i.style.display="flex"),r){document.documentElement.classList.add("hse-post-login-overlay-active"),document.body.classList.add("hse-post-login-overlay-active"),AppState.debugMode&&Utils.safeLog("\u0639\u0631\u0636 \u0634\u0627\u0634\u0629 \u0627\u0644\u0633\u064A\u0627\u0633\u0629 \u0628\u0639\u062F \u0627\u0644\u062F\u062E\u0648\u0644\u060C \u0639\u062F\u062F \u0627\u0644\u0639\u0646\u0627\u0635\u0631:",o.length);try{this._showPostLoginOverlay(o,()=>{const l=document.getElementById("hse-post-login-overlay");l&&l.parentNode&&l.remove(),document.documentElement.classList.remove("hse-post-login-overlay-active"),document.body.classList.remove("hse-post-login-overlay-active"),this._markCurrentUserPostLoginPolicySeen(),i&&(i.style.display="flex");try{this._continueMainAppSetup()}catch(d){AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0647\u064A\u0626\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0639\u062F \u0627\u0644\u0633\u064A\u0627\u0633\u0629:",d)}})}catch(l){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0639\u0631\u0636 \u0634\u0627\u0634\u0629 \u0627\u0644\u0633\u064A\u0627\u0633\u0629 \u0628\u0639\u062F \u0627\u0644\u062F\u062E\u0648\u0644 \u2014 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u062F\u0648\u0646\u0647\u0627:",l),document.documentElement.classList.remove("hse-post-login-overlay-active"),document.body.classList.remove("hse-post-login-overlay-active"),typeof this.clearPostLoginOverlayLock=="function"&&this.clearPostLoginOverlayLock();try{this._continueMainAppSetup()}catch(d){AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0647\u064A\u0626\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0639\u062F \u0641\u0634\u0644 \u0627\u0644\u0633\u064A\u0627\u0633\u0629:",d)}}return}document.documentElement.classList.remove("hse-post-login-overlay-active"),document.body.classList.remove("hse-post-login-overlay-active"),i&&(i.style.display="flex");try{this._continueMainAppSetup()}catch(l){AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0647\u064A\u0626\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642:",l)}},_showPostLoginLoadingOverlay(){let e=document.getElementById("hse-post-login-overlay");if(e&&e.remove(),e=document.createElement("div"),e.id="hse-post-login-overlay",e.className="hse-post-login-overlay",e.setAttribute("aria-live","polite"),e.setAttribute("aria-label","\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0636\u064A\u0631"),e.style.cssText="position:fixed;inset:0;width:100%;height:100%;min-height:100vh;background:#0f172a;display:flex;align-items:center;justify-content:center;z-index:99999;",e.innerHTML=`
+            `;
+        }).join('');
+
+        container.querySelectorAll('[data-attachment-remove]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(btn.getAttribute('data-attachment-remove'), 10);
+                this.removeAttachment(idx);
+            });
+        });
+
+        container.querySelectorAll('[data-attachment-download]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-attachment-download'), 10);
+                this.downloadAttachment(idx);
+            });
+        });
+
+        container.querySelectorAll('[data-attachment-cloud-download]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const idx = parseInt(btn.getAttribute('data-attachment-cloud-download'), 10);
+                const attachment = this.currentAttachments?.[idx];
+                if (attachment && attachment.cloudLink) {
+                    try {
+                        await CloudStorageIntegration.downloadFile(attachment.cloudLink);
+                        Notification.success('تم تحميل الملف بنجاح');
+                    } catch (error) {
+                        Notification.error(error.message || 'فشل تحميل الملف من السحابة');
+                    }
+                }
+            });
+        });
+    },
+
+    removeAttachment(index) {
+        if (!this.currentAttachments) return;
+        this.currentAttachments.splice(index, 1);
+        this.renderAttachmentsList();
+    },
+
+    downloadAttachment(index) {
+        const attachment = this.currentAttachments?.[index];
+        if (!attachment || !attachment.data) return;
+
+        const link = document.createElement('a');
+        link.href = attachment.data;
+        link.download = attachment.name || `attachment-${index + 1}`;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => link.remove(), 0);
+    },
+
+    /**
+     * عرض التطبيق الرئيسي
+     */
+    async showMainApp() {
+        const loginScreen = document.getElementById('login-screen');
+        const mainApp = document.getElementById('main-app');
+        this.cleanupStaleStartupLayers();
+
+        // التحقق من وجود مستخدم مسجل دخول قبل إظهار أي واجهة
+        if (!AppState.currentUser) {
+            if (AppState.debugMode) Utils.safeLog('⚠️ لا يوجد مستخدم مسجل دخول - لا يمكن عرض التطبيق');
+            return;
+        }
+
+        // تحديث القائمة الجانبية حسب الصلاحيات
+        if (typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
+            Permissions.updateNavigation();
+        }
+
+        // مراقب استعادة الواجهة مبكراً (قبل أي await) حتى لا تبقى الصفحة «ميتة» إن تعطل مسار لاحق
+        this._installUiRecoveryWatchdog();
+
+        // إزالة overlay استعادة الجلسة + إظهار التطبيق فوراً (أولوية قصوى)
+        const restoreOverlay = document.getElementById('hse-session-restore-overlay');
+        if (restoreOverlay && restoreOverlay.parentNode) restoreOverlay.remove();
+        if (loginScreen) {
+            loginScreen.style.display = 'none';
+            loginScreen.classList.remove('active', 'show');
+        }
+        if (mainApp) mainApp.style.display = 'flex';
+        document.body.classList.add('app-active');
+        try { window._hseAppVisible = true; } catch (e) {}
+        // بعد تسجيل الدخول مباشرة: أي مزامنة تلقائية يجب أن تبقى بالخلفية بدون نافذة تقدم.
+        AppState._suppressSyncProgressOverlayUntil = Date.now() + (2 * 60 * 1000);
+
+        // عند إعادة التحميل: عرض التطبيق فوراً ثم تحميل الإعدادات في الخلفية (بدون await)
+        if (AppState.isPageRefresh) {
+            document.documentElement.classList.remove('hse-post-login-overlay-active');
+            document.body.classList.remove('hse-post-login-overlay-active');
+            try {
+                this._continueMainAppSetup();
+            } catch (setupErr) {
+                if (AppState.debugMode) Utils.safeWarn('⚠️ خطأ في تهيئة التطبيق:', setupErr);
+            }
+            // تحميل إعدادات الشركة في الخلفية (لا تحجب العرض)
+            if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
+                DataManager.loadCompanySettings(false).then(() => {
+                    AppState._companySettingsLoadedAfterLogin = true;
+                }).catch(() => {});
+            }
+            return;
+        }
+
+        // أول دخول (ليس إعادة تحميل): تحميل إعدادات الشركة وعرض السياسة
+        if (!AppState.companySettings || typeof AppState.companySettings !== 'object') {
+            AppState.companySettings = {};
+        }
+        const hasNoItems = !Array.isArray(AppState.companySettings.postLoginItems) || AppState.companySettings.postLoginItems.length === 0;
+        const shouldLoadSettings = typeof DataManager !== 'undefined' && DataManager.loadCompanySettings &&
+            (AppState.companySettings.postLoginItems === undefined || (hasNoItems && !AppState._companySettingsLoadedAfterLogin));
+        if (shouldLoadSettings) {
+            try {
+                const settingsPromise = DataManager.loadCompanySettings(true)
+                    .then(() => { AppState._companySettingsLoadedAfterLogin = true; })
+                    .catch((e) => {
+                        if (AppState.debugMode) Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة لعرض السياسة:', e);
+                    });
+                // لا نحجب ظهور السياسة/القائمة أكثر من مدة قصيرة جداً
+                await Promise.race([
+                    settingsPromise,
+                    new Promise(resolve => setTimeout(resolve, 900))
+                ]);
+            } catch (e) {
+                if (AppState.debugMode) Utils.safeWarn('⚠️ خطأ غير متوقع أثناء تجهيز الإعدادات:', e);
+            }
+        }
+        if (AppState.companySettings.postLoginItems === undefined) {
+            AppState.companySettings.postLoginItems = [];
+        }
+        if (!Array.isArray(AppState.companySettings.postLoginItems) || AppState.companySettings.postLoginItems.length === 0) {
+            try {
+                const saved = typeof localStorage !== 'undefined' && localStorage.getItem('hse_company_settings');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    const raw = parsed && parsed.postLoginItems;
+                    if (raw !== undefined && raw !== null) {
+                        const arr = Array.isArray(raw) ? raw : (typeof raw === 'string' && raw.trim() ? (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch (e) { return []; } })() : []);
+                        if (arr.length > 0) AppState.companySettings.postLoginItems = arr;
+                    }
+                }
+            } catch (e) { /* تجاهل */ }
+        }
+
+        const shouldShowPolicyByTime = !this._currentUserHasSeenPostLoginPolicy();
+        let postLoginItems = this._getPostLoginItemsForDisplay();
+        if (shouldShowPolicyByTime && (!postLoginItems || postLoginItems.length === 0)) {
+            postLoginItems = [{ title: 'تعليمات الاستخدام', body: 'مرحباً بك. يرجى الاطلاع على تعليمات وسياسات الشركة والالتزام بها.', active: true, order: 0, durationSeconds: 10 }];
+        }
+        const shouldShowPolicy = postLoginItems.length > 0 && shouldShowPolicyByTime;
+
+        // إظهار التطبيق فوراً، ثم عرض السياسة كطبقة فوقه حتى لا يبدو الدخول "معلّقاً"
+        if (mainApp) mainApp.style.display = 'flex';
+
+        if (shouldShowPolicy) {
+            document.documentElement.classList.add('hse-post-login-overlay-active');
+            document.body.classList.add('hse-post-login-overlay-active');
+            if (AppState.debugMode) Utils.safeLog('عرض شاشة السياسة بعد الدخول، عدد العناصر:', postLoginItems.length);
+            try {
+                this._showPostLoginOverlay(postLoginItems, () => {
+                    const el = document.getElementById('hse-post-login-overlay');
+                    if (el && el.parentNode) el.remove();
+                    document.documentElement.classList.remove('hse-post-login-overlay-active');
+                    document.body.classList.remove('hse-post-login-overlay-active');
+                    this._markCurrentUserPostLoginPolicySeen();
+                    if (mainApp) mainApp.style.display = 'flex';
+                    try {
+                        this._continueMainAppSetup();
+                    } catch (setupErr) {
+                        if (AppState.debugMode) Utils.safeWarn('⚠️ خطأ في تهيئة التطبيق بعد السياسة:', setupErr);
+                    }
+                });
+            } catch (policyErr) {
+                Utils.safeWarn('⚠️ فشل عرض شاشة السياسة بعد الدخول — متابعة التطبيق بدونها:', policyErr);
+                document.documentElement.classList.remove('hse-post-login-overlay-active');
+                document.body.classList.remove('hse-post-login-overlay-active');
+                if (typeof this.clearPostLoginOverlayLock === 'function') this.clearPostLoginOverlayLock();
+                try {
+                    this._continueMainAppSetup();
+                } catch (setupErr) {
+                    if (AppState.debugMode) Utils.safeWarn('⚠️ خطأ في تهيئة التطبيق بعد فشل السياسة:', setupErr);
+                }
+            }
+            return;
+        }
+
+        document.documentElement.classList.remove('hse-post-login-overlay-active');
+        document.body.classList.remove('hse-post-login-overlay-active');
+        if (mainApp) mainApp.style.display = 'flex';
+        try {
+            this._continueMainAppSetup();
+        } catch (setupErr) {
+            if (AppState.debugMode) Utils.safeWarn('⚠️ خطأ في تهيئة التطبيق:', setupErr);
+        }
+    },
+
+    /** عرض شاشة تحميل فورية بعد الدخول (بنفس مظهر النظام) لتجنب شاشة بيضاء */
+    _showPostLoginLoadingOverlay() {
+        let el = document.getElementById('hse-post-login-overlay');
+        if (el) el.remove();
+        el = document.createElement('div');
+        el.id = 'hse-post-login-overlay';
+        el.className = 'hse-post-login-overlay';
+        el.setAttribute('aria-live', 'polite');
+        el.setAttribute('aria-label', 'جاري التحضير');
+        el.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;min-height:100vh;background:#0f172a;display:flex;align-items:center;justify-content:center;z-index:99999;';
+        el.innerHTML = `
             <div class="hse-post-login-overlay-backdrop" style="position:absolute;inset:0;background:#0f172a;z-index:0;"></div>
             <div class="hse-post-login-loading-card" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:3rem 2.5rem;min-height:220px;min-width:280px;background:#fff;border-radius:20px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.4);">
                 <div class="hse-post-login-loading-spinner" style="width:52px;height:52px;border:4px solid rgba(37,99,235,0.2);border-top-color:#2563eb;border-radius:50%;animation: hseSpin 0.9s linear infinite;"></div>
-                <p class="hse-post-login-loading-text" style="margin:0;font-size:1.25rem;font-weight:600;color:#1e293b;">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0636\u064A\u0631...</p>
-            </div>`,document.body.appendChild(e),!document.getElementById("hse-post-login-overlay-critical-style")){const i=document.createElement("style");i.id="hse-post-login-overlay-critical-style",i.textContent="@keyframes hseSpin{to{transform:rotate(360deg);}}",document.head.appendChild(i)}},_removePostLoginLoadingOverlay(){const e=document.getElementById("hse-post-login-overlay");e&&e.querySelector(".hse-post-login-loading-card")&&e.parentNode&&e.remove()},_getPostLoginItemsForDisplay(){try{const e=AppState?.companySettings?.postLoginItems;return(Array.isArray(e)?e:typeof e=="string"&&e.trim()?(()=>{try{const t=JSON.parse(e);return Array.isArray(t)?t:[]}catch{return[]}})():[]).filter(t=>{if(!t||typeof t!="object"||t.active===!1)return!1;const n=String(t.title||"").trim(),a=String(t.body||"").trim();return!(!n&&!a)}).sort((t,n)=>(Number(t.order)||999)-(Number(n.order)||999))}catch(e){return typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F _getPostLoginItemsForDisplay error:",e),[]}},_postLoginPolicyValidityDays:10,_policyLastSeenKey(){const e=AppState.currentUser,i=e&&(e.email||e.id)?String(e.email||e.id).trim():"";return i?"hse_policy_last_seen_at_"+i.replace(/\s+/g,"_"):"hse_policy_last_seen_at"},_currentUserHasSeenPostLoginPolicy(){try{const e=AppState.currentUser;if(!e)return!0;const i=this._policyLastSeenKey(),t=(this._postLoginPolicyValidityDays||10)*24*60*60*1e3,n=Date.now(),a=l=>{if(!l||!String(l).trim())return 0;const d=String(l).toLowerCase().trim();if(d==="undefined"||d==="null")return 0;const p=new Date(l).getTime();return isNaN(p)?0:p};try{if(typeof localStorage<"u"&&!localStorage.getItem(i))return!1}catch{}let s=0;try{const l=typeof localStorage<"u"&&localStorage.getItem(i);l&&(s=Math.max(s,a(l)))}catch{}const o=e.postLoginPolicySeenAt;o&&(s=Math.max(s,a(o)));const r=AppState.appData?.users;if(Array.isArray(r)){const l=(e.email||"").toLowerCase().trim(),d=r.find(f=>f&&(String(f.email||"").toLowerCase().trim()===l||String(f.id||"")===String(e.id||""))),p=d&&d.postLoginPolicySeenAt;p&&(s=Math.max(s,a(p)))}return!(!s||n-s>=t)}catch{return!1}},_markCurrentUserPostLoginPolicySeen(){const e=AppState.currentUser;if(!e)return;const i=new Date().toISOString();try{typeof localStorage<"u"&&localStorage.setItem(this._policyLastSeenKey(),i)}catch{}AppState.currentUser&&(AppState.currentUser.postLoginPolicySeenAt=i);const t=AppState.appData?.users;if(Array.isArray(t)){const a=(e.email||"").toLowerCase().trim(),s=t.findIndex(o=>o&&(String(o.email||"").toLowerCase().trim()===a||String(o.id||"")===String(e.id||"")));s!==-1&&t[s]&&(t[s].postLoginPolicySeenAt=i)}const n=e.id||e.email;n&&typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript&&GoogleIntegration.sendToAppsScript("updateUser",{userId:n,updateData:{postLoginPolicySeenAt:i}}).catch(()=>{})},_showPostLoginOverlay(e,i){if(!e||e.length===0){typeof i=="function"&&i();return}document.documentElement.classList.add("hse-post-login-overlay-active"),document.body.classList.add("hse-post-login-overlay-active");let t=0,n=null;const a=(o,r=!1)=>{n&&clearInterval(n),n=null,r&&(document.documentElement.classList.remove("hse-post-login-overlay-active"),document.body.classList.remove("hse-post-login-overlay-active")),o&&o.parentNode&&o.remove()},s=o=>{if(o>=e.length){typeof i=="function"&&i();return}const r=e[o];if(!r||typeof r!="object")return AppState.debugMode&&typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u062E\u0637\u064A \u0639\u0646\u0635\u0631 \u0633\u064A\u0627\u0633\u0629 \u062A\u0627\u0644\u0641 \u0639\u0646\u062F \u0627\u0644\u0641\u0647\u0631\u0633 "+o),s(o+1);const l=Math.min(120,Math.max(0,parseInt(r.durationSeconds,10)||10)),d=String(r.title||"").trim()||"\u062A\u0639\u0644\u064A\u0645\u0627\u062A",p=String(r.body||"").trim()||"\u0645\u0631\u062D\u0628\u0627\u064B \u0628\u0643. \u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0637\u0644\u0627\u0639 \u0639\u0644\u0649 \u0633\u064A\u0627\u0633\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629.",f=typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(d):d,c=typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(p).replace(/\n/g,"<br>"):p.replace(/\n/g,"<br>"),u=AppState.companySettings&&AppState.companySettings.name?String(AppState.companySettings.name).trim():AppState.companyName||"",g=AppState.companySettings&&AppState.companySettings.secondaryName?String(AppState.companySettings.secondaryName).trim():"",m=AppState.companyLogo||AppState.companySettings&&AppState.companySettings.logo||"",y=typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(u):u,b=typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(g):g,w=AppState.companySettings&&AppState.companySettings.policyFormCode?String(AppState.companySettings.policyFormCode).trim():r.formCode||r.code||"HSE-POLICY-01",x=typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(w):w,I=`
+                <p class="hse-post-login-loading-text" style="margin:0;font-size:1.25rem;font-weight:600;color:#1e293b;">جاري التحضير...</p>
+            </div>`;
+        document.body.appendChild(el);
+        if (!document.getElementById('hse-post-login-overlay-critical-style')) {
+            const style = document.createElement('style');
+            style.id = 'hse-post-login-overlay-critical-style';
+            style.textContent = '@keyframes hseSpin{to{transform:rotate(360deg);}}';
+            document.head.appendChild(style);
+        }
+    },
+
+    /** إزالة شاشة تحميل ما بعد الدخول */
+    _removePostLoginLoadingOverlay() {
+        const el = document.getElementById('hse-post-login-overlay');
+        if (el && el.querySelector('.hse-post-login-loading-card')) {
+            if (el.parentNode) el.remove();
+        }
+    },
+
+    /** ترجيع قائمة عناصر ما بعد الدخول (مفعّلة ومرتبة) */
+    _getPostLoginItemsForDisplay() {
+        try {
+            const raw = AppState?.companySettings?.postLoginItems;
+            let items = Array.isArray(raw) ? raw : (typeof raw === 'string' && raw.trim() ? (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch (e) { return []; } })() : []);
+            // ✅ تطبيع دفاعي: تخطي العناصر null/غير الكائنات، وغير النشطة، والفارغة كلياً (لا title ولا body)
+            return items
+                .filter(i => {
+                    if (!i || typeof i !== 'object') return false;
+                    if (i.active === false) return false;
+                    const t = String(i.title || '').trim();
+                    const b = String(i.body || '').trim();
+                    if (!t && !b) return false; // سياسة فارغة تماماً — تخطّى
+                    return true;
+                })
+                .sort((a, b) => (Number(a.order) || 999) - (Number(b.order) || 999));
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ _getPostLoginItemsForDisplay error:', e);
+            }
+            return [];
+        }
+    },
+
+    /** مدة صلاحية "شاهد السياسة" بالأيام — بعدها نعرض السياسة مرة أخرى (كل 10 أيام) */
+    _postLoginPolicyValidityDays: 10,
+
+    /** مفتاح localStorage لآخر مشاهدة سياسة — يُربط بمعرّف المستخدم لضمان ظهور السياسة مرة واحدة لكل مستخدم في هذا المتصفح */
+    _policyLastSeenKey() {
+        const user = AppState.currentUser;
+        const id = (user && (user.email || user.id)) ? String(user.email || user.id).trim() : '';
+        return id ? 'hse_policy_last_seen_at_' + id.replace(/\s+/g, '_') : 'hse_policy_last_seen_at';
+    },
+
+    /** هل المستخدم الحالي قد شاهد سياسة ما بعد الدخول ضمن المدة المحددة (أول دخول أو أكثر من 10 أيام = نعرض السياسة) */
+    _currentUserHasSeenPostLoginPolicy() {
+        try {
+            const user = AppState.currentUser;
+            if (!user) return true;
+            const storageKey = this._policyLastSeenKey();
+            const daysMs = (this._postLoginPolicyValidityDays || 10) * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            const parseTime = (v) => {
+                if (!v || !String(v).trim()) return 0;
+                const s = String(v).toLowerCase().trim();
+                if (s === 'undefined' || s === 'null') return 0;
+                const t = new Date(v).getTime();
+                return isNaN(t) ? 0 : t;
+            };
+            // ضمان ظهور السياسة مرة واحدة على الأقل لكل مستخدم في هذا المتصفح
+            try {
+                if (typeof localStorage !== 'undefined' && !localStorage.getItem(storageKey))
+                    return false; // أول مرة لهذا المستخدم في هذا المتصفح — نعرض السياسة دائماً
+            } catch (e) {}
+            // مصدران: localStorage + المستخدم من الجلسة/قاعدة البيانات (لحساب تكرار كل 10 أيام)
+            let seenAt = 0;
+            try {
+                const localSeen = typeof localStorage !== 'undefined' && localStorage.getItem(storageKey);
+                if (localSeen) seenAt = Math.max(seenAt, parseTime(localSeen));
+            } catch (e) {}
+            const v = user.postLoginPolicySeenAt;
+            if (v) seenAt = Math.max(seenAt, parseTime(v));
+            const users = AppState.appData?.users;
+            if (Array.isArray(users)) {
+                const email = (user.email || '').toLowerCase().trim();
+                const found = users.find(u => (u && (String(u.email || '').toLowerCase().trim() === email || String(u.id || '') === String(user.id || ''))));
+                const fv = found && found.postLoginPolicySeenAt;
+                if (fv) seenAt = Math.max(seenAt, parseTime(fv));
+            }
+            if (!seenAt) return false; // لا يوجد تاريخ مشاهدة صالح — نعرض السياسة
+            if (now - seenAt >= daysMs) return false; // مرّ أكثر من 10 أيام — نعرض السياسة مرة أخرى
+            return true; // شاهد خلال آخر 10 أيام — لا نعرض
+        } catch (e) { return false; }
+    },
+
+    /** تسجيل أن المستخدم الحالي قد شاهد سياسة ما بعد الدخول (حفظ في Backend + AppState + localStorage لضمان ظهورها مرة واحدة على الأقل في هذا المتصفح) */
+    _markCurrentUserPostLoginPolicySeen() {
+        const user = AppState.currentUser;
+        if (!user) return;
+        const seenAt = new Date().toISOString();
+        try {
+            if (typeof localStorage !== 'undefined') localStorage.setItem(this._policyLastSeenKey(), seenAt);
+        } catch (e) {}
+        if (AppState.currentUser) AppState.currentUser.postLoginPolicySeenAt = seenAt;
+        const users = AppState.appData?.users;
+        if (Array.isArray(users)) {
+            const email = (user.email || '').toLowerCase().trim();
+            const idx = users.findIndex(u => u && (String(u.email || '').toLowerCase().trim() === email || String(u.id || '') === String(user.id || '')));
+            if (idx !== -1 && users[idx]) users[idx].postLoginPolicySeenAt = seenAt;
+        }
+        const userId = user.id || user.email;
+        /** مزامنة عبر Google Apps Script */
+        if (userId && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+            GoogleIntegration.sendToAppsScript('updateUser', { userId: userId, updateData: { postLoginPolicySeenAt: seenAt } }).catch(() => {});
+        }
+    },
+
+    /**
+     * عرض شاشة/شاشات السياسات أو التعليمات بعد الدخول (متسلسلة)، مع زر تخطي ومؤقت.
+     * @param {Array<{title:string, body:string, durationSeconds:number}>} items
+     * @param {function} onComplete - يُستدعى عند الانتهاء (تخطي أو انتهاء آخر مؤقت)
+     */
+    _showPostLoginOverlay(items, onComplete) {
+        if (!items || items.length === 0) {
+            if (typeof onComplete === 'function') onComplete();
+            return;
+        }
+        document.documentElement.classList.add('hse-post-login-overlay-active');
+        document.body.classList.add('hse-post-login-overlay-active');
+        let currentIndex = 0;
+        let timerId = null;
+
+        const removeOverlay = (overlayEl, removeBodyClass = false) => {
+            if (timerId) clearInterval(timerId);
+            timerId = null;
+            if (removeBodyClass) {
+                document.documentElement.classList.remove('hse-post-login-overlay-active');
+                document.body.classList.remove('hse-post-login-overlay-active');
+            }
+            if (overlayEl && overlayEl.parentNode) overlayEl.remove();
+        };
+
+        const showItem = (index) => {
+            if (index >= items.length) {
+                if (typeof onComplete === 'function') onComplete();
+                return;
+            }
+            // ✅ حماية دفاعية: لو وصلنا لعنصر تالف، نتخطّاه بدلاً من رمي خطأ يكسر العرض
+            const item = items[index];
+            if (!item || typeof item !== 'object') {
+                if (AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ تخطي عنصر سياسة تالف عند الفهرس ' + index);
+                }
+                return showItem(index + 1);
+            }
+            const duration = Math.min(120, Math.max(0, parseInt(item.durationSeconds, 10) || 10));
+            const rawTitle = String(item.title || '').trim() || 'تعليمات';
+            const rawBody = String(item.body || '').trim() || 'مرحباً بك. يرجى الاطلاع على سياسات الشركة.';
+            const safeTitle = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(rawTitle) : rawTitle;
+            const safeBody = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(rawBody).replace(/\n/g, '<br>') : rawBody.replace(/\n/g, '<br>');
+
+            const companyName = (AppState.companySettings && AppState.companySettings.name) ? String(AppState.companySettings.name).trim() : (AppState.companyName || '');
+            const secondaryName = (AppState.companySettings && AppState.companySettings.secondaryName) ? String(AppState.companySettings.secondaryName).trim() : '';
+            const logoUrl = AppState.companyLogo || (AppState.companySettings && AppState.companySettings.logo) || '';
+            const safeCompanyName = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(companyName) : companyName;
+            const safeSecondaryName = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(secondaryName) : secondaryName;
+            /* كود النموذج: من إعدادات الشركة أو من عنصر السياسة أو افتراضي */
+            const formCode = (AppState.companySettings && AppState.companySettings.policyFormCode)
+                ? String(AppState.companySettings.policyFormCode).trim()
+                : (item.formCode || item.code || 'HSE-POLICY-01');
+            const safeFormCode = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(formCode) : formCode;
+            /* هيدر مثل التقرير: ترتيب في RTL = شركة (يمين)، عنوان (وسط)، شعار (يسار) */
+            const headerHTML = `
                 <div class="hse-post-login-overlay-header">
                     <div class="hse-post-login-overlay-header-right">
-                        ${u?`<div class="hse-post-login-overlay-company-name">${y}</div>`:""}
-                        ${g?`<div class="hse-post-login-overlay-company-secondary">${b}</div>`:""}
+                        ${companyName ? `<div class="hse-post-login-overlay-company-name">${safeCompanyName}</div>` : ''}
+                        ${secondaryName ? `<div class="hse-post-login-overlay-company-secondary">${safeSecondaryName}</div>` : ''}
                     </div>
                     <div class="hse-post-login-overlay-header-center">
-                        <h1 class="hse-post-login-overlay-header-center-title">${f}</h1>
+                        <h1 class="hse-post-login-overlay-header-center-title">${safeTitle}</h1>
                     </div>
                     <div class="hse-post-login-overlay-header-left">
                         <div class="hse-post-login-overlay-logo">
-                            ${m?`<img class="hse-post-login-overlay-logo-img" src="${m.replace(/"/g,"&quot;")}" alt="">`:'<div class="hse-post-login-overlay-logo-placeholder"><i class="fas fa-building" aria-hidden="true"></i></div>'}
+                            ${logoUrl ? `<img class="hse-post-login-overlay-logo-img" src="${logoUrl.replace(/"/g, '&quot;')}" alt="">` : '<div class="hse-post-login-overlay-logo-placeholder"><i class="fas fa-building" aria-hidden="true"></i></div>'}
                         </div>
                     </div>
-                </div>`,L=`
+                </div>`;
+            /* فوتر مثل النماذج: كود النموذج + اسم الشركة (تعبئة تلقائية) */
+            const footerMetaHTML = `
                 <div class="hse-post-login-overlay-footer-meta">
                     <div class="hse-post-login-overlay-footer-meta-line">
-                        <span class="hse-post-login-overlay-footer-meta-item">\u0643\u0648\u062F \u0627\u0644\u0646\u0645\u0648\u0630\u062C: ${x}</span>
-                        <span class="hse-post-login-overlay-footer-meta-item">\u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629: ${y||"\u2014"}</span>
+                        <span class="hse-post-login-overlay-footer-meta-item">كود النموذج: ${safeFormCode}</span>
+                        <span class="hse-post-login-overlay-footer-meta-item">اسم الشركة: ${safeCompanyName ? safeCompanyName : '—'}</span>
                     </div>
-                </div>`;let E=document.getElementById("hse-post-login-overlay");E&&E.remove(),E=document.createElement("div"),E.id="hse-post-login-overlay",E.className="hse-post-login-overlay",E.setAttribute("role","dialog"),E.setAttribute("aria-modal","true"),E.setAttribute("aria-label",d),E.style.cssText="position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);pointer-events:auto;",E.innerHTML=`
+                </div>`;
+
+            let overlay = document.getElementById('hse-post-login-overlay');
+            if (overlay) overlay.remove();
+            overlay = document.createElement('div');
+            overlay.id = 'hse-post-login-overlay';
+            overlay.className = 'hse-post-login-overlay';
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+            overlay.setAttribute('aria-label', rawTitle);
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);pointer-events:auto;';
+            overlay.innerHTML = `
                 <div class="hse-post-login-overlay-backdrop"></div>
                 <div class="hse-post-login-overlay-card">
-                    ${I}
-                    <div class="hse-post-login-overlay-body">${c}</div>
+                    ${headerHTML}
+                    <div class="hse-post-login-overlay-body">${safeBody}</div>
                     <div class="hse-post-login-overlay-footer">
                         <span class="hse-post-login-overlay-timer"></span>
                         <div class="hse-post-login-overlay-actions">
-                            <button type="button" class="hse-post-login-ack-btn"><i class="fas fa-check-circle ml-2"></i>\u0644\u0642\u062F \u0627\u0637\u0651\u0644\u0639\u062A \u0639\u0644\u0649 \u0627\u0644\u0633\u064A\u0627\u0633\u0629</button>
-                            <button type="button" class="hse-post-login-skip-btn"><i class="fas fa-forward ml-2"></i>\u062A\u062E\u0637\u064A</button>
+                            <button type="button" class="hse-post-login-ack-btn"><i class="fas fa-check-circle ml-2"></i>لقد اطّلعت على السياسة</button>
+                            <button type="button" class="hse-post-login-skip-btn"><i class="fas fa-forward ml-2"></i>تخطي</button>
                         </div>
                     </div>
-                    ${L}
-                </div>`,document.body.appendChild(E);const N=E.querySelector(".hse-post-login-overlay-timer"),v=C=>{N&&(N.textContent=l>0?`\u0633\u062A\u0646\u062A\u0642\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u062E\u0644\u0627\u0644 ${C} \u062B\u0627\u0646\u064A\u0629`:"")},A=C=>{const P=C==="acknowledged"?"acknowledged":"skipped";typeof UserActivityLog<"u"&&UserActivityLog.log&&UserActivityLog.log("post_login_policy","PostLoginPolicy",null,{action:P,policyTitle:d,description:P==="acknowledged"?`\u0627\u0637\u0651\u0644\u0639 \u0639\u0644\u0649 \u0627\u0644\u0633\u064A\u0627\u0633\u0629: ${d}`:`\u062A\u062E\u0637\u0649 \u0639\u0631\u0636 \u0627\u0644\u0633\u064A\u0627\u0633\u0629: ${d}`}).catch(()=>{});const $=o+1<e.length;a(E,!$),s(o+1)},k=E.querySelector(".hse-post-login-ack-btn"),D=E.querySelector(".hse-post-login-skip-btn");if(k&&k.addEventListener("click",()=>A("acknowledged")),D&&D.addEventListener("click",()=>A("skipped")),l>0){let C=l;v(C),n=setInterval(()=>{if(C--,v(C),C<=0){clearInterval(n),n=null,typeof UserActivityLog<"u"&&UserActivityLog.log&&UserActivityLog.log("post_login_policy","PostLoginPolicy",null,{action:"skipped",policyTitle:d,description:`\u0627\u0646\u062A\u0647\u0649 \u0627\u0644\u0645\u0624\u0642\u062A (\u062A\u062E\u0637\u064A \u062A\u0644\u0642\u0627\u0626\u064A): ${d}`,auto:!0}).catch(()=>{});const P=o+1<e.length;a(E,!P),s(o+1)}},1e3)}else N&&(N.textContent="\u0627\u0636\u063A\u0637 \xAB\u0644\u0642\u062F \u0627\u0637\u0651\u0644\u0639\u062A\xBB \u0623\u0648 \xAB\u062A\u062E\u0637\u064A\xBB \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629")};try{s(0)}catch(o){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0634\u0627\u0634\u0629 \u0627\u0644\u0633\u064A\u0627\u0633\u0629:",o);try{const r=document.getElementById("hse-post-login-overlay");r&&r.parentNode&&r.remove(),document.documentElement.classList.remove("hse-post-login-overlay-active"),document.body.classList.remove("hse-post-login-overlay-active")}catch{}if(typeof i=="function")try{i()}catch{}}},_compareVersions(e,i){if(!e||!i)return 0;const t=o=>String(o).trim().split(".").map(r=>parseInt(r,10)||0),n=t(e),a=t(i),s=Math.max(n.length,a.length);for(let o=0;o<s;o++){const r=n[o]||0,l=a[o]||0;if(r>l)return 1;if(r<l)return-1}return 0},_showUpdateModal(e,i=null){const t=e&&String(e).trim()||"";if(!t)return;const n="hse_last_seen_version",a="hse_update_modal_shown_version";if(document.getElementById("hse-update-message-modal")||typeof sessionStorage<"u"&&sessionStorage.getItem(a)===t)return;try{typeof sessionStorage<"u"&&sessionStorage.setItem(a,t)}catch{}const s=typeof I18n<"u"&&typeof I18n.isEn=="function"?I18n.isEn():localStorage.getItem("language")==="en",o=typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(t):t,r=s?"New System Update":"\u0647\u0646\u0627\u0643 \u062A\u062D\u062F\u064A\u062B \u062C\u062F\u064A\u062F",l=s?"App updated to Version:":"\u062A\u0645 \u0625\u062C\u0631\u0627\u0621 \u062A\u062D\u062F\u064A\u062B \u0639\u0644\u0649 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2014 \u0627\u0644\u0625\u0635\u062F\u0627\u0631:",d=s?"Release Highlights":"\u0646\u0628\u0630\u0629 \u0639\u0646 \u0627\u0644\u062A\u062D\u062F\u064A\u062B",p=s?"Reload Page Now":"\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0627\u0644\u0622\u0646",f=s?"Later":"\u0644\u0627\u062D\u0642\u0627\u064B",c=s?"A new system update is available \u2014 please refresh the page to apply changes.":"\u0647\u0646\u0627\u0643 \u062A\u062D\u062F\u064A\u062B \u062C\u062F\u064A\u062F \u0645\u062A\u0627\u062D \u0644\u0644\u062A\u0637\u0628\u064A\u0642 \u2014 \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0644\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0623\u062D\u062F\u062B \u0646\u0633\u062E\u0629.",u=i||AppState?._serverReleaseHighlights||null;let g=[];u&&(s&&Array.isArray(u.en)&&u.en.length?g=u.en:!s&&Array.isArray(u.ar)&&u.ar.length&&(g=u.ar)),g.length||(g=s?["A new application version is available. Reload the page to apply updates."]:["\u064A\u062A\u0648\u0641\u0631 \u0625\u0635\u062F\u0627\u0631 \u062C\u062F\u064A\u062F \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642. \u0623\u0639\u062F \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0641\u062D\u0629 \u0644\u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u062A\u062D\u062F\u064A\u062B\u0627\u062A."]);const m=`
-            <ul style="margin: 0.5rem 0 0; padding-${s?"left":"right"}: 1.2rem; font-size: 0.85rem; color: var(--gray-600, #4b5563); line-height: 1.6; list-style-type: disc;">
-                ${g.map(L=>`<li>${typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(L):L}</li>`).join("")}
+                    ${footerMetaHTML}
+                </div>`;
+            document.body.appendChild(overlay);
+
+            const timerEl = overlay.querySelector('.hse-post-login-overlay-timer');
+            const updateTimer = (sec) => {
+                if (timerEl) timerEl.textContent = duration > 0 ? `ستنتقل تلقائياً خلال ${sec} ثانية` : '';
+            };
+
+            const goNext = (action) => {
+                const actionType = action === 'acknowledged' ? 'acknowledged' : 'skipped';
+                if (typeof UserActivityLog !== 'undefined' && UserActivityLog.log) {
+                    UserActivityLog.log('post_login_policy', 'PostLoginPolicy', null, {
+                        action: actionType,
+                        policyTitle: rawTitle,
+                        description: actionType === 'acknowledged' ? `اطّلع على السياسة: ${rawTitle}` : `تخطى عرض السياسة: ${rawTitle}`
+                    }).catch(() => {});
+                }
+                const hasNext = index + 1 < items.length;
+                removeOverlay(overlay, !hasNext);
+                showItem(index + 1);
+            };
+
+            const ackBtn = overlay.querySelector('.hse-post-login-ack-btn');
+            const skipBtn = overlay.querySelector('.hse-post-login-skip-btn');
+            if (ackBtn) ackBtn.addEventListener('click', () => goNext('acknowledged'));
+            if (skipBtn) skipBtn.addEventListener('click', () => goNext('skipped'));
+
+            if (duration > 0) {
+                let left = duration;
+                updateTimer(left);
+                timerId = setInterval(() => {
+                    left--;
+                    updateTimer(left);
+                    if (left <= 0) {
+                        clearInterval(timerId);
+                        timerId = null;
+                        if (typeof UserActivityLog !== 'undefined' && UserActivityLog.log) {
+                            UserActivityLog.log('post_login_policy', 'PostLoginPolicy', null, {
+                                action: 'skipped',
+                                policyTitle: rawTitle,
+                                description: `انتهى المؤقت (تخطي تلقائي): ${rawTitle}`,
+                                auto: true
+                            }).catch(() => {});
+                        }
+                        const hasNext = index + 1 < items.length;
+                        removeOverlay(overlay, !hasNext);
+                        showItem(index + 1);
+                    }
+                }, 1000);
+            } else if (timerEl) {
+                timerEl.textContent = 'اضغط «لقد اطّلعت» أو «تخطي» للمتابعة';
+            }
+        };
+
+        // عرض السياسة فوراً بعد تسجيل الدخول (بدون تأخير)
+        // ✅ حماية دفاعية شاملة: لو أي خطأ غير متوقع في الـ rendering، نتأكد من إكمال الـ onComplete
+        try {
+            showItem(0);
+        } catch (renderErr) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ خطأ في عرض شاشة السياسة:', renderErr);
+            }
+            // إزالة أي overlay عالق وإكمال التطبيق
+            try {
+                const stuck = document.getElementById('hse-post-login-overlay');
+                if (stuck && stuck.parentNode) stuck.remove();
+                document.documentElement.classList.remove('hse-post-login-overlay-active');
+                document.body.classList.remove('hse-post-login-overlay-active');
+            } catch (e) { /* ignore */ }
+            if (typeof onComplete === 'function') {
+                try { onComplete(); } catch (e) { /* ignore */ }
+            }
+        }
+    },
+
+    /**
+     * مقارنة تسلسلية للإصدارات (مثلاً 1.0.2 أحدث من 1.0.1).
+     * @returns {number} 1 إذا a أحدث، -1 إذا b أحدث، 0 إذا متساويان
+     */
+    _compareVersions(a, b) {
+        if (!a || !b) return 0;
+        const parts = (v) => String(v).trim().split('.').map(n => parseInt(n, 10) || 0);
+        const pa = parts(a), pb = parts(b);
+        const len = Math.max(pa.length, pb.length);
+        for (let i = 0; i < len; i++) {
+            const na = pa[i] || 0, nb = pb[i] || 0;
+            if (na > nb) return 1;
+            if (na < nb) return -1;
+        }
+        return 0;
+    },
+
+    /**
+     * عرض نافذة "هناك تحديث جديد" بإصدار معيّن (من التطبيق الحالي أو من الخادم).
+     * لا تُعرض النافذة أكثر من مرة واحدة في الجلسة لنفس الإصدار.
+     * @param {string} newVersion - الإصدار الجديد المعروض للمستخدم (يجب أن يكون تسلسلياً، مثلاً 1.0.1)
+     */
+    /**
+     * عرض نافذة "هناك تحديث جديد" بإصدار معيّن مع نبذة التحديث والدعم الكامل للغتين
+     * @param {string} newVersion - الإصدار الجديد المعروض للمستخدم
+     */
+    _showUpdateModal(newVersion, customHighlights = null) {
+        const v = (newVersion && String(newVersion).trim()) || '';
+        if (!v) return;
+        const storageKey = 'hse_last_seen_version';
+        const sessionShownKey = 'hse_update_modal_shown_version';
+        if (document.getElementById('hse-update-message-modal')) return;
+        if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(sessionShownKey) === v) return;
+        try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(sessionShownKey, v); } catch (e) {}
+
+        const isEn = typeof I18n !== 'undefined' && typeof I18n.isEn === 'function' ? I18n.isEn() : (localStorage.getItem('language') === 'en');
+        const safeVersion = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(v) : v;
+
+        const titleText = isEn ? 'New System Update' : 'هناك تحديث جديد';
+        const versionPrefix = isEn ? 'App updated to Version:' : 'تم إجراء تحديث على التطبيق — الإصدار:';
+        const notesTitle = isEn ? 'Release Highlights' : 'نبذة عن التحديث';
+        const reloadText = isEn ? 'Reload Page Now' : 'تحديث الصفحة الآن';
+        const laterText = isEn ? 'Later' : 'لاحقاً';
+        const toastMsg = isEn 
+            ? 'A new system update is available — please refresh the page to apply changes.'
+            : 'هناك تحديث جديد متاح للتطبيق — يرجى تحديث الصفحة للحصول على أحدث نسخة.';
+
+        const activeHighlights = customHighlights || AppState?._serverReleaseHighlights || null;
+        let notesItems = [];
+
+        if (activeHighlights) {
+            if (isEn && Array.isArray(activeHighlights.en) && activeHighlights.en.length) {
+                notesItems = activeHighlights.en;
+            } else if (!isEn && Array.isArray(activeHighlights.ar) && activeHighlights.ar.length) {
+                notesItems = activeHighlights.ar;
+            }
+        }
+
+        if (!notesItems.length) {
+            notesItems = isEn
+                ? ['A new application version is available. Reload the page to apply updates.']
+                : ['يتوفر إصدار جديد من التطبيق. أعد تحميل الصفحة لتطبيق التحديثات.'];
+        }
+
+        const notesListHtml = `
+            <ul style="margin: 0.5rem 0 0; padding-${isEn ? 'left' : 'right'}: 1.2rem; font-size: 0.85rem; color: var(--gray-600, #4b5563); line-height: 1.6; list-style-type: disc;">
+                ${notesItems.map(item => `<li>${(typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(item) : item}</li>`).join('')}
             </ul>
-        `,y=document.createElement("div");y.id="hse-update-message-modal",y.setAttribute("role","dialog"),y.setAttribute("aria-modal","true"),y.setAttribute("aria-label",r),y.setAttribute("data-no-literal-translate","true"),y.className="hse-update-message-modal",y.style.cssText="position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);padding:1rem;",y.innerHTML=`
-            <div class="hse-update-message-card" data-no-literal-translate="true" style="background:var(--bg-primary,#fff);color:var(--text-primary,#111);max-width:460px;width:100%;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);padding:1.5rem;text-align:${s?"left":"right"};direction:${s?"ltr":"rtl"};">
+        `;
+
+        const modal = document.createElement('div');
+        modal.id = 'hse-update-message-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', titleText);
+        modal.setAttribute('data-no-literal-translate', 'true');
+        modal.className = 'hse-update-message-modal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);padding:1rem;';
+        modal.innerHTML = `
+            <div class="hse-update-message-card" data-no-literal-translate="true" style="background:var(--bg-primary,#fff);color:var(--text-primary,#111);max-width:460px;width:100%;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);padding:1.5rem;text-align:${isEn ? 'left' : 'right'};direction:${isEn ? 'ltr' : 'rtl'};">
                 <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
                     <span style="width:48px;height:48px;border-radius:50%;background:var(--primary-color,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-sync-alt" style="font-size:1.25rem;"></i></span>
                     <div>
-                        <h2 style="margin:0;font-size:1.25rem;font-weight:700;">${r}</h2>
-                        <p style="margin:2px 0 0;font-size:0.85rem;color:var(--gray-500,#6b7280);"><span>${l}</span> <strong>${o}</strong></p>
+                        <h2 style="margin:0;font-size:1.25rem;font-weight:700;">${titleText}</h2>
+                        <p style="margin:2px 0 0;font-size:0.85rem;color:var(--gray-500,#6b7280);"><span>${versionPrefix}</span> <strong>${safeVersion}</strong></p>
                     </div>
                 </div>
 
                 <div style="background:var(--bg-secondary,#f9fafb);border:1px solid var(--border-color,#e5e7eb);border-radius:12px;padding:0.9rem;margin:1rem 0;">
                     <div style="font-weight:700;font-size:0.9rem;color:var(--primary-color,#2563eb);display:flex;align-items:center;gap:6px;">
                         <i class="fas fa-magic"></i>
-                        <span>${d}</span>
+                        <span>${notesTitle}</span>
                     </div>
-                    ${m}
+                    ${notesListHtml}
                 </div>
 
-                <div style="display:flex;gap:0.5rem;margin-top:1.25rem;flex-direction:${s?"row":"row-reverse"};">
-                    <button type="button" id="hse-update-message-reload" class="btn-primary" style="flex:1;">${p}</button>
-                    <button type="button" id="hse-update-message-later" class="btn-secondary" style="flex:1;">${f}</button>
+                <div style="display:flex;gap:0.5rem;margin-top:1.25rem;flex-direction:${isEn ? 'row' : 'row-reverse'};">
+                    <button type="button" id="hse-update-message-reload" class="btn-primary" style="flex:1;">${reloadText}</button>
+                    <button type="button" id="hse-update-message-later" class="btn-secondary" style="flex:1;">${laterText}</button>
                 </div>
-            </div>`,document.body.appendChild(y),typeof Notification<"u"&&Notification.info&&Notification.info(c,{duration:6e3});const b=()=>{try{typeof localStorage<"u"&&localStorage.setItem(n,t)}catch{}y&&y.parentNode&&y.remove(),window.location.reload()},w=()=>{try{typeof sessionStorage<"u"&&sessionStorage.setItem("hse_update_modal_shown_version",t)}catch{}y&&y.parentNode&&y.remove()},x=y.querySelector("#hse-update-message-reload"),I=y.querySelector("#hse-update-message-later");x&&x.addEventListener("click",b),I&&I.addEventListener("click",w),y.addEventListener("click",L=>{L.target===y&&w()})},showReleaseNotesModal(){const e=AppState&&AppState.appVersion?String(AppState.appVersion).trim():"1.0.567";try{sessionStorage.removeItem("hse_update_modal_shown_version")}catch{}this._showUpdateModal(e,AppState?._serverReleaseHighlights||null)},async _checkServerVersion(){try{if(typeof fetch>"u")return;const e=typeof window<"u"&&window.location&&window.location.origin?window.location.origin:"",i=typeof window<"u"&&window.location&&window.location.protocol==="file:";if(!e||e==="null"||e.startsWith("file:")||i)return;const t=e+"/version.json?t="+(Date.now?Date.now():""),n=await fetch(t,{cache:"no-store",method:"GET"});if(!n||!n.ok)return;const a=await n.json(),s=a&&a.version?String(a.version).trim():"";if(!s)return;a.highlights&&(AppState._serverReleaseHighlights=a.highlights);const o="hse_last_seen_version",r=typeof localStorage<"u"&&localStorage.getItem(o)?String(localStorage.getItem(o)).trim():"";if(!r){AppState&&AppState.debugMode,this._showUpdateModal(s,a.highlights||null);return}if(typeof this._compareVersions!="function")return;if(this._compareVersions(s,r)<=0){AppState&&AppState.debugMode;return}AppState&&AppState.debugMode,this._showUpdateModal(s,a.highlights||null)}catch(e){AppState.debugMode&&typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u062E\u0627\u062F\u0645:",e)}},_installUpdateNotificationDevHelpers(){if(typeof window>"u")return;const e=this;try{window.__forceUpdateNotification=function(){const i=AppState&&AppState.appVersion?String(AppState.appVersion).trim():"1.0.0";try{sessionStorage.removeItem("hse_update_modal_shown_version")}catch{}e._showUpdateModal(i)},window.__resetUpdateNotification=function(){try{localStorage.removeItem("hse_last_seen_version")}catch{}try{sessionStorage.removeItem("hse_update_modal_shown_version")}catch{}},window.__whyNoUpdateNotification=function(){const i=AppState&&AppState.appVersion||"(\u063A\u064A\u0631 \u0645\u062D\u062F\u062F)",t=typeof localStorage<"u"?localStorage.getItem("hse_last_seen_version")||"(\u0641\u0627\u0631\u063A)":"(localStorage \u063A\u064A\u0631 \u0645\u062A\u0627\u062D)",n=typeof sessionStorage<"u"?sessionStorage.getItem("hse_update_modal_shown_version")||"(\u0644\u0645 \u064A\u0638\u0647\u0631 \u0647\u0630\u0647 \u0627\u0644\u062C\u0644\u0633\u0629)":"(sessionStorage \u063A\u064A\u0631 \u0645\u062A\u0627\u062D)",a=typeof e._compareVersions=="function"&&t!=="(\u0641\u0627\u0631\u063A)"?e._compareVersions(i,t):"N/A";t==="(\u0641\u0627\u0631\u063A)"||a===0||a<0}}catch{}},_showUpdateMessageIfNeeded(){try{const e=typeof AppState<"u"&&AppState.appVersion?String(AppState.appVersion).trim():"";if(!e){AppState&&AppState.debugMode;return}const i="hse_last_seen_version",t=typeof localStorage<"u"&&localStorage.getItem(i)?String(localStorage.getItem(i)).trim():"";if(!t){AppState&&AppState.debugMode,this._showUpdateModal(e,AppState?._serverReleaseHighlights||null);return}if(typeof this._compareVersions!="function")return;if(this._compareVersions(e,t)<=0){AppState&&AppState.debugMode;return}AppState&&AppState.debugMode,this._showUpdateModal(e,AppState?._serverReleaseHighlights||null)}catch(e){AppState.debugMode&&typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u062A\u062D\u062F\u064A\u062B:",e)}},cleanupStaleStartupLayers(){try{document.documentElement.classList.remove("hse-post-login-overlay-active"),document.body.classList.remove("hse-post-login-overlay-active");const e=document.getElementById("hse-session-restore-overlay");e&&e.parentNode&&e.remove();const i=document.getElementById("hse-post-login-overlay");i&&i.parentNode&&i.remove(),typeof Loading<"u"&&typeof Loading.hide=="function"&&Loading.hide();const t=document.getElementById("loading-overlay");t&&(t.style.setProperty("display","none","important"),t.style.setProperty("visibility","hidden","important"),t.style.setProperty("opacity","0","important"),t.style.setProperty("pointer-events","none","important"),t.setAttribute("aria-hidden","true"),t.dataset.loadingVisible="0");const n=document.getElementById("main-app");n&&(n.style.visibility="",n.style.pointerEvents="",AppState?.currentUser&&n.style.display==="none"&&(n.style.display="flex"))}catch{}},clearPostLoginOverlayLock(){try{this.cleanupStaleStartupLayers()}catch{}},_installUiRecoveryWatchdog(){if(window._hseUiRecoveryWatchdogInstalled)return;window._hseUiRecoveryWatchdogInstalled=!0;try{window.HSE_clearUiLock=()=>{try{typeof UI<"u"&&typeof UI.clearPostLoginOverlayLock=="function"&&UI.clearPostLoginOverlayLock(),typeof Loading<"u"&&typeof Loading.hide=="function"&&(Loading.hide(),this.cleanupStaleStartupLayers())}catch{}}}catch{}try{window.addEventListener("pageshow",()=>{try{typeof UI<"u"&&typeof UI.cleanupStaleStartupLayers=="function"&&UI.cleanupStaleStartupLayers()}catch{}})}catch{}const e=()=>{try{if(typeof AppState>"u"||!AppState.currentUser)return;const i=document.getElementById("hse-post-login-overlay"),t=document.getElementById("main-app"),n=document.body.classList.contains("hse-post-login-overlay-active"),a=t&&(t.style.display==="flex"||t.style.display==="block");n&&!i&&a&&(this.clearPostLoginOverlayLock(),typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0645\u062A \u0625\u0632\u0627\u0644\u0629 \u0642\u0641\u0644 \u0648\u0627\u062C\u0647\u0629 \u0645\u0627 \u0628\u0639\u062F \u0627\u0644\u062F\u062E\u0648\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B (\u062D\u0627\u0644\u0629 \u063A\u064A\u0631 \u0645\u062A\u0633\u0642\u0629)"));const s=document.getElementById("loading-overlay"),o=s&&(s.dataset.loadingVisible==="1"||s.style.display!=="none"&&s.style.display!=="");o&&a&&typeof window._hseLoadingSince!="number"?this.cleanupStaleStartupLayers():o&&typeof window._hseLoadingSince=="number"&&Date.now()-window._hseLoadingSince>12e4&&typeof Loading<"u"&&typeof Loading.hide=="function"&&(Loading.hide(),this.cleanupStaleStartupLayers(),typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0645 \u0625\u0632\u0627\u0644\u0629 \u0637\u0628\u0642\u0629 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0628\u0639\u062F \u0645\u0647\u0644\u0629 \u0637\u0648\u064A\u0644\u0629"))}catch{}};setInterval(e,2500),document.addEventListener("visibilitychange",()=>{document.visibilityState==="visible"&&e()})},_hasAuthOwnedInitialDataFlow(){return AppState?._initialDataLoadOwner==="auth"&&(AppState?._initialDataLoadInProgress||AppState?._initialDataLoadCompleted)},_startPermissionScopedBootstrapLoad(){if(this._hasAuthOwnedInitialDataFlow()||AppState?._permissionScopedBootstrapStarted||AppState?._permissionScopedBootstrapCompleted||typeof AppBootstrap>"u"||typeof AppBootstrap.loadDataBasedOnPermissions!="function")return!1;try{AppState._permissionScopedBootstrapStarted=!0;const e=AppState?.currentUser?.permissions||{};return AppBootstrap.loadDataBasedOnPermissions(e).catch(i=>{AppState?.debugMode&&Utils?.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0630\u0643\u064A \u0644\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",i),AppState._permissionScopedBootstrapStarted=!1}).finally(()=>{AppState._permissionScopedBootstrapStarted=!1,AppState._permissionScopedBootstrapCompleted=!0}),!0}catch(e){return AppState._permissionScopedBootstrapStarted=!1,AppState?.debugMode&&Utils?.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0630\u0643\u064A\u0629:",e),!1}},_startInitialSilentSync(e={}){if(this._hasAuthOwnedInitialDataFlow()||typeof AppState>"u"||!AppState.currentUser||AppState.isPageRefresh||AppState._autoSyncStarted||typeof Utils>"u"||typeof Utils.hasCloudBackendSync!="function"||!Utils.hasCloudBackendSync()||typeof GoogleIntegration>"u"||typeof GoogleIntegration.syncData!="function")return!1;AppState._autoSyncStarted=!0;const i={silent:!0,showLoader:!1,notifyOnSuccess:!1,notifyOnError:!1,includeUsersSheet:!0,incremental:!0,forceRefresh:!1,...e};return setTimeout(()=>{try{GoogleIntegration.syncData(i).catch(t=>{AppState.debugMode&&typeof Utils.safeWarn=="function"&&Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A \u0627\u0644\u0635\u0627\u0645\u062A \u0628\u0639\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644:",t)})}catch(t){AppState.debugMode&&typeof Utils.safeWarn=="function"&&Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A \u0644\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0639\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644:",t)}},500),!0},_currentSectionNeedsRefreshForSheets(e,i){if(!e||e==="dashboard"||!Array.isArray(i)||i.length===0||typeof RealtimeSyncManager>"u"||typeof RealtimeSyncManager.getModulesForSection!="function"||typeof RealtimeSyncManager.getModulesForSheets!="function")return!0;const t=RealtimeSyncManager.getModulesForSection(e)||[];if(!t.length)return!0;const n=RealtimeSyncManager.getModulesForSheets(i)||[];return n.length?n.some(a=>a==="users"||t.includes(a)):!0},_continueMainAppSetup(){if(this.clearPostLoginOverlayLock(),this._mainAppSetupStarted)return;if(this._mainAppSetupStarted=!0,this._startPermissionScopedBootstrapLoad(),typeof InactivityManager<"u"&&!AppState.isPageRefresh?InactivityManager.init():typeof InactivityManager<"u"&&AppState.isPageRefresh&&setTimeout(()=>{AppState.currentUser&&typeof InactivityManager<"u"&&InactivityManager.init()},1e3),this.updateUserProfile(),typeof FireEquipment>"u"&&!document.querySelector('script[src*="fireequipment.js"]'))try{const a=(()=>{const o=document.querySelector("base");if(o&&o.href)return o.href.replace(/\/$/,"")+"/";const r=window.location.pathname||"",l=r.lastIndexOf("/");return window.location.origin+(l>=0?r.slice(0,l+1):"/")})(),s=document.createElement("script");s.src=a+"js/modules/modules/fireequipment.js",s.async=!0,document.body.appendChild(s)}catch(a){AppState.debugMode&&Utils.safeWarn("\u062A\u062D\u0645\u064A\u0644 \u0645\u0633\u0628\u0642 \u0644\u0645\u0639\u062F\u0627\u062A \u0627\u0644\u062D\u0631\u064A\u0642:",a)}this.setupNavigationListeners(),this.bindSidebarEvents(),this.initSyncButton(),this.initUserConnectionStatus(),this._startInitialSilentSync({incremental:!0}),setTimeout(()=>{this.updateUserConnectionStatus()},500);let e=0;const i=()=>{e++,this.setupLogoutButton(),e<3&&setTimeout(i,500)};if(setTimeout(i,100),Permissions.updateNavigation(),setTimeout(()=>{typeof Permissions<"u"&&typeof Permissions.updateNavigation=="function"&&Permissions.updateNavigation()},1e3),setTimeout(()=>{typeof Permissions<"u"&&typeof Permissions.updateNavigation=="function"&&Permissions.updateNavigation()},2e3),[5e3,8e3].forEach(a=>{setTimeout(()=>{if(typeof Permissions<"u"&&typeof Permissions.updateNavigation=="function")try{Permissions.updateNavigation()}catch{}},a)}),this.updateUserProfilePhoto(),setTimeout(()=>{this.updateUserProfilePhoto()},500),this.showHeaderActions(),this.initSidebarButtons(),setTimeout(()=>{try{this.initSidebarButtons()}catch(a){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u0625\u0639\u0627\u062F\u0629 \u062A\u0647\u064A\u0626\u0629 \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0634\u0631\u064A\u0637 \u0627\u0644\u062C\u0627\u0646\u0628\u064A:",a)}},400),typeof UserAIAssistant<"u"&&UserAIAssistant.init&&setTimeout(()=>{UserAIAssistant.init()},500),setTimeout(()=>{typeof this._showUpdateMessageIfNeeded=="function"&&this._showUpdateMessageIfNeeded()},800),!AppState._updateCheckInitialized){AppState._updateCheckInitialized=!0;const a=()=>{typeof this._checkServerVersion=="function"&&this._checkServerVersion()};setTimeout(a,2e3),setInterval(a,300*1e3),document.addEventListener("visibilitychange",()=>{document.visibilityState==="visible"&&a()}),typeof this._installUpdateNotificationDevHelpers=="function"&&this._installUpdateNotificationDevHelpers()}typeof Utils<"u"&&typeof Utils.hasCloudBackendSync=="function"&&!Utils.hasCloudBackendSync()&&(Utils.safeLog("\u2139 \u0627\u0644\u062E\u0644\u0641\u064A\u0629 \u0627\u0644\u0633\u062D\u0627\u0628\u064A\u0629 \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644\u0629 \u2014 \u0627\u0644\u0639\u0645\u0644 \u0639\u0644\u0649 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0641\u0642\u0637"),AppState.isPageRefresh||Object.keys(AppState.appData).some(s=>Array.isArray(AppState.appData[s])&&AppState.appData[s].length>0)||Notification.info("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0629. \u0641\u0639\u0651\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Google Apps Script \u0645\u0646 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0648\u062A\u062D\u0642\u0642 \u0645\u0646 \u0648\u0631\u0642\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A.")),typeof ConnectionMonitor<"u"&&ConnectionMonitor.start&&setTimeout(()=>{try{ConnectionMonitor.start(),Utils.safeLog("\u2705 \u062A\u0645 \u0628\u062F\u0621 \u0646\u0638\u0627\u0645 \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644"),this.updateSyncButtonStatus(),this.updateUserConnectionStatus()}catch(a){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0628\u062F\u0621 \u0646\u0638\u0627\u0645 \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644:",a)}},2e3),setInterval(()=>{this.updateSyncButtonStatus()},15e3),this.updateCompanyLogoHeader(),this.updateDashboardLogo();const t=sessionStorage.getItem("hse_current_section");let n=t||"dashboard";try{if(t&&typeof Permissions<"u"&&typeof Permissions.checkBeforeShow=="function"&&!Permissions.checkBeforeShow(n,!0)){n="dashboard";try{sessionStorage.setItem("hse_current_section","dashboard")}catch{}}}catch{}AppState.currentSection=n;try{n&&typeof window.location<"u"&&(window.location.hash=n)}catch{}Utils.safeLog("\u{1F4C2} \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0642\u0633\u0645:",{savedSection:t,sectionToShow:n,isPageRefresh:AppState.isPageRefresh,currentSection:AppState.currentSection}),AppState.isNavigatingBack=!0,this.showSection(n),setTimeout(()=>{AppState.isNavigatingBack=!1},300),window.innerWidth>1024?setTimeout(()=>{const a=document.querySelector(".sidebar");a&&(n==="dashboard"?a.classList.contains("open")||this.toggleSidebar(!0):a.classList.contains("open")&&this.toggleSidebar(!1))},100):setTimeout(()=>this.toggleSidebar(!1),0),(async()=>{try{if((!AppState.appData.users||AppState.appData.users.length===0)&&typeof DataManager<"u"&&DataManager.load&&await DataManager.load(),typeof DataManager<"u"&&DataManager.loadCompanySettings)try{await DataManager.loadCompanySettings(!1)}catch(a){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0641\u064A showMainApp:",a)}if(typeof Permissions<"u"&&typeof Permissions.initFormSettingsState=="function")try{await Permissions.initFormSettingsState()}catch(a){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u0647\u064A\u0626\u0629 \u0645\u0648\u0627\u0642\u0639 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0628\u0639\u062F \u0639\u0631\u0636 \u0627\u0644\u062A\u0637\u0628\u064A\u0642:",a)}this.refreshCurrentSection(),this.setupSyncDataCompletedListener(),AppState.isPageRefresh&&(AppState.isPageRefresh=!1,Utils.safeLog("\u2705 \u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0639\u0644\u0627\u0645\u0629 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u062D\u0645\u064A\u0644")),this.scheduleContractorApprovalNotificationsRefresh(),this.updateNotificationsBadge&&setTimeout(()=>{this.updateNotificationsBadge()},300)}catch(a){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 Dashboard:",a)}})(),this.scheduleContractorApprovalNotificationsRefresh()},scheduleContractorApprovalNotificationsRefresh(){if(typeof Contractors>"u"||typeof Contractors.prefetchApprovalRequestsForNotifications!="function")return;const e=()=>{Contractors.prefetchApprovalRequestsForNotifications().then(()=>{typeof this.updateNotificationsBadge=="function"&&this.updateNotificationsBadge()}).catch(()=>{})};setTimeout(e,400),this._carNotificationPrefetchInterval||(this._carNotificationPrefetchInterval=setInterval(e,6e4))},setupSyncDataCompletedListener(){this._syncDataCompletedHandler&&window.removeEventListener("syncDataCompleted",this._syncDataCompletedHandler),this._syncDataCompletedHandler=e=>{const{syncedCount:i,failedSheets:t,sheets:n}=e.detail||{};if(AppState.debugMode&&Utils.safeLog(`\u2705 \u0627\u0643\u062A\u0645\u0644\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629: ${i} \u0648\u0631\u0642\u0629\u060C ${t?.length||0} \u0641\u0634\u0644`),Array.isArray(n)&&n.some(r=>String(r||"").toLowerCase()==="users")&&AppState.currentUser&&AppState.appData.users){const r=AppState.currentUser.email?.toLowerCase(),l=AppState.appData.users.find(d=>d.email&&d.email.toLowerCase()===r);if(l){const d=typeof Permissions<"u"&&typeof Permissions.normalizePermissions=="function"?Permissions.normalizePermissions(l.permissions):l.permissions||{};AppState.currentUser.permissions=d||{},typeof window.Auth<"u"&&typeof window.Auth.updateUserSession=="function"&&(window.Auth.updateUserSession(),AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u062D\u0627\u0644\u064A \u0628\u0639\u062F \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629")),typeof Permissions<"u"&&typeof Permissions.updateNavigation=="function"&&setTimeout(()=>{try{Permissions.updateNavigation()}catch{}},0)}}const s=AppState.currentSection;if(s&&s!=="dashboard"&&this._currentSectionNeedsRefreshForSheets(s,n)&&(this._syncSectionRefreshTimer&&clearTimeout(this._syncSectionRefreshTimer),this._syncSectionRefreshTimer=setTimeout(()=>{this.refreshCurrentSection(!0)},120)),s==="dashboard"&&typeof Dashboard<"u"&&Dashboard.load)try{Dashboard.load()}catch(r){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B Dashboard \u0628\u0639\u062F \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629:",r)}(typeof Contractors>"u"||typeof Contractors.shouldLoadContractorApprovalRequests=="function"&&!Contractors.shouldLoadContractorApprovalRequests()?Promise.resolve(!1):typeof Contractors.ensureApprovalRequestsDataLoaded=="function"?Contractors.ensureApprovalRequestsDataLoaded({force:!0}):Promise.resolve(!1)).then(()=>{typeof this.updateNotificationsBadge=="function"&&this.updateNotificationsBadge(),AppState.currentSection==="contractors"&&typeof Contractors<"u"&&typeof Contractors.mountApprovalRequestSection=="function"&&Contractors.currentTab==="approval-request"&&Contractors.mountApprovalRequestSection()}).catch(()=>{})},window.addEventListener("syncDataCompleted",this._syncDataCompletedHandler),AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u0625\u0639\u062F\u0627\u062F \u0645\u0633\u062A\u0645\u0639 \u062D\u062F\u062B \u0627\u0643\u062A\u0645\u0627\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629")},refreshCurrentSection(e=!1){const i=AppState.currentSection||"dashboard";typeof this.loadSectionData=="function"&&this.loadSectionData(i,e||AppState.isPageRefresh)},bindCompanyHeaderClickEvents(){const e=document.getElementById("header-company-logo"),i=document.getElementById("header-company-name-text"),t=document.getElementById("header-company-secondary-text"),n=document.getElementById("header-company-text-group"),a=document.getElementById("company-logo-header"),s=o=>{o.preventDefault(),o.stopPropagation(),this.toggleSidebar()};if(e&&!e.dataset.clickBound&&(e.style.cursor="pointer",e.setAttribute("title","\u0627\u0646\u0642\u0631 \u0644\u0641\u062A\u062D \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629"),e.setAttribute("role","button"),e.setAttribute("aria-label","\u0641\u062A\u062D \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629"),e.addEventListener("click",s),e.dataset.clickBound="true"),i&&!i.dataset.clickBound&&(i.style.cursor="pointer",i.setAttribute("title","\u0627\u0646\u0642\u0631 \u0644\u0641\u062A\u062D \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629"),i.setAttribute("role","button"),i.setAttribute("aria-label","\u0641\u062A\u062D \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629"),i.addEventListener("click",s),i.dataset.clickBound="true"),t&&!t.dataset.clickBound&&(t.style.cursor="pointer",t.setAttribute("title","\u0627\u0646\u0642\u0631 \u0644\u0641\u062A\u062D \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629"),t.setAttribute("role","button"),t.setAttribute("aria-label","\u0641\u062A\u062D \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629"),t.addEventListener("click",s),t.dataset.clickBound="true"),n&&!n.dataset.clickBound&&(n.style.cursor="pointer",n.addEventListener("click",s),n.dataset.clickBound="true"),a){const o=a.querySelector("div:first-child");o&&!o.dataset.clickBound&&(o.style.cursor="pointer",o.addEventListener("click",s),o.dataset.clickBound="true")}},updateCompanyLogoHeader(){const e=document.getElementById("company-logo-header"),i=document.getElementById("header-company-logo"),t=document.getElementById("header-company-logo-right");if(this.updateCompanyBranding(),e){if(AppState.companyLogo){e.style.display="flex",e.style.justifyContent="space-between",e.style.alignItems="center",e.style.padding="10px 20px",e.style.zIndex="1001";const a=document.querySelector(".sidebar"),s=a&&a.classList.contains("open");if(this.updateCompanyLogoHeaderPosition(s),i){let o=!1;i.onerror=()=>{o||(o=!0,i.style.display="none")},i.onload=()=>{o=!1,i.style.display="block"},i.src=AppState.companyLogo,i.style.display="block",i.style.maxHeight="50px",i.style.maxWidth="150px",i.style.objectFit="contain"}t&&(t.style.display="none")}else e.style.display="none",i&&(i.style.display="none"),t&&(t.style.display="none");const n=!!(e&&e.style.display==="flex"&&window.innerWidth>1024);this._lastHeaderTopPaddingState!==n&&(this._lastHeaderTopPaddingState=n,document.querySelectorAll(".section").forEach(s=>{s.style.paddingTop=n?"70px":"0"})),e&&e.style.display==="flex"&&this.showHeaderActions(),this.bindCompanyHeaderClickEvents()}},updateDashboardLogo(){const e=document.getElementById("dashboard-company-logo");e&&(e.style.display="none"),document.querySelectorAll(".section").forEach(t=>{const n=t.querySelector(".section-company-logo");n&&n.remove()})},translateBrandingText(e,i){if(!e)return"";const t=String(e).trim(),n={"\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0639\u0627\u0644\u0645\u064A\u0629 \u0644\u0644\u0627\u0646\u062A\u0627\u062C \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639 \u0627\u0644\u0632\u0631\u0627\u0639\u064A":"International Company for Agricultural Production & Processing (ICAPP)","\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629":"Health, Safety & Environment (HSE)","\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629":"Occupational Safety & Health","\u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629":"Health, Safety & Environment (HSE)","\u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629":"Occupational Safety & Health","\u0646\u0638\u0627\u0645 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629":"Occupational Safety System"},a={"International Company for Agricultural Production & Processing (ICAPP)":"\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0639\u0627\u0644\u0645\u064A\u0629 \u0644\u0644\u0627\u0646\u062A\u0627\u062C \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639 \u0627\u0644\u0632\u0631\u0627\u0639\u064A","HSE Department":"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629","Health, Safety & Environment (HSE)":"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629","Occupational Safety & Health":"\u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629","Occupational Safety System":"\u0646\u0638\u0627\u0645 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629"};if(i==="en"){if(n[t])return n[t];const s=t.replace(/\s+/g," ");for(const[r,l]of Object.entries(n))if(s.includes(r)||r.includes(s))return l;if(s.includes("\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629")||s.includes("\u0627\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629")||s.includes("\u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629"))return"Health, Safety & Environment (HSE)";if(s.includes("\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0639\u0627\u0644\u0645\u064A\u0629"))return"International Company for Agricultural Production & Processing (ICAPP)";const o=window.AppI18n||window.I18n;if(o&&o.literalArToEn){if(o.literalArToEn[t])return o.literalArToEn[t];if(o.literalArToEn[s])return o.literalArToEn[s]}return t}if(i==="ar"){if(a[t])return a[t];const s=t.toLowerCase().replace(/\s+/g," ");for(const[r,l]of Object.entries(a))if(s.includes(r.toLowerCase())||r.toLowerCase().includes(s))return l;if(s.includes("hse department")||s.includes("hse dept")||s.includes("safety department"))return"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629";if(s.includes("agricultural production")||s.includes("icapp"))return"\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0639\u0627\u0644\u0645\u064A\u0629 \u0644\u0644\u0627\u0646\u062A\u0627\u062C \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639 \u0627\u0644\u0632\u0631\u0627\u0639\u064A";const o=window.AppI18n||window.I18n;if(o&&o.literalArToEn){const r=Object.entries(o.literalArToEn).find(([l,d])=>{const p=l.toLowerCase().replace(/\s+/g," "),f=d.toLowerCase().replace(/\s+/g," ");return f===s||f.includes(s)||s.includes(f)});if(r)return r[0]}return t}return t},updateCompanyBranding(){const e=localStorage.getItem("language")||"ar",i=typeof DEFAULT_COMPANY_NAME<"u"?DEFAULT_COMPANY_NAME:"",t=AppState?.companySettings?.name;let n="";if(t!=null){const y=String(t).trim();y&&(n=y)}n||(n=i);const a=AppState?.companySettings?.secondaryName,s=a!=null?String(a).trim():"",o=this.translateBrandingText(n,e),r=this.translateBrandingText(s,e),l=AppState?.companySettings?.nameFontSize||16,d=AppState?.companySettings?.secondaryNameFontSize||14,p=AppState?.companySettings?.secondaryNameColor||"#6B7280",f=document.getElementById("login-company-name");f&&(f.textContent=o,f.style.fontSize=`${l}px`);const c=document.getElementById("login-company-secondary-name");c&&(r?(c.textContent=r,c.style.display="block",c.style.fontSize=`${d}px`,c.style.color=p):(c.textContent="",c.style.display="none"));const u=document.getElementById("header-company-name-text");u&&(u.textContent=o,u.style.display=o?"block":"none",u.style.fontSize=`${l}px`);const g=document.getElementById("header-company-secondary-text");g&&(r?(g.textContent=r,g.style.display="block",g.style.fontSize=`${d}px`,g.style.color=p):(g.textContent="",g.style.display="none"));const m=document.getElementById("mobile-company-name");m&&(m.textContent=o||"SafetyHub | ICAPP",m.style.fontSize=`${l}px`)},updateLoginLogo(){const e=document.getElementById("company-logo"),i=document.getElementById("default-logo-icon");if(!e||!i){Utils.safeWarn("\u26A0\uFE0F \u0639\u0646\u0627\u0635\u0631 \u0627\u0644\u0634\u0639\u0627\u0631 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0641\u064A DOM");return}let t=null;if(AppState&&AppState.companyLogo&&AppState.companyLogo.trim()!==""&&(t=AppState.companyLogo.trim()),!t)try{const n=localStorage.getItem("hse_company_logo")||localStorage.getItem("company_logo");n&&n.trim()!==""&&(t=n.trim())}catch(n){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0634\u0639\u0627\u0631 \u0645\u0646 localStorage:",n)}if(!t&&AppState&&AppState.companySettings){const n=AppState.companySettings.logo;n&&n.trim()!==""&&(t=n.trim())}if(t&&t.trim()!==""){let n=!1;e.onerror=()=>{n||(n=!0,Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0634\u0639\u0627\u0631 \u0627\u0644\u0634\u0631\u0643\u0629 \u0645\u0646:",t),e.style.display="none",i.style.display="inline-block",e.src="")},e.onload=()=>{n=!1,e.style.display="block",i.style.display="none",e.style.maxWidth="180px",e.style.maxHeight="120px",e.style.width="auto",e.style.height="auto",e.style.objectFit="contain",e.style.margin="0 auto",e.style.borderRadius="8px"},e.src=t,e.style.display="block",i.style.display="none"}else e.style.display="none",e.src="",i.style.display="inline-block"},sidebarResizeBound:!1,sidebarKeydownBound:!1,toggleSidebar(e=null){const i=document.querySelector(".sidebar"),t=document.getElementById("sidebar-overlay");if(!i)return;const n=e!==null?e:!i.classList.contains("open"),a=window.innerWidth<=1024;if(n){if(i.classList.add("open"),t&&a&&(t.classList.add("visible"),t.setAttribute("aria-hidden","false")),a){const o=window.scrollY||window.pageYOffset||document.documentElement.scrollTop;document.body.dataset.scrollY=o.toString(),document.body.classList.add("sidebar-open")}}else if(i.classList.remove("open"),t&&(t.classList.remove("visible"),t.setAttribute("aria-hidden","true")),a){const o=document.body.dataset.scrollY;if(document.body.classList.remove("sidebar-open"),delete document.body.dataset.scrollY,o){const r=parseInt(o)||0;requestAnimationFrame(()=>{window.scrollTo({top:r,behavior:"auto"})})}}const s=document.getElementById("sidebar-toggle");if(s){s.setAttribute("aria-expanded",n?"true":"false");const o=s.querySelector("i, svg");if(o&&o.tagName==="I"){const r=document.createElementNS("http://www.w3.org/2000/svg","svg");r.setAttribute("width","28"),r.setAttribute("height","28"),r.setAttribute("viewBox","0 0 24 24"),r.setAttribute("aria-hidden","true"),r.style.cssText="display:block;flex-shrink:0",r.innerHTML='<rect x="0" y="0" width="24" height="24" rx="5" fill="#4A90E2"/><path d="M 12,4 L 19,10 L 18,10 L 18,17 L 24,23 L 24,24 L 0,24 L 0,17 L 6,17 L 6,10 L 5,10 Z" fill="rgba(0,0,55,0.15)"/><polygon points="12,4 5,10 19,10" fill="white"/><rect x="6" y="10" width="12" height="7" rx="0.5" fill="white"/><rect x="10" y="14.5" width="4" height="2.5" rx="0.7" fill="#4A90E2"/>',o.replaceWith(r)}}this.updateCompanyLogoHeaderPosition(n)},toggleSidebarCollapse(e=null){const i=document.querySelector(".sidebar");if(!i)return;const t=e!==null?e:!i.classList.contains("collapsed");i.classList.toggle("collapsed",t);const n=t?"84px":"280px";try{document.documentElement.style.setProperty("--sidebar-width",n)}catch{}const a=document.getElementById("sidebar-collapse-toggle");if(a){a.setAttribute("aria-pressed",t?"true":"false");const s=a.querySelector("i");s&&(s.className=t?"fas fa-chevron-right":"fas fa-chevron-left")}try{localStorage.setItem("sidebarCollapsed",t?"true":"false")}catch(s){Utils?.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062D\u0641\u0638 \u062D\u0627\u0644\u0629 \u0637\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629:",s)}},restoreSidebarCollapseState(){const e=document.querySelector(".sidebar");if(!e)return;let i=null;try{i=localStorage.getItem("sidebarCollapsed")}catch{i=null}const t=i==="true";e.classList.toggle("collapsed",t);const n=t?"84px":"280px";try{document.documentElement.style.setProperty("--sidebar-width",n)}catch{}const a=document.getElementById("sidebar-collapse-toggle");if(a){a.setAttribute("aria-pressed",t?"true":"false");const s=a.querySelector("i");s&&(s.className=t?"fas fa-chevron-right":"fas fa-chevron-left")}},updateCompanyLogoHeaderPosition(e){const i=document.getElementById("company-logo-header");if(!i)return;try{const n=document.querySelector(".mobile-topbar"),a=n?Math.round(n.getBoundingClientRect().height):0;i.style.top=(a>0?a:0)+"px"}catch{}const t=(document.documentElement.dir||document.body?.dir||"rtl")==="rtl";window.innerWidth>1024&&e?t?(i.style.right="var(--sidebar-width)",i.style.left="0"):(i.style.left="var(--sidebar-width)",i.style.right="0"):(i.style.right="0",i.style.left="0")},bindSidebarEvents(){const e=document.getElementById("sidebar-toggle"),i=document.getElementById("sidebar-overlay"),t=document.getElementById("sidebar-collapse-toggle");if(e&&!e.dataset.bound&&(e.addEventListener("click",a=>{a.preventDefault(),a.stopPropagation(),this.toggleSidebar()}),e.dataset.bound="true"),i&&!i.dataset.bound&&(i.addEventListener("click",a=>{a.preventDefault(),a.stopPropagation(),this.toggleSidebar(!1)}),i.dataset.bound="true",i.setAttribute("aria-hidden","true")),t&&!t.dataset.bound&&(t.addEventListener("click",a=>{a.preventDefault(),a.stopPropagation(),this.toggleSidebarCollapse()}),t.dataset.bound="true"),this.restoreSidebarCollapseState(),this.bindCompanyHeaderClickEvents(),!this.sidebarNavItemsBound){const a=()=>{const o=document.querySelector(".sidebar");o&&o.classList.contains("open")},s=document.querySelector(".sidebar");s&&!s.dataset.navDelegationBound&&(s.addEventListener("click",o=>{o.target.closest(".nav-item")&&a()},!0),s.dataset.navDelegationBound="true"),this.sidebarNavItemsBound=!0}if(!this.sidebarResizeBound){let a=null;const s=()=>{a!=null&&cancelAnimationFrame(a),a=requestAnimationFrame(()=>{a=null,window.innerWidth>1024&&this.toggleSidebar(!1),this.showHeaderActions()})};window.addEventListener("resize",s,{passive:!0}),this.sidebarResizeBound=!0}if(this.sidebarKeydownBound||(document.addEventListener("keydown",a=>{if(a.key==="Escape"&&window.innerWidth<=1024){const s=document.querySelector(".sidebar");s&&s.classList.contains("open")&&this.toggleSidebar(!1)}}),this.sidebarKeydownBound=!0),!this.userAvatarPhotoBound){const a=document.querySelector(".user-avatar.user-avatar-clickable"),s=document.getElementById("user-profile-photo-input");if(a&&s){let o=function(){AppState.currentUser&&AppState.currentUser.email&&s&&(s.value="",s.click())};var n=o;a.addEventListener("click",function(r){r.preventDefault(),r.stopPropagation(),o()}),a.addEventListener("keydown",function(r){(r.key==="Enter"||r.key===" ")&&(r.preventDefault(),o())}),s.addEventListener("change",function(r){const l=r.target&&r.target.files&&r.target.files[0];l&&typeof UI<"u"&&UI.handleUserProfilePhotoUpload&&UI.handleUserProfilePhotoUpload(l),r.target.value=""}),this.userAvatarPhotoBound=!0}}if(!this.userProfileSectionNavBound){const a=r=>{r.preventDefault(),r.stopPropagation(),this.showSection("profile")},s=document.getElementById("userDisplayName"),o=document.getElementById("adminEmail");[s,o].filter(Boolean).forEach(r=>{r.dataset.profileBound!=="true"&&(r.addEventListener("click",a),r.addEventListener("keydown",l=>{(l.key==="Enter"||l.key===" ")&&a(l)}),r.dataset.profileBound="true")}),this.userProfileSectionNavBound=!0}},handleUserProfilePhotoUpload(e){const i=this,t=AppState.currentUser;if(!t||!t.email){typeof Notification<"u"&&Notification.warning("\u064A\u062C\u0628 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0623\u0648\u0644\u0627\u064B.");return}const a=(AppState.appData.users||[]).find(function(l){return l&&l.email&&l.email.toLowerCase().trim()===t.email.toLowerCase().trim()});if(!a||!a.id){typeof Notification<"u"&&Notification.warning("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645.");return}const s=2*1024*1024;if(e.size>s){typeof Notification<"u"&&Notification.error("\u062D\u062C\u0645 \u0627\u0644\u0635\u0648\u0631\u0629 \u0643\u0628\u064A\u0631 \u062C\u062F\u0627\u064B. \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 2 \u0645\u064A\u062C\u0627\u0628\u0627\u064A\u062A.");return}const o=["image/jpeg","image/png","image/gif","image/webp"];if(!e.type||!o.includes(e.type)){typeof Notification<"u"&&Notification.error("\u0646\u0648\u0639 \u0627\u0644\u0645\u0644\u0641 \u063A\u064A\u0631 \u0645\u062F\u0639\u0648\u0645. \u0627\u0633\u062A\u062E\u062F\u0645 \u0635\u0648\u0631\u0629 (JPEG, PNG, GIF, WEBP).");return}typeof Loading<"u"&&Loading.show&&Loading.show("\u062C\u0627\u0631\u064A \u0631\u0641\u0639 \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645...");const r=new FileReader;r.onload=function(l){const d=l.target&&l.target.result;if(!d||typeof d!="string"){typeof Loading<"u"&&Loading.hide&&Loading.hide(),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0644\u0641.");return}const p=d,f=e.name&&e.name.lastIndexOf(".")>=0?e.name.substring(e.name.lastIndexOf(".")):".jpg",c="user_photo_"+(a.id||a.email.replace(/@/g,"_"))+"_"+Date.now()+f,u=e.type||"image/jpeg";(typeof GoogleIntegration<"u"&&GoogleIntegration.uploadFileToDrive?GoogleIntegration.uploadFileToDrive(p,c,u,"Users"):Promise.reject(new Error("Google Integration \u063A\u064A\u0631 \u0645\u062A\u0627\u062D"))).then(function(m){const y=m&&(m.directLink||m.shareableLink)||"";if(!y)throw new Error("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0631\u0627\u0628\u0637 \u0627\u0644\u0635\u0648\u0631\u0629");return typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript?GoogleIntegration.sendToAppsScript("updateUser",{userId:a.id,updateData:{photo:y}}).then(function(b){return{updateResult:b,photoUrl:y}}):Promise.reject(new Error("Google Integration \u063A\u064A\u0631 \u0645\u062A\u0627\u062D"))}).then(function(m){const y=m&&m.updateResult,b=m&&m.photoUrl;if(typeof Loading<"u"&&Loading.hide&&Loading.hide(),y&&y.success&&b){if(a&&(a.photo=b),AppState.currentUser&&(AppState.currentUser.photo=b),typeof window.DataManager<"u"&&window.DataManager.save)try{window.DataManager.save()}catch{}typeof Auth<"u"&&Auth.updateUserSession&&Auth.updateUserSession(),i.updateUserProfilePhoto(),typeof AppState<"u"&&AppState.currentSection==="profile"&&typeof i.renderMyProfileSection=="function"&&Promise.resolve(i.renderMyProfileSection()).catch(function(){}),typeof Notification<"u"&&Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0628\u0646\u062C\u0627\u062D.")}else typeof Notification<"u"&&Notification.error(y&&y.message?y.message:"\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0648\u0631\u0629.")}).catch(function(m){typeof Loading<"u"&&Loading.hide&&Loading.hide(),typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u062E\u0637\u0623 \u0631\u0641\u0639 \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645:",m),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0631\u0641\u0639 \u0623\u0648 \u062D\u0641\u0638 \u0627\u0644\u0635\u0648\u0631\u0629. "+(m&&m.message?m.message:""))})},r.onerror=function(){typeof Loading<"u"&&Loading.hide&&Loading.hide(),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0644\u0641.")},r.readAsDataURL(e)},setupNavigationListeners(){document.querySelectorAll(".nav-item").forEach(t=>{const n=t.cloneNode(!0);t.parentNode.replaceChild(n,t)}),document.querySelectorAll(".nav-item").forEach(t=>{t.addEventListener("click",function(n){n.preventDefault(),n.stopPropagation();const a=this.getAttribute("data-section");a&&UI.showSection(a)},{passive:!1})}),this.setupLogoutButton(),this.bindSidebarEvents(),this.setupNavigationIconsListener()},setupNavigationIconsListener(){this._navigationIconsListener&&document.removeEventListener("section-changed",this._navigationIconsListener),this._navigationIconsListener=e=>{const i=e.detail?.section;if(i&&i!=="dashboard"){const t=`${i}-section`,n=()=>{const a=document.getElementById(t);if(a&&a.style.display!=="none"&&a.classList.contains("active")){let s=a.querySelector(".section-header");s?s.querySelector(".navigation-icons-container")||(AppState.debugMode&&Utils.safeLog("\u{1F527} \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0645\u0646 event listener:",i),this.addNavigationIcons(a,i)):setTimeout(()=>{const o=document.getElementById(t);o&&o.style.display!=="none"&&o.querySelector(".section-header")&&this.addNavigationIcons(o,i)},500)}};setTimeout(n,500),setTimeout(n,1e3),setTimeout(n,1500),setTimeout(n,2500),setTimeout(n,3500)}},document.addEventListener("section-changed",this._navigationIconsListener)},setupLogoutButton(){Utils.safeLog("\u{1F527} \u0628\u062F\u0621 \u0625\u0639\u062F\u0627\u062F \u0645\u0639\u0627\u0644\u062C \u0632\u0631 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C...");let e=0;const i=10,t=()=>{e++,Utils.safeLog(`\u{1F50D} \u0645\u062D\u0627\u0648\u0644\u0629 ${e}/${i} \u0644\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0632\u0631 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C...`);const n=document.getElementById("logout-btn");if(!n){if(e<i){setTimeout(t,300);return}Utils.safeWarn("\u26A0\uFE0F \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0632\u0631 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C \u0628\u0639\u062F "+i+" \u0645\u062D\u0627\u0648\u0644\u0629"),Utils.safeError("\u274C \u0632\u0631 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A DOM");return}if(Utils.safeLog("\u2705 \u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0632\u0631 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C"),n.dataset.logoutHandlerBound==="true"){Utils.safeLog("\u2139\uFE0F \u0645\u0639\u0627\u0644\u062C \u0632\u0631 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C \u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644");return}Utils.safeLog("\u{1F527} \u0625\u0639\u062F\u0627\u062F \u0645\u0639\u0627\u0644\u062C \u062C\u062F\u064A\u062F \u0644\u0632\u0631 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C...");const a=n.cloneNode(!0);n.parentNode.replaceChild(a,n),a.dataset.logoutHandlerBound="true";const s=function(l){AppState.debugMode&&Utils.safeLog("\u{1F504} \u062A\u0645 \u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0632\u0631 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C - \u0627\u0644\u062D\u062F\u062B:",l),l.preventDefault(),l.stopPropagation(),l.stopImmediatePropagation(),Utils.safeLog("\u{1F504} \u062A\u0645 \u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0632\u0631 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C"),window.innerWidth<=1024&&typeof UI<"u"&&typeof UI.toggleSidebar=="function"&&UI.toggleSidebar(!1);const d=confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C\u061F");if(AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0623\u0643\u064A\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C:",d),d){Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0623\u0643\u064A\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C");try{a&&(a.dataset.logoutHandlerBound="false"),AppState.debugMode&&Utils.safeLog("\u{1F50D} \u0627\u0644\u0628\u062D\u062B \u0639\u0646 Auth.logout...",{Auth:typeof Auth<"u",windowAuth:typeof window.Auth<"u"}),typeof Auth<"u"&&typeof Auth.logout=="function"?(AppState.debugMode&&Utils.safeLog("\u2705 \u0627\u0633\u062A\u062F\u0639\u0627\u0621 Auth.logout()"),Auth.logout()):typeof window.Auth<"u"&&typeof window.Auth.logout=="function"?(AppState.debugMode&&Utils.safeLog("\u2705 \u0627\u0633\u062A\u062F\u0639\u0627\u0621 window.Auth.logout()"),window.Auth.logout()):(Utils.safeError("\u274C \u062F\u0627\u0644\u0629 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629"),Utils.safeError("\u274C \u062F\u0627\u0644\u0629 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629"),typeof Notification<"u"?Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629."):alert("\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629."))}catch(p){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C:",p),typeof Notification<"u"?Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C: "+(p.message||p)):alert("\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C: "+(p.message||p))}}else Utils.safeLog("\u274C \u062A\u0645 \u0625\u0644\u063A\u0627\u0621 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C")};a.addEventListener("click",s,{passive:!1,capture:!1}),AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0645\u0639\u0627\u0644\u062C click \u0639\u0644\u0649 \u0632\u0631 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C");const o=a.querySelector("i"),r=a.querySelector("span");o&&(o.addEventListener("click",s,{passive:!1}),AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0645\u0639\u0627\u0644\u062C click \u0639\u0644\u0649 \u0623\u064A\u0642\u0648\u0646\u0629 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C")),r&&(r.addEventListener("click",s,{passive:!1}),AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0645\u0639\u0627\u0644\u062C click \u0639\u0644\u0649 \u0646\u0635 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C")),Utils.safeLog("\u2705 \u062A\u0645 \u0625\u0639\u062F\u0627\u062F \u0645\u0639\u0627\u0644\u062C \u0632\u0631 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C \u0628\u0646\u062C\u0627\u062D"),AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u0625\u0639\u062F\u0627\u062F \u0645\u0639\u0627\u0644\u062C \u0632\u0631 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C \u0628\u0646\u062C\u0627\u062D - \u0627\u0644\u0632\u0631 \u062C\u0627\u0647\u0632 \u0644\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645")};t()},showForgotPasswordModal(){const e=document.createElement("div");e.className="modal-overlay",e.innerHTML=`
+            </div>`;
+        document.body.appendChild(modal);
+
+        if (typeof Notification !== 'undefined' && Notification.info) {
+            Notification.info(toastMsg, { duration: 6000 });
+        }
+
+        const onReload = () => {
+            try { if (typeof localStorage !== 'undefined') localStorage.setItem(storageKey, v); } catch (e) {}
+            if (modal && modal.parentNode) modal.remove();
+            window.location.reload();
+        };
+        // «لاحقاً»: لا تُعلِّم الإصدار كمقروء — وإلا يبقى المستخدم على كود قديم بلا تنبيه لاحق
+        const onLater = () => {
+            try {
+                if (typeof sessionStorage !== 'undefined') {
+                    sessionStorage.setItem('hse_update_modal_shown_version', v);
+                }
+            } catch (e) {}
+            if (modal && modal.parentNode) modal.remove();
+        };
+        const btnReload = modal.querySelector('#hse-update-message-reload');
+        const btnLater = modal.querySelector('#hse-update-message-later');
+        if (btnReload) btnReload.addEventListener('click', onReload);
+        if (btnLater) btnLater.addEventListener('click', onLater);
+        modal.addEventListener('click', (e) => { if (e.target === modal) onLater(); });
+    },
+
+    /**
+     * عرض نبذة عن التحديث يدوياً من أي مكان في النظام
+     */
+    showReleaseNotesModal() {
+        const v = (AppState && AppState.appVersion) ? String(AppState.appVersion).trim() : '1.0.567';
+        try { sessionStorage.removeItem('hse_update_modal_shown_version'); } catch (e) {}
+        this._showUpdateModal(v, AppState?._serverReleaseHighlights || null);
+    },
+
+    /**
+     * التحقق من إصدار التطبيق على الخادم (Vercel) — إن وُجد إصدار أحدث مما شاهده المستخدم سابقاً، عرض إشعار التحديث.
+     * يعتمد على version.json + hse_last_seen_version في localStorage بدلاً من AppState.appVersion لإزالة الاعتماد على قيمة ثابتة في الكود.
+     * يُستدعى بعد الدخول، بشكل دوري، وعند العودة إلى التبويب.
+     */
+    async _checkServerVersion() {
+        try {
+            if (typeof fetch === 'undefined') return;
+            const base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+            const isFileProtocol = typeof window !== 'undefined' && window.location && window.location.protocol === 'file:';
+            if (!base || base === 'null' || base.startsWith('file:') || isFileProtocol) return;
+            const url = base + '/version.json?t=' + (Date.now ? Date.now() : '');
+            const res = await fetch(url, { cache: 'no-store', method: 'GET' });
+            if (!res || !res.ok) return;
+            const data = await res.json();
+            const serverVersion = (data && data.version) ? String(data.version).trim() : '';
+            if (!serverVersion) return;
+
+            if (data.highlights) {
+                AppState._serverReleaseHighlights = data.highlights;
+            }
+
+            const storageKey = 'hse_last_seen_version';
+            const lastSeen = (typeof localStorage !== 'undefined' && localStorage.getItem(storageKey))
+                ? String(localStorage.getItem(storageKey)).trim()
+                : '';
+
+            // P4.1: لا تخزّن last_seen قبل عرض المودال — التخزين عند «تحديث الصفحة الآن» فقط
+            if (!lastSeen) {
+                if (AppState && AppState.debugMode) console.log('🌐 [UpdateNotif] أول فحص خادم — عرض المودال لـ ' + serverVersion);
+                this._showUpdateModal(serverVersion, data.highlights || null);
+                return;
+            }
+
+            if (typeof this._compareVersions !== 'function') return;
+            const cmp = this._compareVersions(serverVersion, lastSeen);
+            // عرض نافذة التحديث فقط إذا كان إصدار الخادم أحدث تسلسلياً من آخر إصدار شاهده المستخدم
+            if (cmp <= 0) {
+                if (AppState && AppState.debugMode) {
+                    console.log('🌐 [UpdateNotif] خادم=' + serverVersion + ' lastSeen=' + lastSeen + ' (cmp=' + cmp + ') — لا تغيير');
+                }
+                return;
+            }
+            if (AppState && AppState.debugMode) {
+                console.log('🌐 [UpdateNotif] خادم=' + serverVersion + ' أحدث من lastSeen=' + lastSeen + ' — عرض المودال');
+            }
+            this._showUpdateModal(serverVersion, data.highlights || null);
+        } catch (e) {
+            if (AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ التحقق من إصدار الخادم:', e);
+        }
+    },
+
+    /**
+     * ✅ أدوات اختبار/تشخيص لإشعار التحديث (تُستدعى من الكونسول):
+     *   - __forceUpdateNotification()  : يجبر عرض المودال للإصدار الحالي (لاختبار التصميم)
+     *   - __resetUpdateNotification()  : يصفّر lastSeen + session flag → إعادة تحميل تُظهر المودال
+     *   - __whyNoUpdateNotification()  : يطبع حالة الإصدارات والمفاتيح لمعرفة سبب عدم الظهور
+     */
+    _installUpdateNotificationDevHelpers() {
+        if (typeof window === 'undefined') return;
+        const self = this;
+        try {
+            window.__forceUpdateNotification = function () {
+                const v = (AppState && AppState.appVersion) ? String(AppState.appVersion).trim() : '1.0.0';
+                try { sessionStorage.removeItem('hse_update_modal_shown_version'); } catch (e) {}
+                self._showUpdateModal(v);
+            };
+            window.__resetUpdateNotification = function () {
+                try { localStorage.removeItem('hse_last_seen_version'); } catch (e) {}
+                try { sessionStorage.removeItem('hse_update_modal_shown_version'); } catch (e) {}
+                console.log('✅ تم تصفير حالة إشعار التحديث. أعد تحميل الصفحة لرؤيته.');
+            };
+            window.__whyNoUpdateNotification = function () {
+                const cur = (AppState && AppState.appVersion) || '(غير محدد)';
+                const lastSeen = (typeof localStorage !== 'undefined') ? (localStorage.getItem('hse_last_seen_version') || '(فارغ)') : '(localStorage غير متاح)';
+                const shownInSession = (typeof sessionStorage !== 'undefined') ? (sessionStorage.getItem('hse_update_modal_shown_version') || '(لم يظهر هذه الجلسة)') : '(sessionStorage غير متاح)';
+                const cmp = (typeof self._compareVersions === 'function' && lastSeen !== '(فارغ)') ? self._compareVersions(cur, lastSeen) : 'N/A';
+                console.log('━━━━ تشخيص إشعار التحديث ━━━━');
+                console.log('الإصدار الحالي (appVersion)        : ' + cur);
+                console.log('آخر إصدار رآه المستخدم (lastSeen) : ' + lastSeen);
+                console.log('عُرِض في هذه الجلسة                  : ' + shownInSession);
+                console.log('مقارنة (current vs lastSeen)        : ' + cmp + ' (1=أحدث، 0=نفس الإصدار، -1=أقدم)');
+                console.log('');
+                if (lastSeen === '(فارغ)') {
+                    console.log('📌 السبب: lastSeen فارغ → يجب عرض المودال (P4.1) دون تخزين مسبق');
+                } else if (cmp === 0) {
+                    console.log('📌 السبب: lastSeen = current → المستخدم رأى هذا الإصدار من قبل (طبيعي)');
+                } else if (cmp < 0) {
+                    console.log('📌 السبب: lastSeen أحدث من current → JS قديم في الكاش! أعد التحميل بـ Ctrl+Shift+R');
+                } else if (shownInSession === cur) {
+                    console.log('📌 السبب: تم عرض المودال في هذه الجلسة وأُغلِق → فتح تبويب جديد سيُعيد المحاولة');
+                } else {
+                    console.log('✅ يجب أن يظهر المودال — انتظر 800ms بعد تسجيل الدخول.');
+                }
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('💡 لاختبار العرض فوراً: __forceUpdateNotification()');
+                console.log('💡 لتصفير الحالة: __resetUpdateNotification() ثم refresh');
+            };
+        } catch (e) { /* ignore */ }
+    },
+
+    /**
+     * عرض رسالة "هناك تحديث جديد" عند تسجيل الدخول — يُعرض فقط إذا كان appVersion أحدث فعلاً من آخر إصدار رآه المستخدم.
+     * إذا كان lastSeen في localStorage أحدث من currentVersion (بسبب بقاء JS قديم في الكاش) → لا تعرض شيئاً.
+     */
+    _showUpdateMessageIfNeeded() {
+        try {
+            const currentVersion = (typeof AppState !== 'undefined' && AppState.appVersion) ? String(AppState.appVersion).trim() : '';
+            if (!currentVersion) {
+                if (AppState && AppState.debugMode) console.warn('🔔 [UpdateNotif] لا يوجد appVersion');
+                return;
+            }
+            const storageKey = 'hse_last_seen_version';
+            const lastSeen = (typeof localStorage !== 'undefined' && localStorage.getItem(storageKey)) ? String(localStorage.getItem(storageKey)).trim() : '';
+            // P4.1: أول زيارة / تخزين فارغ → اعرض المودال؛ لا تخزّن last_seen إلا عند Reload
+            if (!lastSeen) {
+                if (AppState && AppState.debugMode) console.log('🔔 [UpdateNotif] أول زيارة — عرض المودال لـ ' + currentVersion);
+                this._showUpdateModal(currentVersion, AppState?._serverReleaseHighlights || null);
+                return;
+            }
+            // عرض فقط إذا كان الإصدار الحالي أحدث تسلسلياً من آخر إصدار رآه المستخدم
+            if (typeof this._compareVersions !== 'function') return;
+            const cmp = this._compareVersions(currentVersion, lastSeen);
+            if (cmp <= 0) {
+                if (AppState && AppState.debugMode) {
+                    console.log('🔔 [UpdateNotif] لا حاجة للمودال — current=' + currentVersion + ' lastSeen=' + lastSeen + ' (cmp=' + cmp + ')');
+                }
+                return;
+            }
+            if (AppState && AppState.debugMode) {
+                console.log('🔔 [UpdateNotif] عرض المودال — current=' + currentVersion + ' أحدث من lastSeen=' + lastSeen);
+            }
+            this._showUpdateModal(currentVersion, AppState?._serverReleaseHighlights || null);
+        } catch (e) {
+            if (AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ خطأ في عرض رسالة التحديث:', e);
+        }
+    },
+
+    /**
+     * تنظيف أي طبقات تحميل/استعادة جلسة/سياسة قد تبقى معلقة بعد refresh أو pageshow.
+     */
+    cleanupStaleStartupLayers() {
+        try {
+            document.documentElement.classList.remove('hse-post-login-overlay-active');
+            document.body.classList.remove('hse-post-login-overlay-active');
+
+            const restoreOverlay = document.getElementById('hse-session-restore-overlay');
+            if (restoreOverlay && restoreOverlay.parentNode) restoreOverlay.remove();
+
+            const postLoginOverlay = document.getElementById('hse-post-login-overlay');
+            if (postLoginOverlay && postLoginOverlay.parentNode) postLoginOverlay.remove();
+
+            if (typeof Loading !== 'undefined' && typeof Loading.hide === 'function') {
+                Loading.hide();
+            }
+
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.setProperty('display', 'none', 'important');
+                loadingOverlay.style.setProperty('visibility', 'hidden', 'important');
+                loadingOverlay.style.setProperty('opacity', '0', 'important');
+                loadingOverlay.style.setProperty('pointer-events', 'none', 'important');
+                loadingOverlay.setAttribute('aria-hidden', 'true');
+                loadingOverlay.dataset.loadingVisible = '0';
+            }
+
+            const mainApp = document.getElementById('main-app');
+            if (mainApp) {
+                mainApp.style.visibility = '';
+                mainApp.style.pointerEvents = '';
+                if (AppState?.currentUser && mainApp.style.display === 'none') {
+                    mainApp.style.display = 'flex';
+                }
+            }
+        } catch (e) { /* ignore */ }
+    },
+
+    /**
+     * إزالة قفل واجهة ما بعد الدخول (overflow/position على body + إخفاء #main-app).
+     * يُستدعى تلقائياً عند متابعة التهيئة؛ يمكن استدعاؤه يدوياً من الكونسول إن علقت الواجهة.
+     */
+    clearPostLoginOverlayLock() {
+        try {
+            this.cleanupStaleStartupLayers();
+        } catch (e) { /* ignore */ }
+    },
+
+    /**
+     * مراقب دوري: إن بقيت فئة سياسة الدخول على body دون طبقة السياسة، أو علق التحميل طويلاً — أصلح الواجهة.
+     */
+    _installUiRecoveryWatchdog() {
+        if (window._hseUiRecoveryWatchdogInstalled) return;
+        window._hseUiRecoveryWatchdogInstalled = true;
+        try {
+            window.HSE_clearUiLock = () => {
+                try {
+                    if (typeof UI !== 'undefined' && typeof UI.clearPostLoginOverlayLock === 'function') {
+                        UI.clearPostLoginOverlayLock();
+                    }
+                    if (typeof Loading !== 'undefined' && typeof Loading.hide === 'function') {
+                        Loading.hide();
+                        this.cleanupStaleStartupLayers();
+                    }
+                } catch (e) { /* ignore */ }
+            };
+        } catch (e) { /* ignore */ }
+        try {
+            window.addEventListener('pageshow', () => {
+                try {
+                    if (typeof UI !== 'undefined' && typeof UI.cleanupStaleStartupLayers === 'function') {
+                        UI.cleanupStaleStartupLayers();
+                    }
+                } catch (e) { /* ignore */ }
+            });
+        } catch (e) { /* ignore */ }
+        const tick = () => {
+            try {
+                if (typeof AppState === 'undefined' || !AppState.currentUser) return;
+                const pol = document.getElementById('hse-post-login-overlay');
+                const main = document.getElementById('main-app');
+                const bodyLocked = document.body.classList.contains('hse-post-login-overlay-active');
+                // ✅ تحسين أداء فائق: استخدام الـ inline display والـ dataset بدلاً من offsetParent و getComputedStyle لمنع الـ Forced Reflow الدوري
+                const mainVisible = main && (main.style.display === 'flex' || main.style.display === 'block');
+                if (bodyLocked && !pol && mainVisible) {
+                    this.clearPostLoginOverlayLock();
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                        Utils.safeWarn('⚠️ تمت إزالة قفل واجهة ما بعد الدخول تلقائياً (حالة غير متسقة)');
+                    }
+                }
+                const lo = document.getElementById('loading-overlay');
+                const overlayVisible = lo && (lo.dataset.loadingVisible === '1' || (lo.style.display !== 'none' && lo.style.display !== ''));
+                if (overlayVisible && mainVisible && typeof window._hseLoadingSince !== 'number') {
+                    this.cleanupStaleStartupLayers();
+                } else if (overlayVisible && typeof window._hseLoadingSince === 'number' && (Date.now() - window._hseLoadingSince > 120000)) {
+                    if (typeof Loading !== 'undefined' && typeof Loading.hide === 'function') {
+                        Loading.hide();
+                        this.cleanupStaleStartupLayers();
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('⚠️ تم إزالة طبقة التحميل تلقائياً بعد مهلة طويلة');
+                        }
+                    }
+                }
+            } catch (e) { /* ignore */ }
+        };
+        setInterval(tick, 2500);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') tick();
+        });
+    },
+
+    _hasAuthOwnedInitialDataFlow() {
+        return AppState?._initialDataLoadOwner === 'auth' &&
+            (AppState?._initialDataLoadInProgress || AppState?._initialDataLoadCompleted);
+    },
+
+    _startPermissionScopedBootstrapLoad() {
+        if (this._hasAuthOwnedInitialDataFlow()) {
+            return false;
+        }
+
+        if (AppState?._permissionScopedBootstrapStarted || AppState?._permissionScopedBootstrapCompleted) {
+            return false;
+        }
+
+        if (typeof AppBootstrap === 'undefined' || typeof AppBootstrap.loadDataBasedOnPermissions !== 'function') {
+            return false;
+        }
+
+        try {
+            AppState._permissionScopedBootstrapStarted = true;
+            const userPermissions = AppState?.currentUser?.permissions || {};
+            AppBootstrap.loadDataBasedOnPermissions(userPermissions)
+                .catch(error => {
+                    if (AppState?.debugMode) Utils?.safeWarn('⚠️ فشل التحميل الذكي للبيانات:', error);
+                    AppState._permissionScopedBootstrapStarted = false;
+                })
+                .finally(() => {
+                    AppState._permissionScopedBootstrapStarted = false;
+                    AppState._permissionScopedBootstrapCompleted = true;
+                });
+            return true;
+        } catch (error) {
+            AppState._permissionScopedBootstrapStarted = false;
+            if (AppState?.debugMode) Utils?.safeWarn('⚠️ خطأ في تحميل البيانات الذكية:', error);
+            return false;
+        }
+    },
+
+    _startInitialSilentSync(options = {}) {
+        if (this._hasAuthOwnedInitialDataFlow()) {
+            return false;
+        }
+
+        if (typeof AppState === 'undefined' ||
+            !AppState.currentUser ||
+            AppState.isPageRefresh ||
+            AppState._autoSyncStarted ||
+            typeof Utils === 'undefined' ||
+            typeof Utils.hasCloudBackendSync !== 'function' ||
+            !Utils.hasCloudBackendSync() ||
+            typeof GoogleIntegration === 'undefined' ||
+            typeof GoogleIntegration.syncData !== 'function') {
+            return false;
+        }
+
+        AppState._autoSyncStarted = true;
+
+        const syncOptions = {
+            silent: true,
+            showLoader: false,
+            notifyOnSuccess: false,
+            notifyOnError: false,
+            includeUsersSheet: true,
+            incremental: true,
+            forceRefresh: false,
+            ...options
+        };
+
+        setTimeout(() => {
+            try {
+                GoogleIntegration.syncData(syncOptions).catch(syncErr => {
+                    if (AppState.debugMode && typeof Utils.safeWarn === 'function') {
+                        Utils.safeWarn('⚠️ فشل التحميل التلقائي الصامت بعد تسجيل الدخول:', syncErr);
+                    }
+                });
+            } catch (e) {
+                if (AppState.debugMode && typeof Utils.safeWarn === 'function') {
+                    Utils.safeWarn('⚠️ فشل التحميل التلقائي للبيانات بعد تسجيل الدخول:', e);
+                }
+            }
+        }, 500);
+
+        return true;
+    },
+
+    _currentSectionNeedsRefreshForSheets(currentSection, sheets) {
+        if (!currentSection || currentSection === 'dashboard') {
+            return true;
+        }
+
+        if (!Array.isArray(sheets) || sheets.length === 0) {
+            return true;
+        }
+
+        if (typeof RealtimeSyncManager === 'undefined' ||
+            typeof RealtimeSyncManager.getModulesForSection !== 'function' ||
+            typeof RealtimeSyncManager.getModulesForSheets !== 'function') {
+            return true;
+        }
+
+        const sectionModules = RealtimeSyncManager.getModulesForSection(currentSection) || [];
+        if (!sectionModules.length) {
+            return true;
+        }
+
+        const changedModules = RealtimeSyncManager.getModulesForSheets(sheets) || [];
+        if (!changedModules.length) {
+            return true;
+        }
+
+        return changedModules.some(module => module === 'users' || sectionModules.includes(module));
+    },
+
+    /** متابعة تهيئة التطبيق الرئيسي (بعد شاشة السياسات أو مباشرة بعد الدخول) */
+    _continueMainAppSetup() {
+        // ضمان عدم بقاء قفل شاشة السياسات (يخفي القائمة والهيدر ويمنع التمرير)
+        this.clearPostLoginOverlayLock();
+        if (this._mainAppSetupStarted) {
+            return;
+        }
+        this._mainAppSetupStarted = true;
+
+        // توحيد مسار التحميل الأولي: إذا كان Auth يملك التحميل الأساسي لا نكرر الطلبات هنا.
+        this._startPermissionScopedBootstrapLoad();
+
+        // تفعيل نظام عدم النشاط (فقط إذا لم تكن إعادة تحميل)
+        if (typeof InactivityManager !== 'undefined' && !AppState.isPageRefresh) {
+            InactivityManager.init();
+        } else if (typeof InactivityManager !== 'undefined' && AppState.isPageRefresh) {
+            setTimeout(() => {
+                if (AppState.currentUser && typeof InactivityManager !== 'undefined') {
+                    InactivityManager.init();
+                }
+            }, 1000);
+        }
+        this.updateUserProfile();
+        if (typeof FireEquipment === 'undefined' && !document.querySelector('script[src*="fireequipment.js"]')) {
+            try {
+                const base = (() => {
+                    const b = document.querySelector('base');
+                    if (b && b.href) return b.href.replace(/\/$/, '') + '/';
+                    const p = window.location.pathname || '';
+                    const i = p.lastIndexOf('/');
+                    return window.location.origin + (i >= 0 ? p.slice(0, i + 1) : '/');
+                })();
+                const s = document.createElement('script');
+                s.src = base + 'js/modules/modules/fireequipment.js';
+                s.async = true;
+                document.body.appendChild(s);
+            } catch (e) { if (AppState.debugMode) Utils.safeWarn('تحميل مسبق لمعدات الحريق:', e); }
+        }
+        this.setupNavigationListeners();
+        this.bindSidebarEvents();
+        this.initSyncButton();
+        this.initUserConnectionStatus();
+
+        // تحميل البيانات تلقائياً من قاعدة البيانات مباشرة بعد تسجيل الدخول حسب صلاحيات المستخدم
+        // ⚠️ لا يتم تشغيل هذا المنطق عند مجرد إعادة تحميل الصفحة (isPageRefresh)
+        this._startInitialSilentSync({ incremental: true });
+        
+        // تحديث حالة الاتصال بعد تحميل البيانات (مع تأخير للتأكد من تحديث البيانات)
+        setTimeout(() => {
+            this.updateUserConnectionStatus();
+        }, 500);
+
+        // إعداد زر تسجيل الخروج بعد عرض التطبيق (مع محاولات متعددة)
+        let logoutSetupAttempts = 0;
+        const setupLogoutWithRetry = () => {
+            logoutSetupAttempts++;
+            this.setupLogoutButton();
+            // إعادة المحاولة مرة أخرى بعد 500ms للتأكد
+            if (logoutSetupAttempts < 3) {
+                setTimeout(setupLogoutWithRetry, 500);
+            }
+        };
+        setTimeout(setupLogoutWithRetry, 100);
+
+        // تحديث القائمة حسب الصلاحيات (مع محاولات متعددة للتأكد من تحميل البيانات)
+        Permissions.updateNavigation();
+        
+        // ✅ إصلاح: إعادة تحديث القائمة بعد تحميل البيانات للتأكد من الصلاحيات الصحيحة
+        setTimeout(() => {
+            if (typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
+                Permissions.updateNavigation();
+            }
+        }, 1000);
+        
+        // محاولة إضافية بعد تحميل البيانات بالكامل
+        setTimeout(() => {
+            if (typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
+                Permissions.updateNavigation();
+            }
+        }, 2000);
+
+        // بعد اكتمال المزامنة المحتملة: إعادة تطبيق إخفاء عناصر القائمة حسب الصلاحيات (لا تُعرض أقسام غير مصرّح بها)
+        [5000, 8000].forEach((delayMs) => {
+            setTimeout(() => {
+                if (typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
+                    try { Permissions.updateNavigation(); } catch (e) { /* ignore */ }
+                }
+            }, delayMs);
+        });
+
+        // عرض صورة المستخدم ي الشريط الجانبي
+        this.updateUserProfilePhoto();
+        // ✅ إعادة تحديث صورة المستخدم بعد تأخير قصير لضمان ظهورها بعد الدخول مباشرة (عند جاهزية الـ DOM)
+        setTimeout(() => { this.updateUserProfilePhoto(); }, 500);
+
+        // إظهار أزرار الهيدر (Theme Toggle & Notifications)
+        this.showHeaderActions();
+
+        // تهيئة أزرار القائمة الجانبية (الوضع الليلي، الإشعارات، اللغة)
+        this.initSidebarButtons();
+        // إعادة تهيئة بعد تأخير قصير لضمان عمل الأزرار بعد رسم الـ DOM (زر اللغة، جرس الإشعارات)
+        setTimeout(() => {
+            try {
+                this.initSidebarButtons();
+            } catch (e) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('إعادة تهيئة أزرار الشريط الجانبي:', e);
+            }
+        }, 400);
+
+        // تهيئة مساعد المستخدم الذكي
+        if (typeof UserAIAssistant !== 'undefined' && UserAIAssistant.init) {
+            setTimeout(() => {
+                UserAIAssistant.init();
+            }, 500);
+        }
+
+        // عرض رسالة التحديث عند بداية تسجيل الدخول إذا تغيّر إصدار التطبيق (بعد تهيئة الواجهة)
+        setTimeout(() => {
+            if (typeof this._showUpdateMessageIfNeeded === 'function') this._showUpdateMessageIfNeeded();
+        }, 800);
+
+        // التحقق من إصدار الخادم (Vercel) — يُهيَّأ مرة واحدة فقط طوال عمر الصفحة لمنع تراكم المؤقتات والمستمعين
+        if (!AppState._updateCheckInitialized) {
+            AppState._updateCheckInitialized = true;
+            const runServerVersionCheck = () => {
+                if (typeof this._checkServerVersion === 'function') this._checkServerVersion();
+            };
+            setTimeout(runServerVersionCheck, 2000);
+            setInterval(runServerVersionCheck, 5 * 60 * 1000);
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') runServerVersionCheck();
+            });
+            // ✅ تثبيت أدوات التشخيص/الاختبار على window
+            if (typeof this._installUpdateNotificationDevHelpers === 'function') {
+                this._installUpdateNotificationDevHelpers();
+            }
+        }
+
+        // تم نقل المزامنة إلى Auth.login لتجنب المزامنات المكررة
+        // المزامنة تحدث مرة واحدة فقط بعد تسجيل الدخول في Auth.login
+        // هذا يحسن الأداء ويقلل وقت تسجيل الدخول
+        if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync()) {
+            Utils.safeLog('ℹ الخلفية السحابية غير مفعّلة — العمل على البيانات المحلية فقط');
+            if (!AppState.isPageRefresh) {
+                const hasLocalData = Object.keys(AppState.appData).some(key =>
+                    Array.isArray(AppState.appData[key]) && AppState.appData[key].length > 0
+                );
+                if (!hasLocalData) {
+                    Notification.info('لا توجد بيانات محلية. فعّل الاتصال بـ Google Apps Script من الإعدادات وتحقق من ورقة البيانات.');
+                }
+            }
+        }
+
+        // بدء نظام مراقبة الاتصال بعد عرض التطبيق الرئيسي
+        if (typeof ConnectionMonitor !== 'undefined' && ConnectionMonitor.start) {
+            setTimeout(() => {
+                try {
+                    ConnectionMonitor.start();
+                    Utils.safeLog('✅ تم بدء نظام مراقبة الاتصال');
+                    // تحديث حالة الأزرار بعد بدء المراقبة
+                    this.updateSyncButtonStatus();
+                    this.updateUserConnectionStatus();
+                } catch (monitorError) {
+                    Utils.safeWarn('⚠️ فشل بدء نظام مراقبة الاتصال:', monitorError);
+                }
+            }, 2000); // انتظار 2 ثانية بعد تحميل التطبيق
+        }
+        
+        // تحديث حالة زر المزامنة بشكل دوري (حالة الاتصال يتم تحديثها تلقائياً عبر startAutoRefreshConnectionStatus)
+        setInterval(() => {
+            this.updateSyncButtonStatus();
+        }, 15000); // كل 15 ثانية — أقل ضغطاً على الواجهة والخلفية
+
+        // إظهار شعار الشركة في الهيدر
+        this.updateCompanyLogoHeader();
+
+        // تحديث شعار الشركة في لوحة التحكم
+        this.updateDashboardLogo();
+
+        // ✅ استعادة القسم المحفوظ إذا كان موجوداً (بغض النظر عن isPageRefresh)
+        // لأن وجود قسم محفوظ يعني أن المستخدم كان في هذا القسم قبل إعادة التحميل
+        const savedSection = sessionStorage.getItem('hse_current_section');
+        let sectionToShow = savedSection || 'dashboard';
+
+        // ✅ إصلاح Reload: إذا كان القسم المحفوظ غير مسموح به للمستخدم (صلاحيات تغيّرت/مستخدم محدود)
+        // لا نترك التطبيق على صفحة بيضاء؛ نعود للـ dashboard فوراً.
+        try {
+            if (savedSection &&
+                typeof Permissions !== 'undefined' &&
+                typeof Permissions.checkBeforeShow === 'function') {
+                const ok = Permissions.checkBeforeShow(sectionToShow, true);
+                if (!ok) {
+                    sectionToShow = 'dashboard';
+                    try { sessionStorage.setItem('hse_current_section', 'dashboard'); } catch (e) { /* ignore */ }
+                }
+            }
+        } catch (e) { /* ignore */ }
+
+        // ✅ تحديث AppState.currentSection قبل عرض القسم لضمان التزامن
+        AppState.currentSection = sectionToShow;
+
+        // ✅ تحديث عنوان الصفحة (hash) ليعكس القسم المستعاد بعد إعادة التحميل
+        try {
+            if (sectionToShow && typeof window.location !== 'undefined') {
+                window.location.hash = sectionToShow;
+            }
+        } catch (e) { /* ignore */ }
+
+        Utils.safeLog('📂 استعادة القسم:', {
+            savedSection,
+            sectionToShow,
+            isPageRefresh: AppState.isPageRefresh,
+            currentSection: AppState.currentSection
+        });
+
+        // عند استعادة القسم المحفوظ، نعرض القسم بدون رسالة خطأ إذا لم يكن لديه صلاحية
+        // لأن هذا ليس محاولة وصول فعلية من المستخدم
+        AppState.isNavigatingBack = true; // تعيين علامة لتجنب عرض رسالة الخطأ
+        // عرض القسم المطلوب أولاً
+        this.showSection(sectionToShow);
+        // إعادة تعيين العلامة بعد التنقل
+        setTimeout(() => {
+            AppState.isNavigatingBack = false;
+        }, 300);
+
+        // فتح القائمة الجانبية عند بدء التطبيق (على سطح المكتب) - بعد عرض القسم
+        // على الموبايل: إغلاق القائمة والستار صراحة لتفادي تغطية المحتوى أو المدولات
+        if (window.innerWidth > 1024) {
+            setTimeout(() => {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) {
+                    // إذا كان القسم المطلوب هو Dashboard، نفتح القائمة الجانبية
+                    if (sectionToShow === 'dashboard') {
+                        if (!sidebar.classList.contains('open')) {
+                            this.toggleSidebar(true);
+                        }
+                    } else {
+                        // إذا كان القسم ليس Dashboard، نتأكد من إغلاق القائمة
+                        if (sidebar.classList.contains('open')) {
+                            this.toggleSidebar(false);
+                        }
+                    }
+                }
+            }, 100);
+        } else {
+            // موبايل: ضمان إغلاق القائمة وإخفاء الستار دائماً عند بدء التطبيق
+            setTimeout(() => this.toggleSidebar(false), 0);
+        }
+
+        // ✅ إصلاح: تحميل Dashboard مباشرة بدون تأخير
+        // البيانات يتم تحميلها بالفعل في auth.js بعد تسجيل الدخول
+        // هنا نحمّل Dashboard فقط إذا كان القسم المطلوب هو dashboard
+        (async () => {
+            try {
+                // ✅ التأكد من وجود بيانات المستخدمين قبل تحميل Dashboard
+                if (!AppState.appData.users || AppState.appData.users.length === 0) {
+                    // إذا لم تكن بيانات المستخدمين محملة، نستخدم البيانات المحلية
+                    if (typeof DataManager !== 'undefined' && DataManager.load) {
+                        await DataManager.load();
+                    }
+                }
+                
+                // ✅ إصلاح: تحميل إعدادات الشركة (بما في ذلك الشعار) إذا لم تكن محملة
+                // هذا يضمن تحميل الشعار حتى لو لم يتم تحميله بعد تسجيل الدخول
+                // forceReload = false هنا لأن showMainApp قد يُستدعى عدة مرات
+                // سنستخدم localStorage إذا كان موجوداً
+                if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
+                    try {
+                        // لا نستخدم forceReload هنا لتجنب التحميل المتكرر
+                        await DataManager.loadCompanySettings(false);
+                    } catch (settingsError) {
+                        Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة في showMainApp:', settingsError);
+                    }
+                }
+
+                // ✅ المواقع/المصانع/الأماكن الفرعية: مسار استعادة الجلسة وإعادة التحميل لا يمرّ بـ Auth.login — إعادة تهيئة صريحة هنا
+                if (typeof Permissions !== 'undefined' && typeof Permissions.initFormSettingsState === 'function') {
+                    try {
+                        await Permissions.initFormSettingsState();
+                    } catch (fsErr) {
+                        Utils.safeWarn('⚠️ فشل تهيئة مواقع النماذج بعد عرض التطبيق:', fsErr);
+                    }
+                }
+
+                // تم توحيد التحميل الأولي والمزامنة الأولى داخل _continueMainAppSetup
+
+                // تحديث جميع البيانات المرئية (يتضمن تحميل Dashboard مرة واحدة عند sectionToShow === 'dashboard')
+                // تجنب استدعاء Dashboard.load() هنا ثم مرة أخرى داخل refreshCurrentSection لتفادي وميض لوحة التقارير والإحصائيات
+                this.refreshCurrentSection();
+
+                // ✅ إضافة: الاستماع لحدث اكتمال المزامنة لتحديث الموديولات تلقائياً
+                this.setupSyncDataCompletedListener();
+
+                // إعادة تعيين العلامة بعد تحميل البيانات (إذا كانت إعادة تحميل)
+                if (AppState.isPageRefresh) {
+                    AppState.isPageRefresh = false;
+                    Utils.safeLog('✅ تم إعادة تعيين علامة إعادة التحميل');
+                }
+
+                // تحديث الإشعارات بعد تحميل البيانات
+                this.scheduleContractorApprovalNotificationsRefresh();
+
+                if (this.updateNotificationsBadge) {
+                    setTimeout(() => {
+                        this.updateNotificationsBadge();
+                    }, 300);
+                }
+            } catch (error) {
+                Utils.safeError('❌ خطأ في تحميل Dashboard:', error);
+            }
+        })();
+
+        this.scheduleContractorApprovalNotificationsRefresh();
+    },
+
+    /**
+     * جلب طلبات اعتماد المقاولين للإشعارات (خارج موديول المقاولين)
+     */
+    scheduleContractorApprovalNotificationsRefresh() {
+        if (typeof Contractors === 'undefined' ||
+            typeof Contractors.prefetchApprovalRequestsForNotifications !== 'function') {
+            return;
+        }
+        const run = () => {
+            Contractors.prefetchApprovalRequestsForNotifications()
+                .then(() => {
+                    if (typeof this.updateNotificationsBadge === 'function') {
+                        this.updateNotificationsBadge();
+                    }
+                })
+                .catch(() => {});
+        };
+        setTimeout(run, 400);
+        if (!this._carNotificationPrefetchInterval) {
+            this._carNotificationPrefetchInterval = setInterval(run, 60000);
+        }
+    },
+
+    /**
+     * ✅ إعداد الاستماع لحدث اكتمال المزامنة
+     */
+    setupSyncDataCompletedListener() {
+        // إزالة المستمع السابق إن وجد
+        if (this._syncDataCompletedHandler) {
+            window.removeEventListener('syncDataCompleted', this._syncDataCompletedHandler);
+        }
+
+        // إضافة مستمع جديد
+        this._syncDataCompletedHandler = (event) => {
+            const { syncedCount, failedSheets, sheets } = event.detail || {};
+            
+            if (AppState.debugMode) {
+                Utils.safeLog(`✅ اكتملت المزامنة: ${syncedCount} ورقة، ${failedSheets?.length || 0} فشل`);
+            }
+
+            // ✅ إصلاح: تحديث صلاحيات المستخدم الحالي إذا تم تحديث ورقة Users
+            const includesUsersSheet = Array.isArray(sheets) && sheets.some(s => String(s || '').toLowerCase() === 'users');
+            if (includesUsersSheet && AppState.currentUser && AppState.appData.users) {
+                const currentUserEmail = AppState.currentUser.email?.toLowerCase();
+                const updatedUser = AppState.appData.users.find(u => 
+                    u.email && u.email.toLowerCase() === currentUserEmail
+                );
+                
+                if (updatedUser) {
+                    // ✅ إصلاح: تطبيع الصلاحيات قبل التحديث
+                    const normalizedPermissions = typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function'
+                        ? Permissions.normalizePermissions(updatedUser.permissions)
+                        : (updatedUser.permissions || {});
+                    
+                    // تحديث صلاحيات المستخدم الحالي
+                    AppState.currentUser.permissions = normalizedPermissions || {};
+                    
+                    // تحديث الجلسة بالصلاحيات الجديدة
+                    if (typeof window.Auth !== 'undefined' && typeof window.Auth.updateUserSession === 'function') {
+                        window.Auth.updateUserSession();
+                        if (AppState.debugMode) {
+                            Utils.safeLog('✅ تم تحديث صلاحيات المستخدم الحالي بعد المزامنة');
+                        }
+                    }
+                    
+                    // تحديث القائمة الجانبية خارج المسار الحرج
+                    if (typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
+                        setTimeout(() => {
+                            try { Permissions.updateNavigation(); } catch (e) {}
+                        }, 0);
+                    }
+                }
+            }
+
+            // تحديث الموديول الحالي إذا كان موجوداً (مع debouncing لمنع إعادة تحميل متكررة)
+            const currentSection = AppState.currentSection;
+            if (currentSection && currentSection !== 'dashboard' && this._currentSectionNeedsRefreshForSheets(currentSection, sheets)) {
+                if (this._syncSectionRefreshTimer) clearTimeout(this._syncSectionRefreshTimer);
+                this._syncSectionRefreshTimer = setTimeout(() => {
+                    this.refreshCurrentSection(true); // silent = true
+                }, 120);
+            }
+
+            // تحديث Dashboard إذا كان مفتوحاً
+            if (currentSection === 'dashboard' && typeof Dashboard !== 'undefined' && Dashboard.load) {
+                try {
+                    Dashboard.load();
+                } catch (error) {
+                    Utils.safeWarn('⚠️ فشل تحديث Dashboard بعد المزامنة:', error);
+                }
+            }
+
+            // ✅ جلب طلبات اعتماد المقاولين بعد المزامنة (للإشعارات وقائمة المدير — منفصل عن syncDataFromServer)
+            const syncCar = () => {
+                if (typeof Contractors === 'undefined') return Promise.resolve(false);
+                if (typeof Contractors.shouldLoadContractorApprovalRequests === 'function' &&
+                    !Contractors.shouldLoadContractorApprovalRequests()) {
+                    return Promise.resolve(false);
+                }
+                if (typeof Contractors.ensureApprovalRequestsDataLoaded === 'function') {
+                    return Contractors.ensureApprovalRequestsDataLoaded({ force: true });
+                }
+                return Promise.resolve(false);
+            };
+            syncCar()
+                .then(() => {
+                    if (typeof this.updateNotificationsBadge === 'function') {
+                        this.updateNotificationsBadge();
+                    }
+                    if (AppState.currentSection === 'contractors' &&
+                        typeof Contractors !== 'undefined' &&
+                        typeof Contractors.mountApprovalRequestSection === 'function' &&
+                        Contractors.currentTab === 'approval-request') {
+                        Contractors.mountApprovalRequestSection();
+                    }
+                })
+                .catch(() => {});
+        };
+
+        window.addEventListener('syncDataCompleted', this._syncDataCompletedHandler);
+        
+        if (AppState.debugMode) {
+            Utils.safeLog('✅ تم إعداد مستمع حدث اكتمال المزامنة');
+        }
+    },
+
+    /**
+     * تحديث قسم البيانات الحالي
+     */
+    refreshCurrentSection(silent = false) {
+        const currentSection = AppState.currentSection || 'dashboard';
+        if (typeof this.loadSectionData === 'function') {
+            this.loadSectionData(currentSection, silent || AppState.isPageRefresh);
+        }
+    },
+
+    /**
+     * ربط أحداث النقر على شعار الشركة واسم الشركة في الهيدر
+     */
+    bindCompanyHeaderClickEvents() {
+        const logoImg = document.getElementById('header-company-logo');
+        const companyNameText = document.getElementById('header-company-name-text');
+        const companySecondaryText = document.getElementById('header-company-secondary-text');
+        const companyTextGroup = document.getElementById('header-company-text-group');
+        const header = document.getElementById('company-logo-header');
+
+        // معالج النقر الموحد لفتح القائمة الجانبية
+        const handleHeaderClick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggleSidebar();
+        };
+
+        // ربط حدث النقر على الشعار
+        if (logoImg && !logoImg.dataset.clickBound) {
+            logoImg.style.cursor = 'pointer';
+            logoImg.setAttribute('title', 'انقر لفتح القائمة الجانبية');
+            logoImg.setAttribute('role', 'button');
+            logoImg.setAttribute('aria-label', 'فتح القائمة الجانبية');
+            logoImg.addEventListener('click', handleHeaderClick);
+            logoImg.dataset.clickBound = 'true';
+        }
+
+        // ربط حدث النقر على اسم الشركة
+        if (companyNameText && !companyNameText.dataset.clickBound) {
+            companyNameText.style.cursor = 'pointer';
+            companyNameText.setAttribute('title', 'انقر لفتح القائمة الجانبية');
+            companyNameText.setAttribute('role', 'button');
+            companyNameText.setAttribute('aria-label', 'فتح القائمة الجانبية');
+            companyNameText.addEventListener('click', handleHeaderClick);
+            companyNameText.dataset.clickBound = 'true';
+        }
+
+        // ربط حدث النقر على النص الثانوي
+        if (companySecondaryText && !companySecondaryText.dataset.clickBound) {
+            companySecondaryText.style.cursor = 'pointer';
+            companySecondaryText.setAttribute('title', 'انقر لفتح القائمة الجانبية');
+            companySecondaryText.setAttribute('role', 'button');
+            companySecondaryText.setAttribute('aria-label', 'فتح القائمة الجانبية');
+            companySecondaryText.addEventListener('click', handleHeaderClick);
+            companySecondaryText.dataset.clickBound = 'true';
+        }
+
+        // ربط حدث النقر على مجموعة النصوص (لجعل المنطقة بأكملها قابلة للنقر)
+        if (companyTextGroup && !companyTextGroup.dataset.clickBound) {
+            companyTextGroup.style.cursor = 'pointer';
+            companyTextGroup.addEventListener('click', handleHeaderClick);
+            companyTextGroup.dataset.clickBound = 'true';
+        }
+
+        // ربط حدث النقر على الهيدر ككل (المنطقة اليسرى فقط)
+        if (header) {
+            const leftSection = header.querySelector('div:first-child');
+            if (leftSection && !leftSection.dataset.clickBound) {
+                leftSection.style.cursor = 'pointer';
+                leftSection.addEventListener('click', handleHeaderClick);
+                leftSection.dataset.clickBound = 'true';
+            }
+        }
+    },
+
+    /**
+     * تحديث شعار الشركة في الهيدر
+     */
+    updateCompanyLogoHeader() {
+        const header = document.getElementById('company-logo-header');
+        const logoImg = document.getElementById('header-company-logo');
+        const logoImgRight = document.getElementById('header-company-logo-right');
+        this.updateCompanyBranding();
+
+        if (header) {
+            if (AppState.companyLogo) {
+                header.style.display = 'flex';
+                header.style.justifyContent = 'space-between';
+                header.style.alignItems = 'center';
+                header.style.padding = '10px 20px';
+                header.style.zIndex = '1001';
+
+                // تحديث موقع الهيدر بناءً على حالة القائمة الجانبية
+                const sidebar = document.querySelector('.sidebar');
+                const sidebarOpen = sidebar && sidebar.classList.contains('open');
+                this.updateCompanyLogoHeaderPosition(sidebarOpen);
+
+                // الشعار في الجانب الأيسر فقط (تم إزالة الشعار الأيمن)
+                if (logoImg) {
+                    // إعداد معالج الأخطاء قبل تعيين src
+                    let hasError = false;
+                    logoImg.onerror = () => {
+                        if (!hasError) {
+                            hasError = true;
+                            // إخفاء الصورة المكسورة
+                            logoImg.style.display = 'none';
+                            // Google Drive URLs لا تدعم CORS - هذا أمر طبيعي
+                            // الشعار لن يظهر إذا كان من Google Drive
+                        }
+                    };
+                    logoImg.onload = () => {
+                        hasError = false;
+                        logoImg.style.display = 'block';
+                    };
+                    
+                    logoImg.src = AppState.companyLogo;
+                    logoImg.style.display = 'block';
+                    logoImg.style.maxHeight = '50px';
+                    logoImg.style.maxWidth = '150px';
+                    logoImg.style.objectFit = 'contain';
+                }
+
+                // إخفاء الشعار الأيمن (تم إزالته حسب الطلب)
+                if (logoImgRight) {
+                    logoImgRight.style.display = 'none';
+                }
+            } else {
+                header.style.display = 'none';
+                if (logoImg) logoImg.style.display = 'none';
+                if (logoImgRight) logoImgRight.style.display = 'none';
+            }
+
+            // إضافة padding-top للأقسام فقط عند تغير الحالة لتقليل forced reflow
+            const shouldApplyTopPadding = !!(header && header.style.display === 'flex' && window.innerWidth > 1024);
+            if (this._lastHeaderTopPaddingState !== shouldApplyTopPadding) {
+                this._lastHeaderTopPaddingState = shouldApplyTopPadding;
+                const allSections = document.querySelectorAll('.section');
+                allSections.forEach(section => {
+                    section.style.paddingTop = shouldApplyTopPadding ? '70px' : '0';
+                });
+            }
+
+            // إظهار أزرار الهيدر (الإشعارات والوضع الليلي) عند إظهار الهيدر
+            if (header && header.style.display === 'flex') {
+                this.showHeaderActions();
+            }
+
+            // ربط أحداث النقر على الشعار واسم الشركة
+            this.bindCompanyHeaderClickEvents();
+        }
+    },
+
+    /**
+     * تحديث شعار الشركة ي لوحة التحكم
+     * تم إزالة الشعار من Dashboard حسب الطلب - الشعار فقط في الهيدر
+     */
+    updateDashboardLogo() {
+        // تم إزالة الشعار من Dashboard حسب الطلب - الشعار فقط في الهيدر
+        const dashboardLogoDiv = document.getElementById('dashboard-company-logo');
+        if (dashboardLogoDiv) {
+            dashboardLogoDiv.style.display = 'none';
+        }
+
+        // إزالة الشعارات من جميع الموديولات الأخرى أيضاً
+        const allSections = document.querySelectorAll('.section');
+        allSections.forEach(section => {
+            const sectionLogoDiv = section.querySelector('.section-company-logo');
+            if (sectionLogoDiv) {
+                sectionLogoDiv.remove();
+            }
+        });
+    },
+
+    translateBrandingText(text, lang) {
+        if (!text) return '';
+
+        const trimmed = String(text).trim();
+
+        // AR → EN
+        const arToEn = {
+            'الشركة العالمية للانتاج والتصنيع الزراعي': 'International Company for Agricultural Production & Processing (ICAPP)',
+            'إدارة السلامة والصحة المهنية والبيئة': 'Health, Safety & Environment (HSE)',
+            'إدارة السلامة والصحة المهنية': 'Occupational Safety & Health',
+            'السلامة والصحة المهنية والبيئة': 'Health, Safety & Environment (HSE)',
+            'السلامة والصحة المهنية': 'Occupational Safety & Health',
+            'نظام السلامة المهنية': 'Occupational Safety System',
+        };
+
+        // EN → AR (for when user switches back to Arabic)
+        const enToAr = {
+            'International Company for Agricultural Production & Processing (ICAPP)': 'الشركة العالمية للانتاج والتصنيع الزراعي',
+            'HSE Department': 'إدارة السلامة والصحة المهنية والبيئة',
+            'Health, Safety & Environment (HSE)': 'إدارة السلامة والصحة المهنية والبيئة',
+            'Occupational Safety & Health': 'السلامة والصحة المهنية',
+            'Occupational Safety System': 'نظام السلامة المهنية',
+        };
+
+        if (lang === 'en') {
+            if (arToEn[trimmed]) return arToEn[trimmed];
+            
+            // Forgiving check
+            const norm = trimmed.replace(/\s+/g, ' ');
+            for (const [key, value] of Object.entries(arToEn)) {
+                if (norm.includes(key) || key.includes(norm)) {
+                    return value;
+                }
+            }
+            if (norm.includes('إدارة السلامة') || norm.includes('ادارة السلامة') || norm.includes('السلامة والصحة')) {
+                return 'Health, Safety & Environment (HSE)';
+            }
+            if (norm.includes('الشركة العالمية')) {
+                return 'International Company for Agricultural Production & Processing (ICAPP)';
+            }
+
+            // Fallback to literal translations map from i18n core
+            const i18nCore = window.AppI18n || window.I18n;
+            if (i18nCore && i18nCore.literalArToEn) {
+                if (i18nCore.literalArToEn[trimmed]) return i18nCore.literalArToEn[trimmed];
+                if (i18nCore.literalArToEn[norm]) return i18nCore.literalArToEn[norm];
+            }
+            return trimmed;
+        }
+
+        if (lang === 'ar') {
+            if (enToAr[trimmed]) return enToAr[trimmed];
+            
+            // Forgiving check
+            const norm = trimmed.toLowerCase().replace(/\s+/g, ' ');
+            for (const [key, value] of Object.entries(enToAr)) {
+                if (norm.includes(key.toLowerCase()) || key.toLowerCase().includes(norm)) {
+                    return value;
+                }
+            }
+            if (norm.includes('hse department') || norm.includes('hse dept') || norm.includes('safety department')) {
+                return 'إدارة السلامة والصحة المهنية والبيئة';
+            }
+            if (norm.includes('agricultural production') || norm.includes('icapp')) {
+                return 'الشركة العالمية للانتاج والتصنيع الزراعي';
+            }
+
+            const i18nCore = window.AppI18n || window.I18n;
+            if (i18nCore && i18nCore.literalArToEn) {
+                const entry = Object.entries(i18nCore.literalArToEn).find(([k, v]) => {
+                    const normK = k.toLowerCase().replace(/\s+/g, ' ');
+                    const normV = v.toLowerCase().replace(/\s+/g, ' ');
+                    return normV === norm || normV.includes(norm) || norm.includes(normV);
+                });
+                if (entry) return entry[0];
+            }
+            return trimmed;
+        }
+
+        return trimmed;
+    },
+
+    updateCompanyBranding() {
+        const lang = localStorage.getItem('language') || 'ar';
+        const fallbackName = (typeof DEFAULT_COMPANY_NAME !== 'undefined') ? DEFAULT_COMPANY_NAME : '';
+        const rawName = AppState?.companySettings?.name;
+        let resolvedName = '';
+        if (rawName !== undefined && rawName !== null) {
+            const trimmedName = String(rawName).trim();
+            if (trimmedName) {
+                resolvedName = trimmedName;
+            }
+        }
+        if (!resolvedName) {
+            resolvedName = fallbackName;
+        }
+        const rawSecondaryName = AppState?.companySettings?.secondaryName;
+        const resolvedSecondaryName = (rawSecondaryName !== undefined && rawSecondaryName !== null)
+            ? String(rawSecondaryName).trim()
+            : '';
+
+        // ترجمة النصوص ديناميكياً عند اختيار اللغة الإنجليزية
+        const resolvedNameTranslated = this.translateBrandingText(resolvedName, lang);
+        const resolvedSecondaryNameTranslated = this.translateBrandingText(resolvedSecondaryName, lang);
+
+        // الحصول على إعدادات الخط واللون
+        const nameFontSize = AppState?.companySettings?.nameFontSize || 16;
+        const secondaryNameFontSize = AppState?.companySettings?.secondaryNameFontSize || 14;
+        const secondaryNameColor = AppState?.companySettings?.secondaryNameColor || '#6B7280';
+
+        const loginCompanyName = document.getElementById('login-company-name');
+        if (loginCompanyName) {
+            loginCompanyName.textContent = resolvedNameTranslated;
+            loginCompanyName.style.fontSize = `${nameFontSize}px`;
+        }
+        const loginCompanySecondary = document.getElementById('login-company-secondary-name');
+        if (loginCompanySecondary) {
+            if (resolvedSecondaryNameTranslated) {
+                loginCompanySecondary.textContent = resolvedSecondaryNameTranslated;
+                loginCompanySecondary.style.display = 'block';
+                loginCompanySecondary.style.fontSize = `${secondaryNameFontSize}px`;
+                loginCompanySecondary.style.color = secondaryNameColor;
+            } else {
+                loginCompanySecondary.textContent = '';
+                loginCompanySecondary.style.display = 'none';
+            }
+        }
+
+        const headerCompanyName = document.getElementById('header-company-name-text');
+        if (headerCompanyName) {
+            headerCompanyName.textContent = resolvedNameTranslated;
+            headerCompanyName.style.display = resolvedNameTranslated ? 'block' : 'none';
+            headerCompanyName.style.fontSize = `${nameFontSize}px`;
+        }
+        const headerCompanySecondary = document.getElementById('header-company-secondary-text');
+        if (headerCompanySecondary) {
+            if (resolvedSecondaryNameTranslated) {
+                headerCompanySecondary.textContent = resolvedSecondaryNameTranslated;
+                headerCompanySecondary.style.display = 'block';
+                headerCompanySecondary.style.fontSize = `${secondaryNameFontSize}px`;
+                headerCompanySecondary.style.color = secondaryNameColor;
+            } else {
+                headerCompanySecondary.textContent = '';
+                headerCompanySecondary.style.display = 'none';
+            }
+        }
+
+        const mobileCompanyName = document.getElementById('mobile-company-name');
+        if (mobileCompanyName) {
+            mobileCompanyName.textContent = resolvedNameTranslated || 'SafetyHub | ICAPP';
+            mobileCompanyName.style.fontSize = `${nameFontSize}px`;
+        }
+    },
+
+    /**
+     * تحديث شعار الشركة في شاشة تسجيل الدخول
+     */
+    updateLoginLogo() {
+        const loginLogoImg = document.getElementById('company-logo');
+        const defaultLogoIcon = document.getElementById('default-logo-icon');
+
+        if (!loginLogoImg || !defaultLogoIcon) {
+            Utils.safeWarn('⚠️ عناصر الشعار غير موجودة في DOM');
+            return;
+        }
+
+        // محاولة الحصول على الشعار من مصادر متعددة
+        let logoUrl = null;
+
+        // المصدر 1: AppState.companyLogo
+        if (AppState && AppState.companyLogo && AppState.companyLogo.trim() !== '') {
+            logoUrl = AppState.companyLogo.trim();
+        }
+
+        // المصدر 2: localStorage
+        if (!logoUrl) {
+            try {
+                const savedLogo = localStorage.getItem('hse_company_logo') || localStorage.getItem('company_logo');
+                if (savedLogo && savedLogo.trim() !== '') {
+                    logoUrl = savedLogo.trim();
+                }
+            } catch (e) {
+                Utils.safeWarn('⚠️ خطأ في قراءة الشعار من localStorage:', e);
+            }
+        }
+
+        // المصدر 3: company settings
+        if (!logoUrl && AppState && AppState.companySettings) {
+            const settingsLogo = AppState.companySettings.logo;
+            if (settingsLogo && settingsLogo.trim() !== '') {
+                logoUrl = settingsLogo.trim();
+            }
+        }
+
+        // إذا وجد شعار، نعرضه ونخفي الأيقونة الافتراضية
+        if (logoUrl && logoUrl.trim() !== '') {
+            // إعداد معالجات الأحداث قبل تعيين src
+            let hasError = false;
+
+            loginLogoImg.onerror = () => {
+                if (!hasError) {
+                    hasError = true;
+                    Utils.safeWarn('⚠️ فشل تحميل شعار الشركة من:', logoUrl);
+                    loginLogoImg.style.display = 'none';
+                    defaultLogoIcon.style.display = 'inline-block';
+                    // إزالة src التالف لمنع محاولات متكررة
+                    loginLogoImg.src = '';
+                }
+            };
+
+            loginLogoImg.onload = () => {
+                // عند تحميل الصورة بنجاح
+                hasError = false;
+                loginLogoImg.style.display = 'block';
+                defaultLogoIcon.style.display = 'none';
+
+                // التأكد من التنسيق المناسب
+                loginLogoImg.style.maxWidth = '180px';
+                loginLogoImg.style.maxHeight = '120px';
+                loginLogoImg.style.width = 'auto';
+                loginLogoImg.style.height = 'auto';
+                loginLogoImg.style.objectFit = 'contain';
+                loginLogoImg.style.margin = '0 auto';
+                loginLogoImg.style.borderRadius = '8px';
+            };
+
+            // تعيين src بعد إعداد المعالجات
+            loginLogoImg.src = logoUrl;
+            loginLogoImg.style.display = 'block';
+            defaultLogoIcon.style.display = 'none';
+
+        } else {
+            // لا يوجد شعار - إخفاء الصورة وإظهار الأيقونة الافتراضية
+            loginLogoImg.style.display = 'none';
+            loginLogoImg.src = '';
+            defaultLogoIcon.style.display = 'inline-block';
+        }
+    },
+
+    sidebarResizeBound: false,
+    sidebarKeydownBound: false,
+
+    toggleSidebar(open = null) {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        if (!sidebar) return;
+
+        const shouldOpen = open !== null ? open : !sidebar.classList.contains('open');
+        const isMobile = window.innerWidth <= 1024;
+
+        if (shouldOpen) {
+            sidebar.classList.add('open');
+            // إظهار الـ overlay فقط على الموبايل
+            if (overlay && isMobile) {
+                overlay.classList.add('visible');
+                overlay.setAttribute('aria-hidden', 'false');
+            }
+            if (isMobile) {
+                // حفظ موضع التمرير للاستعادة لاحقاً
+                const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+                document.body.dataset.scrollY = scrollY.toString();
+                // استخدام CSS فقط لمنع التمرير (يتجنب scroll-linked positioning warnings)
+                // CSS يتعامل مع position: fixed بدون الحاجة لتعيين top بناءً على scroll position
+                document.body.classList.add('sidebar-open');
+            }
+        } else {
+            sidebar.classList.remove('open');
+            // إخفاء الـ overlay على جميع الشاشات
+            if (overlay) {
+                overlay.classList.remove('visible');
+                overlay.setAttribute('aria-hidden', 'true');
+            }
+            if (isMobile) {
+                // استعادة موضع التمرير قبل إزالة الـ class
+                const scrollY = document.body.dataset.scrollY;
+                document.body.classList.remove('sidebar-open');
+                delete document.body.dataset.scrollY;
+
+                // استعادة موضع التمرير بعد إزالة position: fixed
+                if (scrollY) {
+                    const scrollValue = parseInt(scrollY) || 0;
+                    // استخدام requestAnimationFrame لضمان تطبيق التغييرات
+                    requestAnimationFrame(() => {
+                        window.scrollTo({
+                            top: scrollValue,
+                            behavior: 'auto'
+                        });
+                    });
+                }
+            }
+        }
+
+        const toggleBtn = document.getElementById('sidebar-toggle');
+        if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+            // تحديث أيقونة الزر
+            const icon = toggleBtn.querySelector('i, svg');
+            if (icon && icon.tagName === 'I') {
+                // استبدال <i> القديم بأيقونة Home SVG (يعمل حتى على الصفحات المخبأة القديمة)
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('width', '28');
+                svg.setAttribute('height', '28');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                svg.setAttribute('aria-hidden', 'true');
+                svg.style.cssText = 'display:block;flex-shrink:0';
+                svg.innerHTML = '<rect x="0" y="0" width="24" height="24" rx="5" fill="#4A90E2"/><path d="M 12,4 L 19,10 L 18,10 L 18,17 L 24,23 L 24,24 L 0,24 L 0,17 L 6,17 L 6,10 L 5,10 Z" fill="rgba(0,0,55,0.15)"/><polygon points="12,4 5,10 19,10" fill="white"/><rect x="6" y="10" width="12" height="7" rx="0.5" fill="white"/><rect x="10" y="14.5" width="4" height="2.5" rx="0.7" fill="#4A90E2"/>';
+                icon.replaceWith(svg);
+            }
+        }
+
+        // تحديث موقع الهيدر بناءً على حالة القائمة الجانبية
+        this.updateCompanyLogoHeaderPosition(shouldOpen);
+    },
+
+    toggleSidebarCollapse(forceState = null) {
+        const sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+
+        const shouldCollapse = forceState !== null ? forceState : !sidebar.classList.contains('collapsed');
+        sidebar.classList.toggle('collapsed', shouldCollapse);
+
+        // تحديث عرض المحتوى الرئيسي والهيدر عند الطي/التوسيع
+        const newWidth = shouldCollapse ? '84px' : '280px';
+        try {
+            document.documentElement.style.setProperty('--sidebar-width', newWidth);
+        } catch (e) { /* ignore */ }
+
+        const collapseToggle = document.getElementById('sidebar-collapse-toggle');
+        if (collapseToggle) {
+            collapseToggle.setAttribute('aria-pressed', shouldCollapse ? 'true' : 'false');
+            const icon = collapseToggle.querySelector('i');
+            if (icon) {
+                icon.className = shouldCollapse ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+            }
+        }
+
+        try {
+            localStorage.setItem('sidebarCollapsed', shouldCollapse ? 'true' : 'false');
+        } catch (error) {
+            if (Utils?.safeWarn) {
+                Utils.safeWarn('⚠️ فشل حفظ حالة طي القائمة الجانبية:', error);
+            }
+        }
+    },
+
+    restoreSidebarCollapseState() {
+        const sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+
+        let stored = null;
+        try {
+            stored = localStorage.getItem('sidebarCollapsed');
+        } catch (error) {
+            stored = null;
+        }
+
+        const shouldCollapse = stored === 'true';
+        sidebar.classList.toggle('collapsed', shouldCollapse);
+
+        const newWidth = shouldCollapse ? '84px' : '280px';
+        try {
+            document.documentElement.style.setProperty('--sidebar-width', newWidth);
+        } catch (e) { /* ignore */ }
+
+        const collapseToggle = document.getElementById('sidebar-collapse-toggle');
+        if (collapseToggle) {
+            collapseToggle.setAttribute('aria-pressed', shouldCollapse ? 'true' : 'false');
+            const icon = collapseToggle.querySelector('i');
+            if (icon) {
+                icon.className = shouldCollapse ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+            }
+        }
+    },
+
+    /**
+     * تحديث موقع الهيدر بناءً على حالة القائمة الجانبية
+     */
+    updateCompanyLogoHeaderPosition(sidebarOpen) {
+        const header = document.getElementById('company-logo-header');
+        if (!header) return;
+
+        // وضع الهيدر أسفل شريط العنوان (mobile-topbar) حتى لا يغطي زر القائمة الرئيسية
+        try {
+            const topbar = document.querySelector('.mobile-topbar');
+            const topbarHeight = topbar ? Math.round(topbar.getBoundingClientRect().height) : 0;
+            header.style.top = (topbarHeight > 0 ? topbarHeight : 0) + 'px';
+        } catch (e) { /* ignore */ }
+
+        const isRTL = (document.documentElement.dir || document.body?.dir || 'rtl') === 'rtl';
+
+        // على الشاشات الكبيرة (> 1024px)، إذا كانت القائمة مفتوحة، الهيدر يكون بجانبها
+        // وإذا كانت مغلقة، يكون كامل العرض. اتجاه الإزاحة يعتمد على RTL/LTR.
+        if (window.innerWidth > 1024) {
+            if (sidebarOpen) {
+                if (isRTL) {
+                    header.style.right = 'var(--sidebar-width)';
+                    header.style.left = '0';
+                } else {
+                    header.style.left = 'var(--sidebar-width)';
+                    header.style.right = '0';
+                }
+            } else {
+                header.style.right = '0';
+                header.style.left = '0';
+            }
+        } else {
+            // على الموبايل، الهيدر دائماً كامل العرض
+            header.style.right = '0';
+            header.style.left = '0';
+        }
+    },
+
+    bindSidebarEvents() {
+        const toggleBtn = document.getElementById('sidebar-toggle');
+        const overlay = document.getElementById('sidebar-overlay');
+        const collapseToggle = document.getElementById('sidebar-collapse-toggle');
+
+        if (toggleBtn && !toggleBtn.dataset.bound) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleSidebar();
+            });
+            toggleBtn.dataset.bound = 'true';
+        }
+
+        if (overlay && !overlay.dataset.bound) {
+            overlay.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleSidebar(false);
+            });
+            overlay.dataset.bound = 'true';
+            overlay.setAttribute('aria-hidden', 'true');
+        }
+
+        if (collapseToggle && !collapseToggle.dataset.bound) {
+            collapseToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleSidebarCollapse();
+            });
+            collapseToggle.dataset.bound = 'true';
+        }
+
+        this.restoreSidebarCollapseState();
+
+        // ربط أحداث النقر على شعار الشركة واسم الشركة في الهيدر
+        this.bindCompanyHeaderClickEvents();
+
+        // إغلاق القائمة الجانبية عند النقر على عنصر القائمة على جميع أحجام الشاشات
+        // ملاحظة: هذا يتم التعامل معه في setupNavigationListeners أيضاً
+        // ولكن نضيفه هنا كنسخة احتياطية
+        if (!this.sidebarNavItemsBound) {
+            const handleNavClick = () => {
+                // إغلاق القائمة الجانبية على جميع أحجام الشاشات
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar && sidebar.classList.contains('open')) {
+                    // ملاحظة: إغلاق القائمة يتم الآن تلقائياً في showSection() لجميع أحجام الشاشات
+                    // ولكن نضيف هذا كنسخة احتياطية للتعامل مع الحالات الخاصة
+                }
+            };
+
+            // استخدام event delegation للتعامل مع العناصر الديناميكية
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar && !sidebar.dataset.navDelegationBound) {
+                sidebar.addEventListener('click', (e) => {
+                    const navItem = e.target.closest('.nav-item');
+                    if (navItem) {
+                        handleNavClick();
+                    }
+                }, true);
+                sidebar.dataset.navDelegationBound = 'true';
+            }
+
+            this.sidebarNavItemsBound = true;
+        }
+
+        if (!this.sidebarResizeBound) {
+            let resizeRaf = null;
+            const handleResize = () => {
+                if (resizeRaf != null) {
+                    cancelAnimationFrame(resizeRaf);
+                }
+                resizeRaf = requestAnimationFrame(() => {
+                    resizeRaf = null;
+                    if (window.innerWidth > 1024) {
+                        this.toggleSidebar(false);
+                    }
+                    this.showHeaderActions();
+                });
+            };
+            window.addEventListener('resize', handleResize, { passive: true });
+            this.sidebarResizeBound = true;
+        }
+
+        if (!this.sidebarKeydownBound) {
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && window.innerWidth <= 1024) {
+                    const sidebar = document.querySelector('.sidebar');
+                    if (sidebar && sidebar.classList.contains('open')) {
+                        this.toggleSidebar(false);
+                    }
+                }
+            });
+            this.sidebarKeydownBound = true;
+        }
+
+        // النقر على صورة/أيقونة المستخدم لرفع أو تغيير الصورة
+        if (!this.userAvatarPhotoBound) {
+            const avatarEl = document.querySelector('.user-avatar.user-avatar-clickable');
+            const photoInput = document.getElementById('user-profile-photo-input');
+            if (avatarEl && photoInput) {
+                function openProfilePhotoPicker() {
+                    if (AppState.currentUser && AppState.currentUser.email && photoInput) {
+                        photoInput.value = '';
+                        photoInput.click();
+                    }
+                }
+                avatarEl.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openProfilePhotoPicker();
+                });
+                avatarEl.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openProfilePhotoPicker();
+                    }
+                });
+                photoInput.addEventListener('change', function(ev) {
+                    const file = ev.target && ev.target.files && ev.target.files[0];
+                    if (file && typeof UI !== 'undefined' && UI.handleUserProfilePhotoUpload) {
+                        UI.handleUserProfilePhotoUpload(file);
+                    }
+                    ev.target.value = '';
+                });
+                this.userAvatarPhotoBound = true;
+            }
+        }
+
+        // النقر على اسم/بريد المستخدم لفتح تبويب "ملفي الشخصي"
+        if (!this.userProfileSectionNavBound) {
+            const openProfileSection = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showSection('profile');
+            };
+            const nameEl = document.getElementById('userDisplayName');
+            const emailEl = document.getElementById('adminEmail');
+            [nameEl, emailEl].filter(Boolean).forEach((el) => {
+                if (el.dataset.profileBound === 'true') return;
+                el.addEventListener('click', openProfileSection);
+                el.addEventListener('keydown', (ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                        openProfileSection(ev);
+                    }
+                });
+                el.dataset.profileBound = 'true';
+            });
+            this.userProfileSectionNavBound = true;
+        }
+    },
+
+    /**
+     * معالجة رفع صورة المستخدم من الشريط الجانبي (إضافة/تغيير)
+     * @param {File} file - ملف الصورة المختار
+     */
+    handleUserProfilePhotoUpload(file) {
+        const self = this;
+        const user = AppState.currentUser;
+        if (!user || !user.email) {
+            if (typeof Notification !== 'undefined') Notification.warning('يجب تسجيل الدخول أولاً.');
+            return;
+        }
+        const users = AppState.appData.users || [];
+        const userRecord = users.find(function(u) { return u && u.email && u.email.toLowerCase().trim() === user.email.toLowerCase().trim(); });
+        if (!userRecord || !userRecord.id) {
+            if (typeof Notification !== 'undefined') Notification.warning('لم يتم العثور على بيانات المستخدم.');
+            return;
+        }
+        const maxSize = 2 * 1024 * 1024; // 2MB
+        if (file.size > maxSize) {
+            if (typeof Notification !== 'undefined') Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2 ميجابايت.');
+            return;
+        }
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!file.type || !allowedTypes.includes(file.type)) {
+            if (typeof Notification !== 'undefined') Notification.error('نوع الملف غير مدعوم. استخدم صورة (JPEG, PNG, GIF, WEBP).');
+            return;
+        }
+        if (typeof Loading !== 'undefined' && Loading.show) Loading.show('جاري رفع صورة المستخدم...');
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const dataUrl = e.target && e.target.result;
+            if (!dataUrl || typeof dataUrl !== 'string') {
+                if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+                if (typeof Notification !== 'undefined') Notification.error('فشل قراءة الملف.');
+                return;
+            }
+            const base64Data = dataUrl;
+            const ext = (file.name && file.name.lastIndexOf('.') >= 0) ? file.name.substring(file.name.lastIndexOf('.')) : '.jpg';
+            const fileName = 'user_photo_' + (userRecord.id || userRecord.email.replace(/@/g, '_')) + '_' + Date.now() + ext;
+            const mimeType = file.type || 'image/jpeg';
+            const uploadPromise = (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.uploadFileToDrive)
+                ? GoogleIntegration.uploadFileToDrive(base64Data, fileName, mimeType, 'Users')
+                : Promise.reject(new Error('Google Integration غير متاح'));
+            uploadPromise.then(function(uploadResult) {
+                const photoUrl = (uploadResult && (uploadResult.directLink || uploadResult.shareableLink)) || '';
+                if (!photoUrl) {
+                    throw new Error('لم يتم الحصول على رابط الصورة');
+                }
+                return (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript)
+                    ? GoogleIntegration.sendToAppsScript('updateUser', { userId: userRecord.id, updateData: { photo: photoUrl } }).then(function(r) { return { updateResult: r, photoUrl: photoUrl }; })
+                    : Promise.reject(new Error('Google Integration غير متاح'));
+            }).then(function(data) {
+                const updateResult = data && data.updateResult;
+                const photoUrl = data && data.photoUrl;
+                if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+                if (updateResult && updateResult.success && photoUrl) {
+                    if (userRecord) userRecord.photo = photoUrl;
+                    if (AppState.currentUser) AppState.currentUser.photo = photoUrl;
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        try { window.DataManager.save(); } catch (e) { /* ignore */ }
+                    }
+                    if (typeof Auth !== 'undefined' && Auth.updateUserSession) Auth.updateUserSession();
+                    self.updateUserProfilePhoto();
+                    if (typeof AppState !== 'undefined' && AppState.currentSection === 'profile' && typeof self.renderMyProfileSection === 'function') {
+                        Promise.resolve(self.renderMyProfileSection()).catch(function() { /* ignore */ });
+                    }
+                    if (typeof Notification !== 'undefined') Notification.success('تم حفظ صورة المستخدم بنجاح.');
+                } else {
+                    if (typeof Notification !== 'undefined') Notification.error(updateResult && updateResult.message ? updateResult.message : 'فشل تحديث الصورة.');
+                }
+            }).catch(function(err) {
+                if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+                if (typeof Utils !== 'undefined' && Utils.safeError) Utils.safeError('خطأ رفع صورة المستخدم:', err);
+                if (typeof Notification !== 'undefined') Notification.error('فشل رفع أو حفظ الصورة. ' + (err && err.message ? err.message : ''));
+            });
+        };
+        reader.onerror = function() {
+            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+            if (typeof Notification !== 'undefined') Notification.error('فشل قراءة الملف.');
+        };
+        reader.readAsDataURL(file);
+    },
+
+    /**
+     * إعداد event listeners للتنقل
+     */
+    setupNavigationListeners() {
+        // إزالة event listeners القديمة (إن وجدت)
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            // استنساخ العنصر لإزالة جميع event listeners
+            const newItem = item.cloneNode(true);
+            item.parentNode.replaceChild(newItem, item);
+        });
+
+        // إضافة event listeners جديدة
+        const newNavItems = document.querySelectorAll('.nav-item');
+        newNavItems.forEach(item => {
+            item.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const section = this.getAttribute('data-section');
+                if (section) {
+                    UI.showSection(section);
+                    // ملاحظة: إغلاق القائمة الجانبية يتم الآن تلقائياً في showSection() لجميع أحجام الشاشات
+                }
+            }, { passive: false });
+        });
+
+        // إعداد معالج زر تسجيل الخروج مباشرة
+        this.setupLogoutButton();
+
+        this.bindSidebarEvents();
+
+        // إضافة مستمع حدث لإعادة إضافة الأيقونات بعد تحميل المحتوى
+        this.setupNavigationIconsListener();
+    },
+
+    /**
+     * إعداد مستمع حدث لإعادة إضافة أيقونات التنقل
+     */
+    setupNavigationIconsListener() {
+        // إزالة المستمع القديم إن وجد
+        if (this._navigationIconsListener) {
+            document.removeEventListener('section-changed', this._navigationIconsListener);
+        }
+
+        // إضافة مستمع جديد
+        this._navigationIconsListener = (event) => {
+            const sectionName = event.detail?.section;
+            if (sectionName && sectionName !== 'dashboard') {
+                const sectionId = `${sectionName}-section`;
+
+                // إعادة إضافة الأيقونات بعد تأخير مناسب
+                const addIcons = () => {
+                    const section = document.getElementById(sectionId);
+                    if (section && section.style.display !== 'none' && section.classList.contains('active')) {
+                        // التحقق من وجود section-header أولاً
+                        let sectionHeader = section.querySelector('.section-header');
+                        if (sectionHeader) {
+                            const existingIcons = sectionHeader.querySelector('.navigation-icons-container');
+                            if (!existingIcons) {
+                                if (AppState.debugMode) {
+                                    Utils.safeLog('🔧 إضافة الأيقونات من event listener:', sectionName);
+                                }
+                                this.addNavigationIcons(section, sectionName);
+                            }
+                        } else {
+                            // إذا لم يكن هناك header، ننتظر قليلاً ثم نحاول مرة أخرى
+                            setTimeout(() => {
+                                const retrySection = document.getElementById(sectionId);
+                                if (retrySection && retrySection.style.display !== 'none') {
+                                    const retryHeader = retrySection.querySelector('.section-header');
+                                    if (retryHeader) {
+                                        this.addNavigationIcons(retrySection, sectionName);
+                                    }
+                                }
+                            }, 500);
+                        }
+                    }
+                };
+
+                // محاولات متعددة لضمان إضافة الأيقونات
+                setTimeout(addIcons, 500);
+                setTimeout(addIcons, 1000);
+                setTimeout(addIcons, 1500);
+                setTimeout(addIcons, 2500);
+                setTimeout(addIcons, 3500);
+            }
+        };
+
+        document.addEventListener('section-changed', this._navigationIconsListener);
+    },
+
+    /**
+     * إعداد معالج زر تسجيل الخروج
+     */
+    setupLogoutButton() {
+        Utils.safeLog('🔧 بدء إعداد معالج زر تسجيل الخروج...');
+
+        // محاولة متعددة للعثور على الزر
+        let attempts = 0;
+        const maxAttempts = 10;
+
+        const trySetup = () => {
+            attempts++;
+            Utils.safeLog(`🔍 محاولة ${attempts}/${maxAttempts} للعثور على زر تسجيل الخروج...`);
+
+            const logoutBtn = document.getElementById('logout-btn');
+
+            if (!logoutBtn) {
+                if (attempts < maxAttempts) {
+                    setTimeout(trySetup, 300);
+                    return;
+                }
+                Utils.safeWarn('⚠️ لم يتم العثور على زر تسجيل الخروج بعد ' + maxAttempts + ' محاولة');
+                Utils.safeError('❌ زر تسجيل الخروج غير موجود في DOM');
+                return;
+            }
+
+            Utils.safeLog('✅ تم العثور على زر تسجيل الخروج');
+
+            // التحقق إذا كان المعالج موجوداً بالفعل
+            if (logoutBtn.dataset.logoutHandlerBound === 'true') {
+                Utils.safeLog('ℹ️ معالج زر تسجيل الخروج موجود بالفعل');
+                return;
+            }
+
+            Utils.safeLog('🔧 إعداد معالج جديد لزر تسجيل الخروج...');
+
+            // إزالة أي معالجات سابقة
+            const newLogoutBtn = logoutBtn.cloneNode(true);
+            logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+            newLogoutBtn.dataset.logoutHandlerBound = 'true';
+
+            // إضافة معالج حدث جديد
+            const handleLogout = function (e) {
+                if (AppState.debugMode) Utils.safeLog('🔄 تم النقر على زر تسجيل الخروج - الحدث:', e);
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+
+                Utils.safeLog('🔄 تم النقر على زر تسجيل الخروج');
+
+                // إغلاق القائمة الجانبية على الموبايل قبل تسجيل الخروج
+                if (window.innerWidth <= 1024) {
+                    if (typeof UI !== 'undefined' && typeof UI.toggleSidebar === 'function') {
+                        UI.toggleSidebar(false);
+                    }
+                }
+
+                // عرض رسالة تأكيد
+                const confirmed = confirm('هل أنت متأكد من تسجيل الخروج؟');
+                if (AppState.debugMode) Utils.safeLog('✅ تأكيد تسجيل الخروج:', confirmed);
+
+                if (confirmed) {
+                    Utils.safeLog('✅ تم تأكيد تسجيل الخروج');
+                    try {
+                        // إزالة علامة المعالج قبل تسجيل الخروج
+                        if (newLogoutBtn) {
+                            newLogoutBtn.dataset.logoutHandlerBound = 'false';
+                        }
+
+                        if (AppState.debugMode) Utils.safeLog('🔍 البحث عن Auth.logout...', {
+                            Auth: typeof Auth !== 'undefined',
+                            windowAuth: typeof window.Auth !== 'undefined'
+                        });
+
+                        if (typeof Auth !== 'undefined' && typeof Auth.logout === 'function') {
+                            if (AppState.debugMode) Utils.safeLog('✅ استدعاء Auth.logout()');
+                            Auth.logout();
+                        } else if (typeof window.Auth !== 'undefined' && typeof window.Auth.logout === 'function') {
+                            if (AppState.debugMode) Utils.safeLog('✅ استدعاء window.Auth.logout()');
+                            window.Auth.logout();
+                        } else {
+                            Utils.safeError('❌ دالة تسجيل الخروج غير متاحة');
+                            Utils.safeError('❌ دالة تسجيل الخروج غير متاحة');
+                            if (typeof Notification !== 'undefined') {
+                                Notification.error('حدث خطأ في تسجيل الخروج. يرجى تحديث الصفحة.');
+                            } else {
+                                alert('حدث خطأ في تسجيل الخروج. يرجى تحديث الصفحة.');
+                            }
+                        }
+                    } catch (error) {
+                        Utils.safeError('❌ خطأ في تسجيل الخروج:', error);
+                        if (typeof Notification !== 'undefined') {
+                            Notification.error('حدث خطأ في تسجيل الخروج: ' + (error.message || error));
+                        } else {
+                            alert('حدث خطأ في تسجيل الخروج: ' + (error.message || error));
+                        }
+                    }
+                } else {
+                    Utils.safeLog('❌ تم إلغاء تسجيل الخروج');
+                }
+            };
+
+            // إضافة المعالج على الزر نفسه
+            newLogoutBtn.addEventListener('click', handleLogout, { passive: false, capture: false });
+            if (AppState.debugMode) Utils.safeLog('✅ تم إضافة معالج click على زر تسجيل الخروج');
+
+            // إضافة معالج أيضاً على العناصر الداخلية (الأيقونة والنص)
+            const icon = newLogoutBtn.querySelector('i');
+            const span = newLogoutBtn.querySelector('span');
+            if (icon) {
+                icon.addEventListener('click', handleLogout, { passive: false });
+                if (AppState.debugMode) Utils.safeLog('✅ تم إضافة معالج click على أيقونة تسجيل الخروج');
+            }
+            if (span) {
+                span.addEventListener('click', handleLogout, { passive: false });
+                if (AppState.debugMode) Utils.safeLog('✅ تم إضافة معالج click على نص تسجيل الخروج');
+            }
+
+            Utils.safeLog('✅ تم إعداد معالج زر تسجيل الخروج بنجاح');
+            if (AppState.debugMode) Utils.safeLog('✅ تم إعداد معالج زر تسجيل الخروج بنجاح - الزر جاهز للاستخدام');
+        };
+
+        trySetup();
+    },
+
+    /**
+     * عرض نافذة استعادة كلمة المرور
+     */
+    showForgotPasswordModal() {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 400px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">\u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631</h2>
+                    <h2 class="modal-title">استعادة كلمة المرور</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-4 text-gray-700">\u0623\u062F\u062E\u0644 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0648\u0633\u0646\u0642\u0648\u0645 \u0628\u0625\u0646\u0634\u0627\u0621 \u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631 \u0645\u0624\u0642\u062A\u0629:</p>
+                    <p class="mb-4 text-gray-700">أدخل بريدك الإلكتروني وسنقوم بإنشاء كلمة مرور مؤقتة:</p>
                     <form id="forgot-password-form">
                         <div class="mb-4">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A
+                                البريد الإلكتروني
                             </label>
                             <input 
                                 type="email" 
@@ -367,41 +3436,109 @@
                         </div>
                         <div class="flex gap-3 justify-end">
                             <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
-                                \u0625\u0644\u063A\u0627\u0621
+                                إلغاء
                             </button>
                             <button type="submit" class="btn-primary">
                                 <i class="fas fa-key ml-2"></i>
-                                \u0625\u0631\u0633\u0627\u0644
+                                إرسال
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
-        `,document.body.appendChild(e);const i=document.getElementById("forgot-password-form");i&&(i.addEventListener("submit",async t=>{t.preventDefault();const n=document.getElementById("forgot-password-email"),a=n?n.value.trim():"",s=i.querySelector('button[type="submit"]');if(!s)return;const o=s.innerHTML;s.disabled=!0,s.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u0625\u0631\u0633\u0627\u0644...';try{if(await Auth.resetPassword(a)){const l=e.querySelector(".modal-body");l.innerHTML=`
+        `;
+
+        document.body.appendChild(modal);
+
+        const form = document.getElementById('forgot-password-form');
+        if (!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const emailInput = document.getElementById('forgot-password-email');
+            const email = emailInput ? emailInput.value.trim() : '';
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (!submitBtn) return;
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الإرسال...';
+
+            try {
+                const success = await Auth.resetPassword(email);
+                if (success) {
+                    // إظهار رسالة التأكيد في النافذة
+                    const modalBody = modal.querySelector('.modal-body');
+                    modalBody.innerHTML = `
                         <div class="text-center py-4">
                             <div class="mb-4">
                                 <i class="fas fa-check-circle text-5xl text-green-500"></i>
                             </div>
-                            <h3 class="text-lg font-semibold text-gray-800 mb-2">\u062A\u0645 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u0628\u0646\u062C\u0627\u062D</h3>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">تم الإرسال بنجاح</h3>
                             <p class="text-gray-600 mb-4">
-                                \u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0625\u0644\u0649 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A.
+                                تم إرسال رابط استرجاع كلمة المرور إلى بريدك الإلكتروني.
                             </p>
                             <p class="text-sm text-gray-500">
-                                \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0635\u0646\u062F\u0648\u0642 \u0627\u0644\u0648\u0627\u0631\u062F \u0627\u0644\u062E\u0627\u0635 \u0628\u0643 \u0648\u0627\u062A\u0628\u0627\u0639 \u0627\u0644\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0644\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631.
+                                يرجى التحقق من صندوق الوارد الخاص بك واتباع التعليمات لإعادة تعيين كلمة المرور.
                             </p>
                         </div>
                         <div class="flex justify-center mt-6">
                             <button type="button" class="btn-primary" onclick="this.closest('.modal-overlay').remove()">
                                 <i class="fas fa-check ml-2"></i>
-                                \u062A\u0645
+                                تم
                             </button>
                         </div>
-                    `}else{s.disabled=!1,s.innerHTML=o;const l=document.getElementById("login-error-contact");l&&(l.style.display="block")}}catch{s.disabled=!1,s.innerHTML=o,Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631");const l=document.getElementById("login-error-contact");l&&(l.style.display="block")}}),e.addEventListener("click",t=>{t.target===e&&e.remove()}))},showHelpModal(){const e=document.createElement("div");e.className="modal-overlay";const t=(localStorage.getItem("language")||"ar")==="en"?{title:"Help",signIn:"How to sign in",signInSteps:["Enter your registered email address","Enter your password","Enable \u201CRemember me\u201D to sign in automatically next time","Select \u201CLog in\u201D"],reset:"Reset your password",resetSteps:["Select \u201CForgot password?\u201D below the password field","Enter your registered email address","Select \u201CSend\u201D","You will receive a password reset link by email","Follow the email instructions to reset your password"],guide:"Complete system guide",guideText:"After signing in, you can find detailed guidance for every module under <strong>Help</strong> in the sidebar (above Settings).",issue:"If you experience a problem",issueText:"Please contact the system administrator at:",close:"Close"}:{title:"\u0645\u0633\u0627\u0639\u062F\u0629",signIn:"\u0643\u064A\u0641\u064A\u0629 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644",signInSteps:["\u0623\u062F\u062E\u0644 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0627\u0644\u0645\u0633\u062C\u0644 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645","\u0623\u062F\u062E\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062E\u0627\u0635\u0629 \u0628\u0643",'\u064A\u0645\u0643\u0646\u0643 \u062A\u0641\u0639\u064A\u0644 \u062E\u064A\u0627\u0631 "\u062A\u0630\u0643\u0631\u0646\u064A" \u0644\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0641\u064A \u0627\u0644\u0645\u0631\u0629 \u0627\u0644\u0642\u0627\u062F\u0645\u0629','\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0632\u0631 "\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644"'],reset:"\u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631",resetSteps:['\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0631\u0627\u0628\u0637 "\u0646\u0633\u064A\u062A \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631\u061F" \u0627\u0644\u0645\u0648\u062C\u0648\u062F \u0623\u0633\u0641\u0644 \u062D\u0642\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631',"\u0623\u062F\u062E\u0644 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0627\u0644\u0645\u0633\u062C\u0644 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645",'\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0632\u0631 "\u0625\u0631\u0633\u0627\u0644"',"\u0633\u062A\u062A\u0644\u0642\u0649 \u0631\u0627\u0628\u0637 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0639\u0644\u0649 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A","\u0627\u062A\u0628\u0639 \u0627\u0644\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0641\u064A \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0644\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631"],guide:"\u062F\u0644\u064A\u0644 \u0627\u0644\u0646\u0638\u0627\u0645 \u0627\u0644\u0643\u0627\u0645\u0644",guideText:"\u0628\u0639\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0633\u062A\u062C\u062F \u0634\u0631\u062D\u0627\u064B \u062A\u0641\u0635\u064A\u0644\u064A\u0627\u064B \u0644\u0643\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644\u0627\u062A \u0641\u064A <strong>\u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629</strong> \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629 (\u0641\u0648\u0642 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A).",issue:"\u0641\u064A \u062D\u0627\u0644\u0629 \u0648\u062C\u0648\u062F \u0623\u064A \u0645\u0634\u0643\u0644\u0629",issueText:"\u064A\u064F\u0631\u062C\u0649 \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0639\u0644\u0649 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u062A\u0627\u0644\u064A:",close:"\u0641\u0647\u0645\u062A"},n=a=>a.map(s=>`<li>${s}</li>`).join("");e.innerHTML=`
+                    `;
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                    // إظهار معلومات التواصل عند فشل الاسترجاع
+                    const errorContact = document.getElementById('login-error-contact');
+                    if (errorContact) {
+                        errorContact.style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+                Notification.error('حدث خطأ أثناء استعادة كلمة المرور');
+                // إظهار معلومات التواصل عند حدوث خطأ
+                const errorContact = document.getElementById('login-error-contact');
+                if (errorContact) {
+                    errorContact.style.display = 'block';
+                }
+            }
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    /**
+     * عرض نافذة المساعدة
+     */
+    showHelpModal() {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        const helpLang = localStorage.getItem('language') || 'ar';
+        const helpCopy = helpLang === 'en' ? {
+            title: 'Help', signIn: 'How to sign in', signInSteps: ['Enter your registered email address', 'Enter your password', 'Enable “Remember me” to sign in automatically next time', 'Select “Log in”'],
+            reset: 'Reset your password', resetSteps: ['Select “Forgot password?” below the password field', 'Enter your registered email address', 'Select “Send”', 'You will receive a password reset link by email', 'Follow the email instructions to reset your password'],
+            guide: 'Complete system guide', guideText: 'After signing in, you can find detailed guidance for every module under <strong>Help</strong> in the sidebar (above Settings).',
+            issue: 'If you experience a problem', issueText: 'Please contact the system administrator at:', close: 'Close'
+        } : {
+            title: 'مساعدة', signIn: 'كيفية تسجيل الدخول', signInSteps: ['أدخل بريدك الإلكتروني المسجل في النظام', 'أدخل كلمة المرور الخاصة بك', 'يمكنك تفعيل خيار "تذكرني" لتسجيل الدخول تلقائياً في المرة القادمة', 'اضغط على زر "تسجيل الدخول"'],
+            reset: 'استرجاع كلمة المرور', resetSteps: ['اضغط على رابط "نسيت كلمة المرور؟" الموجود أسفل حقل كلمة المرور', 'أدخل بريدك الإلكتروني المسجل في النظام', 'اضغط على زر "إرسال"', 'ستتلقى رابط إعادة تعيين كلمة المرور على بريدك الإلكتروني', 'اتبع التعليمات في البريد الإلكتروني لإعادة تعيين كلمة المرور'],
+            guide: 'دليل النظام الكامل', guideText: 'بعد تسجيل الدخول ستجد شرحاً تفصيلياً لكل الموديولات في <strong>المساعدة</strong> من القائمة الجانبية (فوق الإعدادات).',
+            issue: 'في حالة وجود أي مشكلة', issueText: 'يُرجى التواصل مع مدير النظام على البريد التالي:', close: 'فهمت'
+        };
+        const renderSteps = (items) => items.map(item => `<li>${item}</li>`).join('');
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-question-circle ml-2"></i>
-                        ${t.title}
+                        ${helpCopy.title}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -412,40 +3549,40 @@
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800 mb-2">
                                 <i class="fas fa-sign-in-alt ml-2 text-blue-600"></i>
-                                ${t.signIn}
+                                ${helpCopy.signIn}
                             </h3>
                             <ol class="list-decimal list-inside space-y-2 text-gray-700 text-sm mr-4">
-                                ${n(t.signInSteps)}
+                                ${renderSteps(helpCopy.signInSteps)}
                             </ol>
                         </div>
                         
                         <div class="border-t pt-4">
                             <h3 class="text-lg font-semibold text-gray-800 mb-2">
                                 <i class="fas fa-key ml-2 text-blue-600"></i>
-                                ${t.reset}
+                                ${helpCopy.reset}
                             </h3>
                             <ol class="list-decimal list-inside space-y-2 text-gray-700 text-sm mr-4">
-                                ${n(t.resetSteps)}
+                                ${renderSteps(helpCopy.resetSteps)}
                             </ol>
                         </div>
                         
                         <div class="border-t pt-4 bg-teal-50 border border-teal-200 rounded-lg p-4">
                             <h3 class="text-sm font-semibold text-teal-800 mb-2">
                                 <i class="fas fa-book ml-2"></i>
-                                ${t.guide}
+                                ${helpCopy.guide}
                             </h3>
                             <p class="text-sm text-teal-700">
-                                ${t.guideText}
+                                ${helpCopy.guideText}
                             </p>
                         </div>
                         
                         <div class="border-t pt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                             <h3 class="text-sm font-semibold text-yellow-800 mb-2">
                                 <i class="fas fa-envelope ml-2"></i>
-                                ${t.issue}
+                                ${helpCopy.issue}
                             </h3>
                             <p class="text-sm text-yellow-700 mb-2">
-                                ${t.issueText}
+                                ${helpCopy.issueText}
                             </p>
                             <a href="mailto:Yasser.diab@icapp.com.eg" class="text-yellow-600 hover:text-yellow-800 font-semibold hover:underline inline-flex items-center">
                                 <i class="fas fa-envelope ml-2"></i>
@@ -457,36 +3594,51 @@
                     <div class="flex justify-center mt-6">
                         <button type="button" class="btn-primary" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-check ml-2"></i>
-                            ${t.close}
+                            ${helpCopy.close}
                         </button>
                     </div>
                 </div>
             </div>
-        `,document.body.appendChild(e),e.addEventListener("click",a=>{a.target===e&&e.remove()})},showChangePasswordModal(e=!1){const i=document.createElement("div");i.className="modal-overlay",i.innerHTML=`
+        `;
+
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    /**
+     * عرض نموذج تغيير كلمة المرور
+     */
+    showChangePasswordModal(isFirstLogin = false) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 450px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${e?"\u062A\u063A\u064A\u064A\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 (\u0645\u0637\u0644\u0648\u0628)":"\u062A\u063A\u064A\u064A\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631"}</h2>
-                    ${e?"":`<button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>`}
+                    <h2 class="modal-title">${isFirstLogin ? 'تغيير كلمة المرور (مطلوب)' : 'تغيير كلمة المرور'}</h2>
+                    ${!isFirstLogin ? '<button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()"><i class="fas fa-times"></i></button>' : ''}
                 </div>
                 <div class="modal-body">
-                    ${e?'<div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4"><p class="text-sm text-blue-800"><i class="fas fa-info-circle ml-2"></i>\u064A\u062C\u0628 \u062A\u063A\u064A\u064A\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064A \u0623\u0648\u0644 \u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644</p></div>':""}
+                    ${isFirstLogin ? '<div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4"><p class="text-sm text-blue-800"><i class="fas fa-info-circle ml-2"></i>يجب تغيير كلمة المرور ي أول تسجيل دخول</p></div>' : ''}
                     <form id="change-password-form">
                         <div class="mb-4">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062D\u0627\u0644\u064A\u0629
+                                كلمة المرور الحالية
                             </label>
                             <input 
                                 type="password" 
                                 id="change-password-current" 
                                 required
                                 class="form-input"
-                                placeholder="\u0623\u062F\u062E\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062D\u0627\u0644\u064A\u0629"
+                                placeholder="أدخل كلمة المرور الحالية"
                                 autocomplete="current-password"
                             >
                         </div>
                         <div class="mb-4">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062C\u062F\u064A\u062F\u0629
+                                كلمة المرور الجديدة
                             </label>
                             <input 
                                 type="password" 
@@ -494,13 +3646,13 @@
                                 required
                                 minlength="6"
                                 class="form-input"
-                                placeholder="\u0623\u062F\u062E\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062C\u062F\u064A\u062F\u0629 (6 \u0623\u062D\u0631 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644)"
+                                placeholder="أدخل كلمة المرور الجديدة (6 أحر على الأقل)"
                                 autocomplete="new-password"
                             >
                         </div>
                         <div class="mb-4">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                \u062A\u0623\u0643\u064A\u062F \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062C\u062F\u064A\u062F\u0629
+                                تأكيد كلمة المرور الجديدة
                             </label>
                             <input 
                                 type="password" 
@@ -508,63 +3660,863 @@
                                 required
                                 minlength="6"
                                 class="form-input"
-                                placeholder="\u0623\u0639\u062F \u0625\u062F\u062E\u0627\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062C\u062F\u064A\u062F\u0629"
+                                placeholder="أعد إدخال كلمة المرور الجديدة"
                                 autocomplete="new-password"
                             >
                         </div>
                         <div class="flex gap-3 justify-end">
-                            ${e?"":`<button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>`}
+                            ${!isFirstLogin ? '<button type="button" class="btn-secondary" onclick="this.closest(\'.modal-overlay\').remove()">إلغاء</button>' : ''}
                             <button type="submit" class="btn-primary">
                                 <i class="fas fa-key ml-2"></i>
-                                ${e?"\u062D\u0641\u0638 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062C\u062F\u064A\u062F\u0629":"\u062A\u063A\u064A\u064A\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631"}
+                                ${isFirstLogin ? 'حفظ كلمة المرور الجديدة' : 'تغيير كلمة المرور'}
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
-        `,document.body.appendChild(i);const t=document.getElementById("change-password-form");t&&(t.addEventListener("submit",async n=>{n.preventDefault();const a=document.getElementById("change-password-current"),s=document.getElementById("change-password-new"),o=document.getElementById("change-password-confirm"),r=a?a.value.trim():"",l=s?s.value.trim():"",d=o?o.value.trim():"";if(l!==d){Notification.error("\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062C\u062F\u064A\u062F\u0629 \u0648\u062A\u0623\u0643\u064A\u062F\u0647\u0627 \u063A\u064A\u0631 \u0645\u062A\u0637\u0627\u0628\u0642\u064A\u0646");return}if(l.length<6){Notification.error("\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064A\u062C\u0628 \u0623\u0646 \u062A\u0643\u0648\u0646 6 \u0623\u062D\u0631 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644");return}Loading.show();try{await Auth.changePassword(AppState.currentUser.email,r,l)?(Notification.success("\u062A\u0645 \u062A\u063A\u064A\u064A\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0628\u0646\u062C\u0627\u062D"),setTimeout(()=>{i.remove(),Loading.hide(),e&&window.location.reload()},1500)):(Loading.hide(),Notification.error("\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629"))}catch(p){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u063A\u064A\u064A\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631: "+p.message)}}),e||i.addEventListener("click",n=>{n.target===i&&i.remove()}),setTimeout(()=>{document.getElementById("change-password-current").focus()},100))},async showMfaSettingsModal(){const e=typeof Auth<"u"&&Auth.getCurrentUserMfaStatus?Auth.getCurrentUserMfaStatus():{enabled:!1},i=document.createElement("div");i.className="modal-overlay",i.innerHTML=`
+        `;
+
+        document.body.appendChild(modal);
+
+        const form = document.getElementById('change-password-form');
+        if (!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const currentPasswordInput = document.getElementById('change-password-current');
+            const newPasswordInput = document.getElementById('change-password-new');
+            const confirmPasswordInput = document.getElementById('change-password-confirm');
+            const currentPassword = currentPasswordInput ? currentPasswordInput.value.trim() : '';
+            const newPassword = newPasswordInput ? newPasswordInput.value.trim() : '';
+            const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value.trim() : '';
+
+            // التحقق من تطابق كلمة المرور الجديدة
+            if (newPassword !== confirmPassword) {
+                Notification.error('كلمة المرور الجديدة وتأكيدها غير متطابقين');
+                return;
+            }
+
+            // التحقق من طول كلمة المرور
+            if (newPassword.length < 6) {
+                Notification.error('كلمة المرور يجب أن تكون 6 أحر على الأقل');
+                return;
+            }
+
+            Loading.show();
+            try {
+                const success = await Auth.changePassword(
+                    AppState.currentUser.email,
+                    currentPassword,
+                    newPassword
+                );
+
+                if (success) {
+                    Notification.success('تم تغيير كلمة المرور بنجاح');
+                    setTimeout(() => {
+                        modal.remove();
+                        Loading.hide();
+
+                        // إذا كان أول تسجيل دخول، نعيد تحميل الصحة
+                        if (isFirstLogin) {
+                            window.location.reload();
+                        }
+                    }, 1500);
+                } else {
+                    Loading.hide();
+                    Notification.error('كلمة المرور الحالية غير صحيحة');
+                }
+            } catch (error) {
+                Loading.hide();
+                Notification.error('حدث خطأ أثناء تغيير كلمة المرور: ' + error.message);
+            }
+        });
+
+        // منع إغلاق النموذج إذا كان أول تسجيل دخول
+        if (!isFirstLogin) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+        }
+
+        // التركيز على أول حقل
+        setTimeout(() => {
+            document.getElementById('change-password-current').focus();
+        }, 100);
+    },
+
+    /**
+     * إعداد المصادقة الثنائية (TOTP)
+     */
+    async showMfaSettingsModal() {
+        const status = (typeof Auth !== 'undefined' && Auth.getCurrentUserMfaStatus)
+            ? Auth.getCurrentUserMfaStatus()
+            : { enabled: false };
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 480px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">\u0627\u0644\u0645\u0635\u0627\u062F\u0642\u0629 \u0627\u0644\u062B\u0646\u0627\u0626\u064A\u0629 (TOTP)</h2>
+                    <h2 class="modal-title">المصادقة الثنائية (TOTP)</h2>
                     <button type="button" class="modal-close" id="mfa-modal-close"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body" id="mfa-modal-body">
-                    <div class="text-center text-slate-500 text-sm py-4"><i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</div>
+                    <div class="text-center text-slate-500 text-sm py-4"><i class="fas fa-spinner fa-spin ml-2"></i> جاري التحميل...</div>
                 </div>
             </div>
-        `,document.body.appendChild(i);const t=()=>{try{i.remove()}catch{}};i.querySelector("#mfa-modal-close")?.addEventListener("click",t),i.addEventListener("click",l=>{l.target===i&&t()});const n=i.querySelector("#mfa-modal-body");if(!n)return;const a=l=>typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(String(l??"")):String(l??"");if(e.enabled){n.innerHTML=`
+        `;
+        document.body.appendChild(modal);
+        const closeModal = () => { try { modal.remove(); } catch (_e) { /* ignore */ } };
+        modal.querySelector('#mfa-modal-close')?.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        const body = modal.querySelector('#mfa-modal-body');
+        if (!body) return;
+
+        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML)
+            ? Utils.escapeHTML(String(v ?? ''))
+            : String(v ?? '');
+
+        if (status.enabled) {
+            body.innerHTML = `
                 <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4 text-sm text-emerald-800">
-                    <i class="fas fa-check-circle ml-2"></i>\u0627\u0644\u0645\u0635\u0627\u062F\u0642\u0629 \u0627\u0644\u062B\u0646\u0627\u0626\u064A\u0629 <strong>\u0645\u0641\u0639\u0651\u0644\u0629</strong> \u0639\u0644\u0649 \u062D\u0633\u0627\u0628\u0643.
+                    <i class="fas fa-check-circle ml-2"></i>المصادقة الثنائية <strong>مفعّلة</strong> على حسابك.
                 </div>
-                <p class="text-sm text-gray-600 mb-3">\u0644\u062A\u0639\u0637\u064A\u0644\u0647\u0627 \u0623\u062F\u062E\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062D\u0627\u0644\u064A\u0629:</p>
-                <input type="password" id="mfa-disable-password" class="form-input mb-3" autocomplete="current-password" placeholder="\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631">
+                <p class="text-sm text-gray-600 mb-3">لتعطيلها أدخل كلمة المرور الحالية:</p>
+                <input type="password" id="mfa-disable-password" class="form-input mb-3" autocomplete="current-password" placeholder="كلمة المرور">
                 <div class="flex gap-2 justify-end">
-                    <button type="button" class="btn-secondary" id="mfa-disable-cancel">\u0625\u0644\u063A\u0627\u0621</button>
-                    <button type="button" class="btn-danger" id="mfa-disable-confirm"><i class="fas fa-shield-halved ml-1"></i>\u062A\u0639\u0637\u064A\u0644</button>
+                    <button type="button" class="btn-secondary" id="mfa-disable-cancel">إلغاء</button>
+                    <button type="button" class="btn-danger" id="mfa-disable-confirm"><i class="fas fa-shield-halved ml-1"></i>تعطيل</button>
                 </div>
-            `,n.querySelector("#mfa-disable-cancel")?.addEventListener("click",t),n.querySelector("#mfa-disable-confirm")?.addEventListener("click",async()=>{const l=n.querySelector("#mfa-disable-password")?.value||"";if(!l){Notification.warning("\u0623\u062F\u062E\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631");return}Loading.show();try{const d=await Auth.disableMfa(l);Loading.hide(),d&&d.success&&(t(),AppState.currentSection==="profile"&&this.renderMyProfileSection())}catch{Loading.hide(),Notification.error("\u0641\u0634\u0644 \u0627\u0644\u062A\u0639\u0637\u064A\u0644")}});return}const s=l=>{n.innerHTML=`
+            `;
+            body.querySelector('#mfa-disable-cancel')?.addEventListener('click', closeModal);
+            body.querySelector('#mfa-disable-confirm')?.addEventListener('click', async () => {
+                const pw = body.querySelector('#mfa-disable-password')?.value || '';
+                if (!pw) {
+                    Notification.warning('أدخل كلمة المرور');
+                    return;
+                }
+                Loading.show();
+                try {
+                    const res = await Auth.disableMfa(pw);
+                    Loading.hide();
+                    if (res && res.success) {
+                        closeModal();
+                        if (AppState.currentSection === 'profile') this.renderMyProfileSection();
+                    }
+                } catch (err) {
+                    Loading.hide();
+                    Notification.error('فشل التعطيل');
+                }
+            });
+            return;
+        }
+
+        const showStartError = (message) => {
+            body.innerHTML = `
                 <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-3 text-sm text-red-700">
-                    <i class="fas fa-circle-exclamation ml-1"></i>${a(l||"\u062A\u0639\u0630\u0631 \u0628\u062F\u0621 \u0627\u0644\u062A\u0633\u062C\u064A\u0644")}
+                    <i class="fas fa-circle-exclamation ml-1"></i>${esc(message || 'تعذر بدء التسجيل')}
                 </div>
-                <p class="text-xs text-slate-500 mb-3">\u0625\u0646 \u0627\u0633\u062A\u0645\u0631 \u0627\u0644\u062E\u0637\u0623: \u062D\u062F\u0651\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0623\u0648 \u0623\u0639\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u062B\u0645 \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.</p>
+                <p class="text-xs text-slate-500 mb-3">إن استمر الخطأ: حدّث الصفحة أو أعد تسجيل الدخول ثم حاول مرة أخرى.</p>
                 <div class="flex gap-2 justify-end">
-                    <button type="button" class="btn-secondary" id="mfa-enroll-close-err">\u0625\u063A\u0644\u0627\u0642</button>
-                    <button type="button" class="btn-primary" id="mfa-enroll-retry"><i class="fas fa-rotate-right ml-1"></i>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629</button>
+                    <button type="button" class="btn-secondary" id="mfa-enroll-close-err">إغلاق</button>
+                    <button type="button" class="btn-primary" id="mfa-enroll-retry"><i class="fas fa-rotate-right ml-1"></i>إعادة المحاولة</button>
                 </div>
-            `,n.querySelector("#mfa-enroll-close-err")?.addEventListener("click",t),n.querySelector("#mfa-enroll-retry")?.addEventListener("click",()=>{n.innerHTML='<div class="text-center text-slate-500 text-sm py-4"><i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</div>',r()})},o=l=>{const d=l.otpauthUrl||"",p=l.secret||"";let f='<p class="text-amber-600 text-sm">\u062A\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 QR \u2014 \u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0633\u0631 \u064A\u062F\u0648\u064A\u0627\u064B \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642.</p>';const c=typeof window<"u"&&window.QRCode&&typeof window.QRCode.generate=="function"?window.QRCode:typeof QRCode<"u"&&QRCode&&typeof QRCode.generate=="function"?QRCode:null;if(d&&c)try{const u=c.generate(d,200);u&&(f=`<img src="${a(u)}" alt="QR MFA" class="mx-auto profile-qr-image" style="max-width:200px;">`)}catch{}else if(d){const u=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(d)}`;f=`<img src="${a(u)}" alt="QR MFA" class="mx-auto profile-qr-image" style="max-width:200px;">`}n.innerHTML=`
-                <p class="text-sm text-gray-600 mb-2">\u0627\u0645\u0633\u062D \u0627\u0644\u0631\u0645\u0632 \u0628\u062A\u0637\u0628\u064A\u0642 Google Authenticator \u0623\u0648 Microsoft Authenticator:</p>
-                <p class="text-xs text-amber-700 mb-3">\u0627\u062D\u0630\u0641 \u0623\u064A \u062D\u0633\u0627\u0628 HSE \u0642\u062F\u064A\u0645 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0623\u0648\u0644\u0627\u064B. \u0625\u0646 \u0641\u0634\u0644 \u0627\u0644\u0645\u0633\u062D: \u0623\u062F\u062E\u0644 \u0627\u0644\u0633\u0631 \u064A\u062F\u0648\u064A\u0627\u064B (\u0628\u0627\u0644\u0623\u0633\u0641\u0644) \u062B\u0645 \u0623\u062F\u062E\u0644 \u0631\u0645\u0632\u0627\u064B \u062C\u062F\u064A\u062F\u0627\u064B.</p>
-                <div class="text-center mb-3">${f}</div>
-                <p class="text-xs text-gray-500 mb-1 text-center">\u0627\u0644\u0633\u0631 \u0627\u0644\u064A\u062F\u0648\u064A:</p>
-                <p class="text-sm font-mono text-center mb-3 select-all" dir="ltr">${a(p)}</p>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">\u0623\u062F\u062E\u0644 \u0627\u0644\u0631\u0645\u0632 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0644\u0644\u062A\u0623\u0643\u064A\u062F:</label>
+            `;
+            body.querySelector('#mfa-enroll-close-err')?.addEventListener('click', closeModal);
+            body.querySelector('#mfa-enroll-retry')?.addEventListener('click', () => {
+                body.innerHTML = `<div class="text-center text-slate-500 text-sm py-4"><i class="fas fa-spinner fa-spin ml-2"></i> جاري التحميل...</div>`;
+                beginEnrollment();
+            });
+        };
+
+        const renderEnrollForm = (start) => {
+            const otpauthUrl = start.otpauthUrl || '';
+            const manualSecret = start.secret || '';
+            let qrHtml = '<p class="text-amber-600 text-sm">تعذر إنشاء QR — استخدم السر يدوياً في التطبيق.</p>';
+            const qrApi = (typeof window !== 'undefined' && window.QRCode && typeof window.QRCode.generate === 'function')
+                ? window.QRCode
+                : ((typeof QRCode !== 'undefined' && QRCode && typeof QRCode.generate === 'function') ? QRCode : null);
+            if (otpauthUrl && qrApi) {
+                try {
+                    const qrSrc = qrApi.generate(otpauthUrl, 200);
+                    if (qrSrc) {
+                        qrHtml = `<img src="${esc(qrSrc)}" alt="QR MFA" class="mx-auto profile-qr-image" style="max-width:200px;">`;
+                    }
+                } catch (_qrErr) { /* fallback text */ }
+            } else if (otpauthUrl) {
+                const fallback = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauthUrl)}`;
+                qrHtml = `<img src="${esc(fallback)}" alt="QR MFA" class="mx-auto profile-qr-image" style="max-width:200px;">`;
+            }
+
+            body.innerHTML = `
+                <p class="text-sm text-gray-600 mb-2">امسح الرمز بتطبيق Google Authenticator أو Microsoft Authenticator:</p>
+                <p class="text-xs text-amber-700 mb-3">احذف أي حساب HSE قديم من التطبيق أولاً. إن فشل المسح: أدخل السر يدوياً (بالأسفل) ثم أدخل رمزاً جديداً.</p>
+                <div class="text-center mb-3">${qrHtml}</div>
+                <p class="text-xs text-gray-500 mb-1 text-center">السر اليدوي:</p>
+                <p class="text-sm font-mono text-center mb-3 select-all" dir="ltr">${esc(manualSecret)}</p>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">أدخل الرمز من التطبيق للتأكيد:</label>
                 <input type="text" id="mfa-enroll-code" class="form-input text-center tracking-widest mb-3" inputmode="numeric" maxlength="6" placeholder="000000" dir="ltr" autocomplete="one-time-code">
                 <div class="flex gap-2 justify-end">
-                    <button type="button" class="btn-secondary" id="mfa-enroll-cancel">\u0625\u0644\u063A\u0627\u0621</button>
-                    <button type="button" class="btn-primary" id="mfa-enroll-confirm"><i class="fas fa-check ml-1"></i>\u062A\u0641\u0639\u064A\u0644</button>
+                    <button type="button" class="btn-secondary" id="mfa-enroll-cancel">إلغاء</button>
+                    <button type="button" class="btn-primary" id="mfa-enroll-confirm"><i class="fas fa-check ml-1"></i>تفعيل</button>
                 </div>
-            `,n.querySelector("#mfa-enroll-cancel")?.addEventListener("click",t),n.querySelector("#mfa-enroll-confirm")?.addEventListener("click",async()=>{const u=n.querySelector("#mfa-enroll-code")?.value?.trim()||"";if(!/^\d{6}$/.test(u.replace(/\s/g,""))){Notification.warning("\u0623\u062F\u062E\u0644 6 \u0623\u0631\u0642\u0627\u0645 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642");return}Loading.show();try{if(p&&typeof Auth.verifyTotpLocal=="function"&&await Auth.verifyTotpLocal(p,u,5)===!1){Loading.hide(),Notification.error("\u0627\u0644\u0631\u0645\u0632 \u0644\u0627 \u064A\u0637\u0627\u0628\u0642 \u0627\u0644\u0633\u0631 \u0627\u0644\u0645\u0639\u0631\u0648\u0636. \u0627\u062D\u0630\u0641 \u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u0642\u062F\u064A\u0645 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0648\u0623\u0639\u062F \u0627\u0644\u0645\u0633\u062D \u0623\u0648 \u0627\u0644\u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u064A\u062F\u0648\u064A.");return}const g=await Auth.confirmMfaEnrollment(u);Loading.hide(),g&&g.success&&(t(),AppState.currentSection==="profile"&&this.renderMyProfileSection())}catch(g){Loading.hide(),Notification.error(g?.message||"\u0641\u0634\u0644 \u0627\u0644\u062A\u0641\u0639\u064A\u0644")}}),setTimeout(()=>n.querySelector("#mfa-enroll-code")?.focus(),100)},r=async()=>{try{const l=await Auth.startMfaEnrollment({silent:!0});if(!l||!l.success){s(l?.message||"\u062A\u0639\u0630\u0631 \u0628\u062F\u0621 \u0627\u0644\u062A\u0633\u062C\u064A\u0644");return}o(l)}catch(l){const d=typeof Auth<"u"&&Auth._friendlyMfaTransportError?Auth._friendlyMfaTransportError(l):l?.message||"\u062A\u0639\u0630\u0631 \u0628\u062F\u0621 \u0627\u0644\u062A\u0633\u062C\u064A\u0644";s(d)}};r()},getAppVersionDisplay_(){return(typeof AppState<"u"&&AppState.appVersion?String(AppState.appVersion).trim():"")||"\u2014"},updateAppVersionDisplay(){const e=this.getAppVersionDisplay_(),t=(typeof AppState<"u"&&AppState.currentLanguage||typeof I18n<"u"&&I18n.currentLang||typeof AppI18n<"u"&&AppI18n.currentLang||document.documentElement.lang||"ar")==="en",n=e==="\u2014"?e:t?`Version${e}`:`V.${e}`,a=e==="\u2014"?e:t?`Version${e}`:`\u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 V.${e}`,s=document.getElementById("sidebar-app-version"),o=s?s.querySelector(".sidebar-app-version-label"):null,r=document.getElementById("sidebar-app-version-value"),l=document.getElementById("login-footer-version"),d=document.getElementById("mobile-app-version");o&&(o.textContent=t?"System Version":"\u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"),r&&(r.textContent=n),s&&(s.setAttribute("title",a),s.setAttribute("aria-label",a)),l&&(l.textContent=a,l.setAttribute("aria-label",a)),d&&(d.textContent=n,d.setAttribute("aria-label",a),d.style.display=e==="\u2014"?"none":"block")},updateUserProfile(){const e=document.getElementById("userDisplayName"),i=document.getElementById("adminEmail"),t=document.getElementById("mobile-user-name"),n=document.getElementById("userFactoryDisplay"),a=document.getElementById("userSubLocationDisplay"),s=r=>{try{if(!r)return"";const l=(r.factoryName||r.plantName||r.siteName||"").toString().trim();if(l)return l;const d=(r.factoryId||r.factory||r.plant||r.siteId||r.site||"").toString().trim();return d?((Array.isArray(AppState.appData?.observationSites)?AppState.appData.observationSites:[]).find(c=>String(c?.id||"").trim()===d)?.name||"").toString().trim():""}catch{return""}},o=r=>{try{if(!r)return"";const l=(r.subLocationName||r.placeName||r.subSiteName||"").toString().trim();if(l)return l;const d=(r.factoryId||r.factory||r.plant||r.siteId||r.site||"").toString().trim(),p=(r.subLocationId||r.subLocation||r.placeId||r.place||r.subSite||r.subsite||"").toString().trim();if(!d||!p)return"";const c=(Array.isArray(AppState.appData?.observationSites)?AppState.appData.observationSites:[]).find(m=>String(m?.id||"").trim()===d);return((Array.isArray(c?.places)?c.places:[]).find(m=>String(m?.id||"").trim()===p)?.name||"").toString().trim()}catch{return""}};if(AppState.currentUser){if(e&&(e.textContent=AppState.currentUser.name),i&&(i.textContent=AppState.currentUser.email),t&&(t.textContent=AppState.currentUser.email||"",t.style.display=AppState.currentUser.email?"block":"none"),n){const r=s(AppState.currentUser);n.textContent=r?`\u0627\u0644\u0645\u0635\u0646\u0639: ${r}`:"",n.style.display=r?"block":"none"}if(a){const r=o(AppState.currentUser);a.textContent=r?`\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0641\u0631\u0639\u064A: ${r}`:"",a.style.display=r?"block":"none"}}else e&&(e.textContent="\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645"),i&&(i.textContent="user@example.com"),t&&(t.textContent=""),t&&(t.style.display="none"),n&&(n.textContent="",n.style.display="none"),a&&(a.textContent="",a.style.display="none");this.updateUserProfilePhoto(),this.updateUserConnectionStatus(),this.updateAppVersionDisplay()},_formatProfileHireDateDisplay(e){if(!e)return"";const i=new Date(e);if(isNaN(i.getTime()))return String(e);const t=n=>String(n).padStart(2,"0");return`${t(i.getDate())}/${t(i.getMonth()+1)}/${i.getFullYear()}`},_computeProfileTenure(e){if(!e)return"";const i=e instanceof Date?e:new Date(e);if(isNaN(i.getTime()))return"";const t=new Date;if(i>t)return"\u2014";let n=t.getFullYear()-i.getFullYear(),a=t.getMonth()-i.getMonth();t.getDate()-i.getDate()<0&&(a-=1),a<0&&(n-=1,a+=12),n<0&&(n=0,a=0);const o=[];return n>0&&o.push(n+(n===1?" \u0633\u0646\u0629":" \u0633\u0646\u0648\u0627\u062A")),a>0&&o.push(a+(a===1?" \u0634\u0647\u0631\u0627\u064B":" \u0623\u0634\u0647\u0631")),o.length===0?"\u0623\u0642\u0644 \u0645\u0646 \u0634\u0647\u0631":o.join(" \u0648")},_profileNorm(e){return String(e||"").trim().toLowerCase().replace(/[,،]+/g,"").replace(/[\s\-_.()]+/g,"")},_profileNameFingerprint(e){const i=String(e||"").trim().toLowerCase().replace(/[,،.؛:]+/g," ").replace(/[\s\-_.()]+/g," ").replace(/\s+/g," ").trim();return i?i.split(/\s+/).filter(Boolean).sort().join("|"):""},_resolveFactoryNameForProfile(e,i){try{const t=e||{},n=i||{},a=(n.factoryName||n.plantName||n.siteName||n.branch||t.factoryName||t.plantName||t.siteName||t.branch||"").toString().trim();if(a)return a;const s=(n.factoryId||n.factory||n.plant||n.siteId||n.site||t.factoryId||t.factory||t.plant||t.siteId||t.site||"").toString().trim();return s?((Array.isArray(AppState.appData?.observationSites)?AppState.appData.observationSites:[]).find(l=>String(l?.id||"").trim()===s)?.name||"").toString().trim():""}catch{return""}},_ensureProfileCriticalSheetsLoaded(){return this._profileCriticalLoadPromise?this._profileCriticalLoadPromise:(this._profileCriticalLoadPromise=Promise.resolve().then(()=>this._preloadProfileCriticalSheets()).finally(()=>{this._profileCriticalLoadPromise=null}),this._profileCriticalLoadPromise)},_pickProfileField(e,i=[]){if(!e||typeof e!="object")return"";for(let t=0;t<i.length;t++){const n=i[t];if(e[n]!==void 0&&e[n]!==null&&String(e[n]).trim()!=="")return String(e[n]).trim()}return""},_getProfileEmployeeRecord(){const e=AppState.currentUser||{},i=Array.isArray(AppState.appData?.employees)?AppState.appData.employees:[];if(!i.length)return null;const t=f=>this._profileNorm(f),n=t(e.email),a=n&&n.indexOf("@")!==-1?t(n.split("@")[0]):"",s=t(e.id),o=t(e.employeeCode||e.employeeNumber||e.employeeId||e.sapId||e.nationalId),r=t(e.name||e.fullName||e.displayName),l=this._profileNameFingerprint(e.name||e.fullName||e.displayName||"");if(o){const f=i.find(c=>{if(!c)return!1;const u=t(this._pickProfileField(c,["id","employeeId","\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0648\u0638\u0641"])),g=t(this._pickProfileField(c,["employeeNumber","employeeCode","sapId","code","\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A","\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0648\u0638\u064A\u0641\u064A"]));return g&&g===o||u&&u===o});if(f)return f}const d=f=>{if(!f)return!1;const c=this._pickProfileField(f,["email","mail","\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A","\u0627\u0644\u0627\u064A\u0645\u064A\u0644"]),u=t(c),g=c&&String(c).indexOf("@")!==-1?t(String(c).split("@")[0]):"",m=t(this._pickProfileField(f,["id","employeeId","\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0648\u0638\u0641"])),y=t(this._pickProfileField(f,["employeeNumber","employeeCode","sapId","code","\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A","\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0648\u0638\u064A\u0641\u064A"])),b=this._pickProfileField(f,["name","employeeName","fullName","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641","\u0627\u0644\u0627\u0633\u0645"]),w=t(b);return n&&u&&u===n||a&&g&&g===a||s&&(m===s||y===s)||o&&(y===o||m===o)||r&&w&&w===r};let p=i.find(d);return!p&&l&&(p=i.find(f=>{if(!f)return!1;const c=this._pickProfileField(f,["name","employeeName","fullName","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641","\u0627\u0644\u0627\u0633\u0645"]);return c&&this._profileNameFingerprint(c)===l})||null),p||null},_collectProfileStats(e={}){const i=v=>String(v||"").trim().toLowerCase(),t=i(e.employeeId||e.employeeNumber),n=i(e.fullName),a=i(e.email),s=(v={})=>{const A=i(v.employeeId||v.employeeNumber||v.employeeCode||v.id),k=i(v.employeeName||v.name||v.personName),D=i(v.email);return t&&A&&t===A||n&&k&&n===k||a&&D&&a===D},o=Array.isArray(AppState.appData?.training)?AppState.appData.training:[],r=Array.isArray(AppState.appData?.violations)?AppState.appData.violations:[],l=Array.isArray(AppState.appData?.ppe)?AppState.appData.ppe:[],d=Array.isArray(AppState.appData?.clinicVisits)?AppState.appData.clinicVisits:[],p=Array.isArray(AppState.appData?.emergencyPlans)?AppState.appData.emergencyPlans:[];let f=0,c=0;o.forEach(v=>{const A=String(v?.participants||"").toLowerCase();if(s(v)||n&&A.includes(n)){f+=1;const k=Number(v?.hours||v?.totalHours||0);isNaN(k)||(c+=k)}});const u=r.filter(v=>s(v)),g=u.length,m=u.filter(v=>{const A=String(v?.status||"").toLowerCase();return A!=="closed"&&A!=="resolved"&&A!=="approved"&&A!=="\u0645\u063A\u0644\u0642"&&A!=="\u0645\u0639\u0627\u0644\u062C"}).length,b=l.filter(v=>s(v)).reduce((v,A)=>{const k=Number(A?.quantity||0);return v+(isNaN(k)?0:k)},0),w=d.filter(v=>s(v)).length,x=new Set;p.forEach(v=>{const A=v?.contacts;if(!A)return;if(Array.isArray(A)){A.forEach(C=>{const P=String(C?.phone||C?.mobile||C?.number||"").trim();P&&x.add(P)});return}if(typeof A=="object"){Object.keys(A).forEach(C=>{const P=String(A[C]||"").trim();P&&/[0-9+]{5,}/.test(P)&&x.add(P)});return}(String(A||"").match(/[+0-9][0-9\s\-()]{4,}/g)||[]).forEach(C=>x.add(C.trim()))});const L=(Array.isArray(AppState.appData?.appEmergencyNumbers)?AppState.appData.appEmergencyNumbers:[]).filter(v=>{if(!v)return!1;const A=v.isActive;return!(A===!1||A==="false"||A==="0"||A===0)}).sort((v,A)=>(Number(v.sortOrder)||0)-(Number(A.sortOrder)||0)),E=[],N=new Set;return L.forEach(v=>{const A=String(v.phone||"").trim();if(!A)return;const k=String(v.label||"").trim()||"\u0637\u0648\u0627\u0631\u0626";E.push({label:k,phone:A,source:"app"}),N.add(A)}),x.forEach(v=>{N.has(v)||(E.push({label:"",phone:v,source:"plan"}),N.add(v))}),{trainingSessions:f,trainingHours:Math.round(c*10)/10,violationsCount:g,openViolations:m,ppeTotalQuantity:b,clinicVisitsCount:w,emergencyPhones:E.map(v=>v.phone).slice(0,20),emergencyItems:E}},_buildProfileModel(){const e=AppState.currentUser||{},t=(Array.isArray(AppState.appData?.users)?AppState.appData.users:[]).find(x=>String(x?.email||"").trim().toLowerCase()===String(e?.email||"").trim().toLowerCase())||{},n=this._getProfileEmployeeRecord(),a=this._pickProfileField(n,["name","employeeName","fullName","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641","\u0627\u0644\u0627\u0633\u0645"])||e?.name||t?.name||"",s=e?.email||n?.email||t?.email||"",o=this._pickProfileField(n,["phone","mobile","cellPhone","phoneNumber","tel","\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641","\u0627\u0644\u062C\u0648\u0627\u0644","\u0627\u0644\u0647\u0627\u062A\u0641"])||t?.phone||"",r=this._pickProfileField(n,["department","\u0627\u0644\u0642\u0633\u0645","\u0627\u0644\u0625\u062F\u0627\u0631\u0629"])||e?.department||t?.department||"",l=this._pickProfileField(n,["position","job","jobTitle","title","\u0627\u0644\u0648\u0638\u064A\u0641\u0629","\u0627\u0644\u0645\u0633\u0645\u0649 \u0627\u0644\u0648\u0638\u064A\u0641\u064A","\u0627\u0644\u0645\u0647\u0646\u0629"])||t?.position||t?.job||"",d=this._pickProfileField(n,["branch","factory","factoryName","siteName","plant","\u0627\u0644\u0645\u0635\u0646\u0639","\u0627\u0644\u0641\u0631\u0639"])||this._resolveFactoryNameForProfile(e,n)||e?.branch||t?.branch||"",p=this._pickProfileField(n,["location","address","homeAddress","siteLocation","workLocation","\u0627\u0644\u0639\u0646\u0648\u0627\u0646","\u0627\u0644\u0645\u0648\u0642\u0639"])||e?.subLocationName||e?.subLocation||"",f=this._pickProfileField(n,["employeeNumber","employeeCode","code","sapId","\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0648\u0638\u064A\u0641\u064A","\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A"])||e?.employeeNumber||"",c=n?.id||n?.employeeNumber||e?.id||"",g=String(t?.photo||e?.photo||"").trim()||this._pickProfileField(n,["photo","personalPhoto","image","imageUrl","Photo","\u0627\u0644\u0635\u0648\u0631\u0629"])||String(n?.photo||"").trim()||"",m=this._pickProfileField(n,["hireDate","appointmentDate","employmentDate","startDate","joiningDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u064A\u064A\u0646"]),y=this._formatProfileHireDateDisplay(m),b=m?this._computeProfileTenure(m):"",w=this._collectProfileStats({fullName:a,email:s,employeeId:c,employeeNumber:f});return{fullName:a,email:s,phone:o,department:r,position:l,branch:d,location:p,employeeNumber:f,employeeId:c,photo:g,hireDateDisplay:y,tenureText:b,stats:w}},async getOrCreatePublicProfileCardLink(e=!1){const i=AppState.currentUser;if(!i||!i.email||typeof GoogleIntegration>"u"||typeof GoogleIntegration.callBackend!="function")return null;const t=await GoogleIntegration.callBackend("getOrCreatePublicProfileToken",{userId:i.id||"",email:i.email||"",forceRotate:!!e});if(!t||t.success===!1||!t.data?.token)return null;let n=String(AppState?.googleConfig?.appsScript?.scriptUrl||"").trim();if(!n)return null;n.indexOf("script.google.com/macros/s/")!==-1&&(n=n.replace(/\/dev(\?|#|$)/,"/exec$1"));const a=n.includes("?")?"&":"?";return`${n}${a}action=publicProfileCard&token=${encodeURIComponent(t.data.token)}`},_mergeProfileBatchIntoAppState(e,i){if(!e||!e.data||!Array.isArray(i))return;const t={Employees:"employees",Training:"training",Violations:"violations",PPE:"ppe",ClinicVisits:"clinicVisits",EmergencyPlans:"emergencyPlans",AppEmergencyNumbers:"appEmergencyNumbers"};i.forEach(n=>{const a=t[n];a&&Array.isArray(e.data[n])&&(AppState.appData[a]=e.data[n])})},async _preloadProfileCriticalSheets(){try{if(typeof GoogleIntegration<"u"&&typeof GoogleIntegration.batchReadFromSheets=="function"){const e=[];if((!Array.isArray(AppState.appData?.employees)||AppState.appData.employees.length===0)&&e.push("Employees"),(!Array.isArray(AppState.appData?.appEmergencyNumbers)||AppState.appData.appEmergencyNumbers.length===0)&&e.push("AppEmergencyNumbers"),e.length>0){const i=await GoogleIntegration.batchReadFromSheets(e,{timeout:12e3,batchSize:10});i&&i.data&&this._mergeProfileBatchIntoAppState(i,e)}}if((!Array.isArray(AppState.appData?.employees)||AppState.appData.employees.length===0)&&typeof GoogleIntegration<"u"&&typeof GoogleIntegration.callBackend=="function"){const e=await GoogleIntegration.callBackend("getAllEmployees",{filters:{includeInactive:!0}});e&&e.success!==!1&&Array.isArray(e.data)&&(AppState.appData.employees=e.data)}if((!Array.isArray(AppState.appData?.employees)||AppState.appData.employees.length===0)&&typeof GoogleIntegration<"u"&&typeof GoogleIntegration.callBackend=="function"){const e=await GoogleIntegration.callBackend("readFromSheet",{sheetName:"Employees"});e&&e.success!==!1&&Array.isArray(e.data)&&(AppState.appData.employees=e.data)}(!Array.isArray(AppState.appData?.employees)||AppState.appData.employees.length===0)&&typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A: \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u2014 \u0642\u062F \u062A\u0638\u0647\u0631 \u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0646 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0641\u0642\u0637. \u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0623\u0648 \u0646\u0634\u0631 Web App.")}catch(e){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A: \u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0633\u0631\u064A\u0639 \u0644\u0644\u0628\u064A\u0627\u0646\u0627\u062A",e&&e.message?e.message:e)}},_collectProfileStatsSheetNeeds(){this._profileStatsSheetsFetchedSet||(this._profileStatsSheetsFetchedSet=new Set);const e=this._profileStatsSheetsFetchedSet,i=[["Training","training"],["Violations","violations"],["PPE","ppe"],["ClinicVisits","clinicVisits"],["EmergencyPlans","emergencyPlans"]],t=[];return i.forEach(([n])=>{e.has(n)||t.push(n)}),t},async _preloadProfileStatsSheets(){const e=this._collectProfileStatsSheetNeeds();if(e.length===0||typeof GoogleIntegration>"u"||typeof GoogleIntegration.batchReadFromSheets!="function")return!1;try{const i=await GoogleIntegration.batchReadFromSheets(e,{timeout:22e3,batchSize:10});return i&&i.data&&this._mergeProfileBatchIntoAppState(i,e),e.forEach(t=>{this._profileStatsSheetsFetchedSet&&this._profileStatsSheetsFetchedSet.add(t)}),!0}catch(i){return typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A: \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0634\u064A\u062A\u0627\u062A \u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A",i?.message||i),!1}},_scheduleProfileStatsEnrichment(){this._profileStatsEnriching||this._collectProfileStatsSheetNeeds().length!==0&&(this._profileStatsEnriching=!0,Promise.resolve().then(()=>this._preloadProfileStatsSheets()).then(e=>e&&AppState.currentSection==="profile"?this.renderMyProfileSection():null).catch(e=>{typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A: \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629 (\u062A\u062F\u0631\u064A\u0628/\u0645\u062E\u0627\u0644\u0641\u0627\u062A/\u2026)",e&&e.message?e.message:e)}).finally(()=>{this._profileStatsEnriching=!1}))},_injectProfileIdentityStyles(){if(document.getElementById("profile-identity-styles"))return;const e=document.createElement("style");e.id="profile-identity-styles",e.textContent=`
-        /* \u2550\u2550 Hero \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A \u2550\u2550 */
+            `;
+            body.querySelector('#mfa-enroll-cancel')?.addEventListener('click', closeModal);
+            body.querySelector('#mfa-enroll-confirm')?.addEventListener('click', async () => {
+                const code = body.querySelector('#mfa-enroll-code')?.value?.trim() || '';
+                if (!/^\d{6}$/.test(code.replace(/\s/g, ''))) {
+                    Notification.warning('أدخل 6 أرقام من التطبيق');
+                    return;
+                }
+                Loading.show();
+                try {
+                    if (manualSecret && typeof Auth.verifyTotpLocal === 'function') {
+                        const localOk = await Auth.verifyTotpLocal(manualSecret, code, 5);
+                        if (localOk === false) {
+                            Loading.hide();
+                            Notification.error('الرمز لا يطابق السر المعروض. احذف الحساب القديم من التطبيق وأعد المسح أو الإدخال اليدوي.');
+                            return;
+                        }
+                    }
+                    const res = await Auth.confirmMfaEnrollment(code);
+                    Loading.hide();
+                    if (res && res.success) {
+                        closeModal();
+                        if (AppState.currentSection === 'profile') this.renderMyProfileSection();
+                    }
+                } catch (err) {
+                    Loading.hide();
+                    Notification.error(err?.message || 'فشل التفعيل');
+                }
+            });
+            setTimeout(() => body.querySelector('#mfa-enroll-code')?.focus(), 100);
+        };
+
+        const beginEnrollment = async () => {
+            try {
+                const start = await Auth.startMfaEnrollment({ silent: true });
+                if (!start || !start.success) {
+                    showStartError(start?.message || 'تعذر بدء التسجيل');
+                    return;
+                }
+                renderEnrollForm(start);
+            } catch (err) {
+                const msg = (typeof Auth !== 'undefined' && Auth._friendlyMfaTransportError)
+                    ? Auth._friendlyMfaTransportError(err)
+                    : (err?.message || 'تعذر بدء التسجيل');
+                showStartError(msg);
+            }
+        };
+
+        beginEnrollment();
+    },
+
+    /**
+     * الحصول على نص إصدار النظام للعرض
+     */
+    getAppVersionDisplay_() {
+        const v = (typeof AppState !== 'undefined' && AppState.appVersion)
+            ? String(AppState.appVersion).trim()
+            : '';
+        return v || '—';
+    },
+
+    /**
+     * تحديث عرض إصدار النظام في الشريط الجانبي وتسجيل الدخول والجوال
+     */
+    updateAppVersionDisplay() {
+        const raw = this.getAppVersionDisplay_();
+        const lang = (typeof AppState !== 'undefined' && AppState.currentLanguage)
+            || (typeof I18n !== 'undefined' && I18n.currentLang)
+            || (typeof AppI18n !== 'undefined' && AppI18n.currentLang)
+            || document.documentElement.lang
+            || 'ar';
+        const isEn = lang === 'en';
+
+        const valText = raw === '—' ? raw : (isEn ? `Version${raw}` : `V.${raw}`);
+        const fullText = raw === '—' ? raw : (isEn ? `Version${raw}` : `إصدار النظام V.${raw}`);
+
+        const sidebar = document.getElementById('sidebar-app-version');
+        const sidebarLabel = sidebar ? sidebar.querySelector('.sidebar-app-version-label') : null;
+        const sidebarValue = document.getElementById('sidebar-app-version-value');
+        const loginEl = document.getElementById('login-footer-version');
+        const mobileEl = document.getElementById('mobile-app-version');
+
+        if (sidebarLabel) {
+            sidebarLabel.textContent = isEn ? 'System Version' : 'إصدار النظام';
+        }
+        if (sidebarValue) {
+            sidebarValue.textContent = valText;
+        }
+        if (sidebar) {
+            sidebar.setAttribute('title', fullText);
+            sidebar.setAttribute('aria-label', fullText);
+        }
+        if (loginEl) {
+            loginEl.textContent = fullText;
+            loginEl.setAttribute('aria-label', fullText);
+        }
+        if (mobileEl) {
+            mobileEl.textContent = valText;
+            mobileEl.setAttribute('aria-label', fullText);
+            mobileEl.style.display = raw === '—' ? 'none' : 'block';
+        }
+    },
+
+    /**
+     * تحديث معلومات المستخدم
+     */
+    updateUserProfile() {
+        const nameEl = document.getElementById('userDisplayName');
+        const emailEl = document.getElementById('adminEmail');
+        const mobileUserName = document.getElementById('mobile-user-name');
+        const factoryEl = document.getElementById('userFactoryDisplay');
+        const subLocationEl = document.getElementById('userSubLocationDisplay');
+
+        const resolveFactoryName = (user) => {
+            try {
+                if (!user) return '';
+                const direct = (user.factoryName || user.plantName || user.siteName || '').toString().trim();
+                if (direct) return direct;
+                const factoryId = (user.factoryId || user.factory || user.plant || user.siteId || user.site || '').toString().trim();
+                if (!factoryId) return '';
+                const sites = Array.isArray(AppState.appData?.observationSites) ? AppState.appData.observationSites : [];
+                const site = sites.find(s => String(s?.id || '').trim() === factoryId);
+                return (site?.name || '').toString().trim();
+            } catch (e) {
+                return '';
+            }
+        };
+
+        const resolveSubLocationName = (user) => {
+            try {
+                if (!user) return '';
+                const direct = (user.subLocationName || user.placeName || user.subSiteName || '').toString().trim();
+                if (direct) return direct;
+                const factoryId = (user.factoryId || user.factory || user.plant || user.siteId || user.site || '').toString().trim();
+                const placeId = (user.subLocationId || user.subLocation || user.placeId || user.place || user.subSite || user.subsite || '').toString().trim();
+                if (!factoryId || !placeId) return '';
+                const sites = Array.isArray(AppState.appData?.observationSites) ? AppState.appData.observationSites : [];
+                const site = sites.find(s => String(s?.id || '').trim() === factoryId);
+                const places = Array.isArray(site?.places) ? site.places : [];
+                const place = places.find(p => String(p?.id || '').trim() === placeId);
+                return (place?.name || '').toString().trim();
+            } catch (e) {
+                return '';
+            }
+        };
+
+        if (AppState.currentUser) {
+            if (nameEl) nameEl.textContent = AppState.currentUser.name;
+            if (emailEl) emailEl.textContent = AppState.currentUser.email;
+            if (mobileUserName) {
+                mobileUserName.textContent = AppState.currentUser.email || '';
+                mobileUserName.style.display = AppState.currentUser.email ? 'block' : 'none';
+            }
+
+            if (factoryEl) {
+                const factoryName = resolveFactoryName(AppState.currentUser);
+                factoryEl.textContent = factoryName ? `المصنع: ${factoryName}` : '';
+                factoryEl.style.display = factoryName ? 'block' : 'none';
+            }
+            if (subLocationEl) {
+                const subName = resolveSubLocationName(AppState.currentUser);
+                subLocationEl.textContent = subName ? `الموقع الفرعي: ${subName}` : '';
+                subLocationEl.style.display = subName ? 'block' : 'none';
+            }
+        } else {
+            if (nameEl) nameEl.textContent = 'المستخدم';
+            if (emailEl) emailEl.textContent = 'user@example.com';
+            if (mobileUserName) mobileUserName.textContent = '';
+            if (mobileUserName) mobileUserName.style.display = 'none';
+            if (factoryEl) { factoryEl.textContent = ''; factoryEl.style.display = 'none'; }
+            if (subLocationEl) { subLocationEl.textContent = ''; subLocationEl.style.display = 'none'; }
+        }
+        // تحديث صورة المستخدم
+        this.updateUserProfilePhoto();
+        // تحديث حالة الاتصال للمستخدم
+        this.updateUserConnectionStatus();
+        this.updateAppVersionDisplay();
+    },
+
+    _formatProfileHireDateDisplay(hireRaw) {
+        if (!hireRaw) return '';
+        const d = new Date(hireRaw);
+        if (isNaN(d.getTime())) return String(hireRaw);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    },
+
+    _computeProfileTenure(hireDate) {
+        if (!hireDate) return '';
+        const d = hireDate instanceof Date ? hireDate : new Date(hireDate);
+        if (isNaN(d.getTime())) return '';
+        const now = new Date();
+        if (d > now) return '—';
+        let years = now.getFullYear() - d.getFullYear();
+        let months = now.getMonth() - d.getMonth();
+        let days = now.getDate() - d.getDate();
+        if (days < 0) months -= 1;
+        if (months < 0) {
+            years -= 1;
+            months += 12;
+        }
+        if (years < 0) {
+            years = 0;
+            months = 0;
+        }
+        const parts = [];
+        if (years > 0) parts.push(years + (years === 1 ? ' سنة' : ' سنوات'));
+        if (months > 0) parts.push(months + (months === 1 ? ' شهراً' : ' أشهر'));
+        if (parts.length === 0) return 'أقل من شهر';
+        return parts.join(' و');
+    },
+
+    _profileNorm(v) {
+        return String(v || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[,،]+/g, '')
+            .replace(/[\s\-_.()]+/g, '');
+    },
+
+    /** تطبيع الاسم للمقارنة بالمكوّنات (ترتيب الكلمات) */
+    _profileNameFingerprint(str) {
+        const s = String(str || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[,،.؛:]+/g, ' ')
+            .replace(/[\s\-_.()]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!s) return '';
+        return s.split(/\s+/).filter(Boolean).sort().join('|');
+    },
+
+    /** اسم المصنع/الموقع من الحقول المباشرة أو من observationSites */
+    _resolveFactoryNameForProfile(user, employee) {
+        try {
+            const u = user || {};
+            const e = employee || {};
+            const direct = (e.factoryName || e.plantName || e.siteName || e.branch
+                || u.factoryName || u.plantName || u.siteName || u.branch || '').toString().trim();
+            if (direct) return direct;
+            const factoryId = (e.factoryId || e.factory || e.plant || e.siteId || e.site
+                || u.factoryId || u.factory || u.plant || u.siteId || u.site || '').toString().trim();
+            if (!factoryId) return '';
+            const sites = Array.isArray(AppState.appData?.observationSites) ? AppState.appData.observationSites : [];
+            const site = sites.find((s) => String(s?.id || '').trim() === factoryId);
+            return (site?.name || '').toString().trim();
+        } catch (err) {
+            return '';
+        }
+    },
+
+    /**
+     * جلب موظفين + أرقام طوارئ للملف الشخصي (وعدّ طلبات متزامنة).
+     */
+    _ensureProfileCriticalSheetsLoaded() {
+        if (this._profileCriticalLoadPromise) return this._profileCriticalLoadPromise;
+        this._profileCriticalLoadPromise = Promise.resolve()
+            .then(() => this._preloadProfileCriticalSheets())
+            .finally(() => {
+                this._profileCriticalLoadPromise = null;
+            });
+        return this._profileCriticalLoadPromise;
+    },
+
+    _pickProfileField(record, aliases = []) {
+        if (!record || typeof record !== 'object') return '';
+        for (let i = 0; i < aliases.length; i++) {
+            const key = aliases[i];
+            if (record[key] !== undefined && record[key] !== null && String(record[key]).trim() !== '') {
+                return String(record[key]).trim();
+            }
+        }
+        return '';
+    },
+
+    _getProfileEmployeeRecord() {
+        const user = AppState.currentUser || {};
+        const employees = Array.isArray(AppState.appData?.employees) ? AppState.appData.employees : [];
+        if (!employees.length) return null;
+
+        const norm = (v) => this._profileNorm(v);
+        const email = norm(user.email);
+        const emailLocal = email && email.indexOf('@') !== -1 ? norm(email.split('@')[0]) : '';
+        const userId = norm(user.id);
+        const userEmployeeCode = norm(user.employeeCode || user.employeeNumber || user.employeeId || user.sapId || user.nationalId);
+        const userName = norm(user.name || user.fullName || user.displayName);
+        const nameFp = this._profileNameFingerprint(user.name || user.fullName || user.displayName || '');
+
+        // 1. أولاً: مطابقة صريحة ومباشرة بالكود الوظيفي (إن وجد في حساب المستخدم)
+        if (userEmployeeCode) {
+            const foundByCode = employees.find(emp => {
+                if (!emp) return false;
+                const empId = norm(this._pickProfileField(emp, ['id', 'employeeId', 'معرف الموظف']));
+                const empCode = norm(this._pickProfileField(emp, ['employeeNumber', 'employeeCode', 'sapId', 'code', 'الكود الوظيفي', 'الرقم الوظيفي']));
+                return (empCode && empCode === userEmployeeCode) || (empId && empId === userEmployeeCode);
+            });
+            if (foundByCode) return foundByCode;
+        }
+
+        const matchRow = (emp) => {
+            if (!emp) return false;
+            const empEmailRaw = this._pickProfileField(emp, ['email', 'mail', 'البريد الإلكتروني', 'الايميل']);
+            const empEmail = norm(empEmailRaw);
+            const empEmailLocal = empEmailRaw && String(empEmailRaw).indexOf('@') !== -1
+                ? norm(String(empEmailRaw).split('@')[0])
+                : '';
+            const empId = norm(this._pickProfileField(emp, ['id', 'employeeId', 'معرف الموظف']));
+            const empCode = norm(this._pickProfileField(emp, ['employeeNumber', 'employeeCode', 'sapId', 'code', 'الكود الوظيفي', 'الرقم الوظيفي']));
+            const empNameRaw = this._pickProfileField(emp, ['name', 'employeeName', 'fullName', 'اسم الموظف', 'الاسم']);
+            const empName = norm(empNameRaw);
+            return (email && empEmail && empEmail === email)
+                || (emailLocal && empEmailLocal && empEmailLocal === emailLocal)
+                || (userId && (empId === userId || empCode === userId))
+                || (userEmployeeCode && (empCode === userEmployeeCode || empId === userEmployeeCode))
+                || (userName && empName && empName === userName);
+        };
+
+        let found = employees.find(matchRow);
+        if (!found && nameFp) {
+            found = employees.find((emp) => {
+                if (!emp) return false;
+                const empNameRaw = this._pickProfileField(emp, ['name', 'employeeName', 'fullName', 'اسم الموظف', 'الاسم']);
+                return empNameRaw && this._profileNameFingerprint(empNameRaw) === nameFp;
+            }) || null;
+        }
+        return found || null;
+    },
+
+    _collectProfileStats(profileModel = {}) {
+        const norm = (v) => String(v || '').trim().toLowerCase();
+        const employeeId = norm(profileModel.employeeId || profileModel.employeeNumber);
+        const employeeName = norm(profileModel.fullName);
+        const email = norm(profileModel.email);
+
+        const isSameEmployee = (record = {}) => {
+            const rEmployeeId = norm(record.employeeId || record.employeeNumber || record.employeeCode || record.id);
+            const rEmployeeName = norm(record.employeeName || record.name || record.personName);
+            const rEmail = norm(record.email);
+            return (employeeId && rEmployeeId && employeeId === rEmployeeId)
+                || (employeeName && rEmployeeName && employeeName === rEmployeeName)
+                || (email && rEmail && email === rEmail);
+        };
+
+        const training = Array.isArray(AppState.appData?.training) ? AppState.appData.training : [];
+        const violations = Array.isArray(AppState.appData?.violations) ? AppState.appData.violations : [];
+        const ppe = Array.isArray(AppState.appData?.ppe) ? AppState.appData.ppe : [];
+        const clinicVisits = Array.isArray(AppState.appData?.clinicVisits) ? AppState.appData.clinicVisits : [];
+        const emergencyPlans = Array.isArray(AppState.appData?.emergencyPlans) ? AppState.appData.emergencyPlans : [];
+
+        let trainingSessions = 0;
+        let trainingHours = 0;
+        training.forEach((item) => {
+            const participants = String(item?.participants || '').toLowerCase();
+            if (isSameEmployee(item) || (employeeName && participants.includes(employeeName))) {
+                trainingSessions += 1;
+                const h = Number(item?.hours || item?.totalHours || 0);
+                if (!isNaN(h)) trainingHours += h;
+            }
+        });
+
+        const matchedViolations = violations.filter((v) => isSameEmployee(v));
+        const violationsCount = matchedViolations.length;
+        const openViolations = matchedViolations.filter((v) => {
+            const st = String(v?.status || '').toLowerCase();
+            return st !== 'closed' && st !== 'resolved' && st !== 'approved' && st !== 'مغلق' && st !== 'معالج';
+        }).length;
+
+        const ppeItems = ppe.filter((item) => isSameEmployee(item));
+        const ppeTotalQuantity = ppeItems.reduce((sum, item) => {
+            const qty = Number(item?.quantity || 0);
+            return sum + (isNaN(qty) ? 0 : qty);
+        }, 0);
+
+        const clinicVisitsCount = clinicVisits.filter((visit) => isSameEmployee(visit)).length;
+
+        const emergencyPhoneSet = new Set();
+        emergencyPlans.forEach((plan) => {
+            const contacts = plan?.contacts;
+            if (!contacts) return;
+            if (Array.isArray(contacts)) {
+                contacts.forEach((c) => {
+                    const val = String(c?.phone || c?.mobile || c?.number || '').trim();
+                    if (val) emergencyPhoneSet.add(val);
+                });
+                return;
+            }
+            if (typeof contacts === 'object') {
+                Object.keys(contacts).forEach((k) => {
+                    const val = String(contacts[k] || '').trim();
+                    if (val && /[0-9+]{5,}/.test(val)) emergencyPhoneSet.add(val);
+                });
+                return;
+            }
+            const raw = String(contacts || '');
+            const matches = raw.match(/[+0-9][0-9\s\-()]{4,}/g) || [];
+            matches.forEach((m) => emergencyPhoneSet.add(m.trim()));
+        });
+
+        const appEmergencySrc = Array.isArray(AppState.appData?.appEmergencyNumbers)
+            ? AppState.appData.appEmergencyNumbers
+            : [];
+        const appEmergencyActive = appEmergencySrc
+            .filter((r) => {
+                if (!r) return false;
+                const a = r.isActive;
+                if (a === false || a === 'false' || a === '0' || a === 0) return false;
+                return true;
+            })
+            .sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
+
+        const emergencyItems = [];
+        const seenPhones = new Set();
+        appEmergencyActive.forEach((r) => {
+            const phone = String(r.phone || '').trim();
+            if (!phone) return;
+            const label = String(r.label || '').trim() || 'طوارئ';
+            emergencyItems.push({ label, phone, source: 'app' });
+            seenPhones.add(phone);
+        });
+        emergencyPhoneSet.forEach((phone) => {
+            if (seenPhones.has(phone)) return;
+            emergencyItems.push({ label: '', phone, source: 'plan' });
+            seenPhones.add(phone);
+        });
+
+        return {
+            trainingSessions,
+            trainingHours: Math.round(trainingHours * 10) / 10,
+            violationsCount,
+            openViolations,
+            ppeTotalQuantity,
+            clinicVisitsCount,
+            emergencyPhones: emergencyItems.map((e) => e.phone).slice(0, 20),
+            emergencyItems
+        };
+    },
+
+    _buildProfileModel() {
+        const user = AppState.currentUser || {};
+        const dbUsers = Array.isArray(AppState.appData?.users) ? AppState.appData.users : [];
+        const currentUserRecord = dbUsers.find((u) => String(u?.email || '').trim().toLowerCase() === String(user?.email || '').trim().toLowerCase()) || {};
+        const employee = this._getProfileEmployeeRecord();
+
+        const fullName = this._pickProfileField(employee, ['name', 'employeeName', 'fullName', 'اسم الموظف', 'الاسم']) || user?.name || currentUserRecord?.name || '';
+        const email = user?.email || employee?.email || currentUserRecord?.email || '';
+        const phone = this._pickProfileField(employee, ['phone', 'mobile', 'cellPhone', 'phoneNumber', 'tel', 'رقم الهاتف', 'الجوال', 'الهاتف']) || currentUserRecord?.phone || '';
+        const department = this._pickProfileField(employee, ['department', 'القسم', 'الإدارة']) || user?.department || currentUserRecord?.department || '';
+        const position = this._pickProfileField(employee, ['position', 'job', 'jobTitle', 'title', 'الوظيفة', 'المسمى الوظيفي', 'المهنة']) || currentUserRecord?.position || currentUserRecord?.job || '';
+        const branch = this._pickProfileField(employee, ['branch', 'factory', 'factoryName', 'siteName', 'plant', 'المصنع', 'الفرع'])
+            || this._resolveFactoryNameForProfile(user, employee)
+            || user?.branch
+            || currentUserRecord?.branch
+            || '';
+        const location = this._pickProfileField(employee, ['location', 'address', 'homeAddress', 'siteLocation', 'workLocation', 'العنوان', 'الموقع'])
+            || user?.subLocationName
+            || user?.subLocation
+            || '';
+        const employeeNumber = this._pickProfileField(employee, ['employeeNumber', 'employeeCode', 'code', 'sapId', 'الرقم الوظيفي', 'الكود الوظيفي']) || user?.employeeNumber || '';
+        const employeeId = employee?.id || employee?.employeeNumber || user?.id || '';
+        // صورة حساب المستخدم (جدول Users / الجلسة) تسبق صورة سجل الموظف حتى تظهر التغييرات فوراً بعد الرفع أو تعديل المدير
+        const accountPhoto = String(currentUserRecord?.photo || user?.photo || '').trim();
+        const photo = accountPhoto
+            || this._pickProfileField(employee, ['photo', 'personalPhoto', 'image', 'imageUrl', 'Photo', 'الصورة'])
+            || String(employee?.photo || '').trim()
+            || '';
+        const hireRaw = this._pickProfileField(employee, ['hireDate', 'appointmentDate', 'employmentDate', 'startDate', 'joiningDate', 'تاريخ التعيين']);
+        const hireDateDisplay = this._formatProfileHireDateDisplay(hireRaw);
+        const tenureText = hireRaw ? this._computeProfileTenure(hireRaw) : '';
+
+        const stats = this._collectProfileStats({
+            fullName,
+            email,
+            employeeId,
+            employeeNumber
+        });
+
+        return {
+            fullName,
+            email,
+            phone,
+            department,
+            position,
+            branch,
+            location,
+            employeeNumber,
+            employeeId,
+            photo,
+            hireDateDisplay,
+            tenureText,
+            stats
+        };
+    },
+
+    async getOrCreatePublicProfileCardLink(forceRotate = false) {
+        const user = AppState.currentUser;
+        if (!user || !user.email) return null;
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.callBackend !== 'function') return null;
+
+        const response = await GoogleIntegration.callBackend('getOrCreatePublicProfileToken', {
+            userId: user.id || '',
+            email: user.email || '',
+            forceRotate: !!forceRotate
+        });
+        if (!response || response.success === false || !response.data?.token) return null;
+
+        let scriptUrl = String(AppState?.googleConfig?.appsScript?.scriptUrl || '').trim();
+        if (!scriptUrl) return null;
+        // نسخة اختبار /dev قد لا تعمل كبطاقة عامة — استخدم /exec لنشر تطبيق الويب
+        if (scriptUrl.indexOf('script.google.com/macros/s/') !== -1) {
+            scriptUrl = scriptUrl.replace(/\/dev(\?|#|$)/, '/exec$1');
+        }
+        const joiner = scriptUrl.includes('?') ? '&' : '?';
+        return `${scriptUrl}${joiner}action=publicProfileCard&token=${encodeURIComponent(response.data.token)}`;
+    },
+
+    _mergeProfileBatchIntoAppState(batch, sheetNames) {
+        if (!batch || !batch.data || !Array.isArray(sheetNames)) return;
+        const keyMap = {
+            Employees: 'employees',
+            Training: 'training',
+            Violations: 'violations',
+            PPE: 'ppe',
+            ClinicVisits: 'clinicVisits',
+            EmergencyPlans: 'emergencyPlans',
+            AppEmergencyNumbers: 'appEmergencyNumbers'
+        };
+        sheetNames.forEach((sheet) => {
+            const key = keyMap[sheet];
+            if (key && Array.isArray(batch.data[sheet])) {
+                AppState.appData[key] = batch.data[sheet];
+            }
+        });
+    },
+
+    /**
+     * تحميل سريع لبيانات الملف الشخصي (موظفين + أرقام طوارئ المؤسسة) ثم الرسم.
+     * بقية الشيتات تُحمَّل لاحقاً لتفادي بقاء «جاري التحميل» طويلاً بسبب batch كبير.
+     */
+    async _preloadProfileCriticalSheets() {
+        try {
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.batchReadFromSheets === 'function') {
+                const need = [];
+                if (!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0) {
+                    need.push('Employees');
+                }
+                if (!Array.isArray(AppState.appData?.appEmergencyNumbers) || AppState.appData.appEmergencyNumbers.length === 0) {
+                    need.push('AppEmergencyNumbers');
+                }
+                if (need.length > 0) {
+                    const batch = await GoogleIntegration.batchReadFromSheets(need, { timeout: 12000, batchSize: 10 });
+                    if (batch && batch.data) {
+                        this._mergeProfileBatchIntoAppState(batch, need);
+                    }
+                }
+            }
+            if ((!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0)
+                && typeof GoogleIntegration !== 'undefined'
+                && typeof GoogleIntegration.callBackend === 'function') {
+                const employeesRes = await GoogleIntegration.callBackend('getAllEmployees', { filters: { includeInactive: true } });
+                if (employeesRes && employeesRes.success !== false && Array.isArray(employeesRes.data)) {
+                    AppState.appData.employees = employeesRes.data;
+                }
+            }
+            if ((!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0)
+                && typeof GoogleIntegration !== 'undefined'
+                && typeof GoogleIntegration.callBackend === 'function') {
+                const directRes = await GoogleIntegration.callBackend('readFromSheet', { sheetName: 'Employees' });
+                if (directRes && directRes.success !== false && Array.isArray(directRes.data)) {
+                    AppState.appData.employees = directRes.data;
+                }
+            }
+            if ((!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0)
+                && typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('الملف الشخصي: تعذر تحميل جدول الموظفين — قد تظهر بيانات من حساب المستخدم فقط. تحقق من الصلاحيات أو نشر Web App.');
+            }
+        } catch (err) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('الملف الشخصي: فشل التحميل السريع للبيانات', err && err.message ? err.message : err);
+            }
+        }
+    },
+
+    _collectProfileStatsSheetNeeds() {
+        if (!this._profileStatsSheetsFetchedSet) {
+            this._profileStatsSheetsFetchedSet = new Set();
+        }
+        const got = this._profileStatsSheetsFetchedSet;
+        const pairs = [
+            ['Training', 'training'],
+            ['Violations', 'violations'],
+            ['PPE', 'ppe'],
+            ['ClinicVisits', 'clinicVisits'],
+            ['EmergencyPlans', 'emergencyPlans']
+        ];
+        const needSheets = [];
+        pairs.forEach(([sheet]) => {
+            if (!got.has(sheet)) needSheets.push(sheet);
+        });
+        return needSheets;
+    },
+
+    async _preloadProfileStatsSheets() {
+        const needSheets = this._collectProfileStatsSheetNeeds();
+        if (needSheets.length === 0) return false;
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.batchReadFromSheets !== 'function') {
+            return false;
+        }
+        try {
+            const batch = await GoogleIntegration.batchReadFromSheets(needSheets, { timeout: 22000, batchSize: 10 });
+            if (batch && batch.data) {
+                this._mergeProfileBatchIntoAppState(batch, needSheets);
+            }
+            needSheets.forEach((s) => {
+                if (this._profileStatsSheetsFetchedSet) this._profileStatsSheetsFetchedSet.add(s);
+            });
+            return true;
+        } catch (err) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('الملف الشخصي: تعذر تحميل شيتات الإحصائيات', err?.message || err);
+            }
+            return false;
+        }
+    },
+
+    _scheduleProfileStatsEnrichment() {
+        if (this._profileStatsEnriching) return;
+        if (this._collectProfileStatsSheetNeeds().length === 0) return;
+        this._profileStatsEnriching = true;
+        Promise.resolve()
+            .then(() => this._preloadProfileStatsSheets())
+            .then((updated) => {
+                if (updated && AppState.currentSection === 'profile') {
+                    return this.renderMyProfileSection();
+                }
+                return null;
+            })
+            .catch((err) => {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('الملف الشخصي: تعذر تحميل إحصائيات إضافية (تدريب/مخالفات/…)', err && err.message ? err.message : err);
+                }
+            })
+            .finally(() => {
+                this._profileStatsEnriching = false;
+            });
+    },
+
+    /**
+     * حقن هوية الملف الشخصي (الترويسة + الكروت + الجداول + الداكن) داخل #profile-section
+     */
+    _injectProfileIdentityStyles() {
+        if (document.getElementById('profile-identity-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'profile-identity-styles';
+        style.textContent = `
+        /* ══ Hero الملف الشخصي ══ */
         #profile-section .profile-id-hero {
             position: relative; overflow: hidden;
             display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
@@ -595,7 +4547,7 @@
         #profile-section .profile-id-hero__title { margin: 0; font-size: 1.5rem; font-weight: 800; color: #fff; }
         #profile-section .profile-id-hero__subtitle { margin: 4px 0 0; font-size: .9rem; color: rgba(255,255,255,.72); }
 
-        /* \u2550\u2550 \u0627\u0644\u0643\u0631\u0648\u062A \u2550\u2550 */
+        /* ══ الكروت ══ */
         #profile-section .profile-dashboard-grid { gap: 16px; }
         #profile-section .content-card.profile-hero-card,
         #profile-section .content-card.profile-card {
@@ -614,7 +4566,7 @@
         }
         #profile-section .profile-card .card-title { color: #172033; }
 
-        /* \u2550\u2550 \u0643\u0631\u0648\u062A \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u2550\u2550 */
+        /* ══ كروت التفاصيل المهنية ══ */
         #profile-section .profile-kpi-grid { gap: 10px; }
         #profile-section .profile-kpi {
             border: 1px solid #dce7f5; border-radius: 12px;
@@ -632,7 +4584,7 @@
         #profile-section .profile-kpi:nth-child(5) strong { color: #15803d; }
         #profile-section .profile-kpi:nth-child(6) strong { color: #1e40af; }
 
-        /* \u2550\u2550 \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0647\u0648\u064A\u0629 \u2550\u2550 */
+        /* ══ أزرار الهوية ══ */
         #profile-section .profile-actions .btn-primary,
         #profile-section .profile-admin-em-form .btn-primary,
         #profile-section .profile-qr-actions .btn-primary {
@@ -646,7 +4598,7 @@
         }
         #profile-section .profile-contact-icon-btn { border-radius: 11px; }
 
-        /* \u2550\u2550 \u062C\u062F\u0648\u0644 \u0623\u0631\u0642\u0627\u0645 \u0637\u0648\u0627\u0631\u0626 \u0627\u0644\u0645\u0624\u0633\u0633\u0629 \u2550\u2550 */
+        /* ══ جدول أرقام طوارئ المؤسسة ══ */
         #profile-section .profile-admin-table thead th {
             background: linear-gradient(90deg, #1e40af, #2563eb);
             color: #fff; border-color: #1d4ed8;
@@ -657,19 +4609,19 @@
             border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.14);
         }
 
-        /* \u2550\u2550 \u0628\u0637\u0627\u0642\u0629 QR \u2550\u2550 */
+        /* ══ بطاقة QR ══ */
         #profile-section .profile-qr-holder {
             background: #f8fbff; border: 1.5px dashed #bfdbfe;
             border-radius: 14px; padding: 14px;
         }
         #profile-section .profile-qr-image { border-radius: 12px; border: 1px solid #dce7f5; background: #fff; }
 
-        /* \u2550\u2550 \u0634\u0631\u064A\u062D\u0629 \u0623\u0631\u0642\u0627\u0645 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u2550\u2550 */
+        /* ══ شريحة أرقام الطوارئ ══ */
         #profile-section .profile-chip {
             border-radius: 10px; border-color: #ccd7f5; background: #f2f7ff;
         }
 
-        /* \u2550\u2550 \u0627\u0644\u0648\u0636\u0639 \u0627\u0644\u062F\u0627\u0643\u0646 \u2550\u2550 */
+        /* ══ الوضع الداكن ══ */
         [data-theme="dark"] #profile-section .content-card.profile-hero-card,
         [data-theme="dark"] #profile-section .content-card.profile-card {
             border-color: #2a3b5c; box-shadow: 0 6px 18px rgba(0,0,0,.3);
@@ -684,42 +4636,174 @@
         [data-theme="dark"] #profile-section .profile-qr-holder { background: #16233f; border-color: #2a3b5c; }
         [data-theme="dark"] #profile-section .profile-chip { background: rgba(255,255,255,.06); border-color: #2a3b5c; }
         [data-theme="dark"] #profile-section .profile-hero-content { background: rgba(30,41,59,.85); border-color: #334155; }
-        `,document.head.appendChild(e)},async renderMyProfileSection(){const e=document.getElementById("profile-section");if(!e)return;this._injectProfileIdentityStyles();const i=(h,S)=>window.AppI18n&&typeof window.AppI18n.t=="function"?window.AppI18n.t(h,null,S||h):S||h,t=h=>typeof Utils<"u"&&typeof Utils.escapeHTML=="function"?Utils.escapeHTML(String(h??"")):String(h??"");(!Array.isArray(AppState.appData?.employees)||AppState.appData.employees.length===0)&&this._ensureProfileCriticalSheetsLoaded().then(()=>{AppState.currentSection==="profile"&&(!Array.isArray(AppState.appData?.employees)||AppState.appData.employees.length===0||this.renderMyProfileSection())});const a=this._buildProfileModel(),s=a.stats||{},o=Array.isArray(s.emergencyItems)?s.emergencyItems:[],r=o.length?o.map(h=>{const S=String(h?.phone||""),U=String(h?.label||"").trim(),T=S.replace(/[^\d+]/g,""),B=T?`<a class="profile-em-link" href="tel:${t(T)}">${t(S)}</a>`:t(S);return`<span class="profile-chip profile-chip--em">${U?`<span class="profile-em-label">${t(U)}</span><span class="profile-em-sep"> </span>${B}${h?.source==="plan"?` <span class="profile-em-badge" data-i18n="module.profile.fromPlans">${i("module.profile.fromPlans","\u0645\u0646 \u062E\u0637\u0637 \u0637\u0648\u0627\u0631\u0626")}</span>`:""}`:B}</span>`}).join(""):`<span class="text-slate-500" data-i18n="module.profile.noEmergencyPhones">${i("module.profile.noEmergencyPhones","\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0631\u0642\u0627\u0645 \u0637\u0648\u0627\u0631\u0626 \u0645\u062A\u0627\u062D\u0629 \u062D\u0627\u0644\u064A\u0627\u064B")}</span>`,l=typeof Permissions<"u"&&typeof Permissions.isCurrentUserAdmin=="function"&&Permissions.isCurrentUserAdmin(),d=typeof Auth<"u"&&typeof Auth.getCurrentUserMfaStatus=="function"?Auth.getCurrentUserMfaStatus():{enabled:!1},p=l&&Array.isArray(AppState.appData?.appEmergencyNumbers)?[...AppState.appData.appEmergencyNumbers].sort((h,S)=>(Number(h?.sortOrder)||0)-(Number(S?.sortOrder)||0)):[],f=l?p.map(h=>{if(!h)return"";const S=h.isActive,U=!(S===!1||S==="false"||S==="0"||S===0),T=String(h.phone||""),B=T.replace(/[^\d+]/g,"");return`<tr>
-                    <td class="profile-admin-td">${t(h.label||"")}</td>
-                    <td class="profile-admin-td" dir="ltr"><a class="profile-em-link" href="tel:${t(B)}">${t(T)}</a></td>
-                    <td class="profile-admin-td">${t(h.sortOrder??"")}</td>
-                    <td class="profile-admin-td">${U?`<span data-i18n="module.profile.activeY">${i("module.profile.activeY","\u0645\u0641\u0639\u0651\u0644")}</span>`:`<span data-i18n="module.profile.inactiveN">${i("module.profile.inactiveN","\u0645\u0639\u0637\u0651\u0644")}</span>`}</td>
-                    <td class="profile-admin-td"><button type="button" class="btn-danger btn-xs profile-app-em-del" data-id="${t(h.id||"")}"><i class="fas fa-trash"></i></button></td>
-                </tr>`}).filter(Boolean).join(""):"",c=l?f||`<tr><td colspan="5" class="profile-admin-empty text-slate-500" data-i18n="module.profile.noAppEmergency">${i("module.profile.noAppEmergency","\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0628\u0639\u062F. \u0623\u0636\u0641 \u0623\u0648\u0644 \u0631\u0642\u0645 \u0623\u062F\u0646\u0627\u0647.")}</td></tr>`:"",u=a.hireDateDisplay?`<div class="profile-hire-pill"><span class="profile-hire-label" data-i18n="module.profile.hireDate">${i("module.profile.hireDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u064A\u064A\u0646")}</span><strong class="profile-hire-val">${t(a.hireDateDisplay)}</strong>
-                ${a.tenureText?`<span class="profile-tenure"><span data-i18n="module.profile.seniority">${i("module.profile.seniority","\u0627\u0644\u0623\u0642\u062F\u0645\u064A\u0629")}</span>: ${t(a.tenureText)}</span>`:""}</div>`:"",g=h=>{const S=String(h||"").trim();if(!S||!/^https?:\/\//i.test(S))return"";try{const U=new URL(S);return U.protocol==="http:"||U.protocol==="https:"?S:""}catch{return""}};let m=g(AppState?.companySettings?.profileTeamsUrl||AppState?.companySettings?.teamsUrl||""),y=g(AppState?.companySettings?.profileWhatsAppUrl||AppState?.companySettings?.whatsappUrl||"");if(!y&&a.phone){const h=String(a.phone).replace(/\D/g,"");h.length>=8&&h.length<=15&&(y=`https://wa.me/${h}`)}const b=m?`<a href="${t(m)}" class="profile-contact-icon-btn profile-contact-icon-btn--teams" target="_blank" rel="noopener noreferrer" title="${t(i("module.profile.openTeams","Microsoft Teams \u2014 \u0627\u062C\u062A\u0645\u0627\u0639\u0627\u062A \u0648\u062A\u0648\u0627\u0635\u0644"))}" aria-label="${t(i("module.profile.openTeams","Microsoft Teams \u2014 \u0627\u062C\u062A\u0645\u0627\u0639\u0627\u062A \u0648\u062A\u0648\u0627\u0635\u0644"))}"><i class="fab fa-microsoft" aria-hidden="true"></i></a>`:"",w=y?`<a href="${t(y)}" class="profile-contact-icon-btn profile-contact-icon-btn--wa" target="_blank" rel="noopener noreferrer" title="${t(i("module.profile.openWhatsApp","\u0648\u0627\u062A\u0633\u0627\u0628 \u2014 \u062A\u0648\u0627\u0635\u0644"))}" aria-label="${t(i("module.profile.openWhatsApp","\u0648\u0627\u062A\u0633\u0627\u0628 \u2014 \u062A\u0648\u0627\u0635\u0644"))}"><i class="fab fa-whatsapp" aria-hidden="true"></i></a>`:"";let x="",I="",L=!1;if(a.photo){const h=typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(a.photo):{canonical:String(a.photo).trim(),displaySrc:String(a.photo).trim(),needsProxy:!1,proxyFileId:""};h.canonical&&(L=!0,x=`src="${t(h.displaySrc)}"`,I=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(h):"")}const E=L?"":"display:none;",N=L?"display:none;":"",A=[["module.profile.employeeNumber","\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A",a.employeeNumber||"-"],["module.profile.personalName","\u0627\u0644\u0627\u0633\u0645",a.fullName||"-"],["module.profile.personalJob","\u0627\u0644\u0648\u0638\u064A\u0641\u0629",a.position||"-"],["module.profile.phone","\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641",a.phone||"-"],["module.profile.personalFactory","\u0627\u0644\u0645\u0635\u0646\u0639",a.branch||a.department||"-"],["module.profile.personalAddress","\u0627\u0644\u0639\u0646\u0648\u0627\u0646",a.location||"-"],["module.profile.hireDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u064A\u064A\u0646",a.hireDateDisplay||"-"],["module.profile.seniority","\u0645\u062F\u0629 \u0627\u0644\u0639\u0645\u0644 (\u0627\u0644\u0623\u0642\u062F\u0645\u064A\u0629)",a.tenureText||(a.hireDateDisplay?"\u2014":"-")]].map((h,S)=>{const U=String(h[2]??"-"),T=S===0||S===3||/\d/.test(U);return`<div><span data-i18n="${h[0]}">${t(i(h[0],h[1]))}</span><strong ${T?'dir="ltr"':""}>${t(U)}</strong></div>`}).join("");e.innerHTML=`
+        `;
+        document.head.appendChild(style);
+    },
+
+    async renderMyProfileSection() {
+        const section = document.getElementById('profile-section');
+        if (!section) return;
+
+        this._injectProfileIdentityStyles();
+        const t = (k, f) => {
+            if (window.AppI18n && typeof window.AppI18n.t === 'function') {
+                return window.AppI18n.t(k, null, f || k);
+            }
+            return f || k;
+        };
+        const esc = (v) => (typeof Utils !== 'undefined' && typeof Utils.escapeHTML === 'function')
+            ? Utils.escapeHTML(String(v ?? ''))
+            : String(v ?? '');
+
+        const employeesWasEmpty = !Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0;
+        if (employeesWasEmpty) {
+            this._ensureProfileCriticalSheetsLoaded().then(() => {
+                if (AppState.currentSection !== 'profile') return;
+                if (!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0) return;
+                this.renderMyProfileSection();
+            });
+        }
+
+        const profile = this._buildProfileModel();
+        const stats = profile.stats || {};
+        const emItems = Array.isArray(stats.emergencyItems) ? stats.emergencyItems : [];
+        const phoneList = emItems.length
+            ? emItems.map((it) => {
+                const ph = String(it?.phone || '');
+                const lab = String(it?.label || '').trim();
+                const tel = ph.replace(/[^\d+]/g, '');
+                const link = tel
+                    ? `<a class="profile-em-link" href="tel:${esc(tel)}">${esc(ph)}</a>`
+                    : esc(ph);
+                const inner = lab
+                    ? `<span class="profile-em-label">${esc(lab)}</span><span class="profile-em-sep"> </span>${link}${it?.source === 'plan' ? ` <span class="profile-em-badge" data-i18n="module.profile.fromPlans">${t('module.profile.fromPlans', 'من خطط طوارئ')}</span>` : ''}`
+                    : link;
+                return `<span class="profile-chip profile-chip--em">${inner}</span>`;
+            }).join('')
+            : `<span class="text-slate-500" data-i18n="module.profile.noEmergencyPhones">${t('module.profile.noEmergencyPhones', 'لا توجد أرقام طوارئ متاحة حالياً')}</span>`;
+        const isAdmin = typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function' && Permissions.isCurrentUserAdmin();
+        const mfaStatus = (typeof Auth !== 'undefined' && typeof Auth.getCurrentUserMfaStatus === 'function')
+            ? Auth.getCurrentUserMfaStatus()
+            : { enabled: false };
+        const allAppEm = (isAdmin && Array.isArray(AppState.appData?.appEmergencyNumbers))
+            ? [...AppState.appData.appEmergencyNumbers].sort((a, b) => (Number(a?.sortOrder) || 0) - (Number(b?.sortOrder) || 0))
+            : [];
+        const adminTableRows = isAdmin
+            ? allAppEm.map((r) => {
+                if (!r) return '';
+                const a = r.isActive;
+                const isOn = !(a === false || a === 'false' || a === '0' || a === 0);
+                const ph = String(r.phone || '');
+                const tel = ph.replace(/[^\d+]/g, '');
+                return `<tr>
+                    <td class="profile-admin-td">${esc(r.label || '')}</td>
+                    <td class="profile-admin-td" dir="ltr"><a class="profile-em-link" href="tel:${esc(tel)}">${esc(ph)}</a></td>
+                    <td class="profile-admin-td">${esc(r.sortOrder ?? '')}</td>
+                    <td class="profile-admin-td">${isOn ? `<span data-i18n="module.profile.activeY">${t('module.profile.activeY', 'مفعّل')}</span>` : `<span data-i18n="module.profile.inactiveN">${t('module.profile.inactiveN', 'معطّل')}</span>`}</td>
+                    <td class="profile-admin-td"><button type="button" class="btn-danger btn-xs profile-app-em-del" data-id="${esc(r.id || '')}"><i class="fas fa-trash"></i></button></td>
+                </tr>`;
+            }).filter(Boolean).join('')
+            : '';
+        const adminTbody = isAdmin
+            ? (adminTableRows
+                || `<tr><td colspan="5" class="profile-admin-empty text-slate-500" data-i18n="module.profile.noAppEmergency">${t('module.profile.noAppEmergency', 'لا توجد سجلات بعد. أضف أول رقم أدناه.')}</td></tr>`)
+            : '';
+        const hireRow = (profile.hireDateDisplay)
+            ? `<div class="profile-hire-pill"><span class="profile-hire-label" data-i18n="module.profile.hireDate">${t('module.profile.hireDate', 'تاريخ التعيين')}</span><strong class="profile-hire-val">${esc(profile.hireDateDisplay)}</strong>
+                ${profile.tenureText ? `<span class="profile-tenure"><span data-i18n="module.profile.seniority">${t('module.profile.seniority', 'الأقدمية')}</span>: ${esc(profile.tenureText)}</span>` : ''}</div>`
+            : '';
+        const pickHttpUrl = (s) => {
+            const u = String(s || '').trim();
+            if (!u || !/^https?:\/\//i.test(u)) return '';
+            try {
+                const parsed = new URL(u);
+                return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? u : '';
+            } catch (_) {
+                return '';
+            }
+        };
+        let teamsHref = pickHttpUrl(
+            AppState?.companySettings?.profileTeamsUrl
+            || AppState?.companySettings?.teamsUrl
+            || ''
+        );
+        let whatsappHref = pickHttpUrl(
+            AppState?.companySettings?.profileWhatsAppUrl
+            || AppState?.companySettings?.whatsappUrl
+            || ''
+        );
+        if (!whatsappHref && profile.phone) {
+            const digits = String(profile.phone).replace(/\D/g, '');
+            if (digits.length >= 8 && digits.length <= 15) {
+                whatsappHref = `https://wa.me/${digits}`;
+            }
+        }
+        const teamsLinkHtml = teamsHref
+            ? `<a href="${esc(teamsHref)}" class="profile-contact-icon-btn profile-contact-icon-btn--teams" target="_blank" rel="noopener noreferrer" title="${esc(t('module.profile.openTeams', 'Microsoft Teams — اجتماعات وتواصل'))}" aria-label="${esc(t('module.profile.openTeams', 'Microsoft Teams — اجتماعات وتواصل'))}"><i class="fab fa-microsoft" aria-hidden="true"></i></a>`
+            : '';
+        const whatsappLinkHtml = whatsappHref
+            ? `<a href="${esc(whatsappHref)}" class="profile-contact-icon-btn profile-contact-icon-btn--wa" target="_blank" rel="noopener noreferrer" title="${esc(t('module.profile.openWhatsApp', 'واتساب — تواصل'))}" aria-label="${esc(t('module.profile.openWhatsApp', 'واتساب — تواصل'))}"><i class="fab fa-whatsapp" aria-hidden="true"></i></a>`
+            : '';
+        let avatarSrc = '';
+        let avatarProxyAttr = '';
+        let hasProfileAvatar = false;
+        if (profile.photo) {
+            const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                ? Utils.resolveDriveAwareImgDisplay(profile.photo)
+                : { canonical: String(profile.photo).trim(), displaySrc: String(profile.photo).trim(), needsProxy: false, proxyFileId: '' };
+            if (disp.canonical) {
+                hasProfileAvatar = true;
+                avatarSrc = `src="${esc(disp.displaySrc)}"`;
+                avatarProxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+            }
+        }
+        const avatarDisplay = hasProfileAvatar ? '' : 'display:none;';
+        const iconDisplay = hasProfileAvatar ? 'display:none;' : '';
+        const personalRows = [
+            ['module.profile.employeeNumber', 'الكود الوظيفي', profile.employeeNumber || '-'],
+            ['module.profile.personalName', 'الاسم', profile.fullName || '-'],
+            ['module.profile.personalJob', 'الوظيفة', profile.position || '-'],
+            ['module.profile.phone', 'رقم الهاتف', profile.phone || '-'],
+            ['module.profile.personalFactory', 'المصنع', profile.branch || profile.department || '-'],
+            ['module.profile.personalAddress', 'العنوان', profile.location || '-'],
+            ['module.profile.hireDate', 'تاريخ التعيين', profile.hireDateDisplay || '-'],
+            ['module.profile.seniority', 'مدة العمل (الأقدمية)', profile.tenureText || (profile.hireDateDisplay ? '—' : '-')]
+        ];
+        const personalInfoHtml = personalRows.map((entry, idx) => {
+            const val = String(entry[2] ?? '-');
+            const isLtr = idx === 0 || idx === 3 || /\d/.test(val);
+            return `<div><span data-i18n="${entry[0]}">${esc(t(entry[0], entry[1]))}</span><strong ${isLtr ? 'dir="ltr"' : ''}>${esc(val)}</strong></div>`;
+        }).join('');
+
+        section.innerHTML = `
             <div class="profile-id-hero">
                 <div class="profile-id-hero__icon"><i class="fas fa-id-card"></i></div>
                 <div class="profile-id-hero__text">
-                    <span class="profile-id-hero__eyebrow"><i class="fas fa-shield-halved fa-xs"></i> HSE \xB7 \u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0633\u0644\u0627\u0645\u0629</span>
-                    <h2 class="profile-id-hero__title"><span data-i18n="nav.profile">${i("nav.profile","\u0645\u0644\u0641\u064A \u0627\u0644\u0634\u062E\u0635\u064A")}</span></h2>
-                    <p class="profile-id-hero__subtitle">${i("module.profile.personalInfo","\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0634\u062E\u0635\u064A\u0629")} \u2014 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0623\u0631\u0642\u0627\u0645 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0648\u0628\u0637\u0627\u0642\u0629 QR</p>
+                    <span class="profile-id-hero__eyebrow"><i class="fas fa-shield-halved fa-xs"></i> HSE · الصحة المهنية والسلامة</span>
+                    <h2 class="profile-id-hero__title"><span data-i18n="nav.profile">${t('nav.profile', 'ملفي الشخصي')}</span></h2>
+                    <p class="profile-id-hero__subtitle">${t('module.profile.personalInfo', 'البيانات الشخصية')} — التفاصيل المهنية وأرقام الطوارئ وبطاقة QR</p>
                 </div>
             </div>
             <div class="profile-dashboard-grid">
                 <div class="content-card profile-hero-card profile-linkedin-shell">
                     <div class="card-body profile-hero-body">
                         <div class="profile-avatar-wrap">
-                            <img id="profile-section-photo" ${x}${I} alt="${i("module.profile.photoAlt","\u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629")}" style="${E}">
-                            <i id="profile-section-photo-icon" class="fas fa-user-circle" style="${N}"></i>
+                            <img id="profile-section-photo" ${avatarSrc}${avatarProxyAttr} alt="${t('module.profile.photoAlt', 'الصورة الشخصية')}" style="${avatarDisplay}">
+                            <i id="profile-section-photo-icon" class="fas fa-user-circle" style="${iconDisplay}"></i>
                         </div>
                         <div class="profile-hero-content">
-                            <h3 class="profile-hero-name">${t(a.fullName||i("module.profile.unknownUser","\u0645\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0646\u0638\u0627\u0645"))}</h3>
-                            <p class="profile-hero-role">${t(a.position||i("module.profile.noPosition","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"))}</p>
-                            <p class="profile-hero-meta">${t(a.branch||a.department||i("module.profile.noDepartment","\u0642\u0633\u0645 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F"))}</p>
-                            ${u}
+                            <h3 class="profile-hero-name">${esc(profile.fullName || t('module.profile.unknownUser', 'مستخدم النظام'))}</h3>
+                            <p class="profile-hero-role">${esc(profile.position || t('module.profile.noPosition', 'غير محدد'))}</p>
+                            <p class="profile-hero-meta">${esc(profile.branch || profile.department || t('module.profile.noDepartment', 'قسم غير محدد'))}</p>
+                            ${hireRow}
                             <div class="profile-actions">
-                                <button id="profile-change-photo-btn" class="btn-secondary btn-sm"><i class="fas fa-camera ml-1"></i><span data-i18n="module.profile.changePhoto">${i("module.profile.changePhoto","\u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0635\u0648\u0631\u0629")}</span></button>
-                                <button id="profile-change-password-btn" class="btn-primary btn-sm"><i class="fas fa-key ml-1"></i><span data-i18n="module.profile.changePassword">${i("module.profile.changePassword","\u062A\u063A\u064A\u064A\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631")}</span></button>
+                                <button id="profile-change-photo-btn" class="btn-secondary btn-sm"><i class="fas fa-camera ml-1"></i><span data-i18n="module.profile.changePhoto">${t('module.profile.changePhoto', 'تغيير الصورة')}</span></button>
+                                <button id="profile-change-password-btn" class="btn-primary btn-sm"><i class="fas fa-key ml-1"></i><span data-i18n="module.profile.changePassword">${t('module.profile.changePassword', 'تغيير كلمة المرور')}</span></button>
                                 <button id="profile-mfa-btn" class="btn-secondary btn-sm" type="button">
-                                    <i class="fas fa-shield-halved ml-1"></i><span data-i18n="${d.enabled?"module.profile.mfaManage":"module.profile.mfaEnable"}">${d.enabled?i("module.profile.mfaManage","\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0635\u0627\u062F\u0642\u0629 \u0627\u0644\u062B\u0646\u0627\u0626\u064A\u0629"):i("module.profile.mfaEnable","\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0645\u0635\u0627\u062F\u0642\u0629 \u0627\u0644\u062B\u0646\u0627\u0626\u064A\u0629")}</span>
+                                    <i class="fas fa-shield-halved ml-1"></i><span data-i18n="${mfaStatus.enabled ? 'module.profile.mfaManage' : 'module.profile.mfaEnable'}">${mfaStatus.enabled ? t('module.profile.mfaManage', 'إدارة المصادقة الثنائية') : t('module.profile.mfaEnable', 'تفعيل المصادقة الثنائية')}</span>
                                 </button>
-                                ${b}
-                                ${w}
+                                ${teamsLinkHtml}
+                                ${whatsappLinkHtml}
                                 <input type="file" id="profile-photo-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
                             </div>
                         </div>
@@ -727,174 +4811,1825 @@
                 </div>
 
                 <div class="content-card profile-card profile-personal-card">
-                    <div class="card-header"><h3 class="card-title" data-i18n="module.profile.personalInfo">${i("module.profile.personalInfo","\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0634\u062E\u0635\u064A\u0629")}</h3></div>
+                    <div class="card-header"><h3 class="card-title" data-i18n="module.profile.personalInfo">${t('module.profile.personalInfo', 'البيانات الشخصية')}</h3></div>
                     <div class="card-body profile-info-list">
-                        ${A}
+                        ${personalInfoHtml}
                     </div>
                 </div>
 
                 <div class="content-card profile-card">
-                    <div class="card-header"><h3 class="card-title" data-i18n="module.profile.professionalStats">${i("module.profile.professionalStats","\u062A\u0641\u0627\u0635\u064A\u0644 \u0645\u0647\u0646\u064A\u0629")}</h3></div>
+                    <div class="card-header"><h3 class="card-title" data-i18n="module.profile.professionalStats">${t('module.profile.professionalStats', 'تفاصيل مهنية')}</h3></div>
                     <div class="card-body profile-kpi-grid">
-                        <div class="profile-kpi"><span data-i18n="module.profile.trainingSessions">${i("module.profile.trainingSessions","\u0627\u0644\u062F\u0648\u0631\u0627\u062A \u0627\u0644\u062A\u062F\u0631\u064A\u0628\u064A\u0629")}</span><strong>${t(s.trainingSessions||0)}</strong></div>
-                        <div class="profile-kpi"><span data-i18n="module.profile.trainingHours">${i("module.profile.trainingHours","\u0633\u0627\u0639\u0627\u062A \u0627\u0644\u062A\u062F\u0631\u064A\u0628")}</span><strong>${t(s.trainingHours||0)}</strong></div>
-                        <div class="profile-kpi"><span data-i18n="module.profile.violationsCount">${i("module.profile.violationsCount","\u0639\u062F\u062F \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A")}</span><strong>${t(s.violationsCount||0)}</strong></div>
-                        <div class="profile-kpi"><span data-i18n="module.profile.openViolations">${i("module.profile.openViolations","\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629")}</span><strong>${t(s.openViolations||0)}</strong></div>
-                        <div class="profile-kpi"><span data-i18n="module.profile.ppeTotal">${i("module.profile.ppeTotal","\u0625\u062C\u0645\u0627\u0644\u064A \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629")}</span><strong>${t(s.ppeTotalQuantity||0)}</strong></div>
-                        <div class="profile-kpi"><span data-i18n="module.profile.clinicVisits">${i("module.profile.clinicVisits","\u0632\u064A\u0627\u0631\u0627\u062A \u0627\u0644\u0639\u064A\u0627\u062F\u0629")}</span><strong>${t(s.clinicVisitsCount||0)}</strong></div>
+                        <div class="profile-kpi"><span data-i18n="module.profile.trainingSessions">${t('module.profile.trainingSessions', 'الدورات التدريبية')}</span><strong>${esc(stats.trainingSessions || 0)}</strong></div>
+                        <div class="profile-kpi"><span data-i18n="module.profile.trainingHours">${t('module.profile.trainingHours', 'ساعات التدريب')}</span><strong>${esc(stats.trainingHours || 0)}</strong></div>
+                        <div class="profile-kpi"><span data-i18n="module.profile.violationsCount">${t('module.profile.violationsCount', 'عدد المخالفات')}</span><strong>${esc(stats.violationsCount || 0)}</strong></div>
+                        <div class="profile-kpi"><span data-i18n="module.profile.openViolations">${t('module.profile.openViolations', 'المخالفات المفتوحة')}</span><strong>${esc(stats.openViolations || 0)}</strong></div>
+                        <div class="profile-kpi"><span data-i18n="module.profile.ppeTotal">${t('module.profile.ppeTotal', 'إجمالي مهمات الوقاية')}</span><strong>${esc(stats.ppeTotalQuantity || 0)}</strong></div>
+                        <div class="profile-kpi"><span data-i18n="module.profile.clinicVisits">${t('module.profile.clinicVisits', 'زيارات العيادة')}</span><strong>${esc(stats.clinicVisitsCount || 0)}</strong></div>
                     </div>
                 </div>
 
-                ${l?`
+                ${isAdmin ? `
                 <div class="content-card profile-card profile-card--admin-eme">
-                    <div class="card-header"><h3 class="card-title"><i class="fas fa-shield-halved ml-2 text-emerald-700"></i>${i("module.profile.adminEmergencyTitle","\u0623\u0631\u0642\u0627\u0645 \u0637\u0648\u0627\u0631\u0626 \u0627\u0644\u0645\u0624\u0633\u0633\u0629 (\u0644\u0644\u0645\u062F\u064A\u0631)")}</h3></div>
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-shield-halved ml-2 text-emerald-700"></i>${t('module.profile.adminEmergencyTitle', 'أرقام طوارئ المؤسسة (للمدير)')}</h3></div>
                     <div class="card-body">
-                        <p class="text-sm text-slate-600 mb-3">${i("module.profile.adminEmergencyDesc","\u062A\u064F\u0639\u0631\u0636 \u0644\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0641\u064A \u0627\u0644\u0645\u0644\u0641 \u0648\u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0639\u0627\u0645\u0629 \u0639\u0646\u062F \u0645\u0633\u062D \u0631\u0645\u0632 QR.")}</p>
+                        <p class="text-sm text-slate-600 mb-3">${t('module.profile.adminEmergencyDesc', 'تُعرض لجميع الموظفين في الملف والبطاقة العامة عند مسح رمز QR.')}</p>
                         <div class="profile-admin-table-wrap">
                         <table class="profile-admin-table" role="grid">
                             <thead><tr>
-                                <th>${i("module.profile.emLabel","\u0627\u0644\u062A\u0633\u0645\u064A\u0629")}</th>
-                                <th>${i("module.profile.emPhone","\u0627\u0644\u0631\u0642\u0645")}</th>
-                                <th>${i("module.profile.sortOrder","\u0627\u0644\u062A\u0631\u062A\u064A\u0628")}</th>
-                                <th>${i("module.profile.state","\u0627\u0644\u062D\u0627\u0644\u0629")}</th>
+                                <th>${t('module.profile.emLabel', 'التسمية')}</th>
+                                <th>${t('module.profile.emPhone', 'الرقم')}</th>
+                                <th>${t('module.profile.sortOrder', 'الترتيب')}</th>
+                                <th>${t('module.profile.state', 'الحالة')}</th>
                                 <th></th>
                             </tr></thead>
-                            <tbody>${c}</tbody>
+                            <tbody>${adminTbody}</tbody>
                         </table>
                         </div>
                         <form id="profile-app-emergency-form" class="profile-admin-em-form">
                             <input type="hidden" name="id" value="">
                             <div class="profile-admin-em-row">
-                                <input name="label" class="form-input" required placeholder="${i("module.profile.emLabel","\u0627\u0644\u062A\u0633\u0645\u064A\u0629")}" maxlength="120" autocomplete="off">
-                                <input name="phone" class="form-input" required placeholder="${i("module.profile.emPhone","\u0631\u0642\u0645 (\u0645\u0639 \u0631\u0645\u0632 \u0627\u0644\u062F\u0648\u0644\u0629 \u0625\u0646 \u0648\u064F\u062C\u062F)")}" inputmode="tel" autocomplete="tel">
+                                <input name="label" class="form-input" required placeholder="${t('module.profile.emLabel', 'التسمية')}" maxlength="120" autocomplete="off">
+                                <input name="phone" class="form-input" required placeholder="${t('module.profile.emPhone', 'رقم (مع رمز الدولة إن وُجد)')}" inputmode="tel" autocomplete="tel">
                             </div>
                             <div class="profile-admin-em-row">
-                                <input name="sortOrder" class="form-input" type="number" placeholder="${i("module.profile.sortOrder","\u0627\u0644\u062A\u0631\u062A\u064A\u0628")}" value="0" step="1">
-                                <label class="profile-admin-cb"><input name="isActive" type="checkbox" checked> ${i("module.profile.activeY","\u0645\u0641\u0639\u0651\u0644")}</label>
+                                <input name="sortOrder" class="form-input" type="number" placeholder="${t('module.profile.sortOrder', 'الترتيب')}" value="0" step="1">
+                                <label class="profile-admin-cb"><input name="isActive" type="checkbox" checked> ${t('module.profile.activeY', 'مفعّل')}</label>
                             </div>
                             <div class="profile-admin-em-row">
-                                <button type="submit" class="btn-primary btn-sm"><i class="fas fa-plus ml-1"></i>${i("module.profile.addEmergency","\u0625\u0636\u0627\u0641\u0629 / \u062D\u0641\u0638")}</button>
+                                <button type="submit" class="btn-primary btn-sm"><i class="fas fa-plus ml-1"></i>${t('module.profile.addEmergency', 'إضافة / حفظ')}</button>
                             </div>
                         </form>
                     </div>
                 </div>
-                `:""}
+                ` : ''}
 
                 <div class="content-card profile-card">
-                    <div class="card-header"><h3 class="card-title">${i("module.profile.emergencyPhones","\u0623\u0631\u0642\u0627\u0645 \u0627\u0644\u0637\u0648\u0627\u0631\u0626")}</h3><p class="card-subtitle text-slate-500 text-sm mt-1 mb-0">${i("module.profile.emergencyHint","\u0645\u0624\u0633\u0633\u064A\u0629 (\u0645\u0646 \u0627\u0644\u0645\u062F\u064A\u0631) + \u0645\u0633\u062A\u062E\u0631\u062C\u0629 \u0645\u0646 \u062E\u0637\u0637 \u0627\u0644\u0637\u0648\u0627\u0631\u0626")}</p></div>
-                    <div class="card-body profile-emergency-list">${r}</div>
+                    <div class="card-header"><h3 class="card-title">${t('module.profile.emergencyPhones', 'أرقام الطوارئ')}</h3><p class="card-subtitle text-slate-500 text-sm mt-1 mb-0">${t('module.profile.emergencyHint', 'مؤسسية (من المدير) + مستخرجة من خطط الطوارئ')}</p></div>
+                    <div class="card-body profile-emergency-list">${phoneList}</div>
                 </div>
 
                 <div class="content-card profile-card profile-qr-card">
-                    <div class="card-header"><h3 class="card-title">${i("module.profile.publicCard","\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0623\u0639\u0645\u0627\u0644 \u0639\u0628\u0631 QR")}</h3></div>
+                    <div class="card-header"><h3 class="card-title">${t('module.profile.publicCard', 'بطاقة الأعمال عبر QR')}</h3></div>
                     <div class="card-body">
-                        <p class="text-sm text-slate-600 mb-2">${i("module.profile.publicCardDesc","\u0627\u0645\u0633\u062D \u0627\u0644\u0631\u0645\u0632 \u0628\u0643\u0627\u0645\u064A\u0631\u0627 \u0627\u0644\u0647\u0627\u062A\u0641 \u0644\u0641\u062A\u062D \u0627\u0644\u0628\u0637\u0627\u0642\u0629. \u064A\u062C\u0628 \u0646\u0634\u0631 \u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u0648\u064A\u0628 \u0648\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0631\u0627\u0628\u0637 \u064A\u0646\u062A\u0647\u064A \u0628\u0640 /exec \u0641\u064A \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A.")}</p>
-                        <p class="text-xs text-slate-500 mb-3 profile-qr-hint">${i("module.profile.qrScanHint","\u0625\u0630\u0627 \u0641\u0634\u0644 \u0627\u0644\u0645\u0633\u062D: \u0627\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0648\u0627\u0641\u062A\u062D\u0647 \u0641\u064A \u0627\u0644\u0645\u062A\u0635\u0641\u062D. \u0627\u0644\u0631\u0645\u0632 \u0642\u062F \u064A\u0636\u064A\u0641 \u0645\u0633\u0627\u0641\u0627\u062A \u2014 \u064A\u062A\u0645 \u062A\u0646\u0638\u064A\u0641\u0647\u0627 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645.")}</p>
+                        <p class="text-sm text-slate-600 mb-2">${t('module.profile.publicCardDesc', 'امسح الرمز بكاميرا الهاتف لفتح البطاقة. يجب نشر تطبيق الويب واستخدام رابط ينتهي بـ /exec في الإعدادات.')}</p>
+                        <p class="text-xs text-slate-500 mb-3 profile-qr-hint">${t('module.profile.qrScanHint', 'إذا فشل المسح: انسخ الرابط وافتحه في المتصفح. الرمز قد يضيف مسافات — يتم تنظيفها تلقائياً في الخادم.')}</p>
                         <div id="profile-qr-holder" class="profile-qr-holder">
-                            <div class="text-slate-500 text-sm">${i("module.profile.loadingQr","\u062C\u0627\u0631\u064A \u062A\u0648\u0644\u064A\u062F \u0631\u0645\u0632 QR...")}</div>
+                            <div class="text-slate-500 text-sm">${t('module.profile.loadingQr', 'جاري توليد رمز QR...')}</div>
                         </div>
                         <div class="profile-qr-actions">
                             <input id="profile-public-link" class="form-input" type="text" readonly value="">
-                            <button type="button" id="profile-open-card-btn" class="btn-primary btn-sm"><i class="fas fa-external-link-alt ml-1"></i>${i("module.profile.openCard","\u0641\u062A\u062D \u0627\u0644\u0628\u0637\u0627\u0642\u0629")}</button>
-                            <button id="profile-copy-link-btn" class="btn-secondary btn-sm"><i class="fas fa-copy ml-1"></i>${i("module.profile.copyLink","\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637")}</button>
-                            <button id="profile-refresh-qr-btn" class="btn-secondary btn-sm"><i class="fas fa-rotate ml-1"></i>${i("module.profile.refreshQr","\u062A\u062D\u062F\u064A\u062B QR")}</button>
+                            <button type="button" id="profile-open-card-btn" class="btn-primary btn-sm"><i class="fas fa-external-link-alt ml-1"></i>${t('module.profile.openCard', 'فتح البطاقة')}</button>
+                            <button id="profile-copy-link-btn" class="btn-secondary btn-sm"><i class="fas fa-copy ml-1"></i>${t('module.profile.copyLink', 'نسخ الرابط')}</button>
+                            <button id="profile-refresh-qr-btn" class="btn-secondary btn-sm"><i class="fas fa-rotate ml-1"></i>${t('module.profile.refreshQr', 'تحديث QR')}</button>
                         </div>
                     </div>
                 </div>
             </div>
-        `;const k=document.getElementById("profile-section-photo"),D=document.getElementById("profile-section-photo-icon"),C=()=>{try{k&&(k.style.display="none"),D&&(D.style.display="block")}catch{}};k&&L&&(k.addEventListener("error",function h(){k.removeEventListener("error",h),C()}),typeof Utils.hydrateDriveProxyImages=="function"&&k.getAttribute("data-drive-proxy-id")&&Utils.hydrateDriveProxyImages(e,{onFetchFail:()=>C()}));const P=document.getElementById("profile-photo-input"),$=document.getElementById("profile-change-photo-btn"),W=document.getElementById("profile-change-password-btn"),O=document.getElementById("profile-open-card-btn"),q=document.getElementById("profile-copy-link-btn"),F=document.getElementById("profile-refresh-qr-btn"),M=document.getElementById("profile-public-link"),R=document.getElementById("profile-qr-holder"),_=document.getElementById("profile-app-emergency-form");$&&P&&($.addEventListener("click",h=>{h.preventDefault(),P.value="",P.click()}),P.addEventListener("change",h=>{const S=h.target?.files?.[0];S&&this.handleUserProfilePhotoUpload(S),h.target.value=""})),W&&W.addEventListener("click",h=>{h.preventDefault(),this.showChangePasswordModal(!1)});const j=document.getElementById("profile-mfa-btn");j&&j.addEventListener("click",h=>{h.preventDefault(),this.showMfaSettingsModal()}),O&&M&&O.addEventListener("click",h=>{h.preventDefault();const S=String(M.value||"").trim();if(S)try{window.open(S,"_blank","noopener,noreferrer")}catch{window.location.href=S}else typeof Notification<"u"&&Notification.warning(i("module.profile.qrUnavailable","\u062A\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u0631\u0627\u0628\u0637 \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0639\u0627\u0645\u0629 \u062D\u0627\u0644\u064A\u0627\u064B"))}),_&&l&&typeof GoogleIntegration<"u"&&GoogleIntegration.callBackend&&_.addEventListener("submit",async h=>{h.preventDefault();const S=new FormData(_),U=AppState.currentUser||{},T=await GoogleIntegration.callBackend("upsertAppEmergencyNumber",{id:String(S.get("id")||"").trim(),label:String(S.get("label")||"").trim(),phone:String(S.get("phone")||"").trim(),sortOrder:S.get("sortOrder"),isActive:!!(_.querySelector('input[name="isActive"]')&&_.querySelector('input[name="isActive"]').checked),userData:{id:U.id,email:U.email,role:U.role,permissions:U.permissions}});if(T&&T.success){typeof Notification<"u"&&Notification.success(i("module.profile.emergencySaved","\u062A\u0645 \u062D\u0641\u0638 \u0631\u0642\u0645 \u0627\u0644\u0637\u0648\u0627\u0631\u0626")),_.reset();const B=_.querySelector('input[name="isActive"]');B&&(B.checked=!0);const H=_.querySelector('input[name="id"]');H&&(H.value=""),this.renderMyProfileSection()}else typeof Notification<"u"&&Notification.error(T&&T.message||i("module.profile.emergencySaveErr","\u062A\u0639\u0630\u0631 \u0627\u0644\u062D\u0641\u0638"))}),l&&e.querySelectorAll(".profile-app-em-del").forEach(h=>{h.addEventListener("click",async S=>{S.preventDefault();const U=h.getAttribute("data-id");if(!U||typeof window<"u"&&!window.confirm(i("module.profile.confirmDeleteEm","\u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0633\u062C\u0644\u061F")))return;const T=AppState.currentUser||{};if(typeof GoogleIntegration>"u"||!GoogleIntegration.callBackend)return;const B=await GoogleIntegration.callBackend("deleteAppEmergencyNumber",{id:U,userData:{id:T.id,email:T.email,role:T.role,permissions:T.permissions}});B&&B.success?(typeof Notification<"u"&&Notification.success(i("module.profile.emergencyDeleted","\u062A\u0645 \u0627\u0644\u062D\u0630\u0641")),this.renderMyProfileSection()):typeof Notification<"u"&&Notification.error(B&&B.message||i("module.profile.emergencyDeleteErr","\u062A\u0639\u0630\u0631 \u0627\u0644\u062D\u0630\u0641"))})});const z=async(h=!1)=>{if(!(!R||!M))try{R.innerHTML=`<div class="text-slate-500 text-sm">${i("module.profile.loadingQr","\u062C\u0627\u0631\u064A \u062A\u0648\u0644\u064A\u062F \u0631\u0645\u0632 QR...")}</div>`;const S=await this.getOrCreatePublicProfileCardLink(h);if(!S){R.innerHTML=`<div class="text-amber-600 text-sm">${i("module.profile.qrUnavailable","\u062A\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u0631\u0627\u0628\u0637 \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0639\u0627\u0645\u0629 \u062D\u0627\u0644\u064A\u0627\u064B")}</div>`,M.value="";return}M.value=S;const U=typeof window<"u"&&window.QRCode&&typeof window.QRCode.generate=="function"?window.QRCode.generate(S,220):null;if(!U){R.innerHTML=`<div class="text-amber-600 text-sm">${i("module.profile.qrUnavailable","\u062A\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u0631\u0645\u0632 QR \u062D\u0627\u0644\u064A\u0627\u064B")}</div>`;return}R.innerHTML=`<img src="${t(U)}" alt="${i("module.profile.qrAlt","\u0631\u0645\u0632 QR \u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0645\u0648\u0638\u0641")}" class="profile-qr-image">`}catch{R.innerHTML=`<div class="text-red-600 text-sm">${i("module.profile.qrError","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0625\u0646\u0634\u0627\u0621 QR")}</div>`}};q&&q.addEventListener("click",async h=>{h.preventDefault();const S=String(M?.value||"").trim();if(S)try{navigator.clipboard&&navigator.clipboard.writeText?await navigator.clipboard.writeText(S):(M.select(),document.execCommand("copy")),typeof Notification<"u"&&Notification.success(i("module.profile.linkCopied","\u062A\u0645 \u0646\u0633\u062E \u0631\u0627\u0628\u0637 \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0639\u0627\u0645\u0629"))}catch{typeof Notification<"u"&&Notification.warning(i("module.profile.copyFailed","\u062A\u0639\u0630\u0631 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637"))}}),F&&F.addEventListener("click",h=>{h.preventDefault(),z(!0)}),z(!1),this._scheduleProfileStatsEnrichment(),window.AppI18n&&typeof window.AppI18n.applyModuleI18n=="function"&&window.AppI18n.applyModuleI18n(e)},updateUserProfilePhoto(){if(!AppState.currentUser)return;let e=AppState.appData.users.find(r=>!r||!r.email||!AppState.currentUser.email?!1:r.email.toLowerCase().trim()===AppState.currentUser.email.toLowerCase().trim());if(!e){const r=localStorage.getItem("hse_app_data");if(r)try{const l=JSON.parse(r);l.users&&(AppState.appData.users=l.users,e=AppState.appData.users.find(d=>!d||!d.email||!AppState.currentUser.email?!1:d.email.toLowerCase().trim()===AppState.currentUser.email.toLowerCase().trim()))}catch(l){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629:",l)}}const i=document.getElementById("user-profile-photo"),t=document.getElementById("user-profile-icon"),n=typeof this._getProfileEmployeeRecord=="function"?this._getProfileEmployeeRecord():null,a=e&&e.photo||AppState.currentUser&&AppState.currentUser.photo||n&&this._pickProfileField(n,["photo","personalPhoto","image","imageUrl","Photo","\u0627\u0644\u0635\u0648\u0631\u0629"])||"",s=typeof Utils.normalizeImageSource=="function"?Utils.normalizeImageSource(a):String(a||"").trim(),o=e&&e.email||AppState.currentUser&&AppState.currentUser.email||"";if(s&&i&&t){const r=/drive\.google\.com|googleusercontent\.com/i.test(s),l=`photo_failed_${o}`,d=sessionStorage.getItem(l),p=300*1e3,f=()=>{i.style.display="none",t.style.display="block"},c=w=>{i.src=w,i.style.display="block",t.style.display="none",sessionStorage.removeItem(l)},u=()=>{r&&sessionStorage.setItem(l,Date.now().toString())};if(r&&d){const w=parseInt(d,10);if(!isNaN(w)&&Date.now()-w<p){f();return}sessionStorage.removeItem(l)}let g=typeof Utils.extractDriveFileId=="function"?String(Utils.extractDriveFileId(s)||"").trim():"";if(r&&!g&&typeof Utils.normalizeGoogleDriveImageUrl=="function"){const w=Utils.normalizeGoogleDriveImageUrl(s);g=typeof Utils.extractDriveFileId=="function"?String(Utils.extractDriveFileId(w)||"").trim():""}const m=typeof Utils.getAppsScriptScriptUrl=="function"?Utils.getAppsScriptScriptUrl():AppState.googleConfig&&AppState.googleConfig.appsScript&&AppState.googleConfig.appsScript.scriptUrl?String(AppState.googleConfig.appsScript.scriptUrl).trim():"";if(r&&g&&m&&m.includes("script.google.com")){const w=function(){if(typeof Utils.fetchDriveImageDataUri=="function")return Utils.fetchDriveImageDataUri(g);const x=m+(m.indexOf("?")!==-1?"&":"?")+"action=getProfileImage&id="+encodeURIComponent(g);return fetch(x,{method:"GET",credentials:"omit"}).then(function(I){return I.json()}).then(function(I){if(I&&I.success&&I.dataUri)return I.dataUri;throw new Error(I&&I.message?I.message:"\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631\u0629")})};Promise.resolve(w()).then(function(x){x?c(x):(u(),f())}).catch(function(){u(),f()});return}const y=new Image,b=setTimeout(function(){y.src="",f(),u()},5e3);y.onload=function(){clearTimeout(b),c(s)},y.onerror=function(){clearTimeout(b),f(),u()},y.src=s}else i&&t&&(i.style.display="none",t.style.display="block")},showHeaderActions(){const e=document.getElementById("header-theme-toggle"),i=document.getElementById("header-notifications-btn"),t=document.getElementById("company-logo-header"),n=t&&t.style.display!=="none"||window.innerWidth>1024;i&&(i.style.display="flex",i.style.visibility="visible"),n?(e&&(e.style.display="flex",e.style.visibility="visible"),i&&(i.style.display="flex",i.style.visibility="visible")):(e&&(e.style.display="none"),i&&(i.style.display="none"));const a=document.getElementById("mobile-theme-toggle"),s=document.getElementById("mobile-notifications-btn");a&&(a.style.display="flex"),s&&(s.style.display="flex")},showSection(e){AppState.debugMode&&Utils.safeLog("\u0645\u062D\u0627\u0648\u0644\u0629 \u0639\u0631\u0636 \u0627\u0644\u0642\u0633\u0645:",e);const i=AppState.isNavigatingBack;if(typeof Permissions<"u"&&typeof Permissions.checkBeforeShow=="function"&&typeof Permissions.hasAccess=="function"&&!Permissions.checkBeforeShow(e,i))if(e!=="dashboard"&&Permissions.hasAccess("dashboard"))e="dashboard";else{const u=(typeof Permissions.getAccessibleModules=="function"?Permissions.getAccessibleModules():[]).find(g=>g&&g!=="dashboard"&&g!=="profile"&&g!=="help");if(u)e=u;else if(Permissions.hasAccess("profile"))e="profile";else return}const n=document.getElementById("main-app");if(!n||n.style.display==="none"){Utils.safeError("main-app \u063A\u064A\u0631 \u0645\u0631\u0626\u064A");return}const a=document.querySelectorAll(".section");AppState.debugMode&&Utils.safeLog("\u0639\u062F\u062F \u0627\u0644\u0623\u0642\u0633\u0627\u0645 \u0627\u0644\u0645\u0648\u062C\u0648\u062F\u0629:",a.length),a.forEach(c=>{c.classList.remove("active"),c.style.display="none"});const s=document.querySelectorAll(".nav-item");AppState.debugMode&&Utils.safeLog("\u0639\u062F\u062F \u0639\u0646\u0627\u0635\u0631 \u0627\u0644\u0642\u0627\u0626\u0645\u0629:",s.length),s.forEach(c=>{c.classList.remove("active"),c.removeAttribute("aria-current")});const o=`${e}-section`;let r=document.getElementById(o);if(AppState.debugMode&&Utils.safeLog(" \u0645\u062D\u0627\u0648\u0644\u0629 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649:",o,r?"\u2705 \u0645\u0648\u062C\u0648\u062F":" \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F"),!r){if(AppState.debugMode){Utils.safeWarn("\u26A0 \u0627\u0644\u0642\u0633\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A DOM\u060C \u062C\u0627\u0631\u064A \u0627\u0644\u0628\u062D\u062B \u064A \u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0642\u0633\u0627\u0645...");const u=document.querySelectorAll(".section");Utils.safeLog("\u{1F4CB} \u0627\u0644\u0623\u0642\u0633\u0627\u0645 \u0627\u0644\u0645\u0648\u062C\u0648\u062F\u0629:",Array.from(u).map(g=>g.id).join(", "))}const c=document.querySelector(".main-content");if(c){AppState.debugMode&&Utils.safeLog("\u{1F528} \u0625\u0646\u0634\u0627\u0621 \u0642\u0633\u0645 \u062C\u062F\u064A\u062F:",o),r=document.createElement("section"),r.id=o,r.className="section",r.setAttribute("role","region"),r.setAttribute("aria-label",`\u0642\u0633\u0645 ${e}`);const u=document.getElementById("users-section");u&&e==="employees"?(u.insertAdjacentElement("afterend",r),AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u0625\u062F\u0631\u0627\u062C \u0642\u0633\u0645 employees-section \u0628\u0639\u062F users-section")):(c.appendChild(r),AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u062C\u062F\u064A\u062F \u0625\u0644\u0649 main-content"))}else Utils.safeError(" main-content \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!")}if(r)if(r.classList.add("active"),r.style.display="block",AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0639\u064A\u0644 \u0627\u0644\u0642\u0633\u0645:",o),e!=="dashboard"){try{if(!(r.innerHTML||"").trim()&&(r.innerHTML=`
+        `;
+
+        const sectionPhotoEl = document.getElementById('profile-section-photo');
+        const sectionPhotoIconEl = document.getElementById('profile-section-photo-icon');
+        const showProfileSectionPhotoFallback = () => {
+            try {
+                if (sectionPhotoEl) sectionPhotoEl.style.display = 'none';
+                if (sectionPhotoIconEl) sectionPhotoIconEl.style.display = 'block';
+            } catch (_) { /* ignore */ }
+        };
+        if (sectionPhotoEl && hasProfileAvatar) {
+            sectionPhotoEl.addEventListener('error', function onProfileSectionPhotoErr() {
+                sectionPhotoEl.removeEventListener('error', onProfileSectionPhotoErr);
+                showProfileSectionPhotoFallback();
+            });
+            if (typeof Utils.hydrateDriveProxyImages === 'function' && sectionPhotoEl.getAttribute('data-drive-proxy-id')) {
+                Utils.hydrateDriveProxyImages(section, {
+                    onFetchFail: () => showProfileSectionPhotoFallback()
+                });
+            }
+        }
+
+        const photoInput = document.getElementById('profile-photo-input');
+        const changePhotoBtn = document.getElementById('profile-change-photo-btn');
+        const changePassBtn = document.getElementById('profile-change-password-btn');
+        const openCardBtn = document.getElementById('profile-open-card-btn');
+        const copyBtn = document.getElementById('profile-copy-link-btn');
+        const refreshQrBtn = document.getElementById('profile-refresh-qr-btn');
+        const linkInput = document.getElementById('profile-public-link');
+        const qrHolder = document.getElementById('profile-qr-holder');
+        const emForm = document.getElementById('profile-app-emergency-form');
+
+        if (changePhotoBtn && photoInput) {
+            changePhotoBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                photoInput.value = '';
+                photoInput.click();
+            });
+            photoInput.addEventListener('change', (ev) => {
+                const file = ev.target?.files?.[0];
+                if (file) this.handleUserProfilePhotoUpload(file);
+                ev.target.value = '';
+            });
+        }
+        if (changePassBtn) {
+            changePassBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showChangePasswordModal(false);
+            });
+        }
+        const mfaBtn = document.getElementById('profile-mfa-btn');
+        if (mfaBtn) {
+            mfaBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showMfaSettingsModal();
+            });
+        }
+
+        if (openCardBtn && linkInput) {
+            openCardBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const v = String(linkInput.value || '').trim();
+                if (v) {
+                    try {
+                        window.open(v, '_blank', 'noopener,noreferrer');
+                    } catch (_) {
+                        window.location.href = v;
+                    }
+                } else if (typeof Notification !== 'undefined') {
+                    Notification.warning(t('module.profile.qrUnavailable', 'تعذر إنشاء رابط البطاقة العامة حالياً'));
+                }
+            });
+        }
+
+        if (emForm && isAdmin && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.callBackend) {
+            emForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const fd = new FormData(emForm);
+                const user = AppState.currentUser || {};
+                const res = await GoogleIntegration.callBackend('upsertAppEmergencyNumber', {
+                    id: String(fd.get('id') || '').trim(),
+                    label: String(fd.get('label') || '').trim(),
+                    phone: String(fd.get('phone') || '').trim(),
+                    sortOrder: fd.get('sortOrder'),
+                    isActive: !!(emForm.querySelector('input[name="isActive"]') && emForm.querySelector('input[name="isActive"]').checked),
+                    userData: {
+                        id: user.id,
+                        email: user.email,
+                        role: user.role,
+                        permissions: user.permissions
+                    }
+                });
+                if (res && res.success) {
+                    if (typeof Notification !== 'undefined') {
+                        Notification.success(t('module.profile.emergencySaved', 'تم حفظ رقم الطوارئ'));
+                    }
+                    emForm.reset();
+                    const cb = emForm.querySelector('input[name="isActive"]');
+                    if (cb) cb.checked = true;
+                    const hid = emForm.querySelector('input[name="id"]');
+                    if (hid) hid.value = '';
+                    this.renderMyProfileSection();
+                } else if (typeof Notification !== 'undefined') {
+                    Notification.error((res && res.message) || t('module.profile.emergencySaveErr', 'تعذر الحفظ'));
+                }
+            });
+        }
+        if (isAdmin) {
+            section.querySelectorAll('.profile-app-em-del').forEach((btn) => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const id = btn.getAttribute('data-id');
+                    if (!id) return;
+                    if (typeof window !== 'undefined' && !window.confirm(t('module.profile.confirmDeleteEm', 'حذف هذا السجل؟'))) return;
+                    const user = AppState.currentUser || {};
+                    if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.callBackend) return;
+                    const res = await GoogleIntegration.callBackend('deleteAppEmergencyNumber', {
+                        id,
+                        userData: {
+                            id: user.id,
+                            email: user.email,
+                            role: user.role,
+                            permissions: user.permissions
+                        }
+                    });
+                    if (res && res.success) {
+                        if (typeof Notification !== 'undefined') {
+                            Notification.success(t('module.profile.emergencyDeleted', 'تم الحذف'));
+                        }
+                        this.renderMyProfileSection();
+                    } else if (typeof Notification !== 'undefined') {
+                        Notification.error((res && res.message) || t('module.profile.emergencyDeleteErr', 'تعذر الحذف'));
+                    }
+                });
+            });
+        }
+
+        const paintQr = async (forceRotate = false) => {
+            if (!qrHolder || !linkInput) return;
+            try {
+                qrHolder.innerHTML = `<div class="text-slate-500 text-sm">${t('module.profile.loadingQr', 'جاري توليد رمز QR...')}</div>`;
+                const publicLink = await this.getOrCreatePublicProfileCardLink(forceRotate);
+                if (!publicLink) {
+                    qrHolder.innerHTML = `<div class="text-amber-600 text-sm">${t('module.profile.qrUnavailable', 'تعذر إنشاء رابط البطاقة العامة حالياً')}</div>`;
+                    linkInput.value = '';
+                    return;
+                }
+                linkInput.value = publicLink;
+                const qrSrc = (typeof window !== 'undefined' && window.QRCode && typeof window.QRCode.generate === 'function')
+                    ? window.QRCode.generate(publicLink, 220)
+                    : null;
+                if (!qrSrc) {
+                    qrHolder.innerHTML = `<div class="text-amber-600 text-sm">${t('module.profile.qrUnavailable', 'تعذر إنشاء رمز QR حالياً')}</div>`;
+                    return;
+                }
+                qrHolder.innerHTML = `<img src="${esc(qrSrc)}" alt="${t('module.profile.qrAlt', 'رمز QR لبطاقة الموظف')}" class="profile-qr-image">`;
+            } catch (err) {
+                qrHolder.innerHTML = `<div class="text-red-600 text-sm">${t('module.profile.qrError', 'حدث خطأ أثناء إنشاء QR')}</div>`;
+            }
+        };
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const val = String(linkInput?.value || '').trim();
+                if (!val) return;
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(val);
+                    } else {
+                        linkInput.select();
+                        document.execCommand('copy');
+                    }
+                    if (typeof Notification !== 'undefined') Notification.success(t('module.profile.linkCopied', 'تم نسخ رابط البطاقة العامة'));
+                } catch (_) {
+                    if (typeof Notification !== 'undefined') Notification.warning(t('module.profile.copyFailed', 'تعذر نسخ الرابط'));
+                }
+            });
+        }
+        if (refreshQrBtn) {
+            refreshQrBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                paintQr(true);
+            });
+        }
+
+        paintQr(false);
+
+        this._scheduleProfileStatsEnrichment();
+
+        if (window.AppI18n && typeof window.AppI18n.applyModuleI18n === 'function') {
+            window.AppI18n.applyModuleI18n(section);
+        }
+    },
+
+    /**
+     * تحديث صورة المستخدم ي الشريط الجانبي
+     */
+    updateUserProfilePhoto() {
+        if (!AppState.currentUser) return;
+
+        // البحث عن المستخدم ي قاعدة البيانات (مع إعادة تحميل البيانات إذا لزم الأمر)
+        let user = AppState.appData.users.find(u => {
+            if (!u || !u.email || !AppState.currentUser.email) return false;
+            return u.email.toLowerCase().trim() === AppState.currentUser.email.toLowerCase().trim();
+        });
+
+        // إذا لم يتم العثور على المستخدم، نحاول البحث مرة أخرى بعد تحديث البيانات
+        if (!user) {
+            // إعادة تحميل بيانات المستخدمين من localStorage
+            const savedData = localStorage.getItem('hse_app_data');
+            if (savedData) {
+                try {
+                    const parsedData = JSON.parse(savedData);
+                    if (parsedData.users) {
+                        AppState.appData.users = parsedData.users;
+                        user = AppState.appData.users.find(u => {
+                            if (!u || !u.email || !AppState.currentUser.email) return false;
+                            return u.email.toLowerCase().trim() === AppState.currentUser.email.toLowerCase().trim();
+                        });
+                    }
+                } catch (e) {
+                    Utils.safeWarn('⚠ فشل تحليل البيانات المحفوظة:', e);
+                }
+            }
+        }
+
+        const profilePhoto = document.getElementById('user-profile-photo');
+        const profileIcon = document.getElementById('user-profile-icon');
+
+        // ✅ نفس منطق الملف الشخصي: مستخدم + currentUser + سجل الموظف المطابق (كثيراً ما تُخزَّن الصورة في Employees فقط)
+        const employee = typeof this._getProfileEmployeeRecord === 'function' ? this._getProfileEmployeeRecord() : null;
+        const photoRaw = (user && user.photo)
+            || (AppState.currentUser && AppState.currentUser.photo)
+            || (employee && this._pickProfileField(employee, ['photo', 'personalPhoto', 'image', 'imageUrl', 'Photo', 'الصورة']))
+            || '';
+        const photoUrl = typeof Utils.normalizeImageSource === 'function'
+            ? Utils.normalizeImageSource(photoRaw)
+            : String(photoRaw || '').trim();
+        const userEmailForCache = (user && user.email) || (AppState.currentUser && AppState.currentUser.email) || '';
+
+        if (photoUrl && profilePhoto && profileIcon) {
+            const isDriveUrl = /drive\.google\.com|googleusercontent\.com/i.test(photoUrl);
+            const cacheKey = `photo_failed_${userEmailForCache}`;
+            const failedAtStr = sessionStorage.getItem(cacheKey);
+            const PHOTO_FAIL_COOLDOWN_MS = 5 * 60 * 1000;
+
+            const showIcon = () => {
+                profilePhoto.style.display = 'none';
+                profileIcon.style.display = 'block';
+            };
+            const showPhoto = (src) => {
+                profilePhoto.src = src;
+                profilePhoto.style.display = 'block';
+                profileIcon.style.display = 'none';
+                sessionStorage.removeItem(cacheKey);
+            };
+            const markFailed = () => {
+                if (isDriveUrl) sessionStorage.setItem(cacheKey, Date.now().toString());
+            };
+
+            if (isDriveUrl && failedAtStr) {
+                const failedAt = parseInt(failedAtStr, 10);
+                if (!isNaN(failedAt) && (Date.now() - failedAt) < PHOTO_FAIL_COOLDOWN_MS) {
+                    showIcon();
+                    return;
+                }
+                sessionStorage.removeItem(cacheKey);
+            }
+
+            let driveFileId = typeof Utils.extractDriveFileId === 'function'
+                ? String(Utils.extractDriveFileId(photoUrl) || '').trim()
+                : '';
+            if (isDriveUrl && !driveFileId && typeof Utils.normalizeGoogleDriveImageUrl === 'function') {
+                const normalized = Utils.normalizeGoogleDriveImageUrl(photoUrl);
+                driveFileId = typeof Utils.extractDriveFileId === 'function'
+                    ? String(Utils.extractDriveFileId(normalized) || '').trim()
+                    : '';
+            }
+            const scriptUrl = typeof Utils.getAppsScriptScriptUrl === 'function'
+                ? Utils.getAppsScriptScriptUrl()
+                : ((AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.scriptUrl) ? String(AppState.googleConfig.appsScript.scriptUrl).trim() : '');
+
+            // بعد النشر: صور Drive عبر وكيل getProfileImage (يُطبَّق /exec تلقائياً في getAppsScriptScriptUrl)
+            if (isDriveUrl && driveFileId && scriptUrl && scriptUrl.includes('script.google.com')) {
+                const loadViaProxy = function() {
+                    if (typeof Utils.fetchDriveImageDataUri === 'function') {
+                        return Utils.fetchDriveImageDataUri(driveFileId);
+                    }
+                    const proxyUrl = scriptUrl + (scriptUrl.indexOf('?') !== -1 ? '&' : '?') + 'action=getProfileImage&id=' + encodeURIComponent(driveFileId);
+                    return fetch(proxyUrl, { method: 'GET', credentials: 'omit' })
+                        .then(function(res) { return res.json(); })
+                        .then(function(data) {
+                            if (data && data.success && data.dataUri) return data.dataUri;
+                            throw new Error(data && data.message ? data.message : 'لا توجد صورة');
+                        });
+                };
+                Promise.resolve(loadViaProxy()).then(function(uri) {
+                    if (uri) showPhoto(uri);
+                    else {
+                        markFailed();
+                        showIcon();
+                    }
+                }).catch(function() {
+                    markFailed();
+                    showIcon();
+                });
+                return;
+            }
+
+            // تشغيل محلي أو رابط غير Drive: تحميل الصورة مباشرة
+            const img = new Image();
+            const timeoutId = setTimeout(function() {
+                img.src = '';
+                showIcon();
+                markFailed();
+            }, 5000);
+            img.onload = function() {
+                clearTimeout(timeoutId);
+                showPhoto(photoUrl);
+            };
+            img.onerror = function() {
+                clearTimeout(timeoutId);
+                showIcon();
+                markFailed();
+            };
+            img.src = photoUrl;
+        } else if (profilePhoto && profileIcon) {
+            profilePhoto.style.display = 'none';
+            profileIcon.style.display = 'block';
+        }
+    },
+
+    /**
+     * إظهار أزرار الهيدر (Theme Toggle & Notifications)
+     */
+    showHeaderActions() {
+        const headerThemeToggle = document.getElementById('header-theme-toggle');
+        const headerNotificationsBtn = document.getElementById('header-notifications-btn');
+        const companyLogoHeader = document.getElementById('company-logo-header');
+
+        // إظهار الأزرار في الهيدر إذا كان الهيدر معروضاً أو إذا كانت الشاشة كبيرة
+        const shouldShowHeader = (companyLogoHeader && companyLogoHeader.style.display !== 'none') || window.innerWidth > 1024;
+
+        // إظهار زر الإشعارات دائماً إذا كان موجوداً (في جميع الحالات)
+        if (headerNotificationsBtn) {
+            headerNotificationsBtn.style.display = 'flex';
+            headerNotificationsBtn.style.visibility = 'visible';
+        }
+
+        if (shouldShowHeader) {
+            if (headerThemeToggle) {
+                headerThemeToggle.style.display = 'flex';
+                headerThemeToggle.style.visibility = 'visible';
+            }
+            if (headerNotificationsBtn) {
+                headerNotificationsBtn.style.display = 'flex';
+                headerNotificationsBtn.style.visibility = 'visible';
+            }
+        } else {
+            if (headerThemeToggle) {
+                headerThemeToggle.style.display = 'none';
+            }
+            if (headerNotificationsBtn) {
+                headerNotificationsBtn.style.display = 'none';
+            }
+        }
+
+        // إظهار الأزرار في الموبايل
+        const mobileThemeToggle = document.getElementById('mobile-theme-toggle');
+        const mobileNotificationsBtn = document.getElementById('mobile-notifications-btn');
+        if (mobileThemeToggle) mobileThemeToggle.style.display = 'flex';
+        if (mobileNotificationsBtn) mobileNotificationsBtn.style.display = 'flex';
+    },
+
+    /**
+     * عرض قسم معين
+     */
+    showSection(sectionName) {
+        if (AppState.debugMode) {
+            Utils.safeLog('محاولة عرض القسم:', sectionName);
+        }
+
+        // التحقق من الصلاحيات
+        // عند العودة للتنقل (isNavigatingBack)، لا نعرض رسالة الخطأ
+        const suppressMessage = AppState.isNavigatingBack;
+        const canCheckPermissions = (typeof Permissions !== 'undefined' &&
+            typeof Permissions.checkBeforeShow === 'function' &&
+            typeof Permissions.hasAccess === 'function');
+
+        if (canCheckPermissions && !Permissions.checkBeforeShow(sectionName, suppressMessage)) {
+            // إذا لم يكن لديه صلاحية للمقطع المطلوب:
+            if (sectionName !== 'dashboard' && Permissions.hasAccess('dashboard')) {
+                sectionName = 'dashboard';
+            } else {
+                // إذا لم يكن مصرحاً له بالداشبورد أيضاً، نوجّهه فوراً لأول موديول مسموح له صراحةً (مثل العيادة أو التدريب أو التصاريح)
+                const accessibleList = (typeof Permissions.getAccessibleModules === 'function')
+                    ? Permissions.getAccessibleModules()
+                    : [];
+                const firstAllowed = accessibleList.find(m => m && m !== 'dashboard' && m !== 'profile' && m !== 'help');
+                if (firstAllowed) {
+                    sectionName = firstAllowed;
+                } else if (Permissions.hasAccess('profile')) {
+                    sectionName = 'profile';
+                } else {
+                    return;
+                }
+            }
+        }
+
+        // التحقق من أن main-app معروض
+        const mainApp = document.getElementById('main-app');
+        if (!mainApp || mainApp.style.display === 'none') {
+            Utils.safeError('main-app غير مرئي');
+            return;
+        }
+
+        // إخفاء جميع الأقسام بشكل صريح
+        const sections = document.querySelectorAll('.section');
+        if (AppState.debugMode) {
+            Utils.safeLog('عدد الأقسام الموجودة:', sections.length);
+        }
+        sections.forEach(section => {
+            section.classList.remove('active');
+            section.style.display = 'none'; // إخفاء صريح
+        });
+
+        // إزالة التفعيل من جميع عناصر القائمة
+        const navItems = document.querySelectorAll('.nav-item');
+        if (AppState.debugMode) {
+            Utils.safeLog('عدد عناصر القائمة:', navItems.length);
+        }
+        navItems.forEach(item => {
+            item.classList.remove('active');
+            item.removeAttribute('aria-current');
+        });
+
+        // عرض القسم المطلوب
+        const sectionId = `${sectionName}-section`;
+        let section = document.getElementById(sectionId);
+        if (AppState.debugMode) {
+            Utils.safeLog(' محاولة العثور على:', sectionId, section ? '✅ موجود' : ' غير موجود');
+        }
+
+        if (!section) {
+            if (AppState.debugMode) {
+                Utils.safeWarn('⚠ القسم غير موجود في DOM، جاري البحث ي جميع الأقسام...');
+                const allSections = document.querySelectorAll('.section');
+                Utils.safeLog('📋 الأقسام الموجودة:', Array.from(allSections).map(s => s.id).join(', '));
+            }
+
+            // محاولة إنشاء القسم إذا لم يكن موجوداً
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) {
+                if (AppState.debugMode) {
+                    Utils.safeLog('🔨 إنشاء قسم جديد:', sectionId);
+                }
+                section = document.createElement('section');
+                section.id = sectionId;
+                section.className = 'section';
+                section.setAttribute('role', 'region');
+                section.setAttribute('aria-label', `قسم ${sectionName}`);
+
+                // إدراج القسم في المكان الصحيح (بعد users-section)
+                const usersSection = document.getElementById('users-section');
+                if (usersSection && sectionName === 'employees') {
+                    usersSection.insertAdjacentElement('afterend', section);
+                    if (AppState.debugMode) {
+                        Utils.safeLog('✅ تم إدراج قسم employees-section بعد users-section');
+                    }
+                } else {
+                    mainContent.appendChild(section);
+                    if (AppState.debugMode) {
+                        Utils.safeLog('✅ تم إضافة القسم الجديد إلى main-content');
+                    }
+                }
+            } else {
+                Utils.safeError(' main-content غير موجود!');
+            }
+        }
+
+        if (section) {
+            section.classList.add('active');
+            section.style.display = 'block'; // عرض صريح
+            if (AppState.debugMode) {
+                Utils.safeLog('✅ تم تعيل القسم:', sectionId);
+            }
+
+            // إغلاق القائمة الجانبية تلقائياً عند فتح أي وحدة (عدا Dashboard) على الموبايل فقط
+            if (sectionName !== 'dashboard') {
+                // ✅ منع "صفحة بيضاء": اعرض Skeleton خفيف فوراً إذا القسم فارغ عند Reload/قبل تحميل الموديول
+                try {
+                    const current = (section.innerHTML || '').trim();
+                    if (!current) {
+                        section.innerHTML = `
                             <div class="content-card" style="margin:18px;">
                                 <div class="card-body" style="display:flex;align-items:center;justify-content:center;min-height:220px;gap:12px;">
                                     <div class="hse-mini-spinner" style="width:34px;height:34px;border:3px solid rgba(37,99,235,0.18);border-top-color:#2563eb;border-radius:50%;animation:hseSpin 0.9s linear infinite;"></div>
-                                    <div style="font-weight:600;color:#334155;">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A...</div>
+                                    <div style="font-weight:600;color:#334155;">جاري تحميل البيانات...</div>
                                 </div>
                             </div>
-                        `,!document.getElementById("hse-mini-spinner-style"))){const g=document.createElement("style");g.id="hse-mini-spinner-style",g.textContent="@keyframes hseSpin{to{transform:rotate(360deg);}}",document.head.appendChild(g)}}catch{}const c=document.querySelector(".sidebar");c&&(c.classList.remove("open"),this.toggleSidebar(!1),AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0639\u0646\u062F \u0641\u062A\u062D \u0627\u0644\u0648\u062D\u062F\u0629:",e)),this.setupInnerHTMLWatcher(r,e),requestAnimationFrame(()=>{setTimeout(()=>{this.addNavigationIcons(r,e)},50)})}else this.removeNavigationIcons(r);else Utils.safeError(" \u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0623\u0648 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0642\u0633\u0645:",o);const l=document.querySelector(`[data-section="${e}"]`);l?(l.classList.add("active"),l.setAttribute("aria-current","page"),AppState.debugMode&&Utils.safeLog("\u062A\u0645 \u062A\u0639\u064A\u0644 \u0639\u0646\u0635\u0631 \u0627\u0644\u0642\u0627\u0626\u0645\u0629")):Utils.safeError("\u0639\u0646\u0635\u0631 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F:",e);const d=AppState.currentSection||null;e!==d&&!AppState.isNavigatingBack&&d&&AppState.navigationHistory[AppState.navigationHistory.length-1]!==d&&(AppState.navigationHistory=AppState.navigationHistory.filter(u=>u!==e),AppState.navigationHistory.push(d),AppState.navigationHistory.length>10&&AppState.navigationHistory.shift()),AppState.currentSection=e;try{sessionStorage.setItem("hse_current_section",e)}catch(c){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0642\u0633\u0645 \u0641\u064A sessionStorage:",c)}document.dispatchEvent(new CustomEvent("section-changed",{detail:{section:e,previousSection:d}})),AppState.previousSection=d;const p=AppState.isPageRefresh,f=()=>{setTimeout(()=>{this.loadSectionData(e,p)},0),typeof requestIdleCallback=="function"?requestIdleCallback(()=>this.addNavigationIconsAfterRender(e),{timeout:800}):setTimeout(()=>this.addNavigationIconsAfterRender(e),60)};e==="dashboard"||e==="profile"?f():typeof requestIdleCallback=="function"?requestIdleCallback(()=>setTimeout(f,0),{timeout:260}):requestAnimationFrame(()=>setTimeout(f,0))},loadSectionData(e,i=!1){AppState.isPageRefresh&&!i&&(i=!0),i||Utils.safeLog("\u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0642\u0633\u0645:",e);const t=AppState._languageRefresh===!0,n=AppState.previousSection;n&&n!==e&&!t&&this.cleanupPreviousModule(n),this.updateCompanyLogoHeader(),this.updateDashboardLogo();try{switch(e){case"dashboard":if(typeof Dashboard<"u"&&Dashboard.load){if(typeof Dashboard.load=="function"){const o=Dashboard.load(i);o&&typeof o.catch=="function"&&i&&o.catch(()=>{})}}else i||Utils.safeWarn("\u0648\u062D\u062F\u0629 Dashboard \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");break;case"profile":Promise.resolve(this.renderMyProfileSection()).catch(o=>{typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u0641\u0634\u0644 \u0639\u0631\u0636 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A:",o)});break;case"users":if(typeof Users<"u"&&Users.load){const o=Users.load(i);o&&typeof o.catch=="function"&&i&&o.catch(()=>{})}else if(!i){Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 Users \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");const o=document.getElementById("users-section");o&&(o.innerHTML=`
+                        `;
+                        if (!document.getElementById('hse-mini-spinner-style')) {
+                            const style = document.createElement('style');
+                            style.id = 'hse-mini-spinner-style';
+                            style.textContent = '@keyframes hseSpin{to{transform:rotate(360deg);}}';
+                            document.head.appendChild(style);
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+
+                // إغلاق القائمة الجانبية فوراً
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) {
+                    // إزالة class "open" مباشرة لضمان الإغلاق
+                    sidebar.classList.remove('open');
+                    // استدعاء toggleSidebar للتأكد من تطبيق جميع التغييرات
+                    this.toggleSidebar(false);
+                    if (AppState.debugMode) {
+                        Utils.safeLog('✅ تم إغلاق القائمة الجانبية تلقائياً عند فتح الوحدة:', sectionName);
+                    }
+                }
+
+                // إعداد مراقبة innerHTML لإضافة الأيقونات تلقائياً بعد استبدال المحتوى
+                this.setupInnerHTMLWatcher(section, sectionName);
+
+                // استخدام requestAnimationFrame لضمان عرض القسم أولاً
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        this.addNavigationIcons(section, sectionName);
+                    }, 50);
+                });
+            } else {
+                // إزالة أيقونات التنقل من Dashboard إذا كانت موجودة
+                this.removeNavigationIcons(section);
+            }
+        } else {
+            Utils.safeError(' فشل إنشاء أو العثور على القسم:', sectionId);
+        }
+
+        // تعيل عنصر القائمة
+        const navItem = document.querySelector(`[data-section="${sectionName}"]`);
+        if (navItem) {
+            navItem.classList.add('active');
+            navItem.setAttribute('aria-current', 'page');
+            if (AppState.debugMode) {
+                Utils.safeLog('تم تعيل عنصر القائمة');
+            }
+        } else {
+            Utils.safeError('عنصر القائمة غير موجود:', sectionName);
+        }
+
+        // القسم المغادر قبل تحديث currentSection — لازم للتنظيف الفعلي (cleanupPreviousModule)
+        const leavingSection = AppState.currentSection || null;
+
+        // تحديث سجل التنقل (تجنب الإضافة عند العودة)
+        if (sectionName !== leavingSection && !AppState.isNavigatingBack) {
+            // إضافة الصفحة السابقة إلى السجل
+            if (leavingSection) {
+                // تجنب إضافة نفس الصفحة مرتين متتاليتين
+                const lastHistoryItem = AppState.navigationHistory[AppState.navigationHistory.length - 1];
+                if (lastHistoryItem !== leavingSection) {
+                    // إزالة أي تكرارات للصفحة الحالية من السجل لتجنب التكرار
+                    AppState.navigationHistory = AppState.navigationHistory.filter(
+                        item => item !== sectionName
+                    );
+
+                    // إضافة الصفحة السابقة إلى السجل
+                    AppState.navigationHistory.push(leavingSection);
+
+                    // الحد الأقصى 10 صفحات في السجل
+                    if (AppState.navigationHistory.length > 10) {
+                        AppState.navigationHistory.shift();
+                    }
+                }
+            }
+        }
+
+        AppState.currentSection = sectionName;
+
+        // حفظ القسم الحالي في sessionStorage لاستعادته عند إعادة التحميل
+        try {
+            sessionStorage.setItem('hse_current_section', sectionName);
+        } catch (e) {
+            Utils.safeWarn('⚠️ فشل حفظ القسم في sessionStorage:', e);
+        }
+
+        // إطلاق حدث تغيير القسم لنظام المزامنة اللحظية
+        document.dispatchEvent(new CustomEvent('section-changed', {
+            detail: {
+                section: sectionName,
+                previousSection: leavingSection
+            }
+        }));
+
+        // القسم المغادر (وليس الجديد) — يُستخدم في cleanupPreviousModule داخل loadSectionData
+        AppState.previousSection = leavingSection;
+
+        // التأكد من تحميل البيانات بعد عرض القسم مباشرة مع تقليل الأحمال الثقيلة داخل callbacks
+        const isRefresh = AppState.isPageRefresh;
+        const loadSectionWork = () => {
+            // ✅ تقسيم العمل لتقليل setTimeout/idle Violations: تحميل البيانات أولاً، ثم الأيقونات لاحقاً
+            setTimeout(() => {
+                this.loadSectionData(sectionName, isRefresh);
+            }, 0);
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(() => this.addNavigationIconsAfterRender(sectionName), { timeout: 800 });
+            } else {
+                setTimeout(() => this.addNavigationIconsAfterRender(sectionName), 60);
+            }
+        };
+
+        // الملف الشخصي: تحميل فوري لتفادي بقاء هيكل «جاري تحميل البيانات» بانتظار requestIdleCallback
+        if (sectionName === 'dashboard' || sectionName === 'profile') {
+            loadSectionWork();
+        } else if (typeof requestIdleCallback === 'function') {
+            // ✅ تجنّب Violation: اجعل requestIdleCallback سريعاً، وادفع العمل الثقيل خارج callback
+            requestIdleCallback(() => setTimeout(loadSectionWork, 0), { timeout: 260 });
+        } else {
+            requestAnimationFrame(() => setTimeout(loadSectionWork, 0));
+        }
+    },
+
+    /**
+     * تحميل بيانات القسم
+     */
+    loadSectionData(sectionName, silent = false) {
+        // إذا كانت إعادة تحميل الصفحة، نحمّل بصمت
+        if (AppState.isPageRefresh && !silent) {
+            silent = true;
+        }
+
+        console.log('📢 loadSectionData called for:', sectionName, 'silent:', silent);
+
+        if (!silent) {
+            Utils.safeLog('تحميل بيانات القسم:', sectionName);
+        }
+
+        // عند تحديث اللغة فقط نعيد تحميل المحتوى الحالي دون تنظيف أي موديول
+        // لا تمسح _languageRefresh هنا — يُمسح من setLanguage بعد إطار حتى تقرأه Clinic/Behavior أثناء load()
+        const isLanguageRefresh = AppState._languageRefresh === true;
+
+        // تنظيف الموديول السابق قبل تحميل موديول جديد (لمنع تسريبات الذاكرة) - لا يُنفّذ عند تغيير اللغة
+        const previousSection = AppState.previousSection;
+        if (previousSection && previousSection !== sectionName && !isLanguageRefresh) {
+            this.cleanupPreviousModule(previousSection);
+        }
+
+        // تحديث الشعار ي الهيدر عند تحميل أي قسم
+        this.updateCompanyLogoHeader();
+        this.updateDashboardLogo();
+
+        try {
+            switch (sectionName) {
+                case 'dashboard':
+                    if (typeof Dashboard !== 'undefined' && Dashboard.load) {
+                        // تمرير معامل silent إذا كانت الدالة تدعمه
+                        if (typeof Dashboard.load === 'function') {
+                            const loadResult = Dashboard.load(silent);
+                            // إذا كانت Promise، نتعامل معها بصمت
+                            if (loadResult && typeof loadResult.catch === 'function' && silent) {
+                                loadResult.catch(() => { }); // تجاهل الأخطاء بصمت
+                            }
+                        }
+                    } else {
+                        if (!silent) Utils.safeWarn('وحدة Dashboard غير موجودة');
+                    }
+                    break;
+                case 'profile':
+                    Promise.resolve(this.renderMyProfileSection()).catch((err) => {
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('فشل عرض الملف الشخصي:', err);
+                        }
+                    });
+                    break;
+                case 'users':
+                    if (typeof Users !== 'undefined' && Users.load) {
+                        const loadResult = Users.load(silent);
+                        if (loadResult && typeof loadResult.catch === 'function' && silent) {
+                            loadResult.catch(() => { });
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول Users غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                            // عرض رسالة خطأ في القسم
+                            const section = document.getElementById('users-section');
+                            if (section) {
+                                section.innerHTML = `
                                     <div class="content-card">
                                         <div class="card-body">
                                             <div class="empty-state">
                                                 <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-4"></i>
-                                                <p class="text-gray-500">\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646</p>
-                                                <p class="text-sm text-gray-400 mt-2">\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629</p>
+                                                <p class="text-gray-500">فشل تحميل موديول المستخدمين</p>
+                                                <p class="text-sm text-gray-400 mt-2">يرجى تحديث الصفحة</p>
                                             </div>
                                         </div>
                                     </div>
-                                `)}break;case"user-tasks":Utils.safeLog("\u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 (UserTasks) \u0641\u064A \u0642\u0633\u0645 user-tasks-section"),typeof UserTasks<"u"&&UserTasks.load?UserTasks.load():i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 UserTasks \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"employees":Utils.safeLog(" \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0642\u0627\u0639\u062F\u0629 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 (Employees) \u064A \u0642\u0633\u0645 employees-section"),typeof Employees<"u"&&Employees.load?Employees.load():Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 Employees \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"incidents":if(i||Utils.safeLog(" \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u062D\u0648\u0627\u062F\u062B (Incidents) \u064A \u0642\u0633\u0645 incidents-section"),typeof Incidents<"u"&&Incidents.load){const o=Incidents.load(i);o&&typeof o.catch=="function"&&i&&o.catch(()=>{})}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 Incidents \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"nearmiss":Utils.safeLog(" \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629 (NearMiss) \u064A \u0642\u0633\u0645 nearmiss-section"),typeof NearMiss<"u"&&NearMiss.load?NearMiss.load():Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 NearMiss \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"ptw":Utils.safeLog(" \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u062A\u0635\u0627\u0631\u064A\u062D \u0627\u0644\u0639\u0645\u0644 (PTW) \u064A \u0642\u0633\u0645 ptw-section"),typeof PTW<"u"&&PTW.load?PTW.load():Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 PTW \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"training":Utils.safeLog(" \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u062A\u062F\u0631\u064A\u0628 (Training) \u064A \u0642\u0633\u0645 training-section");{const o=()=>{if(document.getElementById("training-content"))return!0;const c=window.Training;if(!c||typeof c.load!="function")return!1;try{c.load()}catch(u){i||Utils.safeError("\u274C \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 Training.load:",u)}return!0};if(o())break;const r=Date.now(),l=25e3;let d=null;const p=()=>{document.removeEventListener("hse-training-module-ready",f),d&&(clearInterval(d),d=null)},f=()=>{o()&&p()};document.addEventListener("hse-training-module-ready",f),d=setInterval(()=>{if(o()){p();return}Date.now()-r>l&&(p(),i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 Training \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D"))},50)}break;case"clinic":Utils.safeLog("\u{1F504} \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u0639\u064A\u0627\u062F\u0629 (Clinic) \u0641\u064A \u0642\u0633\u0645 clinic-section");const s=window.Clinic||(typeof Clinic<"u"?Clinic:null);if(s&&typeof s.load=="function")try{const o=s.load();o&&typeof o.then=="function"?o.then(()=>{setTimeout(()=>{this.ensureNavigationIcons("clinic")},300)}).catch(r=>{i||Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u0639\u064A\u0627\u062F\u0629:",r),setTimeout(()=>{this.ensureNavigationIcons("clinic")},300)}):setTimeout(()=>{this.ensureNavigationIcons("clinic")},500)}catch(o){i||Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u0639\u064A\u0627\u062F\u0629:",o),setTimeout(()=>{this.ensureNavigationIcons("clinic")},500)}else Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 Clinic \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"fire-equipment":{const o=document.getElementById("fire-equipment-section"),r=(c,u)=>{o&&(o.innerHTML=`
+                                `;
+                            }
+                        }
+                    }
+                    break;
+                case 'user-tasks':
+                    Utils.safeLog('تحميل مديول مهام المستخدمين (UserTasks) في قسم user-tasks-section');
+                    if (typeof UserTasks !== 'undefined' && UserTasks.load) {
+                        UserTasks.load();
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول UserTasks غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'employees':
+                    Utils.safeLog(' تحميل مديول قاعدة بيانات الموظفين (Employees) ي قسم employees-section');
+                    if (typeof Employees !== 'undefined' && Employees.load) {
+                        Employees.load();
+                    } else {
+                        Utils.safeError('❌ موديول Employees غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                    }
+                    break;
+                case 'incidents':
+                    if (!silent) Utils.safeLog(' تحميل مديول الحوادث (Incidents) ي قسم incidents-section');
+                    if (typeof Incidents !== 'undefined' && Incidents.load) {
+                        const loadResult = Incidents.load(silent);
+                        if (loadResult && typeof loadResult.catch === 'function' && silent) {
+                            loadResult.catch(() => { });
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول Incidents غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'nearmiss':
+                    Utils.safeLog(' تحميل مديول الحوادث الوشيكة (NearMiss) ي قسم nearmiss-section');
+                    if (typeof NearMiss !== 'undefined' && NearMiss.load) {
+                        NearMiss.load();
+                    } else {
+                        Utils.safeError('❌ موديول NearMiss غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                    }
+                    break;
+                case 'ptw':
+                    Utils.safeLog(' تحميل مديول تصاريح العمل (PTW) ي قسم ptw-section');
+                    if (typeof PTW !== 'undefined' && PTW.load) {
+                        PTW.load();
+                    } else {
+                        Utils.safeError('❌ موديول PTW غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                    }
+                    break;
+                case 'training':
+                    Utils.safeLog(' تحميل مديول التدريب (Training) ي قسم training-section');
+                    {
+                        const tryTrainingLoad = () => {
+                            if (document.getElementById('training-content')) {
+                                return true;
+                            }
+                            const M = window.Training;
+                            if (!M || typeof M.load !== 'function') {
+                                return false;
+                            }
+                            try {
+                                M.load();
+                            } catch (loadErr) {
+                                if (!silent) {
+                                    Utils.safeError('❌ خطأ أثناء Training.load:', loadErr);
+                                }
+                            }
+                            return true;
+                        };
+                        if (tryTrainingLoad()) {
+                            break;
+                        }
+                        const t0 = Date.now();
+                        const maxMs = 25000;
+                        let iv = null;
+                        const cleanupTrainingWait = () => {
+                            document.removeEventListener('hse-training-module-ready', onTrainingScriptReady);
+                            if (iv) {
+                                clearInterval(iv);
+                                iv = null;
+                            }
+                        };
+                        const onTrainingScriptReady = () => {
+                            if (tryTrainingLoad()) {
+                                cleanupTrainingWait();
+                            }
+                        };
+                        document.addEventListener('hse-training-module-ready', onTrainingScriptReady);
+                        iv = setInterval(() => {
+                            if (tryTrainingLoad()) {
+                                cleanupTrainingWait();
+                                return;
+                            }
+                            if (Date.now() - t0 > maxMs) {
+                                cleanupTrainingWait();
+                                if (!silent) {
+                                    Utils.safeError('❌ موديول Training غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                                }
+                            }
+                        }, 50);
+                    }
+                    break;
+                case 'clinic':
+                    Utils.safeLog('🔄 تحميل مديول العيادة (Clinic) في قسم clinic-section');
+                    // ✅ التحقق من وجود Clinic على window أولاً
+                    const ClinicModule = window.Clinic || (typeof Clinic !== 'undefined' ? Clinic : null);
+                    if (ClinicModule && typeof ClinicModule.load === 'function') {
+                        try {
+                            const clinicLoadResult = ClinicModule.load();
+                            // إذا كانت Promise، نضيف الأيقونات بعد انتهائها
+                            if (clinicLoadResult && typeof clinicLoadResult.then === 'function') {
+                                clinicLoadResult.then(() => {
+                                    setTimeout(() => {
+                                        this.ensureNavigationIcons('clinic');
+                                    }, 300);
+                                }).catch((error) => {
+                                    if (!silent) {
+                                        Utils.safeError('❌ خطأ في تحميل مديول العيادة:', error);
+                                    }
+                                    setTimeout(() => {
+                                        this.ensureNavigationIcons('clinic');
+                                    }, 300);
+                                });
+                            } else {
+                                setTimeout(() => {
+                                    this.ensureNavigationIcons('clinic');
+                                }, 500);
+                            }
+                        } catch (error) {
+                            if (!silent) {
+                                Utils.safeError('❌ خطأ في تحميل مديول العيادة:', error);
+                            }
+                            setTimeout(() => {
+                                this.ensureNavigationIcons('clinic');
+                            }, 500);
+                        }
+                    } else {
+                        Utils.safeError('❌ موديول Clinic غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                    }
+                    break;
+                case 'fire-equipment': {
+                    const section = document.getElementById('fire-equipment-section');
+                    const showFireEquipmentError = (msg, showReload) => {
+                        if (!section) return;
+                        section.innerHTML = `
                             <div class="content-card">
                                 <div class="card-body">
                                     <div class="empty-state">
                                         <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
-                                        <h3 class="text-lg font-semibold text-gray-800 mb-2">\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0645\u0639\u062F\u0627\u062A \u0627\u0644\u062D\u0631\u064A\u0642</h3>
-                                        <p class="text-gray-500 mb-4">${c||"\u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629."}</p>
-                                        ${u?'<button onclick="location.reload()" class="btn-primary"><i class="fas fa-redo ml-2"></i>\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629</button>':'<button onclick="FireEquipment.load()" class="btn-primary"><i class="fas fa-redo ml-2"></i>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629</button>'}
+                                        <h3 class="text-lg font-semibold text-gray-800 mb-2">فشل تحميل مديول معدات الحريق</h3>
+                                        <p class="text-gray-500 mb-4">${msg || 'الموديول لم يُحمّل بشكل صحيح. يرجى تحديث الصفحة.'}</p>
+                                        ${showReload
+                                            ? '<button onclick="location.reload()" class="btn-primary"><i class="fas fa-redo ml-2"></i>تحديث الصفحة</button>'
+                                            : '<button onclick="FireEquipment.load()" class="btn-primary"><i class="fas fa-redo ml-2"></i>إعادة المحاولة</button>'}
                                     </div>
                                 </div>
                             </div>
-                        `)},l=()=>{if(typeof FireEquipment<"u"&&FireEquipment.load)try{const c=FireEquipment.load();return c&&typeof c.then=="function"&&c.catch(u=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0645\u0639\u062F\u0627\u062A \u0627\u0644\u062D\u0631\u064A\u0642:",u),r(u?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641",!1)}),!0}catch(c){return Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 FireEquipment.load:",c),r("\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629",!0),!0}return!1};if(l())break;o&&(o.innerHTML=`
+                        `;
+                    };
+                    const tryLoadFireEquipment = () => {
+                        if (typeof FireEquipment !== 'undefined' && FireEquipment.load) {
+                            try {
+                                const loadResult = FireEquipment.load();
+                                if (loadResult && typeof loadResult.then === 'function') {
+                                    loadResult.catch(error => {
+                                        Utils.safeError('خطأ في تحميل موديول معدات الحريق:', error);
+                                        showFireEquipmentError(error?.message || 'خطأ غير معروف', false);
+                                    });
+                                }
+                                return true;
+                            } catch (error) {
+                                Utils.safeError('خطأ في استدعاء FireEquipment.load:', error);
+                                showFireEquipmentError('يرجى تحديث الصفحة', true);
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+                    if (tryLoadFireEquipment()) break;
+                    if (section) {
+                        section.innerHTML = `
                             <div class="content-card">
                                 <div class="card-body">
                                     <div class="empty-state">
                                         <div class="flex flex-col items-center gap-3">
                                             <div style="width: 40px; height: 40px; border: 3px solid rgba(59, 130, 246, 0.3); border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-                                            <p class="text-gray-500">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0645\u0639\u062F\u0627\u062A \u0627\u0644\u062D\u0631\u064A\u0642...</p>
+                                            <p class="text-gray-500">جاري تحميل مديول معدات الحريق...</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        `);let d=0;const p=8,f=setInterval(()=>{if(d++,l()){clearInterval(f);return}if(d>=p){clearInterval(f);const u=(()=>{const m=document.querySelector("base");if(m&&m.href){const x=m.href.replace(/\/$/,"");return x+(x.indexOf("?")>=0?"":"/")}const y=window.location.pathname||"",b=y.lastIndexOf("/"),w=b>=0?y.slice(0,b+1):"/";return window.location.origin+w})()+"js/modules/modules/fireequipment.js";if(document.querySelector('script[src*="fireequipment.js"]')){l()||r("\u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629.",!0);return}const g=document.createElement("script");g.src=u,g.async=!1,g.onload=()=>{l()||(i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 FireEquipment \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0639\u062F \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0633\u0643\u0631\u0628\u062A"),r("\u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629.",!0))},g.onerror=()=>{i||Utils.safeError("\u274C \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0633\u0643\u0631\u0628\u062A \u0645\u0639\u062F\u0627\u062A \u0627\u0644\u062D\u0631\u064A\u0642"),r("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0648\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629.",!0)},document.body.appendChild(g)}},350);break}case"periodic-inspections":if(typeof PeriodicInspections<"u"&&PeriodicInspections.load)try{const o=PeriodicInspections.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0641\u062D\u0648\u0635\u0627\u062A \u0627\u0644\u062F\u0648\u0631\u064A\u0629:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 PeriodicInspections.load:",o)}else{let o=0;const r=8,l=()=>{if(typeof PeriodicInspections<"u"&&PeriodicInspections.load){try{PeriodicInspections.load()}catch{}return!0}return!1};if(l())break;const d=setInterval(()=>{if(o++,(l()||o>=r)&&(clearInterval(d),!l())){const f=(()=>{const c=document.querySelector("base");if(c&&c.href){const y=c.href.replace(/\/$/,"");return y+(y.indexOf("?")>=0?"":"/")}const u=window.location.pathname||"",g=u.lastIndexOf("/"),m=g>=0?u.slice(0,g+1):"/";return window.location.origin+m})()+"js/modules/modules/periodicinspections.js";if(document.querySelector('script[src*="periodicinspections.js"]'))i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 PeriodicInspections \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");else{const c=document.createElement("script");c.src=f,c.async=!1,c.onload=()=>{l()},c.onerror=()=>{i||Utils.safeError("\u274C \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 PeriodicInspections")},document.body.appendChild(c)}}},350)}break;case"ppe":if(typeof PPE<"u"&&PPE.load)PPE.load();else{let o=0;const r=8,l=()=>{if(typeof PPE<"u"&&PPE.load){try{PPE.load()}catch{}return!0}return!1};if(l())break;const d=setInterval(()=>{if(o++,(l()||o>=r)&&(clearInterval(d),!l())){const f=(()=>{const c=document.querySelector("base");if(c&&c.href){const y=c.href.replace(/\/$/,"");return y+(y.indexOf("?")>=0?"":"/")}const u=window.location.pathname||"",g=u.lastIndexOf("/"),m=g>=0?u.slice(0,g+1):"/";return window.location.origin+m})()+"js/modules/modules/ppe.js";if(document.querySelector('script[src*="ppe.js"]'))i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 PPE \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");else{const c=document.createElement("script");c.src=f,c.async=!1,c.onload=()=>{l()},c.onerror=()=>{i||Utils.safeError("\u274C \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 PPE")},document.body.appendChild(c)}}},350)}break;case"violations":if(typeof Violations<"u"&&Violations.load)try{const o=Violations.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A:",r);const l=document.getElementById("violations-section");l&&(l.innerHTML=`
+                        `;
+                    }
+                    let attempts = 0;
+                    const maxAttempts = 8;
+                    const retryInterval = setInterval(() => {
+                        attempts++;
+                        if (tryLoadFireEquipment()) {
+                            clearInterval(retryInterval);
+                            return;
+                        }
+                        if (attempts >= maxAttempts) {
+                            clearInterval(retryInterval);
+                            const getScriptBase = () => {
+                                const base = document.querySelector('base');
+                                if (base && base.href) {
+                                    const u = base.href.replace(/\/$/, '');
+                                    return u + (u.indexOf('?') >= 0 ? '' : '/');
+                                }
+                                const path = window.location.pathname || '';
+                                const lastSlash = path.lastIndexOf('/');
+                                const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : '/';
+                                return window.location.origin + dir;
+                            };
+                            const scriptUrl = getScriptBase() + 'js/modules/modules/fireequipment.js';
+                            if (document.querySelector('script[src*="fireequipment.js"]')) {
+                                tryLoadFireEquipment() || showFireEquipmentError('الموديول لم يُحمّل بشكل صحيح. يرجى تحديث الصفحة.', true);
+                                return;
+                            }
+                            const script = document.createElement('script');
+                            script.src = scriptUrl;
+                            script.async = false;
+                            script.onload = () => {
+                                if (tryLoadFireEquipment()) return;
+                                if (!silent) Utils.safeError('❌ موديول FireEquipment لم يُحمّل بعد تحميل السكربت');
+                                showFireEquipmentError('الموديول لم يُحمّل بشكل صحيح. يرجى تحديث الصفحة.', true);
+                            };
+                            script.onerror = () => {
+                                if (!silent) Utils.safeError('❌ فشل تحميل سكربت معدات الحريق');
+                                showFireEquipmentError('تعذر تحميل الموديول. يرجى التحقق من الاتصال وتحديث الصفحة.', true);
+                            };
+                            document.body.appendChild(script);
+                        }
+                    }, 350);
+                    break;
+                }
+                case 'periodic-inspections':
+                    if (typeof PeriodicInspections !== 'undefined' && PeriodicInspections.load) {
+                        try {
+                            const loadResult = PeriodicInspections.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول الفحوصات الدورية:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء PeriodicInspections.load:', error);
+                        }
+                    } else {
+                        // حاول تحميل السكربت ديناميكياً بدل إظهار خطأ مباشر
+                        let attempts = 0;
+                        const maxAttempts = 8;
+                        const tryLoad = () => {
+                            if (typeof PeriodicInspections !== 'undefined' && PeriodicInspections.load) {
+                                try { PeriodicInspections.load(); } catch (e) {}
+                                return true;
+                            }
+                            return false;
+                        };
+                        if (tryLoad()) break;
+                        const retry = setInterval(() => {
+                            attempts++;
+                            if (tryLoad() || attempts >= maxAttempts) {
+                                clearInterval(retry);
+                                if (!tryLoad()) {
+                                    const getScriptBase = () => {
+                                        const base = document.querySelector('base');
+                                        if (base && base.href) {
+                                            const u = base.href.replace(/\/$/, '');
+                                            return u + (u.indexOf('?') >= 0 ? '' : '/');
+                                        }
+                                        const path = window.location.pathname || '';
+                                        const lastSlash = path.lastIndexOf('/');
+                                        const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : '/';
+                                        return window.location.origin + dir;
+                                    };
+                                    const scriptUrl = getScriptBase() + 'js/modules/modules/periodicinspections.js';
+                                    if (!document.querySelector('script[src*="periodicinspections.js"]')) {
+                                        const script = document.createElement('script');
+                                        script.src = scriptUrl;
+                                        script.async = false;
+                                        script.onload = () => { tryLoad(); };
+                                        script.onerror = () => {
+                                            if (!silent) Utils.safeError('❌ فشل تحميل موديول PeriodicInspections');
+                                        };
+                                        document.body.appendChild(script);
+                                    } else if (!silent) {
+                                        Utils.safeError('❌ موديول PeriodicInspections غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                                    }
+                                }
+                            }
+                        }, 350);
+                    }
+                    break;
+                case 'ppe':
+                    if (typeof PPE !== 'undefined' && PPE.load) {
+                        PPE.load();
+                    } else {
+                        // حاول تحميل السكربت ديناميكياً بدل إظهار خطأ مباشر
+                        let attempts = 0;
+                        const maxAttempts = 8;
+                        const tryLoad = () => {
+                            if (typeof PPE !== 'undefined' && PPE.load) {
+                                try { PPE.load(); } catch (e) {}
+                                return true;
+                            }
+                            return false;
+                        };
+                        if (tryLoad()) break;
+                        const retry = setInterval(() => {
+                            attempts++;
+                            if (tryLoad() || attempts >= maxAttempts) {
+                                clearInterval(retry);
+                                if (!tryLoad()) {
+                                    const getScriptBase = () => {
+                                        const base = document.querySelector('base');
+                                        if (base && base.href) {
+                                            const u = base.href.replace(/\/$/, '');
+                                            return u + (u.indexOf('?') >= 0 ? '' : '/');
+                                        }
+                                        const path = window.location.pathname || '';
+                                        const lastSlash = path.lastIndexOf('/');
+                                        const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : '/';
+                                        return window.location.origin + dir;
+                                    };
+                                    const scriptUrl = getScriptBase() + 'js/modules/modules/ppe.js';
+                                    if (!document.querySelector('script[src*="ppe.js"]')) {
+                                        const script = document.createElement('script');
+                                        script.src = scriptUrl;
+                                        script.async = false;
+                                        script.onload = () => { tryLoad(); };
+                                        script.onerror = () => {
+                                            if (!silent) Utils.safeError('❌ فشل تحميل موديول PPE');
+                                        };
+                                        document.body.appendChild(script);
+                                    } else if (!silent) {
+                                        Utils.safeError('❌ موديول PPE غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                                    }
+                                }
+                            }
+                        }, 350);
+                    }
+                    break;
+                case 'violations':
+                    if (typeof Violations !== 'undefined' && Violations.load) {
+                        try {
+                            const loadResult = Violations.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول المخالفات:', error);
+                                    // عرض رسالة خطأ في القسم
+                                    const section = document.getElementById('violations-section');
+                                    if (section) {
+                                        section.innerHTML = `
                                             <div class="content-card">
                                                 <div class="card-body">
                                                     <div class="empty-state">
                                                         <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
-                                                        <h3 class="text-lg font-semibold text-gray-800 mb-2">\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644</h3>
-                                                        <p class="text-gray-500 mb-4">${r?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"}</p>
+                                                        <h3 class="text-lg font-semibold text-gray-800 mb-2">فشل تحميل الموديول</h3>
+                                                        <p class="text-gray-500 mb-4">${error?.message || 'خطأ غير معروف'}</p>
                                                         <button onclick="location.reload()" class="btn-primary">
                                                             <i class="fas fa-redo ml-2"></i>
-                                                            \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629
+                                                            تحديث الصفحة
                                                         </button>
                                                     </div>
                                                 </div>
                                             </div>
-                                        `)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 Violations.load:",o);const r=document.getElementById("violations-section");r&&(r.innerHTML=`
+                                        `;
+                                    }
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء Violations.load:', error);
+                            // عرض رسالة خطأ في القسم
+                            const section = document.getElementById('violations-section');
+                            if (section) {
+                                section.innerHTML = `
                                     <div class="content-card">
                                         <div class="card-body">
                                             <div class="empty-state">
                                                 <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
-                                                <h3 class="text-lg font-semibold text-gray-800 mb-2">\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644</h3>
-                                                <p class="text-gray-500 mb-4">\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629</p>
+                                                <h3 class="text-lg font-semibold text-gray-800 mb-2">فشل تحميل الموديول</h3>
+                                                <p class="text-gray-500 mb-4">يرجى تحديث الصفحة</p>
                                                 <button onclick="location.reload()" class="btn-primary">
                                                     <i class="fas fa-redo ml-2"></i>
-                                                    \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629
+                                                    تحديث الصفحة
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
-                                `)}else{let o=0;const r=8,l=()=>{if(typeof Violations<"u"&&Violations.load){try{Violations.load()}catch{}return!0}return!1};if(l())break;const d=setInterval(()=>{if(o++,(l()||o>=r)&&(clearInterval(d),!l())){const f=(()=>{const c=document.querySelector("base");if(c&&c.href){const y=c.href.replace(/\/$/,"");return y+(y.indexOf("?")>=0?"":"/")}const u=window.location.pathname||"",g=u.lastIndexOf("/"),m=g>=0?u.slice(0,g+1):"/";return window.location.origin+m})()+"js/modules/modules/violations.js";if(document.querySelector('script[src*="violations.js"]'))i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 Violations \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");else{const c=document.createElement("script");c.src=f,c.async=!1,c.onload=()=>{l()},c.onerror=()=>{i||Utils.safeError("\u274C \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 Violations")},document.body.appendChild(c)}}},350)}break;case"contractors":if(typeof Contractors<"u"&&Contractors.load)try{const o=Contractors.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646:",r);const l=document.getElementById("contractors-section");l&&(l.innerHTML=`
+                                `;
+                            }
+                        }
+                    } else {
+                        // حاول تحميل السكربت ديناميكياً بدل إظهار خطأ مباشر
+                        let attempts = 0;
+                        const maxAttempts = 8;
+                        const tryLoad = () => {
+                            if (typeof Violations !== 'undefined' && Violations.load) {
+                                try { Violations.load(); } catch (e) {}
+                                return true;
+                            }
+                            return false;
+                        };
+                        if (tryLoad()) break;
+                        const retry = setInterval(() => {
+                            attempts++;
+                            if (tryLoad() || attempts >= maxAttempts) {
+                                clearInterval(retry);
+                                if (!tryLoad()) {
+                                    const getScriptBase = () => {
+                                        const base = document.querySelector('base');
+                                        if (base && base.href) {
+                                            const u = base.href.replace(/\/$/, '');
+                                            return u + (u.indexOf('?') >= 0 ? '' : '/');
+                                        }
+                                        const path = window.location.pathname || '';
+                                        const lastSlash = path.lastIndexOf('/');
+                                        const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : '/';
+                                        return window.location.origin + dir;
+                                    };
+                                    const scriptUrl = getScriptBase() + 'js/modules/modules/violations.js';
+                                    if (!document.querySelector('script[src*="violations.js"]')) {
+                                        const script = document.createElement('script');
+                                        script.src = scriptUrl;
+                                        script.async = false;
+                                        script.onload = () => { tryLoad(); };
+                                        script.onerror = () => {
+                                            if (!silent) Utils.safeError('❌ فشل تحميل موديول Violations');
+                                        };
+                                        document.body.appendChild(script);
+                                    } else if (!silent) {
+                                        Utils.safeError('❌ موديول Violations غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                                    }
+                                }
+                            }
+                        }, 350);
+                    }
+                    break;
+                case 'contractors':
+                    if (typeof Contractors !== 'undefined' && Contractors.load) {
+                        try {
+                            const loadResult = Contractors.load();
+                            // إذا كانت Promise، نتعامل معها
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول المقاولين:', error);
+                                    // عرض رسالة خطأ في القسم
+                                    const section = document.getElementById('contractors-section');
+                                    if (section) {
+                                        section.innerHTML = `
                                             <div class="content-card">
                                                 <div class="card-body">
                                                     <div class="empty-state">
                                                         <i class="fas fa-exclamation-circle text-4xl text-red-400 mb-3"></i>
-                                                        <h3 class="text-lg font-semibold text-gray-800 mb-2">\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644</h3>
-                                                        <p class="text-gray-500 mb-4">${r.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"}</p>
+                                                        <h3 class="text-lg font-semibold text-gray-800 mb-2">حدث خطأ في تحميل الموديول</h3>
+                                                        <p class="text-gray-500 mb-4">${error.message || 'خطأ غير معروف'}</p>
                                                         <button onclick="location.reload()" class="btn-primary">
                                                             <i class="fas fa-redo ml-2"></i>
-                                                            \u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0641\u062D\u0629
+                                                            إعادة تحميل الصفحة
                                                         </button>
                                                     </div>
                                                 </div>
                                             </div>
-                                        `)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 Contractors.load:",o)}else if(!i)Utils.safeWarn("\u0648\u062D\u062F\u0629 Contractors \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 - \u062C\u0627\u0631\u064A \u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u062A\u062D\u0645\u064A\u0644...");else{const o=document.getElementById("contractors-section");o&&(o.innerHTML=`
+                                        `;
+                                    }
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء Contractors.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeWarn('وحدة Contractors غير موجودة - جاري انتظار التحميل...');
+                        } else {
+                            // في حالة silent، نعرض رسالة تحميل
+                            const section = document.getElementById('contractors-section');
+                            if (section) {
+                                section.innerHTML = `
                                     <div class="content-card">
                                         <div class="card-body">
                                             <div class="flex items-center justify-center py-12">
                                                 <div class="text-center">
                                                     <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                                                    <p class="text-gray-600">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644...</p>
+                                                    <p class="text-gray-600">جاري تحميل الموديول...</p>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                `)}break;case"behavior-monitoring":if(typeof BehaviorMonitoring<"u"&&BehaviorMonitoring.load)try{const o=BehaviorMonitoring.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0633\u0644\u0648\u0643:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 BehaviorMonitoring.load:",o)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 BehaviorMonitoring \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"chemical-safety":typeof ChemicalSafety<"u"&&ChemicalSafety.load?ChemicalSafety.load():i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 ChemicalSafety \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"daily-observations":if(typeof DailyObservations<"u"&&DailyObservations.load)try{const o=DailyObservations.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 DailyObservations.load:",o)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 DailyObservations \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"forms-hub":try{typeof DailyObservations<"u"&&DailyObservations.exportPublicConfigToLocalStorage&&DailyObservations.exportPublicConfigToLocalStorage(),this.renderFormsHubSection(document.getElementById("forms-hub-section"))}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C:",o)}break;case"gate-security":if(typeof GateSecurity<"u"&&GateSecurity.render)try{GateSecurity.render()}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0645\u0648\u062F\u064A\u0648\u0644 \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A:",o)}break;case"safety-calendar":if(typeof SafetyCalendar<"u"&&SafetyCalendar.load)try{const o=SafetyCalendar.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0648\u064A\u0645 \u0627\u0644\u0633\u0644\u0627\u0645\u0629:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 SafetyCalendar.load:",o)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 SafetyCalendar \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631");break;case"iso":typeof ISO<"u"&&ISO.load?ISO.load():i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 ISO \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"emergency":typeof Emergency<"u"&&Emergency.load?Emergency.load():i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 Emergency \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"risk-assessment":if(typeof RiskAssessment<"u"&&RiskAssessment.load)try{const o=RiskAssessment.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 RiskAssessment.load:",o)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 RiskAssessment \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"sop-jha":typeof SOPJHA<"u"&&SOPJHA.load?SOPJHA.load():i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 SOPJHA \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"legal-documents":typeof LegalDocuments<"u"&&LegalDocuments.load?LegalDocuments.load():i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 LegalDocuments \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"sustainability":typeof Sustainability<"u"&&Sustainability.load?Sustainability.load():i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 Sustainability \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"ai-assistant":if(typeof AIAssistant<"u"&&AIAssistant.load)try{const o=AIAssistant.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u0633\u0627\u0639\u062F \u0627\u0644\u0630\u0643\u064A:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 AIAssistant.load:",o)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 AIAssistant \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"safety-performance-kpis":typeof SafetyPerformanceKPIs<"u"&&SafetyPerformanceKPIs.load?SafetyPerformanceKPIs.load():i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 SafetyPerformanceKPIs \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"help":typeof Help<"u"&&Help.load?Help.load():i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 Help \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"settings":typeof Settings<"u"&&Settings.load?Settings.load():i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 Settings \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"client-errors":if(typeof ClientErrorsAdmin<"u"&&ClientErrorsAdmin.load)try{const o=ClientErrorsAdmin.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0623\u062E\u0637\u0627\u0621:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 ClientErrorsAdmin.load:",o)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 ClientErrorsAdmin \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631");break;case"safety-budget":typeof SafetyBudget<"u"&&SafetyBudget.load?SafetyBudget.load():i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 SafetyBudget \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"action-tracking":if(typeof ActionTrackingRegister<"u"&&ActionTrackingRegister.load)try{const o=ActionTrackingRegister.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0633\u062C\u0644 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 ActionTrackingRegister.load:",o)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 ActionTrackingRegister \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"safety-health-management":if(Utils.safeLog("\u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0641\u064A \u0642\u0633\u0645 safety-health-management-section"),typeof SafetyHealthManagement<"u"&&SafetyHealthManagement.load)try{const o=SafetyHealthManagement.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 SafetyHealthManagement.load:",o)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 SafetyHealthManagement \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"apptester":Utils.safeLog("\u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0641\u064A \u0642\u0633\u0645 apptester-section"),typeof AppTester<"u"&&AppTester.load?AppTester.load():i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 AppTester \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"reports":if(Utils.safeLog("\u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0641\u064A \u0642\u0633\u0645 reports-section"),typeof Reports<"u"&&Reports.load)try{const o=Reports.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 Reports.load:",o)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 Reports \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"hse":if(Utils.safeLog("\u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 HSE \u0641\u064A \u0642\u0633\u0645 hse-section"),typeof HSE<"u"&&HSE.load)try{const o=HSE.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 HSE:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 HSE.load:",o)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 HSE \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"risk-matrix":if(Utils.safeLog("\u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0645\u0635\u0641\u0648\u0641\u0629 \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0641\u064A \u0642\u0633\u0645 risk-matrix-section"),typeof RiskMatrix<"u"&&RiskMatrix.load)try{const o=RiskMatrix.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0645\u0635\u0641\u0648\u0641\u0629 \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 RiskMatrix.load:",o)}else i||Utils.safeWarn("\u0648\u062D\u062F\u0629 RiskMatrix \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 - \u062C\u0627\u0631\u064A \u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u062A\u062D\u0645\u064A\u0644...");break;case"user-ai-assistant":case"useraiassistant":if(Utils.safeLog("\u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0645\u0633\u0627\u0639\u062F \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0630\u0643\u064A \u0641\u064A \u0642\u0633\u0645 useraiassistant-section"),typeof UserAIAssistant<"u"&&UserAIAssistant.load)try{const o=UserAIAssistant.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0645\u0633\u0627\u0639\u062F \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0630\u0643\u064A:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 UserAIAssistant.load:",o)}else i||Utils.safeWarn("\u0648\u062D\u062F\u0629 UserAIAssistant \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 - \u062C\u0627\u0631\u064A \u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u062A\u062D\u0645\u064A\u0644...");break;case"issue-tracking":if(Utils.safeLog("\u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u062A\u062A\u0628\u0639 \u0627\u0644\u0645\u0634\u0627\u0643\u0644 \u0641\u064A \u0642\u0633\u0645 issue-tracking-section"),typeof IssueTracking<"u"&&IssueTracking.load)try{const o=IssueTracking.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u062A\u062A\u0628\u0639 \u0627\u0644\u0645\u0634\u0627\u0643\u0644:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 IssueTracking.load:",o)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 IssueTracking \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"change-management":if(Utils.safeLog("\u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u063A\u064A\u0631\u0627\u062A \u0641\u064A \u0642\u0633\u0645 change-management-section"),typeof ChangeManagement<"u"&&ChangeManagement.load)try{const o=ChangeManagement.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u063A\u064A\u0631\u0627\u062A:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 ChangeManagement.load:",o)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 ChangeManagement \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");break;case"issuing-authorities":if(Utils.safeLog("\u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u0635\u0631\u062D \u0644\u0647\u0645 \u0628\u0627\u0644\u062A\u0648\u0642\u064A\u0639 \u0641\u064A \u0642\u0633\u0645 issuing-authorities-section"),typeof IssuingAuthorities<"u"&&IssuingAuthorities.load)try{const o=IssuingAuthorities.load();o&&typeof o.then=="function"&&o.catch(r=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 Issuing Authorities:",r)})}catch(o){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 IssuingAuthorities.load:",o)}else new Promise(r=>{let l=!1;const d=p=>{l||(l=!0,r(!!p))};try{const p=document.getElementById("issuing-authorities-module-script");if(p){const c=p.dataset.loadState||"";if(c==="loaded"){d(typeof IssuingAuthorities<"u"&&!!IssuingAuthorities.load);return}if(c==="error"){d(!1);return}p.addEventListener("load",()=>d(!0),{once:!0}),p.addEventListener("error",()=>d(!1),{once:!0}),setTimeout(()=>{d(typeof IssuingAuthorities<"u"&&!!IssuingAuthorities.load)},15e3);return}const f=document.createElement("script");f.id="issuing-authorities-module-script",f.src="js/modules/modules/issuingauthorities.js",f.async=!1,f.dataset.loadState="loading",f.onload=()=>{f.dataset.loadState="loaded",d(!0)},f.onerror=()=>{f.dataset.loadState="error",d(!1)},document.head.appendChild(f),setTimeout(()=>{d(typeof IssuingAuthorities<"u"&&!!IssuingAuthorities.load)},15e3)}catch(p){Utils.safeError("\u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0645\u062D\u0627\u0648\u0644\u0629 \u062A\u062D\u0645\u064A\u0644 \u0633\u0643\u0631\u0628\u062A IssuingAuthorities:",p),d(!1)}}).then(r=>{if(r&&typeof IssuingAuthorities<"u"&&IssuingAuthorities.load)try{const l=IssuingAuthorities.load();l&&typeof l.then=="function"&&l.catch(d=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 Issuing Authorities:",d)})}catch(l){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u062F\u0639\u0627\u0621 IssuingAuthorities.load \u0628\u0639\u062F \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A:",l)}else i||Utils.safeError("\u274C \u0645\u0648\u062F\u064A\u0648\u0644 IssuingAuthorities \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 - \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0644\u0645 \u064A\u064F\u062D\u0645\u0651\u0644 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D")});break;default:Utils.safeWarn("\u0642\u0633\u0645 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641:",e)}setTimeout(()=>{if(typeof Permissions<"u"&&typeof Permissions.applyGlobalReadOnlyRestrictions=="function"){const s=document.getElementById(`${e}-section`);Permissions.applyGlobalReadOnlyRestrictions(s||document)}},300),e!=="dashboard"&&(setTimeout(()=>{this.ensureNavigationIcons(e)},800),setTimeout(()=>{this.ensureNavigationIcons(e)},1500),setTimeout(()=>{this.ensureNavigationIcons(e)},2500))}catch(s){let o="\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";if(s)if(typeof s=="string")o=s;else if(s.message)o=s.message;else if(s.toString&&typeof s.toString=="function")try{o=s.toString()}catch{o="\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0642\u0633\u0645"}else try{o=JSON.stringify(s)}catch{o="\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0642\u0633\u0645"}i?Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0642\u0633\u0645 (\u0635\u0627\u0645\u062A):",o):(Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0642\u0633\u0645:",o),typeof Notification<"u"&&Notification.error&&Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0642\u0633\u0645: "+o)),e!=="dashboard"&&setTimeout(()=>{this.ensureNavigationIcons(e)},500)}const a=window.AppI18n&&typeof window.AppI18n.applyI18n=="function"?window.AppI18n:window.I18n&&typeof window.I18n.applyI18n=="function"?window.I18n:null;if(a){const s=document.getElementById(`${e}-section`)||document;e==="ptw"?(s&&s.setAttribute&&s.setAttribute("data-no-literal-translate","1"),a.applyI18n(s)):(a.applyI18n(s),a.applyLiteralTranslations(s))}},renderFormsHubSection(e){if(!e)return;const i=window.location.origin||window.location.protocol+"//"+window.location.host;let t=window.location.pathname.replace(/\/index\.html$/i,"").replace(/\/$/,"");const n=`${i}${t}/forms-hub`;e.innerHTML=`
+                                `;
+                            }
+                        }
+                    }
+                    break;
+                case 'behavior-monitoring':
+                    if (typeof BehaviorMonitoring !== 'undefined' && BehaviorMonitoring.load) {
+                        try {
+                            const loadResult = BehaviorMonitoring.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول مراقبة السلوك:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء BehaviorMonitoring.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول BehaviorMonitoring غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'chemical-safety':
+                    if (typeof ChemicalSafety !== 'undefined' && ChemicalSafety.load) {
+                        ChemicalSafety.load();
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول ChemicalSafety غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'daily-observations':
+                    if (typeof DailyObservations !== 'undefined' && DailyObservations.load) {
+                        try {
+                            const loadResult = DailyObservations.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول الملاحظات اليومية:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء DailyObservations.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول DailyObservations غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'forms-hub':
+                    try {
+                        if (typeof DailyObservations !== 'undefined' && DailyObservations.exportPublicConfigToLocalStorage) {
+                            DailyObservations.exportPublicConfigToLocalStorage();
+                        }
+                        this.renderFormsHubSection(document.getElementById('forms-hub-section'));
+                    } catch (e) {
+                        Utils.safeError('خطأ في عرض بوابة النماذج:', e);
+                    }
+                    break;
+                case 'gate-security':
+                    if (typeof GateSecurity !== 'undefined' && GateSecurity.render) {
+                        try {
+                            GateSecurity.render();
+                        } catch(e) {
+                            Utils.safeError('خطأ في عرض موديول أمن البوابات:', e);
+                        }
+                    }
+                    break;
+                case 'safety-calendar':
+                    if (typeof SafetyCalendar !== 'undefined' && SafetyCalendar.load) {
+                        try {
+                            const loadResult = SafetyCalendar.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch((error) => {
+                                    Utils.safeError('خطأ في تحميل تقويم السلامة:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء SafetyCalendar.load:', error);
+                        }
+                    } else if (!silent) {
+                        Utils.safeError('❌ موديول SafetyCalendar غير متوفر');
+                    }
+                    break;
+                case 'iso':
+                    if (typeof ISO !== 'undefined' && ISO.load) {
+                        ISO.load();
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول ISO غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'emergency':
+                    if (typeof Emergency !== 'undefined' && Emergency.load) {
+                        Emergency.load();
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول Emergency غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'risk-assessment':
+                    if (typeof RiskAssessment !== 'undefined' && RiskAssessment.load) {
+                        try {
+                            const loadResult = RiskAssessment.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول تقييم المخاطر:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء RiskAssessment.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول RiskAssessment غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'sop-jha':
+                    if (typeof SOPJHA !== 'undefined' && SOPJHA.load) {
+                        SOPJHA.load();
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول SOPJHA غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'legal-documents':
+                    if (typeof LegalDocuments !== 'undefined' && LegalDocuments.load) {
+                        LegalDocuments.load();
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول LegalDocuments غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'sustainability':
+                    if (typeof Sustainability !== 'undefined' && Sustainability.load) {
+                        Sustainability.load();
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول Sustainability غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'ai-assistant':
+                    if (typeof AIAssistant !== 'undefined' && AIAssistant.load) {
+                        try {
+                            const loadResult = AIAssistant.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول المساعد الذكي:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء AIAssistant.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول AIAssistant غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'safety-performance-kpis':
+                    if (typeof SafetyPerformanceKPIs !== 'undefined' && SafetyPerformanceKPIs.load) {
+                        SafetyPerformanceKPIs.load();
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول SafetyPerformanceKPIs غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'help':
+                    if (typeof Help !== 'undefined' && Help.load) {
+                        Help.load();
+                    } else if (!silent) {
+                        Utils.safeError('❌ موديول Help غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                    }
+                    break;
+                case 'settings':
+                    if (typeof Settings !== 'undefined' && Settings.load) {
+                        Settings.load();
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول Settings غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'client-errors':
+                    if (typeof ClientErrorsAdmin !== 'undefined' && ClientErrorsAdmin.load) {
+                        try {
+                            const loadResult = ClientErrorsAdmin.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل مراقبة الأخطاء:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء ClientErrorsAdmin.load:', error);
+                        }
+                    } else if (!silent) {
+                        Utils.safeError('❌ موديول ClientErrorsAdmin غير متوفر');
+                    }
+                    break;
+                case 'safety-budget':
+                    if (typeof SafetyBudget !== 'undefined' && SafetyBudget.load) {
+                        SafetyBudget.load();
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول SafetyBudget غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'action-tracking':
+                    if (typeof ActionTrackingRegister !== 'undefined' && ActionTrackingRegister.load) {
+                        try {
+                            const loadResult = ActionTrackingRegister.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول سجل متابعة الإجراءات:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء ActionTrackingRegister.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول ActionTrackingRegister غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'safety-health-management':
+                    Utils.safeLog('تحميل مديول إدارة السلامة والصحة المهنية في قسم safety-health-management-section');
+                    if (typeof SafetyHealthManagement !== 'undefined' && SafetyHealthManagement.load) {
+                        try {
+                            const loadResult = SafetyHealthManagement.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول إدارة السلامة والصحة:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء SafetyHealthManagement.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول SafetyHealthManagement غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'apptester':
+                    Utils.safeLog('تحميل مديول اختبار التطبيق في قسم apptester-section');
+                    if (typeof AppTester !== 'undefined' && AppTester.load) {
+                        AppTester.load();
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول AppTester غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'reports':
+                    Utils.safeLog('تحميل مديول التقارير في قسم reports-section');
+                    if (typeof Reports !== 'undefined' && Reports.load) {
+                        try {
+                            const loadResult = Reports.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول التقارير:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء Reports.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول Reports غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'hse':
+                    Utils.safeLog('تحميل مديول HSE في قسم hse-section');
+                    if (typeof HSE !== 'undefined' && HSE.load) {
+                        try {
+                            const loadResult = HSE.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول HSE:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء HSE.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول HSE غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'risk-matrix':
+                    Utils.safeLog('تحميل مديول مصفوفة تقييم المخاطر في قسم risk-matrix-section');
+                    if (typeof RiskMatrix !== 'undefined' && RiskMatrix.load) {
+                        try {
+                            const loadResult = RiskMatrix.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول مصفوفة تقييم المخاطر:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء RiskMatrix.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeWarn('وحدة RiskMatrix غير موجودة - جاري انتظار التحميل...');
+                        }
+                    }
+                    break;
+                case 'user-ai-assistant':
+                case 'useraiassistant':
+                    Utils.safeLog('تحميل مديول مساعد المستخدم الذكي في قسم useraiassistant-section');
+                    if (typeof UserAIAssistant !== 'undefined' && UserAIAssistant.load) {
+                        try {
+                            const loadResult = UserAIAssistant.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول مساعد المستخدم الذكي:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء UserAIAssistant.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeWarn('وحدة UserAIAssistant غير موجودة - جاري انتظار التحميل...');
+                        }
+                    }
+                    break;
+                case 'issue-tracking':
+                    Utils.safeLog('تحميل مديول تتبع المشاكل في قسم issue-tracking-section');
+                    if (typeof IssueTracking !== 'undefined' && IssueTracking.load) {
+                        try {
+                            const loadResult = IssueTracking.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول تتبع المشاكل:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء IssueTracking.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول IssueTracking غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'change-management':
+                    Utils.safeLog('تحميل موديول إدارة التغيرات في قسم change-management-section');
+                    if (typeof ChangeManagement !== 'undefined' && ChangeManagement.load) {
+                        try {
+                            const loadResult = ChangeManagement.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول إدارة التغيرات:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء ChangeManagement.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول ChangeManagement غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
+                case 'issuing-authorities':
+                    Utils.safeLog('تحميل موديول المصرح لهم بالتوقيع في قسم issuing-authorities-section');
+                    if (typeof IssuingAuthorities !== 'undefined' && IssuingAuthorities.load) {
+                        try {
+                            const loadResult = IssuingAuthorities.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول Issuing Authorities:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء IssuingAuthorities.load:', error);
+                        }
+                    } else {
+                        const loadIssuingAuthoritiesScript = () => {
+                            return new Promise((resolve) => {
+                                let settled = false;
+                                const finish = (ok) => {
+                                    if (settled) return;
+                                    settled = true;
+                                    resolve(!!ok);
+                                };
+                                try {
+                                    const existing = document.getElementById('issuing-authorities-module-script');
+                                    if (existing) {
+                                        const state = existing.dataset.loadState || '';
+                                        if (state === 'loaded') {
+                                            finish(typeof IssuingAuthorities !== 'undefined' && !!IssuingAuthorities.load);
+                                            return;
+                                        }
+                                        if (state === 'error') {
+                                            finish(false);
+                                            return;
+                                        }
+                                        existing.addEventListener('load', () => finish(true), { once: true });
+                                        existing.addEventListener('error', () => finish(false), { once: true });
+                                        setTimeout(() => {
+                                            finish(typeof IssuingAuthorities !== 'undefined' && !!IssuingAuthorities.load);
+                                        }, 15000);
+                                        return;
+                                    }
+                                    const script = document.createElement('script');
+                                    script.id = 'issuing-authorities-module-script';
+                                    script.src = 'js/modules/modules/issuingauthorities.js';
+                                    script.async = false;
+                                    script.dataset.loadState = 'loading';
+                                    script.onload = () => {
+                                        script.dataset.loadState = 'loaded';
+                                        finish(true);
+                                    };
+                                    script.onerror = () => {
+                                        script.dataset.loadState = 'error';
+                                        finish(false);
+                                    };
+                                    document.head.appendChild(script);
+                                    setTimeout(() => {
+                                        finish(typeof IssuingAuthorities !== 'undefined' && !!IssuingAuthorities.load);
+                                    }, 15000);
+                                } catch (e) {
+                                    Utils.safeError('خطأ أثناء محاولة تحميل سكربت IssuingAuthorities:', e);
+                                    finish(false);
+                                }
+                            });
+                        };
+
+                        loadIssuingAuthoritiesScript().then((ok) => {
+                            if (ok && typeof IssuingAuthorities !== 'undefined' && IssuingAuthorities.load) {
+                                try {
+                                    const retryResult = IssuingAuthorities.load();
+                                    if (retryResult && typeof retryResult.then === 'function') {
+                                        retryResult.catch(error => {
+                                            Utils.safeError('خطأ في إعادة تحميل موديول Issuing Authorities:', error);
+                                        });
+                                    }
+                                } catch (error) {
+                                    Utils.safeError('خطأ في استدعاء IssuingAuthorities.load بعد التحميل الديناميكي:', error);
+                                }
+                            } else if (!silent) {
+                                Utils.safeError('❌ موديول IssuingAuthorities غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                            }
+                        });
+                    }
+                    break;
+                default:
+                    Utils.safeWarn('قسم غير معروف:', sectionName);
+            }
+
+            // تطبيق قيود دور القراءة فقط تلقائياً إذا كان المستخدم بحالة "قراءة فقط"
+            setTimeout(() => {
+                if (typeof Permissions !== 'undefined' && typeof Permissions.applyGlobalReadOnlyRestrictions === 'function') {
+                    const sectionEl = document.getElementById(`${sectionName}-section`);
+                    Permissions.applyGlobalReadOnlyRestrictions(sectionEl || document);
+                }
+            }, 300);
+
+            // التأكد من إضافة أيقونات التنقل بعد تحميل جميع الموديولات
+            if (sectionName !== 'dashboard') {
+                setTimeout(() => {
+                    this.ensureNavigationIcons(sectionName);
+                }, 800);
+                setTimeout(() => {
+                    this.ensureNavigationIcons(sectionName);
+                }, 1500);
+                setTimeout(() => {
+                    this.ensureNavigationIcons(sectionName);
+                }, 2500);
+            }
+        } catch (error) {
+            // استخراج رسالة خطأ واضحة
+            let errorMessage = 'خطأ غير معروف';
+            if (error) {
+                if (typeof error === 'string') {
+                    errorMessage = error;
+                } else if (error.message) {
+                    errorMessage = error.message;
+                } else if (error.toString && typeof error.toString === 'function') {
+                    try {
+                        errorMessage = error.toString();
+                    } catch (e) {
+                        errorMessage = 'خطأ في تحميل بيانات القسم';
+                    }
+                } else {
+                    try {
+                        errorMessage = JSON.stringify(error);
+                    } catch (e) {
+                        errorMessage = 'خطأ في تحميل بيانات القسم';
+                    }
+                }
+            }
+            
+            // عند إعادة التحميل، نكتفي بتسجيل الخطأ بدون إظهار إشعار للمستخدم
+            if (silent) {
+                Utils.safeError('خطأ في تحميل بيانات القسم (صامت):', errorMessage);
+            } else {
+                Utils.safeError('خطأ في تحميل بيانات القسم:', errorMessage);
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error('حدث خطأ في تحميل بيانات القسم: ' + errorMessage);
+                }
+            }
+
+            // حتى في حالة الخطأ، نحاول إضافة الأيقونات
+            if (sectionName !== 'dashboard') {
+                setTimeout(() => {
+                    this.ensureNavigationIcons(sectionName);
+                }, 500);
+            }
+        }
+
+        // تعميم i18n على كل قسم بعد أي عملية تحميل/إعادة تحميل.
+        const i18nCore = (window.AppI18n && typeof window.AppI18n.applyI18n === 'function')
+            ? window.AppI18n
+            : ((window.I18n && typeof window.I18n.applyI18n === 'function') ? window.I18n : null);
+        if (i18nCore) {
+            const sectionRoot = document.getElementById(`${sectionName}-section`) || document;
+            // PTW: data-i18n فقط — applyLiteral على القسم الكامل كان يسبب تهنيج/تجمد
+            if (sectionName === 'ptw') {
+                if (sectionRoot && sectionRoot.setAttribute) {
+                    sectionRoot.setAttribute('data-no-literal-translate', '1');
+                }
+                i18nCore.applyI18n(sectionRoot);
+            } else {
+                i18nCore.applyI18n(sectionRoot);
+                i18nCore.applyLiteralTranslations(sectionRoot);
+            }
+        }
+    },
+
+    /**
+     * عرض قسم بوابة النماذج الميدانية الموحدة داخل الداشبورد
+     */
+    renderFormsHubSection(container) {
+        if (!container) return;
+        const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
+        let basePath = window.location.pathname.replace(/\/index\.html$/i, '').replace(/\/$/, '');
+        const hubUrl = `${origin}${basePath}/forms-hub`;
+
+        container.innerHTML = `
             <div class="content-header" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); color: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);">
                 <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
                     <div style="display: flex; align-items: center; gap: 16px;">
@@ -902,20 +6637,20 @@
                             <i class="fas fa-mobile-screen-button"></i>
                         </div>
                         <div>
-                            <h1 style="font-size: 20px; font-weight: 800; margin: 0 0 4px 0; color: #ffffff;">\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A\u0629 \u0627\u0644\u0645\u0648\u062D\u062F\u0629 (HSE Field Forms Hub)</h1>
-                            <p style="font-size: 13px; color: #94a3b8; margin: 0;">\u062A\u062B\u0628\u064A\u062A \u0648\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0645\u0648\u062D\u062F \u0644\u0643\u0627\u0641\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u0648\u0627\u062A\u0641 \u0627\u0644\u0630\u0643\u064A\u0629 \u0628\u062F\u0648\u0646 \u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644</p>
+                            <h1 style="font-size: 20px; font-weight: 800; margin: 0 0 4px 0; color: #ffffff;">بوابة النماذج الميدانية الموحدة (HSE Field Forms Hub)</h1>
+                            <p style="font-size: 13px; color: #94a3b8; margin: 0;">تثبيت واستخدام موحد لكافة النماذج الميدانية على الهواتف الذكية بدون تسجيل دخول</p>
                         </div>
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('forms-hub', '_blank')" style="background: #2563eb; padding: 10px 20px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-arrow-up-right-from-square"></i> \u0641\u062A\u062D \u0627\u0644\u0628\u0648\u0627\u0628\u0629 \u0641\u064A \u0646\u0627\u0641\u0630\u0629 \u0643\u0627\u0645\u0644\u0629
+                            <i class="fas fa-arrow-up-right-from-square"></i> فتح البوابة في نافذة كاملة
                         </button>
                     </div>
                 </div>
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px;">
-                <!-- 1. \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u064A\u0648\u0645\u064A \u0644\u0645\u0633\u0624\u0648\u0644\u064A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 -->
+                <!-- 1. نموذج المرور اليومي لمسؤولي السلامة -->
                 <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
@@ -923,20 +6658,20 @@
                                 <i class="fas fa-clipboard-user"></i>
                             </div>
                             <div>
-                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">\u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u064A\u0648\u0645\u064A \u0644\u0645\u0633\u0624\u0648\u0644\u064A \u0627\u0644\u0633\u0644\u0627\u0645\u0629</h3>
-                                <span style="font-size: 11px; background: #dcfce7; color: #059669; padding: 2px 8px; border-radius: 6px; font-weight: 700;">18 \u0628\u0646\u062F\u0627\u064B \u0648\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0637\u0644\u0645\u0628\u0627\u062A</span>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">المرور اليومي لمسؤولي السلامة</h3>
+                                <span style="font-size: 11px; background: #dcfce7; color: #059669; padding: 2px 8px; border-radius: 6px; font-weight: 700;">18 بنداً وقراءة الطلمبات</span>
                             </div>
                         </div>
                         <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
-                            \u062C\u0648\u0644\u0629 \u0627\u0644\u062A\u0641\u062A\u064A\u0634 \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A\u0629 \u0627\u0644\u0634\u0627\u0645\u0644\u0629 \u0644\u0645\u0633\u0624\u0648\u0644\u064A \u0648\u0645\u0634\u0631\u0641\u064A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0639\u0627\u064A\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0641\u064A \u0643\u0627\u0641\u0629 \u0627\u0644\u0639\u0646\u0627\u0628\u0631 \u0648\u0627\u0644\u0645\u062E\u0627\u0632\u0646.
+                            جولة التفتيش الميدانية الشاملة لمسؤولي ومشرفي السلامة ومطابقة معايير السلامة في كافة العنابر والمخازن.
                         </p>
                     </div>
                     <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('daily-safety', '_blank')" style="width: 100%; justify-content: center; background: #059669;">
-                        <i class="fas fa-external-link-alt ml-2"></i> \u0641\u062A\u062D \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u064A\u0648\u0645\u064A
+                        <i class="fas fa-external-link-alt ml-2"></i> فتح نموذج المرور اليومي
                     </button>
                 </div>
 
-                <!-- 2. \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629 -->
+                <!-- 2. نموذج الملاحظات اليومية -->
                 <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
@@ -944,20 +6679,20 @@
                                 <i class="fas fa-clipboard-check"></i>
                             </div>
                             <div>
-                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629</h3>
-                                <span style="font-size: 11px; background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 6px; font-weight: 700;">\u064A\u0648\u0645\u064A \u0648\u0633\u0631\u064A\u0639</span>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">تسجيل الملاحظات اليومية</h3>
+                                <span style="font-size: 11px; background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 6px; font-weight: 700;">يومي وسريع</span>
                             </div>
                         </div>
                         <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
-                            \u0631\u0635\u062F \u0648\u062A\u0648\u062B\u064A\u0642 \u0627\u0644\u0633\u0644\u0648\u0643\u064A\u0627\u062A \u0648\u0627\u0644\u0638\u0631\u0648\u0641 \u063A\u064A\u0631 \u0627\u0644\u0622\u0645\u0646\u0629 \u0648\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0641\u0648\u0631\u064A\u0629 \u0628\u0627\u0644\u0635\u0648\u0631 \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0641\u0627\u062A \u0627\u0644\u062F\u0642\u064A\u0642\u0629.
+                            رصد وتوثيق السلوكيات والظروف غير الآمنة والإجراءات الفورية بالصور والتصنيفات الدقيقة.
                         </p>
                     </div>
                     <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('observation', '_blank')" style="width: 100%; justify-content: center; background: #2563eb;">
-                        <i class="fas fa-external-link-alt ml-2"></i> \u0641\u062A\u062D \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0628\u0627\u0634\u0631
+                        <i class="fas fa-external-link-alt ml-2"></i> فتح النموذج المباشر
                     </button>
                 </div>
 
-                <!-- 2. \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629 -->
+                <!-- 2. نموذج الحوادث الوشيكة -->
                 <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
@@ -965,20 +6700,20 @@
                                 <i class="fas fa-triangle-exclamation"></i>
                             </div>
                             <div>
-                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">\u062A\u0633\u062C\u064A\u0644 \u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643 (Near Miss)</h3>
-                                <span style="font-size: 11px; background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 6px; font-weight: 700;">\u0641\u0648\u0631\u064A \u0648\u0639\u0627\u0644\u064A \u0627\u0644\u0623\u0647\u0645\u064A\u0629</span>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">تسجيل حادث وشيك (Near Miss)</h3>
+                                <span style="font-size: 11px; background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 6px; font-weight: 700;">فوري وعالي الأهمية</span>
                             </div>
                         </div>
                         <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
-                            \u0627\u0644\u0625\u0628\u0644\u0627\u063A \u0627\u0644\u0641\u0648\u0631\u064A \u0639\u0646 \u0627\u0644\u0648\u0642\u0627\u0626\u0639 \u0627\u0644\u062A\u064A \u0643\u0627\u062F\u062A \u062A\u0624\u062F\u064A \u0625\u0644\u0649 \u062D\u0648\u0627\u062F\u062B \u0623\u0648 \u0625\u0635\u0627\u0628\u0627\u062A \u0644\u0645\u0646\u0639 \u062A\u0643\u0631\u0627\u0631\u0647\u0627.
+                            الإبلاغ الفوري عن الوقائع التي كادت تؤدي إلى حوادث أو إصابات لمنع تكرارها.
                         </p>
                     </div>
                     <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('near-miss', '_blank')" style="width: 100%; justify-content: center; background: #d97706;">
-                        <i class="fas fa-external-link-alt ml-2"></i> \u0641\u062A\u062D \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u062D\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643
+                        <i class="fas fa-external-link-alt ml-2"></i> فتح نموذج الحادث الوشيك
                     </button>
                 </div>
 
-                <!-- 3. \u0646\u0645\u0648\u0630\u062C \u0641\u062D\u0635 \u0627\u0644\u062D\u0631\u064A\u0642 -->
+                <!-- 3. نموذج فحص الحريق -->
                 <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
@@ -986,79 +6721,3387 @@
                                 <i class="fas fa-fire-extinguisher"></i>
                             </div>
                             <div>
-                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">\u0641\u062D\u0635 \u0637\u0641\u0627\u064A\u0627\u062A \u0648\u0645\u0639\u062F\u0627\u062A \u0627\u0644\u062D\u0631\u064A\u0642</h3>
-                                <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 700;">\u0641\u062D\u0635 \u062F\u0648\u0631\u064A \u0634\u0647\u0631\u064A</span>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">فحص طفايات ومعدات الحريق</h3>
+                                <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 700;">فحص دوري شهري</span>
                             </div>
                         </div>
                         <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
-                            \u0627\u0644\u0641\u062D\u0635 \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A \u0627\u0644\u0634\u0647\u0631\u064A \u0644\u062C\u0627\u0647\u0632\u064A\u0629 \u0645\u0639\u062F\u0627\u062A \u0648\u0623\u062C\u0647\u0632\u0629 \u0645\u0643\u0627\u0641\u062D\u0629 \u0627\u0644\u062D\u0631\u064A\u0642 \u0648\u0627\u0644\u0625\u0646\u0630\u0627\u0631.
+                            الفحص الميداني الشهري لجاهزية معدات وأجهزة مكافحة الحريق والإنذار.
                         </p>
                     </div>
                     <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('fire-inspection', '_blank')" style="width: 100%; justify-content: center; background: #dc2626;">
-                        <i class="fas fa-external-link-alt ml-2"></i> \u0641\u062A\u062D \u0646\u0645\u0648\u0630\u062C \u0641\u062D\u0635 \u0627\u0644\u062D\u0631\u064A\u0642
+                        <i class="fas fa-external-link-alt ml-2"></i> فتح نموذج فحص الحريق
                     </button>
                 </div>
             </div>
 
-            <!-- \u0643\u0648\u062F \u0627\u0644\u0640 QR \u0648\u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0628\u0627\u0634\u0631 -->
+            <!-- كود الـ QR والرابط المباشر -->
             <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                 <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
                     <div>
-                        <h2 style="font-size: 17px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">\u0631\u0645\u0632 QR \u0648\u0631\u0627\u0628\u0637 \u0627\u0644\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0645\u0648\u062D\u062F\u0629 \u0644\u0645\u0634\u0627\u0631\u0643\u062A\u0647 \u0645\u0639 \u0627\u0644\u0639\u0627\u0645\u0644\u064A\u0646</h2>
-                        <p style="font-size: 13px; color: #64748b; margin: 0;">\u0627\u0645\u0633\u062D \u0627\u0644\u0643\u0648\u062F \u0628\u0643\u0627\u0645\u064A\u0631\u0627 \u0627\u0644\u0645\u0648\u0628\u0627\u064A\u0644 \u0644\u0641\u062A\u062D \u0648\u062A\u062B\u0628\u064A\u062A \u0627\u0644\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0645\u0648\u062D\u062F\u0629 \u0645\u0628\u0627\u0634\u0631\u0629 \u062F\u0648\u0646 \u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644</p>
+                        <h2 style="font-size: 17px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">رمز QR ورابط البوابة الموحدة لمشاركته مع العاملين</h2>
+                        <p style="font-size: 13px; color: #64748b; margin: 0;">امسح الكود بكاميرا الموبايل لفتح وتثبيت البوابة الموحدة مباشرة دون تسجيل دخول</p>
                     </div>
                     <div style="display: flex; gap: 8px;">
-                        <input type="text" id="dashboard-hub-url-input" readonly value="${n}" style="padding: 8px 14px; border-radius: 8px; border: 1.5px solid #cbd5e1; direction: ltr; font-size: 13px; min-width: 260px;">
-                        <button class="btn-secondary" onclick="navigator.clipboard.writeText ? navigator.clipboard.writeText('${n}') : prompt('\u0627\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637:', '${n}'); if(typeof Notification!=='undefined'&&Notification.success)Notification.success('\u062A\u0645 \u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0628\u0646\u062C\u0627\u062D')">
-                            <i class="fas fa-copy ml-1"></i> \u0646\u0633\u062E
+                        <input type="text" id="dashboard-hub-url-input" readonly value="${hubUrl}" style="padding: 8px 14px; border-radius: 8px; border: 1.5px solid #cbd5e1; direction: ltr; font-size: 13px; min-width: 260px;">
+                        <button class="btn-secondary" onclick="navigator.clipboard.writeText ? navigator.clipboard.writeText('${hubUrl}') : prompt('انسخ الرابط:', '${hubUrl}'); if(typeof Notification!=='undefined'&&Notification.success)Notification.success('تم نسخ الرابط بنجاح')">
+                            <i class="fas fa-copy ml-1"></i> نسخ
                         </button>
                     </div>
                 </div>
 
                 <div style="display: flex; align-items: center; justify-content: center; gap: 30px; flex-wrap: wrap; background: #f8fafc; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
                     <div style="padding: 12px; background: white; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(n)}" alt="QR Code" style="width: 160px; height: 160px; display: block;">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(hubUrl)}" alt="QR Code" style="width: 160px; height: 160px; display: block;">
                     </div>
                     <div style="max-width: 360px;">
                         <h4 style="font-size: 15px; font-weight: 800; color: #1e293b; margin-bottom: 8px;">
-                            <i class="fas fa-qrcode text-blue-600 ml-1"></i> \u0645\u0633\u062D \u0648\u062A\u062B\u0628\u064A\u062A \u0627\u0644\u0628\u0648\u0627\u0628\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u0627\u062A\u0641
+                            <i class="fas fa-qrcode text-blue-600 ml-1"></i> مسح وتثبيت البوابة على الهاتف
                         </h4>
                         <p style="font-size: 12.5px; color: #475569; line-height: 1.6; margin-bottom: 12px;">
-                            \u064A\u062A\u064A\u062D \u0647\u0630\u0627 \u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u0648\u0635\u0648\u0644 \u0644\u0643\u0627\u0641\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A\u0629 \u0641\u064A \u0635\u0641\u062D\u0629 \u0648\u0627\u062D\u062F\u0629\u060C \u0648\u062A\u062B\u0628\u064A\u062A\u0647\u0627 \u0643\u062A\u0637\u0628\u064A\u0642 \u0633\u0631\u064A\u0639 (PWA) \u0639\u0644\u0649 \u0627\u0644\u0647\u0648\u0627\u062A\u0641 \u062F\u0648\u0646 \u0627\u0644\u062D\u0627\u062C\u0629 \u0644\u0623\u064A \u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644.
+                            يتيح هذا الرمز الوصول لكافة النماذج الميدانية في صفحة واحدة، وتثبيتها كتطبيق سريع (PWA) على الهواتف دون الحاجة لأي تسجيل دخول.
                         </p>
                         <button class="btn-secondary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.openPublicQrModal)DailyObservations.openPublicQrModal()" style="font-size: 12px;">
-                            <i class="fas fa-expand ml-1"></i> \u062A\u062E\u0635\u064A\u0635 \u0627\u0644\u0631\u0645\u0632 \u0648\u0637\u0628\u0627\u0639\u062A\u0647
+                            <i class="fas fa-expand ml-1"></i> تخصيص الرمز وطباعته
                         </button>
                     </div>
                 </div>
             </div>
-        `},togglePasswordVisibility(){const e=document.getElementById("password"),i=document.getElementById("password-toggle-icon"),t=document.getElementById("password-toggle-btn");if(!e||!i){Utils.safeWarn("\u26A0 \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0639\u0646\u0627\u0635\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631");return}e.type==="password"?(e.type="text",i.classList.remove("fa-eye"),i.classList.add("fa-eye-slash"),t&&(t.setAttribute("aria-label","\u0625\u062E\u0641\u0627\u0621 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631"),t.setAttribute("title","\u0625\u062E\u0641\u0627\u0621 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631"))):(e.type="password",i.classList.remove("fa-eye-slash"),i.classList.add("fa-eye"),t&&(t.setAttribute("aria-label","\u0625\u0638\u0647\u0627\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631"),t.setAttribute("title","\u0625\u0638\u0647\u0627\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631"))),e.focus()},addNavigationIcons(e,i){if(!e){AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F addNavigationIcons: section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}AppState.debugMode&&Utils.safeLog("\u{1F527} \u0645\u062D\u0627\u0648\u0644\u0629 \u0625\u0636\u0627\u0641\u0629 \u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0627\u0644\u062A\u0646\u0642\u0644 \u0644\u0644\u0642\u0633\u0645:",i,{sectionExists:!!e,sectionId:e?.id,sectionVisible:e?.style?.display!=="none",sectionActive:e?.classList?.contains("active")}),AppState.debugMode&&Utils.safeLog("\u{1F527} \u0625\u0636\u0627\u0641\u0629 \u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0627\u0644\u062A\u0646\u0642\u0644 \u0644\u0644\u0642\u0633\u0645:",i);let t=e.querySelector(".section-header");if(AppState.debugMode&&Utils.safeLog("\u{1F50D} \u0627\u0644\u0628\u062D\u062B \u0639\u0646 section-header:",{found:!!t,sectionChildren:e?.children?.length}),!t){const u=e.querySelector(".section-title");u&&(t=document.createElement("div"),t.className="section-header",u.parentNode.insertBefore(t,u),t.appendChild(u))}if(!t){const u=e.firstElementChild;u?(t=document.createElement("div"),t.className="section-header",e.insertBefore(t,u)):(t=document.createElement("div"),t.className="section-header",e.appendChild(t))}const n=t.querySelector(".navigation-icons-container");if(n){const u=n.querySelector(".back-menu-icon");if(u){const g=AppState.navigationHistory&&AppState.navigationHistory.length>0;u.setAttribute("aria-label",g?"\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0633\u0627\u0628\u0642\u0629":"\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629"),u.setAttribute("title",g?"\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0633\u0627\u0628\u0642\u0629":"\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629")}return}const a=(document.documentElement.dir||document.body?.dir||"rtl")==="rtl",s=document.createElement("div");s.className="navigation-icons-container",s.style.cssText=`position: absolute; ${a?"right: 0;":"left: 0;"} top: 0; display: flex; gap: 0.5rem; align-items: center; z-index: 1000; visibility: visible; opacity: 1;`;const o=document.createElement("button");o.className="main-menu-icon",o.setAttribute("aria-label",a?"\u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629":"Main Menu"),o.setAttribute("title",a?"\u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629":"Main Menu"),o.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" style="display:block;flex-shrink:0"><rect x="0" y="0" width="24" height="24" rx="5" fill="#4A90E2"/><path d="M 12,4 L 19,10 L 18,10 L 18,17 L 24,23 L 24,24 L 0,24 L 0,17 L 6,17 L 6,10 L 5,10 Z" fill="rgba(0,0,55,0.15)"/><polygon points="12,4 5,10 19,10" fill="white"/><rect x="6" y="10" width="12" height="7" rx="0.5" fill="white"/><rect x="10" y="14.5" width="4" height="2.5" rx="0.7" fill="#4A90E2"/></svg>',o.style.cssText="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: var(--btn-primary-bg); color: white; border-radius: 12px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: 0 2px 8px rgba(var(--sidebar-shadow-rgb), 0.2); border: none; flex-shrink: 0;",o.addEventListener("click",u=>{u.preventDefault(),u.stopPropagation(),this.goToDashboard()}),o.addEventListener("mouseenter",function(){this.style.transform="translateY(-2px)",this.style.boxShadow="0 4px 12px rgba(var(--sidebar-shadow-rgb), 0.3)",this.style.background="var(--btn-primary-bg-hover)"}),o.addEventListener("mouseleave",function(){this.style.transform="translateY(0)",this.style.boxShadow="0 2px 8px rgba(var(--sidebar-shadow-rgb), 0.2)",this.style.background="var(--btn-primary-bg)"});const r=document.createElement("button");r.className="back-menu-icon";const l=AppState.navigationHistory&&AppState.navigationHistory.length>0;r.setAttribute("aria-label",l?a?"\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0633\u0627\u0628\u0642\u0629":"Back to previous menu":a?"\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629":"Back to main menu"),r.setAttribute("title",l?a?"\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0633\u0627\u0628\u0642\u0629":"Back to previous menu":a?"\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629":"Back to main menu"),r.innerHTML=`<i class="fas ${a?"fa-arrow-right":"fa-arrow-left"}"></i>`,r.style.cssText="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: var(--bg-tertiary); color: var(--text-primary); border-radius: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); font-size: 1.25rem; flex-shrink: 0;",r.addEventListener("click",u=>{u.preventDefault(),u.stopPropagation(),this.goBack()}),r.addEventListener("mouseenter",function(){this.style.transform="translateY(-2px)",this.style.boxShadow="var(--shadow-lg)",this.style.background="var(--bg-secondary)"}),r.addEventListener("mouseleave",function(){this.style.transform="translateY(0)",this.style.boxShadow="var(--shadow-md)",this.style.background="var(--bg-tertiary)"}),s.appendChild(o),s.appendChild(r),t.appendChild(s),window.getComputedStyle(t).position==="static"&&(t.style.position="relative");const p=window.getComputedStyle(t)[a?"paddingRight":"paddingLeft"];(parseInt(p)||0)<120&&(a?t.style.paddingRight="120px":t.style.paddingLeft="120px"),s.style.visibility="visible",s.style.opacity="1",s.style.display="flex",s.style.zIndex="1000";const c=t.querySelector(".navigation-icons-container");if(c?AppState.debugMode&&Utils.safeLog("\u2705 \u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0627\u0644\u062A\u0646\u0642\u0644 \u0628\u0646\u062C\u0627\u062D \u0644\u0644\u0642\u0633\u0645:",i,{sectionHeader:!!t,iconsContainer:!!s,iconsInDOM:!!c,position:window.getComputedStyle(t).position,paddingRight:t.style.paddingRight,iconsVisible:window.getComputedStyle(c).visibility,iconsDisplay:window.getComputedStyle(c).display,iconsZIndex:window.getComputedStyle(c).zIndex,headerRect:t.getBoundingClientRect(),iconsRect:c.getBoundingClientRect()}):Utils.safeError("\u274C \u0641\u0634\u0644 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0623\u064A\u0642\u0648\u0646\u0627\u062A - \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u064A\u0647\u0627 \u0641\u064A DOM:",i,{sectionHeader:!!t,iconsContainer:!!s}),!e.dataset.observerAdded){const u=i,g=this;let m=null;const y=new MutationObserver(b=>{m&&clearTimeout(m);let w=!1;for(const x of b)if(x.type==="childList"){if(x.removedNodes.length>0){let I=!1;for(const L of x.removedNodes)if(L.nodeType===1&&L.classList&&L.classList.contains("navigation-icons-container")){I=!0;break}if(!I){w=!0;break}}if(x.addedNodes.length>0){let I=!1;for(const L of x.addedNodes)if(L.nodeType===1&&L.classList&&L.classList.contains("navigation-icons-container")){I=!0;break}if(!I){w=!0;break}}}w&&u!=="dashboard"&&(m=setTimeout(()=>{const x=e.querySelector(".section-header");x?x.querySelector(".navigation-icons-container")||(AppState.debugMode&&Utils.safeLog("\u{1F504} \u0625\u0639\u0627\u062F\u0629 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0628\u0639\u062F \u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0645\u062D\u062A\u0648\u0649:",u),g.addNavigationIcons(e,u)):setTimeout(()=>{e.querySelector(".section-header")&&g.addNavigationIcons(e,u)},200)},100))});y.observe(e,{childList:!0,subtree:!0,attributes:!1}),e.dataset.observerAdded="true",e.dataset.sectionName=u,e._navigationObserver=y}},ensureNavigationIcons(e){if(!e||e==="dashboard")return;const i=`${e}-section`,t=document.getElementById(i);if(!t||t.style.display==="none"||!t.classList.contains("active"))return;const n=t.querySelector(".section-header");n?n.querySelector(".navigation-icons-container")||(AppState.debugMode&&Utils.safeLog("\u{1F527} ensureNavigationIcons: \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0644\u0644\u0642\u0633\u0645:",e),this.addNavigationIcons(t,e)):setTimeout(()=>{const a=document.getElementById(i);a&&a.querySelector(".section-header")&&this.addNavigationIcons(a,e)},200)},addNavigationIconsAfterRender(e){if(!e||e==="dashboard"){Utils.safeWarn("\u26A0\uFE0F addNavigationIconsAfterRender: sectionName \u063A\u064A\u0631 \u0635\u0627\u0644\u062D:",e);return}const i=`${e}-section`,t=document.getElementById(i);if(!t){Utils.safeWarn("\u26A0\uFE0F addNavigationIconsAfterRender: section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F:",i),setTimeout(()=>{const n=document.getElementById(i);n&&typeof this.addNavigationIcons=="function"&&this.addNavigationIcons(n,e)},200);return}if(typeof this.addNavigationIcons=="function"){AppState.debugMode&&Utils.safeLog("\u2705 \u0627\u0633\u062A\u062F\u0639\u0627\u0621 addNavigationIconsAfterRender \u0644\u0644\u0642\u0633\u0645:",e),this._addNavIconsTimers||(this._addNavIconsTimers={});const n=this._addNavIconsTimers[e];n&&clearTimeout(n),this._addNavIconsTimers[e]=setTimeout(()=>{try{this.addNavigationIcons(t,e)}catch{}this._addNavIconsTimers[e]=null},60)}else Utils.safeError("\u274C addNavigationIconsAfterRender: \u062F\u0627\u0644\u0629 addNavigationIcons \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629")},setupInnerHTMLWatcher(e,i){if(!e||i==="dashboard"||e.dataset.innerHTMLWatched)return;const t=this,n=Object.getOwnPropertyDescriptor(Element.prototype,"innerHTML");if(!n)return;const a=n.set,s=n.get;Object.defineProperty(e,"innerHTML",{set:function(l){a&&a.call(this,l),i!=="dashboard"&&setTimeout(()=>{try{this.isConnected&&this.parentNode&&t.addNavigationIcons(this,i)}catch(d){AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0623\u064A\u0642\u0648\u0646\u0627\u062A \u0628\u0639\u062F innerHTML:",d)}},60)},get:function(){return s?s.call(this):""},configurable:!0,enumerable:!0}),e.dataset.innerHTMLWatched="true";let o=null;const r=new MutationObserver(l=>{let d=!1,p=!1;for(const f of l){if(f.type==="childList"){if(f.addedNodes.length>0){for(const c of f.addedNodes)if(c.nodeType===1){if(c.classList&&c.classList.contains("section-header")){d=!0;break}if(c.querySelector&&c.querySelector(".section-header")){d=!0;break}}}if(f.removedNodes.length>0){for(const c of f.removedNodes)if(c.nodeType===1&&(c.classList&&c.classList.contains("navigation-icons-container")||c.querySelector&&c.querySelector(".navigation-icons-container"))){p=!0;break}}}if(d||p)break}o&&clearTimeout(o),(d||p)&&(o=setTimeout(()=>{try{const f=e.querySelector(".section-header");f&&e.isConnected&&(f.querySelector(".navigation-icons-container")||t.addNavigationIcons(e,i))}catch(f){AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A MutationObserver:",f)}},180))});r.observe(e,{childList:!0,subtree:!0,attributes:!1}),e._innerHTMLObserver=r,e._innerHTMLObserverTimeout=o},removeNavigationIcons(e){if(!e)return;const i=e.querySelector(".section-header");if(i){const t=i.querySelector(".navigation-icons-container");t&&t.remove();const n=i.querySelector(".back-home-icon");n&&n.remove()}e._innerHTMLObserver&&(e._innerHTMLObserver.disconnect(),e._innerHTMLObserver=null),e._innerHTMLObserverTimeout&&(clearTimeout(e._innerHTMLObserverTimeout),e._innerHTMLObserverTimeout=null),delete e.dataset.innerHTMLWatched},goToDashboard(){if(AppState.navigationHistory=[],this.showSection("dashboard"),window.innerWidth>1024){const t=document.querySelector(".sidebar");t&&!t.classList.contains("open")&&setTimeout(()=>{this.toggleSidebar(!0)},100)}document.querySelectorAll(".nav-item").forEach(t=>{t.classList.remove("active"),t.removeAttribute("aria-current")});const i=document.querySelector('[data-section="dashboard"]');i&&(i.classList.add("active"),i.setAttribute("aria-current","page"))},goBack(){if(!AppState.navigationHistory||AppState.navigationHistory.length===0){this.goToDashboard();return}if(AppState.navigationHistory=AppState.navigationHistory.filter((n,a,s)=>!n||n.trim()===""?!1:a===0||n!==s[a-1]),AppState.navigationHistory.length===0){this.goToDashboard();return}const e=AppState.navigationHistory[AppState.navigationHistory.length-1];if(!e||e===AppState.currentSection){AppState.navigationHistory=[],this.goToDashboard();return}const i=`${e}-section`;if(!document.getElementById(i)&&e!=="dashboard")if(AppState.navigationHistory=AppState.navigationHistory.filter(n=>n!==e),AppState.navigationHistory.length>0){this.goBack();return}else{this.goToDashboard();return}if(AppState.navigationHistory.pop(),AppState.isNavigatingBack=!0,this.showSection(e),window.innerWidth>1024){const n=document.querySelector(".sidebar");n&&!n.classList.contains("open")&&setTimeout(()=>{this.toggleSidebar(!0)},100)}setTimeout(()=>{AppState.isNavigatingBack=!1},300)},initSidebarButtons(){this.initThemeToggle(),this.initColorThemeToggle(),this.initNotificationsButton(),this.initLanguageToggle()},initThemeToggle(){const e=[document.getElementById("theme-toggle"),document.getElementById("mobile-theme-toggle"),document.getElementById("header-theme-toggle"),document.getElementById("sidebar-theme-toggle")].filter(Boolean);if(e.length===0){Utils.safeWarn("\u26A0\uFE0F \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0648\u0636\u0639 \u0627\u0644\u0644\u064A\u0644\u064A");return}const i=localStorage.getItem("theme")||"light";this.setTheme(i),e.forEach(t=>{t.dataset.themeBound!=="true"&&(t.addEventListener("click",n=>{n.preventDefault(),n.stopPropagation(),this.toggleTheme()}),t.dataset.themeBound="true")}),Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0647\u064A\u0626\u0629 \u0632\u0631 \u0627\u0644\u0648\u0636\u0639 \u0627\u0644\u0644\u064A\u0644\u064A")},setTheme(e){const i=e==="dark";document.documentElement.setAttribute("data-theme",e),document.body&&document.body.setAttribute("data-theme",e),[document.getElementById("theme-icon"),document.getElementById("mobile-theme-icon"),document.getElementById("header-theme-icon"),document.getElementById("sidebar-theme-icon")].filter(Boolean).forEach(a=>{a&&(a.className=i?"fas fa-sun":"fas fa-moon")});let n=document.querySelector('meta[name="theme-color"]');n||(n=document.createElement("meta"),n.name="theme-color",document.head.appendChild(n)),n.content=i?"#1a1a1a":"#ffffff",localStorage.setItem("theme",e),Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0648\u0636\u0639: ${e}`)},toggleTheme(){const i=(localStorage.getItem("theme")||"light")==="light"?"dark":"light";this.setTheme(i),typeof Notification<"u"&&Notification.success(i==="dark"?"\u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0648\u0636\u0639 \u0627\u0644\u0644\u064A\u0644\u064A":"\u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0648\u0636\u0639 \u0627\u0644\u0646\u0647\u0627\u0631\u064A")},initColorThemeToggle(){const e=[document.getElementById("sidebar-color-theme-toggle")].filter(Boolean);e.length!==0&&(this.setColorTheme("emerald"),e.forEach(i=>{i.dataset.colorThemeBound!=="true"&&(i.addEventListener("click",t=>{t.preventDefault(),t.stopPropagation(),this.toggleColorTheme()}),i.dataset.colorThemeBound="true")}))},setColorTheme(e){const t=["emerald","blue","purple","amber"].includes(e)?e:"emerald";document.documentElement.setAttribute("data-color-theme",t),document.body&&document.body.setAttribute("data-color-theme",t),localStorage.setItem("color-theme",t);const n=localStorage.getItem("theme")||"light",a=getComputedStyle(document.documentElement).getPropertyValue("--brand-primary").trim();let s=document.querySelector('meta[name="theme-color"]');s||(s=document.createElement("meta"),s.name="theme-color",document.head.appendChild(s)),s.content=n==="dark"?"#1a1a1a":a||"#1a634f"},toggleColorTheme(){const e=["emerald","blue","purple","amber"],i={emerald:"\u0627\u0644\u0623\u062E\u0636\u0631",blue:"\u0627\u0644\u0623\u0632\u0631\u0642",purple:"\u0627\u0644\u0628\u0646\u0641\u0633\u062C\u064A",amber:"\u0627\u0644\u0639\u0646\u0628\u0631\u064A"},t=localStorage.getItem("color-theme")||"emerald",n=e.indexOf(t),a=e[(n+1)%e.length];this.setColorTheme(a),typeof Notification<"u"&&Notification.success(`\u062A\u0645 \u062A\u063A\u064A\u064A\u0631 \u0633\u0645\u0629 \u0627\u0644\u0644\u0648\u0646 \u0625\u0644\u0649 ${i[a]||a}`)},initNotificationsButton(){const e=this;try{const t=document.getElementById("notifications-btn"),n=document.getElementById("mobile-notifications-btn"),a=document.getElementById("header-notifications-btn"),s=[t,n,a].filter(Boolean);if(s.length===0){if(this._notificationsInitCount=(this._notificationsInitCount||0)+1,this._notificationsInitCount>20){Utils.safeError("\u26A0\uFE0F \u062A\u0648\u0642\u0641 \u062A\u0647\u064A\u0626\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A: \u062A\u062C\u0627\u0648\u0632 \u0639\u062F\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0627\u062A (20)");return}Utils.safeWarn("\u26A0\uFE0F \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A - \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 #"+this._notificationsInitCount),setTimeout(()=>{this.initNotificationsButton()},500);return}this._notificationsInitCount=0,Utils.safeLog("\u2705 \u062A\u0647\u064A\u0626\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:"),t&&Utils.safeLog("  - notifications-btn (\u0627\u0644\u0634\u0631\u064A\u0637 \u0627\u0644\u062C\u0627\u0646\u0628\u064A)"),n&&Utils.safeLog("  - mobile-notifications-btn"),a&&Utils.safeLog("  - header-notifications-btn"),s.forEach(o=>{if(o)try{if(!document.body.contains(o)){Utils.safeWarn("\u26A0\uFE0F \u0627\u0644\u0632\u0631 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A DOM:",o.id);return}const r=o.id==="notifications-btn";o._notificationClickHandler&&(o.removeEventListener("click",o._notificationClickHandler,{capture:!!o._notificationClickUsesCapture}),delete o._notificationClickHandler,delete o._notificationClickUsesCapture);const l=d=>{try{d.preventDefault(),d.stopPropagation();let p,f,c,u;if(o.id==="notifications-btn")p="notifications-dropdown",f="notifications-list",c="notifications-empty",u="close-notifications-dropdown";else if(o.id==="mobile-notifications-btn")p="mobile-notifications-dropdown",f="mobile-notifications-list",c="mobile-notifications-empty",u="close-mobile-notifications-dropdown";else if(o.id==="header-notifications-btn")p="header-notifications-dropdown",f="header-notifications-list",c="header-notifications-empty",u="close-header-notifications-dropdown";else{Utils.safeWarn("\u26A0\uFE0F \u0645\u0639\u0631\u0641 \u0632\u0631 \u0625\u0634\u0639\u0627\u0631\u0627\u062A \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641:",o.id);return}if(!document.getElementById(p)){Utils.safeWarn("\u26A0\uFE0F \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 dropdown:",p);return}Utils.safeLog("\u{1F514} \u0641\u062A\u062D dropdown:",p);const m=e&&typeof e.toggleNotificationsDropdown=="function"?e:typeof window<"u"&&window.UI&&typeof window.UI.toggleNotificationsDropdown=="function"?window.UI:null;m&&m.toggleNotificationsDropdown.call(m,p,f,c,u,o)}catch(p){Utils.safeError("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u062D\u062F\u062B \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",p);try{const f=o.id==="notifications-btn"?"notifications-dropdown":o.id==="mobile-notifications-btn"?"mobile-notifications-dropdown":o.id==="header-notifications-btn"?"header-notifications-dropdown":null;if(f&&document.getElementById(f)){const u=f==="notifications-dropdown"?"notifications-list":f.replace("dropdown","list"),g=f==="notifications-dropdown"?"notifications-empty":f.replace("dropdown","empty"),m=e||window.UI;m&&typeof m.showNotificationsDropdown=="function"&&m.showNotificationsDropdown(f,u,g,o).catch(y=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",y)})}}catch(f){Utils.safeError("\u26A0\uFE0F \u0641\u0634\u0644 \u0641\u062A\u062D \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",f)}}};o._notificationClickHandler=l,o._notificationClickUsesCapture=r,o.addEventListener("click",l,{capture:r,passive:!1}),o.dataset.notificationsBound="true",Utils.safeLog("\u2705 \u062A\u0645 \u0631\u0628\u0637 \u0632\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",o.id),o.id==="mobile-notifications-btn"&&Utils.safeLog("\u{1F514} \u062A\u0645 \u0631\u0628\u0637 \u0632\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0627\u0644\u062C\u0627\u0646\u0628\u064A (mobile-notifications-btn)"),o.id==="notifications-btn"&&Utils.safeLog("\u{1F514} \u062A\u0645 \u0631\u0628\u0637 \u0632\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629 (notifications-btn)"),o.id==="header-notifications-btn"&&Utils.safeLog("\u{1F514} \u062A\u0645 \u0631\u0628\u0637 \u0632\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0627\u0644\u0639\u0644\u0648\u064A (header-notifications-btn)")}catch(r){Utils.safeError("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0631\u0628\u0637 \u0632\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",o.id,r)}})}catch(t){Utils.safeError("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0647\u064A\u0626\u0629 \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",t)}[{id:"close-notifications-dropdown",dropdownId:"notifications-dropdown"},{id:"close-mobile-notifications-dropdown",dropdownId:"mobile-notifications-dropdown"},{id:"close-header-notifications-dropdown",dropdownId:"header-notifications-dropdown"}].forEach(({id:t,dropdownId:n})=>{const a=document.getElementById(t);a&&a.addEventListener("click",s=>{s.preventDefault(),s.stopPropagation();const o=e||window.UI;o&&typeof o.hideNotificationsDropdown=="function"&&o.hideNotificationsDropdown(n)})}),["notifications-mark-all-read","mobile-notifications-mark-all-read","header-notifications-mark-all-read"].forEach(t=>{const n=document.getElementById(t);n&&n.dataset.markAllBound!=="true"&&(n.dataset.markAllBound="true",n.addEventListener("click",a=>{a.preventDefault(),a.stopPropagation();const s=e||window.UI;s&&typeof s.markAllNotificationsAsRead=="function"&&s.markAllNotificationsAsRead()}))}),e._notificationsClickHandler&&(document.removeEventListener("click",e._notificationsClickHandler,!0),e._notificationsClickHandler=null),e._notificationsClickHandler=t=>{try{if(t&&t.target&&t.target.closest("#notifications-btn, #mobile-notifications-btn, #header-notifications-btn, #sidebar-notifications-container"))return;if(t&&t.target){const a=String(t.target.tagName||"").toLowerCase(),s=String(t.target.id||""),o=String(t.target.className||"");if(s.includes("uploadmanager")||o.includes("uploadmanager")||a.includes("style")&&s.includes("extension"))return}["notifications-dropdown","mobile-notifications-dropdown","header-notifications-dropdown"].forEach(a=>{try{const s=document.getElementById(a);if(s&&s.style.display==="flex"&&t&&t.target){const r=t.target.closest('#notifications-btn, #mobile-notifications-btn, #header-notifications-btn, #sidebar-notifications-container, [id$="-notifications-btn"]'),l=t.target.closest(".notifications-dropdown");if(!r&&!l){const d=e||window.UI;d&&typeof d.hideNotificationsDropdown=="function"&&d.hideNotificationsDropdown(a)}}}catch(s){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u063A\u0644\u0627\u0642 dropdown:",s)}})}catch(n){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0639\u0627\u0644\u062C \u0627\u0644\u0646\u0642\u0631:",n)}},document.addEventListener("click",e._notificationsClickHandler,!0),e&&typeof e.updateNotificationsBadge=="function"?e.updateNotificationsBadge():window.UI&&typeof window.UI.updateNotificationsBadge=="function"&&window.UI.updateNotificationsBadge(),e._notificationsInterval&&(clearInterval(e._notificationsInterval),e._notificationsInterval=null),e._notificationsInterval=setInterval(()=>{const t=()=>{const n=e||window.UI;n&&typeof n.updateNotificationsBadge=="function"&&n.updateNotificationsBadge()};typeof requestAnimationFrame=="function"?requestAnimationFrame(t):setTimeout(t,0)},3e4),Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0647\u064A\u0626\u0629 \u0632\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A"),setTimeout(()=>{const t=document.getElementById("mobile-notifications-btn"),n=document.getElementById("notifications-btn");(t&&!t.dataset.notificationsBound||n&&!n.dataset.notificationsBound)&&e._notificationsInitCount<5&&(Utils.safeLog("\u26A0\uFE0F \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0644\u0645 \u062A\u064F\u0631\u0628\u0637 \u0628\u0639\u062F\u060C \u0625\u0639\u0627\u062F\u0629 \u062A\u0647\u064A\u0626\u0629..."),this.initNotificationsButton())},1e3)},cleanupNotifications(){try{if(this._notificationsInterval&&(clearInterval(this._notificationsInterval),this._notificationsInterval=null),this._notificationsClickHandler){try{document.removeEventListener("click",this._notificationsClickHandler,!0)}catch(e){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u0632\u0627\u0644\u0629 document click listener:",e)}this._notificationsClickHandler=null}try{const e=document.querySelector(".sidebar");e&&e._sidebarNotifDelegationHandler&&(e.removeEventListener("click",e._sidebarNotifDelegationHandler,!0),delete e._sidebarNotifDelegationHandler)}catch(e){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u0632\u0627\u0644\u0629 \u062A\u0641\u0648\u064A\u0636 \u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0627\u0644\u0634\u0631\u064A\u0637:",e)}try{[document.getElementById("notifications-btn"),document.getElementById("mobile-notifications-btn"),document.getElementById("header-notifications-btn")].filter(Boolean).forEach(i=>{try{i._notificationClickHandler&&(i.removeEventListener("click",i._notificationClickHandler,{capture:!!i._notificationClickUsesCapture}),delete i._notificationClickUsesCapture,i._notificationClickDebounceTimer&&(clearTimeout(i._notificationClickDebounceTimer),i._notificationClickDebounceTimer=null),delete i._notificationClickHandler),i.dataset&&delete i.dataset.notificationsBound}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0646\u0638\u064A\u0641 \u0632\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",i.id,t)}})}catch(e){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0646\u0638\u064A\u0641 \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",e)}Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0646\u0638\u064A\u0641 \u0645\u0648\u0627\u0631\u062F \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A")}catch(e){Utils.safeError("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A cleanupNotifications:",e)}},updateNotificationsBadge(){const e=this.getNotificationsCount();[document.getElementById("notifications-badge"),document.getElementById("mobile-notifications-badge"),document.getElementById("header-notifications-badge")].filter(Boolean).forEach(n=>{n&&(n.textContent=e,n.style.display=e>0?"flex":"none")}),[document.getElementById("notifications-btn"),document.getElementById("mobile-notifications-btn"),document.getElementById("header-notifications-btn")].filter(Boolean).forEach(n=>{n&&(e>0?n.classList.add("has-notifications"):n.classList.remove("has-notifications"))})},handleSidebarNotificationClick(e){try{Utils.safeLog("\u{1F514} handleSidebarNotificationClick - \u062A\u0645 \u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0632\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629");const i=typeof window<"u"&&window.UI?window.UI:this;if(!i||typeof i.toggleNotificationsDropdown!="function"){Utils.safeWarn("\u26A0\uFE0F toggleNotificationsDropdown \u063A\u064A\u0631 \u0645\u062A\u0627\u062D");return}i.toggleNotificationsDropdown("notifications-dropdown","notifications-list","notifications-empty","close-notifications-dropdown",e||document.getElementById("notifications-btn"))}catch(i){Utils.safeError("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A handleSidebarNotificationClick:",i)}},toggleNotificationsDropdown(e,i,t,n,a){try{Utils.safeLog("\u{1F514} toggleNotificationsDropdown - dropdownId:",e);const s=document.getElementById(e);if(!s){Utils.safeWarn("\u26A0\uFE0F \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 dropdown:",e);return}["notifications-dropdown","mobile-notifications-dropdown","header-notifications-dropdown"].forEach(l=>{try{l!==e&&this.hideNotificationsDropdown(l)}catch(d){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u063A\u0644\u0627\u0642 dropdown:",l,d)}});let r=!1;try{if(s.style.display==="flex"&&s.style.visibility!=="hidden"&&s.style.opacity!=="0")r=!0;else if(s.style.display!=="none"){const l=window.getComputedStyle(s),p=l.position==="fixed"||s.offsetParent!==null;r=l.display==="flex"&&l.visibility!=="hidden"&&l.opacity!=="0"&&p}}catch{r=!1}if(r)this.hideNotificationsDropdown(e);else{try{this.updateNotificationsBadge()}catch(l){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0634\u0627\u0631\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",l)}typeof this.showNotificationsDropdown=="function"&&this.showNotificationsDropdown(e,i,t,a).catch(l=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",l)})}}catch(s){Utils.safeError("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A toggleNotificationsDropdown:",s);try{document.getElementById(e)&&typeof this.showNotificationsDropdown=="function"&&this.showNotificationsDropdown(e,i,t,a).catch(r=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A (fallback):",r)})}catch(o){Utils.safeError("\u26A0\uFE0F \u0641\u0634\u0644 \u0641\u062A\u062D \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",o)}}},async showNotificationsDropdown(e,i,t,n){try{Utils.safeLog("\u{1F514} showNotificationsDropdown - \u0628\u062F\u0621 \u0639\u0631\u0636 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",e);const a=document.getElementById(e),s=document.getElementById(i),o=document.getElementById(t);if(!a){Utils.safeWarn("\u26A0\uFE0F \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 dropdown:",e);return}if(Utils.safeLog("\u{1F514} \u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 dropdown:",a.id),e==="notifications-dropdown"&&a.parentElement!==document.body)try{a._hseNotifSidebarRestoreParent=a.parentElement,a._hseNotifSidebarRestoreBefore=a.nextSibling,document.body.appendChild(a)}catch(p){Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u0646\u0642\u0644 \u0644\u0648\u062D\u0629 \u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0627\u0644\u0634\u0631\u064A\u0637 \u0625\u0644\u0649 body:",p)}try{const p=a.parentElement;p&&p!==document.body&&window.getComputedStyle(p).position==="static"&&(p.style.position="relative")}catch(p){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0636\u0628\u0637 position \u0644\u0644\u0640 parent:",p)}let r=[];try{typeof this.getNotificationsList=="function"&&(r=this.getNotificationsList())}catch(p){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",p),r=[]}if(a.style.setProperty("display","flex","important"),a.style.setProperty("visibility","visible","important"),a.style.setProperty("opacity","1","important"),Utils.safeLog("\u{1F514} \u062A\u0645 \u0639\u0631\u0636 dropdown \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",e),r.length===0){if(s&&(s.style.setProperty("display","none","important"),s.innerHTML=""),o){o.style.setProperty("display","flex","important"),o.style.setProperty("visibility","visible","important");const p=o.querySelector("p");p&&(p.textContent="\u0644\u0627 \u064A\u0648\u062C\u062F \u0625\u0634\u0639\u0627\u0631\u0627\u062A")}Utils.safeLog("\u2139\uFE0F \u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u0634\u0639\u0627\u0631\u0627\u062A \u063A\u064A\u0631 \u0645\u0642\u0631\u0648\u0621\u0629")}else if(o&&o.style.setProperty("display","none","important"),s)try{s.style.display="block",typeof this.renderNotificationItem=="function"?s.innerHTML=r.map(p=>{try{return this.renderNotificationItem(p)}catch(f){return Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0631\u0633\u0645 \u0625\u0634\u0639\u0627\u0631:",f),""}}).filter(Boolean).join(""):s.innerHTML='<div class="notification-item">\u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A</div>',Utils.safeLog(`\u2705 \u0639\u0631\u0636 ${r.length} \u0625\u0634\u0639\u0627\u0631 \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629`);try{s.querySelectorAll(".notification-item").forEach(p=>{try{p.addEventListener("click",f=>{try{f&&(f.preventDefault(),f.stopPropagation());const c=p.getAttribute("data-notification-id");if(c){let u=[];try{typeof this.getNotificationsList=="function"&&(u=this.getNotificationsList())}catch(m){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",m)}const g=u.find(m=>m&&m.id===c);if(g&&typeof g.onClick=="function")try{g.onClick()}catch(m){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0646\u0641\u064A\u0630 onClick \u0644\u0644\u0625\u0634\u0639\u0627\u0631:",m)}try{typeof this.markNotificationAsRead=="function"&&this.markNotificationAsRead(c)}catch(m){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0645\u064A\u064A\u0632 \u0627\u0644\u0625\u0634\u0639\u0627\u0631 \u0643\u0645\u0642\u0631\u0648\u0621:",m)}}}catch(c){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u0646\u0642\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631:",c)}},{capture:!0,passive:!1})}catch(f){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0631\u0628\u0637 \u062D\u062F\u062B \u0627\u0644\u0625\u0634\u0639\u0627\u0631:",f)}})}catch(p){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0631\u0628\u0637 \u0623\u062D\u062F\u0627\u062B \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",p)}}catch(p){Utils.safeError("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",p),s&&(s.innerHTML='<div class="notification-item">\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A</div>')}requestAnimationFrame(()=>{try{typeof this.positionNotificationsDropdown=="function"&&this.positionNotificationsDropdown(a,n)}catch(p){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u0645\u0648\u0636\u0639 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",p)}});const l=this,d=()=>{try{if(!a)return;const p=a.style&&a.style.display,f=window.getComputedStyle(a).display;if(p!=="flex"&&f!=="flex")return;const c=typeof l.getNotificationsList=="function"?l.getNotificationsList():[];if(!s||typeof l.renderNotificationItem!="function")return;if(c.length>0){s.innerHTML=c.map(u=>{try{return l.renderNotificationItem(u)}catch(g){return Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0631\u0633\u0645 \u0625\u0634\u0639\u0627\u0631:",g),""}}).filter(Boolean).join(""),s.style.display="block",o&&(o.style.display="none");try{s.querySelectorAll(".notification-item").forEach(u=>{try{u.addEventListener("click",g=>{try{g&&(g.preventDefault(),g.stopPropagation());const m=u.getAttribute("data-notification-id");if(m){const y=c.find(b=>b&&b.id===m);if(y&&typeof y.onClick=="function")try{y.onClick()}catch(b){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0646\u0641\u064A\u0630 onClick \u0644\u0644\u0625\u0634\u0639\u0627\u0631:",b)}typeof l.markNotificationAsRead=="function"&&l.markNotificationAsRead(m)}}catch(m){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u0646\u0642\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631:",m)}},{capture:!0,passive:!1})}catch(g){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0631\u0628\u0637 \u062D\u062F\u062B \u0627\u0644\u0625\u0634\u0639\u0627\u0631:",g)}})}catch(u){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0631\u0628\u0637 \u0623\u062D\u062F\u0627\u062B \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",u)}}else s.style.display="none",o&&(o.style.display="flex")}catch(p){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",p)}};Promise.resolve().then(async()=>{try{if(typeof FireEquipment<"u"&&typeof FireEquipment.loadApprovalRequestsFromBackend=="function")try{await FireEquipment.loadApprovalRequestsFromBackend(),d()}catch(p){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629 \u0639\u0646\u062F \u0639\u0631\u0636 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",p)}if(typeof PTW<"u"&&typeof PTW.loadPTWData=="function")try{(!AppState||!AppState.appData||!AppState.appData.ptw||AppState.appData.ptw.length===0)&&(await PTW.loadPTWData(),d())}catch(p){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A PTW \u0639\u0646\u062F \u0639\u0631\u0636 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",p)}}catch(p){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",p)}})}catch(a){Utils.safeError("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A showNotificationsDropdown:",a);try{const s=document.getElementById(e);s&&(s.style.display="flex",s.style.visibility="visible",s.style.opacity="1")}catch(s){Utils.safeError("\u26A0\uFE0F \u0641\u0634\u0644 \u0625\u0638\u0647\u0627\u0631 dropdown:",s)}}},positionNotificationsDropdown(e,i){if(Utils.safeLog("\u{1F514} positionNotificationsDropdown - \u0628\u062F\u0621 \u062A\u0645\u0648\u0636\u0639 \u0627\u0644\u0640 dropdown"),!e){Utils.safeWarn("\u26A0\uFE0F positionNotificationsDropdown - dropdown \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const t=i||e.parentElement;if(!t||typeof t.getBoundingClientRect!="function"){Utils.safeWarn("\u26A0\uFE0F positionNotificationsDropdown - anchorEl \u063A\u064A\u0631 \u0635\u0627\u0644\u062D");return}Utils.safeLog("\u{1F514} positionNotificationsDropdown - dropdown:",e.id,"button:",t.id||"parent");const n=8,a=8,s=document.documentElement.clientWidth||window.innerWidth,o=document.documentElement.clientHeight||window.innerHeight,r=(document.documentElement.getAttribute("dir")||"").toLowerCase()==="rtl"||window.getComputedStyle(document.documentElement).direction==="rtl",l=e.id==="notifications-dropdown",d=document.querySelector(".sidebar"),p=d?d.offsetWidth:280;e.style.setProperty("position","fixed","important"),e.style.setProperty("z-index","10001","important"),e.style.setProperty("right","auto","important"),e.style.setProperty("bottom","auto","important"),e.style.setProperty("transform","none","important");const f=e.style.visibility;e.style.visibility="hidden",e.style.setProperty("left","-9999px","important"),e.style.setProperty("top","-9999px","important");const c=t.getBoundingClientRect(),u=e.getBoundingClientRect(),g=u.width||380,m=u.height||200;let y,b;if(l)r?(y=s-p-g-n,y<n&&(y=n)):(y=p+n,y+g>s-n&&(y=s-g-n)),b=c.top,b+m>o-n&&(b=o-m-n),b<n&&(b=n);else{const w=c.left,x=c.right-g,I=N=>{const v=Math.max(n-N,0),A=Math.max(N+g-(s-n),0);return v+A};let L=r?x:w;const E=r?w:x;I(E)<I(L)&&(L=E),y=Math.min(Math.max(L,n),Math.max(s-g-n,n)),b=c.bottom+a,b+m>o-n&&(b=c.top-a-m),b=Math.min(Math.max(b,n),Math.max(o-m-n,n))}e.style.setProperty("left",`${Math.round(y)}px`,"important"),e.style.setProperty("top",`${Math.round(b)}px`,"important"),e.style.visibility=f||"visible",Utils.safeLog(`\u{1F514} \u062A\u0645 \u062A\u0645\u0648\u0636\u0639 dropdown: left=${Math.round(y)}px, top=${Math.round(b)}px, isSidebar=${l}`)},hideNotificationsDropdown(e){try{const i=document.getElementById(e);if(i&&(i.style.setProperty("display","none","important"),i.style.setProperty("visibility","hidden","important"),i.style.setProperty("opacity","0","important"),e==="notifications-dropdown"&&i._hseNotifSidebarRestoreParent)){try{const t=i._hseNotifSidebarRestoreParent,n=i._hseNotifSidebarRestoreBefore;if(t&&document.body.contains(t))n&&n.parentNode===t?t.insertBefore(i,n):t.appendChild(i);else{const a=document.getElementById("sidebar-notifications-container");a&&a.appendChild(i)}}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u0625\u0639\u0627\u062F\u0629 \u0625\u062F\u0631\u0627\u062C \u0644\u0648\u062D\u0629 \u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0627\u0644\u0634\u0631\u064A\u0637:",t)}delete i._hseNotifSidebarRestoreParent,delete i._hseNotifSidebarRestoreBefore}}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u062E\u0641\u0627\u0621 dropdown:",e,i)}},getReadNotifications(){try{const e=typeof AppState<"u"&&AppState.currentUser?String(AppState.currentUser.email||AppState.currentUser.id||"").trim().toLowerCase():"",i=e?`hse_read_notifications_${e}`:"hse_read_notifications",t=localStorage.getItem(i);if(t)return JSON.parse(t);const n=localStorage.getItem("hse_read_notifications");return n?JSON.parse(n):[]}catch(e){return Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0642\u0631\u0648\u0621\u0629:",e),[]}},saveReadNotifications(e){try{const i=typeof AppState<"u"&&AppState.currentUser?String(AppState.currentUser.email||AppState.currentUser.id||"").trim().toLowerCase():"",t=i?`hse_read_notifications_${i}`:"hse_read_notifications",n=JSON.stringify(e||[]);localStorage.setItem(t,n),localStorage.setItem("hse_read_notifications",n)}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0642\u0631\u0648\u0621\u0629:",i)}},markNotificationAsRead(e){if(!e)return;const i=this.getReadNotifications();i.includes(e)||(i.push(e),this.saveReadNotifications(i),this.updateNotificationsBadge(),[{listId:"notifications-list",dropdownId:"notifications-dropdown"},{listId:"mobile-notifications-list",dropdownId:"mobile-notifications-dropdown"},{listId:"header-notifications-list",dropdownId:"header-notifications-dropdown"}].forEach(({listId:n,dropdownId:a})=>{const s=document.getElementById(n),o=document.getElementById(a);if(s&&o&&o.style.display!=="none"){const r=s.querySelector(`[data-notification-id="${e}"]`);if(r&&(r.remove(),s.querySelectorAll(".notification-item").length===0)){const d=document.getElementById(a.replace("dropdown","empty"));d&&(d.style.display="flex",s.style.display="none")}}}),Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u0645\u064A\u064A\u0632 \u0627\u0644\u0625\u0634\u0639\u0627\u0631 ${e} \u0643\u0645\u0642\u0631\u0648\u0621`))},markAllNotificationsAsRead(){try{const e=this.getNotificationsList();if(!e.length)return;const i=this.getReadNotifications(),t=[...new Set([...i,...e.map(n=>n&&n.id).filter(Boolean)])];this.saveReadNotifications(t),this.updateNotificationsBadge(),["notifications-dropdown","mobile-notifications-dropdown","header-notifications-dropdown"].forEach(n=>{const a=document.getElementById(n);if(!a||a.style.display==="none")return;const s=n.replace("dropdown","list"),o=n.replace("dropdown","empty"),r=document.getElementById(s),l=document.getElementById(o);r&&(r.innerHTML="",r.style.display="none"),l&&l.style.setProperty("display","flex","important")}),Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0639\u0644\u064A\u0645 \u062C\u0645\u064A\u0639 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0643\u0645\u0642\u0631\u0648\u0621\u0629")}catch(e){Utils.safeWarn("markAllNotificationsAsRead",e)}},getNotificationsList(){if(!AppState||!AppState.appData)return[];const e=[],i=this.getReadNotifications();try{if(AppState.appData.emergencyAlerts&&AppState.appData.emergencyAlerts.filter(t=>t.status!=="\u0645\u063A\u0644\u0642").forEach(t=>{const n="emergency-"+(t.id||Date.now());i.includes(n)||e.push({id:n,type:"emergency",title:"\u062A\u0646\u0628\u064A\u0647 \u0637\u0648\u0627\u0631\u0626",message:t.description||t.type||"\u062A\u0646\u0628\u064A\u0647 \u0637\u0648\u0627\u0631\u0626 \u062C\u062F\u064A\u062F",time:t.date||t.createdAt||new Date,icon:"fa-exclamation-triangle"})}),AppState.appData.incidents&&AppState.appData.incidents.filter(t=>t.status==="\u0645\u0641\u062A\u0648\u062D"||t.status==="\u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629").forEach(t=>{const n="incident-"+(t.id||Date.now());i.includes(n)||e.push({id:n,type:"warning",title:"\u062D\u0627\u062F\u062B "+(t.status||""),message:t.description||t.incidentType||"\u062D\u0627\u062F\u062B \u062C\u062F\u064A\u062F \u064A\u062D\u062A\u0627\u062C \u0625\u0644\u0649 \u0645\u0639\u0627\u0644\u062C\u0629",time:t.date||t.reportDate||new Date,icon:"fa-exclamation-circle"})}),AppState.appData.ptw){const t=new Date,n=new Date(t.getTime()+10080*60*1e3);AppState.appData.ptw.filter(a=>{if(!a.expiryDate)return!1;const s=new Date(a.expiryDate);return s<=n&&s>=t&&a.status!=="\u0645\u0646\u062A\u0647\u064A"}).forEach(a=>{const s="ptw-expiry-"+(a.id||Date.now());if(!i.includes(s)){const o=Math.ceil((new Date(a.expiryDate)-t)/864e5);e.push({id:s,type:"warning",title:"\u062A\u0635\u0631\u064A\u062D \u0639\u0645\u0644 \u0633\u064A\u0646\u062A\u0647\u064A \u0642\u0631\u064A\u0628\u0627\u064B",message:`\u062A\u0635\u0631\u064A\u062D \u0639\u0645\u0644 \u0631\u0642\u0645 ${a.permitNumber||a.id} \u0633\u064A\u0646\u062A\u0647\u064A \u062E\u0644\u0627\u0644 ${o} \u064A\u0648\u0645${o>1?"\u0627\u062A":""}`,time:a.expiryDate||new Date,icon:"fa-clock"})}})}if(AppState.appData.ptw){const t=(AppState.currentUser?.email||"").toLowerCase(),n=AppState.currentUser?.id||"",a=AppState.currentUser&&(AppState.currentUser.role==="admin"||AppState.currentUser.role==="\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"||typeof Permissions<"u"&&Permissions.isCurrentUserAdmin&&Permissions.isCurrentUserAdmin());AppState.appData.ptw.filter(s=>{if(!s||s.status==="\u0645\u063A\u0644\u0642"||s.status==="\u0645\u0631\u0641\u0648\u0636"||s.status==="\u0645\u0639\u062A\u0645\u062F")return!1;try{const o=s.approvals||[];let r=[];typeof PTW<"u"&&typeof PTW.normalizeApprovals=="function"?r=PTW.normalizeApprovals(o):r=Array.isArray(o)?o:[];const l=r.find(g=>g?(g.status||(g.approved?"approved":g.rejected?"rejected":"pending"))==="pending":!1);if(!l)return!1;const d=(l.approverEmail||"").toLowerCase(),p=l.approverId||"",f=d&&d===t,c=p&&(p===n||p===t);let u=!1;return!f&&!c&&Array.isArray(l.candidates)&&(u=l.candidates.some(g=>{if(!g)return!1;const m=(g.email||"").toLowerCase(),y=g.id||"";return m&&m===t||y&&y===n})),f||c||u}catch(o){return Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0641\u062D\u0635 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0645\u0648\u0627\u0641\u0642\u0629 PTW:",o),!1}}).forEach(s=>{const o="ptw-review-"+(s.id||Date.now());if(!i.includes(o)){let r="\u0645\u0648\u0627\u0641\u0642\u0629 \u0645\u0637\u0644\u0648\u0628\u0629";try{const l=s.approvals||[];let d=[];typeof PTW<"u"&&typeof PTW.normalizeApprovals=="function"?d=PTW.normalizeApprovals(l):d=Array.isArray(l)?l:[];const p=d.find(f=>f?(f.status||(f.approved?"approved":f.rejected?"rejected":"pending"))==="pending":!1);p&&p.role&&(r=p.role)}catch(l){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629:",l)}e.push({id:o,type:"warning",title:"\u062A\u0635\u0631\u064A\u062D \u0639\u0645\u0644 \u064A\u062D\u062A\u0627\u062C \u0645\u0648\u0627\u0641\u0642\u062A\u0643",message:`\u062A\u0635\u0631\u064A\u062D \u0639\u0645\u0644 \u0631\u0642\u0645 ${s.permitNumber||s.id} \u064A\u062D\u062A\u0627\u062C \u0645\u0648\u0627\u0641\u0642\u062A\u0643 (${r})`,time:s.submitDate||s.date||s.createdAt||new Date,icon:"fa-file-signature",onClick:()=>{typeof PTW<"u"&&PTW.viewPTW&&PTW.viewPTW(s.id)}})}})}if(AppState.appData.contractorApprovalRequests){const t=AppState.currentUser||{},n=String(t.id||"").trim(),a=String(t.email||"").trim().toLowerCase(),s=typeof Contractors<"u"&&typeof Contractors.isContractorApprovalAdminUser=="function"?Contractors.isContractorApprovalAdminUser():typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin()||t.role==="admin"||t.role==="\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"||typeof Permissions<"u"&&Permissions.isCurrentUserAdmin&&Permissions.isCurrentUserAdmin(),o=d=>typeof Contractors<"u"&&typeof Contractors.normalizeApprovalRequestStatus=="function"?Contractors.normalizeApprovalRequestStatus(d):String(d||"").trim().toLowerCase().replace(/\s+/g,"_").replace(/-/g,"_")||"pending",r=d=>{if(typeof Contractors<"u"&&typeof Contractors.isCurrentUserApprovalRequestOwner=="function")return Contractors.isCurrentUserApprovalRequestOwner(d);const p=String(d?.createdBy||"").trim(),f=p.toLowerCase();return n&&p===n||a&&f===a};AppState.appData.contractorApprovalRequests.map(d=>typeof Contractors<"u"&&typeof Contractors.normalizeApprovalRequestRecord=="function"?Contractors.normalizeApprovalRequestRecord(d):d).filter(Boolean).filter(d=>{if(!d||String(d.requestType||"").trim()==="evaluation")return!1;if(s){if(typeof Contractors<"u"&&typeof Contractors.isApprovalRequestPendingForReview=="function")return Contractors.isApprovalRequestPendingForReview(d);const f=o(d.status);return f==="pending"||f==="under_review"}if(!r(d))return!1;const p=o(d.status);return p==="pending"||p==="under_review"||p==="approved"||p==="rejected"}).forEach(d=>{const p="contractor-approval-"+(d.id||Date.now());if(!i.includes(p)){const f=o(d.status);let c,u,g;if(s){const m=d.requestType==="contractor"?"\u0645\u0642\u0627\u0648\u0644":d.requestType==="evaluation"?"\u062A\u0642\u064A\u064A\u0645":"\u0645\u0648\u0631\u062F";c="\u0637\u0644\u0628 \u0627\u0639\u062A\u0645\u0627\u062F \u062C\u062F\u064A\u062F \u064A\u062D\u062A\u0627\u062C \u0645\u0631\u0627\u062C\u0639\u0629",u=`\u0637\u0644\u0628 \u0627\u0639\u062A\u0645\u0627\u062F ${m}: ${d.companyName||d.contractorName||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}`,g="warning"}else f==="approved"?(c="\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F \u0637\u0644\u0628\u0643",u=`\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F \u0637\u0644\u0628 \u0627\u0639\u062A\u0645\u0627\u062F: ${d.companyName||d.contractorName||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}`,g="success"):f==="rejected"?(c="\u062A\u0645 \u0631\u0641\u0636 \u0637\u0644\u0628\u0643",u=`\u062A\u0645 \u0631\u0641\u0636 \u0637\u0644\u0628 \u0627\u0639\u062A\u0645\u0627\u062F: ${d.companyName||d.contractorName||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}`,g="error"):(c="\u0637\u0644\u0628 \u0627\u0639\u062A\u0645\u0627\u062F \u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629",u=`\u0637\u0644\u0628 \u0627\u0639\u062A\u0645\u0627\u062F: ${d.companyName||d.contractorName||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"} \u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629`,g="info");e.push({id:p,type:g,title:c,message:u,time:d.createdAt||new Date,icon:"fa-paper-plane",onClick:()=>{if(typeof Contractors<"u"){const m=document.querySelector('a[data-section="contractors"]');m&&m.click(),setTimeout(()=>{Contractors.switchTab&&Contractors.switchTab("approval-request"),Contractors.viewApprovalRequest&&setTimeout(()=>{Contractors.viewApprovalRequest(d.id)},500)},300)}}})}})}if(Array.isArray(AppState.appData.contractorEvaluationApprovalRequests)){const t=AppState.currentUser||{},n=String(t.id||"").trim(),a=typeof Contractors<"u"&&typeof Contractors.isContractorApprovalAdminUser=="function"?Contractors.isContractorApprovalAdminUser():t.role==="admin"||t.role==="\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645";AppState.appData.contractorEvaluationApprovalRequests.filter(s=>{if(!s)return!1;const o=String(s.id||"").trim();if(s._isPendingSync||o.startsWith("TEMP_"))return!1;const r=String(s.status||"").trim().toLowerCase();return a?r==="pending"||r==="under_review":s.createdBy===n&&(r==="pending"||r==="under_review"||r==="approved"||r==="rejected")}).forEach(s=>{const o="contractor-eval-approval-"+(s.id||Date.now());if(i.includes(o))return;const r=s.contractorName||s.companyName||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",l=String(s.status||"").trim().toLowerCase();let d,p,f;a?(d="\u0637\u0644\u0628 \u0627\u0639\u062A\u0645\u0627\u062F \u062A\u0642\u064A\u064A\u0645 \u064A\u062D\u062A\u0627\u062C \u0645\u0631\u0627\u062C\u0639\u0629",p="\u0637\u0644\u0628 \u0627\u0639\u062A\u0645\u0627\u062F \u062A\u0642\u064A\u064A\u0645: "+r,f="warning"):l==="approved"?(d="\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F \u0637\u0644\u0628 \u0627\u0644\u062A\u0642\u064A\u064A\u0645",p="\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F \u0637\u0644\u0628 \u0627\u0644\u062A\u0642\u064A\u064A\u0645: "+r,f="success"):l==="rejected"?(d="\u062A\u0645 \u0631\u0641\u0636 \u0637\u0644\u0628 \u0627\u0644\u062A\u0642\u064A\u064A\u0645",p="\u062A\u0645 \u0631\u0641\u0636 \u0637\u0644\u0628 \u0627\u0644\u062A\u0642\u064A\u064A\u0645: "+r,f="error"):(d="\u0637\u0644\u0628 \u062A\u0642\u064A\u064A\u0645 \u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629",p="\u0637\u0644\u0628 \u062A\u0642\u064A\u064A\u0645: "+r+" \u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629",f="info"),e.push({id:o,type:f,title:d,message:p,time:s.createdAt||new Date,icon:"fa-clipboard-check",onClick:async()=>{if(typeof Contractors>"u")return;const c=document.querySelector('a[data-section="contractors"]');c&&c.click();const u=s.id;try{Contractors.switchTab&&Contractors.switchTab("approval-request"),Contractors.viewApprovalRequest&&await Contractors.viewApprovalRequest(u,"evaluation_approval")}catch{Notification.error("\u062A\u0639\u0630\u0631 \u0641\u062A\u062D \u0637\u0644\u0628 \u0627\u0644\u062A\u0642\u064A\u064A\u0645")}}})})}if(Array.isArray(AppState.appData?.violationApprovalRequests)){const t=AppState.currentUser||{},n=String(t.id||"").trim(),a=String(t.email||"").trim().toLowerCase(),s=t.role==="admin"||typeof Permissions<"u"&&Permissions.isCurrentUserAdmin&&Permissions.isCurrentUserAdmin();AppState.appData.violationApprovalRequests.filter(o=>{if(!o)return!1;if(s)return o.status==="pending";const r=String(o.createdBy||"").trim(),l=r.toLowerCase();return n&&r===n||a&&l===a?["pending","approved","committed","rejected"].includes(String(o.status||"").toLowerCase()):!1}).forEach(o=>{const r="violation-approval-"+(o.id||Date.now())+"-"+(o.status||"");if(i.includes(r))return;let l,d,p,f;const c=String(o.status||"").toLowerCase();s?(l="\u0637\u0644\u0628 \u0627\u0639\u062A\u0645\u0627\u062F \u0645\u062E\u0627\u0644\u0641\u0629 \u062C\u062F\u064A\u062F",d=`\u0647\u0646\u0627\u0643 \u0645\u062E\u0627\u0644\u0641\u0629 \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0639\u062A\u0645\u0627\u062F\u0643 (${o.id||""}) \u2014 \u0623\u0631\u0633\u0644\u0647\u0627 ${o.createdByName||o.createdBy||""}`,p="warning",f="fa-gavel"):c==="approved"||c==="committed"?(l="\u2705 \u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F \u0645\u062E\u0627\u0644\u0641\u062A\u0643",d=`\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F \u0637\u0644\u0628 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 (${o.id||""}). \u0634\u0643\u0631\u0627\u064B \u0644\u0645\u062A\u0627\u0628\u0639\u062A\u0643.`,p="success",f="fa-circle-check"):c==="rejected"?(l="\u274C \u062A\u0645 \u0631\u0641\u0636 \u0645\u062E\u0627\u0644\u0641\u062A\u0643",d=`\u062A\u0645 \u0631\u0641\u0636 \u0637\u0644\u0628 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 (${o.id||""})${o.rejectionReason?". \u0627\u0644\u0633\u0628\u0628: "+o.rejectionReason:""}`,p="error",f="fa-circle-xmark"):(l="\u0637\u0644\u0628 \u0645\u062E\u0627\u0644\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629",d=`\u0637\u0644\u0628 \u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 (${o.id||""}) \u0642\u064A\u062F \u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u0645\u062F\u064A\u0631`,p="info",f="fa-hourglass-half"),e.push({id:r,type:p,title:l,message:d,time:o.updatedAt||o.createdAt||new Date,icon:f,onClick:()=>{try{const u=document.querySelector('a[data-section="violations"]');u&&u.click(),setTimeout(()=>{typeof Violations<"u"&&Violations.switchTab&&Violations.switchTab("approval-requests")},300)}catch{}}})})}if(AppState.appData&&AppState.appData.fireEquipmentApprovalRequests){const t=AppState.currentUser&&(AppState.currentUser.role==="admin"||AppState.currentUser.role==="\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"||typeof Permissions<"u"&&Permissions.isCurrentUserAdmin&&Permissions.isCurrentUserAdmin()),n=AppState.currentUser?.id||AppState.currentUser?.email||"";AppState.appData.fireEquipmentApprovalRequests.filter(a=>t?a.status==="pending":(a.requestedById===n||a.userEmail===n)&&(a.status==="pending"||a.status==="approved"||a.status==="rejected")).forEach(a=>{const s="fire-equipment-approval-"+(a.id||Date.now());if(!i.includes(s)){let o,r,l,d;t?(o="\u0637\u0644\u0628 \u0645\u0648\u0627\u0641\u0642\u0629 \u0639\u0644\u0649 \u0641\u062D\u0635 \u0645\u0639\u062F\u0627\u062A \u0627\u0644\u0625\u0637\u0641\u0627\u0621",r=`\u0637\u0644\u0628 ${a.requestedBy||"\u0645\u0633\u062A\u062E\u062F\u0645"} \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629 \u0639\u0644\u0649 \u0641\u062D\u0635 \u0627\u0644\u062C\u0647\u0627\u0632: ${a.assetNumber||a.assetId||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}`,l="warning",d="fa-clipboard-check"):a.status==="approved"?(o="\u062A\u0645\u062A \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629 \u0639\u0644\u0649 \u0637\u0644\u0628\u0643",r=`\u062A\u0645\u062A \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629 \u0639\u0644\u0649 \u0637\u0644\u0628\u0643 \u0644\u0625\u062C\u0631\u0627\u0621 \u0641\u062D\u0635 \u0634\u0647\u0631\u064A \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632: ${a.assetNumber||a.assetId||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}`,l="success",d="fa-check-circle"):a.status==="rejected"?(o="\u062A\u0645 \u0631\u0641\u0636 \u0637\u0644\u0628\u0643",r=`\u062A\u0645 \u0631\u0641\u0636 \u0637\u0644\u0628\u0643 \u0644\u0625\u062C\u0631\u0627\u0621 \u0641\u062D\u0635 \u0634\u0647\u0631\u064A \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632: ${a.assetNumber||a.assetId||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}${a.rejectionReason?`. \u0627\u0644\u0633\u0628\u0628: ${a.rejectionReason}`:""}`,l="error",d="fa-times-circle"):(o="\u0637\u0644\u0628\u0643 \u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629",r=`\u0637\u0644\u0628\u0643 \u0644\u0625\u062C\u0631\u0627\u0621 \u0641\u062D\u0635 \u0634\u0647\u0631\u064A \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632: ${a.assetNumber||a.assetId||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"} \u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629`,l="info",d="fa-clock"),e.push({id:s,type:l,title:o,message:r,time:a.requestedAt||a.createdAt||new Date,icon:d,onClick:()=>{if(typeof FireEquipment<"u"){const p=document.querySelector('a[data-section="fire-equipment"]');p&&p.click(),setTimeout(()=>{FireEquipment.switchTab&&FireEquipment.switchTab("approval-requests")},300)}}})}})}try{if(typeof DailyObservations<"u"&&typeof DailyObservations.getObservationInboxNotifications=="function"){const t=DailyObservations.getObservationInboxNotifications(i);t&&t.length&&t.forEach(n=>e.push(n))}}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0641\u064A \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",t)}try{if(((AppState.currentUser||{}).role==="admin"||typeof Permissions<"u"&&Permissions.isCurrentUserAdmin&&Permissions.isCurrentUserAdmin())&&Array.isArray(AppState.appData?.clinicStaffTimeOffRequests)){const a={leave:"\u0625\u062C\u0627\u0632\u0629",permission:"\u0625\u0630\u0646",overtime:"\u0625\u0636\u0627\u0641\u064A"};AppState.appData.clinicStaffTimeOffRequests.filter(s=>s&&String(s.status)==="pending").forEach(s=>{const o="clinic-timeoff-"+(s.id||Date.now());if(i.includes(o))return;const r=a[String(s.requestType||"").toLowerCase()]||s.requestType||"\u0637\u0644\u0628",l=s.userName||s.userEmail||"\u0645\u0633\u0626\u0648\u0644 \u0639\u064A\u0627\u062F\u0629";let d=s.dateFrom||"";s.requestType==="leave"&&s.dateTo?d+=" \u2192 "+s.dateTo:s.requestType==="permission"&&s.timeFrom&&(d+=" "+s.timeFrom+"-"+(s.timeTo||"")),e.push({id:o,type:"warning",title:"\u0637\u0644\u0628 "+r+" \u2014 \u0627\u0644\u0639\u064A\u0627\u062F\u0629",message:l+": "+(d||r)+(s.reason?" \u2014 "+String(s.reason).slice(0,80):""),time:s.requestedAt||s.createdAt||new Date,icon:"fa-user-clock",onClick:()=>{try{const p=document.querySelector('a[data-section="clinic"]');p&&p.click(),setTimeout(()=>{typeof Clinic<"u"&&(Clinic.state=Clinic.state||{},Clinic.state.activeTab="approvals",typeof Clinic.renderUI=="function"&&Clinic.renderUI())},400)}catch{}}})})}}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0637\u0644\u0628\u0627\u062A \u0627\u0644\u062D\u0636\u0648\u0631 \u0641\u064A \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",t)}try{const t=AppState.currentUser||{},n=c=>String(c||"").trim().toLowerCase(),a=[t.id,t.userId,t.email].map(n).filter(Boolean),s=(c,u)=>{if(!c||a.length===0)return!1;const g=u==="supply"?c.requestedBy||{}:c;return(u==="supply"?[c.requestedById,c.requestedByEmail,g.id,g.userId,g.email]:[c.userId,c.userEmail,c.staffId]).map(n).filter(Boolean).some(y=>a.includes(y))},o=c=>{try{document.querySelector('a[data-section="clinic"]')?.click(),setTimeout(()=>{typeof Clinic>"u"||(Clinic.state=Clinic.state||{},Clinic.state.activeTab=c,typeof Clinic.renderUI=="function"&&Clinic.renderUI())},400)}catch{}},r=t.role==="admin"||typeof Permissions<"u"&&Permissions.isCurrentUserAdmin&&Permissions.isCurrentUserAdmin(),l=Array.isArray(AppState.appData?.clinicSupplyRequests)?AppState.appData.clinicSupplyRequests:[],d=Array.isArray(AppState.appData?.clinicStaffTimeOffRequests)?AppState.appData.clinicStaffTimeOffRequests:[];r&&l.filter(c=>c&&n(c.status||"pending")==="pending").forEach(c=>{const u="clinic-supply-"+(c.id||Date.now());if(i.includes(u))return;const g=c.requestedBy||{},m=c.requestedByName||g.name||g.email||"\u0645\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0639\u064A\u0627\u062F\u0629",y=c.quantity?`${c.quantity} ${c.unit||"\u0648\u062D\u062F\u0629"}`:"";e.push({id:u,type:c.priority==="urgent"?"warning":"approval",title:"\u0637\u0644\u0628 \u0627\u062D\u062A\u064A\u0627\u062C\u0627\u062A \u062C\u062F\u064A\u062F \u2014 \u0627\u0644\u0639\u064A\u0627\u062F\u0629",message:`${m}: ${c.itemName||"\u0635\u0646\u0641 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}${y?" \u2014 "+y:""}`,time:c.createdAt||c.requestDate||new Date,icon:"fa-box-medical",onClick:()=>o("approvals")})});const p={approved:{label:"\u062A\u0645\u062A \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629",type:"success",icon:"fa-circle-check"},rejected:{label:"\u062A\u0645 \u0627\u0644\u0631\u0641\u0636",type:"error",icon:"fa-circle-xmark"}},f=(c,u)=>{const g=n(c?.status),m=p[g];if(!m||!s(c,u))return;const y=c.id||Date.now(),b=`clinic-${u}-result-${y}-${g}`;if(i.includes(b))return;const w=u==="supply",I=w?c.itemName||"\u0637\u0644\u0628 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u062C\u0627\u062A":{leave:"\u0627\u0644\u0625\u062C\u0627\u0632\u0629",permission:"\u0627\u0644\u0625\u0630\u0646",overtime:"\u0627\u0644\u0639\u0645\u0644 \u0627\u0644\u0625\u0636\u0627\u0641\u064A"}[n(c.requestType)]||"\u0637\u0644\u0628 \u0627\u0644\u062D\u0636\u0648\u0631",L=g==="rejected"&&(c.rejectionReason||c.reviewNotes)||"";e.push({id:b,type:m.type,title:`${m.label} \u0639\u0644\u0649 ${w?"\u0637\u0644\u0628 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u062C\u0627\u062A":"\u0637\u0644\u0628 \u0627\u0644\u062D\u0636\u0648\u0631"}`,message:`${I}${L?" \u2014 \u0627\u0644\u0633\u0628\u0628: "+String(L).slice(0,100):""}`,time:c.reviewedAt||c.approvedAt||c.rejectedAt||c.updatedAt||new Date,icon:m.icon,onClick:()=>o(w?"supply-request":"attendance")})};d.forEach(c=>f(c,"timeoff")),l.forEach(c=>f(c,"supply"))}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0633\u064A\u0631 \u0645\u0648\u0627\u0641\u0642\u0627\u062A \u0627\u0644\u0639\u064A\u0627\u062F\u0629:",t)}e.sort((t,n)=>{const a=new Date(t.time);return new Date(n.time)-a})}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",t)}return e},renderObservationNotificationItem(e){const i=this.getTimeAgo(e.time),t=Utils.escapeHTML(e.title),n=Utils.escapeHTML(e.message),a=typeof e.onClick=="function",s=JSON.stringify(e.id||""),o=a?`onclick="window.UI.handleNotificationClick(${s})"`:"";return`
-            <div class="notification-item notification-item--observation" data-notification-id="${Utils.escapeHTML(String(e.id||""))}" ${o} style="${a?"cursor: pointer;":""}">
+        `;
+    },
+
+    /**
+     * تبديل إظهار كلمة المرور
+     */
+    togglePasswordVisibility() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('password-toggle-icon');
+        const toggleBtn = document.getElementById('password-toggle-btn');
+
+        if (!passwordInput || !toggleIcon) {
+            Utils.safeWarn('⚠ لم يتم العثور على عناصر كلمة المرور');
+            return;
+        }
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
+            if (toggleBtn) {
+                toggleBtn.setAttribute('aria-label', 'إخفاء كلمة المرور');
+                toggleBtn.setAttribute('title', 'إخفاء كلمة المرور');
+            }
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
+            if (toggleBtn) {
+                toggleBtn.setAttribute('aria-label', 'إظهار كلمة المرور');
+                toggleBtn.setAttribute('title', 'إظهار كلمة المرور');
+            }
+        }
+
+        // إعادة التركيز على حقل الإدخال
+        passwordInput.focus();
+    },
+
+    /**
+     * إضافة أيقونة العودة إلى القسم
+     */
+    /**
+     * إضافة أيقونات التنقل (القائمة الرئيسية والعودة)
+     */
+    addNavigationIcons(section, sectionName) {
+        if (!section) {
+            if (AppState.debugMode) {
+                Utils.safeWarn('⚠️ addNavigationIcons: section غير موجود');
+            }
+            return;
+        }
+
+        // سجل للتحقق في وضع التطوير فقط
+        if (AppState.debugMode) {
+            Utils.safeLog('🔧 محاولة إضافة أيقونات التنقل للقسم:', sectionName, {
+                sectionExists: !!section,
+                sectionId: section?.id,
+                sectionVisible: section?.style?.display !== 'none',
+                sectionActive: section?.classList?.contains('active')
+            });
+        }
+
+        if (AppState.debugMode) {
+            Utils.safeLog('🔧 إضافة أيقونات التنقل للقسم:', sectionName);
+        }
+
+        // التحقق من وجود section-header
+        let sectionHeader = section.querySelector('.section-header');
+        if (AppState.debugMode) {
+            Utils.safeLog('🔍 البحث عن section-header:', {
+                found: !!sectionHeader,
+                sectionChildren: section?.children?.length
+            });
+        }
+
+        // إذا لم يكن موجوداً، نبحث عن section-title مباشرة
+        if (!sectionHeader) {
+            const sectionTitle = section.querySelector('.section-title');
+            if (sectionTitle) {
+                // إنشاء section-header إذا لم يكن موجوداً
+                sectionHeader = document.createElement('div');
+                sectionHeader.className = 'section-header';
+                sectionTitle.parentNode.insertBefore(sectionHeader, sectionTitle);
+                sectionHeader.appendChild(sectionTitle);
+            }
+        }
+
+        if (!sectionHeader) {
+            // إذا لم نجد section-header أو section-title، نحاول إنشاءهما
+            const firstChild = section.firstElementChild;
+            if (firstChild) {
+                sectionHeader = document.createElement('div');
+                sectionHeader.className = 'section-header';
+                section.insertBefore(sectionHeader, firstChild);
+            } else {
+                // إذا كان القسم فارغاً، نضيف section-header في البداية
+                sectionHeader = document.createElement('div');
+                sectionHeader.className = 'section-header';
+                section.appendChild(sectionHeader);
+            }
+        }
+
+        // التحقق من وجود أيقونات التنقل مسبقاً
+        const existingIcons = sectionHeader.querySelector('.navigation-icons-container');
+        if (existingIcons) {
+            // تحديث حالة زر العودة بناءً على سجل التنقل الحالي
+            const backIcon = existingIcons.querySelector('.back-menu-icon');
+            if (backIcon) {
+                const hasHistory = AppState.navigationHistory && AppState.navigationHistory.length > 0;
+                backIcon.setAttribute('aria-label', hasHistory ? 'العودة للقائمة السابقة' : 'العودة للقائمة الرئيسية');
+                backIcon.setAttribute('title', hasHistory ? 'العودة للقائمة السابقة' : 'العودة للقائمة الرئيسية');
+            }
+            return; // الأيقونات موجودة بالفعل
+        }
+
+        const isRTL = (document.documentElement.dir || document.body?.dir || 'rtl') === 'rtl';
+
+        // إنشاء حاوية للأيقونات
+        const iconsContainer = document.createElement('div');
+        iconsContainer.className = 'navigation-icons-container';
+        iconsContainer.style.cssText = `position: absolute; ${isRTL ? 'right: 0;' : 'left: 0;'} top: 0; display: flex; gap: 0.5rem; align-items: center; z-index: 1000; visibility: visible; opacity: 1;`;
+
+        // إنشاء أيقونة القائمة الرئيسية
+        const homeIcon = document.createElement('button');
+        homeIcon.className = 'main-menu-icon';
+        homeIcon.setAttribute('aria-label', isRTL ? 'القائمة الرئيسية' : 'Main Menu');
+        homeIcon.setAttribute('title', isRTL ? 'القائمة الرئيسية' : 'Main Menu');
+        homeIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" style="display:block;flex-shrink:0"><rect x="0" y="0" width="24" height="24" rx="5" fill="#4A90E2"/><path d="M 12,4 L 19,10 L 18,10 L 18,17 L 24,23 L 24,24 L 0,24 L 0,17 L 6,17 L 6,10 L 5,10 Z" fill="rgba(0,0,55,0.15)"/><polygon points="12,4 5,10 19,10" fill="white"/><rect x="6" y="10" width="12" height="7" rx="0.5" fill="white"/><rect x="10" y="14.5" width="4" height="2.5" rx="0.7" fill="#4A90E2"/></svg>';
+        homeIcon.style.cssText = 'width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: var(--btn-primary-bg); color: white; border-radius: 12px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: 0 2px 8px rgba(var(--sidebar-shadow-rgb), 0.2); border: none; flex-shrink: 0;';
+
+        // إضافة معالج الأحداث لأيقونة القائمة الرئيسية
+        homeIcon.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.goToDashboard();
+        });
+
+        // إضافة تأثيرات hover
+        homeIcon.addEventListener('mouseenter', function () {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 4px 12px rgba(var(--sidebar-shadow-rgb), 0.3)';
+            this.style.background = 'var(--btn-primary-bg-hover)';
+        });
+        homeIcon.addEventListener('mouseleave', function () {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 2px 8px rgba(var(--sidebar-shadow-rgb), 0.2)';
+            this.style.background = 'var(--btn-primary-bg)';
+        });
+
+        // إنشاء أيقونة العودة للقائمة السابقة
+        const backIcon = document.createElement('button');
+        backIcon.className = 'back-menu-icon';
+        const hasHistory = AppState.navigationHistory && AppState.navigationHistory.length > 0;
+        backIcon.setAttribute('aria-label', hasHistory
+            ? (isRTL ? 'العودة للقائمة السابقة' : 'Back to previous menu')
+            : (isRTL ? 'العودة للقائمة الرئيسية' : 'Back to main menu'));
+        backIcon.setAttribute('title', hasHistory
+            ? (isRTL ? 'العودة للقائمة السابقة' : 'Back to previous menu')
+            : (isRTL ? 'العودة للقائمة الرئيسية' : 'Back to main menu'));
+        backIcon.innerHTML = `<i class="fas ${isRTL ? 'fa-arrow-right' : 'fa-arrow-left'}"></i>`;
+        backIcon.style.cssText = 'width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: var(--bg-tertiary); color: var(--text-primary); border-radius: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); font-size: 1.25rem; flex-shrink: 0;';
+
+        // إضافة معالج الأحداث لأيقونة العودة
+        backIcon.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.goBack();
+        });
+
+        // إضافة تأثيرات hover
+        backIcon.addEventListener('mouseenter', function () {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = 'var(--shadow-lg)';
+            this.style.background = 'var(--bg-secondary)';
+        });
+        backIcon.addEventListener('mouseleave', function () {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = 'var(--shadow-md)';
+            this.style.background = 'var(--bg-tertiary)';
+        });
+
+        // إضافة الأيقونات إلى الحاوية
+        iconsContainer.appendChild(homeIcon);
+        iconsContainer.appendChild(backIcon);
+
+        // إضافة الحاوية إلى section-header
+        sectionHeader.appendChild(iconsContainer);
+
+        // التأكد من أن section-header له position: relative
+        const computedPosition = window.getComputedStyle(sectionHeader).position;
+        if (computedPosition === 'static') {
+            sectionHeader.style.position = 'relative';
+        }
+
+        // إضافة padding للـ section-header لتفادي تداخل الأيقونات مع المحتوى
+        const computedPadding = window.getComputedStyle(sectionHeader)[isRTL ? 'paddingRight' : 'paddingLeft'];
+        const paddingValue = parseInt(computedPadding) || 0;
+        if (paddingValue < 120) {
+            if (isRTL) {
+                sectionHeader.style.paddingRight = '120px';
+            } else {
+                sectionHeader.style.paddingLeft = '120px';
+            }
+        }
+
+        // التأكد من أن الأيقونات مرئية
+        iconsContainer.style.visibility = 'visible';
+        iconsContainer.style.opacity = '1';
+        iconsContainer.style.display = 'flex';
+        iconsContainer.style.zIndex = '1000';
+
+        // التأكد من أن الأيقونات مرئية وموجودة في DOM
+        const iconsInDOM = sectionHeader.querySelector('.navigation-icons-container');
+        if (iconsInDOM) {
+            if (AppState.debugMode) {
+                Utils.safeLog('✅ تم إضافة أيقونات التنقل بنجاح للقسم:', sectionName, {
+                    sectionHeader: !!sectionHeader,
+                    iconsContainer: !!iconsContainer,
+                    iconsInDOM: !!iconsInDOM,
+                    position: window.getComputedStyle(sectionHeader).position,
+                    paddingRight: sectionHeader.style.paddingRight,
+                    iconsVisible: window.getComputedStyle(iconsInDOM).visibility,
+                    iconsDisplay: window.getComputedStyle(iconsInDOM).display,
+                    iconsZIndex: window.getComputedStyle(iconsInDOM).zIndex,
+                    headerRect: sectionHeader.getBoundingClientRect(),
+                    iconsRect: iconsInDOM.getBoundingClientRect()
+                });
+            }
+        } else {
+            Utils.safeError('❌ فشل إضافة الأيقونات - لم يتم العثور عليها في DOM:', sectionName, {
+                sectionHeader: !!sectionHeader,
+                iconsContainer: !!iconsContainer
+            });
+        }
+
+        // إضافة MutationObserver لإعادة إضافة الأيقونات عند تغيير محتوى القسم
+        if (!section.dataset.observerAdded) {
+            const savedSectionName = sectionName; // حفظ اسم القسم
+            const self = this; // حفظ المرجع للـ this
+            let checkTimeout = null;
+
+            const observer = new MutationObserver((mutations) => {
+                // إلغاء أي timeout سابق
+                if (checkTimeout) {
+                    clearTimeout(checkTimeout);
+                }
+
+                // التحقق من أي تغييرات في المحتوى
+                let contentChanged = false;
+                for (const mutation of mutations) {
+                    if (mutation.type === 'childList') {
+                        // إذا تم حذف عقد (مثل innerHTML)
+                        if (mutation.removedNodes.length > 0) {
+                            // التحقق من أن التغيير ليس من الأيقونات نفسها
+                            let isIconRemoval = false;
+                            for (const node of mutation.removedNodes) {
+                                if (node.nodeType === 1 &&
+                                    (node.classList && node.classList.contains('navigation-icons-container'))) {
+                                    isIconRemoval = true;
+                                    break;
+                                }
+                            }
+                            if (!isIconRemoval) {
+                                contentChanged = true;
+                                break;
+                            }
+                        }
+                        // إذا تم إضافة عقد جديدة (بعد innerHTML)
+                        if (mutation.addedNodes.length > 0) {
+                            let isIconAddition = false;
+                            for (const node of mutation.addedNodes) {
+                                if (node.nodeType === 1 &&
+                                    (node.classList && node.classList.contains('navigation-icons-container'))) {
+                                    isIconAddition = true;
+                                    break;
+                                }
+                            }
+                            if (!isIconAddition) {
+                                contentChanged = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (contentChanged && savedSectionName !== 'dashboard') {
+                    // استخدام debounce لتجنب استدعاءات متعددة
+                    checkTimeout = setTimeout(() => {
+                        const currentHeader = section.querySelector('.section-header');
+                        if (currentHeader) {
+                            const currentIcons = currentHeader.querySelector('.navigation-icons-container');
+                            if (!currentIcons) {
+                                // إعادة إضافة الأيقونات إذا تم حذفها
+                                if (AppState.debugMode) {
+                                    Utils.safeLog('🔄 إعادة إضافة الأيقونات بعد تغيير المحتوى:', savedSectionName);
+                                }
+                                self.addNavigationIcons(section, savedSectionName);
+                            }
+                        } else {
+                            // إذا تم حذف section-header بالكامل، نعيد إضافة الأيقونات بعد إنشاء header جديد
+                            setTimeout(() => {
+                                const retryHeader = section.querySelector('.section-header');
+                                if (retryHeader) {
+                                    self.addNavigationIcons(section, savedSectionName);
+                                }
+                            }, 200);
+                        }
+                    }, 100);
+                }
+            });
+
+            observer.observe(section, {
+                childList: true,
+                subtree: true,
+                attributes: false
+            });
+
+            section.dataset.observerAdded = 'true';
+            section.dataset.sectionName = savedSectionName;
+            section._navigationObserver = observer;
+        }
+    },
+
+    /**
+     * التأكد من وجود أيقونات التنقل في القسم
+     */
+    ensureNavigationIcons(sectionName) {
+        if (!sectionName || sectionName === 'dashboard') return;
+
+        const sectionId = `${sectionName}-section`;
+        const section = document.getElementById(sectionId);
+
+        if (!section || section.style.display === 'none' || !section.classList.contains('active')) {
+            return;
+        }
+
+        const sectionHeader = section.querySelector('.section-header');
+        if (sectionHeader) {
+            const existingIcons = sectionHeader.querySelector('.navigation-icons-container');
+            if (!existingIcons) {
+                if (AppState.debugMode) {
+                    Utils.safeLog('🔧 ensureNavigationIcons: إضافة الأيقونات للقسم:', sectionName);
+                }
+                this.addNavigationIcons(section, sectionName);
+            }
+        } else {
+            // إذا لم يكن هناك header، ننتظر قليلاً ثم نحاول مرة أخرى
+            setTimeout(() => {
+                const retrySection = document.getElementById(sectionId);
+                if (retrySection) {
+                    const retryHeader = retrySection.querySelector('.section-header');
+                    if (retryHeader) {
+                        this.addNavigationIcons(retrySection, sectionName);
+                    }
+                }
+            }, 200);
+        }
+    },
+
+    /**
+     * دالة helper لإضافة الأيقونات بعد renderUI
+     * يمكن استدعاؤها من أي موديول بعد استبدال innerHTML
+     */
+    addNavigationIconsAfterRender(sectionName) {
+        if (!sectionName || sectionName === 'dashboard') {
+            Utils.safeWarn('⚠️ addNavigationIconsAfterRender: sectionName غير صالح:', sectionName);
+            return;
+        }
+
+        const sectionId = `${sectionName}-section`;
+        const section = document.getElementById(sectionId);
+
+        if (!section) {
+            Utils.safeWarn('⚠️ addNavigationIconsAfterRender: section غير موجود:', sectionId);
+            // محاولة بعد قليل
+            setTimeout(() => {
+                const retrySection = document.getElementById(sectionId);
+                if (retrySection && typeof this.addNavigationIcons === 'function') {
+                    this.addNavigationIcons(retrySection, sectionName);
+                }
+            }, 200);
+            return;
+        }
+
+        if (typeof this.addNavigationIcons === 'function') {
+            if (AppState.debugMode) Utils.safeLog('✅ استدعاء addNavigationIconsAfterRender للقسم:', sectionName);
+            // جدولة واحدة فقط لكل قسم لتجنب setTimeout handlers الثقيلة
+            if (!this._addNavIconsTimers) this._addNavIconsTimers = {};
+            const previousTimer = this._addNavIconsTimers[sectionName];
+            if (previousTimer) clearTimeout(previousTimer);
+            this._addNavIconsTimers[sectionName] = setTimeout(() => {
+                try { this.addNavigationIcons(section, sectionName); } catch (e) {}
+                this._addNavIconsTimers[sectionName] = null;
+            }, 60);
+        } else {
+            Utils.safeError('❌ addNavigationIconsAfterRender: دالة addNavigationIcons غير موجودة');
+        }
+    },
+
+    /**
+     * إعداد مراقبة innerHTML لإضافة الأيقونات تلقائياً
+     */
+    setupInnerHTMLWatcher(section, sectionName) {
+        if (!section || sectionName === 'dashboard' || section.dataset.innerHTMLWatched) {
+            return;
+        }
+
+        const self = this;
+
+        // Override innerHTML setter للقسم المحدد
+        const originalDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+        if (!originalDescriptor) return;
+
+        const originalSet = originalDescriptor.set;
+        const originalGet = originalDescriptor.get;
+
+        // Override innerHTML setter with improved retry mechanism
+        Object.defineProperty(section, 'innerHTML', {
+            set: function (value) {
+                // استدعاء setter الأصلي
+                if (originalSet) {
+                    originalSet.call(this, value);
+                }
+
+                // إضافة الأيقونات مرة واحدة فقط بعد استبدال innerHTML لتقليل الحمل
+                if (sectionName !== 'dashboard') {
+                    setTimeout(() => {
+                        try {
+                            if (this.isConnected && this.parentNode) {
+                                self.addNavigationIcons(this, sectionName);
+                            }
+                        } catch (error) {
+                            if (AppState.debugMode) {
+                                Utils.safeWarn('⚠️ خطأ في إضافة الأيقونات بعد innerHTML:', error);
+                            }
+                        }
+                    }, 60);
+                }
+            },
+            get: function () {
+                if (originalGet) {
+                    return originalGet.call(this);
+                }
+                return '';
+            },
+            configurable: true,
+            enumerable: true
+        });
+
+        section.dataset.innerHTMLWatched = 'true';
+
+        // استخدام MutationObserver كحل احتياطي محسّن
+        let observerTimeout = null;
+        const observer = new MutationObserver((mutations) => {
+            let shouldAddIcons = false;
+            let iconsRemoved = false;
+
+            for (const mutation of mutations) {
+                if (mutation.type === 'childList') {
+                    // التحقق من إضافة section-header
+                    if (mutation.addedNodes.length > 0) {
+                        for (const node of mutation.addedNodes) {
+                            if (node.nodeType === 1) {
+                                if (node.classList && node.classList.contains('section-header')) {
+                                    shouldAddIcons = true;
+                                    break;
+                                }
+                                if (node.querySelector && node.querySelector('.section-header')) {
+                                    shouldAddIcons = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // التحقق من حذف الأيقونات
+                    if (mutation.removedNodes.length > 0) {
+                        for (const node of mutation.removedNodes) {
+                            if (node.nodeType === 1) {
+                                if ((node.classList && node.classList.contains('navigation-icons-container')) ||
+                                    (node.querySelector && node.querySelector('.navigation-icons-container'))) {
+                                    iconsRemoved = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (shouldAddIcons || iconsRemoved) break;
+            }
+
+            // إلغاء أي timeout سابق
+            if (observerTimeout) {
+                clearTimeout(observerTimeout);
+            }
+
+            // إضافة الأيقونات عند الحاجة
+            if (shouldAddIcons || iconsRemoved) {
+                observerTimeout = setTimeout(() => {
+                    try {
+                        const currentHeader = section.querySelector('.section-header');
+                        if (currentHeader && section.isConnected) {
+                            const existingIcons = currentHeader.querySelector('.navigation-icons-container');
+                            if (!existingIcons) {
+                                self.addNavigationIcons(section, sectionName);
+                            }
+                        }
+                    } catch (error) {
+                        if (AppState.debugMode) {
+                            Utils.safeWarn('⚠️ خطأ في MutationObserver:', error);
+                        }
+                    }
+                }, 180); // زيادة الفترة لتجميع mutations وتقليل reflow
+            }
+        });
+
+        observer.observe(section, {
+            childList: true,
+            subtree: true,
+            attributes: false // لا نحتاج لمراقبة التغييرات في السمات
+        });
+
+        section._innerHTMLObserver = observer;
+        section._innerHTMLObserverTimeout = observerTimeout;
+    },
+
+    /**
+     * إزالة أيقونات التنقل من القسم
+     */
+    removeNavigationIcons(section) {
+        if (!section) return;
+
+        const sectionHeader = section.querySelector('.section-header');
+        if (sectionHeader) {
+            const iconsContainer = sectionHeader.querySelector('.navigation-icons-container');
+            if (iconsContainer) {
+                iconsContainer.remove();
+            }
+            // إزالة أيقونات قديمة إن وجدت
+            const oldBackIcon = sectionHeader.querySelector('.back-home-icon');
+            if (oldBackIcon) {
+                oldBackIcon.remove();
+            }
+        }
+
+        // تنظيف MutationObserver و timeout
+        if (section._innerHTMLObserver) {
+            section._innerHTMLObserver.disconnect();
+            section._innerHTMLObserver = null;
+        }
+        if (section._innerHTMLObserverTimeout) {
+            clearTimeout(section._innerHTMLObserverTimeout);
+            section._innerHTMLObserverTimeout = null;
+        }
+
+        // إزالة علامة innerHTMLWatched للسماح بإعادة الإعداد إذا لزم الأمر
+        delete section.dataset.innerHTMLWatched;
+    },
+
+    /**
+     * الانتقال إلى الشاشة الرئيسية (Dashboard)
+     */
+    goToDashboard() {
+        // مسح سجل التنقل
+        AppState.navigationHistory = [];
+
+        // الانتقال إلى Dashboard أولاً
+        this.showSection('dashboard');
+
+        // فتح القائمة الجانبية عند العودة إلى Dashboard على الشاشات الكبيرة
+        // وعلى الموبايل نتركها كما هي (مغلقة افتراضياً)
+        if (window.innerWidth > 1024) {
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar && !sidebar.classList.contains('open')) {
+                // استخدام setTimeout لضمان اكتمال render القسم أولاً
+                setTimeout(() => {
+                    this.toggleSidebar(true);
+                }, 100);
+            }
+        }
+
+        // إزالة التفعيل من جميع عناصر القائمة
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.classList.remove('active');
+            item.removeAttribute('aria-current');
+        });
+
+        // تفعيل عنصر Dashboard في القائمة
+        const dashboardNav = document.querySelector('[data-section="dashboard"]');
+        if (dashboardNav) {
+            dashboardNav.classList.add('active');
+            dashboardNav.setAttribute('aria-current', 'page');
+        }
+    },
+
+    /**
+     * العودة للقائمة السابقة
+     */
+    goBack() {
+        // التحقق من وجود سجل تنقل
+        if (!AppState.navigationHistory || AppState.navigationHistory.length === 0) {
+            // إذا لم يكن هناك سجل، نعود للقائمة الرئيسية
+            this.goToDashboard();
+            return;
+        }
+
+        // تنظيف السجل من أي صفحات مكررة أو غير صالحة
+        AppState.navigationHistory = AppState.navigationHistory.filter(
+            (section, index, arr) => {
+                // إزالة القيم الفارغة أو غير الصحيحة
+                if (!section || section.trim() === '') {
+                    return false;
+                }
+                // إزالة التكرارات المتتالية
+                return index === 0 || section !== arr[index - 1];
+            }
+        );
+
+        // التحقق مرة أخرى بعد التنظيف
+        if (AppState.navigationHistory.length === 0) {
+            this.goToDashboard();
+            return;
+        }
+
+        // الحصول على آخر صفحة من السجل (بدون حذفها أولاً)
+        const previousSection = AppState.navigationHistory[AppState.navigationHistory.length - 1];
+
+        // التحقق من أن الصفحة السابقة صالحة ومختلفة عن الصفحة الحالية
+        if (!previousSection || previousSection === AppState.currentSection) {
+            // إذا كانت الصفحة السابقة غير صالحة أو نفس الصفحة الحالية، نعود للقائمة الرئيسية
+            AppState.navigationHistory = []; // مسح السجل
+            this.goToDashboard();
+            return;
+        }
+
+        // التحقق من وجود الصفحة في DOM قبل الانتقال إليها
+        const previousSectionId = `${previousSection}-section`;
+        const previousSectionElement = document.getElementById(previousSectionId);
+
+        // إذا لم تكن الصفحة موجودة، نحاول الانتقال إلى Dashboard
+        if (!previousSectionElement && previousSection !== 'dashboard') {
+            // إزالة الصفحة غير الصالحة من السجل
+            AppState.navigationHistory = AppState.navigationHistory.filter(
+                item => item !== previousSection
+            );
+
+            // المحاولة مرة أخرى إذا كان هناك صفحات أخرى في السجل
+            if (AppState.navigationHistory.length > 0) {
+                this.goBack();
+                return;
+            } else {
+                this.goToDashboard();
+                return;
+            }
+        }
+
+        // حذف آخر صفحة من السجل بعد التأكد من صحتها
+        AppState.navigationHistory.pop();
+
+        // تعيين علامة لتجنب إضافة القسم الحالي إلى السجل عند العودة
+        AppState.isNavigatingBack = true;
+
+        // العودة للصفحة السابقة
+        this.showSection(previousSection);
+
+        // فتح القائمة الجانبية عند العودة للصفحة السابقة على الشاشات الكبيرة
+        if (window.innerWidth > 1024) {
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar && !sidebar.classList.contains('open')) {
+                setTimeout(() => {
+                    this.toggleSidebar(true);
+                }, 100);
+            }
+        }
+
+        // إعادة تعيين العلامة بعد التنقل
+        setTimeout(() => {
+            AppState.isNavigatingBack = false;
+        }, 300); // زيادة الوقت لضمان اكتمال التنقل
+    },
+
+    /**
+     * تهيئة أزرار الواجهة (الوضع الليلي، الإشعارات، اللغة)
+     */
+    initSidebarButtons() {
+        // تهيئة زر الوضع الليلي
+        this.initThemeToggle();
+        this.initColorThemeToggle();
+
+        // تهيئة زر الإشعارات
+        this.initNotificationsButton();
+
+        // تهيئة زر اللغة
+        this.initLanguageToggle();
+    },
+
+    /**
+     * تهيئة زر الوضع الليلي
+     */
+    initThemeToggle() {
+        // الحصول على جميع أزرار الوضع الليلي
+        const themeToggles = [
+            document.getElementById('theme-toggle'),
+            document.getElementById('mobile-theme-toggle'),
+            document.getElementById('header-theme-toggle'),
+            document.getElementById('sidebar-theme-toggle')
+        ].filter(Boolean);
+
+        if (themeToggles.length === 0) {
+            Utils.safeWarn('⚠️ لم يتم العثور على أزرار الوضع الليلي');
+            return;
+        }
+
+        // تحميل الوضع المحفوظ
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        this.setTheme(savedTheme);
+
+        // ربط جميع الأزرار
+        themeToggles.forEach(btn => {
+            // التحقق من عدم ربط الزر مسبقاً
+            if (btn.dataset.themeBound === 'true') {
+                return;
+            }
+
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleTheme();
+            });
+
+            btn.dataset.themeBound = 'true';
+        });
+
+        Utils.safeLog('✅ تم تهيئة زر الوضع الليلي');
+    },
+
+    /**
+     * تعيين الوضع الليلي
+     */
+    setTheme(theme) {
+        const isDark = theme === 'dark';
+
+        // استخدام data-theme attribute بدلاً من class (حسب CSS)
+        document.documentElement.setAttribute('data-theme', theme);
+        if (document.body) {
+            document.body.setAttribute('data-theme', theme);
+        }
+
+        // تحديث الأيقونات
+        const icons = [
+            document.getElementById('theme-icon'),
+            document.getElementById('mobile-theme-icon'),
+            document.getElementById('header-theme-icon'),
+            document.getElementById('sidebar-theme-icon')
+        ].filter(Boolean);
+
+        icons.forEach(icon => {
+            if (icon) {
+                icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        });
+
+        // تحديث meta theme-color
+        let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        if (!metaThemeColor) {
+            metaThemeColor = document.createElement('meta');
+            metaThemeColor.name = 'theme-color';
+            document.head.appendChild(metaThemeColor);
+        }
+        metaThemeColor.content = isDark ? '#1a1a1a' : '#ffffff';
+
+        // حفظ الوضع
+        localStorage.setItem('theme', theme);
+
+        Utils.safeLog(`✅ تم تعيين الوضع: ${theme}`);
+    },
+
+    /**
+     * التبديل بين الوضع الليلي والنهاري
+     */
+    toggleTheme() {
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        this.setTheme(newTheme);
+
+        if (typeof Notification !== 'undefined') {
+            Notification.success(newTheme === 'dark' ? 'تم تفعيل الوضع الليلي' : 'تم تفعيل الوضع النهاري');
+        }
+    },
+
+    initColorThemeToggle() {
+        const colorThemeToggles = [
+            document.getElementById('sidebar-color-theme-toggle')
+        ].filter(Boolean);
+
+        if (colorThemeToggles.length === 0) {
+            return;
+        }
+
+        // افتراضياً عند كل فتح للنظام نبدأ بالسيم الأخضر
+        this.setColorTheme('emerald');
+
+        colorThemeToggles.forEach(btn => {
+            if (btn.dataset.colorThemeBound === 'true') return;
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleColorTheme();
+            });
+            btn.dataset.colorThemeBound = 'true';
+        });
+    },
+
+    setColorTheme(colorTheme) {
+        const supportedThemes = ['emerald', 'blue', 'purple', 'amber'];
+        const safeTheme = supportedThemes.includes(colorTheme) ? colorTheme : 'emerald';
+
+        document.documentElement.setAttribute('data-color-theme', safeTheme);
+        if (document.body) {
+            document.body.setAttribute('data-color-theme', safeTheme);
+        }
+        localStorage.setItem('color-theme', safeTheme);
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        const computedPrimary = getComputedStyle(document.documentElement).getPropertyValue('--brand-primary').trim();
+        let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        if (!metaThemeColor) {
+            metaThemeColor = document.createElement('meta');
+            metaThemeColor.name = 'theme-color';
+            document.head.appendChild(metaThemeColor);
+        }
+        metaThemeColor.content = currentTheme === 'dark' ? '#1a1a1a' : (computedPrimary || '#1a634f');
+    },
+
+    toggleColorTheme() {
+        const themes = ['emerald', 'blue', 'purple', 'amber'];
+        const labels = {
+            emerald: 'الأخضر',
+            blue: 'الأزرق',
+            purple: 'البنفسجي',
+            amber: 'العنبري'
+        };
+
+        const currentTheme = localStorage.getItem('color-theme') || 'emerald';
+        const currentIndex = themes.indexOf(currentTheme);
+        const nextTheme = themes[(currentIndex + 1) % themes.length];
+        this.setColorTheme(nextTheme);
+
+        if (typeof Notification !== 'undefined') {
+            Notification.success(`تم تغيير سمة اللون إلى ${labels[nextTheme] || nextTheme}`);
+        }
+    },
+
+    /**
+     * تهيئة زر الإشعارات
+     */
+    initNotificationsButton() {
+        // حفظ مرجع إلى this للاستخدام داخل arrow function
+        const self = this;
+
+        try {
+            const sidebarBtn = document.getElementById('notifications-btn');
+            const mobileNotificationsBtn = document.getElementById('mobile-notifications-btn');
+            const headerNotificationsBtn = document.getElementById('header-notifications-btn');
+
+            const notificationButtons = [sidebarBtn, mobileNotificationsBtn, headerNotificationsBtn].filter(Boolean);
+
+            if (notificationButtons.length === 0) {
+                this._notificationsInitCount = (this._notificationsInitCount || 0) + 1;
+                if (this._notificationsInitCount > 20) {
+                    Utils.safeError('⚠️ توقف تهيئة الإشعارات: تجاوز عدد المحاولات (20)');
+                    return;
+                }
+                Utils.safeWarn('⚠️ لم يتم العثور على أزرار الإشعارات - المحاولة #' + this._notificationsInitCount);
+                setTimeout(() => {
+                    this.initNotificationsButton();
+                }, 500);
+                return;
+            }
+            this._notificationsInitCount = 0;
+
+            Utils.safeLog('✅ تهيئة الإشعارات:');
+            if (sidebarBtn) Utils.safeLog('  - notifications-btn (الشريط الجانبي)');
+            if (mobileNotificationsBtn) Utils.safeLog('  - mobile-notifications-btn');
+            if (headerNotificationsBtn) Utils.safeLog('  - header-notifications-btn');
+
+            // ربط أزرار الإشعارات — نفس المسار لجميع الأزرار (شريط جانبي، موبايل، هيدر): click على الزر
+            notificationButtons.forEach((btn) => {
+                if (!btn) return;
+
+                try {
+                    // التحقق من أن الزر موجود في DOM
+                    if (!document.body.contains(btn)) {
+                        Utils.safeWarn('⚠️ الزر غير موجود في DOM:', btn.id);
+                        return;
+                    }
+
+                    // جرس الشريط: التقاط على الزر نفسه يعمل قبل الفقاعة ويقلّل تعارض المستمعات/اللمس
+                    const useCapture = btn.id === 'notifications-btn';
+
+                    // إزالة event listeners القديمة
+                    if (btn._notificationClickHandler) {
+                        btn.removeEventListener('click', btn._notificationClickHandler, {
+                            capture: !!btn._notificationClickUsesCapture
+                        });
+                        delete btn._notificationClickHandler;
+                        delete btn._notificationClickUsesCapture;
+                    }
+
+                    // إنشاء handler جديد
+                    const clickHandler = (e) => {
+                        try {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            // تحديد أي dropdown يجب فتحه بناءً على الزر
+                            let dropdownId, listId, emptyId, closeBtnId;
+                            if (btn.id === 'notifications-btn') {
+                                dropdownId = 'notifications-dropdown';
+                                listId = 'notifications-list';
+                                emptyId = 'notifications-empty';
+                                closeBtnId = 'close-notifications-dropdown';
+                            } else if (btn.id === 'mobile-notifications-btn') {
+                                dropdownId = 'mobile-notifications-dropdown';
+                                listId = 'mobile-notifications-list';
+                                emptyId = 'mobile-notifications-empty';
+                                closeBtnId = 'close-mobile-notifications-dropdown';
+                            } else if (btn.id === 'header-notifications-btn') {
+                                dropdownId = 'header-notifications-dropdown';
+                                listId = 'header-notifications-list';
+                                emptyId = 'header-notifications-empty';
+                                closeBtnId = 'close-header-notifications-dropdown';
+                            } else {
+                                Utils.safeWarn('⚠️ معرف زر إشعارات غير معروف:', btn.id);
+                                return;
+                            }
+
+                            const dropdown = document.getElementById(dropdownId);
+                            if (!dropdown) {
+                                Utils.safeWarn('⚠️ لم يتم العثور على dropdown:', dropdownId);
+                                return;
+                            }
+
+                            Utils.safeLog('🔔 فتح dropdown:', dropdownId);
+
+                            // استدعاء toggle مع ربط this صريح (ضمان hide/show حتى لو اختلف سياق الاستدعاء)
+                            const uiToggle = (self && typeof self.toggleNotificationsDropdown === 'function')
+                                ? self
+                                : (typeof window !== 'undefined' && window.UI && typeof window.UI.toggleNotificationsDropdown === 'function')
+                                    ? window.UI
+                                    : null;
+                            if (uiToggle) {
+                                uiToggle.toggleNotificationsDropdown.call(uiToggle, dropdownId, listId, emptyId, closeBtnId, btn);
+                            }
+                        } catch (error) {
+                            Utils.safeError('⚠️ خطأ في معالجة حدث الإشعارات:', error);
+                            // محاولة فتح dropdown مباشرة
+                            try {
+                                const dropdownId = btn.id === 'notifications-btn' ? 'notifications-dropdown' :
+                                    btn.id === 'mobile-notifications-btn' ? 'mobile-notifications-dropdown' :
+                                        btn.id === 'header-notifications-btn' ? 'header-notifications-dropdown' : null;
+                                if (dropdownId) {
+                                    const dropdown = document.getElementById(dropdownId);
+                                    if (dropdown) {
+                                        const listId = dropdownId === 'notifications-dropdown' ? 'notifications-list' : dropdownId.replace('dropdown', 'list');
+                                        const emptyId = dropdownId === 'notifications-dropdown' ? 'notifications-empty' : dropdownId.replace('dropdown', 'empty');
+                                        const uiObj = self || window.UI;
+                                        if (uiObj && typeof uiObj.showNotificationsDropdown === 'function') {
+                                            uiObj.showNotificationsDropdown(dropdownId, listId, emptyId, btn).catch(err => {
+                                                Utils.safeWarn('⚠️ خطأ في عرض الإشعارات:', err);
+                                            });
+                                        }
+                                    }
+                                }
+                            } catch (fallbackError) {
+                                Utils.safeError('⚠️ فشل فتح الإشعارات:', fallbackError);
+                            }
+                        }
+                    };
+
+                    // ربط الـ handler
+                    btn._notificationClickHandler = clickHandler;
+                    btn._notificationClickUsesCapture = useCapture;
+                    btn.addEventListener('click', clickHandler, { capture: useCapture, passive: false });
+                    btn.dataset.notificationsBound = 'true';
+
+                    Utils.safeLog('✅ تم ربط زر الإشعارات:', btn.id);
+                    if (btn.id === 'mobile-notifications-btn') {
+                        Utils.safeLog('🔔 تم ربط زر الإشعارات الجانبي (mobile-notifications-btn)');
+                    }
+                    if (btn.id === 'notifications-btn') {
+                        Utils.safeLog('🔔 تم ربط زر الإشعارات في القائمة الجانبية (notifications-btn)');
+                    }
+                    if (btn.id === 'header-notifications-btn') {
+                        Utils.safeLog('🔔 تم ربط زر الإشعارات العلوي (header-notifications-btn)');
+                    }
+                } catch (error) {
+                    Utils.safeError('⚠️ خطأ في ربط زر الإشعارات:', btn.id, error);
+                }
+            });
+        } catch (error) {
+            Utils.safeError('⚠️ خطأ في تهيئة أزرار الإشعارات:', error);
+        }
+
+        // ربط أزرار الإغلاق باستخدام self
+        const closeButtons = [
+            { id: 'close-notifications-dropdown', dropdownId: 'notifications-dropdown' },
+            { id: 'close-mobile-notifications-dropdown', dropdownId: 'mobile-notifications-dropdown' },
+            { id: 'close-header-notifications-dropdown', dropdownId: 'header-notifications-dropdown' }
+        ];
+
+        closeButtons.forEach(({ id, dropdownId }) => {
+            const closeBtn = document.getElementById(id);
+            if (closeBtn) {
+                closeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // استخدام self أو window.UI
+                    const uiObj = self || window.UI;
+                    if (uiObj && typeof uiObj.hideNotificationsDropdown === 'function') {
+                        uiObj.hideNotificationsDropdown(dropdownId);
+                    }
+                });
+            }
+        });
+
+        ['notifications-mark-all-read', 'mobile-notifications-mark-all-read', 'header-notifications-mark-all-read'].forEach((btnId) => {
+            const b = document.getElementById(btnId);
+            if (b && b.dataset.markAllBound !== 'true') {
+                b.dataset.markAllBound = 'true';
+                b.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const uiObj = self || window.UI;
+                    if (uiObj && typeof uiObj.markAllNotificationsAsRead === 'function') {
+                        uiObj.markAllNotificationsAsRead();
+                    }
+                });
+            }
+        });
+
+        // إغلاق dropdown عند النقر خارجها
+        // تنظيف الـ listener القديم إذا كان موجوداً
+        if (self._notificationsClickHandler) {
+            document.removeEventListener('click', self._notificationsClickHandler, true);
+            self._notificationsClickHandler = null;
+        }
+        
+        self._notificationsClickHandler = (e) => {
+            try {
+                // إذا كان النقر على أحد أزرار الإشعارات: لا نغلق القائمة هنا — نترك الزر نفسه يفتح/يغلق عبر الـ handler المباشر (لتجنب عدم استجابة النقر في القائمة الجانبية)
+                if (e && e.target) {
+                    const notifBtn = e.target.closest(
+                        '#notifications-btn, #mobile-notifications-btn, #header-notifications-btn, #sidebar-notifications-container'
+                    );
+                    if (notifBtn) {
+                        return; // عدم منع الانتشار؛ الـ handler المربوط على الزر سيتولى فتح/إغلاق القائمة
+                    }
+                }
+
+                // تجاهل الأخطاء من uploadmanager أو extensions
+                if (e && e.target) {
+                    const targetStr = String(e.target.tagName || '').toLowerCase();
+                    const idStr = String(e.target.id || '');
+                    const classStr = String(e.target.className || '');
+                    
+                    // تجاهل أخطاء extensions
+                    if (idStr.includes('uploadmanager') || classStr.includes('uploadmanager') ||
+                        targetStr.includes('style') && idStr.includes('extension')) {
+                        return;
+                    }
+                }
+
+                const dropdowns = ['notifications-dropdown', 'mobile-notifications-dropdown', 'header-notifications-dropdown'];
+                dropdowns.forEach(dropdownId => {
+                    try {
+                        const dropdown = document.getElementById(dropdownId);
+                        if (dropdown) {
+                            // ✅ تحسين أداء فائق: فحص سريع للغاية للـ inline style أولاً لتجنب استدعاء getComputedStyle المكلف في كل نقرة على الشاشة
+                            const isVisible = dropdown.style.display === 'flex';
+                            
+                            if (isVisible && e && e.target) {
+                                // ✅ إصلاح: استخدام selector يشمل جميع أزرار الإشعارات
+                                const button = e.target.closest(
+                                    '#notifications-btn, #mobile-notifications-btn, #header-notifications-btn, #sidebar-notifications-container, [id$="-notifications-btn"]'
+                                );
+                                const insideDropdown = e.target.closest('.notifications-dropdown');
+                                if (!button && !insideDropdown) {
+                                    // استخدام self أو window.UI
+                                    const uiObj = self || window.UI;
+                                    if (uiObj && typeof uiObj.hideNotificationsDropdown === 'function') {
+                                        uiObj.hideNotificationsDropdown(dropdownId);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        // تجاهل الأخطاء
+                        Utils.safeWarn('⚠️ خطأ في إغلاق dropdown:', err);
+                    }
+                });
+            } catch (error) {
+                // تجاهل جميع الأخطاء من document click handler
+                Utils.safeWarn('⚠️ خطأ في معالج النقر:', error);
+            }
+        };
+        
+        // استخدام capture: true لمعالجة نقر زر الإشعارات أولاً (تفويض حدث) ثم إغلاق القائمة عند النقر خارجها
+        document.addEventListener('click', self._notificationsClickHandler, true);
+
+        // تحديث عدد الإشعارات
+        if (self && typeof self.updateNotificationsBadge === 'function') {
+            self.updateNotificationsBadge();
+        } else if (window.UI && typeof window.UI.updateNotificationsBadge === 'function') {
+            window.UI.updateNotificationsBadge();
+        }
+
+        // تنظيف الـ interval القديم قبل إنشاء واحد جديد
+        if (self._notificationsInterval) {
+            clearInterval(self._notificationsInterval);
+            self._notificationsInterval = null;
+        }
+
+        // تحديث عدد الإشعارات كل 30 ثانية (rAF يخفّض تحذير طول معالج setInterval)
+        self._notificationsInterval = setInterval(() => {
+            const run = () => {
+                const uiObj = self || window.UI;
+                if (uiObj && typeof uiObj.updateNotificationsBadge === 'function') {
+                    uiObj.updateNotificationsBadge();
+                }
+            };
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(run);
+            } else {
+                setTimeout(run, 0);
+            }
+        }, 30000);
+
+        Utils.safeLog('✅ تم تهيئة زر الإشعارات');
+
+        // ✅ إصلاح: إزالة إعادة الاستدعاء المتكرر - يكفي محاولة واحدة
+        // إعادة محاولة تهيئة الأزرار بعد تأخير (محاولة واحدة فقط)
+        setTimeout(() => {
+            const mobileBtn = document.getElementById('mobile-notifications-btn');
+            const sidebarBell = document.getElementById('notifications-btn');
+            const needRetry =
+                (mobileBtn && !mobileBtn.dataset.notificationsBound) ||
+                (sidebarBell && !sidebarBell.dataset.notificationsBound);
+            if (needRetry && self._notificationsInitCount < 5) {
+                Utils.safeLog('⚠️ أزرار الإشعارات لم تُربط بعد، إعادة تهيئة...');
+                this.initNotificationsButton();
+            }
+        }, 1000);
+    },
+
+    /**
+     * تنظيف موارد الإشعارات
+     */
+    cleanupNotifications() {
+        try {
+            // تنظيف الـ interval
+            if (this._notificationsInterval) {
+                clearInterval(this._notificationsInterval);
+                this._notificationsInterval = null;
+            }
+
+            // تنظيف الـ click listener
+            if (this._notificationsClickHandler) {
+                try {
+                    document.removeEventListener('click', this._notificationsClickHandler, true);
+                } catch (err) {
+                    Utils.safeWarn('⚠️ خطأ في إزالة document click listener:', err);
+                }
+                this._notificationsClickHandler = null;
+            }
+
+            // إزالة تفويض الجرس على القائمة الجانبية
+            try {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar && sidebar._sidebarNotifDelegationHandler) {
+                    sidebar.removeEventListener('click', sidebar._sidebarNotifDelegationHandler, true);
+                    delete sidebar._sidebarNotifDelegationHandler;
+                }
+            } catch (err) {
+                Utils.safeWarn('⚠️ خطأ في إزالة تفويض إشعارات الشريط:', err);
+            }
+
+            // تنظيف event listeners من الأزرار
+            try {
+                const notificationButtons = [
+                    document.getElementById('notifications-btn'),
+                    document.getElementById('mobile-notifications-btn'),
+                    document.getElementById('header-notifications-btn')
+                ].filter(Boolean);
+
+                notificationButtons.forEach(btn => {
+                    try {
+                        if (btn._notificationClickHandler) {
+                            btn.removeEventListener('click', btn._notificationClickHandler, {
+                                capture: !!btn._notificationClickUsesCapture
+                            });
+                            delete btn._notificationClickUsesCapture;
+                            if (btn._notificationClickDebounceTimer) {
+                                clearTimeout(btn._notificationClickDebounceTimer);
+                                btn._notificationClickDebounceTimer = null;
+                            }
+                            delete btn._notificationClickHandler;
+                        }
+                        if (btn.dataset) {
+                            delete btn.dataset.notificationsBound;
+                        }
+                    } catch (err) {
+                        Utils.safeWarn('⚠️ خطأ في تنظيف زر الإشعارات:', btn.id, err);
+                    }
+                });
+            } catch (err) {
+                Utils.safeWarn('⚠️ خطأ في تنظيف أزرار الإشعارات:', err);
+            }
+
+            Utils.safeLog('✅ تم تنظيف موارد الإشعارات');
+        } catch (error) {
+            Utils.safeError('⚠️ خطأ في cleanupNotifications:', error);
+        }
+    },
+
+    /**
+     * تحديث شارة الإشعارات
+     */
+    updateNotificationsBadge() {
+        const count = this.getNotificationsCount();
+
+        // تحديث الشارات
+        const badges = [
+            document.getElementById('notifications-badge'),
+            document.getElementById('mobile-notifications-badge'),
+            document.getElementById('header-notifications-badge')
+        ].filter(Boolean);
+
+        badges.forEach(badge => {
+            if (badge) {
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'flex' : 'none';
+            }
+        });
+
+        // تحديث حالة الأزرار (إضافة/إزالة class has-notifications)
+        const notificationButtons = [
+            document.getElementById('notifications-btn'),
+            document.getElementById('mobile-notifications-btn'),
+            document.getElementById('header-notifications-btn')
+        ].filter(Boolean);
+
+        notificationButtons.forEach(btn => {
+            if (btn) {
+                if (count > 0) {
+                    btn.classList.add('has-notifications');
+                } else {
+                    btn.classList.remove('has-notifications');
+                }
+            }
+        });
+    },
+
+    /**
+     * ✅ دالة مساعدة للتعامل مع النقر على زر الإشعارات في القائمة الجانبية
+     * يمكن استدعاؤها مباشرة من onclick في HTML
+     */
+    handleSidebarNotificationClick(btn) {
+        try {
+            Utils.safeLog('🔔 handleSidebarNotificationClick - تم النقر على زر الإشعارات في القائمة الجانبية');
+            const ui = typeof window !== 'undefined' && window.UI ? window.UI : this;
+            if (!ui || typeof ui.toggleNotificationsDropdown !== 'function') {
+                Utils.safeWarn('⚠️ toggleNotificationsDropdown غير متاح');
+                return;
+            }
+            ui.toggleNotificationsDropdown(
+                'notifications-dropdown',
+                'notifications-list',
+                'notifications-empty',
+                'close-notifications-dropdown',
+                btn || document.getElementById('notifications-btn')
+            );
+        } catch (error) {
+            Utils.safeError('⚠️ خطأ في handleSidebarNotificationClick:', error);
+        }
+    },
+
+    /**
+     * عرض/إخفاء لوحة الإشعارات المنبثقة
+     */
+    toggleNotificationsDropdown(dropdownId, listId, emptyId, closeBtnId, button) {
+        try {
+            Utils.safeLog('🔔 toggleNotificationsDropdown - dropdownId:', dropdownId);
+            const dropdown = document.getElementById(dropdownId);
+            if (!dropdown) {
+                Utils.safeWarn('⚠️ لم يتم العثور على dropdown:', dropdownId);
+                return;
+            }
+
+            // إغلاق جميع اللوحات الأخرى أولاً
+            const allDropdowns = ['notifications-dropdown', 'mobile-notifications-dropdown', 'header-notifications-dropdown'];
+            allDropdowns.forEach(id => {
+                try {
+                    if (id !== dropdownId) {
+                        this.hideNotificationsDropdown(id);
+                    }
+                } catch (err) {
+                    Utils.safeWarn('⚠️ خطأ في إغلاق dropdown:', id, err);
+                }
+            });
+
+            // التبديل بين الفتح والإغلاق - تحقق محسّن وسريع من حالة العرض
+            let isCurrentlyVisible = false;
+            try {
+                // ✅ فحص سريع أولاً (inline style)
+                if (dropdown.style.display === 'flex' && dropdown.style.visibility !== 'hidden' && dropdown.style.opacity !== '0') {
+                    isCurrentlyVisible = true;
+                } else if (dropdown.style.display !== 'none') {
+                    // فحص computed style فقط إذا لزم الأمر (أبطأ)
+                    const computedStyle = window.getComputedStyle(dropdown);
+                    const isFixed = computedStyle.position === 'fixed';
+                    const inLayoutTree = isFixed || dropdown.offsetParent !== null;
+                    isCurrentlyVisible = computedStyle.display === 'flex' &&
+                        computedStyle.visibility !== 'hidden' &&
+                        computedStyle.opacity !== '0' &&
+                        inLayoutTree;
+                }
+            } catch (err) {
+                // في حالة الخطأ، نعتبر أن الـ dropdown مخفي
+                isCurrentlyVisible = false;
+            }
+
+            if (!isCurrentlyVisible) {
+                // تحديث الإشعارات قبل العرض
+                try {
+                    this.updateNotificationsBadge();
+                } catch (err) {
+                    Utils.safeWarn('⚠️ خطأ في تحديث شارة الإشعارات:', err);
+                }
+                // استدعاء async بدون await لأن toggleNotificationsDropdown ليست async
+                if (typeof this.showNotificationsDropdown === 'function') {
+                    this.showNotificationsDropdown(dropdownId, listId, emptyId, button).catch(error => {
+                        Utils.safeWarn('⚠️ خطأ في عرض الإشعارات:', error);
+                    });
+                }
+            } else {
+                this.hideNotificationsDropdown(dropdownId);
+            }
+        } catch (error) {
+            Utils.safeError('⚠️ خطأ في toggleNotificationsDropdown:', error);
+            // محاولة فتح dropdown مباشرة في حالة الخطأ
+            try {
+                const dropdown = document.getElementById(dropdownId);
+                if (dropdown && typeof this.showNotificationsDropdown === 'function') {
+                    this.showNotificationsDropdown(dropdownId, listId, emptyId, button).catch(err => {
+                        Utils.safeWarn('⚠️ خطأ في عرض الإشعارات (fallback):', err);
+                    });
+                }
+            } catch (fallbackError) {
+                Utils.safeError('⚠️ فشل فتح الإشعارات:', fallbackError);
+            }
+        }
+    },
+
+    /**
+     * عرض لوحة الإشعارات المنبثقة - محسّن للاستجابة السريعة
+     */
+    async showNotificationsDropdown(dropdownId, listId, emptyId, button) {
+        try {
+            Utils.safeLog('🔔 showNotificationsDropdown - بدء عرض الإشعارات:', dropdownId);
+            
+            const dropdown = document.getElementById(dropdownId);
+            const list = document.getElementById(listId);
+            const empty = document.getElementById(emptyId);
+
+            if (!dropdown) {
+                Utils.safeWarn('⚠️ لم يتم العثور على dropdown:', dropdownId);
+                return;
+            }
+            
+            Utils.safeLog('🔔 تم العثور على dropdown:', dropdown.id);
+
+            // لوحة الشريط الجانبي داخل .sidebar الذي يستخدم transform — fixed يصبح نسبياً للشريط فيُموضع اللوح خطأ أو يُقصّ بـ overflow. ننقلها مؤقتاً إلى body مثل لوحة الهيدر.
+            if (dropdownId === 'notifications-dropdown' && dropdown.parentElement !== document.body) {
+                try {
+                    dropdown._hseNotifSidebarRestoreParent = dropdown.parentElement;
+                    dropdown._hseNotifSidebarRestoreBefore = dropdown.nextSibling;
+                    document.body.appendChild(dropdown);
+                } catch (reparentErr) {
+                    Utils.safeWarn('⚠️ تعذر نقل لوحة إشعارات الشريط إلى body:', reparentErr);
+                }
+            }
+
+            // التأكد من أن الـ parent element له position: relative (للقوائم داخل الحاوية الأصلية فقط)
+            try {
+                const parent = dropdown.parentElement;
+                if (parent && parent !== document.body && window.getComputedStyle(parent).position === 'static') {
+                    parent.style.position = 'relative';
+                }
+            } catch (err) {
+                Utils.safeWarn('⚠️ خطأ في ضبط position للـ parent:', err);
+            }
+
+            // ✅ عرض dropdown فوراً مع الإشعارات الحالية (لا ننتظر تحميل البيانات)
+            // الحصول على قائمة الإشعارات الحالية (غير المقروءة فقط)
+            let notifications = [];
+            try {
+                if (typeof this.getNotificationsList === 'function') {
+                    notifications = this.getNotificationsList();
+                }
+            } catch (error) {
+                Utils.safeWarn('⚠️ خطأ في الحصول على قائمة الإشعارات:', error);
+                notifications = [];
+            }
+
+            // إظهار التبويب فوراً بدون انتظار
+            // ✅ إصلاح: استخدام setProperty مع important لتجاوز أي CSS conflicts
+            dropdown.style.setProperty('display', 'flex', 'important');
+            dropdown.style.setProperty('visibility', 'visible', 'important');
+            dropdown.style.setProperty('opacity', '1', 'important');
+            Utils.safeLog('🔔 تم عرض dropdown الإشعارات:', dropdownId);
+
+            if (notifications.length === 0) {
+                // إظهار "لا يوجد إشعارات" كالهيدر (نفس السلوك لجميع الأزرار: sidebar، mobile، header)
+                if (list) {
+                    list.style.setProperty('display', 'none', 'important');
+                    list.innerHTML = '';
+                }
+                if (empty) {
+                    empty.style.setProperty('display', 'flex', 'important');
+                    empty.style.setProperty('visibility', 'visible', 'important');
+                    const msgEl = empty.querySelector('p');
+                    if (msgEl) msgEl.textContent = 'لا يوجد إشعارات';
+                }
+                Utils.safeLog('ℹ️ لا توجد إشعارات غير مقروءة');
+            } else {
+                if (empty) {
+                    empty.style.setProperty('display', 'none', 'important');
+                }
+                if (list) {
+                    try {
+                        list.style.display = 'block';
+                        // عرض الإشعارات بشكل آمن
+                        if (typeof this.renderNotificationItem === 'function') {
+                            list.innerHTML = notifications.map(notif => {
+                                try {
+                                    return this.renderNotificationItem(notif);
+                                } catch (err) {
+                                    Utils.safeWarn('⚠️ خطأ في رسم إشعار:', err);
+                                    return '';
+                                }
+                            }).filter(Boolean).join('');
+                        } else {
+                            list.innerHTML = '<div class="notification-item">خطأ في عرض الإشعارات</div>';
+                        }
+                        Utils.safeLog(`✅ عرض ${notifications.length} إشعار في القائمة`);
+
+                        // ربط حدث الضغط على كل إشعار
+                        try {
+                            list.querySelectorAll('.notification-item').forEach(item => {
+                                try {
+                                    item.addEventListener('click', (e) => {
+                                        try {
+                                            if (e) {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                            }
+                                            const notificationId = item.getAttribute('data-notification-id');
+                                            if (notificationId) {
+                                                // الحصول على الإشعار من القائمة
+                                                let notificationsList = [];
+                                                try {
+                                                    if (typeof this.getNotificationsList === 'function') {
+                                                        notificationsList = this.getNotificationsList();
+                                                    }
+                                                } catch (err) {
+                                                    Utils.safeWarn('⚠️ خطأ في الحصول على قائمة الإشعارات:', err);
+                                                }
+                                                
+                                                const notification = notificationsList.find(n => n && n.id === notificationId);
+
+                                                // إذا كان هناك إجراء مخصص، تنفيذه
+                                                if (notification && typeof notification.onClick === 'function') {
+                                                    try {
+                                                        notification.onClick();
+                                                    } catch (err) {
+                                                        Utils.safeWarn('⚠️ خطأ في تنفيذ onClick للإشعار:', err);
+                                                    }
+                                                }
+
+                                                // تمييز الإشعار كمقروء
+                                                try {
+                                                    if (typeof this.markNotificationAsRead === 'function') {
+                                                        this.markNotificationAsRead(notificationId);
+                                                    }
+                                                } catch (err) {
+                                                    Utils.safeWarn('⚠️ خطأ في تمييز الإشعار كمقروء:', err);
+                                                }
+                                            }
+                                        } catch (error) {
+                                            Utils.safeWarn('⚠️ خطأ في معالجة نقر الإشعار:', error);
+                                        }
+                                    }, { capture: true, passive: false });
+                                } catch (err) {
+                                    Utils.safeWarn('⚠️ خطأ في ربط حدث الإشعار:', err);
+                                }
+                            });
+                        } catch (err) {
+                            Utils.safeWarn('⚠️ خطأ في ربط أحداث الإشعارات:', err);
+                        }
+                    } catch (error) {
+                        Utils.safeError('⚠️ خطأ في عرض قائمة الإشعارات:', error);
+                        if (list) {
+                            list.innerHTML = '<div class="notification-item">حدث خطأ في عرض الإشعارات</div>';
+                        }
+                    }
+                }
+            }
+
+            // تموضع اللوحة داخل حدود الشاشة (مهم خصوصاً عند RTL لما تكون الأيقونات أقرب لليسار)
+            // نستخدم requestAnimationFrame لضمان حساب المقاسات بعد الرسم.
+            requestAnimationFrame(() => {
+                try {
+                    if (typeof this.positionNotificationsDropdown === 'function') {
+                        this.positionNotificationsDropdown(dropdown, button);
+                    }
+                } catch (e) {
+                    Utils.safeWarn('⚠️ فشل تموضع قائمة الإشعارات:', e);
+                }
+            });
+
+            // ✅ تحديث البيانات في الخلفية بعد عرض dropdown (لتحسين الاستجابة)
+            // هذا يتم بشكل غير متزامن بعد عرض الإشعارات الحالية
+            // دالة مساعدة لتحديث قائمة الإشعارات
+            const selfRef = this;
+            const updateNotificationsList = () => {
+                try {
+                    if (!dropdown) return;
+                    const inlineD = dropdown.style && dropdown.style.display;
+                    const computedD = window.getComputedStyle(dropdown).display;
+                    if (inlineD !== 'flex' && computedD !== 'flex') return;
+                    const updatedNotifications = typeof selfRef.getNotificationsList === 'function' ? selfRef.getNotificationsList() : [];
+                    if (!list || typeof selfRef.renderNotificationItem !== 'function') return;
+                    
+                    if (updatedNotifications.length > 0) {
+                        list.innerHTML = updatedNotifications.map(notif => {
+                            try {
+                                return selfRef.renderNotificationItem(notif);
+                            } catch (err) {
+                                Utils.safeWarn('⚠️ خطأ في رسم إشعار:', err);
+                                return '';
+                            }
+                        }).filter(Boolean).join('');
+                        list.style.display = 'block';
+                        if (empty) empty.style.display = 'none';
+                        
+                        // ربط أحداث الإشعارات مرة أخرى (نفس الكود المستخدم في العرض الأولي)
+                        try {
+                            list.querySelectorAll('.notification-item').forEach(item => {
+                                try {
+                                    item.addEventListener('click', (e) => {
+                                        try {
+                                            if (e) {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                            }
+                                            const notificationId = item.getAttribute('data-notification-id');
+                                            if (notificationId) {
+                                                const notification = updatedNotifications.find(n => n && n.id === notificationId);
+                                                if (notification && typeof notification.onClick === 'function') {
+                                                    try {
+                                                        notification.onClick();
+                                                    } catch (err) {
+                                                        Utils.safeWarn('⚠️ خطأ في تنفيذ onClick للإشعار:', err);
+                                                    }
+                                                }
+                                                if (typeof selfRef.markNotificationAsRead === 'function') {
+                                                    selfRef.markNotificationAsRead(notificationId);
+                                                }
+                                            }
+                                        } catch (error) {
+                                            Utils.safeWarn('⚠️ خطأ في معالجة نقر الإشعار:', error);
+                                        }
+                                    }, { capture: true, passive: false });
+                                } catch (err) {
+                                    Utils.safeWarn('⚠️ خطأ في ربط حدث الإشعار:', err);
+                                }
+                            });
+                        } catch (err) {
+                            Utils.safeWarn('⚠️ خطأ في ربط أحداث الإشعارات:', err);
+                        }
+                    } else {
+                        list.style.display = 'none';
+                        if (empty) empty.style.display = 'flex';
+                    }
+                } catch (err) {
+                    Utils.safeWarn('⚠️ خطأ في تحديث قائمة الإشعارات:', err);
+                }
+            };
+            
+            Promise.resolve().then(async () => {
+                try {
+                    // تحديث طلبات الموافقة في الخلفية
+                    if (typeof FireEquipment !== 'undefined' && typeof FireEquipment.loadApprovalRequestsFromBackend === 'function') {
+                        try {
+                            await FireEquipment.loadApprovalRequestsFromBackend();
+                            updateNotificationsList();
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ خطأ في تحميل طلبات الموافقة عند عرض الإشعارات:', error);
+                        }
+                    }
+
+                    // تحديث بيانات PTW في الخلفية
+                    if (typeof PTW !== 'undefined' && typeof PTW.loadPTWData === 'function') {
+                        try {
+                            // تحديث محاولة واحدة فقط إذا لم تكن البيانات محملة
+                            if (!AppState || !AppState.appData || !AppState.appData.ptw || AppState.appData.ptw.length === 0) {
+                                await PTW.loadPTWData();
+                                updateNotificationsList();
+                            }
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ خطأ في تحميل بيانات PTW عند عرض الإشعارات:', error);
+                        }
+                    }
+                } catch (backgroundError) {
+                    Utils.safeWarn('⚠️ خطأ في تحديث البيانات في الخلفية:', backgroundError);
+                }
+            });
+        } catch (error) {
+            Utils.safeError('⚠️ خطأ في showNotificationsDropdown:', error);
+            // محاولة إظهار dropdown حتى لو حدث خطأ
+            try {
+                const dropdown = document.getElementById(dropdownId);
+                if (dropdown) {
+                    dropdown.style.display = 'flex';
+                    dropdown.style.visibility = 'visible';
+                    dropdown.style.opacity = '1';
+                }
+            } catch (fallbackError) {
+                Utils.safeError('⚠️ فشل إظهار dropdown:', fallbackError);
+            }
+        }
+    },
+
+    /**
+     * تموضع لوحة الإشعارات بحيث لا تخرج خارج الشاشة (RTL/LTR)
+     * - يعتمد على زر الإشعارات إن توفر، وإلا يستخدم parent
+     * - يستخدم setProperty مع important لتجاوز CSS الذي قد يحتوي !important
+     * - ✅ إصلاح: دعم خاص للـ dropdown في القائمة الجانبية (sidebar)
+     */
+    positionNotificationsDropdown(dropdown, button) {
+        Utils.safeLog('🔔 positionNotificationsDropdown - بدء تموضع الـ dropdown');
+        
+        if (!dropdown) {
+            Utils.safeWarn('⚠️ positionNotificationsDropdown - dropdown غير موجود');
+            return;
+        }
+
+        const anchorEl = button || dropdown.parentElement;
+        if (!anchorEl || typeof anchorEl.getBoundingClientRect !== 'function') {
+            Utils.safeWarn('⚠️ positionNotificationsDropdown - anchorEl غير صالح');
+            return;
+        }
+        
+        Utils.safeLog('🔔 positionNotificationsDropdown - dropdown:', dropdown.id, 'button:', anchorEl.id || 'parent');
+
+        const margin = 8;
+        const gap = 8;
+        const vw = document.documentElement.clientWidth || window.innerWidth;
+        const vh = document.documentElement.clientHeight || window.innerHeight;
+        const isRTL = (document.documentElement.getAttribute('dir') || '').toLowerCase() === 'rtl' ||
+            window.getComputedStyle(document.documentElement).direction === 'rtl';
+
+        // ✅ إصلاح: التحقق من أن الـ dropdown في sidebar
+        const isSidebarDropdown = dropdown.id === 'notifications-dropdown';
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
+
+        // اجعلها "fixed" لكي لا تتأثر بحاويات overflow/positioning
+        dropdown.style.setProperty('position', 'fixed', 'important');
+        dropdown.style.setProperty('z-index', '10001', 'important');
+        dropdown.style.setProperty('right', 'auto', 'important');
+        dropdown.style.setProperty('bottom', 'auto', 'important');
+        dropdown.style.setProperty('transform', 'none', 'important');
+
+        // اخفاء مؤقتًا لتجنب أي وميض أثناء الحساب
+        const prevVisibility = dropdown.style.visibility;
+        dropdown.style.visibility = 'hidden';
+
+        // ضعها خارج الشاشة ثم قِس أبعادها
+        dropdown.style.setProperty('left', '-9999px', 'important');
+        dropdown.style.setProperty('top', '-9999px', 'important');
+
+        const btnRect = anchorEl.getBoundingClientRect();
+        const ddRect = dropdown.getBoundingClientRect();
+        const ddWidth = ddRect.width || 380;
+        const ddHeight = ddRect.height || 200;
+
+        let left, top;
+
+        if (isSidebarDropdown) {
+            // ✅ إصلاح خاص للـ sidebar dropdown
+            // عرض الـ dropdown خارج الـ sidebar من جهة اليسار
+            if (isRTL) {
+                // في RTL، الـ sidebar على اليمين، فالـ dropdown يظهر على يسار الـ sidebar
+                left = vw - sidebarWidth - ddWidth - margin;
+                // التأكد من عدم خروجه من الشاشة
+                if (left < margin) {
+                    left = margin;
+                }
+            } else {
+                // في LTR، الـ sidebar على اليسار، فالـ dropdown يظهر على يمين الـ sidebar
+                left = sidebarWidth + margin;
+                // التأكد من عدم خروجه من الشاشة
+                if (left + ddWidth > vw - margin) {
+                    left = vw - ddWidth - margin;
+                }
+            }
+            
+            // الموقع الرأسي: بجانب الزر
+            top = btnRect.top;
+            if (top + ddHeight > vh - margin) {
+                top = vh - ddHeight - margin;
+            }
+            if (top < margin) {
+                top = margin;
+            }
+        } else {
+            // خيارات أفقية: محاذاة يمين الزر أو يساره حسب المساحة
+            const candidateLeftAlignLeft = btnRect.left;
+            const candidateLeftAlignRight = btnRect.right - ddWidth;
+
+            const overflowScore = (l) => {
+                const overL = Math.max(margin - l, 0);
+                const overR = Math.max((l + ddWidth) - (vw - margin), 0);
+                return overL + overR;
+            };
+
+            let preferred = isRTL ? candidateLeftAlignRight : candidateLeftAlignLeft;
+            const alt = isRTL ? candidateLeftAlignLeft : candidateLeftAlignRight;
+            if (overflowScore(alt) < overflowScore(preferred)) preferred = alt;
+
+            left = Math.min(Math.max(preferred, margin), Math.max(vw - ddWidth - margin, margin));
+
+            // خيارات رأسية: أسفل الزر، ولو لا توجد مساحة افتح لأعلى
+            top = btnRect.bottom + gap;
+            if (top + ddHeight > vh - margin) {
+                top = btnRect.top - gap - ddHeight;
+            }
+            top = Math.min(Math.max(top, margin), Math.max(vh - ddHeight - margin, margin));
+        }
+
+        dropdown.style.setProperty('left', `${Math.round(left)}px`, 'important');
+        dropdown.style.setProperty('top', `${Math.round(top)}px`, 'important');
+        dropdown.style.visibility = prevVisibility || 'visible';
+        
+        Utils.safeLog(`🔔 تم تموضع dropdown: left=${Math.round(left)}px, top=${Math.round(top)}px, isSidebar=${isSidebarDropdown}`);
+    },
+
+    /**
+     * إخفاء لوحة الإشعارات المنبثقة
+     */
+    hideNotificationsDropdown(dropdownId) {
+        try {
+            const dropdown = document.getElementById(dropdownId);
+            if (dropdown) {
+                dropdown.style.setProperty('display', 'none', 'important');
+                dropdown.style.setProperty('visibility', 'hidden', 'important');
+                dropdown.style.setProperty('opacity', '0', 'important');
+                if (dropdownId === 'notifications-dropdown' && dropdown._hseNotifSidebarRestoreParent) {
+                    try {
+                        const p = dropdown._hseNotifSidebarRestoreParent;
+                        const before = dropdown._hseNotifSidebarRestoreBefore;
+                        if (p && document.body.contains(p)) {
+                            if (before && before.parentNode === p) {
+                                p.insertBefore(dropdown, before);
+                            } else {
+                                p.appendChild(dropdown);
+                            }
+                        } else {
+                            const fallback = document.getElementById('sidebar-notifications-container');
+                            if (fallback) fallback.appendChild(dropdown);
+                        }
+                    } catch (restoreErr) {
+                        Utils.safeWarn('⚠️ تعذر إعادة إدراج لوحة إشعارات الشريط:', restoreErr);
+                    }
+                    delete dropdown._hseNotifSidebarRestoreParent;
+                    delete dropdown._hseNotifSidebarRestoreBefore;
+                }
+            }
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في إخفاء dropdown:', dropdownId, error);
+        }
+    },
+
+    /**
+     * الحصول على قائمة الإشعارات المقروءة
+     */
+    getReadNotifications() {
+        try {
+            const userId = (typeof AppState !== 'undefined' && AppState.currentUser)
+                ? String(AppState.currentUser.email || AppState.currentUser.id || '').trim().toLowerCase()
+                : '';
+            const userKey = userId ? `hse_read_notifications_${userId}` : 'hse_read_notifications';
+            const read = localStorage.getItem(userKey);
+            if (read) return JSON.parse(read);
+            const legacy = localStorage.getItem('hse_read_notifications');
+            return legacy ? JSON.parse(legacy) : [];
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في قراءة الإشعارات المقروءة:', error);
+            return [];
+        }
+    },
+
+    /**
+     * حفظ قائمة الإشعارات المقروءة
+     */
+    saveReadNotifications(readNotifications) {
+        try {
+            const userId = (typeof AppState !== 'undefined' && AppState.currentUser)
+                ? String(AppState.currentUser.email || AppState.currentUser.id || '').trim().toLowerCase()
+                : '';
+            const userKey = userId ? `hse_read_notifications_${userId}` : 'hse_read_notifications';
+            const payload = JSON.stringify(readNotifications || []);
+            localStorage.setItem(userKey, payload);
+            localStorage.setItem('hse_read_notifications', payload);
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في حفظ الإشعارات المقروءة:', error);
+        }
+    },
+
+    /**
+     * تمييز إشعار كمقروء
+     */
+    markNotificationAsRead(notificationId) {
+        if (!notificationId) return;
+
+        const readNotifications = this.getReadNotifications();
+        if (!readNotifications.includes(notificationId)) {
+            readNotifications.push(notificationId);
+            this.saveReadNotifications(readNotifications);
+
+            // تحديث الشارات
+            this.updateNotificationsBadge();
+
+            // إزالة الإشعار من جميع اللوحات المنبثقة المفتوحة
+            const allDropdowns = [
+                { listId: 'notifications-list', dropdownId: 'notifications-dropdown' },
+                { listId: 'mobile-notifications-list', dropdownId: 'mobile-notifications-dropdown' },
+                { listId: 'header-notifications-list', dropdownId: 'header-notifications-dropdown' }
+            ];
+
+            allDropdowns.forEach(({ listId, dropdownId }) => {
+                const list = document.getElementById(listId);
+                const dropdown = document.getElementById(dropdownId);
+                if (list && dropdown && dropdown.style.display !== 'none') {
+                    const item = list.querySelector(`[data-notification-id="${notificationId}"]`);
+                    if (item) {
+                        item.remove();
+                        // تحديث قائمة الإشعارات في اللوحة
+                        const remainingItems = list.querySelectorAll('.notification-item');
+                        if (remainingItems.length === 0) {
+                            const empty = document.getElementById(dropdownId.replace('dropdown', 'empty'));
+                            if (empty) {
+                                empty.style.display = 'flex';
+                                list.style.display = 'none';
+                            }
+                        }
+                    }
+                }
+            });
+
+            Utils.safeLog(`✅ تم تمييز الإشعار ${notificationId} كمقروء`);
+        }
+    },
+
+    /**
+     * تعليم جميع الإشعارات الظاهرة حالياً كمقروءة (بما فيها تنبيهات الملاحظات)
+     */
+    markAllNotificationsAsRead() {
+        try {
+            const items = this.getNotificationsList();
+            if (!items.length) return;
+            const read = this.getReadNotifications();
+            const next = [...new Set([...read, ...items.map((n) => n && n.id).filter(Boolean)])];
+            this.saveReadNotifications(next);
+            this.updateNotificationsBadge();
+            ['notifications-dropdown', 'mobile-notifications-dropdown', 'header-notifications-dropdown'].forEach((dropdownId) => {
+                const dropdown = document.getElementById(dropdownId);
+                if (!dropdown || dropdown.style.display === 'none') return;
+                const listId = dropdownId.replace('dropdown', 'list');
+                const emptyId = dropdownId.replace('dropdown', 'empty');
+                const list = document.getElementById(listId);
+                const empty = document.getElementById(emptyId);
+                if (list) {
+                    list.innerHTML = '';
+                    list.style.display = 'none';
+                }
+                if (empty) {
+                    empty.style.setProperty('display', 'flex', 'important');
+                }
+            });
+            Utils.safeLog('✅ تم تعليم جميع الإشعارات كمقروءة');
+        } catch (e) {
+            Utils.safeWarn('markAllNotificationsAsRead', e);
+        }
+    },
+
+    /**
+     * الحصول على قائمة الإشعارات مع التفاصيل (غير المقروءة فقط)
+     */
+    getNotificationsList() {
+        if (!AppState || !AppState.appData) return [];
+
+        const notifications = [];
+        const readNotifications = this.getReadNotifications();
+
+        try {
+            // 1. تنبيهات الطوارئ غير المغلقة
+            if (AppState.appData.emergencyAlerts) {
+                AppState.appData.emergencyAlerts
+                    .filter(a => a.status !== 'مغلق')
+                    .forEach(alert => {
+                        const notificationId = 'emergency-' + (alert.id || Date.now());
+                        if (!readNotifications.includes(notificationId)) {
+                            notifications.push({
+                                id: notificationId,
+                                type: 'emergency',
+                                title: 'تنبيه طوارئ',
+                                message: alert.description || alert.type || 'تنبيه طوارئ جديد',
+                                time: alert.date || alert.createdAt || new Date(),
+                                icon: 'fa-exclamation-triangle'
+                            });
+                        }
+                    });
+            }
+
+            // 2. الحوادث المفتوحة
+            if (AppState.appData.incidents) {
+                AppState.appData.incidents
+                    .filter(i => i.status === 'مفتوح' || i.status === 'قيد المعالجة')
+                    .forEach(incident => {
+                        const notificationId = 'incident-' + (incident.id || Date.now());
+                        if (!readNotifications.includes(notificationId)) {
+                            notifications.push({
+                                id: notificationId,
+                                type: 'warning',
+                                title: 'حادث ' + (incident.status || ''),
+                                message: incident.description || incident.incidentType || 'حادث جديد يحتاج إلى معالجة',
+                                time: incident.date || incident.reportDate || new Date(),
+                                icon: 'fa-exclamation-circle'
+                            });
+                        }
+                    });
+            }
+
+            // 3. تصاريح العمل المنتهية خلال 7 أيام
+            if (AppState.appData.ptw) {
+                const now = new Date();
+                const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                AppState.appData.ptw
+                    .filter(p => {
+                        if (!p.expiryDate) return false;
+                        const expiry = new Date(p.expiryDate);
+                        return expiry <= sevenDaysFromNow && expiry >= now && p.status !== 'منتهي';
+                    })
+                    .forEach(ptw => {
+                        const notificationId = 'ptw-expiry-' + (ptw.id || Date.now());
+                        if (!readNotifications.includes(notificationId)) {
+                            const daysLeft = Math.ceil((new Date(ptw.expiryDate) - now) / (1000 * 60 * 60 * 24));
+                            notifications.push({
+                                id: notificationId,
+                                type: 'warning',
+                                title: 'تصريح عمل سينتهي قريباً',
+                                message: `تصريح عمل رقم ${ptw.permitNumber || ptw.id} سينتهي خلال ${daysLeft} يوم${daysLeft > 1 ? 'ات' : ''}`,
+                                time: ptw.expiryDate || new Date(),
+                                icon: 'fa-clock'
+                            });
+                        }
+                    });
+            }
+
+            // 4. تصاريح العمل قيد المراجعة - فقط للمستخدمين المصرح لهم بالموافقة
+            if (AppState.appData.ptw) {
+                const currentUserEmail = (AppState.currentUser?.email || '').toLowerCase();
+                const currentUserId = AppState.currentUser?.id || '';
+                const isAdmin = AppState.currentUser && (
+                    AppState.currentUser.role === 'admin' ||
+                    AppState.currentUser.role === 'مدير النظام' ||
+                    (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin && Permissions.isCurrentUserAdmin())
+                );
+
+                AppState.appData.ptw
+                    .filter(p => {
+                        // فلترة التصاريح التي تحتاج موافقة
+                        if (!p || p.status === 'مغلق' || p.status === 'مرفوض' || p.status === 'معتمد') {
+                            return false;
+                        }
+
+                        // إذا كان المستخدم مدير، لا نحتاج لفحص الموافقة - لكن لا نعرض جميع التصاريح
+                        // فقط التصاريح التي لها موافقات معلقة
+                        try {
+                            // الحصول على الموافقات الطبيعية
+                            const approvals = p.approvals || [];
+                            let normalizedApprovals = [];
+                            
+                            // محاولة استخدام PTW.normalizeApprovals إذا كان متاحاً
+                            if (typeof PTW !== 'undefined' && typeof PTW.normalizeApprovals === 'function') {
+                                normalizedApprovals = PTW.normalizeApprovals(approvals);
+                            } else {
+                                // بديل بسيط إذا لم يكن PTW متاحاً
+                                normalizedApprovals = Array.isArray(approvals) ? approvals : [];
+                            }
+
+                            // البحث عن موافقة معلقة
+                            const pendingApproval = normalizedApprovals.find(a => {
+                                if (!a) return false;
+                                const status = a.status || (a.approved ? 'approved' : a.rejected ? 'rejected' : 'pending');
+                                return status === 'pending';
+                            });
+
+                            if (!pendingApproval) {
+                                return false;
+                            }
+
+                            // فحص إذا كان المستخدم الحالي مصرح له بالموافقة
+                            // للمدير: عرض جميع التصاريح المعلقة (اختياري - يمكن إزالة هذا السطر إذا أردنا عدم عرضها)
+                            // if (isAdmin) {
+                            //     return true;
+                            // }
+
+                            // التحقق من أن المستخدم معين كموافق
+                            const approverEmail = (pendingApproval.approverEmail || '').toLowerCase();
+                            const approverId = pendingApproval.approverId || '';
+                            const isAssignedToUser = approverEmail && approverEmail === currentUserEmail;
+                            const isAssignedById = approverId && (approverId === currentUserId || approverId === currentUserEmail);
+
+                            // التحقق من أن المستخدم موجود في قائمة المرشحين (إذا لم يتم تعيين موافق بعد)
+                            let isInCandidates = false;
+                            if (!isAssignedToUser && !isAssignedById && Array.isArray(pendingApproval.candidates)) {
+                                isInCandidates = pendingApproval.candidates.some(candidate => {
+                                    if (!candidate) return false;
+                                    const candidateEmail = (candidate.email || '').toLowerCase();
+                                    const candidateId = candidate.id || '';
+                                    return (candidateEmail && candidateEmail === currentUserEmail) ||
+                                           (candidateId && candidateId === currentUserId);
+                                });
+                            }
+
+                            // إرجاع true فقط إذا كان المستخدم معين أو موجود في المرشحين
+                            return isAssignedToUser || isAssignedById || isInCandidates;
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ خطأ في فحص صلاحيات موافقة PTW:', error);
+                            return false;
+                        }
+                    })
+                    .forEach(ptw => {
+                        const notificationId = 'ptw-review-' + (ptw.id || Date.now());
+                        if (!readNotifications.includes(notificationId)) {
+                            // الحصول على تفاصيل الموافقة المعلقة للرسالة
+                            let approvalRole = 'موافقة مطلوبة';
+                            try {
+                                const approvals = ptw.approvals || [];
+                                let normalizedApprovals = [];
+                                if (typeof PTW !== 'undefined' && typeof PTW.normalizeApprovals === 'function') {
+                                    normalizedApprovals = PTW.normalizeApprovals(approvals);
+                                } else {
+                                    normalizedApprovals = Array.isArray(approvals) ? approvals : [];
+                                }
+                                const pendingApproval = normalizedApprovals.find(a => {
+                                    if (!a) return false;
+                                    const status = a.status || (a.approved ? 'approved' : a.rejected ? 'rejected' : 'pending');
+                                    return status === 'pending';
+                                });
+                                if (pendingApproval && pendingApproval.role) {
+                                    approvalRole = pendingApproval.role;
+                                }
+                            } catch (error) {
+                                Utils.safeWarn('⚠️ خطأ في الحصول على تفاصيل الموافقة:', error);
+                            }
+
+                            notifications.push({
+                                id: notificationId,
+                                type: 'warning',
+                                title: 'تصريح عمل يحتاج موافقتك',
+                                message: `تصريح عمل رقم ${ptw.permitNumber || ptw.id} يحتاج موافقتك (${approvalRole})`,
+                                time: ptw.submitDate || ptw.date || ptw.createdAt || new Date(),
+                                icon: 'fa-file-signature',
+                                onClick: () => {
+                                    if (typeof PTW !== 'undefined' && PTW.viewPTW) {
+                                        PTW.viewPTW(ptw.id);
+                                    }
+                                }
+                            });
+                        }
+                    });
+            }
+
+            // 5. طلبات اعتماد المقاولين (للمستخدمين - طلباتهم الخاصة)
+            if (AppState.appData.contractorApprovalRequests) {
+                const cu = AppState.currentUser || {};
+                const currentUserId = String(cu.id || '').trim();
+                const currentUserEmail = String(cu.email || '').trim().toLowerCase();
+                const isContractorApprovalAdmin = (typeof Contractors !== 'undefined' && typeof Contractors.isContractorApprovalAdminUser === 'function')
+                    ? Contractors.isContractorApprovalAdminUser()
+                    : ((typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function' && Permissions.isCurrentUserEffectiveAdmin()) ||
+                        cu.role === 'admin' ||
+                        cu.role === 'مدير النظام' ||
+                        (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin && Permissions.isCurrentUserAdmin()));
+                const normalizeCarStatus = (status) => {
+                    if (typeof Contractors !== 'undefined' && typeof Contractors.normalizeApprovalRequestStatus === 'function') {
+                        return Contractors.normalizeApprovalRequestStatus(status);
+                    }
+                    const s = String(status || '').trim().toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
+                    return s || 'pending';
+                };
+                const isCarOwner = (req) => {
+                    if (typeof Contractors !== 'undefined' && typeof Contractors.isCurrentUserApprovalRequestOwner === 'function') {
+                        return Contractors.isCurrentUserApprovalRequestOwner(req);
+                    }
+                    const creator = String(req?.createdBy || '').trim();
+                    const creatorLower = creator.toLowerCase();
+                    return (currentUserId && creator === currentUserId) ||
+                        (currentUserEmail && creatorLower === currentUserEmail);
+                };
+
+                const normalizedCarRequests = AppState.appData.contractorApprovalRequests
+                    .map((req) => {
+                        if (typeof Contractors !== 'undefined' &&
+                            typeof Contractors.normalizeApprovalRequestRecord === 'function') {
+                            return Contractors.normalizeApprovalRequestRecord(req);
+                        }
+                        return req;
+                    })
+                    .filter(Boolean);
+
+                normalizedCarRequests
+                    .filter(req => {
+                        if (!req) return false;
+                        if (String(req.requestType || '').trim() === 'evaluation') return false;
+                        if (isContractorApprovalAdmin) {
+                            if (typeof Contractors !== 'undefined' && typeof Contractors.isApprovalRequestPendingForReview === 'function') {
+                                return Contractors.isApprovalRequestPendingForReview(req);
+                            }
+                            const st = normalizeCarStatus(req.status);
+                            return st === 'pending' || st === 'under_review';
+                        }
+                        if (!isCarOwner(req)) return false;
+                        const st = normalizeCarStatus(req.status);
+                        return st === 'pending' || st === 'under_review' || st === 'approved' || st === 'rejected';
+                    })
+                    .forEach(request => {
+                        const notificationId = 'contractor-approval-' + (request.id || Date.now());
+                        if (!readNotifications.includes(notificationId)) {
+                            const st = normalizeCarStatus(request.status);
+                            let title, message, type;
+
+                            if (isContractorApprovalAdmin) {
+                                const requestType = request.requestType === 'contractor' ? 'مقاول' :
+                                    request.requestType === 'evaluation' ? 'تقييم' : 'مورد';
+                                title = 'طلب اعتماد جديد يحتاج مراجعة';
+                                message = `طلب اعتماد ${requestType}: ${request.companyName || request.contractorName || 'غير محدد'}`;
+                                type = 'warning';
+                            } else {
+                                if (st === 'approved') {
+                                    title = 'تم اعتماد طلبك';
+                                    message = `تم اعتماد طلب اعتماد: ${request.companyName || request.contractorName || 'غير محدد'}`;
+                                    type = 'success';
+                                } else if (st === 'rejected') {
+                                    title = 'تم رفض طلبك';
+                                    message = `تم رفض طلب اعتماد: ${request.companyName || request.contractorName || 'غير محدد'}`;
+                                    type = 'error';
+                                } else {
+                                    title = 'طلب اعتماد قيد المراجعة';
+                                    message = `طلب اعتماد: ${request.companyName || request.contractorName || 'غير محدد'} قيد المراجعة`;
+                                    type = 'info';
+                                }
+                            }
+
+                            notifications.push({
+                                id: notificationId,
+                                type: type,
+                                title: title,
+                                message: message,
+                                time: request.createdAt || new Date(),
+                                icon: 'fa-paper-plane',
+                                onClick: () => {
+                                    // الانتقال إلى تبويب طلبات الاعتماد
+                                    if (typeof Contractors !== 'undefined') {
+                                        // فتح قسم المقاولين
+                                        const contractorsLink = document.querySelector('a[data-section="contractors"]');
+                                        if (contractorsLink) {
+                                            contractorsLink.click();
+                                        }
+                                        // الانتظار قليلاً ثم فتح التبويب
+                                        setTimeout(() => {
+                                            if (Contractors.switchTab) {
+                                                Contractors.switchTab('approval-request');
+                                            }
+                                            // عرض تفاصيل الطلب
+                                            if (Contractors.viewApprovalRequest) {
+                                                setTimeout(() => {
+                                                    Contractors.viewApprovalRequest(request.id);
+                                                }, 500);
+                                            }
+                                        }, 300);
+                                    }
+                                }
+                            });
+                        }
+                    });
+            }
+
+            if (Array.isArray(AppState.appData.contractorEvaluationApprovalRequests)) {
+                const cuEval = AppState.currentUser || {};
+                const currentUserIdEval = String(cuEval.id || '').trim();
+                const isEvalAdmin = (typeof Contractors !== 'undefined' && typeof Contractors.isContractorApprovalAdminUser === 'function')
+                    ? Contractors.isContractorApprovalAdminUser()
+                    : (cuEval.role === 'admin' || cuEval.role === 'مدير النظام');
+                AppState.appData.contractorEvaluationApprovalRequests
+                    .filter((req) => {
+                        if (!req) return false;
+                        const rid = String(req.id || '').trim();
+                        if (req._isPendingSync || rid.startsWith('TEMP_')) return false;
+                        const st = String(req.status || '').trim().toLowerCase();
+                        if (isEvalAdmin) return st === 'pending' || st === 'under_review';
+                        return req.createdBy === currentUserIdEval &&
+                            (st === 'pending' || st === 'under_review' || st === 'approved' || st === 'rejected');
+                    })
+                    .forEach((request) => {
+                        const notificationId = 'contractor-eval-approval-' + (request.id || Date.now());
+                        if (readNotifications.includes(notificationId)) return;
+                        const label = request.contractorName || request.companyName || 'غير محدد';
+                        const st = String(request.status || '').trim().toLowerCase();
+                        let title, message, type;
+                        if (isEvalAdmin) {
+                            title = 'طلب اعتماد تقييم يحتاج مراجعة';
+                            message = 'طلب اعتماد تقييم: ' + label;
+                            type = 'warning';
+                        } else if (st === 'approved') {
+                            title = 'تم اعتماد طلب التقييم';
+                            message = 'تم اعتماد طلب التقييم: ' + label;
+                            type = 'success';
+                        } else if (st === 'rejected') {
+                            title = 'تم رفض طلب التقييم';
+                            message = 'تم رفض طلب التقييم: ' + label;
+                            type = 'error';
+                        } else {
+                            title = 'طلب تقييم قيد المراجعة';
+                            message = 'طلب تقييم: ' + label + ' قيد المراجعة';
+                            type = 'info';
+                        }
+                        notifications.push({
+                            id: notificationId,
+                            type,
+                            title,
+                            message,
+                            time: request.createdAt || new Date(),
+                            icon: 'fa-clipboard-check',
+                            onClick: async () => {
+                                if (typeof Contractors === 'undefined') return;
+                                const contractorsLink = document.querySelector('a[data-section="contractors"]');
+                                if (contractorsLink) contractorsLink.click();
+                                const snapshotId = request.id;
+                                try {
+                                    if (Contractors.switchTab) Contractors.switchTab('approval-request');
+                                    if (Contractors.viewApprovalRequest) {
+                                        await Contractors.viewApprovalRequest(snapshotId, 'evaluation_approval');
+                                    }
+                                } catch (_openErr) {
+                                    Notification.error('تعذر فتح طلب التقييم');
+                                }
+                            }
+                        });
+                    });
+            }
+
+            // ✅ 5b. طلبات اعتماد المخالفات (للمدير + للمُرسِل الأصلي)
+            if (Array.isArray(AppState.appData?.violationApprovalRequests)) {
+                const cu = AppState.currentUser || {};
+                const currentUserId = String(cu.id || '').trim();
+                const currentUserEmail = String(cu.email || '').trim().toLowerCase();
+                const isAdminUser = (cu.role === 'admin') ||
+                    (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin && Permissions.isCurrentUserAdmin());
+
+                AppState.appData.violationApprovalRequests
+                    .filter(req => {
+                        if (!req) return false;
+                        if (isAdminUser) {
+                            // المدير يرى الطلبات قيد الاعتماد فقط
+                            return req.status === 'pending';
+                        }
+                        // المستخدم العادي يرى طلباته الخاصة (قيد المراجعة / مُعتمدة / مرفوضة)
+                        const reqCreator = String(req.createdBy || '').trim();
+                        const reqCreatorLower = reqCreator.toLowerCase();
+                        const isMine = (currentUserId && reqCreator === currentUserId) ||
+                                       (currentUserEmail && reqCreatorLower === currentUserEmail);
+                        if (!isMine) return false;
+                        return ['pending', 'approved', 'committed', 'rejected'].includes(String(req.status || '').toLowerCase());
+                    })
+                    .forEach(req => {
+                        const notificationId = 'violation-approval-' + (req.id || Date.now()) + '-' + (req.status || '');
+                        if (readNotifications.includes(notificationId)) return;
+
+                        let title, message, type, icon;
+                        const status = String(req.status || '').toLowerCase();
+                        if (isAdminUser) {
+                            // للمدير: طلب جديد يحتاج اعتماد
+                            title = 'طلب اعتماد مخالفة جديد';
+                            message = `هناك مخالفة بانتظار اعتمادك (${req.id || ''}) — أرسلها ${req.createdByName || req.createdBy || ''}`;
+                            type = 'warning';
+                            icon = 'fa-gavel';
+                        } else if (status === 'approved' || status === 'committed') {
+                            title = '✅ تم اعتماد مخالفتك';
+                            message = `تم اعتماد طلب المخالفة (${req.id || ''}). شكراً لمتابعتك.`;
+                            type = 'success';
+                            icon = 'fa-circle-check';
+                        } else if (status === 'rejected') {
+                            title = '❌ تم رفض مخالفتك';
+                            message = `تم رفض طلب المخالفة (${req.id || ''})${req.rejectionReason ? '. السبب: ' + req.rejectionReason : ''}`;
+                            type = 'error';
+                            icon = 'fa-circle-xmark';
+                        } else {
+                            title = 'طلب مخالفة قيد المراجعة';
+                            message = `طلب اعتماد المخالفة (${req.id || ''}) قيد مراجعة المدير`;
+                            type = 'info';
+                            icon = 'fa-hourglass-half';
+                        }
+
+                        notifications.push({
+                            id: notificationId,
+                            type: type,
+                            title: title,
+                            message: message,
+                            time: req.updatedAt || req.createdAt || new Date(),
+                            icon: icon,
+                            onClick: () => {
+                                // الانتقال لقسم المخالفات → تبويب طلبات الاعتماد
+                                try {
+                                    const link = document.querySelector('a[data-section="violations"]');
+                                    if (link) link.click();
+                                    setTimeout(() => {
+                                        if (typeof Violations !== 'undefined' && Violations.switchTab) {
+                                            Violations.switchTab('approval-requests');
+                                        }
+                                    }, 300);
+                                } catch (e) { /* ignore */ }
+                            }
+                        });
+                    });
+            }
+
+            // 6. طلبات موافقة فحص معدات الإطفاء
+            if (AppState.appData && AppState.appData.fireEquipmentApprovalRequests) {
+                const isAdmin = AppState.currentUser && (
+                    AppState.currentUser.role === 'admin' ||
+                    AppState.currentUser.role === 'مدير النظام' ||
+                    (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin && Permissions.isCurrentUserAdmin())
+                );
+                const userId = AppState.currentUser?.id || AppState.currentUser?.email || '';
+
+                AppState.appData.fireEquipmentApprovalRequests
+                    .filter(request => {
+                        // للمدير: جميع الطلبات قيد المراجعة
+                        // للمستخدم: طلباته الخاصة فقط
+                        return isAdmin
+                            ? (request.status === 'pending')
+                            : (request.requestedById === userId || request.userEmail === userId) &&
+                              (request.status === 'pending' || request.status === 'approved' || request.status === 'rejected');
+                    })
+                    .forEach(request => {
+                        const notificationId = 'fire-equipment-approval-' + (request.id || Date.now());
+                        if (!readNotifications.includes(notificationId)) {
+                            let title, message, type, icon;
+
+                            if (isAdmin) {
+                                // للمدير: إشعار بطلب جديد يحتاج مراجعة
+                                title = 'طلب موافقة على فحص معدات الإطفاء';
+                                message = `طلب ${request.requestedBy || 'مستخدم'} الموافقة على فحص الجهاز: ${request.assetNumber || request.assetId || 'غير محدد'}`;
+                                type = 'warning';
+                                icon = 'fa-clipboard-check';
+                            } else {
+                                // للمستخدم: إشعار بحالة طلبه
+                                if (request.status === 'approved') {
+                                    title = 'تمت الموافقة على طلبك';
+                                    message = `تمت الموافقة على طلبك لإجراء فحص شهري على الجهاز: ${request.assetNumber || request.assetId || 'غير محدد'}`;
+                                    type = 'success';
+                                    icon = 'fa-check-circle';
+                                } else if (request.status === 'rejected') {
+                                    title = 'تم رفض طلبك';
+                                    message = `تم رفض طلبك لإجراء فحص شهري على الجهاز: ${request.assetNumber || request.assetId || 'غير محدد'}${request.rejectionReason ? `. السبب: ${request.rejectionReason}` : ''}`;
+                                    type = 'error';
+                                    icon = 'fa-times-circle';
+                                } else {
+                                    title = 'طلبك قيد المراجعة';
+                                    message = `طلبك لإجراء فحص شهري على الجهاز: ${request.assetNumber || request.assetId || 'غير محدد'} قيد المراجعة`;
+                                    type = 'info';
+                                    icon = 'fa-clock';
+                                }
+                            }
+
+                            notifications.push({
+                                id: notificationId,
+                                type: type,
+                                title: title,
+                                message: message,
+                                time: request.requestedAt || request.createdAt || new Date(),
+                                icon: icon,
+                                onClick: () => {
+                                    // الانتقال إلى تبويب طلبات الموافقة
+                                    if (typeof FireEquipment !== 'undefined') {
+                                        // فتح قسم معدات الإطفاء
+                                        const fireEquipmentLink = document.querySelector('a[data-section="fire-equipment"]');
+                                        if (fireEquipmentLink) {
+                                            fireEquipmentLink.click();
+                                        }
+                                        // الانتظار قليلاً ثم فتح التبويب
+                                        setTimeout(() => {
+                                            if (FireEquipment.switchTab) {
+                                                FireEquipment.switchTab('approval-requests');
+                                            }
+                                        }, 300);
+                                    }
+                                }
+                            });
+                        }
+                    });
+            }
+
+            // 7. تنبيهات الملاحظات اليومية (حالة السير + التأخير) — مربوطة بنفس نظام المقروء/غير المقروء
+            try {
+                if (typeof DailyObservations !== 'undefined' && typeof DailyObservations.getObservationInboxNotifications === 'function') {
+                    const obsInbox = DailyObservations.getObservationInboxNotifications(readNotifications);
+                    if (obsInbox && obsInbox.length) {
+                        obsInbox.forEach((n) => notifications.push(n));
+                    }
+                }
+            } catch (obsErr) {
+                Utils.safeWarn('⚠️ تنبيهات الملاحظات في الإشعارات:', obsErr);
+            }
+
+            // 7b. طلبات إجازة/إذن/إضافي — العيادة (للمدير)
+            try {
+                const cu = AppState.currentUser || {};
+                const isAdminUser = (cu.role === 'admin') ||
+                    (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin && Permissions.isCurrentUserAdmin());
+                if (isAdminUser && Array.isArray(AppState.appData?.clinicStaffTimeOffRequests)) {
+                    const typeLabels = { leave: 'إجازة', permission: 'إذن', overtime: 'إضافي' };
+                    AppState.appData.clinicStaffTimeOffRequests
+                        .filter(req => req && String(req.status) === 'pending')
+                        .forEach(req => {
+                            const notificationId = 'clinic-timeoff-' + (req.id || Date.now());
+                            if (readNotifications.includes(notificationId)) return;
+                            const typeLabel = typeLabels[String(req.requestType || '').toLowerCase()] || req.requestType || 'طلب';
+                            const who = req.userName || req.userEmail || 'مسئول عيادة';
+                            let details = req.dateFrom || '';
+                            if (req.requestType === 'leave' && req.dateTo) details += ' → ' + req.dateTo;
+                            else if (req.requestType === 'permission' && req.timeFrom) details += ' ' + req.timeFrom + '-' + (req.timeTo || '');
+                            notifications.push({
+                                id: notificationId,
+                                type: 'warning',
+                                title: 'طلب ' + typeLabel + ' — العيادة',
+                                message: who + ': ' + (details || typeLabel) + (req.reason ? ' — ' + String(req.reason).slice(0, 80) : ''),
+                                time: req.requestedAt || req.createdAt || new Date(),
+                                icon: 'fa-user-clock',
+                                onClick: () => {
+                                    try {
+                                        const link = document.querySelector('a[data-section="clinic"]');
+                                        if (link) link.click();
+                                        setTimeout(() => {
+                                            if (typeof Clinic !== 'undefined') {
+                                                Clinic.state = Clinic.state || {};
+                                                Clinic.state.activeTab = 'approvals';
+                                                if (typeof Clinic.renderUI === 'function') Clinic.renderUI();
+                                            }
+                                        }, 400);
+                                    } catch (_e) { /* ignore */ }
+                                }
+                            });
+                        });
+                }
+            } catch (clinicToErr) {
+                Utils.safeWarn('⚠️ تنبيهات طلبات الحضور في الإشعارات:', clinicToErr);
+            }
+
+            // 7c. سير موافقات العيادة — طلبات الاحتياجات للمدير ونتائج الطلبات لصاحبها
+            try {
+                const cu = AppState.currentUser || {};
+                const normalizeKey = (value) => String(value || '').trim().toLowerCase();
+                const currentKeys = [cu.id, cu.userId, cu.email].map(normalizeKey).filter(Boolean);
+                const isOwnRequest = (request, kind) => {
+                    if (!request || currentKeys.length === 0) return false;
+                    const owner = kind === 'supply' ? (request.requestedBy || {}) : request;
+                    const keys = kind === 'supply'
+                        ? [request.requestedById, request.requestedByEmail, owner.id, owner.userId, owner.email]
+                        : [request.userId, request.userEmail, request.staffId];
+                    return keys.map(normalizeKey).filter(Boolean).some(key => currentKeys.includes(key));
+                };
+                const openClinicTab = (tab) => {
+                    try {
+                        document.querySelector('a[data-section="clinic"]')?.click();
+                        setTimeout(() => {
+                            if (typeof Clinic === 'undefined') return;
+                            Clinic.state = Clinic.state || {};
+                            Clinic.state.activeTab = tab;
+                            if (typeof Clinic.renderUI === 'function') Clinic.renderUI();
+                        }, 400);
+                    } catch (_e) { /* ignore */ }
+                };
+                const isAdminUser = (cu.role === 'admin') ||
+                    (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin && Permissions.isCurrentUserAdmin());
+                const supplyRequests = Array.isArray(AppState.appData?.clinicSupplyRequests)
+                    ? AppState.appData.clinicSupplyRequests : [];
+                const timeOffRequests = Array.isArray(AppState.appData?.clinicStaffTimeOffRequests)
+                    ? AppState.appData.clinicStaffTimeOffRequests : [];
+
+                if (isAdminUser) {
+                    supplyRequests
+                        .filter(request => request && normalizeKey(request.status || 'pending') === 'pending')
+                        .forEach(request => {
+                            const notificationId = 'clinic-supply-' + (request.id || Date.now());
+                            if (readNotifications.includes(notificationId)) return;
+                            const owner = request.requestedBy || {};
+                            const who = request.requestedByName || owner.name || owner.email || 'مستخدم العيادة';
+                            const quantity = request.quantity ? `${request.quantity} ${request.unit || 'وحدة'}` : '';
+                            notifications.push({
+                                id: notificationId,
+                                type: request.priority === 'urgent' ? 'warning' : 'approval',
+                                title: 'طلب احتياجات جديد — العيادة',
+                                message: `${who}: ${request.itemName || 'صنف غير محدد'}${quantity ? ' — ' + quantity : ''}`,
+                                time: request.createdAt || request.requestDate || new Date(),
+                                icon: 'fa-box-medical',
+                                onClick: () => openClinicTab('approvals')
+                            });
+                        });
+                }
+
+                const resultMeta = {
+                    approved: { label: 'تمت الموافقة', type: 'success', icon: 'fa-circle-check' },
+                    rejected: { label: 'تم الرفض', type: 'error', icon: 'fa-circle-xmark' }
+                };
+                const addOwnerResult = (request, kind) => {
+                    const status = normalizeKey(request?.status);
+                    const meta = resultMeta[status];
+                    if (!meta || !isOwnRequest(request, kind)) return;
+                    const requestId = request.id || Date.now();
+                    const notificationId = `clinic-${kind}-result-${requestId}-${status}`;
+                    if (readNotifications.includes(notificationId)) return;
+                    const isSupply = kind === 'supply';
+                    const typeLabels = { leave: 'الإجازة', permission: 'الإذن', overtime: 'العمل الإضافي' };
+                    const subject = isSupply
+                        ? (request.itemName || 'طلب الاحتياجات')
+                        : (typeLabels[normalizeKey(request.requestType)] || 'طلب الحضور');
+                    const reason = status === 'rejected'
+                        ? (request.rejectionReason || request.reviewNotes || '') : '';
+                    notifications.push({
+                        id: notificationId,
+                        type: meta.type,
+                        title: `${meta.label} على ${isSupply ? 'طلب الاحتياجات' : 'طلب الحضور'}`,
+                        message: `${subject}${reason ? ' — السبب: ' + String(reason).slice(0, 100) : ''}`,
+                        time: request.reviewedAt || request.approvedAt || request.rejectedAt || request.updatedAt || new Date(),
+                        icon: meta.icon,
+                        onClick: () => openClinicTab(isSupply ? 'supply-request' : 'attendance')
+                    });
+                };
+                timeOffRequests.forEach(request => addOwnerResult(request, 'timeoff'));
+                supplyRequests.forEach(request => addOwnerResult(request, 'supply'));
+            } catch (clinicWorkflowErr) {
+                Utils.safeWarn('⚠️ تنبيهات سير موافقات العيادة:', clinicWorkflowErr);
+            }
+
+            // ترتيب الإشعارات حسب التاريخ (الأحدث أولاً)
+            notifications.sort((a, b) => {
+                const dateA = new Date(a.time);
+                const dateB = new Date(b.time);
+                return dateB - dateA;
+            });
+
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في الحصول على الإشعارات:', error);
+        }
+
+        return notifications;
+    },
+
+    /**
+     * بطاقة تنبيه ملاحظة (نمط العنوان + الوصف + «فتح الملاحظة»)
+     */
+    renderObservationNotificationItem(notification) {
+        const timeAgo = this.getTimeAgo(notification.time);
+        const safeTitle = Utils.escapeHTML(notification.title);
+        const safeMsg = Utils.escapeHTML(notification.message);
+        const hasAction = typeof notification.onClick === 'function';
+        const idJson = JSON.stringify(notification.id || '');
+        const clickHandler = hasAction ? `onclick="window.UI.handleNotificationClick(${idJson})"` : '';
+        return `
+            <div class="notification-item notification-item--observation" data-notification-id="${Utils.escapeHTML(String(notification.id || ''))}" ${clickHandler} style="${hasAction ? 'cursor: pointer;' : ''}">
                 <div class="notification-item--observation-inner">
                     <div class="notification-item-obs-row">
                         <i class="fas fa-chevron-left notification-item-chevron" aria-hidden="true"></i>
                         <div class="notification-item-content">
-                            <div class="notification-item-title">${t}</div>
-                            <div class="notification-item-message">${n}</div>
-                            <button type="button" class="notification-item-open-obs" onclick="event.stopPropagation(); window.UI.handleNotificationClick(${s})">\u0641\u062A\u062D \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0629</button>
+                            <div class="notification-item-title">${safeTitle}</div>
+                            <div class="notification-item-message">${safeMsg}</div>
+                            <button type="button" class="notification-item-open-obs" onclick="event.stopPropagation(); window.UI.handleNotificationClick(${idJson})">فتح الملاحظة</button>
                         </div>
                     </div>
-                    <div class="notification-item-time">${i}</div>
+                    <div class="notification-item-time">${timeAgo}</div>
                 </div>
             </div>
-        `},renderNotificationItem(e){if(e&&e.variant==="observation")return this.renderObservationNotificationItem(e);const i=this.getTimeAgo(e.time),t=e.icon||"fa-bell",n=e.type||"info",a=typeof e.onClick=="function",s=JSON.stringify(e.id||""),o=a?`onclick="window.UI.handleNotificationClick(${s})"`:"",r=a?"cursor: pointer;":"";return`
-            <div class="notification-item" data-notification-id="${Utils.escapeHTML(String(e.id||""))}" ${o} style="${r}">
-                <div class="notification-item-icon ${n}">
-                    <i class="fas ${t}"></i>
+        `;
+    },
+
+    /**
+     * رسم عنصر إشعار واحد
+     */
+    renderNotificationItem(notification) {
+        if (notification && notification.variant === 'observation') {
+            return this.renderObservationNotificationItem(notification);
+        }
+        const timeAgo = this.getTimeAgo(notification.time);
+        const iconClass = notification.icon || 'fa-bell';
+        const typeClass = notification.type || 'info';
+        const hasAction = typeof notification.onClick === 'function';
+        const idJson = JSON.stringify(notification.id || '');
+        const clickHandler = hasAction ? `onclick="window.UI.handleNotificationClick(${idJson})"` : '';
+        const cursorStyle = hasAction ? 'cursor: pointer;' : '';
+
+        return `
+            <div class="notification-item" data-notification-id="${Utils.escapeHTML(String(notification.id || ''))}" ${clickHandler} style="${cursorStyle}">
+                <div class="notification-item-icon ${typeClass}">
+                    <i class="fas ${iconClass}"></i>
                 </div>
                 <div class="notification-item-content">
-                    <div class="notification-item-title">${Utils.escapeHTML(e.title)}</div>
-                    <div class="notification-item-message">${Utils.escapeHTML(e.message)}</div>
-                    <div class="notification-item-time">${i}</div>
+                    <div class="notification-item-title">${Utils.escapeHTML(notification.title)}</div>
+                    <div class="notification-item-message">${Utils.escapeHTML(notification.message)}</div>
+                    <div class="notification-item-time">${timeAgo}</div>
                 </div>
             </div>
-        `},handleNotificationClick(e){const t=this.getNotificationsList().find(n=>n.id===e);t&&typeof t.onClick=="function"&&(this.markNotificationAsRead(e),t.onClick(),["notifications-dropdown","mobile-notifications-dropdown","header-notifications-dropdown"].forEach(a=>{this.hideNotificationsDropdown(a)}))},getTimeAgo(e){if(!e)return"\u0642\u0628\u0644 \u0648\u0642\u062A \u063A\u064A\u0631 \u0645\u062D\u062F\u062F";try{const i=new Date,t=new Date(e),n=i-t,a=Math.floor(n/6e4),s=Math.floor(n/36e5),o=Math.floor(n/864e5);return a<1?"\u0627\u0644\u0622\u0646":a<60?`\u0645\u0646\u0630 ${a} \u062F\u0642\u064A\u0642\u0629`:s<24?`\u0645\u0646\u0630 ${s} \u0633\u0627\u0639\u0629`:o<7?`\u0645\u0646\u0630 ${o} \u064A\u0648\u0645`:Utils.formatDate(e)}catch{return"\u0642\u0628\u0644 \u0648\u0642\u062A \u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}},initSyncButton(){const e=document.getElementById("sync-btn");if(!e){Utils.safeWarn("\u26A0\uFE0F \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0632\u0631 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629");return}if(e.dataset.bound==="1"){this.updateSyncButtonStatus();return}e.dataset.bound="1",e.addEventListener("click",async i=>{i.preventDefault(),i.stopPropagation(),await this.handleSyncClick()}),this.updateSyncButtonStatus(),Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0647\u064A\u0626\u0629 \u0632\u0631 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629")},async _waitForGlobalSyncIdle(e=45e3){const i=Date.now();for(;typeof GoogleIntegration<"u"&&GoogleIntegration._syncInProgress?.global;){if(Date.now()-i>e)return!1;const t=Number(GoogleIntegration._syncInProgress.lastSyncStart||0);if(t&&Date.now()-t>18e4)return GoogleIntegration._syncInProgress.global=!1,!0;await new Promise(n=>setTimeout(n,250))}return!0},async handleSyncClick(){const e=document.getElementById("sync-btn");if(e&&!(this._syncClickInFlight||e.classList.contains("syncing")))try{if(this._syncClickInFlight=!0,e.classList.add("syncing"),typeof GoogleIntegration>"u")throw new Error("\u0637\u0628\u0642\u0629 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629");typeof GoogleIntegration.resetCircuitBreaker=="function"&&GoogleIntegration.resetCircuitBreaker(),GoogleIntegration._syncInProgress?.global&&(typeof Notification<"u"&&Notification.info("\u062C\u0627\u0631\u064A \u0625\u0643\u0645\u0627\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u062B\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B..."),!await this._waitForGlobalSyncIdle(6e4)&&GoogleIntegration._syncInProgress&&(GoogleIntegration._syncInProgress.global=!1)),typeof Notification<"u"&&Notification.info("\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A");let i=!1;const t=typeof Utils<"u"&&typeof Utils.hasCloudBackendSync=="function"?Utils.hasCloudBackendSync():!!(AppState.googleConfig?.appsScript?.enabled&&AppState.googleConfig?.appsScript?.scriptUrl),n=!!(typeof Permissions<"u"&&AppState.currentUser&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser))||typeof Permissions<"u"&&typeof Permissions.hasAccess=="function"&&Permissions.hasAccess("users");if(typeof GoogleIntegration.syncData=="function"){GoogleIntegration._lastSyncBusy=!1,i=await GoogleIntegration.syncData({silent:!1,showLoader:!0,notifyOnSuccess:!1,notifyOnError:!1,includeUsersSheet:n,incremental:!1,forceRefresh:!0});try{typeof window<"u"&&window.Auth&&typeof window.Auth.handleUsersSyncSuccess=="function"&&window.Auth.handleUsersSyncSuccess()}catch{}}else if(typeof GoogleIntegration.syncUsers=="function"){i=await GoogleIntegration.syncUsers(!0);try{typeof window<"u"&&window.Auth&&typeof window.Auth.handleUsersSyncSuccess=="function"&&window.Auth.handleUsersSyncSuccess()}catch{}}else if(typeof GoogleIntegration.readFromSheets=="function"){const a=await GoogleIntegration.readFromSheets("Users");a&&Array.isArray(a)&&(AppState.appData.users=a,typeof DataManager<"u"&&DataManager.save&&DataManager.save()),i=!0}else throw new Error("\u0644\u0627 \u062A\u0648\u062C\u062F \u062F\u0627\u0644\u0629 \u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u062A\u0627\u062D\u0629");if(!i&&t){if(GoogleIntegration&&GoogleIntegration._lastSyncBusy){typeof Notification<"u"&&Notification.info("\u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u062A\u0639\u0645\u0644 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629. \u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0639\u0631\u0636 \u0627\u0644\u062D\u0627\u0644\u064A.");try{this.refreshCurrentSection(!0)}catch{}return}const a=GoogleIntegration&&GoogleIntegration._lastSyncError?String(GoogleIntegration._lastSyncError):"";throw new Error(a?`\u0641\u0634\u0644\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: ${a}`:"\u0641\u0634\u0644\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}typeof Notification<"u"&&Notification.success("\u062A\u0645\u062A \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0646\u062C\u0627\u062D"),typeof Users<"u"&&typeof Users.refreshUsersTable=="function"&&Users.refreshUsersTable();try{typeof this.refreshCurrentSection=="function"&&this.refreshCurrentSection()}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u062D\u0627\u0644\u064A \u0628\u0639\u062F \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629:",a)}this.updateUserConnectionStatus()}catch(i){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629:",i),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629: "+(i.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}finally{this._syncClickInFlight=!1,e.classList.remove("syncing"),this.updateSyncButtonStatus()}},updateSyncButtonStatus(){const e=document.getElementById("sync-btn");if(!e)return;let i=!1;typeof ConnectionMonitor<"u"&&ConnectionMonitor.getStatus?i=ConnectionMonitor.getStatus().isConnected===!0:i=typeof Utils<"u"&&typeof Utils.hasCloudBackendSync=="function"?Utils.hasCloudBackendSync():!!(AppState.googleConfig?.appsScript?.enabled&&AppState.googleConfig?.appsScript?.scriptUrl),e.classList.remove("connected","disconnected"),i?(e.classList.add("connected"),e.title="\u0645\u062A\u0635\u0644"):(e.classList.add("disconnected"),e.title="\u063A\u064A\u0631 \u0645\u062A\u0635\u0644 - \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629")},connectionStatusInterval:null,connectionStatusRefreshInterval:15e3,initUserConnectionStatus(){if(!document.getElementById("user-connection-status")){Utils.safeWarn("\u26A0\uFE0F \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0632\u0631 \u062D\u0627\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644");return}this.updateUserConnectionStatus(),this.startAutoRefreshConnectionStatus(),Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0647\u064A\u0626\u0629 \u0632\u0631 \u062D\u0627\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644")},startAutoRefreshConnectionStatus(){this.stopAutoRefreshConnectionStatus(),!(!AppState.currentUser||!AppState.currentUser.email)&&(this.connectionStatusInterval=setInterval(()=>{if(!AppState.currentUser||!AppState.currentUser.email){this.stopAutoRefreshConnectionStatus();return}this.updateUserConnectionStatus()},this.connectionStatusRefreshInterval),Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A \u0644\u062D\u0627\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644"))},startBackgroundSync(){this.stopBackgroundSync(),!(!AppState.currentUser||typeof Utils<"u"&&typeof Utils.hasCloudBackendSync=="function"&&!Utils.hasCloudBackendSync())&&(this._backgroundSyncInterval=setInterval(()=>{if(!document.hidden){if(!AppState.currentUser||typeof Utils<"u"&&typeof Utils.hasCloudBackendSync=="function"&&!Utils.hasCloudBackendSync()){this.stopBackgroundSync();return}if(typeof GoogleIntegration<"u"&&GoogleIntegration._syncInProgress&&GoogleIntegration._syncInProgress.global){AppState.debugMode&&Utils.safeLog("\u23F8\uFE0F \u0645\u0632\u0627\u0645\u0646\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630 - \u062A\u062E\u0637\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629");return}typeof GoogleIntegration<"u"&&typeof GoogleIntegration.syncData=="function"&&(AppState.debugMode&&Utils.safeLog("\u{1F504} \u0628\u062F\u0621 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629 \u0627\u0644\u062F\u0648\u0631\u064A\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629..."),GoogleIntegration.syncData({silent:!0,showLoader:!1,notifyOnSuccess:!1,notifyOnError:!1,incremental:!0}).catch(e=>{AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629 \u0627\u0644\u062F\u0648\u0631\u064A\u0629:",e)}))}},this._backgroundSyncIntervalTime),AppState.debugMode&&Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629 \u0627\u0644\u062F\u0648\u0631\u064A\u0629 (\u0643\u0644 ${this._backgroundSyncIntervalTime/6e4} \u062F\u0642\u064A\u0642\u0629)`))},stopBackgroundSync(){this._backgroundSyncInterval&&(clearInterval(this._backgroundSyncInterval),this._backgroundSyncInterval=null,AppState.debugMode&&Utils.safeLog("\u23F9\uFE0F \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629 \u0627\u0644\u062F\u0648\u0631\u064A\u0629"))},stopAutoRefreshConnectionStatus(){this.connectionStatusInterval&&(clearInterval(this.connectionStatusInterval),this.connectionStatusInterval=null,Utils.safeLog("\u{1F6D1} \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A \u0644\u062D\u0627\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644"))},updateUserConnectionStatus(){const e=document.getElementById("user-connection-status"),i=document.getElementById("user-connection-icon"),t=document.getElementById("user-connection-text");if(!e||!i||!t)return;if(!AppState.currentUser||!AppState.currentUser.email){t.textContent="\u063A\u064A\u0631 \u0645\u062A\u0635\u0644",e.classList.remove("connected","disconnected"),e.classList.add("disconnected"),e.title="\u062D\u0627\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644: \u063A\u064A\u0631 \u0645\u062A\u0635\u0644",this.stopAutoRefreshConnectionStatus();return}const n=AppState.currentUser.email.toLowerCase().trim();let a=null;AppState.appData&&AppState.appData.users&&Array.isArray(AppState.appData.users)&&(a=AppState.appData.users.find(o=>!o||!o.email?!1:o.email.toLowerCase().trim()===n));let s=!1;if(a&&typeof Auth<"u"&&typeof Auth.isUserEffectivelyOnline=="function"?s=Auth.isUserEffectivelyOnline(a):a?s=a.isOnline===!0:AppState.currentUser&&AppState.currentUser.email&&(s=!0),s?(t.textContent="\u0645\u062A\u0635\u0644",e.classList.remove("disconnected"),e.classList.add("connected")):(t.textContent="\u063A\u064A\u0631 \u0645\u062A\u0635\u0644",e.classList.remove("connected"),e.classList.add("disconnected")),a){const o=a.lastLogin?Utils.formatDateTime(a.lastLogin):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";e.title=`\u062D\u0627\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644: ${s?"\u0645\u062A\u0635\u0644":"\u063A\u064A\u0631 \u0645\u062A\u0635\u0644"} | \u0622\u062E\u0631 \u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644: ${o}`}else e.title=`\u062D\u0627\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644: ${s?"\u0645\u062A\u0635\u0644":"\u063A\u064A\u0631 \u0645\u062A\u0635\u0644"}`},getNotificationsCount(){return this.getNotificationsList().length},_positionLanguageDropdown(e,i){if(!e||!i)return;const t=i.getBoundingClientRect(),n=8,a=document.documentElement.clientHeight||window.innerHeight,s=(document.documentElement.getAttribute("dir")||"").toLowerCase()==="rtl";e.style.position="fixed",e.style.zIndex="10002",e.style.left=s?"auto":t.left+"px",e.style.right=s?window.innerWidth-t.right+"px":"auto",e.style.top=t.bottom+n+"px";const o=e.offsetHeight||120;t.bottom+n+o>a-n&&(e.style.top=t.top-o-n+"px")},initLanguageToggle(){const e=document.getElementById("language-toggle");if(!e){Utils.safeWarn("\u26A0\uFE0F \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0632\u0631 \u0627\u0644\u0644\u063A\u0629");return}if(e.dataset.languageBound==="true")return;const i=localStorage.getItem("language")||AppState.currentLanguage||"ar";this.setLanguage(i,!0),e.addEventListener("click",t=>{t.preventDefault(),t.stopPropagation();const a=(localStorage.getItem("language")||AppState.currentLanguage||"ar")==="ar"?"en":"ar";this.setLanguage(a)}),e.dataset.languageBound="true",this.initLoginLanguageToggle(),Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0647\u064A\u0626\u0629 \u0632\u0631 \u0627\u0644\u0644\u063A\u0629")},initLoginLanguageToggle(){const e=document.getElementById("login-language-toggle-btn"),i=document.getElementById("login-language-dropdown");if(!e||!i)return;if(e.dataset.handlerBound==="true"){Utils.safeLog("\u2139\uFE0F \u0632\u0631 \u0627\u0644\u0644\u063A\u0629 \u0641\u064A \u0634\u0627\u0634\u0629 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0645\u0641\u0639\u0644 \u0645\u0633\u0628\u0642\u0627\u064B \u0628\u0648\u0627\u0633\u0637\u0629 login-init-fixed.js");return}if(e.dataset.loginLangBound==="true")return;const t=localStorage.getItem("language")||"ar",n=e.querySelector("#current-lang-text");n&&(n.textContent=t==="ar"?"\u0627\u0644\u0639\u0631\u0628\u064A\u0629":"English"),e.addEventListener("click",s=>{s.preventDefault(),s.stopPropagation(),i.classList.contains("hidden")?(i.classList.remove("hidden"),i.classList.add("show"),e.classList.add("active")):(i.classList.add("hidden"),i.classList.remove("show"),e.classList.remove("active"))}),i.querySelectorAll("[data-lang]").forEach(s=>{s.addEventListener("click",o=>{o.preventDefault(),o.stopPropagation();const r=s.getAttribute("data-lang"),l=localStorage.getItem("language")||"ar";r!==l&&this.setLanguage(r),i.classList.add("hidden"),i.classList.remove("show"),e.classList.remove("active")})}),document.addEventListener("click",s=>{!e.contains(s.target)&&!i.contains(s.target)&&(i.classList.add("hidden"),i.classList.remove("show"),e.classList.remove("active"))}),e.dataset.loginLangBound="true",Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0647\u064A\u0626\u0629 \u062A\u0628\u062F\u064A\u0644 \u0627\u0644\u0644\u063A\u0629 \u0641\u064A \u0634\u0627\u0634\u0629 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644")},setLanguage(e,i=!1){localStorage.setItem("language",e),AppState&&(AppState.currentLanguage=e);const t=e==="ar";document.documentElement.dir=t?"rtl":"ltr",document.documentElement.lang=e,document.body&&(document.body.dir=t?"rtl":"ltr");const n=document.querySelector(".sidebar");n&&(n.dir=t?"rtl":"ltr",t?(n.style.right="0",n.style.left="auto",n.style.borderLeft="3px solid #FFC72C",n.style.borderRight="none"):(n.style.left="0",n.style.right="auto",n.style.borderRight="3px solid #FFC72C",n.style.borderLeft="none"));const a=document.querySelector(".navigation");a&&(a.dir=t?"rtl":"ltr");const s=document.querySelector(".app-shell");s&&(t?(s.style.marginRight="var(--sidebar-width)",s.style.marginLeft="0"):(s.style.marginLeft="var(--sidebar-width)",s.style.marginRight="0")),document.querySelectorAll(".nav-item").forEach(m=>{t?(m.style.borderRight="4px solid transparent",m.style.borderLeft="none",m.style.borderRadius="8px 0 0 8px"):(m.style.borderLeft="4px solid transparent",m.style.borderRight="none",m.style.borderRadius="0 8px 8px 0");const y=m.querySelector("i"),b=m.querySelector("span");y&&(y.style.order="",t?(y.style.marginLeft="0.75rem",y.style.marginRight="0"):(y.style.marginRight="0.75rem",y.style.marginLeft="0")),b&&(b.style.order="",b.style.flex="1",b.style.textAlign=t?"right":"left"),m.style.textAlign=t?"right":"left",m.style.justifyContent="flex-start",m.style.flexDirection="row"});const r="nav-item-hover-ltr-fix";let l=document.getElementById(r);l||(l=document.createElement("style"),l.id=r,document.head.appendChild(l)),l.textContent=`
-            /* \u062A\u0623\u062B\u064A\u0631 hover */
+        `;
+    },
+
+    /**
+     * معالجة النقر على إشعار
+     */
+    handleNotificationClick(notificationId) {
+        const notifications = this.getNotificationsList();
+        const notification = notifications.find(n => n.id === notificationId);
+
+        if (notification && typeof notification.onClick === 'function') {
+            // تمييز الإشعار كمقروء
+            this.markNotificationAsRead(notificationId);
+            // تنفيذ الإجراء المخصص
+            notification.onClick();
+            // إغلاق dropdown
+            const allDropdowns = ['notifications-dropdown', 'mobile-notifications-dropdown', 'header-notifications-dropdown'];
+            allDropdowns.forEach(dropdownId => {
+                this.hideNotificationsDropdown(dropdownId);
+            });
+        }
+    },
+
+    /**
+     * حساب الوقت المنقضي منذ تاريخ معين
+     */
+    getTimeAgo(date) {
+        if (!date) return 'قبل وقت غير محدد';
+
+        try {
+            const now = new Date();
+            const past = new Date(date);
+            const diffMs = now - past;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'الآن';
+            if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
+            if (diffHours < 24) return `منذ ${diffHours} ساعة`;
+            if (diffDays < 7) return `منذ ${diffDays} يوم`;
+
+            return Utils.formatDate(date);
+        } catch (error) {
+            return 'قبل وقت غير محدد';
+        }
+    },
+
+    /**
+     * تهيئة زر المزامنة
+     */
+    initSyncButton() {
+        const syncBtn = document.getElementById('sync-btn');
+        if (!syncBtn) {
+            Utils.safeWarn('⚠️ لم يتم العثور على زر المزامنة');
+            return;
+        }
+
+        if (syncBtn.dataset.bound === '1') {
+            this.updateSyncButtonStatus();
+            return;
+        }
+        syncBtn.dataset.bound = '1';
+
+        syncBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            await this.handleSyncClick();
+        });
+
+        this.updateSyncButtonStatus();
+        Utils.safeLog('✅ تم تهيئة زر المزامنة');
+    },
+
+    async _waitForGlobalSyncIdle(maxMs = 45000) {
+        const start = Date.now();
+        while (typeof GoogleIntegration !== 'undefined' && GoogleIntegration._syncInProgress?.global) {
+            if (Date.now() - start > maxMs) return false;
+            const startedAt = Number(GoogleIntegration._syncInProgress.lastSyncStart || 0);
+            if (startedAt && (Date.now() - startedAt) > 180000) {
+                GoogleIntegration._syncInProgress.global = false;
+                return true;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        return true;
+    },
+
+    /**
+     * معالجة النقر على زر المزامنة
+     */
+    async handleSyncClick() {
+        const syncBtn = document.getElementById('sync-btn');
+        if (!syncBtn) return;
+
+        if (this._syncClickInFlight || syncBtn.classList.contains('syncing')) {
+            return;
+        }
+
+        try {
+            this._syncClickInFlight = true;
+            syncBtn.classList.add('syncing');
+            
+            if (typeof GoogleIntegration === 'undefined') {
+                throw new Error('طبقة المزامنة غير متاحة');
+            }
+
+            if (typeof GoogleIntegration.resetCircuitBreaker === 'function') {
+                GoogleIntegration.resetCircuitBreaker();
+            }
+
+            if (GoogleIntegration._syncInProgress?.global) {
+                if (typeof Notification !== 'undefined') {
+                    Notification.info('جاري إكمال المزامنة الحالية ثم التحديث...');
+                }
+                const idle = await this._waitForGlobalSyncIdle(60000);
+                if (!idle && GoogleIntegration._syncInProgress) {
+                    GoogleIntegration._syncInProgress.global = false;
+                }
+            }
+
+            if (typeof Notification !== 'undefined') {
+                Notification.info('جاري تحميل البيانات من قاعدة البيانات');
+            }
+
+            let syncResult = false;
+
+            const cloudSyncConfigured = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function'
+                ? Utils.hasCloudBackendSync()
+                : !!(AppState.googleConfig?.appsScript?.enabled && AppState.googleConfig?.appsScript?.scriptUrl);
+
+            const includeUsersSheet = !!(typeof Permissions !== 'undefined'
+                && AppState.currentUser
+                && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser))
+                || (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function' && Permissions.hasAccess('users'));
+            
+            if (typeof GoogleIntegration.syncData === 'function') {
+                GoogleIntegration._lastSyncBusy = false;
+                syncResult = await GoogleIntegration.syncData({
+                    silent: false,
+                    showLoader: true,
+                    notifyOnSuccess: false,
+                    notifyOnError: false,
+                    includeUsersSheet: includeUsersSheet,
+                    incremental: false,
+                    forceRefresh: true
+                });
+                
+                // ✅ إذا نجحت المزامنة، عطّل bootstrap تلقائياً (إن كان مستخدماً)
+                try {
+                    if (typeof window !== 'undefined' && window.Auth && typeof window.Auth.handleUsersSyncSuccess === 'function') {
+                        window.Auth.handleUsersSyncSuccess();
+                    }
+                } catch (e) { /* ignore */ }
+            } else if (typeof GoogleIntegration.syncUsers === 'function') {
+                // استخدام syncUsers كبديل إذا لم يكن syncData متاحاً
+                syncResult = await GoogleIntegration.syncUsers(true); // force = true
+                try {
+                    if (typeof window !== 'undefined' && window.Auth && typeof window.Auth.handleUsersSyncSuccess === 'function') {
+                        window.Auth.handleUsersSyncSuccess();
+                    }
+                } catch (e) { /* ignore */ }
+            } else {
+                // محاولة قراءة مباشرة من ورقة البيانات عبر التكامل (كبديل أخير)
+                if (typeof GoogleIntegration.readFromSheets === 'function') {
+                    const usersData = await GoogleIntegration.readFromSheets('Users');
+                    if (usersData && Array.isArray(usersData)) {
+                        AppState.appData.users = usersData;
+                        if (typeof DataManager !== 'undefined' && DataManager.save) {
+                            DataManager.save();
+                        }
+                    }
+                    syncResult = true;
+                } else {
+                    throw new Error('لا توجد دالة مزامنة متاحة');
+                }
+            }
+            
+            if (!syncResult && cloudSyncConfigured) {
+                if (GoogleIntegration && GoogleIntegration._lastSyncBusy) {
+                    if (typeof Notification !== 'undefined') {
+                        Notification.info('المزامنة تعمل في الخلفية. تم تحديث العرض الحالي.');
+                    }
+                    try { this.refreshCurrentSection(true); } catch (_e) {}
+                    return;
+                }
+                const detail = (GoogleIntegration && GoogleIntegration._lastSyncError)
+                    ? String(GoogleIntegration._lastSyncError)
+                    : '';
+                throw new Error(detail ? `فشلت المزامنة مع قاعدة البيانات: ${detail}` : 'فشلت المزامنة مع قاعدة البيانات');
+            }
+
+            if (typeof Notification !== 'undefined') {
+                Notification.success('تمت مزامنة البيانات بنجاح');
+            }
+
+            // تحديث جدول المستخدمين إذا كان مفتوحاً
+            if (typeof Users !== 'undefined' && typeof Users.refreshUsersTable === 'function') {
+                Users.refreshUsersTable();
+            }
+            
+            // تحديث القسم الحالي بعد المزامنة (لتحديث جميع الموديولات)
+            try {
+                if (typeof this.refreshCurrentSection === 'function') {
+                    this.refreshCurrentSection();
+                }
+            } catch (refreshError) {
+                Utils.safeWarn('⚠️ خطأ في تحديث القسم الحالي بعد المزامنة:', refreshError);
+            }
+            
+            // تحديث زر حالة الاتصال بعد المزامنة
+            this.updateUserConnectionStatus();
+
+        } catch (error) {
+            Utils.safeError('❌ خطأ في المزامنة:', error);
+            if (typeof Notification !== 'undefined') {
+                Notification.error('فشلت المزامنة: ' + (error.message || 'خطأ غير معروف'));
+            }
+        } finally {
+            this._syncClickInFlight = false;
+            syncBtn.classList.remove('syncing');
+            this.updateSyncButtonStatus();
+        }
+    },
+
+    /**
+     * تحديث حالة زر المزامنة
+     */
+    updateSyncButtonStatus() {
+        const syncBtn = document.getElementById('sync-btn');
+        if (!syncBtn) return;
+
+        // التحقق من حالة الاتصال
+        let isConnected = false;
+        if (typeof ConnectionMonitor !== 'undefined' && ConnectionMonitor.getStatus) {
+            const status = ConnectionMonitor.getStatus();
+            isConnected = status.isConnected === true;
+        } else {
+            isConnected = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function'
+                ? Utils.hasCloudBackendSync()
+                : !!(AppState.googleConfig?.appsScript?.enabled && AppState.googleConfig?.appsScript?.scriptUrl);
+        }
+
+        // تحديث فئة الزر
+        syncBtn.classList.remove('connected', 'disconnected');
+        if (isConnected) {
+            syncBtn.classList.add('connected');
+            syncBtn.title = 'متصل';
+        } else {
+            syncBtn.classList.add('disconnected');
+            syncBtn.title = 'غير متصل - لا يمكن المزامنة';
+        }
+    },
+
+    // متغير لتخزين معرف التحديث التلقائي لحالة الاتصال
+    connectionStatusInterval: null,
+    connectionStatusRefreshInterval: 15000, // تحديث كل 15 ثانية — تقليل طلبات الخلفية
+
+    /**
+     * تهيئة زر حالة الاتصال للمستخدم
+     */
+    initUserConnectionStatus() {
+        const statusBtn = document.getElementById('user-connection-status');
+        if (!statusBtn) {
+            Utils.safeWarn('⚠️ لم يتم العثور على زر حالة الاتصال');
+            return;
+        }
+
+        // تحديث حالة الزر
+        this.updateUserConnectionStatus();
+
+        // بدء التحديث التلقائي لحالة الاتصال
+        this.startAutoRefreshConnectionStatus();
+
+        Utils.safeLog('✅ تم تهيئة زر حالة الاتصال');
+    },
+
+    /**
+     * بدء التحديث التلقائي لحالة الاتصال
+     */
+    startAutoRefreshConnectionStatus() {
+        // إيقاف التحديث السابق إن وجد
+        this.stopAutoRefreshConnectionStatus();
+
+        // التحقق من وجود مستخدم مسجل دخول
+        if (!AppState.currentUser || !AppState.currentUser.email) {
+            return;
+        }
+
+        // بدء التحديث التلقائي
+        this.connectionStatusInterval = setInterval(() => {
+            // التحقق من وجود مستخدم مسجل دخول
+            if (!AppState.currentUser || !AppState.currentUser.email) {
+                this.stopAutoRefreshConnectionStatus();
+                return;
+            }
+
+            // تحديث حالة الاتصال
+            this.updateUserConnectionStatus();
+        }, this.connectionStatusRefreshInterval);
+
+        Utils.safeLog('✅ تم تفعيل التحديث التلقائي لحالة الاتصال');
+    },
+
+    /**
+     * ✅ بدء المزامنة التلقائية الدورية في الخلفية
+     */
+    startBackgroundSync() {
+        // إيقاف المزامنة السابقة إن وجدت
+        this.stopBackgroundSync();
+
+        if (!AppState.currentUser ||
+            (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync())) {
+            return;
+        }
+
+        this._backgroundSyncInterval = setInterval(() => {
+            if (document.hidden) return;
+            if (!AppState.currentUser ||
+                (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync())) {
+                this.stopBackgroundSync();
+                return;
+            }
+
+            // التحقق من عدم وجود مزامنة قيد التنفيذ
+            if (typeof GoogleIntegration !== 'undefined' && 
+                GoogleIntegration._syncInProgress && 
+                GoogleIntegration._syncInProgress.global) {
+                if (AppState.debugMode) {
+                    Utils.safeLog('⏸️ مزامنة قيد التنفيذ - تخطي المزامنة التلقائية');
+                }
+                return;
+            }
+
+            // بدء المزامنة التلقائية في الخلفية (صامتة)
+            if (typeof GoogleIntegration !== 'undefined' && 
+                typeof GoogleIntegration.syncData === 'function') {
+                if (AppState.debugMode) {
+                    Utils.safeLog('🔄 بدء المزامنة التلقائية الدورية في الخلفية...');
+                }
+                
+                GoogleIntegration.syncData({
+                    silent: true, // صامت - لا إشعارات
+                    showLoader: false, // لا loader
+                    notifyOnSuccess: false, // لا إشعارات نجاح
+                    notifyOnError: false, // لا إشعارات خطأ
+                    incremental: true // تحميل تدريجي - فقط البيانات غير المكتملة
+                }).catch(error => {
+                    if (AppState.debugMode) {
+                        Utils.safeWarn('⚠️ فشل المزامنة التلقائية الدورية:', error);
+                    }
+                });
+            }
+        }, this._backgroundSyncIntervalTime);
+
+        if (AppState.debugMode) {
+            Utils.safeLog(`✅ تم تفعيل المزامنة التلقائية الدورية (كل ${this._backgroundSyncIntervalTime / 60000} دقيقة)`);
+        }
+    },
+
+    /**
+     * ✅ إيقاف المزامنة التلقائية الدورية
+     */
+    stopBackgroundSync() {
+        if (this._backgroundSyncInterval) {
+            clearInterval(this._backgroundSyncInterval);
+            this._backgroundSyncInterval = null;
+            if (AppState.debugMode) {
+                Utils.safeLog('⏹️ تم إيقاف المزامنة التلقائية الدورية');
+            }
+        }
+    },
+
+    /**
+     * إيقاف التحديث التلقائي لحالة الاتصال
+     */
+    stopAutoRefreshConnectionStatus() {
+        if (this.connectionStatusInterval) {
+            clearInterval(this.connectionStatusInterval);
+            this.connectionStatusInterval = null;
+            Utils.safeLog('🛑 تم إيقاف التحديث التلقائي لحالة الاتصال');
+        }
+    },
+
+    /**
+     * تحديث حالة الاتصال للمستخدم
+     */
+    updateUserConnectionStatus() {
+        const statusBtn = document.getElementById('user-connection-status');
+        const statusIcon = document.getElementById('user-connection-icon');
+        const statusText = document.getElementById('user-connection-text');
+        
+        if (!statusBtn || !statusIcon || !statusText) return;
+
+        // إذا لم يكن هناك مستخدم مسجل دخول
+        if (!AppState.currentUser || !AppState.currentUser.email) {
+            statusText.textContent = 'غير متصل';
+            statusBtn.classList.remove('connected', 'disconnected');
+            statusBtn.classList.add('disconnected');
+            statusBtn.title = 'حالة الاتصال: غير متصل';
+            // إيقاف التحديث التلقائي إذا لم يكن هناك مستخدم
+            this.stopAutoRefreshConnectionStatus();
+            return;
+        }
+
+        // البحث عن المستخدم في قاعدة البيانات
+        const userEmail = AppState.currentUser.email.toLowerCase().trim();
+        let user = null;
+        
+        if (AppState.appData && AppState.appData.users && Array.isArray(AppState.appData.users)) {
+            user = AppState.appData.users.find(u => {
+                if (!u || !u.email) return false;
+                return u.email.toLowerCase().trim() === userEmail;
+            });
+        }
+
+        // حالة زر الشريط: الجلسة الحالية = متصل للعرض فقط — لا نفرض isOnline على مصفوفة المستخدمين المشتركة
+        let isOnline = false;
+        if (user && typeof Auth !== 'undefined' && typeof Auth.isUserEffectivelyOnline === 'function') {
+            isOnline = Auth.isUserEffectivelyOnline(user);
+        } else if (user) {
+            isOnline = user.isOnline === true;
+        } else if (AppState.currentUser && AppState.currentUser.email) {
+            isOnline = true;
+        }
+
+        if (isOnline) {
+            statusText.textContent = 'متصل';
+            statusBtn.classList.remove('disconnected');
+            statusBtn.classList.add('connected');
+        } else {
+            // إذا لم يكن المستخدم موجوداً أو كان isOnline = false
+            statusText.textContent = 'غير متصل';
+            statusBtn.classList.remove('connected');
+            statusBtn.classList.add('disconnected');
+        }
+
+        // تحديث title الزر
+        if (user) {
+            const lastLogin = user.lastLogin ? Utils.formatDateTime(user.lastLogin) : 'غير محدد';
+            statusBtn.title = `حالة الاتصال: ${isOnline ? 'متصل' : 'غير متصل'} | آخر تسجيل دخول: ${lastLogin}`;
+        } else {
+            statusBtn.title = `حالة الاتصال: ${isOnline ? 'متصل' : 'غير متصل'}`;
+        }
+    },
+
+    /**
+     * حساب عدد الإشعارات غير المقروءة
+     */
+    getNotificationsCount() {
+        // استخدام نفس دالة getNotificationsList التي تراعي الإشعارات المقروءة
+        return this.getNotificationsList().length;
+    },
+
+    /**
+     * تموضع قائمة اللغة بجانب الزر (fixed لتجنب القص داخل sidebar)
+     */
+    _positionLanguageDropdown(langDropdown, langToggle) {
+        if (!langDropdown || !langToggle) return;
+        const rect = langToggle.getBoundingClientRect();
+        const margin = 8;
+        const vh = document.documentElement.clientHeight || window.innerHeight;
+        const isRTL = (document.documentElement.getAttribute('dir') || '').toLowerCase() === 'rtl';
+        langDropdown.style.position = 'fixed';
+        langDropdown.style.zIndex = '10002';
+        langDropdown.style.left = isRTL ? 'auto' : (rect.left + 'px');
+        langDropdown.style.right = isRTL ? (window.innerWidth - rect.right + 'px') : 'auto';
+        langDropdown.style.top = (rect.bottom + margin) + 'px';
+        const ddHeight = langDropdown.offsetHeight || 120;
+        if (rect.bottom + margin + ddHeight > vh - margin) {
+            langDropdown.style.top = (rect.top - ddHeight - margin) + 'px';
+        }
+    },
+
+    /**
+     * تهيئة زر اللغة
+     */
+    initLanguageToggle() {
+        const langToggle = document.getElementById('language-toggle');
+        if (!langToggle) {
+            Utils.safeWarn('⚠️ لم يتم العثور على زر اللغة');
+            return;
+        }
+
+        // التحقق من عدم ربط الزر مسبقاً
+        if (langToggle.dataset.languageBound === 'true') {
+            return;
+        }
+
+        // تحميل اللغة المحفوظة (بدون عرض إشعار أثناء التهيئة)
+        const savedLang = localStorage.getItem('language') || AppState.currentLanguage || 'ar';
+        this.setLanguage(savedLang, true); // true = تهيئة أولية (لا نعرض إشعار)
+        // زر اللغة الرئيسي: تبديل مباشر بين العربية والإنجليزية بدون قائمة منسدلة
+        langToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const currentLang = localStorage.getItem('language') || AppState.currentLanguage || 'ar';
+            const nextLang = currentLang === 'ar' ? 'en' : 'ar';
+            this.setLanguage(nextLang);
+        });
+
+        langToggle.dataset.languageBound = 'true';
+
+        // تهيئة تبديل اللغة في شاشة تسجيل الدخول أيضاً
+        this.initLoginLanguageToggle();
+
+        Utils.safeLog('✅ تم تهيئة زر اللغة');
+    },
+
+    /**
+     * تهيئة تبديل اللغة في شاشة تسجيل الدخول
+     */
+    initLoginLanguageToggle() {
+        const loginLangToggle = document.getElementById('login-language-toggle-btn');
+        const loginLangDropdown = document.getElementById('login-language-dropdown');
+        
+        if (!loginLangToggle || !loginLangDropdown) {
+            return; // لا نعرض تحذير إذا كنا لسنا في شاشة تسجيل الدخول
+        }
+
+        // التحقق مما إذا كان login-init-fixed.js قد قام بالفعل بتهيئة الزر
+        if (loginLangToggle.dataset.handlerBound === 'true') {
+            Utils.safeLog('ℹ️ زر اللغة في شاشة تسجيل الدخول مفعل مسبقاً بواسطة login-init-fixed.js');
+            return;
+        }
+
+        // منع تكرار الربط من هذا الملف أيضاً
+        if (loginLangToggle.dataset.loginLangBound === 'true') {
+            return;
+        }
+
+        // تحميل اللغة الحالية
+        const currentLang = localStorage.getItem('language') || 'ar';
+        const currentLangText = loginLangToggle.querySelector('#current-lang-text');
+        if (currentLangText) {
+            currentLangText.textContent = currentLang === 'ar' ? 'العربية' : 'English';
+        }
+
+        // تبديل القائمة المنسدلة
+        loginLangToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const isHidden = loginLangDropdown.classList.contains('hidden');
+            if (isHidden) {
+                loginLangDropdown.classList.remove('hidden');
+                loginLangDropdown.classList.add('show');
+                loginLangToggle.classList.add('active');
+            } else {
+                loginLangDropdown.classList.add('hidden');
+                loginLangDropdown.classList.remove('show');
+                loginLangToggle.classList.remove('active');
+            }
+        });
+
+        // معالجة اختيار اللغة
+        const langButtons = loginLangDropdown.querySelectorAll('[data-lang]');
+        langButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const selectedLang = btn.getAttribute('data-lang');
+                const savedLang = localStorage.getItem('language') || 'ar';
+                if (selectedLang !== savedLang) {
+                    this.setLanguage(selectedLang);
+                }
+                
+                // إغلاق القائمة
+                loginLangDropdown.classList.add('hidden');
+                loginLangDropdown.classList.remove('show');
+                loginLangToggle.classList.remove('active');
+            });
+        });
+
+        // إغلاق القائمة عند النقر خارجها
+        document.addEventListener('click', (e) => {
+            if (!loginLangToggle.contains(e.target) && !loginLangDropdown.contains(e.target)) {
+                loginLangDropdown.classList.add('hidden');
+                loginLangDropdown.classList.remove('show');
+                loginLangToggle.classList.remove('active');
+            }
+        });
+
+        loginLangToggle.dataset.loginLangBound = 'true';
+        Utils.safeLog('✅ تم تهيئة تبديل اللغة في شاشة تسجيل الدخول');
+    },
+
+    /**
+     * تعيين اللغة
+     * @param {string} lang - اللغة ('ar' أو 'en')
+     * @param {boolean} isInitialLoad - هل هذه تهيئة أولية؟ (لا نعرض إشعار إذا كان true)
+     */
+    setLanguage(lang, isInitialLoad = false) {
+        // حفظ اللغة
+        localStorage.setItem('language', lang);
+        if (AppState) {
+            AppState.currentLanguage = lang;
+        }
+
+        const isRTL = lang === 'ar';
+
+        // تحديث اتجاه الصفحة على جميع العناصر
+        document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+        document.documentElement.lang = lang;
+
+        if (document.body) {
+            document.body.dir = isRTL ? 'rtl' : 'ltr';
+        }
+
+        // تحديث اتجاه Sidebar و Navigation
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) {
+            sidebar.dir = isRTL ? 'rtl' : 'ltr';
+            // تحديث موضع Sidebar
+            if (isRTL) {
+                sidebar.style.right = '0';
+                sidebar.style.left = 'auto';
+                sidebar.style.borderLeft = '3px solid #FFC72C';
+                sidebar.style.borderRight = 'none';
+            } else {
+                sidebar.style.left = '0';
+                sidebar.style.right = 'auto';
+                sidebar.style.borderRight = '3px solid #FFC72C';
+                sidebar.style.borderLeft = 'none';
+            }
+        }
+
+        // تحديث اتجاه Navigation
+        const navigation = document.querySelector('.navigation');
+        if (navigation) {
+            navigation.dir = isRTL ? 'rtl' : 'ltr';
+        }
+
+        // تحديث موضع app-shell
+        const appShell = document.querySelector('.app-shell');
+        if (appShell) {
+            if (isRTL) {
+                appShell.style.marginRight = 'var(--sidebar-width)';
+                appShell.style.marginLeft = '0';
+            } else {
+                appShell.style.marginLeft = 'var(--sidebar-width)';
+                appShell.style.marginRight = '0';
+            }
+        }
+
+        // تحديث nav-item borders
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            if (isRTL) {
+                item.style.borderRight = '4px solid transparent';
+                item.style.borderLeft = 'none';
+                item.style.borderRadius = '8px 0 0 8px';
+            } else {
+                item.style.borderLeft = '4px solid transparent';
+                item.style.borderRight = 'none';
+                item.style.borderRadius = '0 8px 8px 0';
+            }
+
+            const icon = item.querySelector('i');
+            const textSpan = item.querySelector('span');
+
+            if (icon) {
+                icon.style.order = '';
+                if (isRTL) {
+                    icon.style.marginLeft = '0.75rem';
+                    icon.style.marginRight = '0';
+                } else {
+                    icon.style.marginRight = '0.75rem';
+                    icon.style.marginLeft = '0';
+                }
+            }
+
+            if (textSpan) {
+                textSpan.style.order = '';
+                textSpan.style.flex = '1';
+                textSpan.style.textAlign = isRTL ? 'right' : 'left';
+            }
+
+            item.style.textAlign = isRTL ? 'right' : 'left';
+            item.style.justifyContent = 'flex-start';
+            item.style.flexDirection = 'row';
+        });
+        
+        // إضافة CSS ديناميكي لتأثير hover و ::before
+        const styleId = 'nav-item-hover-ltr-fix';
+        let styleElement = document.getElementById(styleId);
+        if (!styleElement) {
+            styleElement = document.createElement('style');
+            styleElement.id = styleId;
+            document.head.appendChild(styleElement);
+        }
+        styleElement.textContent = `
+            /* تأثير hover */
             [dir="ltr"] .nav-item:hover {
                 transform: translateX(3px) !important;
             }
@@ -1066,7 +10109,7 @@
                 transform: translateX(-3px) !important;
             }
             
-            /* \u062A\u0623\u062B\u064A\u0631 ::before */
+            /* تأثير ::before */
             [dir="ltr"] .nav-item::before {
                 right: auto !important;
                 left: 0 !important;
@@ -1076,7 +10119,7 @@
                 right: 0 !important;
             }
             
-            /* \u062A\u0623\u062B\u064A\u0631 border \u0641\u064A hover */
+            /* تأثير border في hover */
             [dir="ltr"] .nav-item:hover {
                 border-right-color: transparent !important;
                 border-left-color: #FFC72C !important;
@@ -1094,8 +10137,561 @@
                 border-left-color: transparent !important;
                 border-right-color: #FFC72C !important;
             }
-        `;const d=document.querySelector("#language-toggle #current-lang-text");d&&(d.textContent=e==="ar"?"EN":"AR");const p=document.querySelector("#login-language-toggle-btn #current-lang-text");p&&(p.textContent=e==="ar"?"\u0627\u0644\u0639\u0631\u0628\u064A\u0629":"English");const f={ar:{"nav.dashboard":"\u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645","dash.overview":"\u0646\u0638\u0631\u0629 \u0639\u0627\u0645\u0629 \u0639\u0644\u0649 \u0623\u0646\u0634\u0637\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629","dash.totalIncidents":"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062D\u0648\u0627\u062F\u062B","dash.thisMonth":"\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631","dash.thisYearByRegistration":"\u0647\u0630\u0627 \u0627\u0644\u0639\u0627\u0645 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0627\u0644\u062A\u0633\u062C\u064A\u0644","dash.registeredInSystem":"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0645\u0633\u062C\u0644\u0629","dash.activeUsers":"\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0627\u0644\u0646\u0634\u0637\u064A\u0646","dash.registeredUser":"\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0633\u062C\u0644","dash.workPermits":"\u062A\u0635\u0627\u0631\u064A\u062D \u0627\u0644\u0639\u0645\u0644","dash.openPermit":"\u062A\u0635\u0631\u064A\u062D \u0645\u0641\u062A\u0648\u062D","dash.closedPermit":"\u062A\u0635\u0631\u064A\u062D \u0645\u063A\u0644\u0642","dash.total":"\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A","dash.complianceRate":"\u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644","dash.monthly":"\u0634\u0647\u0631\u064A","dash.workHours":"\u0639\u062F\u062F \u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0639\u0645\u0644","dash.workHour":"\u0633\u0627\u0639\u0629 \u0639\u0645\u0644","dash.safeWorkHours":"\u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0639\u0645\u0644 \u0627\u0644\u0622\u0645\u0646\u0629","dash.safeWorkHoursDesc":"\u0645\u0646\u0630 \u0622\u062E\u0631 \u062D\u0627\u062F\u062B","dash.daysSinceLastAccident":"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0623\u064A\u0627\u0645 \u0645\u0646\u0630 \u0622\u062E\u0631 \u062D\u0627\u062F\u062B","dash.day":"\u064A\u0648\u0645","dash.safetyMetrics":"\u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629","dash.trirTitle":"\u0645\u0639\u062F\u0644 \u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A \u0627\u0644\u0642\u0627\u0628\u0644\u0629 \u0644\u0644\u062A\u0633\u062C\u064A\u0644","dash.trirSubtitle":"\u0644\u0643\u0644 200 \u0623\u0644\u0641 \u0633\u0627\u0639\u0629 \u0639\u0645\u0644","dash.afrTitle":"\u0645\u0639\u062F\u0644 \u062A\u0643\u0631\u0627\u0631 \u0627\u0644\u062D\u0648\u0627\u062F\u062B","dash.afrSubtitle":"\u0644\u0643\u0644 \u0645\u0644\u064A\u0648\u0646 \u0633\u0627\u0639\u0629 \u0639\u0645\u0644","dash.farTitle":"\u0645\u0639\u062F\u0644 \u0648\u0641\u064A\u0627\u062A \u0627\u0644\u062D\u0648\u0627\u062F\u062B","dash.farSubtitle":"\u0644\u0643\u0644 100 \u0645\u0644\u064A\u0648\u0646 \u0633\u0627\u0639\u0629 \u0639\u0645\u0644","dash.frTitle":"\u0645\u0639\u062F\u0644 \u062A\u0643\u0631\u0627\u0631 LTI","dash.frSubtitle":"\u0644\u0643\u0644 \u0645\u0644\u064A\u0648\u0646 \u0633\u0627\u0639\u0629 \u0639\u0645\u0644","dash.faTitle":"\u0645\u0639\u062F\u0644 \u0627\u0644\u062A\u0643\u0631\u0627\u0631","dash.frequencyRateSubtitle":"\u0644\u0643\u0644 \u0645\u0644\u064A\u0648\u0646 \u0633\u0627\u0639\u0629 \u0639\u0645\u0644","dash.tirTitle":"\u0646\u0633\u0628\u0629 \u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A\u0629","dash.totalInjuryRateSubtitle":"\u0644\u0643\u0644 100 \u0639\u0627\u0645\u0644","dash.ltiTitle":"\u0639\u062F\u062F \u0625\u0635\u0627\u0628\u0627\u062A \u0641\u0642\u062F\u0627\u0646 \u0648\u0642\u062A \u0627\u0644\u0639\u0645\u0644","dash.lostTimeInjurySubtitle":"\u0639\u062F\u062F \u0627\u0644\u062D\u0627\u0644\u0627\u062A \u0627\u0644\u0645\u0633\u062C\u0651\u0644\u0629","dash.srTitle":"\u0645\u0639\u062F\u0644 \u0634\u062F\u0629 \u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A","dash.srSubtitle":"\u0623\u064A\u0627\u0645 \u0645\u0641\u0642\u0648\u062F\u0629 \u0644\u0643\u0644 \u0645\u0644\u064A\u0648\u0646 \u0633\u0627\u0639\u0629 \u0639\u0645\u0644","dash.irTitle":"\u0645\u0639\u062F\u0644 \u0627\u0644\u062D\u0648\u0627\u062F\u062B","dash.irSubtitle":"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0644\u0643\u0644 \u0645\u0644\u064A\u0648\u0646 \u0633\u0627\u0639\u0629 \u0639\u0645\u0644","dash.safetyMetricsNote":"\u0645\u0644\u0627\u062D\u0638\u0629: TRIR/AFR/FAR/FR/SR/IR \u062A\u064F\u062D\u0633\u0628 \u0639\u0628\u0631 HseMetrics \u0627\u0644\u0645\u0648\u062D\u0651\u062F (YTD \u0627\u0644\u0639\u0627\u0645 \u0627\u0644\u062D\u0627\u0644\u064A) \u0628\u0646\u0641\u0633 \u0645\u0646\u0637\u0642 \u0627\u0644\u0633\u0643\u0648\u0631\u0643\u0627\u0631\u062F.","dash.reportsStatistics":"\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A","dash.totalReportsSubtitle":"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0645\u064F\u0646\u0634\u0623\u0629","dash.incidentReportsSubtitle":"\u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u062D\u0648\u0627\u062F\u062B","dash.nearmissReportsSubtitle":"\u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629","dash.inspectionsSubtitle":"\u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0641\u062D\u0635 \u0648\u0627\u0644\u062A\u0641\u062A\u064A\u0634","dash.trainingSessionsSubtitle":"\u062C\u0644\u0633\u0627\u062A \u0627\u0644\u062A\u062F\u0631\u064A\u0628 \u0627\u0644\u0645\u0646\u0641\u0630\u0629","dash.violationsSubtitle":"\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0633\u062C\u0644\u0629","dash.approvedContractorsTitle":"\u0625\u0639\u062F\u0627\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u064A\u0646","dash.approvedContractorsSubtitle":"\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u0648\u0646 \u0648\u0627\u0644\u0645\u0648\u0631\u062F\u0648\u0646 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0648\u0646","dash.ptwIssuedSubtitle":"\u062A\u0635\u0627\u0631\u064A\u062D \u0627\u0644\u0639\u0645\u0644 \u0627\u0644\u0635\u0627\u062F\u0631\u0629","dash.auditsSubtitle":"\u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0627\u0644\u0645\u0646\u0641\u0630\u0629","dash.electricityTitle":"\u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0627\u0644\u0643\u0647\u0631\u0628\u0627\u0621","dash.electricitySubtitle":"\u0643\u064A\u0644\u0648\u0648\u0627\u062A \u0633\u0627\u0639\u0629 (kWh)","dash.incidentsCurrentYear":"\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0639\u0627\u0645 \u0627\u0644\u062D\u0627\u0644\u064A","dash.incidentsPriorYears":"\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0623\u0639\u0648\u0627\u0645 \u0627\u0644\u0633\u0627\u0628\u0642\u0629:","dash.noStatsForPermissions":"\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0633\u0631\u064A\u0639\u0629 \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A\u0643 \u0627\u0644\u062D\u0627\u0644\u064A\u0629.","dash.queryEmployeeReport":"\u0627\u0644\u0627\u0633\u062A\u0639\u0644\u0627\u0645 - \u062A\u0642\u0631\u064A\u0631 \u0645\u0648\u0638\u0641","dash.queryContractorReport":"\u0627\u0644\u0627\u0633\u062A\u0639\u0644\u0627\u0645 - \u062A\u0642\u0631\u064A\u0631 \u0645\u0642\u0627\u0648\u0644","dash.noPermissionTasks":"\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0639\u0631\u0636 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646.","dash.kpiTrainingPrograms":"\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628","dash.kpiTrainingDesc":"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645","dash.kpiClinicVisits":"\u0627\u0644\u062A\u0631\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0639\u064A\u0627\u062F\u0629","dash.kpiClinicDesc":"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0632\u064A\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062C\u0644\u0629","dash.kpiActiveEmployees":"\u0627\u0644\u0645\u0648\u0638\u0641\u0648\u0646 \u0627\u0644\u0646\u0634\u0637\u0648\u0646","dash.kpiEmployeesDesc":"\u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646","dash.kpiExternalWorkforce":"\u0627\u0644\u0639\u0645\u0627\u0644\u0629 \u0627\u0644\u062E\u0627\u0631\u062C\u064A\u0629 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u0648\u0646","dash.kpiContractorsDesc":"\u0645\u0646 \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u064A\u0646","dash.statsNote":"\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A: \u064A\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u064F\u062F\u062E\u0644\u0629 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645. \u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0631\u0642\u0627\u0645 \u062A\u0639\u0643\u0633 \u0627\u0644\u0648\u0636\u0639 \u0627\u0644\u062D\u0627\u0644\u064A \u0644\u0644\u0646\u0638\u0627\u0645.","dash.chartIncidents30d":"\u0627\u0644\u062D\u0648\u0627\u062F\u062B - \u0622\u062E\u0631 30 \u064A\u0648\u0645","dash.chartIncidentsBySeverity":"\u062A\u0648\u0632\u064A\u0639 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u062D\u0633\u0628 \u0627\u0644\u062E\u0637\u0648\u0631\u0629","dash.chartPtw30d":"Work Permits - \u0622\u062E\u0631 30 \u064A\u0648\u0645","dash.chartTraining30d":"Training - \u0622\u062E\u0631 30 \u064A\u0648\u0645","dash.noData30d":"\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0641\u064A \u0622\u062E\u0631 30 \u064A\u0648\u0645\u0627\u064B","nav.users":"\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646","nav.userTasks":"\u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646","nav.employees":"\u0642\u0627\u0639\u062F\u0629 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646","nav.incidents":"\u0627\u0644\u062D\u0648\u0627\u062F\u062B","nav.nearmiss":"\u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629","nav.ptw":"\u062A\u0635\u0627\u0631\u064A\u062D \u0627\u0644\u0639\u0645\u0644","nav.training":"\u0627\u0644\u062A\u062F\u0631\u064A\u0628","nav.clinic":"\u0627\u0644\u0639\u064A\u0627\u062F\u0629 \u0627\u0644\u0637\u0628\u064A\u0629","nav.fire":"\u0641\u062D\u0635 \u0645\u0639\u062F\u0627\u062A \u0627\u0644\u062D\u0631\u064A\u0642","nav.periodicInspections":"\u0627\u0644\u0641\u062D\u0648\u0635\u0627\u062A \u0627\u0644\u062F\u0648\u0631\u064A\u0629","nav.ppe":"\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629","nav.violations":"\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A","nav.contractors":"\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646","nav.behavior":"\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u062A\u0635\u0631\u0641\u0627\u062A","nav.chemical":"\u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629","nav.observations":"\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629","nav.iso":"\u0646\u0638\u0627\u0645 ISO","nav.emergency":"\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0627\u0644\u0637\u0648\u0627\u0631\u0626","nav.risk":"\u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631","nav.sop":"\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 SOP-JHA","nav.legal":"\u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A \u0627\u0644\u0642\u0627\u0646\u0648\u0646\u064A\u0629","nav.sustainability":"\u0627\u0644\u0627\u0633\u062A\u062F\u0627\u0645\u0629 \u0627\u0644\u0628\u064A\u0626\u064A\u0629","nav.safetyBudget":"\u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629","nav.safetyKPIs":"\u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u0623\u062F\u0627\u0621 \u0644\u0644\u0633\u0644\u0627\u0645\u0629","nav.safetyHealthManagement":"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629","nav.actionTracking":"\u0633\u062C\u0644 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A","nav.aiAssistant":"\u0645\u0633\u0627\u0639\u062F \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A","nav.appTester":"\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u062A\u0637\u0628\u064A\u0642","nav.settings":"\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A","nav.help":"\u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629","nav.logout":"\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C"},en:{"nav.dashboard":"Dashboard","dash.overview":"Overview of Occupational Safety Activities","dash.totalIncidents":"Total Incidents","dash.thisMonth":"This Month","dash.thisYearByRegistration":"This year by registration","dash.registeredInSystem":"Total incidents registered","dash.activeUsers":"Active Users","dash.registeredUser":"Registered User","dash.workPermits":"Work Permits","dash.openPermit":"Open Permit","dash.closedPermit":"Closed Permit","dash.total":"Total","dash.complianceRate":"Compliance Rate","dash.monthly":"Monthly","dash.workHours":"Work Hours","dash.workHour":"Work Hour","dash.safeWorkHours":"SAFE WORKING HOURS","dash.safeWorkHoursDesc":"Since last recorded incident","dash.daysSinceLastAccident":"Days Since Last Accident","dash.day":"Day","dash.safetyMetrics":"Safety Metrics","dash.trirTitle":"Total Recordable Injury Rate","dash.trirSubtitle":"Per 200,000 work hours","dash.afrTitle":"Accident Frequency Rate","dash.afrSubtitle":"Per 1,000,000 work hours","dash.farTitle":"Fatality Accident Rate","dash.farSubtitle":"Per 100,000,000 work hours","dash.frTitle":"LTI Frequency Rate (FR)","dash.frSubtitle":"Per 1,000,000 work hours","dash.faTitle":"Frequency Rate","dash.frequencyRateSubtitle":"Per million work hours","dash.tirTitle":"Total Injury Rate (%)","dash.totalInjuryRateSubtitle":"Per 100 employees","dash.ltiTitle":"Lost-Time Injuries (count)","dash.lostTimeInjurySubtitle":"Recorded cases","dash.srTitle":"Severity Rate (SR)","dash.srSubtitle":"Lost days per 1,000,000 work hours","dash.irTitle":"Incident Rate (IR)","dash.irSubtitle":"Total incidents per 1,000,000 work hours","dash.safetyMetricsNote":"Note: TRIR/AFR/FAR/FR/SR/IR are calculated via unified HseMetrics (current year YTD), same as the scorecard.","dash.reportsStatistics":"Reports & Statistics","dash.totalReportsSubtitle":"Total reports generated","dash.incidentReportsSubtitle":"Incident reports","dash.nearmissReportsSubtitle":"Near miss reports","dash.inspectionsSubtitle":"Inspection reports","dash.trainingSessionsSubtitle":"Training sessions completed","dash.violationsSubtitle":"Recorded violations","dash.approvedContractorsTitle":"Approved Contractors","dash.approvedContractorsSubtitle":"Approved contractors and suppliers","dash.ptwIssuedSubtitle":"Work permits issued","dash.auditsSubtitle":"Audits completed","dash.electricityTitle":"Electricity Consumption","dash.electricitySubtitle":"Kilowatt-hours (kWh)","dash.incidentsCurrentYear":"Current Year Incidents","dash.incidentsPriorYears":"Prior Years Incidents:","dash.noStatsForPermissions":"No quick statistics available for your current permissions.","dash.queryEmployeeReport":"Query - Employee Report","dash.queryContractorReport":"Query - Contractor Report","dash.noPermissionTasks":"No permission to view user tasks.","dash.kpiTrainingPrograms":"Training Programs","dash.kpiTrainingDesc":"Total programs registered in the system","dash.kpiClinicVisits":"Clinic Visits","dash.kpiClinicDesc":"Total visits recorded","dash.kpiActiveEmployees":"Active Employees","dash.kpiEmployeesDesc":"From the employee database","dash.kpiExternalWorkforce":"External Workforce & Contractors","dash.kpiContractorsDesc":"From approved contractor records","dash.statsNote":"Statistics: Reports & Statistics are automatically refreshed based on data entered in the system. All figures reflect the current state of the system.","dash.chartIncidents30d":"Incidents - Last 30 Days","dash.chartIncidentsBySeverity":"Incidents Distribution by Severity","dash.chartPtw30d":"Work Permits - Last 30 Days","dash.chartTraining30d":"Training - Last 30 Days","dash.noData30d":"No data in the last 30 days","nav.users":"Users","nav.userTasks":"User Tasks","nav.employees":"Employees Database","nav.incidents":"Incidents","nav.nearmiss":"Near Miss","nav.ptw":"Work Permits","nav.training":"Training","nav.clinic":"Medical Clinic","nav.fire":"Fire Equipment","nav.periodicInspections":"Periodic Inspections","nav.ppe":"PPE","nav.violations":"Violations","nav.contractors":"Contractors","nav.behavior":"Behavior Monitoring","nav.chemical":"Chemical Safety","nav.observations":"Daily Observations","nav.iso":"ISO System","nav.emergency":"Emergency Alerts","nav.risk":"Risk Assessment","nav.sop":"Safety Instructions SOP-JHA","nav.legal":"Legal Documents","nav.sustainability":"Environmental Sustainability","nav.safetyBudget":"Safety Budget","nav.safetyKPIs":"Safety Performance Indicators","nav.safetyHealthManagement":"Safety and Health Management","nav.actionTracking":"Action Tracking Log","nav.aiAssistant":"AI Assistant","nav.appTester":"Application Testing","nav.settings":"Settings","nav.help":"Help","nav.logout":"Logout"}},c=window.AppI18n&&typeof window.AppI18n.applyI18n=="function"?window.AppI18n:window.I18n&&typeof window.I18n.applyI18n=="function"?window.I18n:null;if(c&&c.translations&&(f.ar={...f.ar,...c.translations.ar},f.en={...f.en,...c.translations.en}),document.querySelectorAll("[data-i18n]").forEach(m=>{const y=m.getAttribute("data-i18n");y&&f[e]&&f[e][y]&&(m.textContent=f[e][y])}),document.querySelectorAll(".sidebar .nav-item[data-i18n]").forEach(m=>{const y=m.getAttribute("data-i18n");y&&f[e]&&f[e][y]&&m.setAttribute("title",f[e][y])}),c){c.applyI18n(document,e);const m=[document.querySelector(".sidebar"),document.querySelector(".login-container")||document.getElementById("login-form"),document.querySelector(".section.active")||(AppState.currentSection?document.getElementById(`${AppState.currentSection}-section`):null)||document.getElementById("main-content")].filter(Boolean),y=[...new Set(m)];y.length?y.forEach(b=>{try{c.applyLiteralTranslations(b,e)}catch{}}):c.applyLiteralTranslations(document,e),c.observeDomForI18n()}if(typeof Permissions<"u"&&typeof Permissions.applyGlobalReadOnlyRestrictions=="function")try{Permissions.applyGlobalReadOnlyRestrictions(document)}catch{}this.updateLoginScreenTexts(e),this.updateCompanyBranding(),this.updateAppVersionDisplay();const g=document.querySelector("nav.navigation");g&&g.setAttribute("aria-label",t?"\u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629":"Main Menu"),n&&n.setAttribute("aria-label",t?"\u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629":"Sidebar"),Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0644\u063A\u0629: ${e} (${t?"RTL":"LTR"})`),!i&&typeof AppState<"u"&&(AppState._languageRefresh=!0);try{const m=new CustomEvent("language-changed",{detail:{lang:e,isRTL:t}});document.dispatchEvent(m)}catch(m){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u0631\u0633\u0627\u0644 \u062D\u062F\u062B \u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0644\u063A\u0629:",m)}if(!i)try{const m=AppState.currentSection;m&&typeof this.loadSectionData=="function"&&this.loadSectionData(m,!0)}catch(m){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0639\u0646\u062F \u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0642\u0633\u0645 \u0628\u0639\u062F \u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0644\u063A\u0629:",m)}finally{const m=()=>{try{typeof AppState<"u"&&(AppState._languageRefresh=!1)}catch{}};typeof requestAnimationFrame=="function"?requestAnimationFrame(()=>setTimeout(m,0)):setTimeout(m,0)}try{typeof window.dispatchEvent=="function"&&window.dispatchEvent(new Event("resize"))}catch{}this.fixSidebarForLanguage(e,t),this.updateCompanyLogoHeaderPosition(!!document.querySelector(".sidebar.open"));try{typeof AppState<"u"&&AppState.currentUser&&typeof Permissions<"u"&&typeof Permissions.updateNavigation=="function"&&Permissions.updateNavigation()}catch(m){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u0639\u0627\u062F\u0629 \u062A\u0637\u0628\u064A\u0642 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0628\u0639\u062F \u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0644\u063A\u0629:",m)}if(!i)try{typeof Notification<"u"&&Notification.success&&typeof Notification.success=="function"&&document.getElementById("notification-container")&&Notification.success(e==="ar"?"\u062A\u0645 \u0627\u0644\u062A\u0628\u062F\u064A\u0644 \u0644\u0644\u0639\u0631\u0628\u064A\u0629":"Switched to English")}catch(m){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0625\u0634\u0639\u0627\u0631 \u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0644\u063A\u0629:",m)}},updateLoginScreenTexts(e){const t={ar:{"login-email-text":"\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A","login-password-text":"\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631","login-label-email-text":"\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A","login-label-password-text":"\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631","login-submit-text":"\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644","login-help-text":"\u0645\u0633\u0627\u0639\u062F\u0629","login-forgot-text":"\u0646\u0633\u064A\u062A \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631\u061F","current-lang-text":"\u0627\u0644\u0639\u0631\u0628\u064A\u0629"},en:{"login-email-text":"Email","login-password-text":"Password","login-label-email-text":"Email","login-label-password-text":"Password","login-submit-text":"Log in","login-help-text":"Help","login-forgot-text":"Forgot password?","current-lang-text":"English"}}[e];if(!t)return;const n=document.querySelector("#login-language-toggle-btn #current-lang-text");n&&t["current-lang-text"]&&(n.textContent=t["current-lang-text"]),Object.entries(t).forEach(([s,o])=>{if(s==="current-lang-text")return;const r=document.getElementById(s);r&&(r.textContent=o)}),document.querySelectorAll("#login-form [data-i18n]").forEach(s=>{const o=s.getAttribute("data-i18n");t[o]&&(s.textContent=t[o])})},fixSidebarForLanguage(e,i){const t=document.querySelector(".sidebar");if(t){if(i){t.style.position="fixed",t.style.top="0",t.style.right="0",t.style.left="auto",t.style.width="var(--sidebar-width, 280px)",t.style.height="100vh",t.style.zIndex="1000",t.style.background="linear-gradient(180deg, #003865 0%, #004C8C 50%, #003865 100%)",t.style.borderLeft="3px solid #FFC72C",t.style.borderRight="none",t.style.boxShadow="-2px 0 10px rgba(0,0,0,0.1)",t.dir="rtl";const n=document.querySelector(".app-shell");n&&(n.style.marginRight="var(--sidebar-width, 280px)",n.style.marginLeft="0",n.style.width="calc(100% - var(--sidebar-width, 280px))",n.style.transition="margin-right 0.3s ease, width 0.3s ease")}else{t.style.position="fixed",t.style.top="0",t.style.left="0",t.style.right="auto",t.style.width="var(--sidebar-width, 280px)",t.style.height="100vh",t.style.zIndex="1000",t.style.backgroundColor="#003865",t.style.borderRight="3px solid #FFC72C",t.style.borderLeft="none",t.style.boxShadow="2px 0 10px rgba(0,0,0,0.1)",t.style.overflowY="auto",t.style.overflowX="hidden",t.dir="ltr",t.querySelectorAll(".nav-item").forEach(p=>{if(p.getAttribute("data-permission-hidden")==="true"){p.style.display="none";return}p.style.display="flex",p.style.alignItems="center",p.style.width="calc(100% - 16px)",p.style.padding="12px 12px 12px 16px",p.style.margin="4px 8px",p.style.borderRadius="8px",p.style.color="white",p.style.textDecoration="none",p.style.transition="all 0.3s ease",p.style.cursor="pointer",p.style.borderLeft="4px solid transparent",p.style.borderRight="none",p.style.flexDirection="row";const c=p.querySelector("i"),u=p.querySelector("span");c&&(c.style.fontSize="18px",c.style.width="24px",c.style.textAlign="center",c.style.marginRight="12px",c.style.marginLeft="0",c.style.flexShrink="0",c.style.color="white"),u&&(u.style.fontSize="14px",u.style.fontWeight="500",u.style.textAlign="left",u.style.flex="1",u.style.whiteSpace="nowrap",u.style.overflow="hidden",u.style.textOverflow="ellipsis",u.style.color="white")});const a=t.querySelector(".sidebar-header");a&&(a.style.padding="20px 16px",a.style.borderBottom="1px solid rgba(255,255,255,0.2)",a.style.textAlign="left");const s=a?.querySelector(".logo")||t.querySelector(".logo");s&&(s.style.fontSize="20px",s.style.fontWeight="bold",s.style.color="white",s.style.textAlign="left",s.style.marginBottom="8px");const o=document.querySelector(".app-shell");o&&(o.style.marginLeft="var(--sidebar-width, 280px)",o.style.marginRight="0",o.style.width="calc(100% - var(--sidebar-width, 280px))",o.style.transition="margin-left 0.3s ease, width 0.3s ease",o.style.minHeight="100vh");const r=document.querySelector(".main-content");r&&(r.style.marginLeft="0",r.style.marginRight="0",r.style.width="100%");const l="sidebar-english-fix-v2";let d=document.getElementById(l);d||(d=document.createElement("style"),d.id=l,document.head.appendChild(d)),d.textContent=`
-                /* \u0625\u0635\u0644\u0627\u062D\u0627\u062A \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629 \u0641\u064A \u0627\u0644\u0644\u063A\u0629 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629 */
+        `;
+
+        // تحديث نص زر اللغة في التطبيق الرئيسي (مع تجنب تعارض IDs المكررة)
+        const mainLangText = document.querySelector('#language-toggle #current-lang-text');
+        if (mainLangText) {
+            // عرض اختصار اللغة الهدف (التي سيتم التحويل إليها عند الضغط).
+            mainLangText.textContent = lang === 'ar' ? 'EN' : 'AR';
+        }
+
+        // تحديث نص زر اللغة في شاشة الدخول عند وجوده
+        const loginLangText = document.querySelector('#login-language-toggle-btn #current-lang-text');
+        if (loginLangText) {
+            loginLangText.textContent = lang === 'ar' ? 'العربية' : 'English';
+        }
+
+        // تحديث جميع العناصر التي تحتوي على data-i18n (القائمة + لوحة التحكم)
+        const translations = {
+            ar: {
+                'nav.dashboard': 'لوحة التحكم',
+                'dash.overview': 'نظرة عامة على أنشطة السلامة المهنية',
+                'dash.totalIncidents': 'إجمالي الحوادث',
+                'dash.thisMonth': 'هذا الشهر',
+                'dash.thisYearByRegistration': 'هذا العام بناءً على التسجيل',
+                'dash.registeredInSystem': 'إجمالي الحوادث المسجلة',
+                'dash.activeUsers': 'المستخدمين النشطين',
+                'dash.registeredUser': 'مستخدم مسجل',
+                'dash.workPermits': 'تصاريح العمل',
+                'dash.openPermit': 'تصريح مفتوح',
+                'dash.closedPermit': 'تصريح مغلق',
+                'dash.total': 'الإجمالي',
+                'dash.complianceRate': 'معدل الامتثال',
+                'dash.monthly': 'شهري',
+                'dash.workHours': 'عدد ساعات العمل',
+                'dash.workHour': 'ساعة عمل',
+                'dash.safeWorkHours': 'ساعات العمل الآمنة',
+                'dash.safeWorkHoursDesc': 'منذ آخر حادث',
+                'dash.daysSinceLastAccident': 'إجمالي الأيام منذ آخر حادث',
+                'dash.day': 'يوم',
+                'dash.safetyMetrics': 'مؤشرات السلامة المهنية',
+                'dash.trirTitle': 'معدل الإصابات القابلة للتسجيل',
+                'dash.trirSubtitle': 'لكل 200 ألف ساعة عمل',
+                'dash.afrTitle': 'معدل تكرار الحوادث',
+                'dash.afrSubtitle': 'لكل مليون ساعة عمل',
+                'dash.farTitle': 'معدل وفيات الحوادث',
+                'dash.farSubtitle': 'لكل 100 مليون ساعة عمل',
+                'dash.frTitle': 'معدل تكرار LTI',
+                'dash.frSubtitle': 'لكل مليون ساعة عمل',
+                'dash.faTitle': 'معدل التكرار',
+                'dash.frequencyRateSubtitle': 'لكل مليون ساعة عمل',
+                'dash.tirTitle': 'نسبة الإصابات الإجمالية',
+                'dash.totalInjuryRateSubtitle': 'لكل 100 عامل',
+                'dash.ltiTitle': 'عدد إصابات فقدان وقت العمل',
+                'dash.lostTimeInjurySubtitle': 'عدد الحالات المسجّلة',
+                'dash.srTitle': 'معدل شدة الإصابات',
+                'dash.srSubtitle': 'أيام مفقودة لكل مليون ساعة عمل',
+                'dash.irTitle': 'معدل الحوادث',
+                'dash.irSubtitle': 'إجمالي الحوادث لكل مليون ساعة عمل',
+                'dash.safetyMetricsNote': 'ملاحظة: TRIR/AFR/FAR/FR/SR/IR تُحسب عبر HseMetrics الموحّد (YTD العام الحالي) بنفس منطق السكوركارد.',
+                'dash.reportsStatistics': 'التقارير والإحصائيات',
+                'dash.totalReportsSubtitle': 'إجمالي التقارير المُنشأة',
+                'dash.incidentReportsSubtitle': 'تقارير الحوادث',
+                'dash.nearmissReportsSubtitle': 'تقارير الحوادث الوشيكة',
+                'dash.inspectionsSubtitle': 'تقارير الفحص والتفتيش',
+                'dash.trainingSessionsSubtitle': 'جلسات التدريب المنفذة',
+                'dash.violationsSubtitle': 'المخالفات المسجلة',
+                'dash.approvedContractorsTitle': 'إعداد المقاولين المعتمدين',
+                'dash.approvedContractorsSubtitle': 'المقاولون والموردون المعتمدون',
+                'dash.ptwIssuedSubtitle': 'تصاريح العمل الصادرة',
+                'dash.auditsSubtitle': 'عمليات التدقيق المنفذة',
+                'dash.electricityTitle': 'استهلاك الكهرباء',
+                'dash.electricitySubtitle': 'كيلووات ساعة (kWh)',
+                'dash.incidentsCurrentYear': 'حوادث العام الحالي',
+                'dash.incidentsPriorYears': 'حوادث الأعوام السابقة:',
+                'dash.noStatsForPermissions': 'لا توجد إحصائيات سريعة مطابقة لصلاحياتك الحالية.',
+                'dash.queryEmployeeReport': 'الاستعلام - تقرير موظف',
+                'dash.queryContractorReport': 'الاستعلام - تقرير مقاول',
+                'dash.noPermissionTasks': 'لا توجد صلاحية لعرض مهام المستخدمين.',
+                'dash.kpiTrainingPrograms': 'برامج التدريب',
+                'dash.kpiTrainingDesc': 'إجمالي البرامج المسجلة في النظام',
+                'dash.kpiClinicVisits': 'التردد على العيادة',
+                'dash.kpiClinicDesc': 'إجمالي الزيارات المسجلة',
+                'dash.kpiActiveEmployees': 'الموظفون النشطون',
+                'dash.kpiEmployeesDesc': 'من قاعدة بيانات الموظفين',
+                'dash.kpiExternalWorkforce': 'العمالة الخارجية والمقاولون',
+                'dash.kpiContractorsDesc': 'من سجلات المقاولين المعتمدين',
+                'dash.statsNote': 'إحصائيات: يتم تحديث التقارير والإحصائيات تلقائياً بناءً على البيانات المُدخلة في النظام. جميع الأرقام تعكس الوضع الحالي للنظام.',
+                'dash.chartIncidents30d': 'الحوادث - آخر 30 يوم',
+                'dash.chartIncidentsBySeverity': 'توزيع الحوادث حسب الخطورة',
+                'dash.chartPtw30d': 'Work Permits - آخر 30 يوم',
+                'dash.chartTraining30d': 'Training - آخر 30 يوم',
+                'dash.noData30d': 'لا توجد بيانات في آخر 30 يوماً',
+                'nav.users': 'المستخدمين',
+                'nav.userTasks': 'مهام المستخدمين',
+                'nav.employees': 'قاعدة بيانات الموظفين',
+                'nav.incidents': 'الحوادث',
+                'nav.nearmiss': 'الحوادث الوشيكة',
+                'nav.ptw': 'تصاريح العمل',
+                'nav.training': 'التدريب',
+                'nav.clinic': 'العيادة الطبية',
+                'nav.fire': 'فحص معدات الحريق',
+                'nav.periodicInspections': 'الفحوصات الدورية',
+                'nav.ppe': 'مهمات الوقاية',
+                'nav.violations': 'المخالفات',
+                'nav.contractors': 'المقاولين',
+                'nav.behavior': 'مراقبة التصرفات',
+                'nav.chemical': 'المواد الكيميائية',
+                'nav.observations': 'الملاحظات اليومية',
+                'nav.iso': 'نظام ISO',
+                'nav.emergency': 'تنبيهات الطوارئ',
+                'nav.risk': 'تقييم المخاطر',
+                'nav.sop': 'تعليمات السلامة SOP-JHA',
+                'nav.legal': 'المستندات القانونية',
+                'nav.sustainability': 'الاستدامة البيئية',
+                'nav.safetyBudget': 'ميزانية السلامة',
+                'nav.safetyKPIs': 'مؤشرات الأداء للسلامة',
+                'nav.safetyHealthManagement': 'إدارة السلامة والصحة',
+                'nav.actionTracking': 'سجل متابعة الإجراءات',
+                'nav.aiAssistant': 'مساعد الذكاء الاصطناعي',
+                'nav.appTester': 'اختبار التطبيق',
+                'nav.settings': 'الإعدادات',
+                'nav.help': 'المساعدة',
+                'nav.logout': 'تسجيل الخروج'
+            },
+            en: {
+                'nav.dashboard': 'Dashboard',
+                'dash.overview': 'Overview of Occupational Safety Activities',
+                'dash.totalIncidents': 'Total Incidents',
+                'dash.thisMonth': 'This Month',
+                'dash.thisYearByRegistration': 'This year by registration',
+                'dash.registeredInSystem': 'Total incidents registered',
+                'dash.activeUsers': 'Active Users',
+                'dash.registeredUser': 'Registered User',
+                'dash.workPermits': 'Work Permits',
+                'dash.openPermit': 'Open Permit',
+                'dash.closedPermit': 'Closed Permit',
+                'dash.total': 'Total',
+                'dash.complianceRate': 'Compliance Rate',
+                'dash.monthly': 'Monthly',
+                'dash.workHours': 'Work Hours',
+                'dash.workHour': 'Work Hour',
+                'dash.safeWorkHours': 'SAFE WORKING HOURS',
+                'dash.safeWorkHoursDesc': 'Since last recorded incident',
+                'dash.daysSinceLastAccident': 'Days Since Last Accident',
+                'dash.day': 'Day',
+                'dash.safetyMetrics': 'Safety Metrics',
+                'dash.trirTitle': 'Total Recordable Injury Rate',
+                'dash.trirSubtitle': 'Per 200,000 work hours',
+                'dash.afrTitle': 'Accident Frequency Rate',
+                'dash.afrSubtitle': 'Per 1,000,000 work hours',
+                'dash.farTitle': 'Fatality Accident Rate',
+                'dash.farSubtitle': 'Per 100,000,000 work hours',
+                'dash.frTitle': 'LTI Frequency Rate (FR)',
+                'dash.frSubtitle': 'Per 1,000,000 work hours',
+                'dash.faTitle': 'Frequency Rate',
+                'dash.frequencyRateSubtitle': 'Per million work hours',
+                'dash.tirTitle': 'Total Injury Rate (%)',
+                'dash.totalInjuryRateSubtitle': 'Per 100 employees',
+                'dash.ltiTitle': 'Lost-Time Injuries (count)',
+                'dash.lostTimeInjurySubtitle': 'Recorded cases',
+                'dash.srTitle': 'Severity Rate (SR)',
+                'dash.srSubtitle': 'Lost days per 1,000,000 work hours',
+                'dash.irTitle': 'Incident Rate (IR)',
+                'dash.irSubtitle': 'Total incidents per 1,000,000 work hours',
+                'dash.safetyMetricsNote': 'Note: TRIR/AFR/FAR/FR/SR/IR are calculated via unified HseMetrics (current year YTD), same as the scorecard.',
+                'dash.reportsStatistics': 'Reports & Statistics',
+                'dash.totalReportsSubtitle': 'Total reports generated',
+                'dash.incidentReportsSubtitle': 'Incident reports',
+                'dash.nearmissReportsSubtitle': 'Near miss reports',
+                'dash.inspectionsSubtitle': 'Inspection reports',
+                'dash.trainingSessionsSubtitle': 'Training sessions completed',
+                'dash.violationsSubtitle': 'Recorded violations',
+                'dash.approvedContractorsTitle': 'Approved Contractors',
+                'dash.approvedContractorsSubtitle': 'Approved contractors and suppliers',
+                'dash.ptwIssuedSubtitle': 'Work permits issued',
+                'dash.auditsSubtitle': 'Audits completed',
+                'dash.electricityTitle': 'Electricity Consumption',
+                'dash.electricitySubtitle': 'Kilowatt-hours (kWh)',
+                'dash.incidentsCurrentYear': 'Current Year Incidents',
+                'dash.incidentsPriorYears': 'Prior Years Incidents:',
+                'dash.noStatsForPermissions': 'No quick statistics available for your current permissions.',
+                'dash.queryEmployeeReport': 'Query - Employee Report',
+                'dash.queryContractorReport': 'Query - Contractor Report',
+                'dash.noPermissionTasks': 'No permission to view user tasks.',
+                'dash.kpiTrainingPrograms': 'Training Programs',
+                'dash.kpiTrainingDesc': 'Total programs registered in the system',
+                'dash.kpiClinicVisits': 'Clinic Visits',
+                'dash.kpiClinicDesc': 'Total visits recorded',
+                'dash.kpiActiveEmployees': 'Active Employees',
+                'dash.kpiEmployeesDesc': 'From the employee database',
+                'dash.kpiExternalWorkforce': 'External Workforce & Contractors',
+                'dash.kpiContractorsDesc': 'From approved contractor records',
+                'dash.statsNote': 'Statistics: Reports & Statistics are automatically refreshed based on data entered in the system. All figures reflect the current state of the system.',
+                'dash.chartIncidents30d': 'Incidents - Last 30 Days',
+                'dash.chartIncidentsBySeverity': 'Incidents Distribution by Severity',
+                'dash.chartPtw30d': 'Work Permits - Last 30 Days',
+                'dash.chartTraining30d': 'Training - Last 30 Days',
+                'dash.noData30d': 'No data in the last 30 days',
+                'nav.users': 'Users',
+                'nav.userTasks': 'User Tasks',
+                'nav.employees': 'Employees Database',
+                'nav.incidents': 'Incidents',
+                'nav.nearmiss': 'Near Miss',
+                'nav.ptw': 'Work Permits',
+                'nav.training': 'Training',
+                'nav.clinic': 'Medical Clinic',
+                'nav.fire': 'Fire Equipment',
+                'nav.periodicInspections': 'Periodic Inspections',
+                'nav.ppe': 'PPE',
+                'nav.violations': 'Violations',
+                'nav.contractors': 'Contractors',
+                'nav.behavior': 'Behavior Monitoring',
+                'nav.chemical': 'Chemical Safety',
+                'nav.observations': 'Daily Observations',
+                'nav.iso': 'ISO System',
+                'nav.emergency': 'Emergency Alerts',
+                'nav.risk': 'Risk Assessment',
+                'nav.sop': 'Safety Instructions SOP-JHA',
+                'nav.legal': 'Legal Documents',
+                'nav.sustainability': 'Environmental Sustainability',
+                'nav.safetyBudget': 'Safety Budget',
+                'nav.safetyKPIs': 'Safety Performance Indicators',
+                'nav.safetyHealthManagement': 'Safety and Health Management',
+                'nav.actionTracking': 'Action Tracking Log',
+                'nav.aiAssistant': 'AI Assistant',
+                'nav.appTester': 'Application Testing',
+                'nav.settings': 'Settings',
+                'nav.help': 'Help',
+                'nav.logout': 'Logout'
+            }
+        };
+
+        const i18nCore = (window.AppI18n && typeof window.AppI18n.applyI18n === 'function')
+            ? window.AppI18n
+            : ((window.I18n && typeof window.I18n.applyI18n === 'function') ? window.I18n : null);
+        if (i18nCore && i18nCore.translations) {
+            translations.ar = { ...translations.ar, ...i18nCore.translations.ar };
+            translations.en = { ...translations.en, ...i18nCore.translations.en };
+        }
+
+        const i18nElements = document.querySelectorAll('[data-i18n]');
+        i18nElements.forEach(element => {
+            const key = element.getAttribute('data-i18n');
+            if (key && translations[lang] && translations[lang][key]) {
+                element.textContent = translations[lang][key];
+            }
+        });
+
+        // توحيد ترجمة العناوين المساعدة لعناصر القائمة الجانبية.
+        document.querySelectorAll('.sidebar .nav-item[data-i18n]').forEach((item) => {
+            const key = item.getAttribute('data-i18n');
+            if (key && translations[lang] && translations[lang][key]) {
+                item.setAttribute('title', translations[lang][key]);
+            }
+        });
+
+        // تطبيق طبقة i18n المركزية — data-i18n على المستند؛ الترجمة الحرفية فقط على الشريط + القسم النشط (تفادي تجميد كامل الـ DOM)
+        if (i18nCore) {
+            i18nCore.applyI18n(document, lang);
+            const literalRoots = [
+                document.querySelector('.sidebar'),
+                document.querySelector('.login-container') || document.getElementById('login-form'),
+                document.querySelector('.section.active')
+                    || (AppState.currentSection ? document.getElementById(`${AppState.currentSection}-section`) : null)
+                    || document.getElementById('main-content')
+            ].filter(Boolean);
+            const uniqueRoots = [...new Set(literalRoots)];
+            if (uniqueRoots.length) {
+                uniqueRoots.forEach((root) => {
+                    try { i18nCore.applyLiteralTranslations(root, lang); } catch (_e) { /* ignore */ }
+                });
+            } else {
+                i18nCore.applyLiteralTranslations(document, lang);
+            }
+            i18nCore.observeDomForI18n();
+        }
+
+        // تحديث شريط وضع القراءة فقط ليعكس اللغة المختارة فورياً
+        if (typeof Permissions !== 'undefined' && typeof Permissions.applyGlobalReadOnlyRestrictions === 'function') {
+            try { Permissions.applyGlobalReadOnlyRestrictions(document); } catch (e) {}
+        }
+
+        // تحديث نصوص تسجيل الدخول إذا كنا في شاشة الدخول
+        this.updateLoginScreenTexts(lang);
+
+        // تحديث هوية الشركة والاسم المترجم
+        this.updateCompanyBranding();
+
+        // تحديث نص إصدار النظام حسب اللغة المختارة
+        this.updateAppVersionDisplay();
+
+        // تحديث aria-label للـ navigation
+        const navElement = document.querySelector('nav.navigation');
+        if (navElement) {
+            navElement.setAttribute('aria-label', isRTL ? 'القائمة الرئيسية' : 'Main Menu');
+        }
+
+        // تحديث aria-label للـ sidebar
+        if (sidebar) {
+            sidebar.setAttribute('aria-label', isRTL ? 'القائمة الجانبية' : 'Sidebar');
+        }
+
+        Utils.safeLog(`✅ تم تعيين اللغة: ${lang} (${isRTL ? 'RTL' : 'LTR'})`);
+
+        // علم قبل الحدث: المستمعون يتخطون this.load() المزدوج؛ loadSectionData يعيد القسم الظاهر مرة واحدة فقط
+        if (!isInitialLoad && typeof AppState !== 'undefined') {
+            AppState._languageRefresh = true;
+        }
+
+        // إرسال حدث تغيير اللغة للموديولات
+        try {
+            const languageChangeEvent = new CustomEvent('language-changed', {
+                detail: { lang, isRTL }
+            });
+            document.dispatchEvent(languageChangeEvent);
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في إرسال حدث تغيير اللغة:', error);
+        }
+
+        // إعادة تحميل محتوى الموديول الظاهر حالياً ليطبق اللغة الجديدة (فقط عند تغيير المستخدم للغة وليس عند التهيئة الأولى)
+        if (!isInitialLoad) {
+            try {
+                const currentSection = AppState.currentSection;
+                if (currentSection && typeof this.loadSectionData === 'function') {
+                    this.loadSectionData(currentSection, true);
+                }
+            } catch (err) {
+                Utils.safeWarn('⚠️ خطأ عند إعادة تحميل القسم بعد تغيير اللغة:', err);
+            } finally {
+                // إبقاء العلم أثناء بدء load() المتزامن؛ المسح بعد إطار لمنع سباق الموديولات الثقيلة
+                const clearFlag = () => {
+                    try { if (typeof AppState !== 'undefined') AppState._languageRefresh = false; } catch (_e) { /* ignore */ }
+                };
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(() => setTimeout(clearFlag, 0));
+                } else {
+                    setTimeout(clearFlag, 0);
+                }
+            }
+        }
+
+        // تحديث التخطيط وحجم الشاشة بعد تغيير RTL/LTR
+        try {
+            if (typeof window.dispatchEvent === 'function') {
+                window.dispatchEvent(new Event('resize'));
+            }
+        } catch (e) { /* تجاهل */ }
+
+        // إصلاحات إضافية للقائمة الجانبية في اللغة الإنجليزية
+        this.fixSidebarForLanguage(lang, isRTL);
+        // إعادة احتساب إزاحة هيدر الشعار بعد تغيير الاتجاه وحالة القائمة.
+        this.updateCompanyLogoHeaderPosition(!!document.querySelector('.sidebar.open'));
+
+        // إعادة تطبيق الصلاحيات بعد أي تغييرات تنسيقية للغة حتى لا تظهر موديولات غير مصرح بها
+        try {
+            if (typeof AppState !== 'undefined' && AppState.currentUser &&
+                typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
+                Permissions.updateNavigation();
+            }
+        } catch (permErr) {
+            Utils.safeWarn('⚠️ خطأ في إعادة تطبيق صلاحيات القائمة بعد تغيير اللغة:', permErr);
+        }
+
+        // عرض الإشعار فقط إذا لم تكن هذه تهيئة أولية وكانت الواجهة جاهزة
+        if (!isInitialLoad) {
+            try {
+                if (typeof Notification !== 'undefined' &&
+                    Notification.success &&
+                    typeof Notification.success === 'function' &&
+                    document.getElementById('notification-container')) {
+                    Notification.success(lang === 'ar' ? 'تم التبديل للعربية' : 'Switched to English');
+                }
+            } catch (error) {
+                // تجاهل الأخطاء في عرض الإشعار - لا نريد إيقاف عملية تغيير اللغة
+                Utils.safeWarn('⚠️ خطأ في عرض إشعار تغيير اللغة:', error);
+            }
+        }
+    },
+
+    /**
+     * تحديث نصوص شاشة تسجيل الدخول
+     */
+    updateLoginScreenTexts(lang) {
+        const loginTexts = {
+            ar: {
+                'login-email-text': 'البريد الإلكتروني',
+                'login-password-text': 'كلمة المرور',
+                'login-label-email-text': 'البريد الإلكتروني',
+                'login-label-password-text': 'كلمة المرور',
+                'login-submit-text': 'تسجيل الدخول',
+                'login-help-text': 'مساعدة',
+                'login-forgot-text': 'نسيت كلمة المرور؟',
+                'current-lang-text': 'العربية'
+            },
+            en: {
+                'login-email-text': 'Email',
+                'login-password-text': 'Password',
+                'login-label-email-text': 'Email',
+                'login-label-password-text': 'Password',
+                'login-submit-text': 'Log in',
+                'login-help-text': 'Help',
+                'login-forgot-text': 'Forgot password?',
+                'current-lang-text': 'English'
+            }
+        };
+
+        const texts = loginTexts[lang];
+        if (!texts) return;
+
+        const loginCurrentLangText = document.querySelector('#login-language-toggle-btn #current-lang-text');
+        if (loginCurrentLangText && texts['current-lang-text']) {
+            loginCurrentLangText.textContent = texts['current-lang-text'];
+        }
+
+        Object.entries(texts).forEach(([id, text]) => {
+            if (id === 'current-lang-text') {
+                return;
+            }
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = text;
+            }
+        });
+
+        // تحديث عناصر data-i18n في شاشة تسجيل الدخول
+        const loginI18nElements = document.querySelectorAll('#login-form [data-i18n]');
+        loginI18nElements.forEach(element => {
+            const key = element.getAttribute('data-i18n');
+            if (texts[key]) {
+                element.textContent = texts[key];
+            }
+        });
+    },
+
+    /**
+     * إصلاحات خاصة بالقائمة الجانبية عند تغيير اللغة
+     */
+    fixSidebarForLanguage(lang, isRTL) {
+        const sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+
+        // إصلاحات خاصة باللغة الإنجليزية
+        if (!isRTL) {
+            // تحديث موضع القائمة الجانبية - نفس العربية تماماً ولكن على اليسار
+            sidebar.style.position = 'fixed';
+            sidebar.style.top = '0';
+            sidebar.style.left = '0';
+            sidebar.style.right = 'auto';
+            sidebar.style.width = 'var(--sidebar-width, 280px)';
+            sidebar.style.height = '100vh';
+            sidebar.style.zIndex = '1000';
+            sidebar.style.backgroundColor = '#003865'; // نفس لون العربية
+            sidebar.style.borderRight = '3px solid #FFC72C';
+            sidebar.style.borderLeft = 'none';
+            sidebar.style.boxShadow = '2px 0 10px rgba(0,0,0,0.1)';
+            sidebar.style.overflowY = 'auto';
+            sidebar.style.overflowX = 'hidden';
+
+            // تحديث اتجاه القائمة
+            sidebar.dir = 'ltr';
+
+            // إصلاح عناصر القائمة
+            const navItems = sidebar.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                const isPermissionHidden = item.getAttribute('data-permission-hidden') === 'true';
+                if (isPermissionHidden) {
+                    item.style.display = 'none';
+                    return;
+                }
+                item.style.display = 'flex';
+                item.style.alignItems = 'center';
+                item.style.width = 'calc(100% - 16px)';
+                item.style.padding = '12px 12px 12px 16px';
+                item.style.margin = '4px 8px';
+                item.style.borderRadius = '8px';
+                item.style.color = 'white';
+                item.style.textDecoration = 'none';
+                item.style.transition = 'all 0.3s ease';
+                item.style.cursor = 'pointer';
+                item.style.borderLeft = '4px solid transparent';
+                item.style.borderRight = 'none';
+                item.style.flexDirection = 'row';
+                
+                // إصلاح الأيقونات والنصوص
+                const icon = item.querySelector('i');
+                const text = item.querySelector('span');
+                
+                if (icon) {
+                    icon.style.fontSize = '18px';
+                    icon.style.width = '24px';
+                    icon.style.textAlign = 'center';
+                    icon.style.marginRight = '12px';
+                    icon.style.marginLeft = '0';
+                    icon.style.flexShrink = '0';
+                    icon.style.color = 'white';
+                }
+                
+                if (text) {
+                    text.style.fontSize = '14px';
+                    text.style.fontWeight = '500';
+                    text.style.textAlign = 'left';
+                    text.style.flex = '1';
+                    text.style.whiteSpace = 'nowrap';
+                    text.style.overflow = 'hidden';
+                    text.style.textOverflow = 'ellipsis';
+                    text.style.color = 'white';
+                }
+            });
+
+            // إصلاح رأس القائمة
+            const sidebarHeader = sidebar.querySelector('.sidebar-header');
+            if (sidebarHeader) {
+                sidebarHeader.style.padding = '20px 16px';
+                sidebarHeader.style.borderBottom = '1px solid rgba(255,255,255,0.2)';
+                sidebarHeader.style.textAlign = 'left';
+            }
+
+            // إصلاح شعار القائمة
+            const logo = sidebarHeader?.querySelector('.logo') || sidebar.querySelector('.logo');
+            if (logo) {
+                logo.style.fontSize = '20px';
+                logo.style.fontWeight = 'bold';
+                logo.style.color = 'white';
+                logo.style.textAlign = 'left';
+                logo.style.marginBottom = '8px';
+            }
+
+            // تحديث مساحة المحتوى الرئيسي - نفس العربية
+            const appShell = document.querySelector('.app-shell');
+            if (appShell) {
+                appShell.style.marginLeft = 'var(--sidebar-width, 280px)';
+                appShell.style.marginRight = '0';
+                appShell.style.width = 'calc(100% - var(--sidebar-width, 280px))';
+                appShell.style.transition = 'margin-left 0.3s ease, width 0.3s ease';
+                appShell.style.minHeight = '100vh';
+            }
+
+            // إصلاح المحتوى الرئيسي
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) {
+                mainContent.style.marginLeft = '0';
+                mainContent.style.marginRight = '0';
+                mainContent.style.width = '100%';
+            }
+
+            // إضافة CSS ديناميكي شامل للإصلاحات
+            const styleId = 'sidebar-english-fix-v2';
+            let styleElement = document.getElementById(styleId);
+            if (!styleElement) {
+                styleElement = document.createElement('style');
+                styleElement.id = styleId;
+                document.head.appendChild(styleElement);
+            }
+            
+            styleElement.textContent = `
+                /* إصلاحات القائمة الجانبية في اللغة الإنجليزية */
                 [dir="ltr"] .sidebar {
                     position: fixed !important;
                     top: 0 !important;
@@ -1174,7 +10770,7 @@
                     color: white !important;
                 }
                 
-                /* \u0625\u0635\u0644\u0627\u062D app-shell \u0641\u064A \u0627\u0644\u0644\u063A\u0629 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629 */
+                /* إصلاح app-shell في اللغة الإنجليزية */
                 [dir="ltr"] .app-shell {
                     margin-left: var(--sidebar-width, 280px) !important;
                     margin-right: 0 !important;
@@ -1219,4 +10815,168 @@
                         width: 100% !important;
                     }
                 }
-            `}Utils.safeLog(`\u2705 \u062A\u0645 \u0625\u0635\u0644\u0627\u062D \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629 \u0644\u0644\u063A\u0629: ${e}`)}},cleanupPreviousModule(e){try{if(!e)return;const t={clinic:"Clinic",users:"Users",incidents:"Incidents",nearmiss:"NearMiss",ptw:"PTW",training:"Training",contractors:"Contractors",employees:"Employees",emergency:"Emergency",ppe:"PPE","fire-equipment":"FireEquipment","periodic-inspections":"PeriodicInspections",violations:"Violations","behavior-monitoring":"BehaviorMonitoring","chemical-safety":"ChemicalSafety","daily-observations":"DailyObservations",iso:"ISO",hse:"HSE","safety-budget":"SafetyBudget","action-tracking-register":"ActionTrackingRegister","safety-performance-kpis":"SafetyPerformanceKPIs",sustainability:"Sustainability","risk-assessment":"RiskAssessment","risk-matrix":"RiskMatrix","legal-documents":"LegalDocuments","safety-health-management":"SafetyHealthManagement","user-tasks":"UserTasks",sopjha:"SOPJHA","ai-assistant":"AIAssistant","user-ai-assistant":"UserAIAssistant","client-errors":"ClientErrorsAdmin"}[e];if(!t)return;if(typeof window[t]<"u"&&typeof window[t].cleanup=="function")try{window[t].cleanup(),AppState.debugMode&&Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u0646\u0638\u064A\u0641 \u0645\u0648\u062F\u064A\u0648\u0644 ${t}`)}catch(n){Utils.safeWarn(`\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0646\u0638\u064A\u0641 \u0645\u0648\u062F\u064A\u0648\u0644 ${t}:`,n)}}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A cleanupPreviousModule:",i)}}},typeof window<"u"&&!window.UI&&(window.UI=UI);const UI=window.UI;if(typeof window<"u"&&(window.AppUI=window.UI),typeof window<"u"&&(window.addNavigationIconsAfterRender=function(e){typeof UI<"u"&&UI.addNavigationIconsAfterRender?UI.addNavigationIconsAfterRender(e):Utils.safeWarn("\u26A0\uFE0F UI.addNavigationIconsAfterRender \u063A\u064A\u0631 \u0645\u062A\u0627\u062D")},window.ensureNavigationIcons=function(e){typeof UI<"u"&&UI.ensureNavigationIcons?UI.ensureNavigationIcons(e):Utils.safeWarn("\u26A0\uFE0F UI.ensureNavigationIcons \u063A\u064A\u0631 \u0645\u062A\u0627\u062D")}),typeof document<"u"){const e=()=>{if(!(typeof window.UI>"u"||typeof window.UI.initNotificationsButton!="function"))try{window.UI.initNotificationsButton(),typeof Utils<"u"&&Utils.safeLog("\u2705 \u062A\u0647\u064A\u0626\u0629 \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A (\u0645\u0639\u0627\u0644\u062C \u0648\u0627\u062D\u062F \u0644\u0643\u0644 \u0632\u0631)")}catch(a){typeof Utils<"u"&&Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u0647\u064A\u0626\u0629 \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A:",a)}},i=()=>{e(),setTimeout(e,500)},t=()=>{if(typeof window.UI<"u"&&typeof window.UI.updateAppVersionDisplay=="function")try{window.UI.updateAppVersionDisplay()}catch{}},n=()=>{i(),t(),setTimeout(t,300)};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",n):n()}
+            `;
+
+        } else {
+            // إصلاحات للغة العربية (استعادة الحالة الأصلية)
+            sidebar.style.position = 'fixed';
+            sidebar.style.top = '0';
+            sidebar.style.right = '0';
+            sidebar.style.left = 'auto';
+            sidebar.style.width = 'var(--sidebar-width, 280px)';
+            sidebar.style.height = '100vh';
+            sidebar.style.zIndex = '1000';
+            sidebar.style.background = 'linear-gradient(180deg, #003865 0%, #004C8C 50%, #003865 100%)';
+            sidebar.style.borderLeft = '3px solid #FFC72C';
+            sidebar.style.borderRight = 'none';
+            sidebar.style.boxShadow = '-2px 0 10px rgba(0,0,0,0.1)';
+            sidebar.dir = 'rtl';
+
+            const appShell = document.querySelector('.app-shell');
+            if (appShell) {
+                appShell.style.marginRight = 'var(--sidebar-width, 280px)';
+                appShell.style.marginLeft = '0';
+                appShell.style.width = 'calc(100% - var(--sidebar-width, 280px))';
+                appShell.style.transition = 'margin-right 0.3s ease, width 0.3s ease';
+            }
+        }
+
+        Utils.safeLog(`✅ تم إصلاح القائمة الجانبية للغة: ${lang}`);
+    },
+
+    /**
+     * تنظيف الموديول السابق قبل تحميل موديول جديد
+     * يمنع تسريبات الذاكرة (Memory Leaks)
+     */
+    cleanupPreviousModule(sectionName) {
+        try {
+            if (!sectionName) return;
+
+            // خريطة أسماء الموديولات
+            const moduleMap = {
+                'clinic': 'Clinic',
+                'users': 'Users',
+                'incidents': 'Incidents',
+                'nearmiss': 'NearMiss',
+                'ptw': 'PTW',
+                'training': 'Training',
+                'contractors': 'Contractors',
+                'employees': 'Employees',
+                'emergency': 'Emergency',
+                'ppe': 'PPE',
+                'fire-equipment': 'FireEquipment',
+                'periodic-inspections': 'PeriodicInspections',
+                'violations': 'Violations',
+                'behavior-monitoring': 'BehaviorMonitoring',
+                'chemical-safety': 'ChemicalSafety',
+                'daily-observations': 'DailyObservations',
+                'iso': 'ISO',
+                'hse': 'HSE',
+                'safety-budget': 'SafetyBudget',
+                'action-tracking-register': 'ActionTrackingRegister',
+                'safety-performance-kpis': 'SafetyPerformanceKPIs',
+                'sustainability': 'Sustainability',
+                'risk-assessment': 'RiskAssessment',
+                'risk-matrix': 'RiskMatrix',
+                'legal-documents': 'LegalDocuments',
+                'safety-health-management': 'SafetyHealthManagement',
+                'user-tasks': 'UserTasks',
+                'sopjha': 'SOPJHA',
+                'ai-assistant': 'AIAssistant',
+                'user-ai-assistant': 'UserAIAssistant',
+                'client-errors': 'ClientErrorsAdmin'
+            };
+
+            const moduleName = moduleMap[sectionName];
+            if (!moduleName) return;
+
+            // استدعاء دالة cleanup إذا كانت موجودة
+            if (typeof window[moduleName] !== 'undefined' && 
+                typeof window[moduleName].cleanup === 'function') {
+                try {
+                    window[moduleName].cleanup();
+                    if (AppState.debugMode) {
+                        Utils.safeLog(`✅ تم تنظيف موديول ${moduleName}`);
+                    }
+                } catch (error) {
+                    Utils.safeWarn(`⚠️ خطأ في تنظيف موديول ${moduleName}:`, error);
+                }
+            }
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في cleanupPreviousModule:', error);
+        }
+    }
+};
+
+// Export to global scope (already done at the top, but kept for safety)
+if (typeof window !== 'undefined' && !window.UI) {
+    window.UI = UI;
+}
+
+// تصدير UI كـ const أيضاً للتوافق مع الكود القديم
+const UI = window.UI;
+
+// إضافة اسم بديل AppUI للتوافق مع الكود القديم
+if (typeof window !== 'undefined') {
+    window.AppUI = window.UI;
+}
+
+// دالة helper عالمية لإضافة الأيقونات بعد renderUI
+// يمكن استدعاؤها من أي موديول بعد استبدال innerHTML
+if (typeof window !== 'undefined') {
+    window.addNavigationIconsAfterRender = function (sectionName) {
+        if (typeof UI !== 'undefined' && UI.addNavigationIconsAfterRender) {
+            UI.addNavigationIconsAfterRender(sectionName);
+        } else {
+            Utils.safeWarn('⚠️ UI.addNavigationIconsAfterRender غير متاح');
+        }
+    };
+
+    // دالة helper أخرى للوصول المباشر
+    window.ensureNavigationIcons = function (sectionName) {
+        if (typeof UI !== 'undefined' && UI.ensureNavigationIcons) {
+            UI.ensureNavigationIcons(sectionName);
+        } else {
+            Utils.safeWarn('⚠️ UI.ensureNavigationIcons غير متاح');
+        }
+    };
+}
+
+// تهيئة أزرار الإشعارات بعد تحميل DOM.
+// كل أزرار الجرس: مستمع click (فقاعة) على الزر نفسه، مثل الهيدر.
+if (typeof document !== 'undefined') {
+    const tryInitNotificationsOnly = () => {
+        if (typeof window.UI === 'undefined' || typeof window.UI.initNotificationsButton !== 'function') {
+            return;
+        }
+        try {
+            window.UI.initNotificationsButton();
+            if (typeof Utils !== 'undefined') {
+                Utils.safeLog('✅ تهيئة أزرار الإشعارات (معالج واحد لكل زر)');
+            }
+        } catch (e) {
+            if (typeof Utils !== 'undefined') {
+                Utils.safeWarn('⚠️ فشل تهيئة أزرار الإشعارات:', e);
+            }
+        }
+    };
+    const runNotificationsInit = () => {
+        tryInitNotificationsOnly();
+        setTimeout(tryInitNotificationsOnly, 500);
+    };
+    const tryInitAppVersionDisplay = () => {
+        if (typeof window.UI !== 'undefined' && typeof window.UI.updateAppVersionDisplay === 'function') {
+            try { window.UI.updateAppVersionDisplay(); } catch (_e) { /* ignore */ }
+        }
+    };
+    const runDomInit = () => {
+        runNotificationsInit();
+        tryInitAppVersionDisplay();
+        setTimeout(tryInitAppVersionDisplay, 300);
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runDomInit);
+    } else {
+        runDomInit();
+    }
+}

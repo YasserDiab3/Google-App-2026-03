@@ -1,9 +1,58 @@
-const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0);let e=document.getElementById("hse-section");if(e||(e=document.getElementById("safety-health-management-section")),!e){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u0642\u0633\u0645 hse-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!");return}try{let s="";try{const t=this.render();s=await Utils.promiseWithTimeout(t,5e3,()=>new Error("Timeout: render took too long"))}catch(t){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0648\u0627\u062C\u0647\u0629:",t),s=`
+/**
+ * HSE Module
+ * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
+ */
+// ===== HSE Module (إدارة السلامة والصحة المهنية) =====
+const HSE = {
+    currentView: 'dashboard', // dashboard, audits, non-conformities, corrective-actions, objectives, risk-assessments
+    currentTab: 'dashboard',
+
+    async load() {
+        // Add language change listener
+        if (!this._languageChangeListenerAdded) {
+            document.addEventListener('language-changed', () => {
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
+                this.load();
+            });
+            this._languageChangeListenerAdded = true;
+        }
+
+        // محاولة البحث عن القسم الصحيح
+        let section = document.getElementById('hse-section');
+        if (!section) {
+            section = document.getElementById('safety-health-management-section');
+        }
+        if (!section) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('قسم hse-section غير موجود!');
+            } else {
+                console.error('قسم hse-section غير موجود!');
+            }
+            return;
+        }
+
+        try {
+            // تحميل المحتوى بشكل آمن مع timeout
+            let content = '';
+            try {
+                const contentPromise = this.render();
+                content = await Utils.promiseWithTimeout(
+                    contentPromise,
+                    5000,
+                    () => new Error('Timeout: render took too long')
+                );
+            } catch (error) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ خطأ في تحميل محتوى الواجهة:', error);
+                } else {
+                    console.warn('⚠️ خطأ في تحميل محتوى الواجهة:', error);
+                }
+                content = `
                     <div class="section-header">
                         <div>
                             <h1 class="section-title">
                                 <i class="fas fa-user-shield ml-3"></i>
-                                \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 (HSE)
+                                إدارة السلامة والصحة المهنية (HSE)
                             </h1>
                         </div>
                     </div>
@@ -15,43 +64,70 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                                         <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                     </div>
                                 </div>
-                                <p class="text-gray-500 mb-4">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A...</p>
+                                <p class="text-gray-500 mb-4">جاري تحميل البيانات...</p>
                             </div>
                         </div>
                     </div>
-                `}e.innerHTML=s;try{this.setupEventListeners(),this.loadDashboard()}catch(t){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A setupEventListeners \u0623\u0648 loadDashboard:",t)}}catch(s){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 HSE:",s),e.innerHTML=`
+                `;
+            }
+
+            section.innerHTML = content;
+            
+            // تهيئة الأحداث بعد عرض الواجهة
+            try {
+                this.setupEventListeners();
+                this.loadDashboard();
+            } catch (error) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ خطأ في setupEventListeners أو loadDashboard:', error);
+                } else {
+                    console.warn('⚠️ خطأ في setupEventListeners أو loadDashboard:', error);
+                }
+            }
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('❌ خطأ في تحميل مديول HSE:', error);
+            } else {
+                console.error('❌ خطأ في تحميل مديول HSE:', error);
+            }
+            section.innerHTML = `
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                            <p class="text-gray-500 mb-4">\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
+                            <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل البيانات</p>
                             <button onclick="HSE.load()" class="btn-primary">
                                 <i class="fas fa-redo ml-2"></i>
-                                \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
+                                إعادة المحاولة
                             </button>
                         </div>
                     </div>
                 </div>
-            `}},async render(){return`
+            `;
+        }
+    },
+
+    async render() {
+        return `
             <div class="section-header">
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-user-shield ml-3"></i>
-                            \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 (HSE)
+                            إدارة السلامة والصحة المهنية (HSE)
                         </h1>
-                        <p class="section-subtitle">\u0625\u062F\u0627\u0631\u0629 \u0634\u0627\u0645\u0644\u0629 \u0644\u0623\u0646\u0634\u0637\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629</p>
+                        <p class="section-subtitle">إدارة شاملة لأنشطة السلامة والصحة المهنية والبيئة</p>
                     </div>
                     <div class="flex gap-2">
                         <button id="hse-export-excel-btn" class="btn-success">
                             <i class="fas fa-file-excel ml-2"></i>
-                            \u062A\u0635\u062F\u064A\u0631 Excel
+                            تصدير Excel
                         </button>
                         <button id="hse-export-pdf-btn" class="btn-secondary">
                             <i class="fas fa-file-pdf ml-2"></i>
-                            \u062A\u0635\u062F\u064A\u0631 PDF
+                            تصدير PDF
                         </button>
-                        ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("hse"):""}
+                        ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('hse') : ''}
                     </div>
                 </div>
             </div>
@@ -61,27 +137,27 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                 <div class="flex items-center gap-2 border-b border-gray-200" style="border-bottom: 2px solid #e5e7eb; flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box;">
                     <button class="hse-tab-btn active" data-tab="dashboard" onclick="HSE.switchTab('dashboard')" style="padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
                         <i class="fas fa-chart-pie ml-2"></i>
-                        \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645
+                        لوحة التحكم
                     </button>
                     <button class="hse-tab-btn" data-tab="audits" onclick="HSE.switchTab('audits')" style="padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
                         <i class="fas fa-clipboard-check ml-2"></i>
-                        \u0627\u0644\u062A\u062F\u0642\u064A\u0642\u0627\u062A
+                        التدقيقات
                     </button>
                     <button class="hse-tab-btn" data-tab="non-conformities" onclick="HSE.switchTab('non-conformities')" style="padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
                         <i class="fas fa-exclamation-triangle ml-2"></i>
-                        \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629
+                        عدم المطابقة
                     </button>
                     <button class="hse-tab-btn" data-tab="corrective-actions" onclick="HSE.switchTab('corrective-actions')" style="padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
                         <i class="fas fa-tools ml-2"></i>
-                        \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629
+                        الإجراءات التصحيحية
                     </button>
                     <button class="hse-tab-btn" data-tab="objectives" onclick="HSE.switchTab('objectives')" style="padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
                         <i class="fas fa-bullseye ml-2"></i>
-                        \u0627\u0644\u0623\u0647\u062F\u0627\u0641
+                        الأهداف
                     </button>
                     <button class="hse-tab-btn" data-tab="risk-assessments" onclick="HSE.switchTab('risk-assessments')" style="padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
                         <i class="fas fa-shield-alt ml-2"></i>
-                        \u062A\u0642\u064A\u064A\u0645\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0637\u0631
+                        تقييمات المخاطر
                     </button>
                 </div>
                 <style>
@@ -106,20 +182,121 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                                     <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p class="text-gray-500">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0644\u0648\u062D\u0629 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A...</p>
+                            <p class="text-gray-500">جاري تحميل لوحة المعلومات...</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `},async switchTab(e){this.currentTab=e,document.querySelectorAll(".hse-tab-btn").forEach(n=>{n.classList.remove("active"),n.dataset.tab===e&&n.classList.add("active"),n.style.flexShrink||(n.style.setProperty("flex-shrink","0","important"),n.style.setProperty("min-width","fit-content","important"),n.style.setProperty("white-space","nowrap","important"),n.style.setProperty("width","auto","important"),n.style.setProperty("max-width","none","important"))});const t=document.querySelector(".flex.items-center.gap-2.border-b.border-gray-200");t&&!t.style.flexWrap&&(t.style.setProperty("flex-wrap","nowrap","important"),t.style.setProperty("overflow-x","auto","important"),t.style.setProperty("overflow-y","visible","important"));const a=document.getElementById("hse-tab-content");a&&(e==="dashboard"?(a.innerHTML=await this.renderDashboard(),this.loadDashboard()):e==="audits"?(a.innerHTML=await this.renderAudits(),this.loadAudits()):e==="non-conformities"?(a.innerHTML=await this.renderNonConformities(),this.loadNonConformities()):e==="corrective-actions"?(a.innerHTML=await this.renderCorrectiveActions(),this.loadCorrectiveActions()):e==="objectives"?(a.innerHTML=await this.renderObjectives(),this.loadObjectives()):e==="risk-assessments"&&(a.innerHTML=await this.renderRiskAssessments(),this.loadRiskAssessments()))},async renderDashboard(){const e=AppState.appData?.hseAudits||[],s=AppState.appData?.hseNonConformities||[],t=AppState.appData?.hseCorrectiveActions||[],a=AppState.appData?.hseObjectives||[],n=AppState.appData?.hseRiskAssessments||[],r=t.filter(d=>d.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||d.status==="pending").length,o=t.filter(d=>d.status==="\u0645\u0643\u062A\u0645\u0644"||d.status==="completed").length,i=t.filter(d=>d.dueDate?new Date(d.dueDate)<new Date&&(d.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||d.status==="pending"):!1).length;return`
+        `;
+        
+        // ✅ تحميل لوحة المعلومات فوراً بعد عرض الواجهة
+        setTimeout(async () => {
+            try {
+                const contentArea = document.getElementById('hse-tab-content');
+                if (!contentArea) return;
+                
+                const dashboardContent = await this.renderDashboard().catch(error => {
+                    Utils.safeWarn('⚠️ خطأ في تحميل لوحة المعلومات:', error);
+                    return `
+                        <div class="content-card">
+                            <div class="card-body">
+                                <div class="empty-state">
+                                    <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                                    <p class="text-gray-500 mb-4">حدث خطأ في تحميل البيانات</p>
+                                    <button onclick="HSE.load()" class="btn-primary">
+                                        <i class="fas fa-redo ml-2"></i>
+                                        إعادة المحاولة
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                contentArea.innerHTML = dashboardContent;
+            } catch (error) {
+                Utils.safeWarn('⚠️ خطأ في تحميل لوحة المعلومات:', error);
+            }
+        }, 0);
+    },
+
+    async switchTab(tabName) {
+        this.currentTab = tabName;
+
+        // Update tab buttons
+        const tabBtns = document.querySelectorAll('.hse-tab-btn');
+        tabBtns.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.tab === tabName) {
+                btn.classList.add('active');
+            }
+            // التأكد من الحفاظ على styles لمنع التكسير
+            if (!btn.style.flexShrink) {
+                btn.style.setProperty('flex-shrink', '0', 'important');
+                btn.style.setProperty('min-width', 'fit-content', 'important');
+                btn.style.setProperty('white-space', 'nowrap', 'important');
+                btn.style.setProperty('width', 'auto', 'important');
+                btn.style.setProperty('max-width', 'none', 'important');
+            }
+        });
+
+        // التأكد من الحفاظ على styles للـ container
+        const tabContainer = document.querySelector('.flex.items-center.gap-2.border-b.border-gray-200');
+        if (tabContainer && !tabContainer.style.flexWrap) {
+            tabContainer.style.setProperty('flex-wrap', 'nowrap', 'important');
+            tabContainer.style.setProperty('overflow-x', 'auto', 'important');
+            tabContainer.style.setProperty('overflow-y', 'visible', 'important');
+        }
+
+        // Load appropriate content
+        const contentContainer = document.getElementById('hse-tab-content');
+        if (!contentContainer) return;
+
+        if (tabName === 'dashboard') {
+            contentContainer.innerHTML = await this.renderDashboard();
+            this.loadDashboard();
+        } else if (tabName === 'audits') {
+            contentContainer.innerHTML = await this.renderAudits();
+            this.loadAudits();
+        } else if (tabName === 'non-conformities') {
+            contentContainer.innerHTML = await this.renderNonConformities();
+            this.loadNonConformities();
+        } else if (tabName === 'corrective-actions') {
+            contentContainer.innerHTML = await this.renderCorrectiveActions();
+            this.loadCorrectiveActions();
+        } else if (tabName === 'objectives') {
+            contentContainer.innerHTML = await this.renderObjectives();
+            this.loadObjectives();
+        } else if (tabName === 'risk-assessments') {
+            contentContainer.innerHTML = await this.renderRiskAssessments();
+            this.loadRiskAssessments();
+        }
+    },
+
+    async renderDashboard() {
+        const audits = AppState.appData?.hseAudits || [];
+        const nonConformities = AppState.appData?.hseNonConformities || [];
+        const correctiveActions = AppState.appData?.hseCorrectiveActions || [];
+        const objectives = AppState.appData?.hseObjectives || [];
+        const riskAssessments = AppState.appData?.hseRiskAssessments || [];
+
+        const pendingActions = correctiveActions.filter(a => a.status === 'قيد التنفيذ' || a.status === 'pending').length;
+        const completedActions = correctiveActions.filter(a => a.status === 'مكتمل' || a.status === 'completed').length;
+        const overdueActions = correctiveActions.filter(a => {
+            if (!a.dueDate) return false;
+            const dueDate = new Date(a.dueDate);
+            return dueDate < new Date() && (a.status === 'قيد التنفيذ' || a.status === 'pending');
+        }).length;
+
+        return `
             <!-- KPI Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
                 <div class="content-card">
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600 mb-1">\u0627\u0644\u062A\u062F\u0642\u064A\u0642\u0627\u062A</p>
-                                <p class="text-2xl font-bold text-blue-600">${e.length}</p>
+                                <p class="text-sm text-gray-600 mb-1">التدقيقات</p>
+                                <p class="text-2xl font-bold text-blue-600">${audits.length}</p>
                             </div>
                             <div class="bg-blue-100 rounded-full p-4">
                                 <i class="fas fa-clipboard-check text-2xl text-blue-600"></i>
@@ -131,8 +308,8 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600 mb-1">\u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629</p>
-                                <p class="text-2xl font-bold text-red-600">${s.length}</p>
+                                <p class="text-sm text-gray-600 mb-1">عدم المطابقة</p>
+                                <p class="text-2xl font-bold text-red-600">${nonConformities.length}</p>
                             </div>
                             <div class="bg-red-100 rounded-full p-4">
                                 <i class="fas fa-exclamation-triangle text-2xl text-red-600"></i>
@@ -144,8 +321,8 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600 mb-1">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629</p>
-                                <p class="text-2xl font-bold text-yellow-600">${t.length}</p>
+                                <p class="text-sm text-gray-600 mb-1">الإجراءات التصحيحية</p>
+                                <p class="text-2xl font-bold text-yellow-600">${correctiveActions.length}</p>
                             </div>
                             <div class="bg-yellow-100 rounded-full p-4">
                                 <i class="fas fa-tools text-2xl text-yellow-600"></i>
@@ -157,8 +334,8 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600 mb-1">\u0627\u0644\u0623\u0647\u062F\u0627\u0641</p>
-                                <p class="text-2xl font-bold text-green-600">${a.length}</p>
+                                <p class="text-sm text-gray-600 mb-1">الأهداف</p>
+                                <p class="text-2xl font-bold text-green-600">${objectives.length}</p>
                             </div>
                             <div class="bg-green-100 rounded-full p-4">
                                 <i class="fas fa-bullseye text-2xl text-green-600"></i>
@@ -170,8 +347,8 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600 mb-1">\u062A\u0642\u064A\u064A\u0645\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0637\u0631</p>
-                                <p class="text-2xl font-bold text-purple-600">${n.length}</p>
+                                <p class="text-sm text-gray-600 mb-1">تقييمات المخاطر</p>
+                                <p class="text-2xl font-bold text-purple-600">${riskAssessments.length}</p>
                             </div>
                             <div class="bg-purple-100 rounded-full p-4">
                                 <i class="fas fa-shield-alt text-2xl text-purple-600"></i>
@@ -187,36 +364,36 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                     <div class="card-header bg-yellow-50">
                         <h2 class="card-title text-yellow-800">
                             <i class="fas fa-clock ml-2"></i>
-                            \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630
+                            الإجراءات قيد التنفيذ
                         </h2>
                     </div>
                     <div class="card-body">
-                        <p class="text-3xl font-bold text-yellow-600">${r}</p>
-                        <p class="text-sm text-gray-600 mt-2">\u0645\u0646 \u0625\u062C\u0645\u0627\u0644\u064A ${t.length} \u0625\u062C\u0631\u0627\u0621</p>
+                        <p class="text-3xl font-bold text-yellow-600">${pendingActions}</p>
+                        <p class="text-sm text-gray-600 mt-2">من إجمالي ${correctiveActions.length} إجراء</p>
                     </div>
                 </div>
                 <div class="content-card">
                     <div class="card-header bg-green-50">
                         <h2 class="card-title text-green-800">
                             <i class="fas fa-check-circle ml-2"></i>
-                            \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0645\u0643\u062A\u0645\u0644\u0629
+                            الإجراءات المكتملة
                         </h2>
                     </div>
                     <div class="card-body">
-                        <p class="text-3xl font-bold text-green-600">${o}</p>
-                        <p class="text-sm text-gray-600 mt-2">\u0645\u0646 \u0625\u062C\u0645\u0627\u0644\u064A ${t.length} \u0625\u062C\u0631\u0627\u0621</p>
+                        <p class="text-3xl font-bold text-green-600">${completedActions}</p>
+                        <p class="text-sm text-gray-600 mt-2">من إجمالي ${correctiveActions.length} إجراء</p>
                     </div>
                 </div>
                 <div class="content-card">
                     <div class="card-header bg-red-50">
                         <h2 class="card-title text-red-800">
                             <i class="fas fa-exclamation-circle ml-2"></i>
-                            \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0645\u062A\u0623\u062E\u0631\u0629
+                            الإجراءات المتأخرة
                         </h2>
                     </div>
                     <div class="card-body">
-                        <p class="text-3xl font-bold text-red-600">${i}</p>
-                        <p class="text-sm text-gray-600 mt-2">\u064A\u062D\u062A\u0627\u062C \u0645\u062A\u0627\u0628\u0639\u0629 \u0639\u0627\u062C\u0644\u0629</p>
+                        <p class="text-3xl font-bold text-red-600">${overdueActions}</p>
+                        <p class="text-sm text-gray-600 mt-2">يحتاج متابعة عاجلة</p>
                     </div>
                 </div>
             </div>
@@ -226,7 +403,7 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                 <div class="card-header">
                     <h2 class="card-title">
                         <i class="fas fa-history ml-2"></i>
-                        \u0627\u0644\u0646\u0634\u0627\u0637 \u0627\u0644\u0623\u062E\u064A\u0631
+                        النشاط الأخير
                     </h2>
                 </div>
                 <div class="card-body">
@@ -237,22 +414,26 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                                     <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p>\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
+                            <p>جاري التحميل...</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `},async renderAudits(){return`
+        `;
+    },
+
+    async renderAudits() {
+        return `
             <div class="content-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between">
                         <h2 class="card-title">
                             <i class="fas fa-clipboard-check ml-2"></i>
-                            \u062A\u062F\u0642\u064A\u0642\u0627\u062A HSE
+                            تدقيقات HSE
                         </h2>
                         <button id="add-audit-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
-                            \u0625\u0636\u0627\u0641\u0629 \u062A\u062F\u0642\u064A\u0642 \u062C\u062F\u064A\u062F
+                            إضافة تدقيق جديد
                         </button>
                     </div>
                 </div>
@@ -264,22 +445,26 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                                     <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p>\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
+                            <p>جاري التحميل...</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `},async renderNonConformities(){return`
+        `;
+    },
+
+    async renderNonConformities() {
+        return `
             <div class="content-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between">
                         <h2 class="card-title">
                             <i class="fas fa-exclamation-triangle ml-2"></i>
-                            \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 HSE
+                            عدم المطابقة HSE
                         </h2>
                         <button id="add-non-conformity-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
-                            \u0625\u0636\u0627\u0641\u0629 \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 \u062C\u062F\u064A\u062F
+                            إضافة عدم مطابقة جديد
                         </button>
                     </div>
                 </div>
@@ -291,22 +476,26 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                                     <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p>\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
+                            <p>جاري التحميل...</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `},async renderCorrectiveActions(){return`
+        `;
+    },
+
+    async renderCorrectiveActions() {
+        return `
             <div class="content-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between">
                         <h2 class="card-title">
                             <i class="fas fa-tools ml-2"></i>
-                            \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629 HSE
+                            الإجراءات التصحيحية HSE
                         </h2>
                         <button id="add-corrective-action-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
-                            \u0625\u0636\u0627\u0641\u0629 \u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A \u062C\u062F\u064A\u062F
+                            إضافة إجراء تصحيحي جديد
                         </button>
                     </div>
                 </div>
@@ -318,22 +507,26 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                                     <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p>\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
+                            <p>جاري التحميل...</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `},async renderObjectives(){return`
+        `;
+    },
+
+    async renderObjectives() {
+        return `
             <div class="content-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between">
                         <h2 class="card-title">
                             <i class="fas fa-bullseye ml-2"></i>
-                            \u0623\u0647\u062F\u0627\u0641 HSE
+                            أهداف HSE
                         </h2>
                         <button id="add-objective-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
-                            \u0625\u0636\u0627\u0641\u0629 \u0647\u062F\u0641 \u062C\u062F\u064A\u062F
+                            إضافة هدف جديد
                         </button>
                     </div>
                 </div>
@@ -345,22 +538,26 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                                     <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p>\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
+                            <p>جاري التحميل...</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `},async renderRiskAssessments(){return`
+        `;
+    },
+
+    async renderRiskAssessments() {
+        return `
             <div class="content-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between">
                         <h2 class="card-title">
                             <i class="fas fa-shield-alt ml-2"></i>
-                            \u062A\u0642\u064A\u064A\u0645\u0627\u062A \u0645\u062E\u0627\u0637\u0631 HSE
+                            تقييمات مخاطر HSE
                         </h2>
                         <button id="add-risk-assessment-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
-                            \u0625\u0636\u0627\u0641\u0629 \u062A\u0642\u064A\u064A\u0645 \u0645\u062E\u0627\u0637\u0631 \u062C\u062F\u064A\u062F
+                            إضافة تقييم مخاطر جديد
                         </button>
                     </div>
                 </div>
@@ -372,75 +569,290 @@ const HSE={currentView:"dashboard",currentTab:"dashboard",async load(){this._lan
                                     <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p>\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
+                            <p>جاري التحميل...</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `},loadDashboard(){const e=document.getElementById("hse-recent-activity");if(!e)return;const s=AppState.appData?.hseAudits||[],t=AppState.appData?.hseNonConformities||[],a=AppState.appData?.hseCorrectiveActions||[],n=AppState.appData?.hseObjectives||[],r=AppState.appData?.hseRiskAssessments||[],o=[...s.map(i=>({...i,type:"audit",icon:"fa-clipboard-check",color:"blue"})),...t.map(i=>({...i,type:"non-conformity",icon:"fa-exclamation-triangle",color:"red"})),...a.map(i=>({...i,type:"corrective-action",icon:"fa-tools",color:"yellow"})),...n.map(i=>({...i,type:"objective",icon:"fa-bullseye",color:"green"})),...r.map(i=>({...i,type:"risk-assessment",icon:"fa-shield-alt",color:"purple"}))].sort((i,d)=>{const c=new Date(i.date||i.createdAt||0);return new Date(d.date||d.createdAt||0)-c}).slice(0,10);if(o.length===0){e.innerHTML=`
+        `;
+    },
+
+    loadDashboard() {
+        const recentActivity = document.getElementById('hse-recent-activity');
+        if (!recentActivity) return;
+
+        const audits = AppState.appData?.hseAudits || [];
+        const nonConformities = AppState.appData?.hseNonConformities || [];
+        const correctiveActions = AppState.appData?.hseCorrectiveActions || [];
+        const objectives = AppState.appData?.hseObjectives || [];
+        const riskAssessments = AppState.appData?.hseRiskAssessments || [];
+
+        // Combine all activities and sort by date
+        const allActivities = [
+            ...audits.map(a => ({ ...a, type: 'audit', icon: 'fa-clipboard-check', color: 'blue' })),
+            ...nonConformities.map(nc => ({ ...nc, type: 'non-conformity', icon: 'fa-exclamation-triangle', color: 'red' })),
+            ...correctiveActions.map(ca => ({ ...ca, type: 'corrective-action', icon: 'fa-tools', color: 'yellow' })),
+            ...objectives.map(o => ({ ...o, type: 'objective', icon: 'fa-bullseye', color: 'green' })),
+            ...riskAssessments.map(ra => ({ ...ra, type: 'risk-assessment', icon: 'fa-shield-alt', color: 'purple' }))
+        ].sort((a, b) => {
+            const dateA = new Date(a.date || a.createdAt || 0);
+            const dateB = new Date(b.date || b.createdAt || 0);
+            return dateB - dateA;
+        }).slice(0, 10);
+
+        if (allActivities.length === 0) {
+            recentActivity.innerHTML = `
                 <div class="text-center text-gray-500 py-8">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0646\u0634\u0637\u0629 \u062D\u062F\u064A\u062B\u0629</p>
+                    <p>لا توجد أنشطة حديثة</p>
                 </div>
-            `;return}e.innerHTML=o.map(i=>{const c=new Date(i.date||i.createdAt).toLocaleDateString("ar-SA",{year:"numeric",month:"long",day:"numeric"}),l=i.title||i.description||i.name||"\u0628\u062F\u0648\u0646 \u0639\u0646\u0648\u0627\u0646";return`
+            `;
+            return;
+        }
+
+        recentActivity.innerHTML = allActivities.map(activity => {
+            const date = new Date(activity.date || activity.createdAt);
+            const dateStr = date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+            const title = activity.title || activity.description || activity.name || 'بدون عنوان';
+
+            return `
                 <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <div class="bg-${i.color}-100 rounded-full p-3">
-                        <i class="fas ${i.icon} text-${i.color}-600"></i>
+                    <div class="bg-${activity.color}-100 rounded-full p-3">
+                        <i class="fas ${activity.icon} text-${activity.color}-600"></i>
                     </div>
                     <div class="flex-1">
-                        <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(l)}</h3>
-                        <p class="text-sm text-gray-600">${c}</p>
+                        <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(title)}</h3>
+                        <p class="text-sm text-gray-600">${dateStr}</p>
                     </div>
                 </div>
-            `}).join("")},loadAudits(){const e=document.getElementById("hse-audits-list");if(!e)return;const s=AppState.appData?.hseAudits||[];if(s.length===0){e.innerHTML=`
+            `;
+        }).join('');
+    },
+
+    loadAudits() {
+        const container = document.getElementById('hse-audits-list');
+        if (!container) return;
+
+        const audits = AppState.appData?.hseAudits || [];
+
+        if (audits.length === 0) {
+            container.innerHTML = `
                 <div class="text-center text-gray-500 py-8">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u062F\u0642\u064A\u0642\u0627\u062A \u0645\u0633\u062C\u0644\u0629</p>
+                    <p>لا توجد تدقيقات مسجلة</p>
                 </div>
-            `;return}e.innerHTML=s.map(t=>{const a=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return`
+            `;
+            return;
+        }
+
+        container.innerHTML = audits.map(audit => {
+            const date = audit.date ? new Date(audit.date).toLocaleDateString('ar-SA') : 'غير محدد';
+            return `
                 <div class="p-4 bg-gray-50 rounded-lg">
-                    <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(t.title||t.type||"\u062A\u062F\u0642\u064A\u0642")}</h3>
-                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${a}</p>
+                    <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(audit.title || audit.type || 'تدقيق')}</h3>
+                    <p class="text-sm text-gray-600 mt-2">التاريخ: ${date}</p>
                 </div>
-            `}).join("")},loadNonConformities(){const e=document.getElementById("hse-non-conformities-list");if(!e)return;const s=AppState.appData?.hseNonConformities||[];if(s.length===0){e.innerHTML=`
+            `;
+        }).join('');
+    },
+
+    loadNonConformities() {
+        const container = document.getElementById('hse-non-conformities-list');
+        if (!container) return;
+
+        const nonConformities = AppState.appData?.hseNonConformities || [];
+
+        if (nonConformities.length === 0) {
+            container.innerHTML = `
                 <div class="text-center text-gray-500 py-8">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>\u0644\u0627 \u062A\u0648\u062C\u062F \u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0633\u062C\u0644\u0629</p>
+                    <p>لا توجد حالات عدم مطابقة مسجلة</p>
                 </div>
-            `;return}e.innerHTML=s.map(t=>{const a=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return`
+            `;
+            return;
+        }
+
+        container.innerHTML = nonConformities.map(nc => {
+            const date = nc.date ? new Date(nc.date).toLocaleDateString('ar-SA') : 'غير محدد';
+            return `
                 <div class="p-4 bg-gray-50 rounded-lg">
-                    <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(t.title||t.description||"\u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629")}</h3>
-                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${a}</p>
+                    <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(nc.title || nc.description || 'عدم مطابقة')}</h3>
+                    <p class="text-sm text-gray-600 mt-2">التاريخ: ${date}</p>
                 </div>
-            `}).join("")},loadCorrectiveActions(){const e=document.getElementById("hse-corrective-actions-list");if(!e)return;const s=AppState.appData?.hseCorrectiveActions||[];if(s.length===0){e.innerHTML=`
+            `;
+        }).join('');
+    },
+
+    loadCorrectiveActions() {
+        const container = document.getElementById('hse-corrective-actions-list');
+        if (!container) return;
+
+        const actions = AppState.appData?.hseCorrectiveActions || [];
+
+        if (actions.length === 0) {
+            container.innerHTML = `
                 <div class="text-center text-gray-500 py-8">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629 \u0645\u0633\u062C\u0644\u0629</p>
+                    <p>لا توجد إجراءات تصحيحية مسجلة</p>
                 </div>
-            `;return}e.innerHTML=s.map(t=>{const a=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",n=t.status||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",r=n==="\u0645\u0643\u062A\u0645\u0644"||n==="completed"?"green":n==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||n==="pending"?"yellow":"gray";return`
+            `;
+            return;
+        }
+
+        container.innerHTML = actions.map(action => {
+            const date = action.date ? new Date(action.date).toLocaleDateString('ar-SA') : 'غير محدد';
+            const status = action.status || 'غير محدد';
+            const statusColor = status === 'مكتمل' || status === 'completed' ? 'green' :
+                status === 'قيد التنفيذ' || status === 'pending' ? 'yellow' : 'gray';
+            return `
                 <div class="p-4 bg-gray-50 rounded-lg">
-                    <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(t.title||t.description||"\u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A")}</h3>
-                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${a}</p>
-                    <span class="inline-block mt-2 px-3 py-1 bg-${r}-100 text-${r}-800 rounded-full text-xs">${n}</span>
+                    <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(action.title || action.description || 'إجراء تصحيحي')}</h3>
+                    <p class="text-sm text-gray-600 mt-2">التاريخ: ${date}</p>
+                    <span class="inline-block mt-2 px-3 py-1 bg-${statusColor}-100 text-${statusColor}-800 rounded-full text-xs">${status}</span>
                 </div>
-            `}).join("")},loadObjectives(){const e=document.getElementById("hse-objectives-list");if(!e)return;const s=AppState.appData?.hseObjectives||[];if(s.length===0){e.innerHTML=`
+            `;
+        }).join('');
+    },
+
+    loadObjectives() {
+        const container = document.getElementById('hse-objectives-list');
+        if (!container) return;
+
+        const objectives = AppState.appData?.hseObjectives || [];
+
+        if (objectives.length === 0) {
+            container.innerHTML = `
                 <div class="text-center text-gray-500 py-8">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0647\u062F\u0627\u0641 \u0645\u0633\u062C\u0644\u0629</p>
+                    <p>لا توجد أهداف مسجلة</p>
                 </div>
-            `;return}e.innerHTML=s.map(t=>{const a=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return`
+            `;
+            return;
+        }
+
+        container.innerHTML = objectives.map(objective => {
+            const date = objective.date ? new Date(objective.date).toLocaleDateString('ar-SA') : 'غير محدد';
+            return `
                 <div class="p-4 bg-gray-50 rounded-lg">
-                    <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(t.title||t.description||"\u0647\u062F\u0641")}</h3>
-                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${a}</p>
+                    <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(objective.title || objective.description || 'هدف')}</h3>
+                    <p class="text-sm text-gray-600 mt-2">التاريخ: ${date}</p>
                 </div>
-            `}).join("")},loadRiskAssessments(){const e=document.getElementById("hse-risk-assessments-list");if(!e)return;const s=AppState.appData?.hseRiskAssessments||[];if(s.length===0){e.innerHTML=`
+            `;
+        }).join('');
+    },
+
+    loadRiskAssessments() {
+        const container = document.getElementById('hse-risk-assessments-list');
+        if (!container) return;
+
+        const assessments = AppState.appData?.hseRiskAssessments || [];
+
+        if (assessments.length === 0) {
+            container.innerHTML = `
                 <div class="text-center text-gray-500 py-8">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0642\u064A\u064A\u0645\u0627\u062A \u0645\u062E\u0627\u0637\u0631 \u0645\u0633\u062C\u0644\u0629</p>
+                    <p>لا توجد تقييمات مخاطر مسجلة</p>
                 </div>
-            `;return}e.innerHTML=s.map(t=>{const a=t.date?new Date(t.date).toLocaleDateString("ar-SA"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return`
+            `;
+            return;
+        }
+
+        container.innerHTML = assessments.map(assessment => {
+            const date = assessment.date ? new Date(assessment.date).toLocaleDateString('ar-SA') : 'غير محدد';
+            return `
                 <div class="p-4 bg-gray-50 rounded-lg">
-                    <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(t.title||t.description||"\u062A\u0642\u064A\u064A\u0645 \u0645\u062E\u0627\u0637\u0631")}</h3>
-                    <p class="text-sm text-gray-600 mt-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${a}</p>
+                    <h3 class="font-semibold text-gray-800">${Utils.escapeHTML(assessment.title || assessment.description || 'تقييم مخاطر')}</h3>
+                    <p class="text-sm text-gray-600 mt-2">التاريخ: ${date}</p>
                 </div>
-            `}).join("")},setupEventListeners(){const e=document.getElementById("hse-export-excel-btn");e&&e.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const s=document.getElementById("hse-export-pdf-btn");s&&s.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const t=s?.parentElement;t&&typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(t,{moduleKey:"hse",record:{id:"hse-dashboard",title:"\u0644\u0648\u062D\u0629 HSE",date:new Date().toISOString().slice(0,10)},recordId:"hse-dashboard"});const a=document.getElementById("add-audit-btn");a&&a.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const n=document.getElementById("add-non-conformity-btn");n&&n.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const r=document.getElementById("add-corrective-action-btn");r&&r.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const o=document.getElementById("add-objective-btn");o&&o.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")});const i=document.getElementById("add-risk-assessment-btn");i&&i.addEventListener("click",()=>{Notification.info("\u0645\u064A\u0632\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631")})}};(function(){"use strict";try{typeof window<"u"&&typeof HSE<"u"&&(window.HSE=HSE,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 HSE module loaded and available on window.HSE"))}catch{if(typeof window<"u"&&typeof HSE<"u")try{window.HSE=HSE}catch{}}})();
+            `;
+        }).join('');
+    },
+
+    setupEventListeners() {
+        // Export buttons
+        const exportExcelBtn = document.getElementById('hse-export-excel-btn');
+        if (exportExcelBtn) {
+            exportExcelBtn.addEventListener('click', () => {
+                Notification.info('ميزة التصدير قيد التطوير');
+            });
+        }
+
+        const exportPdfBtn = document.getElementById('hse-export-pdf-btn');
+        if (exportPdfBtn) {
+            exportPdfBtn.addEventListener('click', () => {
+                Notification.info('ميزة التصدير قيد التطوير');
+            });
+        }
+
+        const exportBar = exportPdfBtn?.parentElement;
+        if (exportBar && typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(exportBar, {
+                moduleKey: 'hse',
+                record: { id: 'hse-dashboard', title: 'لوحة HSE', date: new Date().toISOString().slice(0, 10) },
+                recordId: 'hse-dashboard'
+            });
+        }
+
+        // Add buttons
+        const addAuditBtn = document.getElementById('add-audit-btn');
+        if (addAuditBtn) {
+            addAuditBtn.addEventListener('click', () => {
+                Notification.info('ميزة الإضافة قيد التطوير');
+            });
+        }
+
+        const addNonConformityBtn = document.getElementById('add-non-conformity-btn');
+        if (addNonConformityBtn) {
+            addNonConformityBtn.addEventListener('click', () => {
+                Notification.info('ميزة الإضافة قيد التطوير');
+            });
+        }
+
+        const addCorrectiveActionBtn = document.getElementById('add-corrective-action-btn');
+        if (addCorrectiveActionBtn) {
+            addCorrectiveActionBtn.addEventListener('click', () => {
+                Notification.info('ميزة الإضافة قيد التطوير');
+            });
+        }
+
+        const addObjectiveBtn = document.getElementById('add-objective-btn');
+        if (addObjectiveBtn) {
+            addObjectiveBtn.addEventListener('click', () => {
+                Notification.info('ميزة الإضافة قيد التطوير');
+            });
+        }
+
+        const addRiskAssessmentBtn = document.getElementById('add-risk-assessment-btn');
+        if (addRiskAssessmentBtn) {
+            addRiskAssessmentBtn.addEventListener('click', () => {
+                Notification.info('ميزة الإضافة قيد التطوير');
+            });
+        }
+    }
+};
+
+// ===== Export module to global scope =====
+// تصدير الموديول إلى window فوراً لضمان توافره
+(function () {
+    'use strict';
+    try {
+        if (typeof window !== 'undefined' && typeof HSE !== 'undefined') {
+            window.HSE = HSE;
+            
+            // إشعار عند تحميل الموديول بنجاح
+            if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
+                Utils.safeLog('✅ HSE module loaded and available on window.HSE');
+            }
+        }
+    } catch (error) {
+        console.error('❌ خطأ في تصدير HSE:', error);
+        // محاولة التصدير مرة أخرى حتى في حالة الخطأ
+        if (typeof window !== 'undefined' && typeof HSE !== 'undefined') {
+            try {
+                window.HSE = HSE;
+            } catch (e) {
+                console.error('❌ فشل تصدير HSE:', e);
+            }
+        }
+    }
+})();
