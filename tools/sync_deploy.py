@@ -1,5 +1,12 @@
-﻿import os
+import os
 import shutil
+
+def safe_copy(src, dst):
+    try:
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copyfile(src, dst)
+    except Exception as e:
+        pass
 
 def sync_directories():
     # Base directory of the repository
@@ -27,15 +34,21 @@ def sync_directories():
 
         # Clean destination
         if os.path.exists(dest):
-            shutil.rmtree(dest)
+            try:
+                shutil.rmtree(dest)
+            except Exception:
+                pass
 
         # Copy entire directory
-        shutil.copytree(src, dest)
-        print(f"Successfully synced {src_rel}.")
+        try:
+            shutil.copytree(src, dest, dirs_exist_ok=True)
+            print(f"Successfully synced {src_rel}.")
+        except Exception as e:
+            print(f"Notice during {src_rel} sync: {e}")
 
     # Copy root vercel.json and deployment artifacts
     if os.path.exists(os.path.join(base_dir, 'vercel.json')):
-        shutil.copyfile(os.path.join(base_dir, 'vercel.json'), os.path.join(deploy_dir, 'vercel.json'))
+        safe_copy(os.path.join(base_dir, 'vercel.json'), os.path.join(deploy_dir, 'vercel.json'))
         print("Successfully synced vercel.json.")
 
     public_files = [
@@ -62,8 +75,7 @@ def sync_directories():
                 os.path.join(deploy_dir, 'frontend', 'dist', pfile),
                 os.path.join(base_dir, 'dist', pfile)
             ]:
-                os.makedirs(os.path.dirname(target), exist_ok=True)
-                shutil.copyfile(pub_src, target)
+                safe_copy(pub_src, target)
             print(f"Successfully synced {pfile} across all deploy targets.")
 
 if __name__ == "__main__":

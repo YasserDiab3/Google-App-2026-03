@@ -209,35 +209,24 @@ const DynamicModuleLoader = {
                     }
                 };
                 
-                // إضافة للصفحة
+                // إضافة للصفحة ليتم تنفيذه عبر محرك المتصفح بأمان
                 document.head.appendChild(script);
                 
-                // إذا كان الكود نصي مباشر، يتم تنفيذه فوراً
-                if (script.textContent) {
-                    // محاولة تنفيذ مباشر
-                    try {
-                        // استخدام Function constructor لتجنب مشاكل النطاق
-                        const func = new Function(moduleCode);
-                        func();
-                        
-                        // تهيئة الموديول
-                        if (typeof window[moduleName] !== 'undefined') {
-                            if (typeof window[moduleName].init === 'function') {
-                                const initResult = window[moduleName].init();
-                                if (initResult instanceof Promise) {
-                                    initResult.then(() => resolve()).catch(reject);
-                                } else {
-                                    resolve();
-                                }
-                            } else {
-                                resolve();
-                            }
+                // تهيئة الموديول بعد التحميل
+                try {
+                    if (typeof window[moduleName] !== 'undefined' && typeof window[moduleName].init === 'function') {
+                        const initResult = window[moduleName].init();
+                        if (initResult instanceof Promise) {
+                            initResult.then(() => resolve()).catch(reject);
                         } else {
                             resolve();
                         }
-                    } catch (execError) {
-                        reject(new Error(`فشل تنفيذ كود الموديول: ${execError.message}`));
+                    } else {
+                        resolve();
                     }
+                } catch (initErr) {
+                    console.warn(`⚠️ تنبيه في تهيئة الموديول ${moduleName}:`, initErr);
+                    resolve();
                 }
             } catch (error) {
                 reject(error);

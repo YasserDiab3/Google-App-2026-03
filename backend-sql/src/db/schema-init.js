@@ -27,21 +27,14 @@ function initSchema(db = getDatabase()) {
             console.error(`Failed to create table ${sheetName}:`, e.message);
         }
 
-        // Create index on primary identifier columns if present
-        if (columns.includes('id')) {
-            try {
-                db.exec(`CREATE INDEX IF NOT EXISTS "idx_${sheetName}_id" ON ${tableName} ("id");`);
-            } catch (_) {}
-        }
-        if (columns.includes('userId')) {
-            try {
-                db.exec(`CREATE INDEX IF NOT EXISTS "idx_${sheetName}_userId" ON ${tableName} ("userId");`);
-            } catch (_) {}
-        }
-        if (columns.includes('createdAt')) {
-            try {
-                db.exec(`CREATE INDEX IF NOT EXISTS "idx_${sheetName}_createdAt" ON ${tableName} ("createdAt");`);
-            } catch (_) {}
+        // Create index on primary identifier and high-frequency query columns
+        const highFrequencyCols = ['id', 'userId', 'createdAt', 'date', 'status', 'riskLevel', 'observerName', 'siteName', 'permitId', 'entryDate'];
+        for (const col of highFrequencyCols) {
+            if (columns.includes(col)) {
+                try {
+                    db.exec(`CREATE INDEX IF NOT EXISTS "idx_${sheetName}_${col}" ON ${tableName} ("${col}");`);
+                } catch (_) {}
+            }
         }
     }
 }

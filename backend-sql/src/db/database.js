@@ -8,6 +8,19 @@ const path = require('path');
 const config = require('../config/config');
 const { headersMap } = require('./headers-schema');
 
+const IDENTIFIER_REGEX = /^[a-zA-Z0-9_]+$/;
+
+function sanitizeIdentifier(name) {
+    if (!name || typeof name !== 'string') {
+        throw new Error('اسم الحقل أو الجدول غير صالح');
+    }
+    const clean = name.trim();
+    if (!IDENTIFIER_REGEX.test(clean)) {
+        throw new Error(`محاولة إدخال غير آمنة في اسم الحقل/الجدول: "${name}"`);
+    }
+    return clean;
+}
+
 let dbInstance = null;
 
 function initDatabase(overridePath = null) {
@@ -90,7 +103,8 @@ function initDatabase(overridePath = null) {
             },
 
             readFromSheet(sheetName, filter = null) {
-                const tableName = `"${sheetName}"`;
+                const safeTable = sanitizeIdentifier(sheetName);
+                const tableName = `"${safeTable}"`;
                 try {
                     let sql = `SELECT * FROM ${tableName}`;
                     const params = [];
@@ -98,7 +112,8 @@ function initDatabase(overridePath = null) {
                     if (filter && typeof filter === 'object') {
                         const conditions = [];
                         for (const [key, val] of Object.entries(filter)) {
-                            conditions.push(`"${key}" = ?`);
+                            const safeKey = sanitizeIdentifier(key);
+                            conditions.push(`"${safeKey}" = ?`);
                             params.push(val);
                         }
                         if (conditions.length > 0) {
@@ -138,8 +153,9 @@ function initDatabase(overridePath = null) {
 
             saveToSheet(sheetName, rows) {
                 if (!Array.isArray(rows) || rows.length === 0) return 0;
-                const tableName = `"${sheetName}"`;
-                const columns = headersMap[sheetName] || Object.keys(rows[0]);
+                const safeTable = sanitizeIdentifier(sheetName);
+                const tableName = `"${safeTable}"`;
+                const columns = (headersMap[sheetName] || Object.keys(rows[0])).map(c => sanitizeIdentifier(c));
 
                 this.exec(`DELETE FROM ${tableName}`);
 
@@ -163,8 +179,9 @@ function initDatabase(overridePath = null) {
             },
 
             appendToSheet(sheetName, row) {
-                const tableName = `"${sheetName}"`;
-                const columns = headersMap[sheetName] || Object.keys(row);
+                const safeTable = sanitizeIdentifier(sheetName);
+                const tableName = `"${safeTable}"`;
+                const columns = (headersMap[sheetName] || Object.keys(row)).map(c => sanitizeIdentifier(c));
                 const colNames = columns.map(c => `"${c}"`).join(', ');
                 const placeholders = columns.map(() => '?').join(', ');
                 const insertSql = `INSERT INTO ${tableName} (${colNames}) VALUES (${placeholders})`;
@@ -201,20 +218,23 @@ function initDatabase(overridePath = null) {
                     keyCol = 'id';
                 }
 
-                const tableName = `"${sheetName}"`;
+                const safeTable = sanitizeIdentifier(sheetName);
+                const safeKeyCol = sanitizeIdentifier(keyCol);
+                const tableName = `"${safeTable}"`;
                 const setClauses = [];
                 const values = [];
 
                 for (const [key, val] of Object.entries(updatedFields || {})) {
                     if (key === keyCol) continue;
-                    setClauses.push(`"${key}" = ?`);
+                    const safeCol = sanitizeIdentifier(key);
+                    setClauses.push(`"${safeCol}" = ?`);
                     values.push(typeof val === 'object' && val !== null ? JSON.stringify(val) : val);
                 }
 
                 if (setClauses.length === 0) return 0;
 
                 values.push(keyVal);
-                const updateSql = `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE "${keyCol}" = ?`;
+                const updateSql = `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE "${safeKeyCol}" = ?`;
                 const result = this.run(updateSql, values);
                 return result.changes;
             },
@@ -228,8 +248,10 @@ function initDatabase(overridePath = null) {
                     keyCol = 'id';
                 }
 
-                const tableName = `"${sheetName}"`;
-                const deleteSql = `DELETE FROM ${tableName} WHERE "${keyCol}" = ?`;
+                const safeTable = sanitizeIdentifier(sheetName);
+                const safeKeyCol = sanitizeIdentifier(keyCol);
+                const tableName = `"${safeTable}"`;
+                const deleteSql = `DELETE FROM ${tableName} WHERE "${safeKeyCol}" = ?`;
                 const result = this.run(deleteSql, [keyVal]);
                 return result.changes;
             },

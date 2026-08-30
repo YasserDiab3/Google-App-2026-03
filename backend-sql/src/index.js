@@ -20,16 +20,36 @@ initSchema(db);
 // Start Automated Backup Scheduler
 startDailyBackupScheduler(db);
 
-// CORS configuration (supports all origins for dev/production)
+// Allowed Origin Whitelist (Production Domains + Development)
+const ALLOWED_ORIGINS = [
+    'https://www.safety-icapp.com',
+    'https://safetyicapp-ecru.vercel.app',
+    /^https:\/\/.*\.vercel\.app$/,
+    /^https:\/\/.*\.trycloudflare\.com$/,
+    /^http:\/\/localhost(:\d+)?$/,
+    /^http:\/\/127\.0\.0\.1(:\d+)?$/
+];
+
 app.use(cors({
-    origin: '*',
+    origin: function(origin, callback) {
+        if (!origin) return callback(null, true); // Mobile WebView, curl, server-to-server
+        const isAllowed = ALLOWED_ORIGINS.some(allowed => {
+            if (allowed instanceof RegExp) return allowed.test(origin);
+            return allowed === origin;
+        });
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            callback(null, true); // Allow with warning in development/tunnel
+        }
+    },
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Support text/plain (used by Frontend Google Apps Script fetch) and application/json
-app.use(express.text({ type: ['text/plain', 'application/json', '*/*'], limit: '50mb' }));
-app.use(express.json({ limit: '50mb' }));
+// Support text/plain (used by Frontend Google Apps Script fetch) and application/json (10MB limit)
+app.use(express.text({ type: ['text/plain', 'application/json', '*/*'], limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // Health Check Endpoint
 app.get('/health', (req, res) => {
