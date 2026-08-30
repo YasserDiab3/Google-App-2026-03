@@ -633,6 +633,94 @@ const moduleHandlers = {
             data: records,
             count: records.length
         };
+    },
+
+    // ==========================================
+    // Public Mobile Forms Instant Config Endpoints
+    // ==========================================
+    'getPublicObservationConfig': function(payload, postData, action) {
+        const db = getDatabase();
+        const sites = db.readSheet('Form_Sites') || [];
+        const places = db.readSheet('Form_Places') || [];
+        const safetyMembers = db.readSheet('SafetyTeamMembers') || [];
+        const violationTypes = db.readSheet('Violation_Types_DB') || db.readSheet('ViolationTypes') || [];
+
+        return {
+            success: true,
+            factories: sites.map(s => s.name || s.siteName || s.factoryName || s),
+            sites: sites,
+            places: places,
+            safetyMembers: safetyMembers.map(m => ({ name: m.name || m.fullName || m, id: m.id || '' })),
+            violationTypes: violationTypes,
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    'getPublicVisitorConfig': function(payload, postData, action) {
+        const db = getDatabase();
+        const sites = db.readSheet('Form_Sites') || [];
+        const securityOfficers = db.readSheet('SecurityOfficers') || [];
+        const hosts = db.readSheet('Employees') || db.readSheet('Users') || [];
+
+        return {
+            success: true,
+            sites: sites,
+            securityOfficers: securityOfficers,
+            hosts: hosts.map(h => ({ name: h.name || h.fullName || h, department: h.department || '' })),
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    'getFormsHubConfig': function(payload, postData, action) {
+        const db = getDatabase();
+        const sites = db.readSheet('Form_Sites') || [];
+        const activeVisitors = (db.readSheet('GateVisitors') || []).filter(v => !v.exitTime);
+
+        return {
+            success: true,
+            sites: sites,
+            activeVisitorsCount: activeVisitors.length,
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    'getPublicDailySafetyConfig': function(payload, postData, action) {
+        const db = getDatabase();
+        const sites = db.readSheet('Form_Sites') || [];
+        const safetyMembers = db.readSheet('SafetyTeamMembers') || [];
+
+        return {
+            success: true,
+            sites: sites,
+            safetyMembers: safetyMembers.map(m => ({ name: m.name || m.fullName || m, id: m.id || '' })),
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    'getPublicNearMissConfig': function(payload, postData, action) {
+        const db = getDatabase();
+        const sites = db.readSheet('Form_Sites') || [];
+        const places = db.readSheet('Form_Places') || [];
+
+        return {
+            success: true,
+            sites: sites,
+            places: places,
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    'getPublicFireInspectionConfig': function(payload, postData, action) {
+        const db = getDatabase();
+        const sites = db.readSheet('Form_Sites') || [];
+        const assets = db.readSheet('FireEquipmentAssets') || [];
+
+        return {
+            success: true,
+            sites: sites,
+            assets: assets,
+            timestamp: new Date().toISOString()
+        };
     }
 };
 

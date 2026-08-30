@@ -33,18 +33,44 @@ const genericSheetOps = {
     },
 
     'batchReadSheets': function(payload, postData, action, actorUserData) {
-        const sheetNames = payload?.sheetNames || postData?.sheetNames || [];
-        if (!Array.isArray(sheetNames) || sheetNames.length === 0) {
+        let raw = payload?.sheetNames || postData?.sheetNames || payload?.sheets || postData?.sheets || payload?.sheetsList || postData?.sheetsList || [];
+        if (typeof raw === 'string') {
+            raw = raw.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        const sheetNames = Array.isArray(raw) ? raw : [];
+        if (sheetNames.length === 0) {
             return { success: false, message: 'قائمة الأوراق مطلوبة', errorCode: 'SHEET_NAMES_REQUIRED' };
         }
 
         const db = getDatabase();
         const result = {};
 
+        const aliases = {
+            'safetymembers': 'SafetyTeamMembers',
+            'factories': 'Form_Sites',
+            'sites': 'Form_Sites',
+            'places': 'Form_Places',
+            'officers': 'SecurityOfficers',
+            'gatevisitors': 'GateVisitors',
+            'observations': 'DailyObservations',
+            'dailysafety': 'DailySafetyCheckList',
+            'nearmisses': 'NearMiss',
+            'fireequipment': 'FireEquipmentAssets',
+            'fireinspections': 'FireEquipmentInspections'
+        };
+
         let totalCount = 0;
         for (const name of sheetNames) {
             try {
-                result[name] = db.readSheet(name);
+                let rows = db.readSheet(name);
+                if ((!rows || rows.length === 0) && aliases[name.toLowerCase()]) {
+                    const aliasTarget = aliases[name.toLowerCase()];
+                    const aliasRows = db.readSheet(aliasTarget);
+                    if (aliasRows && aliasRows.length > 0) {
+                        rows = aliasRows;
+                    }
+                }
+                result[name] = rows || [];
                 totalCount += (result[name] ? result[name].length : 0);
             } catch (err) {
                 result[name] = [];

@@ -5966,22 +5966,24 @@
         window.addEventListener('offline', updateOnlineStatus);
         updateOnlineStatus();
 
-        const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+        const LIVE_BACKEND_URL = 'https://ent-measured-weighted-deaf.trycloudflare.com/exec';
+        const GAS_FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+        const DEFAULT_API_URL = LIVE_BACKEND_URL;
 
         function getEffectiveApiUrl() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const p = urlParams.get('apiUrl') || urlParams.get('api');
-                if (p && p.includes('script.google.com')) return p;
+                if (p) return p;
                 const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
                 if (s1) {
                     const parsed = JSON.parse(s1);
-                    if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+                    if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
                 }
                 const s2 = localStorage.getItem('hse_app_settings');
                 if (s2) {
                     const parsed = JSON.parse(s2);
-                    if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+                    if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
                 }
             } catch(e) {}
             return DEFAULT_API_URL;
