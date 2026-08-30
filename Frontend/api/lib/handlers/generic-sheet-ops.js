@@ -41,9 +41,11 @@ const genericSheetOps = {
         const db = getDatabase();
         const result = {};
 
+        let totalCount = 0;
         for (const name of sheetNames) {
             try {
                 result[name] = db.readSheet(name);
+                totalCount += (result[name] ? result[name].length : 0);
             } catch (err) {
                 result[name] = [];
             }
@@ -52,6 +54,10 @@ const genericSheetOps = {
         return {
             success: true,
             data: result,
+            totalSheets: sheetNames.length,
+            successfulSheets: sheetNames.length,
+            failedSheets: [],
+            count: totalCount,
             timestamp: new Date().toISOString()
         };
     },

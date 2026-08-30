@@ -1735,7 +1735,7 @@ const GoogleIntegration = {
         const isAuthAction = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'].includes(action);
 
         // Actions التي يمكن cache-ها (عمليات قراءة فقط)
-        const cacheableActions = ['readFromSheet', 'getData', 'getSafetyTeamMembers',
+        const cacheableActions = ['readFromSheet', 'batchReadSheets', 'getData', 'getSafetyTeamMembers',
             'getSafetyTeamMember', 'getOrganizationalStructure', 'getJobDescription',
             'getSafetyTeamKPIs', 'getSafetyHealthManagementSettings', 'getActionTrackingSettings',
             'getAllActionTracking', 'getActionTracking',

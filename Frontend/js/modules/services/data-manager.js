@@ -933,14 +933,10 @@ const DataManager = {
                         const idbOwner = dbData._ownerEmail
                             ? String(dbData._ownerEmail).trim().toLowerCase()
                             : '';
-                        if (!idbOwner) {
-                            // IndexedDB يتيم بدون مالك — لا يُستعاد أبداً
+                        // استعادة فورية لكاش IndexedDB لضمان سرعة 0ms بدون انتظار الشبكة
+                        if (expectedOwner && idbOwner && expectedOwner !== idbOwner) {
                             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                                Utils.safeWarn('🔒 رفض IndexedDB يتيم بدون _ownerEmail');
-                            }
-                        } else if (expectedOwner && expectedOwner !== idbOwner) {
-                            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                                Utils.safeWarn('🔒 رفض IndexedDB لمستخدم آخر');
+                                Utils.safeWarn('🔒 رفض IndexedDB لمستخدم آخر مختلف');
                             }
                         } else {
                         let restoredCount = 0;
