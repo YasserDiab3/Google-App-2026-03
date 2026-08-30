@@ -1894,6 +1894,129 @@
             }
         }
 
+        /* ════════════════════════════════════════════════════
+           ⭐ أنماط تثبيت النماذج المفضلة وشريط التنبيهات
+        ════════════════════════════════════════════════════ */
+        .card-pin-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(203, 213, 225, 0.8);
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        html[dir="ltr"] .card-pin-btn {
+            left: auto;
+            right: 10px;
+        }
+        .card-pin-btn:hover {
+            transform: scale(1.15);
+            color: #f59e0b;
+            background: #fffbeb;
+            border-color: #fde68a;
+        }
+        .card-pin-btn.pinned {
+            color: #f59e0b;
+            background: #fffbeb;
+            border-color: #f59e0b;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+        }
+        [data-theme="dark"] .card-pin-btn {
+            background: rgba(30, 41, 59, 0.85);
+            border-color: #475569;
+            color: #64748b;
+        }
+        [data-theme="dark"] .card-pin-btn.pinned {
+            background: #78350f;
+            color: #fde047;
+            border-color: #f59e0b;
+        }
+
+        .pinned-section-wrap {
+            margin-bottom: 22px;
+            background: linear-gradient(135deg, rgba(254, 243, 199, 0.45) 0%, rgba(255, 255, 255, 0.85) 100%);
+            border: 1.5px solid #fde68a;
+            border-radius: 16px;
+            padding: 14px;
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.08);
+            transition: all 0.25s ease;
+        }
+        [data-theme="dark"] .pinned-section-wrap {
+            background: linear-gradient(135deg, rgba(120, 53, 15, 0.25) 0%, rgba(30, 41, 59, 0.85) 100%);
+            border-color: rgba(245, 158, 11, 0.4);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+        }
+
+        /* 📢 شريط تنبيهات السلامة الميدانية (HSE Broadcast Ticker) */
+        .hse-broadcast-ticker {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: #ffffff;
+            border-radius: 12px;
+            padding: 7px 14px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .hse-ticker-badge {
+            background: #ef4444;
+            color: #ffffff;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            flex-shrink: 0;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+            letter-spacing: 0.3px;
+        }
+        .hse-ticker-viewport {
+            overflow: hidden;
+            white-space: nowrap;
+            flex: 1;
+            position: relative;
+            mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent);
+            -webkit-mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent);
+        }
+        .hse-ticker-content {
+            display: inline-block;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            animation: tickerScroll 30s linear infinite;
+        }
+        .hse-broadcast-ticker:hover .hse-ticker-content {
+            animation-play-state: paused;
+        }
+        @keyframes tickerScroll {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        html[dir="ltr"] .hse-ticker-content {
+            animation-name: tickerScrollLtr;
+        }
+        @keyframes tickerScrollLtr {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
 </style>
 </head>
 <body>
@@ -1903,10 +2026,11 @@
 
         <!-- شريط أدوات الحالة والتحديث واللغة والثيم المعتمد -->
         <div class="top-tools-bar">
-            <!-- مؤشر حالة الاتصال بالسحابة -->
-            <div id="onlineStatus" style="padding: 4px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; transition: all 0.2s;">
-                <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 6px #10b981;"></span>
+            <!-- مؤشر حالة الاتصال وسرعة استجابة السيرفر (Live Ping Meter) -->
+            <div id="onlineStatus" onclick="measureCloudPing(true)" title="انقر لفحص سرعة الاستجابة اللحظية للسيرفر" style="padding: 4px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; cursor: pointer; transition: all 0.2s;">
+                <span id="onlineStatusDot" style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 6px #10b981;"></span>
                 <span id="onlineStatusText">متصل بالسحابة</span>
+                <span id="onlineStatusPing" style="background: rgba(4, 120, 87, 0.12); padding: 1px 5px; border-radius: 4px; font-size: 0.68rem; font-family: monospace; display: none;">--ms</span>
             </div>
 
             <!-- أزرار الأدوات والتحديث والثيم واللغة -->
@@ -1953,6 +2077,19 @@
                 <div class="iso-meta-row">
                     <span class="iso-meta-key">درجة السرية:</span>
                     <span class="iso-meta-val" style="color: #047857;">عام داخلي</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 📢 شريط تنبيهات السلامة الميدانية المباشرة (Live HSE Broadcast Ticker) -->
+        <div class="hse-broadcast-ticker" id="hseBroadcastTicker">
+            <div class="hse-ticker-badge">
+                <i class="fas fa-bullhorn"></i>
+                <span id="txtHseTickerBadge">تنبيهات السلامة</span>
+            </div>
+            <div class="hse-ticker-viewport">
+                <div class="hse-ticker-content" id="hseTickerContent">
+                    <span>🛡️ مرحباً بكم في بوابة السلامة الرقمية الموحدة • 🏆 تهنئة خاصة لأبطال السلامة لشهر أغسطس 2026 • ⚡ يرجى مراجعة كافة تصاريح العمل الساخنة والارتفاعات (PTW) قبل البدء • 🌡️ الالتزام بتعليمات الإجهاد الحراري وشرب السوائل • 🦺 مهمات الوقاية الشخصية (PPE) إلزامية في كافة المواقع</span>
                 </div>
             </div>
         </div>
@@ -2011,11 +2148,25 @@
             <input type="text" id="formSearchInput" placeholder="ابحث عن نموذج (ملاحظة، حادث، حريق، معدات...)" oninput="filterForms()">
         </div>
 
+        <!-- ⭐ قسم النماذج المفضلة والمثبتة (Pinned / Favorite Forms) -->
+        <div id="pinnedFormsSection" class="pinned-section-wrap" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.88rem; color: #b45309;">
+                    <i class="fas fa-star text-amber-500"></i>
+                    <span id="txtPinnedSectionTitle">النماذج المفضلة والمثبتة (Quick Access)</span>
+                </div>
+                <span id="pinnedCountBadge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 800;">0 نماذج</span>
+            </div>
+            <div class="forms-grid" id="pinnedFormsGrid" style="margin-bottom: 0;">
+                <!-- يتم بناؤها ديناميكياً -->
+            </div>
+        </div>
+
         <!-- Section Title -->
         <div class="section-header">
             <div class="section-title">
                 <i class="fas fa-layer-group text-blue-500"></i>
-                <span>النماذج المتاحة</span>
+                <span id="txtAllFormsSectionTitle">كافة النماذج المتاحة</span>
             </div>
             <span class="forms-count" id="formsCountBadge">6 نماذج وأدوات تحليل</span>
         </div>
@@ -2024,7 +2175,8 @@
         <div class="forms-grid" id="formsGrid">
             
             <!-- 1. نموذج المرور اليومي لمسؤولي السلامة -->
-            <div class="form-card card-daily-safety" onclick="navigateToForm('public-daily-safety.html')" data-keywords="مرور يومي جولة تفتيش قائمة تحقق سلامة وردية daily safety checklist patrol">
+            <div class="form-card card-daily-safety" data-form-key="daily-safety" onclick="navigateToForm('public-daily-safety.html')" data-keywords="مرور يومي جولة تفتيش قائمة تحقق سلامة وردية daily safety checklist patrol">
+                <button type="button" class="card-pin-btn" onclick="togglePinForm('daily-safety', event)" title="تثبيت في المفضلة"><i class="fas fa-star"></i></button>
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
                         <i class="fas fa-clipboard-user"></i>
@@ -2044,7 +2196,8 @@
             </div>
 
             <!-- 2. نموذج الملاحظات اليومية -->
-            <div class="form-card card-obs" onclick="navigateToForm('public-observation.html')" data-keywords="ملاحظة ملاحظات يومية سلوك خطر تدقيق unsafe act condition">
+            <div class="form-card card-obs" data-form-key="observation" onclick="navigateToForm('public-observation.html')" data-keywords="ملاحظة ملاحظات يومية سلوك خطر تدقيق unsafe act condition">
+                <button type="button" class="card-pin-btn" onclick="togglePinForm('observation', event)" title="تثبيت في المفضلة"><i class="fas fa-star"></i></button>
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
                         <i class="fas fa-clipboard-check"></i>
@@ -2064,7 +2217,8 @@
             </div>
 
             <!-- 3. نموذج الحوادث الوشيكة -->
-            <div class="form-card card-near-miss" onclick="navigateToForm('public-near-miss.html')" data-keywords="حادث وشيك حوادث وشيكة كاد يقع خطر داهم near miss incident">
+            <div class="form-card card-near-miss" data-form-key="near-miss" onclick="navigateToForm('public-near-miss.html')" data-keywords="حادث وشيك حوادث وشيكة كاد يقع خطر داهم near miss incident">
+                <button type="button" class="card-pin-btn" onclick="togglePinForm('near-miss', event)" title="تثبيت في المفضلة"><i class="fas fa-star"></i></button>
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
                         <i class="fas fa-triangle-exclamation"></i>
@@ -2084,7 +2238,8 @@
             </div>
 
             <!-- 4. نموذج فحص الحريق -->
-            <div class="form-card card-fire" onclick="navigateToForm('public-fire-inspection.html')" data-keywords="حريق اطفاء طفاية طفايات مضخات فحص شهري معدات fire extinguisher">
+            <div class="form-card card-fire" data-form-key="fire-inspection" onclick="navigateToForm('public-fire-inspection.html')" data-keywords="حريق اطفاء طفاية طفايات مضخات فحص شهري معدات fire extinguisher">
+                <button type="button" class="card-pin-btn" onclick="togglePinForm('fire-inspection', event)" title="تثبيت في المفضلة"><i class="fas fa-star"></i></button>
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
                         <i class="fas fa-fire-extinguisher"></i>
@@ -2104,7 +2259,8 @@
             </div>
 
             <!-- 5. لوحة تحليل الملاحظات والمتابعة الميدانية -->
-            <div class="form-card card-obs-analytics" onclick="openObservationsAnalyticsModal()" data-keywords="تحليل احصائيات ملاحظات كروت kpi اسبوع مفتوح مغلق ابطال السلامة analytics safety observations" style="border-right-color: #6366f1;">
+            <div class="form-card card-obs-analytics" data-form-key="obs-analytics" onclick="openObservationsAnalyticsModal()" data-keywords="تحليل احصائيات ملاحظات كروت kpi اسبوع مفتوح مغلق ابطال السلامة analytics safety observations" style="border-right-color: #6366f1;">
+                <button type="button" class="card-pin-btn" onclick="togglePinForm('obs-analytics', event)" title="تثبيت في المفضلة"><i class="fas fa-star"></i></button>
                 <div class="form-card-left">
                     <div class="form-icon-wrap" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff;">
                         <i class="fas fa-chart-pie"></i>
@@ -2124,7 +2280,8 @@
             </div>
 
             <!-- 6. نظام تسجيل وتصاريح الزائرين والمقاولين بالبوابة -->
-            <div class="form-card card-gate" onclick="navigateToForm('gate-visitor-entry.html')" data-keywords="بوابة زائرين مقاولين تصريح امن زيارة دخول خروج كشف طوارئ visitor gate pass security" style="border-right-color: #0284c7;">
+            <div class="form-card card-gate" data-form-key="gate-visitor" onclick="navigateToForm('gate-visitor-entry.html')" data-keywords="بوابة زائرين مقاولين تصريح امن زيارة دخول خروج كشف طوارئ visitor gate pass security" style="border-right-color: #0284c7;">
+                <button type="button" class="card-pin-btn" onclick="togglePinForm('gate-visitor', event)" title="تثبيت في المفضلة"><i class="fas fa-star"></i></button>
                 <div class="form-card-left">
                     <div class="form-icon-wrap" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff;">
                         <i class="fas fa-id-card-clip"></i>
@@ -2355,7 +2512,18 @@
                 anlTableColType: 'النوع',
                 anlTableColObserver: 'الراصد',
                 anlTableColDept: 'الإدارة المسؤولة',
-                anlTableColStatus: 'الحالة'
+                anlTableColStatus: 'الحالة',
+
+                // Pinned & Ticker & Ping
+                pinnedSectionTitle: 'النماذج المفضلة والمثبتة (Quick Access)',
+                allFormsSectionTitle: 'كافة النماذج المتاحة',
+                tickerBadge: 'تنبيهات السلامة',
+                tickerText: '🛡️ مرحباً بكم في بوابة السلامة الرقمية الموحدة • 🏆 تهنئة خاصة لأبطال السلامة لشهر أغسطس 2026 • ⚡ يرجى مراجعة كافة تصاريح العمل الساخنة والارتفاعات (PTW) قبل البدء • 🌡️ الالتزام بتعليمات الإجهاد الحراري وشرب السوائل • 🦺 مهمات الوقاية الشخصية (PPE) إلزامية في كافة المواقع',
+                pinTitle: 'تثبيت في المفضلة',
+                unpinTitle: 'إلغاء التثبيت من المفضلة',
+                cloudFast: 'متصل وسريع',
+                cloudNormal: 'متصل بالسحابة',
+                cloudOffline: 'وضع أوفلاين'
             },
             en: {
                 dir: 'ltr',
@@ -2493,7 +2661,18 @@
                 anlTableColType: 'Type',
                 anlTableColObserver: 'Observer',
                 anlTableColDept: 'Responsible Dept',
-                anlTableColStatus: 'Status'
+                anlTableColStatus: 'Status',
+
+                // Pinned & Ticker & Ping
+                pinnedSectionTitle: 'Favorite & Pinned Forms (Quick Access)',
+                allFormsSectionTitle: 'All Available Forms',
+                tickerBadge: 'HSE Broadcast',
+                tickerText: '🛡️ Welcome to Digital HSE Hub • 🏆 Congratulations to Safety Champions of August 2026 • ⚡ Review all High-Risk & Hot Work Permits (PTW) before execution • 🌡️ Follow Heat Stress hydration advisories in all plants • 🦺 PPE compliance is mandatory across all zones',
+                pinTitle: 'Pin to Favorites',
+                unpinTitle: 'Unpin from Favorites',
+                cloudFast: 'Fast Cloud',
+                cloudNormal: 'Connected',
+                cloudOffline: 'Offline Mode'
             }
         };
 
@@ -2567,13 +2746,23 @@
             const ptwLbl = document.getElementById('livePtwCountLabel');
             if (ptwLbl) ptwLbl.textContent = t.livePtwCountLabel;
 
+            // HSE Broadcast Ticker
+            const tTickerBadge = document.getElementById('txtHseTickerBadge');
+            if (tTickerBadge) tTickerBadge.textContent = t.tickerBadge;
+            const tTickerContent = document.getElementById('hseTickerContent');
+            if (tTickerContent) tTickerContent.innerHTML = `<span>${t.tickerText}</span>`;
+
+            // Pinned Section & Section Title
+            const tPinTitle = document.getElementById('txtPinnedSectionTitle');
+            if (tPinTitle) tPinTitle.textContent = t.pinnedSectionTitle;
+            const tAllTitle = document.getElementById('txtAllFormsSectionTitle');
+            if (tAllTitle) tAllTitle.textContent = t.allFormsSectionTitle;
+
             // Search
             const searchInp = document.getElementById('formSearchInput');
             if (searchInp) searchInp.placeholder = t.searchPlaceholder;
 
-            // Section title
-            const st = document.querySelector('.section-title span');
-            if (st) st.textContent = t.availableForms;
+            // Section title badge
             const fcb = document.getElementById('formsCountBadge');
             if (fcb) fcb.textContent = t.formsCountBadge;
 
@@ -2776,6 +2965,180 @@
 
             updateLiveVisitorsCount();
             fetchLiveVisitorsFromCloud();
+            renderPinnedFormsSection();
+            measureCloudPing();
+        }
+
+        // ======================================================================
+        // 🌟 Pinned / Favorite Forms Management Engine
+        // ======================================================================
+        function getPinnedForms() {
+            try {
+                const raw = localStorage.getItem('HSE_PINNED_FORMS');
+                return raw ? JSON.parse(raw) : [];
+            } catch(e) {
+                return [];
+            }
+        }
+
+        function savePinnedForms(list) {
+            try {
+                localStorage.setItem('HSE_PINNED_FORMS', JSON.stringify(list));
+            } catch(e) {}
+        }
+
+        function togglePinForm(formKey, event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            let pinned = getPinnedForms();
+            if (pinned.includes(formKey)) {
+                pinned = pinned.filter(k => k !== formKey);
+            } else {
+                pinned.push(formKey);
+            }
+            savePinnedForms(pinned);
+            renderPinnedFormsSection();
+        }
+
+        function renderPinnedFormsSection() {
+            const pinnedSection = document.getElementById('pinnedFormsSection');
+            const pinnedGrid = document.getElementById('pinnedFormsGrid');
+            const pinnedBadge = document.getElementById('pinnedCountBadge');
+            if (!pinnedSection || !pinnedGrid) return;
+
+            const pinned = getPinnedForms();
+            const lang = currentLang || 'ar';
+            const t = (typeof HUB_I18N !== 'undefined' && HUB_I18N[lang]) ? HUB_I18N[lang] : {};
+
+            // Update all pin buttons on normal cards
+            const allCards = document.querySelectorAll('#formsGrid .form-card');
+            allCards.forEach(card => {
+                const key = card.getAttribute('data-form-key');
+                const pinBtn = card.querySelector('.card-pin-btn');
+                if (pinBtn) {
+                    const isPinned = pinned.includes(key);
+                    pinBtn.classList.toggle('pinned', isPinned);
+                    pinBtn.title = isPinned ? (t.unpinTitle || 'إلغاء التثبيت من المفضلة') : (t.pinTitle || 'تثبيت في المفضلة');
+                }
+            });
+
+            if (pinned.length === 0) {
+                pinnedSection.style.display = 'none';
+                pinnedGrid.innerHTML = '';
+                return;
+            }
+
+            pinnedSection.style.display = 'block';
+            if (pinnedBadge) {
+                pinnedBadge.textContent = `${pinned.length} ${lang === 'en' ? 'Forms' : 'نماذج'}`;
+            }
+
+            // Clone and render pinned cards
+            let html = '';
+            pinned.forEach(key => {
+                const originalCard = document.querySelector(`#formsGrid .form-card[data-form-key="${key}"]`);
+                if (originalCard) {
+                    const clone = originalCard.cloneNode(true);
+                    const pinBtn = clone.querySelector('.card-pin-btn');
+                    if (pinBtn) {
+                        pinBtn.classList.add('pinned');
+                        pinBtn.title = t.unpinTitle || 'إلغاء التثبيت من المفضلة';
+                    }
+                    html += clone.outerHTML;
+                }
+            });
+            pinnedGrid.innerHTML = html;
+        }
+
+        // ======================================================================
+        // 🟢 Live Cloud Health & Ping Meter Engine
+        // ======================================================================
+        let isMeasuringPing = false;
+        async function measureCloudPing(forceCheck) {
+            if (isMeasuringPing) return;
+            const statusDot = document.getElementById('onlineStatusDot');
+            const statusText = document.getElementById('onlineStatusText');
+            const pingBadge = document.getElementById('onlineStatusPing');
+            const container = document.getElementById('onlineStatus');
+            if (!container || !statusText) return;
+
+            const lang = currentLang || 'ar';
+            const t = (typeof HUB_I18N !== 'undefined' && HUB_I18N[lang]) ? HUB_I18N[lang] : {};
+
+            if (!navigator.onLine) {
+                if (statusDot) {
+                    statusDot.style.background = '#94a3b8';
+                    statusDot.style.boxShadow = 'none';
+                }
+                statusText.textContent = t.cloudOffline || 'وضع أوفلاين';
+                if (pingBadge) pingBadge.style.display = 'none';
+                container.style.background = '#f1f5f9';
+                container.style.color = '#475569';
+                container.style.borderColor = '#cbd5e1';
+                return;
+            }
+
+            try {
+                isMeasuringPing = true;
+                if (pingBadge) {
+                    pingBadge.style.display = 'inline-block';
+                    pingBadge.textContent = '...';
+                }
+
+                const startTime = performance.now();
+                const targetUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+                
+                // Ping with lightweight health query
+                const res = await fetch(targetUrl + (targetUrl.includes('?') ? '&' : '?') + 'ping=1&_t=' + Date.now(), {
+                    method: 'GET',
+                    mode: 'cors',
+                    cache: 'no-store'
+                });
+                const duration = Math.round(performance.now() - startTime);
+
+                if (res.ok) {
+                    if (pingBadge) {
+                        pingBadge.style.display = 'inline-block';
+                        pingBadge.textContent = `${duration}ms`;
+                    }
+
+                    if (duration < 350) {
+                        if (statusDot) {
+                            statusDot.style.background = '#10b981';
+                            statusDot.style.boxShadow = '0 0 8px #10b981';
+                        }
+                        statusText.textContent = t.cloudFast || 'متصل وسريع';
+                        container.style.background = '#ecfdf5';
+                        container.style.color = '#047857';
+                        container.style.borderColor = '#a7f3d0';
+                    } else {
+                        if (statusDot) {
+                            statusDot.style.background = '#f59e0b';
+                            statusDot.style.boxShadow = '0 0 6px #f59e0b';
+                        }
+                        statusText.textContent = t.cloudNormal || 'متصل بالسحابة';
+                        container.style.background = '#fffbeb';
+                        container.style.color = '#b45309';
+                        container.style.borderColor = '#fde68a';
+                    }
+                } else {
+                    throw new Error('Ping failed');
+                }
+            } catch(e) {
+                if (statusDot) {
+                    statusDot.style.background = '#10b981';
+                    statusDot.style.boxShadow = '0 0 6px #10b981';
+                }
+                statusText.textContent = t.cloudNormal || 'متصل بالسحابة';
+                if (pingBadge) pingBadge.style.display = 'none';
+                container.style.background = '#ecfdf5';
+                container.style.color = '#047857';
+                container.style.borderColor = '#a7f3d0';
+            } finally {
+                isMeasuringPing = false;
+            }
         }
 
         // Live Visitors Monitor Logic
@@ -5573,6 +5936,12 @@
         }
         if (typeof updatePtwWidgetsAndModal === 'function') {
             updatePtwWidgetsAndModal();
+        }
+        if (typeof renderPinnedFormsSection === 'function') {
+            renderPinnedFormsSection();
+        }
+        if (typeof measureCloudPing === 'function') {
+            measureCloudPing();
         }
 
         setTimeout(() => {
