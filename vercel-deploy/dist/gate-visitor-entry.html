@@ -104,13 +104,25 @@
             max-width: 840px;
         }
 
-        /* ═════════════════════════════════════════════════�        /* ════════════════════════════════════════════════════
+        /* 📌 رأس النموذج الثابت أثناء الانزلاق (Sticky Header: Tools + ISO Table) */
+        .form-sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--bg-base);
+            padding-top: 6px;
+            padding-bottom: 2px;
+            margin-bottom: 8px;
+            transition: all 0.25s ease;
+        }
+        [data-theme="dark"] .form-sticky-header {
+            background: var(--bg-base);
+        }
+
+        /* ════════════════════════════════════════════════════
            ترويسة ISO المعتمدة ثلاثية الأعمدة - تناسق تام وبدون تكسير
         ════════════════════════════════════════════════════ */
         .iso-header-table {
-            position: sticky;
-            top: 6px;
-            z-index: 100;
             display: grid;
             grid-template-columns: minmax(130px, 150px) 1fr minmax(150px, 185px);
             width: 100%;
@@ -121,7 +133,7 @@
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15,23,42,0.04);
-            margin-bottom: 16px;
+            margin-bottom: 4px;
         }
 
         [data-theme="dark"] .iso-header-table {
@@ -1421,83 +1433,86 @@
     </div>
 
     <div class="container">
-        <!-- شريط أدوات الحالة والتحديث واللغة والثيم -->
-        <div class="top-tools-bar" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                <!-- مؤشر حالة الاتصال بالسحابة -->
-                <div id="gateConnectionStatus" onclick="measureCloudPing(true)" style="padding: 4px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; cursor: pointer; transition: all 0.2s;">
-                    <span id="connIndicatorDot" style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 6px #10b981;"></span>
-                    <span id="txtConnectionStatus">متصل بالسحابة</span>
-                    <span id="onlineStatusPing" style="background: rgba(4, 120, 87, 0.12); padding: 1px 5px; border-radius: 4px; font-size: 0.68rem; font-family: monospace; display: none;">--ms</span>
+        <!-- 📌 رأس النموذج الثابت أثناء الانزلاق (Sticky Header: Tools + ISO Table) -->
+        <header class="form-sticky-header">
+            <!-- شريط أدوات الحالة والتحديث واللغة والثيم -->
+            <div class="top-tools-bar" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                    <!-- مؤشر حالة الاتصال بالسحابة -->
+                    <div id="gateConnectionStatus" onclick="measureCloudPing(true)" style="padding: 4px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; cursor: pointer; transition: all 0.2s;">
+                        <span id="connIndicatorDot" style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 6px #10b981;"></span>
+                        <span id="txtConnectionStatus">متصل بالسحابة</span>
+                        <span id="onlineStatusPing" style="background: rgba(4, 120, 87, 0.12); padding: 1px 5px; border-radius: 4px; font-size: 0.68rem; font-family: monospace; display: none;">--ms</span>
+                    </div>
+
+                    <!-- ودجت الطقس ومستوى الإجهاد الحراري اللحظي بالمصانع -->
+                    <div class="weather-badge" id="plantWeatherWidget" onclick="openHeatStressAdvisoryModal(event)" title="حالة الطقس ومؤشر الإجهاد الحراري (انقر للإرشادات التفصيلية)">
+                        <span id="weatherIcon">☀️</span>
+                        <span id="weatherTemp">32°C</span>
+                        <span class="heat-index-pill" id="heatIndexPill">طبيعي</span>
+                    </div>
                 </div>
 
-                <!-- ودجت الطقس ومستوى الإجهاد الحراري اللحظي بالمصانع -->
-                <div class="weather-badge" id="plantWeatherWidget" onclick="openHeatStressAdvisoryModal(event)" title="حالة الطقس ومؤشر الإجهاد الحراري (انقر للإرشادات التفصيلية)">
-                    <span id="weatherIcon">☀️</span>
-                    <span id="weatherTemp">32°C</span>
-                    <span class="heat-index-pill" id="heatIndexPill">طبيعي</span>
-                </div>
-            </div>
+                <!-- أزرار الأدوات والتحديث والثيم واللغة والعودة للبوابة -->
+                <div class="tools-actions" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                    <!-- زر الطوارئ الفوري SOS -->
+                    <button type="button" class="sos-btn" id="btnEmergencySos" onclick="openEmergencySosModal(event)" title="أرقام وخطوط الطوارئ الميدانية / Emergency SOS">
+                        <i class="fas fa-phone-volume"></i>
+                        <span id="txtSosBtn">طوارئ SOS</span>
+                    </button>
 
-            <!-- أزرار الأدوات والتحديث والثيم واللغة والعودة للبوابة -->
-            <div class="tools-actions" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                <!-- زر الطوارئ الفوري SOS -->
-                <button type="button" class="sos-btn" id="btnEmergencySos" onclick="openEmergencySosModal(event)" title="أرقام وخطوط الطوارئ الميدانية / Emergency SOS">
-                    <i class="fas fa-phone-volume"></i>
-                    <span id="txtSosBtn">طوارئ SOS</span>
-                </button>
+                    <!-- زر العودة لبوابة النماذج -->
+                    <a href="forms-hub.html" title="العودة لبوابة النماذج الرئيسية" style="text-decoration: none; padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #4338ca; font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        <i class="fas fa-th-large"></i>
+                        <span id="txtBackToHub">البوابة</span>
+                    </a>
 
-                <!-- زر العودة لبوابة النماذج -->
-                <a href="forms-hub.html" title="العودة لبوابة النماذج الرئيسية" style="text-decoration: none; padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #4338ca; font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    <i class="fas fa-th-large"></i>
-                    <span id="txtBackToHub">البوابة</span>
-                </a>
-
-                <button type="button" id="btnManualRefresh" class="tool-btn" onclick="triggerManualSync()" title="تحديث البيانات فورياً من السحابة" style="padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #2563eb; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    <i class="fas fa-rotate" id="refreshIcon"></i>
-                    <span id="txtRefreshBtn">تحديث</span>
-                </button>
-                <button type="button" class="tool-btn" onclick="toggleTheme()" title="تبديل الثيم" style="padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; font-size: 0.8rem;">
-                    <i class="fas fa-moon" id="themeIcon"></i>
-                </button>
-                <button type="button" id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()" style="padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    <i class="fas fa-globe"></i>
-                    <span id="langBtnText">EN</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- ══════════════════════════════════════════════════════
-             ترويسة ISO المعتمدة ثلاثية الأعمدة (مطابقة لجميع النماذج)
-        ══════════════════════════════════════════════════════ -->
-        <div class="iso-header-table">
-            <div class="iso-col-brand">
-                <div class="iso-logo-wrap">
-                    <img id="isoLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
-                </div>
-                <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
-            </div>
-
-            <div class="iso-col-title">
-                <h1 class="iso-doc-title" id="isoDocTitle">نظام تسجيل الزائرين</h1>
-                <div class="iso-doc-subtitle" id="isoDocSubtitle">Visitor Registration System</div>
-            </div>
-
-            <div class="iso-col-meta">
-                <div class="iso-meta-row">
-                    <span class="iso-meta-key">كود الوثيقة:</span>
-                    <span class="iso-meta-val">DOC-HSE-GAT-01</span>
-                </div>
-                <div class="iso-meta-row">
-                    <span class="iso-meta-key">رقم الإصدار:</span>
-                    <span class="iso-meta-val">Rev. 02</span>
-                </div>
-                <div class="iso-meta-row">
-                    <span class="iso-meta-key">درجة السرية:</span>
-                    <span class="iso-meta-val" style="color: #047857;">عام داخلي</span>
+                    <button type="button" id="btnManualRefresh" class="tool-btn" onclick="triggerManualSync()" title="تحديث البيانات فورياً من السحابة" style="padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #2563eb; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        <i class="fas fa-rotate" id="refreshIcon"></i>
+                        <span id="txtRefreshBtn">تحديث</span>
+                    </button>
+                    <button type="button" class="tool-btn" onclick="toggleTheme()" title="تبديل الثيم" style="padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; font-size: 0.8rem;">
+                        <i class="fas fa-moon" id="themeIcon"></i>
+                    </button>
+                    <button type="button" id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()" style="padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        <i class="fas fa-globe"></i>
+                        <span id="langBtnText">EN</span>
+                    </button>
                 </div>
             </div>
-        </div>
+
+            <!-- ══════════════════════════════════════════════════════
+                 ترويسة ISO المعتمدة ثلاثية الأعمدة (مطابقة لجميع النماذج)
+            ══════════════════════════════════════════════════════ -->
+            <div class="iso-header-table">
+                <div class="iso-col-brand">
+                    <div class="iso-logo-wrap">
+                        <img id="isoLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
+                    </div>
+                    <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
+                </div>
+
+                <div class="iso-col-title">
+                    <h1 class="iso-doc-title" id="isoDocTitle">نظام تسجيل الزائرين</h1>
+                    <div class="iso-doc-subtitle" id="isoDocSubtitle">Visitor Registration System</div>
+                </div>
+
+                <div class="iso-col-meta">
+                    <div class="iso-meta-row">
+                        <span class="iso-meta-key">كود الوثيقة:</span>
+                        <span class="iso-meta-val">DOC-HSE-GAT-01</span>
+                    </div>
+                    <div class="iso-meta-row">
+                        <span class="iso-meta-key">رقم الإصدار:</span>
+                        <span class="iso-meta-val">Rev. 02</span>
+                    </div>
+                    <div class="iso-meta-row">
+                        <span class="iso-meta-key">درجة السرية:</span>
+                        <span class="iso-meta-val" style="color: #047857;">عام داخلي</span>
+                    </div>
+                </div>
+            </div>
+        </header>
 
         <!-- تبويبات التنقل السريعة بين تسجيل الدخول وقائمة المتواجدين -->
         <div class="tabs-nav">
