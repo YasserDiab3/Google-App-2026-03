@@ -3719,18 +3719,32 @@ function resetCheckInForm() {
         });
 
         // ════════════════════════════════════════════════════
-        // PWA: Service Worker Registration
+        // PWA: Service Worker Registration & Forced Cache Update
         // ════════════════════════════════════════════════════
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
+                navigator.serviceWorker.register('./service-worker.js?v=' + Date.now())
                     .then(reg => {
                         reg.update();
-                        console.log('[Gate PWA] SW registered:', reg.scope);
                     })
                     .catch(err => console.warn('[Gate PWA] SW failed:', err));
             });
         }
+
+        // 🛡️ ضمان عدم ظهور أي زر قديم للبوابة من أي كاش للمتصفح
+        (function enforceStandaloneVisitorUI() {
+            const purge = () => {
+                const legacyPortalLinks = document.querySelectorAll('a[href*="forms-hub"], #txtBackToHub, .back-to-hub-btn');
+                legacyPortalLinks.forEach(el => el.remove());
+            };
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', purge);
+            } else {
+                purge();
+            }
+            setTimeout(purge, 500);
+            setTimeout(purge, 1500);
+        })();
 
         // ════════════════════════════════════════════════════
         // PWA: Install Prompt

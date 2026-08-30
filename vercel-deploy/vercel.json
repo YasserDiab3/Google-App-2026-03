@@ -1,34 +1,54 @@
 {
+  "cleanUrls": true,
+  "trailingSlash": false,
   "outputDirectory": "dist",
   "functions": {
     "api/*.js": {
       "includeFiles": "api/lib/data/**"
     }
   },
+  "rewrites": [
+    { "source": "/forms", "destination": "/forms-hub.html" },
+    { "source": "/forms-hub", "destination": "/forms-hub.html" },
+    { "source": "/gate", "destination": "/gate-visitor-entry.html" },
+    { "source": "/visitors", "destination": "/gate-visitor-entry.html" },
+    { "source": "/gate-visitor-entry", "destination": "/gate-visitor-entry.html" },
+    { "source": "/observation", "destination": "/public-observation.html" },
+    { "source": "/near-miss", "destination": "/public-near-miss.html" },
+    { "source": "/fire-inspection", "destination": "/public-fire-inspection.html" },
+    { "source": "/daily-safety", "destination": "/public-daily-safety.html" }
+  ],
   "headers": [
     {
       "source": "/service-worker.js",
       "headers": [
         { "key": "Content-Type", "value": "application/javascript; charset=utf-8" },
         { "key": "Service-Worker-Allowed", "value": "/" },
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
       ]
     },
     {
       "source": "/manifest.json",
       "headers": [
         { "key": "Content-Type", "value": "application/manifest+json" },
-        { "key": "Cache-Control", "value": "public, max-age=86400, must-revalidate" }
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
       ]
     },
     {
-      "source": "/",
+      "source": "/manifest-visitor.json",
+      "headers": [
+        { "key": "Content-Type", "value": "application/manifest+json" },
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
+      ]
+    },
+    {
+      "source": "/(.*).html",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
       ]
     },
     {
-      "source": "/index.html",
+      "source": "/",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
       ]
