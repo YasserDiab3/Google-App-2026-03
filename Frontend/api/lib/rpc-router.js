@@ -1,11 +1,13 @@
 /**
  * RPC Router & Dispatcher - 100% Contract Parity with Google Apps Script doPost / ActionHandlers
+ * Includes Hybrid Dual-Write Background Mirroring to Google Sheets.
  */
 'use strict';
 
 const genericSheetOps = require('./handlers/generic-sheet-ops');
 const authHandlers = require('./handlers/auth-handlers');
 const moduleHandlers = require('./handlers/module-handlers');
+const { dispatchBackgroundMirror } = require('./services/mirror-sync');
 
 // Combine all handlers into a single unified registry
 const ActionRegistry = {
@@ -54,6 +56,12 @@ function handleRpcRequest(reqBody) {
 
     try {
         const result = handler(payload, postData, action, actorUserData, spreadsheetId);
+        
+        // Asynchronous non-blocking mirror sync to Google Sheets (Hybrid Mode)
+        if (result && result.success !== false && !reqBody._isHybridMirror) {
+            dispatchBackgroundMirror(action, payload, actorUserData, postData);
+        }
+
         return result || { success: true };
     } catch (err) {
         console.error(`[RPC ERROR] Exception in action "${action}":`, err);

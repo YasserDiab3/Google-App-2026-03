@@ -1,4 +1,4 @@
-﻿/* ========================================
+/* ========================================
    نظام السلامة المهنية - أمريكانا HSE
    app-utils.js - الدوال المساعدة والثوابت
    ======================================== */
@@ -4341,7 +4341,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1486',
+    appVersion: '1.0.1487',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -4460,8 +4460,8 @@ const AppState = {
     googleConfig: {
         appsScript: {
             enabled: true,
-            // ✅ v1.0.84 — تحديث إلى @135: إصلاح addLegalTraining ليعيد data.id لربط المعرف المؤقت
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec'
+            // ✅ v1.0.85 — ترقية المحرك إلى SQL السريع مع المزامنة الخلفية لشيت جوجل (Hybrid Dual-Write)
+            scriptUrl: 'https://www.safety-icapp.com/api/exec'
         },
         sheets: {
             // يُفعَّل تلقائياً عند ضبط spreadsheetId من الإعدادات المحفوظة؛ المعرف الرسمي يُفضَّل في Script Properties بالخادم
@@ -4536,31 +4536,12 @@ const AppState = {
                         const currentApps = AppState.googleConfig.appsScript || {};
                         const parsedApps = parsed.appsScript || {};
                         let parsedUrl = String(parsedApps.scriptUrl || '').trim();
-                        // ✅ ترقية تلقائية من نشرات قديمة إلى @124 (إصلاح خصم الأدوية لزيارة جديدة + دائرة اعتماد المخالفات)
-                        const OLD_DEPLOYMENT_URLS = [
-                            'AKfycbxkqiYDwVdSUhzi-DOGZO8bBJMORw78FzLhUzRYwSfGldDqvlXerdajhd7byDeuvsP0', // @92 / login-init legacy
-                            'AKfycbzmZKpLvrFm-zcaY91_a7JsW7O6sHzf7vO-sw1ujsa7FbSELMhCFFxF04_5vReLU9Xr', // @95
-                            'AKfycbzzUIVg7t0RNEqL9RtmKlOZd_3yU7VDsHlFLbnMZOjantyBy62vhBTK-xn0K3AWvyme', // @97
-                            'AKfycbznQux2RDY-UB56gAhrluEoXYfPt2s0CtAUQpQ8WHwna8w64cUez_QLhm4gRk8ez2Aw', // @98
-                            'AKfycbwLzUsMbK4abB7n8Ft1hOcMIHMQhSGbeInuqvUmjOAJdyCmFqQzJ-4Oczhkw2OVZIQh', // @109
-                            'AKfycbxnX6Is8GOk_zHQPKhyrAokL-QHOCLgE4kZHqaTpspsnP9huAwAPI833368mfatYsiV', // @112
-                            'AKfycbyJBW2DhTWtuNmN_IXs7jqkLChky6LQikPlUUvyXPhotC_S5hFE_3_I-_WOCOV9j1dt', // @114
-                            'AKfycbwjAwsW72gWeMpRpTVZqkMFh_QVKwp_-ff2tvLcze3XcmANcZPrcmmXEvvueYLm6h7Q', // @116
-                            'AKfycbyisizNKergIPDRKFa6IUHUL9x98Prcs16FvflommIo-PSr41gXHQv59I3QUasSEPA2', // @118
-                            'AKfycbwhWmcjchhLNbl6cbr_BzsjrFkZOCUFk8pgoSONvbvIXHpRnqFqnER4esHiOZYIWL7X', // @120
-                            'AKfycbyFmgpaD4d2y74A1T3uWzLXXFK7YJSPw5IA45uv2TpCUX3gkQJhcgjuVmZS6zPNWcMa', // @122 — broken addClinicVisit medication deduction
-                            'AKfycbzxF2wNoo_g0Psy2k9dOG7i4X1wuw1mWSWirdXBpRu61eMBhRFhX1-5DEmNs5Ldjdjv', // @134 — fixed in @135
-                            'AKfycbxaIlrBSSHeRR56X3ZEJiTm5iMw-c2Tb3H206WaZKywY0zo-1AgdqdkMkf5MF0yFf-T', // old URL (pre-@149)
-                            'AKfycbx88ue81OTEXapNCcfFcBUEoONTJnSypsm9zGT6upSHnIieBDskcyH-Tij9D7lxHP6Y', // @149/@150 (replaced)
-                            'AKfycbweqBqZUiavxb_-23pASfFK8HKbXAICEoAdPa5fWfc', // HEAD-only — لا تستخدم للإنتاج
-                        ];
-                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
-                        if (parsedUrl && OLD_DEPLOYMENT_URLS.some(old => parsedUrl.includes(old))) {
-                            parsedUrl = LATEST_DEPLOYMENT_URL;
+                        const PRIMARY_SQL_API = 'https://www.safety-icapp.com/api/exec';
+                        if (parsedUrl && (parsedUrl.includes('script.google.com') || parsedUrl.includes('AKfyc'))) {
+                            parsedUrl = PRIMARY_SQL_API;
                             try {
-                                const updatedConfig = { ...parsed, appsScript: { ...parsedApps, scriptUrl: LATEST_DEPLOYMENT_URL } };
+                                const updatedConfig = { ...parsed, appsScript: { ...parsedApps, scriptUrl: PRIMARY_SQL_API } };
                                 localStorage.setItem('hse_google_config', JSON.stringify(updatedConfig));
-                                // مسح التخزين المؤقت وإعادة تعيين الدارة لحل مشكلة عدم تطابق البيانات
                                 try {
                                     localStorage.removeItem('hse_sync_meta');
                                     localStorage.removeItem('hse_cache_timestamps');
@@ -4580,8 +4561,8 @@ const AppState = {
                         AppState.googleConfig.appsScript = {
                             ...currentApps,
                             ...parsedApps,
-                            scriptUrl: parsedUrl || String(currentApps.scriptUrl || '').trim(),
-                            enabled: parsedUrl ? true : !!(parsedApps.enabled ?? currentApps.enabled)
+                            scriptUrl: parsedUrl || String(currentApps.scriptUrl || PRIMARY_SQL_API).trim(),
+                            enabled: true
                         };
                     }
                     if (parsed.sheets && typeof parsed.sheets === 'object') {
