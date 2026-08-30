@@ -132,6 +132,29 @@ const authHandlers = {
         }));
 
         return { success: true, users: users, data: users };
+    },
+
+    'getUsersForApp': function(payload, postData, action, actorUserData) {
+        const db = getDatabase();
+        const users = db.readSheet('Users').map(u => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role,
+            department: u.department,
+            employeeCode: u.employeeCode,
+            active: u.active !== 'false' && u.active !== false,
+            photo: u.photo,
+            lastLogin: u.lastLogin,
+            isOnline: u.isOnline
+        }));
+        return { success: true, users: users, data: users };
+    },
+
+    'getUsersMeta': function(payload, postData, action, actorUserData) {
+        const db = getDatabase();
+        const users = db.readSheet('Users');
+        return { success: true, count: users.length, total: users.length };
     }
 };
 
