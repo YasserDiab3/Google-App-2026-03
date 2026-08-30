@@ -99,7 +99,19 @@ function initDatabase(overridePath = null) {
                 return this.readFromSheet(sheetName, filter);
             },
 
-            findRow(sheetName, filter) {
+            findRow(...args) {
+                let sheetName, filter;
+                if (args.length === 3) {
+                    sheetName = args[0];
+                    filter = { [args[1]]: args[2] };
+                } else if (args.length === 2) {
+                    sheetName = args[0];
+                    if (typeof args[1] === 'string') {
+                        filter = { id: args[1] };
+                    } else {
+                        filter = args[1];
+                    }
+                }
                 const rows = this.readFromSheet(sheetName, filter);
                 return rows.length > 0 ? rows[0] : null;
             },

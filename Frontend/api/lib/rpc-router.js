@@ -44,7 +44,59 @@ function handleRpcRequest(reqBody) {
     const actorUserData = reqBody.actorUserData || payload.actorUserData || null;
     const spreadsheetId = reqBody.spreadsheetId || payload.spreadsheetId || '';
 
-    const handler = ActionRegistry[action];
+    let handler = ActionRegistry[action];
+    
+    // Dynamic Table CRUD Resolver for all 144 sheets
+    if (!handler || typeof handler !== 'function') {
+        const { headersMap } = require('./db/headers-schema');
+        const { getDatabase } = require('./db/database');
+        const sheetKeys = Object.keys(headersMap || {});
+
+        // Check if action matches getAll<SheetName>, get<SheetName>s, add<SheetName>, save<SheetName>, update<SheetName>, delete<SheetName>
+        for (const sheetName of sheetKeys) {
+            const lowerSheet = sheetName.toLowerCase();
+            const lowerAction = action.toLowerCase();
+
+            if (lowerAction === `getall${lowerSheet}` || lowerAction === `get${lowerSheet}s` || lowerAction === `get${lowerSheet}`) {
+                handler = function() {
+                    const db = getDatabase();
+                    const records = db.readSheet(sheetName);
+                    return { success: true, data: records, count: records.length, sheetName: sheetName };
+                };
+                break;
+            } else if (lowerAction === `add${lowerSheet}` || lowerAction === `save${lowerSheet}` || lowerAction === `insert${lowerSheet}`) {
+                handler = function(p) {
+                    const db = getDatabase();
+                    const row = p?.data || p || {};
+                    if (!row.id) row.id = `${sheetName.substring(0, 3).toUpperCase()}_${Date.now()}`;
+                    row.createdAt = row.createdAt || new Date().toISOString();
+                    row.updatedAt = new Date().toISOString();
+                    db.insertRow(sheetName, row);
+                    return { success: true, message: `تم حفظ البيانات في ${sheetName} بنجاح`, data: row, id: row.id };
+                };
+                break;
+            } else if (lowerAction === `update${lowerSheet}`) {
+                handler = function(p) {
+                    const db = getDatabase();
+                    const id = p?.id || p?.recordId;
+                    const updateData = p?.updateData || p?.data || p || {};
+                    updateData.updatedAt = new Date().toISOString();
+                    db.updateRow(sheetName, 'id', id, updateData);
+                    return { success: true, message: `تم تحديث البيانات في ${sheetName} بنجاح`, id: id };
+                };
+                break;
+            } else if (lowerAction === `delete${lowerSheet}`) {
+                handler = function(p) {
+                    const db = getDatabase();
+                    const id = p?.id || p?.recordId;
+                    db.deleteRows(sheetName, 'id', id);
+                    return { success: true, message: `تم حذف السجل من ${sheetName} بنجاح`, id: id };
+                };
+                break;
+            }
+        }
+    }
+
     if (!handler || typeof handler !== 'function') {
         return {
             success: false,
