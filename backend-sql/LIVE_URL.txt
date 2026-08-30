@@ -1,0 +1,5 @@
+Frontend API Endpoint:
+https://entry-consoles-simon-medicare.trycloudflare.com/exec
+
+Health Check:
+https://entry-consoles-simon-medicare.trycloudflare.com/health
