@@ -2436,6 +2436,8 @@
                     <span id="livePtwCountLabel">تصريح نشط</span>
                 </div>
             </div>
+        </div>
+
         <!-- 📊 شريط المؤشرات الحية الميداني السريع (Live Field Safety KPIs Grid) -->
         <div class="hse-live-kpi-grid" id="hseLiveKpiGrid">
             <div class="kpi-micro-card kpi-safe-hours" id="kpiCardSafeHours" onclick="openHseSafeMilestoneModal()" title="ساعات العمل الآمنة المتواصلة بدون إصابات (انقر للتفاصيل)">
@@ -2592,7 +2594,7 @@
             </div>
 
             <!-- 5. لوحة تحليل الملاحظات والمتابعة الميدانية -->
-            <div class="form-card card-obs-analytics" data-form-key="obs-analytics" onclick="openObservationsAnalyticsModal()" data-keywords="تحليل احصائيات ملاحظات كروت kpi اسبوع مفتوح مغلق ابطال السلامة analytics safety observations" style="border-right-color: #6366f1;">
+            <div class="form-card card-obs-analytics" data-form-key="obs-analytics" onclick="openObservationsAnalyticsModal(event)" data-keywords="تحليل احصائيات ملاحظات كروت kpi اسبوع مفتوح مغلق ابطال السلامة analytics safety observations" style="border-right-color: #6366f1;">
                 <button type="button" class="card-pin-btn" onclick="togglePinForm('obs-analytics', event)" title="تثبيت في المفضلة"><i class="fas fa-star"></i></button>
                 <div class="form-card-left">
                     <div class="form-icon-wrap" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff;">
@@ -7414,7 +7416,8 @@
         }, 500);
     });
 
-    async function openObservationsAnalyticsModal() {
+    async function openObservationsAnalyticsModal(event) {
+        if (event && event.stopPropagation) event.stopPropagation();
         const modal = document.getElementById('obsAnalyticsModal');
         if (!modal) return;
         modal.style.display = 'flex';
