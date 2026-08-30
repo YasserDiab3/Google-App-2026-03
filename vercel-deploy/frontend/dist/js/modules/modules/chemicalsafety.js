@@ -1,4 +1,43 @@
-const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","Gel","Gas","Spray"],PURPOSE_OF_USE_OPTIONS=["Electrical panels cleaners","CIP","Water Treatment","Conveyors lubricants","Data Coding","Boilers additives","BW Recovery","BW additives","Cleaning Agent","Pesticide","Lubricants","Fuels","Lab chemicals","Microbiology Media","Cooling Gases","Ingredients","Stationary"],LOCAL_IMPORT_OPTIONS=["Local","Import"],GHS_PICTOGRAMS=[{key:"environment",labelAr:"\u062E\u0637\u0631 \u0639\u0644\u0649 \u0627\u0644\u0628\u064A\u0626\u0629",svg:`
+/**
+ * Chemical Management Module - مديول إدارة المواد الكيميائية
+ * Chemical Register with full CRUD, file uploads, NFPA Diamond, and exports
+ */
+
+// ===== Constants =====
+const PHYSICAL_SHAPES = [
+    'Powder', 'Flakes', 'Pellets', 'Liquid', 'Lubricant', 'Oil', 'Gel', 'Gas', 'Spray'
+];
+
+const PURPOSE_OF_USE_OPTIONS = [
+    'Electrical panels cleaners',
+    'CIP',
+    'Water Treatment',
+    'Conveyors lubricants',
+    'Data Coding',
+    'Boilers additives',
+    'BW Recovery',
+    'BW additives',
+    'Cleaning Agent',
+    'Pesticide',
+    'Lubricants',
+    'Fuels',
+    'Lab chemicals',
+    'Microbiology Media',
+    'Cooling Gases',
+    'Ingredients',
+    'Stationary'
+];
+
+const LOCAL_IMPORT_OPTIONS = ['Local', 'Import'];
+
+// ===== SDS / GHS Pictograms (inline SVG) =====
+// Note: we keep this minimal and focused on the pictograms shown in the provided template.
+const GHS_PICTOGRAMS = [
+    {
+        key: 'environment',
+        labelAr: 'خطر على البيئة',
+        // Simple SVG representation (diamond + tree/fish)
+        svg: `
             <svg viewBox="0 0 100 100" width="74" height="74" aria-hidden="true" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;">
                 <polygon points="50,3 97,50 50,97 3,50" fill="#FFFFFF" stroke="#FF0000" stroke-width="6" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
                 <!-- ground -->
@@ -10,7 +49,13 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                 <path d="M60 68 C66 66, 70 62, 73 58 C76 62, 80 66, 86 68 C80 70, 76 74, 73 78 C70 74, 66 70, 60 68 Z" fill="#000000" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
                 <circle cx="69" cy="66" r="1.8" fill="#FFFFFF" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
             </svg>
-        `.trim()},{key:"corrosion",labelAr:"\u0645\u0627\u062F\u0629 \u0622\u0643\u0644\u0629",svg:`
+        `.trim()
+    },
+    {
+        key: 'corrosion',
+        labelAr: 'مادة آكلة',
+        // Simple SVG representation (diamond + test tubes and corrosion lines)
+        svg: `
             <svg viewBox="0 0 100 100" width="74" height="74" aria-hidden="true" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;">
                 <polygon points="50,3 97,50 50,97 3,50" fill="#FFFFFF" stroke="#FF0000" stroke-width="6" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
                 <!-- test tube 1 -->
@@ -27,7 +72,13 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                 <line x1="56" y1="64" x2="74" y2="64" stroke="#000000" stroke-width="3" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
                 <line x1="58" y1="70" x2="82" y2="70" stroke="#000000" stroke-width="3" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
             </svg>
-        `.trim()},{key:"skull",labelAr:"\u0633\u0627\u0645 (\u0633\u0645\u0651\u064A\u0629 \u062D\u0627\u062F\u0629)",svg:`
+        `.trim()
+    },
+    {
+        key: 'skull',
+        labelAr: 'سام (سمّية حادة)',
+        // Simple SVG representation (diamond + skull)
+        svg: `
             <svg viewBox="0 0 100 100" width="74" height="74" aria-hidden="true" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;">
                 <polygon points="50,3 97,50 50,97 3,50" fill="#FFFFFF" stroke="#FF0000" stroke-width="6" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
                 <path d="M50 28 C38 28,30 36,30 48 C30 57,35 62,40 64 L40 72 L60 72 L60 64 C65 62,70 57,70 48 C70 36,62 28,50 28 Z" fill="#000000" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
@@ -38,20 +89,54 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                 <path d="M28 76 L72 56" stroke="#000000" stroke-width="6" stroke-linecap="round" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
                 <path d="M28 56 L72 76" stroke="#000000" stroke-width="6" stroke-linecap="round" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
             </svg>
-        `.trim()},{key:"flame",labelAr:"\u0642\u0627\u0628\u0644 \u0644\u0644\u0627\u0634\u062A\u0639\u0627\u0644",svg:`
+        `.trim()
+    },
+    {
+        key: 'flame',
+        labelAr: 'قابل للاشتعال',
+        // Simple SVG representation (diamond + flame)
+        svg: `
             <svg viewBox="0 0 100 100" width="74" height="74" aria-hidden="true" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;">
                 <polygon points="50,3 97,50 50,97 3,50" fill="#FFFFFF" stroke="#FF0000" stroke-width="6" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
                 <path d="M52 24 C58 34,52 38,60 46 C67 53,66 64,58 72 C52 78,42 78,36 72 C28 64,30 52,40 44 C45 40,44 34,48 30 C49 34,52 36,52 24 Z" fill="#000000" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
                 <path d="M48 54 C52 58,50 60,54 64 C56 66,56 70,52 72 C48 74,44 72,42 68 C40 64,42 60,46 58 C47 57,48 56,48 54 Z" fill="#FFFFFF" opacity="0.3" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
                 <line x1="30" y1="76" x2="70" y2="76" stroke="#000000" stroke-width="4" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;"/>
             </svg>
-        `.trim()}],ChemicalSafety={currentEditId:null,filters:{search:"",department:"",physicalShape:"",classification:""},msdsFiles:{arabic:null,english:null},_eventListenersAbortController:null,_setupTimeoutId:null,_chemicalDataLoadPromise:null,_chemicalBackendFetchOk:!1,_injectChemicalIdentityStyles(){try{if(document.getElementById("chemical-professional-identity-styles"))return;const t=document.createElement("style");t.id="chemical-professional-identity-styles",t.textContent=`
+        `.trim()
+    }
+];
+
+// ===== Chemical Safety Module =====
+const ChemicalSafety = {
+    currentEditId: null,
+    filters: {
+        search: '',
+        department: '',
+        physicalShape: '',
+        classification: ''
+    },
+    msdsFiles: {
+        arabic: null,
+        english: null
+    },
+    // مراجع لتنظيف الموارد
+    _eventListenersAbortController: null,
+    _setupTimeoutId: null,
+    _chemicalDataLoadPromise: null,
+    _chemicalBackendFetchOk: false,
+
+    _injectChemicalIdentityStyles() {
+        try {
+            if (document.getElementById('chemical-professional-identity-styles')) return;
+            const style = document.createElement('style');
+            style.id = 'chemical-professional-identity-styles';
+            style.textContent = `
                 #chemical-safety-section .chem-id-hero {
                     --c-navy: #0b2a55;
                     --c-blue: #1e40af;
                     --c-blue2: #2563eb;
                 }
-                /* \u2705 \u0627\u0644\u0647\u0648\u064A\u0629 \u2014 \u062A\u0631\u0648\u064A\u0633\u0629 \u0627\u0644\u0645\u062F\u064A\u0648\u0644 (Hero) */
+                /* ✅ الهوية — ترويسة المديول (Hero) */
                 #chemical-safety-section .chem-id-hero {
                     position: relative; overflow: hidden;
                     display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
@@ -101,7 +186,7 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     #chemical-safety-section .chem-id-hero__actions { width: 100%; }
                     #chemical-safety-section .chem-id-hero__actions .btn { flex: 1; justify-content: center; }
                 }
-                /* \u2705 \u0627\u0644\u0647\u0648\u064A\u0629 \u2014 \u0623\u0633\u0637\u062D \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0648\u0627\u0644\u062C\u062F\u0627\u0648\u0644 */
+                /* ✅ الهوية — أسطح المحتوى والجداول */
                 #chemical-safety-section #chemical-content { animation: chemSurfaceIn .24s ease-out; }
                 @keyframes chemSurfaceIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
                 #chemical-safety-section #chemical-content .content-card {
@@ -120,7 +205,7 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                 }
                 #chemical-safety-section .data-table tbody tr:hover td { background: #f2f7ff !important; }
                 #chemical-safety-section .data-table td { vertical-align: middle; }
-                /* \u2705 \u0627\u0644\u0647\u0648\u064A\u0629 \u2014 \u0643\u0631\u0648\u062A \u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A */
+                /* ✅ الهوية — كروت الإحصائيات */
                 #chemical-safety-section .chem-stat-card {
                     --chem-blue: #2563eb;
                     border: 1px solid #dce7f5; border-radius: 16px;
@@ -141,14 +226,14 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     color: #fff; font-size: 19px; border-radius: 14px;
                     box-shadow: 0 8px 18px rgba(15,47,90,.22);
                 }
-                /* \u2705 \u0627\u0644\u0647\u0648\u064A\u0629 \u2014 \u0644\u0648\u062D\u0629 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 */
+                /* ✅ الهوية — لوحة الفلاتر */
                 #chemical-safety-section .bg-gray-50.p-4.rounded-lg.mb-6 {
                     background: #f8faff !important; border: 1px solid #dce7f5; border-radius: 14px;
                 }
                 #chemical-safety-section .form-input:focus {
                     border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37,99,235,.14) !important; outline: none;
                 }
-                /* \u2705 \u0627\u0644\u0647\u0648\u064A\u0629 \u2014 \u0645\u0648\u062F\u0627\u0644 \u0627\u0644\u0646\u0645\u0648\u0630\u062C */
+                /* ✅ الهوية — مودال النموذج */
                 .chem-form-modal { border-radius: 18px !important; box-shadow: 0 26px 70px rgba(11,42,85,.35) !important; }
                 .chem-form-modal__header {
                     position: relative; display: flex; align-items: center; justify-content: space-between;
@@ -192,7 +277,7 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                 .chem-form-modal #save-chemical-btn { background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #7c2d12; }
                 .chem-form-modal #next-tab-btn { background: linear-gradient(135deg, #1e40af, #2563eb); color: #fff; }
                 .chem-form-modal #prev-tab-btn { background: #fff8e6; color: #92400e; border: 1px solid #fcd34d; }
-                /* \u2705 \u0627\u0644\u0647\u0648\u064A\u0629 \u2014 \u062A\u0648\u062D\u064A\u062F \u0623\u0644\u0648\u0627\u0646 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0628\u0646\u0641\u0633\u062C\u064A\u0629/\u0627\u0644\u0646\u064A\u0644\u064A \u0641\u064A \u0627\u0644\u0646\u0645\u0648\u0630\u062C */
+                /* ✅ الهوية — توحيد ألوان الحقول البنفسجية/النيلي في النموذج */
                 .chem-form-modal div[class*="purple"] { background: linear-gradient(135deg, #eff6ff, #dbeafe) !important; border-color: #93c5fd !important; }
                 .chem-form-modal .text-purple-800 { color: #1e40af !important; }
                 .chem-form-modal .text-purple-600 { color: #2563eb !important; }
@@ -202,7 +287,7 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                 .chem-form-modal .border-purple-200, .chem-form-modal .border-indigo-200, .chem-form-modal .border-blue-300, .chem-form-modal .border-blue-200 { border-color: #93c5fd !important; }
                 .chem-form-modal .tab-content { animation: chemFormTabIn .22s ease-out; }
                 @keyframes chemFormTabIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-                /* \u2705 \u0627\u0644\u0647\u0648\u064A\u0629 \u2014 \u0645\u0648\u062F\u0627\u0644 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644 */
+                /* ✅ الهوية — مودال التفاصيل */
                 .chem-detail-modal { border-radius: 18px !important; box-shadow: 0 26px 70px -12px rgba(11,42,85,.4) !important; }
                 .chem-detail-modal__header .modal-close { color: #fff; background: rgba(255,255,255,.14); border-radius: 10px; width: 34px; height: 34px; display: grid; place-items: center; transition: background .2s; }
                 .chem-detail-modal__header .modal-close:hover { background: rgba(255,255,255,.26); }
@@ -213,34 +298,70 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                 }
                 #chemical-safety-section .content-card[class*="purple"] .bg-purple-500 { background: #2563eb !important; }
                 #chemical-safety-section .content-card[class*="purple"] .text-purple-600 { color: #2563eb !important; }
-            `,document.head.appendChild(t)}catch(t){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062D\u0642\u0646 \u0647\u0648\u064A\u0629 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629:",t)}},async load(){this._injectChemicalIdentityStyles(),this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0);const t=document.getElementById("chemical-safety-section");if(t){if(typeof AppState>"u"){t.innerHTML=`
+            `;
+            document.head.appendChild(style);
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر حقن هوية المواد الكيميائية:', e);
+        }
+    },
+
+    /**
+     * تحميل الموديول
+     */
+    async load() {
+        this._injectChemicalIdentityStyles();
+        // Add language change listener
+        if (!this._languageChangeListenerAdded) {
+            document.addEventListener('language-changed', () => {
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
+                this.load();
+            });
+            this._languageChangeListenerAdded = true;
+        }
+
+        const section = document.getElementById('chemical-safety-section');
+        if (!section) return;
+
+        if (typeof AppState === 'undefined') {
+            // لا تترك الواجهة فارغة (مهم للاختبار وتجربة المستخدم)
+            section.innerHTML = `
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                            <p class="text-gray-500 mb-2">\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629</p>
-                            <p class="text-sm text-gray-400">AppState \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 \u062D\u0627\u0644\u064A\u0627\u064B. \u062C\u0631\u0651\u0628 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629.</p>
+                            <p class="text-gray-500 mb-2">تعذر تحميل السلامة الكيميائية</p>
+                            <p class="text-sm text-gray-400">AppState غير متوفر حالياً. جرّب تحديث الصفحة.</p>
                             <button onclick="location.reload()" class="btn-primary mt-4">
                                 <i class="fas fa-redo ml-2"></i>
-                                \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629
+                                تحديث الصفحة
                             </button>
                         </div>
                     </div>
                 </div>
-            `,Utils?.safeError?.("AppState \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631!");return}AppState.appData||(AppState.appData={}),AppState.appData.chemicalRegister||(AppState.appData.chemicalRegister=[]);try{t.innerHTML=`
+            `;
+            Utils?.safeError?.('AppState غير متوفر!');
+            return;
+        }
+
+        if (!AppState.appData) AppState.appData = {};
+        if (!AppState.appData.chemicalRegister) AppState.appData.chemicalRegister = [];
+
+        try {
+            // Skeleton فوري قبل أي عمليات قد تكون بطيئة
+            section.innerHTML = `
                 <div class="chem-id-hero">
                     <div class="chem-id-hero__copy">
                         <div class="chem-id-hero__icon"><i class="fas fa-flask"></i></div>
                         <div>
-                            <span class="chem-id-hero__eyebrow">\u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 \u2014 HSE</span>
-                            <h1>\u0633\u062C\u0644 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629</h1>
-                            <p>\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
+                            <span class="chem-id-hero__eyebrow">السلامة الكيميائية — HSE</span>
+                            <h1>سجل المواد الكيميائية</h1>
+                            <p>جاري التحميل...</p>
                         </div>
                     </div>
                     <div class="chem-id-hero__actions">
                         <button class="btn-primary" disabled>
                             <i class="fas fa-spinner fa-spin ml-2"></i>
-                            \u062A\u062D\u0645\u064A\u0644
+                            تحميل
                         </button>
                     </div>
                 </div>
@@ -253,63 +374,95 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                                         <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                     </div>
                                 </div>
-                                <p class="text-gray-500">\u062C\u0627\u0631\u064A \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0648\u0627\u062C\u0647\u0629...</p>
+                                <p class="text-gray-500">جاري تجهيز الواجهة...</p>
                             </div>
                         </div>
                     </div>
                 </div>
-            `;let e="";try{const a=this.renderList();e=await Utils.promiseWithTimeout(a,1e4,()=>new Error("Timeout: renderList took too long"))}catch(a){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629:",a),e=`
+            `;
+
+            // محاولة تحميل القائمة مع معالجة الأخطاء
+            let listContent = '';
+            try {
+                const listPromise = this.renderList();
+                listContent = await Utils.promiseWithTimeout(
+                    listPromise,
+                    10000,
+                    () => new Error('Timeout: renderList took too long')
+                );
+            } catch (error) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ خطأ في تحميل قائمة المواد الكيميائية:', error);
+                } else {
+                    console.warn('⚠️ خطأ في تحميل قائمة المواد الكيميائية:', error);
+                }
+                listContent = `
                     <div class="content-card">
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
+                                <p class="text-gray-500 mb-4">حدث خطأ في تحميل البيانات</p>
                                 <button onclick="ChemicalSafety.load()" class="btn-primary">
                                     <i class="fas fa-redo ml-2"></i>
-                                    \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
+                                    إعادة المحاولة
                                 </button>
                             </div>
                         </div>
                     </div>
-                `}t.innerHTML=`
+                `;
+            }
+
+            section.innerHTML = `
                 <div class="chem-id-hero">
                     <div class="chem-id-hero__copy">
                         <div class="chem-id-hero__icon"><i class="fas fa-flask"></i></div>
                         <div>
-                            <span class="chem-id-hero__eyebrow">\u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 \u2014 HSE</span>
-                            <h1>\u0633\u062C\u0644 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629</h1>
-                            <p>\u0625\u062F\u0627\u0631\u0629 \u0633\u062C\u0644 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 \u0648\u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u062E\u0627\u0645</p>
+                            <span class="chem-id-hero__eyebrow">السلامة الكيميائية — HSE</span>
+                            <h1>سجل المواد الكيميائية</h1>
+                            <p>إدارة سجل المواد الكيميائية والمواد الخام</p>
                         </div>
                     </div>
                     <div class="chem-id-hero__meta">
-                        <span><i class="fas fa-list-check"></i> \u0627\u0644\u0633\u062C\u0644 \u0627\u0644\u0643\u0627\u0645\u0644</span>
-                        <span><i class="fas fa-file-pdf"></i> MSDS \u0645\u0648\u062B\u0642</span>
-                        <span><i class="fas fa-database"></i> \u062A\u062D\u062F\u064A\u062B \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645</span>
+                        <span><i class="fas fa-list-check"></i> السجل الكامل</span>
+                        <span><i class="fas fa-file-pdf"></i> MSDS موثق</span>
+                        <span><i class="fas fa-database"></i> تحديث من الخادم</span>
                     </div>
                     <div class="chem-id-hero__actions">
                         <button id="add-chemical-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
-                            \u0625\u0636\u0627\u0641\u0629 \u0645\u0627\u062F\u0629 \u062C\u062F\u064A\u062F\u0629
+                            إضافة مادة جديدة
                         </button>
                     </div>
                 </div>
                 <div id="chemical-content" class="mt-6">
-                    ${e}
+                    ${listContent}
                 </div>
-            `,this.setupEventListeners();try{await this.loadChemicalDataAsync()}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629:",a),this.loadChemicalList()}}catch(e){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629:",e),t.innerHTML=`
+            `;
+
+            this.setupEventListeners();
+            
+            try {
+                await this.loadChemicalDataAsync();
+            } catch (error) {
+                Utils.safeWarn('⚠️ تعذر تحميل بيانات المواد الكيميائية:', error);
+                this.loadChemicalList();
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في تحميل مديول المواد الكيميائية:', error);
+            section.innerHTML = `
                 <div class="chem-id-hero">
                     <div class="chem-id-hero__copy">
                         <div class="chem-id-hero__icon"><i class="fas fa-flask"></i></div>
                         <div>
-                            <span class="chem-id-hero__eyebrow">\u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 \u2014 HSE</span>
-                            <h1>\u0633\u062C\u0644 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629</h1>
-                            <p>\u062A\u0639\u0630\u0631 \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0648\u0627\u062C\u0647\u0629</p>
+                            <span class="chem-id-hero__eyebrow">السلامة الكيميائية — HSE</span>
+                            <h1>سجل المواد الكيميائية</h1>
+                            <p>تعذر تجهيز الواجهة</p>
                         </div>
                     </div>
                     <div class="chem-id-hero__actions">
                         <button onclick="ChemicalSafety.load()" class="btn-secondary">
                             <i class="fas fa-redo ml-2"></i>
-                            \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
+                            إعادة المحاولة
                         </button>
                     </div>
                 </div>
@@ -318,24 +471,144 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-2">\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
-                                <p class="text-sm text-gray-400 mb-4">${e&&e.message?Utils.escapeHTML(e.message):"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"}</p>
+                                <p class="text-gray-500 mb-2">حدث خطأ أثناء تحميل البيانات</p>
+                                <p class="text-sm text-gray-400 mb-4">${error && error.message ? Utils.escapeHTML(error.message) : 'خطأ غير معروف'}</p>
                                 <button onclick="ChemicalSafety.load()" class="btn-primary">
-                                    <i class="fas fa-redo ml-2"></i>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
+                                    <i class="fas fa-redo ml-2"></i>إعادة المحاولة
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
-            `}}},async loadChemicalDataAsync(){return this._chemicalDataLoadPromise?this._chemicalDataLoadPromise:(this._chemicalDataLoadPromise=(async()=>{if(!AppState.googleConfig?.appsScript?.enabled||!AppState.googleConfig?.appsScript?.scriptUrl){this._chemicalBackendFetchOk=!0,this.loadChemicalList();return}if(typeof GoogleIntegration>"u"||typeof GoogleIntegration.sendRequest!="function"){this._chemicalBackendFetchOk=!0,this.loadChemicalList();return}try{const t=await GoogleIntegration.sendRequest({action:"readFromSheet",data:{sheetName:"Chemical_Register",spreadsheetId:AppState.googleConfig?.sheets?.spreadsheetId}}).catch(r=>(Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0633\u062C\u0644:",r),{success:!1,data:[]}));let e=!1;t&&t.success&&Array.isArray(t.data)?(AppState.appData.chemicalRegister=t.data,e=!0,Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 ${t.data.length} \u0633\u062C\u0644 \u0645\u0646 Google Sheets`)):AppState.appData.chemicalRegister||(AppState.appData.chemicalRegister=[]);const a=document.getElementById("chemical-stats-container");a&&(a.innerHTML=this.renderStatisticsCards()),this.loadChemicalList(),e&&typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save();try{localStorage.setItem("chemical_safety_last_sync",String(Date.now()))}catch{}}catch(t){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",t);const e=document.getElementById("chemical-stats-container");e&&(e.innerHTML=this.renderStatisticsCards()),this.loadChemicalList()}this._chemicalBackendFetchOk=!0})().finally(()=>{this._chemicalDataLoadPromise=null}),this._chemicalDataLoadPromise)},getStatistics(){const t=AppState.appData.chemicalRegister||[],e=t.length,a=t.filter(p=>{const m=(p.hazardClass||"").toLowerCase();return m.includes("hazard")||m.includes("\u062E\u0637")||m.includes("danger")}).length,r=e-a,s={};t.forEach(p=>{const m=p.physicalShape||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";s[m]=(s[m]||0)+1});const n={};t.forEach(p=>{const m=p.department||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";n[m]=(n[m]||0)+1});const i=t.filter(p=>p.msdsArabic||p.msdsEnglish).length,b=e-i;return{total:e,hazardous:a,safe:r,shapeDistribution:s,deptDistribution:n,withMSDS:i,withoutMSDS:b,hazardousPercentage:e>0?Math.round(a/e*100):0}},renderStatisticsCards(){const t=this.getStatistics();return`
+            `;
+        }
+    },
+
+    /**
+     * تحميل البيانات من Google Sheets
+     */
+    async loadChemicalDataAsync() {
+        if (this._chemicalDataLoadPromise) {
+            return this._chemicalDataLoadPromise;
+        }
+        this._chemicalDataLoadPromise = (async () => {
+            if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
+                this._chemicalBackendFetchOk = true;
+                this.loadChemicalList();
+                return;
+            }
+            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
+                this._chemicalBackendFetchOk = true;
+                this.loadChemicalList();
+                return;
+            }
+            try {
+                const result = await GoogleIntegration.sendRequest({
+                    action: 'readFromSheet',
+                    data: {
+                        sheetName: 'Chemical_Register',
+                        spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
+                    }
+                }).catch(error => {
+                    Utils.safeWarn('⚠️ تعذر تحميل بيانات السجل:', error);
+                    return { success: false, data: [] };
+                });
+
+                let dataUpdated = false;
+                if (result && result.success && Array.isArray(result.data)) {
+                    AppState.appData.chemicalRegister = result.data;
+                    dataUpdated = true;
+                    Utils.safeLog(`✅ تم تحميل ${result.data.length} سجل من Google Sheets`);
+                } else {
+                    if (!AppState.appData.chemicalRegister) {
+                        AppState.appData.chemicalRegister = [];
+                    }
+                }
+
+                const statsContainer = document.getElementById('chemical-stats-container');
+                if (statsContainer) {
+                    statsContainer.innerHTML = this.renderStatisticsCards();
+                }
+                this.loadChemicalList();
+
+                if (dataUpdated && typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                }
+                try {
+                    localStorage.setItem('chemical_safety_last_sync', String(Date.now()));
+                } catch (e) {}
+            } catch (error) {
+                Utils.safeError('❌ خطأ في تحميل البيانات:', error);
+                const statsContainer = document.getElementById('chemical-stats-container');
+                if (statsContainer) {
+                    statsContainer.innerHTML = this.renderStatisticsCards();
+                }
+                this.loadChemicalList();
+            }
+            this._chemicalBackendFetchOk = true;
+        })().finally(() => {
+            this._chemicalDataLoadPromise = null;
+        });
+        return this._chemicalDataLoadPromise;
+    },
+
+    /**
+     * حساب الإحصائيات
+     */
+    getStatistics() {
+        const chemicals = AppState.appData.chemicalRegister || [];
+        const total = chemicals.length;
+        const hazardous = chemicals.filter(c => {
+            const hc = (c.hazardClass || '').toLowerCase();
+            return hc.includes('hazard') || hc.includes('خط') || hc.includes('danger');
+        }).length;
+        const safe = total - hazardous;
+        
+        // توزيع حسب الشكل الفيزيائي
+        const shapeDistribution = {};
+        chemicals.forEach(c => {
+            const shape = c.physicalShape || 'غير محدد';
+            shapeDistribution[shape] = (shapeDistribution[shape] || 0) + 1;
+        });
+        
+        // توزيع حسب القسم
+        const deptDistribution = {};
+        chemicals.forEach(c => {
+            const dept = c.department || 'غير محدد';
+            deptDistribution[dept] = (deptDistribution[dept] || 0) + 1;
+        });
+        
+        // المواد التي لديها MSDS
+        const withMSDS = chemicals.filter(c => c.msdsArabic || c.msdsEnglish).length;
+        const withoutMSDS = total - withMSDS;
+        
+        return {
+            total,
+            hazardous,
+            safe,
+            shapeDistribution,
+            deptDistribution,
+            withMSDS,
+            withoutMSDS,
+            hazardousPercentage: total > 0 ? Math.round((hazardous / total) * 100) : 0
+        };
+    },
+
+    /**
+     * عرض كروت الإحصائيات
+     */
+    renderStatisticsCards() {
+        const stats = this.getStatistics();
+        
+        return `
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- \u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0648\u0627\u062F -->
+                <!-- إجمالي المواد -->
                 <div class="content-card chem-stat-card">
                     <div class="chem-stat-card__body">
                         <div>
-                            <p class="chem-stat-card__label"><i class="fas fa-flask ml-1"></i>\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0648\u0627\u062F</p>
-                            <p class="chem-stat-card__value" style="color:var(--chem-blue,#1d4ed8);">${t.total}</p>
-                            <p class="chem-stat-card__sub">\u0645\u0627\u062F\u0629 \u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 \u0645\u0633\u062C\u0644\u0629</p>
+                            <p class="chem-stat-card__label"><i class="fas fa-flask ml-1"></i>إجمالي المواد</p>
+                            <p class="chem-stat-card__value" style="color:var(--chem-blue,#1d4ed8);">${stats.total}</p>
+                            <p class="chem-stat-card__sub">مادة كيميائية مسجلة</p>
                         </div>
                         <div class="chem-stat-card__icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">
                             <i class="fas fa-flask"></i>
@@ -343,13 +616,13 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     </div>
                 </div>
                 
-                <!-- \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u062E\u0637\u0631\u0629 -->
+                <!-- المواد الخطرة -->
                 <div class="content-card chem-stat-card">
                     <div class="chem-stat-card__body">
                         <div>
-                            <p class="chem-stat-card__label"><i class="fas fa-exclamation-triangle ml-1"></i>\u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u062E\u0637\u0631\u0629</p>
-                            <p class="chem-stat-card__value" style="color:#dc2626;">${t.hazardous}</p>
-                            <p class="chem-stat-card__sub">${t.hazardousPercentage}% \u0645\u0646 \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</p>
+                            <p class="chem-stat-card__label"><i class="fas fa-exclamation-triangle ml-1"></i>المواد الخطرة</p>
+                            <p class="chem-stat-card__value" style="color:#dc2626;">${stats.hazardous}</p>
+                            <p class="chem-stat-card__sub">${stats.hazardousPercentage}% من الإجمالي</p>
                         </div>
                         <div class="chem-stat-card__icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c);">
                             <i class="fas fa-exclamation-triangle"></i>
@@ -357,13 +630,13 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     </div>
                 </div>
                 
-                <!-- \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0622\u0645\u0646\u0629 -->
+                <!-- المواد الآمنة -->
                 <div class="content-card chem-stat-card">
                     <div class="chem-stat-card__body">
                         <div>
-                            <p class="chem-stat-card__label"><i class="fas fa-shield-alt ml-1"></i>\u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0622\u0645\u0646\u0629</p>
-                            <p class="chem-stat-card__value" style="color:#16a34a;">${t.safe}</p>
-                            <p class="chem-stat-card__sub">\u0645\u0648\u0627\u062F \u0622\u0645\u0646\u0629 \u0644\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645</p>
+                            <p class="chem-stat-card__label"><i class="fas fa-shield-alt ml-1"></i>المواد الآمنة</p>
+                            <p class="chem-stat-card__value" style="color:#16a34a;">${stats.safe}</p>
+                            <p class="chem-stat-card__sub">مواد آمنة للاستخدام</p>
                         </div>
                         <div class="chem-stat-card__icon" style="background:linear-gradient(135deg,#22c55e,#15803d);">
                             <i class="fas fa-shield-alt"></i>
@@ -371,13 +644,13 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     </div>
                 </div>
                 
-                <!-- \u0627\u0644\u0645\u0648\u0627\u062F \u0645\u0639 MSDS -->
+                <!-- المواد مع MSDS -->
                 <div class="content-card chem-stat-card">
                     <div class="chem-stat-card__body">
                         <div>
-                            <p class="chem-stat-card__label"><i class="fas fa-file-pdf ml-1"></i>\u0645\u0648\u0627\u062F \u0645\u0639 MSDS</p>
-                            <p class="chem-stat-card__value" style="color:var(--chem-blue,#2563eb);">${t.withMSDS}</p>
-                            <p class="chem-stat-card__sub">${t.withoutMSDS} \u0628\u062F\u0648\u0646 MSDS</p>
+                            <p class="chem-stat-card__label"><i class="fas fa-file-pdf ml-1"></i>مواد مع MSDS</p>
+                            <p class="chem-stat-card__value" style="color:var(--chem-blue,#2563eb);">${stats.withMSDS}</p>
+                            <p class="chem-stat-card__sub">${stats.withoutMSDS} بدون MSDS</p>
                         </div>
                         <div class="chem-stat-card__icon" style="background:linear-gradient(135deg,#2563eb,#1e40af);">
                             <i class="fas fa-file-pdf"></i>
@@ -385,8 +658,15 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     </div>
                 </div>
             </div>
-        `},async renderList(){return`
-            <!-- \u0643\u0631\u0648\u062A \u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A -->
+        `;
+    },
+
+    /**
+     * عرض القائمة
+     */
+    async renderList() {
+        return `
+            <!-- كروت الإحصائيات -->
             <div id="chemical-stats-container" class="mb-6">
                 ${this.renderStatisticsCards()}
             </div>
@@ -396,179 +676,334 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     <div class="flex items-center justify-between flex-wrap gap-4">
                         <h2 class="card-title">
                             <i class="fas fa-list ml-2"></i>
-                            \u0633\u062C\u0644 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629
+                            سجل المواد الكيميائية
                         </h2>
                         <div class="flex items-center gap-2">
                             <button id="export-pdf-btn" class="btn-secondary">
-                                <i class="fas fa-file-pdf ml-2"></i>\u062A\u0635\u062F\u064A\u0631 PDF
+                                <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                             </button>
                             <button id="export-excel-btn" class="btn-success">
-                                <i class="fas fa-file-excel ml-2"></i>\u062A\u0635\u062F\u064A\u0631 Excel
+                                <i class="fas fa-file-excel ml-2"></i>تصدير Excel
                             </button>
                         </div>
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- \u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u0628\u062D\u062B \u0627\u0644\u0645\u062D\u0633\u0646\u0629 -->
+                    <!-- فلاتر البحث المحسنة -->
                     <div class="bg-gray-50 p-4 rounded-lg mb-6">
                         <div class="flex items-center gap-2 mb-4">
                             <i class="fas fa-filter text-blue-600"></i>
-                            <h3 class="text-sm font-semibold text-gray-700">\u0641\u0644\u062A\u0631\u0629 \u0627\u0644\u0628\u062D\u062B</h3>
+                            <h3 class="text-sm font-semibold text-gray-700">فلترة البحث</h3>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-search ml-1 text-gray-400"></i>\u0628\u062D\u062B \u0639\u0627\u0645
+                                    <i class="fas fa-search ml-1 text-gray-400"></i>بحث عام
                                 </label>
                                 <input type="text" id="search-filter" class="form-input" 
-                                    placeholder="\u0628\u062D\u062B \u0628\u0627\u0644\u0627\u0633\u0645\u060C \u0627\u0644\u0643\u0648\u062F..." value="${Utils.escapeHTML(this.filters.search)}">
+                                    placeholder="بحث بالاسم، الكود..." value="${Utils.escapeHTML(this.filters.search)}">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-building ml-1 text-gray-400"></i>\u0627\u0644\u0642\u0633\u0645
+                                    <i class="fas fa-building ml-1 text-gray-400"></i>القسم
                                 </label>
                                 <input type="text" id="department-filter" class="form-input" 
-                                    placeholder="\u0627\u0644\u0642\u0633\u0645" value="${Utils.escapeHTML(this.filters.department)}">
+                                    placeholder="القسم" value="${Utils.escapeHTML(this.filters.department)}">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-shapes ml-1 text-gray-400"></i>\u0627\u0644\u0634\u0643\u0644 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0626\u064A
+                                    <i class="fas fa-shapes ml-1 text-gray-400"></i>الشكل الفيزيائي
                                 </label>
                                 <select id="physical-shape-filter" class="form-input">
-                                    <option value="">\u0627\u0644\u0643\u0644</option>
-                                    ${PHYSICAL_SHAPES.map(t=>`
-                                        <option value="${t}" ${this.filters.physicalShape===t?"selected":""}>
-                                            ${t}
+                                    <option value="">الكل</option>
+                                    ${PHYSICAL_SHAPES.map(shape => `
+                                        <option value="${shape}" ${this.filters.physicalShape === shape ? 'selected' : ''}>
+                                            ${shape}
                                         </option>
-                                    `).join("")}
+                                    `).join('')}
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-tags ml-1 text-gray-400"></i>\u0627\u0644\u062A\u0635\u0646\u064A\u0641
+                                    <i class="fas fa-tags ml-1 text-gray-400"></i>التصنيف
                                 </label>
                                 <input type="text" id="classification-filter" class="form-input" 
-                                    placeholder="\u0627\u0644\u062A\u0635\u0646\u064A\u0641" value="${Utils.escapeHTML(this.filters.classification)}">
+                                    placeholder="التصنيف" value="${Utils.escapeHTML(this.filters.classification)}">
                             </div>
                         </div>
                         <div class="flex justify-end mt-4">
                             <button id="reset-filters-btn" class="btn-secondary btn-sm">
-                                <i class="fas fa-undo-alt ml-2"></i>\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0641\u0644\u0627\u062A\u0631
+                                <i class="fas fa-undo-alt ml-2"></i>إعادة تعيين الفلاتر
                             </button>
                         </div>
                     </div>
                     <div id="chemical-table-container">
                         <div class="empty-state">
-                            <p class="text-gray-500">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
+                            <p class="text-gray-500">جاري التحميل...</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `},async loadChemicalList(){const t=document.getElementById("chemical-table-container");if(!t)return;const e=AppState.appData.chemicalRegister||[],a=this.getFilteredChemicals(e),r=document.getElementById("chemical-stats-container");if(r&&(r.innerHTML=this.renderStatisticsCards()),a.length===0){t.innerHTML=`
+        `;
+    },
+
+    /**
+     * تحميل وعرض قائمة المواد
+     */
+    async loadChemicalList() {
+        const container = document.getElementById('chemical-table-container');
+        if (!container) return;
+
+        const chemicals = AppState.appData.chemicalRegister || [];
+        const filtered = this.getFilteredChemicals(chemicals);
+
+        // تحديث الإحصائيات
+        const statsContainer = document.getElementById('chemical-stats-container');
+        if (statsContainer) {
+            statsContainer.innerHTML = this.renderStatisticsCards();
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
                 <div class="empty-state py-12">
                     <i class="fas fa-flask text-6xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500 text-lg mb-2">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0648\u0627\u062F \u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 \u0645\u0633\u062C\u0644\u0629</p>
-                    <p class="text-gray-400 text-sm">\u0627\u0628\u062F\u0623 \u0628\u0625\u0636\u0627\u0641\u0629 \u0645\u0627\u062F\u0629 \u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 \u062C\u062F\u064A\u062F\u0629</p>
+                    <p class="text-gray-500 text-lg mb-2">لا توجد مواد كيميائية مسجلة</p>
+                    <p class="text-gray-400 text-sm">ابدأ بإضافة مادة كيميائية جديدة</p>
                     <button onclick="ChemicalSafety.showForm()" class="btn-primary mt-4">
-                        <i class="fas fa-plus ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0645\u0627\u062F\u0629 \u062C\u062F\u064A\u062F\u0629
+                        <i class="fas fa-plus ml-2"></i>إضافة مادة جديدة
                     </button>
                 </div>
-            `;return}t.innerHTML=`
+            `;
+            return;
+        }
+
+        container.innerHTML = `
             <div class="overflow-x-auto rounded-lg border border-gray-200">
                 <table class="data-table">
                     <thead class="bg-gradient-to-r from-blue-600 to-blue-700">
                         <tr>
-                            <th class="text-white">\u0645</th>
-                            <th class="text-white">\u0627\u0633\u0645 \u0627\u0644\u0645\u0627\u062F\u0629</th>
-                            <th class="text-white">\u0627\u0644\u0634\u0643\u0644 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0626\u064A</th>
-                            <th class="text-white">\u0627\u0644\u063A\u0631\u0636 \u0645\u0646 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645</th>
-                            <th class="text-white">\u0627\u0644\u0642\u0633\u0645</th>
-                            <th class="text-white">\u0627\u0644\u062A\u0635\u0646\u064A\u0641</th>
-                            <th class="text-white">\u0627\u0644\u0645\u0648\u0642\u0639/\u0627\u0644\u0645\u062E\u0632\u0646</th>
-                            <th class="text-white">\u0627\u0644\u0643\u0645\u064A\u0629/\u0627\u0644\u0633\u0646\u0629</th>
-                            <th class="text-white">\u062E\u0637\u0648\u0631\u0629</th>
-                            <th class="text-white">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                            <th class="text-white">م</th>
+                            <th class="text-white">اسم المادة</th>
+                            <th class="text-white">الشكل الفيزيائي</th>
+                            <th class="text-white">الغرض من الاستخدام</th>
+                            <th class="text-white">القسم</th>
+                            <th class="text-white">التصنيف</th>
+                            <th class="text-white">الموقع/المخزن</th>
+                            <th class="text-white">الكمية/السنة</th>
+                            <th class="text-white">خطورة</th>
+                            <th class="text-white">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${a.map((s,n)=>{const i=s.hazardClass&&(s.hazardClass.toLowerCase().includes("hazard")||s.hazardClass.toLowerCase().includes("\u062E\u0637")||s.hazardClass.toLowerCase().includes("danger")),b=!!(s.msdsArabic||s.msdsEnglish);return`
-                                <tr class="${i?"bg-red-50 hover:bg-red-100":"hover:bg-gray-50"} transition-colors duration-150">
-                                    <td class="font-semibold text-gray-700">${s.serialNumber||n+1}</td>
+                        ${filtered.map((chemical, index) => {
+                            const isHazardous = chemical.hazardClass && 
+                                (chemical.hazardClass.toLowerCase().includes('hazard') || 
+                                 chemical.hazardClass.toLowerCase().includes('خط') ||
+                                 chemical.hazardClass.toLowerCase().includes('danger'));
+                            const hasMSDS = !!(chemical.msdsArabic || chemical.msdsEnglish);
+                            return `
+                                <tr class="${isHazardous ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'} transition-colors duration-150">
+                                    <td class="font-semibold text-gray-700">${chemical.serialNumber || (index + 1)}</td>
                                     <td>
-                                        <div class="font-semibold text-gray-900">${Utils.escapeHTML(s.rmName||"")}</div>
+                                        <div class="font-semibold text-gray-900">${Utils.escapeHTML(chemical.rmName || '')}</div>
                                         <div class="flex items-center gap-2 mt-1">
-                                            ${i?'<span class="badge badge-danger text-xs"><i class="fas fa-exclamation-triangle ml-1"></i>\u062E\u0637\u064A\u0631</span>':""}
-                                            ${b?'<span class="badge badge-info text-xs"><i class="fas fa-file-pdf ml-1"></i>MSDS</span>':""}
+                                            ${isHazardous ? '<span class="badge badge-danger text-xs"><i class="fas fa-exclamation-triangle ml-1"></i>خطير</span>' : ''}
+                                            ${hasMSDS ? '<span class="badge badge-info text-xs"><i class="fas fa-file-pdf ml-1"></i>MSDS</span>' : ''}
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="text-gray-700">${Utils.escapeHTML(s.physicalShape||"-")}</span>
+                                        <span class="text-gray-700">${Utils.escapeHTML(chemical.physicalShape || '-')}</span>
                                     </td>
                                     <td>
-                                        <div class="max-w-xs truncate" title="${Array.isArray(s.purposeOfUse)?s.purposeOfUse.join(", "):Utils.escapeHTML(s.purposeOfUse||"")}">
-                                            ${Array.isArray(s.purposeOfUse)?s.purposeOfUse.slice(0,2).join(", ")+(s.purposeOfUse.length>2?"...":""):Utils.escapeHTML((s.purposeOfUse||"").substring(0,30)+((s.purposeOfUse||"").length>30?"...":""))}
+                                        <div class="max-w-xs truncate" title="${Array.isArray(chemical.purposeOfUse) ? chemical.purposeOfUse.join(', ') : Utils.escapeHTML(chemical.purposeOfUse || '')}">
+                                            ${Array.isArray(chemical.purposeOfUse) 
+                                                ? chemical.purposeOfUse.slice(0, 2).join(', ') + (chemical.purposeOfUse.length > 2 ? '...' : '')
+                                                : Utils.escapeHTML((chemical.purposeOfUse || '').substring(0, 30) + ((chemical.purposeOfUse || '').length > 30 ? '...' : ''))}
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="text-gray-700">${Utils.escapeHTML(s.department||"-")}</span>
+                                        <span class="text-gray-700">${Utils.escapeHTML(chemical.department || '-')}</span>
                                     </td>
                                     <td>
-                                        ${s.hazardClass?`<span class="px-2 py-1 rounded text-xs font-semibold ${i?"bg-red-100 text-red-800":"bg-gray-100 text-gray-800"}">${Utils.escapeHTML(s.hazardClass)}</span>`:'<span class="text-gray-400">-</span>'}
+                                        ${chemical.hazardClass 
+                                            ? `<span class="px-2 py-1 rounded text-xs font-semibold ${isHazardous ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}">${Utils.escapeHTML(chemical.hazardClass)}</span>`
+                                            : '<span class="text-gray-400">-</span>'}
                                     </td>
                                     <td>
-                                        <span class="text-gray-700">${Utils.escapeHTML(s.locationStore||"-")}</span>
+                                        <span class="text-gray-700">${Utils.escapeHTML(chemical.locationStore || '-')}</span>
                                     </td>
                                     <td>
-                                        <span class="font-semibold text-gray-800">${Utils.escapeHTML(s.qtyYear||"-")}</span>
+                                        <span class="font-semibold text-gray-800">${Utils.escapeHTML(chemical.qtyYear || '-')}</span>
                                     </td>
                                     <td>
-                                        ${i?'<span class="badge badge-danger"><i class="fas fa-exclamation-triangle ml-1"></i>\u062E\u0637\u064A\u0631</span>':'<span class="badge badge-success"><i class="fas fa-check-circle ml-1"></i>\u0622\u0645\u0646</span>'}
+                                        ${isHazardous 
+                                            ? '<span class="badge badge-danger"><i class="fas fa-exclamation-triangle ml-1"></i>خطير</span>'
+                                            : '<span class="badge badge-success"><i class="fas fa-check-circle ml-1"></i>آمن</span>'}
                                     </td>
                                     <td>
                                         <div class="flex items-center gap-2">
-                                            <button onclick="ChemicalSafety.viewChemical('${s.id}')" 
-                                                class="btn-icon btn-icon-primary hover:scale-110 transition-transform" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
+                                            <button onclick="ChemicalSafety.viewChemical('${chemical.id}')" 
+                                                class="btn-icon btn-icon-primary hover:scale-110 transition-transform" title="عرض التفاصيل">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button onclick="ChemicalSafety.editChemical('${s.id}')" 
-                                                class="btn-icon btn-icon-info hover:scale-110 transition-transform" title="\u062A\u0639\u062F\u064A\u0644">
+                                            <button onclick="ChemicalSafety.editChemical('${chemical.id}')" 
+                                                class="btn-icon btn-icon-info hover:scale-110 transition-transform" title="تعديل">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button onclick="ChemicalSafety.deleteChemical('${s.id}')" 
-                                                class="btn-icon btn-icon-danger hover:scale-110 transition-transform" title="\u062D\u0630\u0641">
+                                            <button onclick="ChemicalSafety.deleteChemical('${chemical.id}')" 
+                                                class="btn-icon btn-icon-danger hover:scale-110 transition-transform" title="حذف">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-                            `}).join("")}
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             </div>
             <div class="mt-4 flex items-center justify-between bg-blue-50 p-3 rounded-lg">
                 <div class="text-sm text-gray-700">
                     <i class="fas fa-info-circle ml-1 text-blue-600"></i>
-                    <span class="font-semibold">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0633\u062C\u0644\u0627\u062A:</span> 
-                    <span class="text-blue-600 font-bold">${a.length}</span> \u0645\u0646 
-                    <span class="text-gray-600">${e.length}</span>
+                    <span class="font-semibold">إجمالي السجلات:</span> 
+                    <span class="text-blue-600 font-bold">${filtered.length}</span> من 
+                    <span class="text-gray-600">${chemicals.length}</span>
                 </div>
-                ${a.length<e.length?`
+                ${filtered.length < chemicals.length ? `
                     <div class="text-xs text-gray-500">
                         <i class="fas fa-filter ml-1"></i>
-                        \u064A\u062A\u0645 \u0639\u0631\u0636 ${a.length} \u0633\u062C\u0644 \u0628\u0639\u062F \u0627\u0644\u062A\u0635\u0641\u064A\u0629
+                        يتم عرض ${filtered.length} سجل بعد التصفية
                     </div>
-                `:""}
+                ` : ''}
             </div>
-        `},getFilteredChemicals(t){return t.filter(e=>{const a=!this.filters.search||e.rmName&&e.rmName.toLowerCase().includes(this.filters.search.toLowerCase())||e.serialNumber&&e.serialNumber.toString().includes(this.filters.search),r=!this.filters.department||e.department&&e.department.toLowerCase().includes(this.filters.department.toLowerCase()),s=!this.filters.physicalShape||e.physicalShape===this.filters.physicalShape,n=!this.filters.classification||e.hazardClass&&e.hazardClass.toLowerCase().includes(this.filters.classification.toLowerCase());return a&&r&&s&&n})},setupEventListeners(){this._eventListenersAbortController&&this._eventListenersAbortController.abort(),this._eventListenersAbortController=new AbortController;const t=this._eventListenersAbortController.signal;this._setupTimeoutId&&clearTimeout(this._setupTimeoutId),this._setupTimeoutId=setTimeout(()=>{const e=document.getElementById("add-chemical-btn");e&&!t.aborted&&e.addEventListener("click",()=>this.showForm(),{signal:t});const a=document.getElementById("search-filter"),r=document.getElementById("department-filter"),s=document.getElementById("physical-shape-filter"),n=document.getElementById("classification-filter"),i=document.getElementById("reset-filters-btn");a&&!t.aborted&&a.addEventListener("input",()=>{this.filters.search=a.value,this.loadChemicalList()},{signal:t}),r&&!t.aborted&&r.addEventListener("input",()=>{this.filters.department=r.value,this.loadChemicalList()},{signal:t}),s&&!t.aborted&&s.addEventListener("change",()=>{this.filters.physicalShape=s.value,this.loadChemicalList()},{signal:t}),n&&!t.aborted&&n.addEventListener("input",()=>{this.filters.classification=n.value,this.loadChemicalList()},{signal:t}),i&&!t.aborted&&i.addEventListener("click",()=>{this.filters={search:"",department:"",physicalShape:"",classification:""},a&&(a.value=""),r&&(r.value=""),s&&(s.value=""),n&&(n.value=""),this.loadChemicalList()},{signal:t});const b=document.getElementById("export-pdf-btn"),p=document.getElementById("export-excel-btn");b&&!t.aborted&&b.addEventListener("click",()=>this.exportToPDF(),{signal:t}),p&&!t.aborted&&p.addEventListener("click",()=>this.exportToExcel(),{signal:t})},100)},async showForm(t=null){this.currentEditId=t?.id||null,this.msdsFiles={arabic:null,english:null};const e=document.createElement("div");e.className="modal-overlay",e.style.zIndex="10000";const a=t?.purposeOfUse||[],r=Array.isArray(a)?a:a?[a]:[],s=t?.sds||{},n=Array.isArray(s?.ghsPictograms)?s.ghsPictograms:typeof s?.ghsPictograms=="string"?s.ghsPictograms.split(",").map(o=>o.trim()).filter(Boolean):[],i=s?.instructions||{},b=s?.approval||{};e.innerHTML=`
+        `;
+    },
+
+    /**
+     * فلترة المواد
+     */
+    getFilteredChemicals(chemicals) {
+        return chemicals.filter(chem => {
+            const searchMatch = !this.filters.search || 
+                (chem.rmName && chem.rmName.toLowerCase().includes(this.filters.search.toLowerCase())) ||
+                (chem.serialNumber && chem.serialNumber.toString().includes(this.filters.search));
+            
+            const deptMatch = !this.filters.department || 
+                (chem.department && chem.department.toLowerCase().includes(this.filters.department.toLowerCase()));
+            
+            const shapeMatch = !this.filters.physicalShape || 
+                chem.physicalShape === this.filters.physicalShape;
+            
+            const classMatch = !this.filters.classification || 
+                (chem.hazardClass && chem.hazardClass.toLowerCase().includes(this.filters.classification.toLowerCase()));
+            
+            return searchMatch && deptMatch && shapeMatch && classMatch;
+        });
+    },
+
+    /**
+     * إعداد مستمعي الأحداث
+     */
+    setupEventListeners() {
+        // تنظيف الـ listeners القديمة أولاً
+        if (this._eventListenersAbortController) {
+            this._eventListenersAbortController.abort();
+        }
+        this._eventListenersAbortController = new AbortController();
+        const signal = this._eventListenersAbortController.signal;
+
+        // تنظيف timeout القديم إن وجد
+        if (this._setupTimeoutId) {
+            clearTimeout(this._setupTimeoutId);
+        }
+
+        this._setupTimeoutId = setTimeout(() => {
+            const addBtn = document.getElementById('add-chemical-btn');
+            if (addBtn && !signal.aborted) addBtn.addEventListener('click', () => this.showForm(), { signal });
+
+            const searchFilter = document.getElementById('search-filter');
+            const deptFilter = document.getElementById('department-filter');
+            const shapeFilter = document.getElementById('physical-shape-filter');
+            const classFilter = document.getElementById('classification-filter');
+            const resetBtn = document.getElementById('reset-filters-btn');
+
+            if (searchFilter && !signal.aborted) {
+                searchFilter.addEventListener('input', () => {
+                    this.filters.search = searchFilter.value;
+                    this.loadChemicalList();
+                }, { signal });
+            }
+            if (deptFilter && !signal.aborted) {
+                deptFilter.addEventListener('input', () => {
+                    this.filters.department = deptFilter.value;
+                    this.loadChemicalList();
+                }, { signal });
+            }
+            if (shapeFilter && !signal.aborted) {
+                shapeFilter.addEventListener('change', () => {
+                    this.filters.physicalShape = shapeFilter.value;
+                    this.loadChemicalList();
+                }, { signal });
+            }
+            if (classFilter && !signal.aborted) {
+                classFilter.addEventListener('input', () => {
+                    this.filters.classification = classFilter.value;
+                    this.loadChemicalList();
+                }, { signal });
+            }
+            if (resetBtn && !signal.aborted) {
+                resetBtn.addEventListener('click', () => {
+                    this.filters = { search: '', department: '', physicalShape: '', classification: '' };
+                    if (searchFilter) searchFilter.value = '';
+                    if (deptFilter) deptFilter.value = '';
+                    if (shapeFilter) shapeFilter.value = '';
+                    if (classFilter) classFilter.value = '';
+                    this.loadChemicalList();
+                }, { signal });
+            }
+
+            const exportPdfBtn = document.getElementById('export-pdf-btn');
+            const exportExcelBtn = document.getElementById('export-excel-btn');
+            if (exportPdfBtn && !signal.aborted) exportPdfBtn.addEventListener('click', () => this.exportToPDF(), { signal });
+            if (exportExcelBtn && !signal.aborted) exportExcelBtn.addEventListener('click', () => this.exportToExcel(), { signal });
+        }, 100);
+    },
+
+    /**
+     * عرض نموذج إضافة/تعديل مادة
+     */
+    async showForm(data = null) {
+        this.currentEditId = data?.id || null;
+        this.msdsFiles = { arabic: null, english: null };
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.zIndex = '10000';
+        
+        const purposeOfUseValue = data?.purposeOfUse || [];
+        const purposeArray = Array.isArray(purposeOfUseValue) ? purposeOfUseValue : 
+            (purposeOfUseValue ? [purposeOfUseValue] : []);
+
+        // SDS data (optional / extended)
+        const sdsData = data?.sds || {};
+        const sdsPictograms = Array.isArray(sdsData?.ghsPictograms)
+            ? sdsData.ghsPictograms
+            : (typeof sdsData?.ghsPictograms === 'string'
+                ? sdsData.ghsPictograms.split(',').map(v => v.trim()).filter(Boolean)
+                : []);
+        const sdsInstructions = sdsData?.instructions || {};
+        const sdsApproval = sdsData?.approval || {};
+
+        modal.innerHTML = `
             <div class="modal-content chem-form-modal" style="max-width: 1000px; max-height: 90vh; overflow-y: auto; overflow-x: hidden;">
                 <div class="modal-header chem-form-modal__header">
                     <div class="chem-form-modal__head-copy">
-                        <span class="chem-form-modal__eyebrow">\u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 \u2014 HSE</span>
+                        <span class="chem-form-modal__eyebrow">السلامة الكيميائية — HSE</span>
                         <h2 class="modal-title text-white">
                             <i class="fas fa-flask ml-2"></i>
-                            ${t?"\u062A\u0639\u062F\u064A\u0644 \u0645\u0627\u062F\u0629 \u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629":"\u0625\u0636\u0627\u0641\u0629 \u0645\u0627\u062F\u0629 \u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 \u062C\u062F\u064A\u062F\u0629"}
+                            ${data ? 'تعديل مادة كيميائية' : 'إضافة مادة كيميائية جديدة'}
                         </h2>
-                        <span class="chem-form-modal__sub">${t?"\u062A\u062D\u062F\u064A\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0633\u062C\u0644 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629":"\u062A\u0633\u062C\u064A\u0644 \u0645\u0627\u062F\u0629 \u062C\u062F\u064A\u062F\u0629 \u0641\u064A \u0627\u0644\u0633\u062C\u0644 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A"}</span>
+                        <span class="chem-form-modal__sub">${data ? 'تحديث بيانات سجل المواد الكيميائية' : 'تسجيل مادة جديدة في السجل الكيميائي'}</span>
                     </div>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -581,121 +1016,121 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                             <div class="tabs-nav">
                                 <button type="button" class="tab-btn active" data-tab="basic-info">
                                     <i class="fas fa-info-circle ml-2"></i>
-                                    \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629
+                                    المعلومات الأساسية
                                 </button>
                                 <button type="button" class="tab-btn" data-tab="documents">
                                     <i class="fas fa-file-pdf ml-2"></i>
-                                    \u0627\u0644\u0645\u0644\u0641\u0627\u062A \u0648\u0627\u0644\u0648\u062B\u0627\u0626\u0642
+                                    الملفات والوثائق
                                 </button>
                                 <button type="button" class="tab-btn" data-tab="manufacturer">
                                     <i class="fas fa-industry ml-2"></i>
-                                    \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0645\u0635\u0646\u0639\u0629
+                                    معلومات الشركة المصنعة
                                 </button>
                                 <button type="button" class="tab-btn" data-tab="container">
                                     <i class="fas fa-box ml-2"></i>
-                                    \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u062D\u0627\u0648\u064A\u0629
+                                    معلومات الحاوية
                                 </button>
                                 <button type="button" class="tab-btn" data-tab="hazards">
                                     <i class="fas fa-exclamation-triangle ml-2"></i>
-                                    \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u062E\u0637\u0648\u0631\u0629
+                                    معلومات الخطورة
                                 </button>
                                 <button type="button" class="tab-btn" data-tab="location">
                                     <i class="fas fa-map-marker-alt ml-2"></i>
-                                    \u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0627\u0644\u0643\u0645\u064A\u0629
+                                    الموقع والكمية
                                 </button>
                                 <button type="button" class="tab-btn" data-tab="sds">
                                     <i class="fas fa-shield-alt ml-2"></i>
-                                    \u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 SDS
+                                    تعليمات السلامة SDS
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Tab Content: \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 -->
+                        <!-- Tab Content: المعلومات الأساسية -->
                         <div class="tab-content active" id="tab-basic-info">
                             <!-- S.N (Auto) -->
                             <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-300 shadow-sm mb-4">
                                 <label class="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-                                    <i class="fas fa-hashtag text-blue-600"></i>\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u062A\u0633\u0644\u0633\u0644\u064A (S.N)
+                                    <i class="fas fa-hashtag text-blue-600"></i>الرقم التسلسلي (S.N)
                                 </label>
                                 <input type="text" id="serial-number" class="form-input bg-white text-gray-900 font-bold text-lg text-center" 
-                                    value="${t?.serialNumber||(AppState.appData.chemicalRegister?.length||0)+1}" readonly style="color: #111827 !important; background-color: #ffffff !important;">
+                                    value="${data?.serialNumber || ((AppState.appData.chemicalRegister?.length || 0) + 1)}" readonly style="color: #111827 !important; background-color: #ffffff !important;">
                                 <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                                    <i class="fas fa-info-circle"></i>\u064A\u062A\u0645 \u062A\u0648\u0644\u064A\u062F\u0647 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B
+                                    <i class="fas fa-info-circle"></i>يتم توليده تلقائياً
                                 </p>
                             </div>
 
                             <!-- RM Name -->
                             <div class="bg-gradient-to-br from-blue-50 to-white p-4 rounded-lg border-2 border-blue-200 shadow-sm mb-4">
                                 <label class="block text-sm font-bold text-blue-800 mb-2 flex items-center gap-2">
-                                    <i class="fas fa-tag text-blue-600"></i>\u0627\u0633\u0645 \u0627\u0644\u0645\u0627\u062F\u0629 (RM Name) *
+                                    <i class="fas fa-tag text-blue-600"></i>اسم المادة (RM Name) *
                                 </label>
                                 <input type="text" id="rm-name" required class="form-input bg-white text-gray-900 text-lg" 
-                                    value="${Utils.escapeHTML(t?.rmName||"")}" 
-                                    placeholder="\u0623\u062F\u062E\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u0627\u062F\u0629 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629" style="color: #111827 !important; background-color: #ffffff !important;">
+                                    value="${Utils.escapeHTML(data?.rmName || '')}" 
+                                    placeholder="أدخل اسم المادة الكيميائية" style="color: #111827 !important; background-color: #ffffff !important;">
                             </div>
 
                             <!-- Physical Shape -->
                             <div class="bg-gradient-to-br from-indigo-50 to-white p-4 rounded-lg border-2 border-indigo-200 shadow-sm mb-4">
                                 <label class="block text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
-                                    <i class="fas fa-shapes text-indigo-600"></i>\u0627\u0644\u0634\u0643\u0644 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0626\u064A (Physical Shape) *
+                                    <i class="fas fa-shapes text-indigo-600"></i>الشكل الفيزيائي (Physical Shape) *
                                 </label>
                                 <select id="physical-shape" required class="form-input bg-white text-gray-900" style="color: #111827 !important; background-color: #ffffff !important;">
-                                    <option value="" style="color: #6b7280;">\u0627\u062E\u062A\u0631 \u0627\u0644\u0634\u0643\u0644 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0626\u064A</option>
-                                    ${PHYSICAL_SHAPES.map(o=>`
-                                        <option value="${o}" ${t?.physicalShape===o?"selected":""} style="color: #111827; background-color: #ffffff;">
-                                            ${o}
+                                    <option value="" style="color: #6b7280;">اختر الشكل الفيزيائي</option>
+                                    ${PHYSICAL_SHAPES.map(shape => `
+                                        <option value="${shape}" ${data?.physicalShape === shape ? 'selected' : ''} style="color: #111827; background-color: #ffffff;">
+                                            ${shape}
                                         </option>
-                                    `).join("")}
+                                    `).join('')}
                                 </select>
                             </div>
 
                             <!-- Purpose of Use (Custom Multi-Select Dropdown) -->
                             <div class="bg-gradient-to-br from-purple-50 to-white p-4 rounded-lg border-2 border-purple-200 shadow-sm mb-4">
                                 <label class="block text-sm font-bold text-purple-800 mb-2 flex items-center gap-2">
-                                    <i class="fas fa-list-check text-purple-600"></i>\u0627\u0644\u063A\u0631\u0636 \u0645\u0646 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 (Purpose of Use) *
+                                    <i class="fas fa-list-check text-purple-600"></i>الغرض من الاستخدام (Purpose of Use) *
                                 </label>
                                 
                                 <!-- Selected Tags Display -->
                                 <div id="purpose-selected-tags" class="flex flex-wrap gap-2 mb-3 min-h-[40px] p-2 bg-gray-50 rounded-lg border border-gray-200">
-                                    ${r.length>0?r.map(o=>`
-                                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold purpose-tag" data-value="${Utils.escapeHTML(o)}">
-                                            ${Utils.escapeHTML(o)}
-                                            <button type="button" onclick="ChemicalSafety.removePurposeTag('${Utils.escapeHTML(o)}')" 
+                                    ${purposeArray.length > 0 ? purposeArray.map(purpose => `
+                                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold purpose-tag" data-value="${Utils.escapeHTML(purpose)}">
+                                            ${Utils.escapeHTML(purpose)}
+                                            <button type="button" onclick="ChemicalSafety.removePurposeTag('${Utils.escapeHTML(purpose)}')" 
                                                 class="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors">
                                                 <i class="fas fa-times text-xs"></i>
                                             </button>
                                         </span>
-                                    `).join(""):'<span class="text-gray-400 text-sm">\u0644\u0645 \u064A\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0623\u064A \u063A\u0631\u0636</span>'}
+                                    `).join('') : '<span class="text-gray-400 text-sm">لم يتم اختيار أي غرض</span>'}
                                 </div>
                                 
                                 <!-- Dropdown -->
                                 <div class="relative">
                                     <button type="button" id="purpose-dropdown-btn" 
                                         class="w-full form-input text-right flex items-center justify-between bg-white hover:bg-gray-50 transition-colors text-gray-900" style="color: #111827 !important; background-color: #ffffff !important;">
-                                        <span class="text-gray-500">\u0627\u062E\u062A\u0631 \u0627\u0644\u063A\u0631\u0636 \u0645\u0646 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645</span>
+                                        <span class="text-gray-500">اختر الغرض من الاستخدام</span>
                                         <i class="fas fa-chevron-down text-gray-400"></i>
                                     </button>
                                     <div id="purpose-dropdown-menu" 
                                         class="hse-lookup-dropdown hidden absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                        ${PURPOSE_OF_USE_OPTIONS.map(o=>`
+                                        ${PURPOSE_OF_USE_OPTIONS.map(purpose => `
                                             <label class="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0">
                                                 <input type="checkbox" 
                                                     class="purpose-checkbox rounded border-gray-300 text-blue-600" 
-                                                    value="${Utils.escapeHTML(o)}" 
-                                                    ${r.includes(o)?"checked":""}
-                                                    onchange="ChemicalSafety.togglePurposeOption('${Utils.escapeHTML(o)}', this.checked)">
-                                                <span class="flex-1 text-sm text-gray-700">${Utils.escapeHTML(o)}</span>
+                                                    value="${Utils.escapeHTML(purpose)}" 
+                                                    ${purposeArray.includes(purpose) ? 'checked' : ''}
+                                                    onchange="ChemicalSafety.togglePurposeOption('${Utils.escapeHTML(purpose)}', this.checked)">
+                                                <span class="flex-1 text-sm text-gray-700">${Utils.escapeHTML(purpose)}</span>
                                             </label>
-                                        `).join("")}
+                                        `).join('')}
                                     </div>
                                 </div>
                                 
                                 <input type="hidden" id="purpose-of-use" required 
-                                    value="${r.map(o=>Utils.escapeHTML(o)).join(",")}">
+                                    value="${purposeArray.map(p => Utils.escapeHTML(p)).join(',')}">
                                 
                                 <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
                                     <i class="fas fa-info-circle text-blue-600"></i>
-                                    \u064A\u0645\u0643\u0646\u0643 \u0627\u062E\u062A\u064A\u0627\u0631 \u0623\u0643\u062B\u0631 \u0645\u0646 \u063A\u0631\u0636 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0646\u0633\u062F\u0644\u0629
+                                    يمكنك اختيار أكثر من غرض من القائمة المنسدلة
                                 </p>
                             </div>
 
@@ -703,28 +1138,28 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="bg-gradient-to-br from-teal-50 to-white p-4 rounded-lg border-2 border-teal-200 shadow-sm">
                                     <label class="block text-sm font-bold text-teal-800 mb-2 flex items-center gap-2">
-                                        <i class="fas fa-tools text-teal-600"></i>\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 (Method of Application)
+                                        <i class="fas fa-tools text-teal-600"></i>طريقة التطبيق (Method of Application)
                                     </label>
                                     <input type="text" id="method-of-application" class="form-input bg-white text-gray-900" 
-                                        value="${Utils.escapeHTML(t?.methodOfApplication||"")}" 
-                                        placeholder="\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642" style="color: #111827 !important; background-color: #ffffff !important;">
+                                        value="${Utils.escapeHTML(data?.methodOfApplication || '')}" 
+                                        placeholder="طريقة التطبيق" style="color: #111827 !important; background-color: #ffffff !important;">
                                 </div>
                                 <div class="bg-gradient-to-br from-cyan-50 to-white p-4 rounded-lg border-2 border-cyan-200 shadow-sm">
                                     <label class="block text-sm font-bold text-cyan-800 mb-2 flex items-center gap-2">
-                                        <i class="fas fa-building text-cyan-600"></i>\u0627\u0644\u0642\u0633\u0645 (Department) *
+                                        <i class="fas fa-building text-cyan-600"></i>القسم (Department) *
                                     </label>
                                     <input type="text" id="department" required class="form-input bg-white text-gray-900" 
-                                        value="${Utils.escapeHTML(t?.department||"")}" 
-                                        placeholder="\u0627\u0644\u0642\u0633\u0645" style="color: #111827 !important; background-color: #ffffff !important;">
+                                        value="${Utils.escapeHTML(data?.department || '')}" 
+                                        placeholder="القسم" style="color: #111827 !important; background-color: #ffffff !important;">
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Tab Content: \u0627\u0644\u0645\u0644\u0641\u0627\u062A \u0648\u0627\u0644\u0648\u062B\u0627\u0626\u0642 -->
+                        <!-- Tab Content: الملفات والوثائق -->
                         <div class="tab-content" id="tab-documents">
                             <div class="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-lg border-2 border-purple-200">
                                 <label class="block text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                    <i class="fas fa-file-pdf text-purple-600"></i>\u0645\u0644\u0641\u0627\u062A MSDS (Material Safety Data Sheet)
+                                    <i class="fas fa-file-pdf text-purple-600"></i>ملفات MSDS (Material Safety Data Sheet)
                                 </label>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="bg-gradient-to-br from-purple-50 to-white p-4 rounded-lg border-2 border-purple-200">
@@ -732,105 +1167,105 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                                             <i class="fas fa-file-pdf text-red-500 ml-1"></i>MSDS (Arabic)
                                         </label>
                                         <input type="file" id="msds-arabic" accept=".pdf,.doc,.docx" class="form-input bg-white text-gray-900" style="color: #111827 !important; background-color: #ffffff !important;">
-                                        ${t?.msdsArabic?`
+                                        ${data?.msdsArabic ? `
                                             <div class="mt-3 p-2 bg-green-50 rounded border border-green-200">
-                                                <a href="${Utils.escapeHTML(t.msdsArabic)}" target="_blank" 
+                                                <a href="${Utils.escapeHTML(data.msdsArabic)}" target="_blank" 
                                                    class="text-green-700 hover:text-green-900 flex items-center gap-2 font-semibold">
                                                     <i class="fas fa-check-circle"></i>
-                                                    \u0645\u0644\u0641 \u0645\u0648\u062C\u0648\u062F - \u0627\u0636\u063A\u0637 \u0644\u0644\u0639\u0631\u0636
+                                                    ملف موجود - اضغط للعرض
                                                 </a>
                                             </div>
-                                        `:'<p class="text-xs text-gray-500 mt-2">\u0644\u0645 \u064A\u062A\u0645 \u0631\u0641\u0639 \u0645\u0644\u0641</p>'}
+                                        ` : '<p class="text-xs text-gray-500 mt-2">لم يتم رفع ملف</p>'}
                                     </div>
                                     <div class="bg-gradient-to-br from-indigo-50 to-white p-4 rounded-lg border-2 border-indigo-200">
                                         <label class="block text-sm font-bold text-indigo-800 mb-2">
                                             <i class="fas fa-file-pdf text-red-500 ml-1"></i>MSDS (English)
                                         </label>
                                         <input type="file" id="msds-english" accept=".pdf,.doc,.docx" class="form-input bg-white text-gray-900" style="color: #111827 !important; background-color: #ffffff !important;">
-                                        ${t?.msdsEnglish?`
+                                        ${data?.msdsEnglish ? `
                                             <div class="mt-3 p-2 bg-green-50 rounded border border-green-200">
-                                                <a href="${Utils.escapeHTML(t.msdsEnglish)}" target="_blank" 
+                                                <a href="${Utils.escapeHTML(data.msdsEnglish)}" target="_blank" 
                                                    class="text-green-700 hover:text-green-900 flex items-center gap-2 font-semibold">
                                                     <i class="fas fa-check-circle"></i>
-                                                    \u0645\u0644\u0641 \u0645\u0648\u062C\u0648\u062F - \u0627\u0636\u063A\u0637 \u0644\u0644\u0639\u0631\u0636
+                                                    ملف موجود - اضغط للعرض
                                                 </a>
                                             </div>
-                                        `:'<p class="text-xs text-gray-500 mt-2">\u0644\u0645 \u064A\u062A\u0645 \u0631\u0641\u0639 \u0645\u0644\u0641</p>'}
+                                        ` : '<p class="text-xs text-gray-500 mt-2">لم يتم رفع ملف</p>'}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Tab Content: \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0645\u0635\u0646\u0639\u0629 -->
+                        <!-- Tab Content: معلومات الشركة المصنعة -->
                         <div class="tab-content" id="tab-manufacturer">
                             <div class="bg-gradient-to-r from-indigo-50 to-blue-50 p-4 rounded-lg border-2 border-indigo-200">
                                 <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                                     <i class="fas fa-industry text-indigo-600"></i>
-                                    \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0645\u0635\u0646\u0639\u0629 \u0648\u0627\u0644\u0648\u0643\u064A\u0644
+                                    معلومات الشركة المصنعة والوكيل
                                 </h3>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="bg-gradient-to-br from-indigo-50 to-white p-4 rounded-lg border-2 border-indigo-200">
                                         <label class="block text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
-                                            <i class="fas fa-globe text-indigo-600"></i>\u0645\u062D\u0644\u064A / \u0645\u0633\u062A\u0648\u0631\u062F
+                                            <i class="fas fa-globe text-indigo-600"></i>محلي / مستورد
                                         </label>
                                         <select id="local-import" class="form-input bg-white text-gray-900" style="color: #111827 !important; background-color: #ffffff !important;">
-                                            <option value="" style="color: #6b7280;">\u0627\u062E\u062A\u0631</option>
-                                            ${LOCAL_IMPORT_OPTIONS.map(o=>`
-                                                <option value="${o}" ${t?.localImport===o?"selected":""} style="color: #111827; background-color: #ffffff;">
-                                                    ${o}
+                                            <option value="" style="color: #6b7280;">اختر</option>
+                                            ${LOCAL_IMPORT_OPTIONS.map(opt => `
+                                                <option value="${opt}" ${data?.localImport === opt ? 'selected' : ''} style="color: #111827; background-color: #ffffff;">
+                                                    ${opt}
                                                 </option>
-                                            `).join("")}
+                                            `).join('')}
                                         </select>
                                     </div>
                                     <div class="bg-gradient-to-br from-blue-50 to-white p-4 rounded-lg border-2 border-blue-200">
                                         <label class="block text-sm font-bold text-blue-800 mb-2 flex items-center gap-2">
-                                            <i class="fas fa-industry text-blue-600"></i>\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0645\u0635\u0646\u0639\u0629
+                                            <i class="fas fa-industry text-blue-600"></i>الشركة المصنعة
                                         </label>
                                         <input type="text" id="manufacturer" class="form-input bg-white text-gray-900" 
-                                            value="${Utils.escapeHTML(t?.manufacturer||"")}" 
-                                            placeholder="\u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0645\u0635\u0646\u0639\u0629" style="color: #111827 !important; background-color: #ffffff !important;">
+                                            value="${Utils.escapeHTML(data?.manufacturer || '')}" 
+                                            placeholder="اسم الشركة المصنعة" style="color: #111827 !important; background-color: #ffffff !important;">
                                     </div>
                                     <div class="bg-gradient-to-br from-violet-50 to-white p-4 rounded-lg border-2 border-violet-200 md:col-span-2">
                                         <label class="block text-sm font-bold text-violet-800 mb-2 flex items-center gap-2">
-                                            <i class="fas fa-handshake text-violet-600"></i>\u0627\u0644\u0648\u0643\u064A\u0644 \u0641\u064A \u0645\u0635\u0631
+                                            <i class="fas fa-handshake text-violet-600"></i>الوكيل في مصر
                                         </label>
                                         <input type="text" id="agent-egypt" class="form-input bg-white text-gray-900" 
-                                            value="${Utils.escapeHTML(t?.agentEgypt||"")}" 
-                                            placeholder="\u0627\u0633\u0645 \u0627\u0644\u0648\u0643\u064A\u0644 \u0641\u064A \u0645\u0635\u0631" style="color: #111827 !important; background-color: #ffffff !important;">
+                                            value="${Utils.escapeHTML(data?.agentEgypt || '')}" 
+                                            placeholder="اسم الوكيل في مصر" style="color: #111827 !important; background-color: #ffffff !important;">
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Tab Content: \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u062D\u0627\u0648\u064A\u0629 -->
+                        <!-- Tab Content: معلومات الحاوية -->
                         <div class="tab-content" id="tab-container">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="bg-gradient-to-br from-green-50 to-white p-4 rounded-lg border-2 border-green-200 shadow-sm">
                                     <label class="block text-sm font-bold text-green-800 mb-2 flex items-center gap-2">
-                                        <i class="fas fa-box text-green-600"></i>\u0646\u0648\u0639 \u0627\u0644\u062D\u0627\u0648\u064A\u0629
+                                        <i class="fas fa-box text-green-600"></i>نوع الحاوية
                                     </label>
                                     <input type="text" id="container-type" class="form-input bg-white text-gray-900" 
-                                        value="${Utils.escapeHTML(t?.containerType||"")}" 
-                                        placeholder="\u0646\u0648\u0639 \u0627\u0644\u062D\u0627\u0648\u064A\u0629" style="color: #111827 !important; background-color: #ffffff !important;">
+                                        value="${Utils.escapeHTML(data?.containerType || '')}" 
+                                        placeholder="نوع الحاوية" style="color: #111827 !important; background-color: #ffffff !important;">
                                 </div>
                                 <div class="bg-gradient-to-br from-emerald-50 to-white p-4 rounded-lg border-2 border-emerald-200 shadow-sm">
                                     <label class="block text-sm font-bold text-emerald-800 mb-2 flex items-center gap-2">
-                                        <i class="fas fa-recycle text-emerald-600"></i>\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062A\u062E\u0644\u0635
+                                        <i class="fas fa-recycle text-emerald-600"></i>طريقة التخلص
                                     </label>
                                     <input type="text" id="container-disposal" class="form-input bg-white text-gray-900" 
-                                        value="${Utils.escapeHTML(t?.containerDisposalMethod||"")}" 
-                                        placeholder="\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062A\u062E\u0644\u0635 \u0645\u0646 \u0627\u0644\u062D\u0627\u0648\u064A\u0629" style="color: #111827 !important; background-color: #ffffff !important;">
+                                        value="${Utils.escapeHTML(data?.containerDisposalMethod || '')}" 
+                                        placeholder="طريقة التخلص من الحاوية" style="color: #111827 !important; background-color: #ffffff !important;">
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Tab Content: \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u062E\u0637\u0648\u0631\u0629 -->
+                        <!-- Tab Content: معلومات الخطورة -->
                         <div class="tab-content" id="tab-hazards">
                             <!-- Header Section -->
                             <div class="mb-6 flex items-center justify-end gap-3">
                                 <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
                                     <i class="fas fa-skull text-red-600 text-2xl"></i>
-                                    \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u062E\u0637\u0648\u0631\u0629
+                                    معلومات الخطورة
                                 </h3>
                             </div>
 
@@ -838,24 +1273,24 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                                 <!-- Left Side: NFPA Hazard Values -->
                                 <div class="bg-white p-6 rounded-lg border-2 border-gray-200 shadow-sm">
-                                    <h4 class="text-lg font-bold text-gray-800 mb-4 text-right">\u0642\u064A\u0645 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 NFPA</h4>
+                                    <h4 class="text-lg font-bold text-gray-800 mb-4 text-right">قيم الخطورة NFPA</h4>
                                     
                                     <!-- Health Dropdown -->
                                     <div class="mb-4">
                                         <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2 justify-end">
                                             <i class="fas fa-heartbeat text-blue-600"></i>
-                                            \u0627\u0644\u0635\u062D\u0629 (Health)
+                                            الصحة (Health)
                                         </label>
                                         <div class="relative">
                                             <select id="nfpa-health-dropdown" 
                                                 class="form-input bg-white text-gray-900 w-full pr-10 pl-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                                                 onchange="ChemicalSafety.updateNFPADiamondFromDropdown()"
                                                 style="color: #111827 !important; background-color: #ffffff !important;">
-                                                <option value="0" ${(t?.nfpaDiamond?.health||0)===0?"selected":""}>Normal Material - 0</option>
-                                                <option value="1" ${(t?.nfpaDiamond?.health||0)===1?"selected":""}>Slightly Hazardous - 1</option>
-                                                <option value="2" ${(t?.nfpaDiamond?.health||0)===2?"selected":""}>Hazardous - 2</option>
-                                                <option value="3" ${(t?.nfpaDiamond?.health||0)===3?"selected":""}>Extreme Danger - 3</option>
-                                                <option value="4" ${(t?.nfpaDiamond?.health||0)===4?"selected":""}>Deadly - 4</option>
+                                                <option value="0" ${(data?.nfpaDiamond?.health || 0) === 0 ? 'selected' : ''}>Normal Material - 0</option>
+                                                <option value="1" ${(data?.nfpaDiamond?.health || 0) === 1 ? 'selected' : ''}>Slightly Hazardous - 1</option>
+                                                <option value="2" ${(data?.nfpaDiamond?.health || 0) === 2 ? 'selected' : ''}>Hazardous - 2</option>
+                                                <option value="3" ${(data?.nfpaDiamond?.health || 0) === 3 ? 'selected' : ''}>Extreme Danger - 3</option>
+                                                <option value="4" ${(data?.nfpaDiamond?.health || 0) === 4 ? 'selected' : ''}>Deadly - 4</option>
                                             </select>
                                             <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                                         </div>
@@ -865,18 +1300,18 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                                     <div class="mb-4">
                                         <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2 justify-end">
                                             <i class="fas fa-fire text-red-600"></i>
-                                            \u0627\u0644\u0627\u0634\u062A\u0639\u0627\u0644 (Fire)
+                                            الاشتعال (Fire)
                                         </label>
                                         <div class="relative">
                                             <select id="nfpa-fire-dropdown" 
                                                 class="form-input bg-white text-gray-900 w-full pr-10 pl-3 py-2 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring-2 focus:ring-red-200"
                                                 onchange="ChemicalSafety.updateNFPADiamondFromDropdown()"
                                                 style="color: #111827 !important; background-color: #ffffff !important;">
-                                                <option value="0" ${(t?.nfpaDiamond?.flammability||0)===0?"selected":""}>Will Not Burn - 0</option>
-                                                <option value="1" ${(t?.nfpaDiamond?.flammability||0)===1?"selected":""}>Above 200\xB0F - 1</option>
-                                                <option value="2" ${(t?.nfpaDiamond?.flammability||0)===2?"selected":""}>Below 200\xB0F - 2</option>
-                                                <option value="3" ${(t?.nfpaDiamond?.flammability||0)===3?"selected":""}>Below 100\xB0F - 3</option>
-                                                <option value="4" ${(t?.nfpaDiamond?.flammability||0)===4?"selected":""}>Below 73\xB0F - 4</option>
+                                                <option value="0" ${(data?.nfpaDiamond?.flammability || 0) === 0 ? 'selected' : ''}>Will Not Burn - 0</option>
+                                                <option value="1" ${(data?.nfpaDiamond?.flammability || 0) === 1 ? 'selected' : ''}>Above 200°F - 1</option>
+                                                <option value="2" ${(data?.nfpaDiamond?.flammability || 0) === 2 ? 'selected' : ''}>Below 200°F - 2</option>
+                                                <option value="3" ${(data?.nfpaDiamond?.flammability || 0) === 3 ? 'selected' : ''}>Below 100°F - 3</option>
+                                                <option value="4" ${(data?.nfpaDiamond?.flammability || 0) === 4 ? 'selected' : ''}>Below 73°F - 4</option>
                                             </select>
                                             <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                                         </div>
@@ -886,18 +1321,18 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                                     <div class="mb-4">
                                         <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2 justify-end">
                                             <i class="fas fa-cog text-yellow-600"></i>
-                                            \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629 (Reactivity)
+                                            التفاعلية (Reactivity)
                                         </label>
                                         <div class="relative">
                                             <select id="nfpa-reactivity-dropdown" 
                                                 class="form-input bg-white text-gray-900 w-full pr-10 pl-3 py-2 border-2 border-gray-300 rounded-lg focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200"
                                                 onchange="ChemicalSafety.updateNFPADiamondFromDropdown()"
                                                 style="color: #111827 !important; background-color: #ffffff !important;">
-                                                <option value="0" ${(t?.nfpaDiamond?.instability||0)===0?"selected":""}>Stable - 0</option>
-                                                <option value="1" ${(t?.nfpaDiamond?.instability||0)===1?"selected":""}>Unstable if Heated - 1</option>
-                                                <option value="2" ${(t?.nfpaDiamond?.instability||0)===2?"selected":""}>Violent Chemical Change - 2</option>
-                                                <option value="3" ${(t?.nfpaDiamond?.instability||0)===3?"selected":""}>Shock and Heat May Detonate - 3</option>
-                                                <option value="4" ${(t?.nfpaDiamond?.instability||0)===4?"selected":""}>May Detonate - 4</option>
+                                                <option value="0" ${(data?.nfpaDiamond?.instability || 0) === 0 ? 'selected' : ''}>Stable - 0</option>
+                                                <option value="1" ${(data?.nfpaDiamond?.instability || 0) === 1 ? 'selected' : ''}>Unstable if Heated - 1</option>
+                                                <option value="2" ${(data?.nfpaDiamond?.instability || 0) === 2 ? 'selected' : ''}>Violent Chemical Change - 2</option>
+                                                <option value="3" ${(data?.nfpaDiamond?.instability || 0) === 3 ? 'selected' : ''}>Shock and Heat May Detonate - 3</option>
+                                                <option value="4" ${(data?.nfpaDiamond?.instability || 0) === 4 ? 'selected' : ''}>May Detonate - 4</option>
                                             </select>
                                             <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                                         </div>
@@ -907,19 +1342,19 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                                     <div class="mb-4">
                                         <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2 justify-end">
                                             <i class="fas fa-exclamation-circle text-gray-700"></i>
-                                            \u062E\u0627\u0635 (Special)
+                                            خاص (Special)
                                         </label>
                                         <div class="relative">
                                             <select id="nfpa-special-dropdown" 
                                                 class="form-input bg-white text-gray-900 w-full pr-10 pl-3 py-2 border-2 border-gray-300 rounded-lg focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
                                                 onchange="ChemicalSafety.updateNFPADiamondFromDropdown()"
                                                 style="color: #111827 !important; background-color: #ffffff !important;">
-                                                <option value="">\u0644\u0627 \u064A\u0648\u062C\u062F - None</option>
-                                                <option value="W" ${(t?.nfpaDiamond?.special||"").toUpperCase()==="W"?"selected":""}>W - Use No Water</option>
-                                                <option value="OX" ${(t?.nfpaDiamond?.special||"").toUpperCase()==="OX"?"selected":""}>OX - Oxidizer</option>
-                                                <option value="ACID" ${(t?.nfpaDiamond?.special||"").toUpperCase()==="ACID"?"selected":""}>ACID - Acid</option>
-                                                <option value="ALK" ${(t?.nfpaDiamond?.special||"").toUpperCase()==="ALK"?"selected":""}>ALK - Alkali</option>
-                                                <option value="COR" ${(t?.nfpaDiamond?.special||"").toUpperCase()==="COR"?"selected":""}>COR - Corrosive</option>
+                                                <option value="">لا يوجد - None</option>
+                                                <option value="W" ${(data?.nfpaDiamond?.special || '').toUpperCase() === 'W' ? 'selected' : ''}>W - Use No Water</option>
+                                                <option value="OX" ${(data?.nfpaDiamond?.special || '').toUpperCase() === 'OX' ? 'selected' : ''}>OX - Oxidizer</option>
+                                                <option value="ACID" ${(data?.nfpaDiamond?.special || '').toUpperCase() === 'ACID' ? 'selected' : ''}>ACID - Acid</option>
+                                                <option value="ALK" ${(data?.nfpaDiamond?.special || '').toUpperCase() === 'ALK' ? 'selected' : ''}>ALK - Alkali</option>
+                                                <option value="COR" ${(data?.nfpaDiamond?.special || '').toUpperCase() === 'COR' ? 'selected' : ''}>COR - Corrosive</option>
                                             </select>
                                             <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                                         </div>
@@ -928,9 +1363,9 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
 
                                 <!-- Right Side: NFPA Diamond -->
                                 <div class="bg-white p-6 rounded-lg border-2 border-gray-200 shadow-sm">
-                                    <h4 class="text-lg font-bold text-gray-800 mb-6 text-center">\u0645\u0631\u0628\u0639 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 (NFPA Diamond)</h4>
+                                    <h4 class="text-lg font-bold text-gray-800 mb-6 text-center">مربع الخطورة (NFPA Diamond)</h4>
                                     <div id="nfpa-diamond-container" class="w-full py-4">
-                                        ${this.renderNFPADiamond(t?.nfpaDiamond||{},"compact")}
+                                        ${this.renderNFPADiamond(data?.nfpaDiamond || {}, 'compact')}
                                     </div>
                                 </div>
                             </div>
@@ -939,11 +1374,11 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                             <div class="mb-6">
                                 <div class="bg-white p-4 rounded-lg border-2 border-gray-200 shadow-sm">
                                     <label class="block text-sm font-bold text-gray-800 mb-2 text-right">
-                                        \u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u062E\u0637\u0648\u0631\u0629 (Class)
+                                        تصنيف الخطورة (Class)
                                     </label>
                                     <input type="text" id="hazard-class" class="form-input bg-white text-gray-900 w-full" 
-                                        value="${Utils.escapeHTML(t?.hazardClass||"")}" 
-                                        placeholder="\u0645\u062B\u0627\u0644: Class 3 - Flammable" 
+                                        value="${Utils.escapeHTML(data?.hazardClass || '')}" 
+                                        placeholder="مثال: Class 3 - Flammable" 
                                         style="color: #111827 !important; background-color: #ffffff !important;">
                                 </div>
                             </div>
@@ -952,136 +1387,136 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                             <div class="mb-6">
                                 <div class="bg-white p-4 rounded-lg border-2 border-gray-200 shadow-sm">
                                     <label class="block text-sm font-bold text-gray-800 mb-2 text-right">
-                                        \u0648\u0635\u0641 \u0627\u0644\u062E\u0637\u0648\u0631\u0629
+                                        وصف الخطورة
                                     </label>
                                     <textarea id="hazard-description" class="form-input bg-white text-gray-900 w-full" rows="5" 
-                                        placeholder="\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0627\u0644\u0645\u0627\u062F\u0629" 
-                                        style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(t?.hazardDescription||"")}</textarea>
+                                        placeholder="وصف تفصيلي للمخاطر المرتبطة بالمادة" 
+                                        style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(data?.hazardDescription || '')}</textarea>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Tab Content: \u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 SDS -->
+                        <!-- Tab Content: تعليمات السلامة SDS -->
                         <div class="tab-content" id="tab-sds">
                             <div class="bg-gradient-to-r from-gray-50 to-slate-50 p-4 rounded-lg border-2 border-gray-200 shadow-sm mb-6">
                                 <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 justify-end">
                                     <i class="fas fa-file-alt text-gray-700"></i>
-                                    \u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 (SDS)
+                                    تعليمات السلامة للمواد الكيميائية (SDS)
                                 </h3>
 
                                 <!-- Header Fields -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <div class="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">\u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629 \u0648\u0627\u0644\u0641\u0631\u0639</label>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">اسم الشركة والفرع</label>
                                         <input type="text" id="sds-company-branch" class="form-input bg-white text-gray-900"
-                                            value="${Utils.escapeHTML(s?.companyBranch||"")}"
-                                            placeholder="\u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0641\u0631\u0639" style="color: #111827 !important; background-color: #ffffff !important;">
+                                            value="${Utils.escapeHTML(sdsData?.companyBranch || '')}"
+                                            placeholder="اسم الشركة - الفرع" style="color: #111827 !important; background-color: #ffffff !important;">
                                     </div>
                                     <div class="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">\u062D\u0627\u0644\u0629 \u0627\u0644\u062A\u0631\u062C\u0645\u0629</label>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">حالة الترجمة</label>
                                         <input type="text" id="sds-translation-status" class="form-input bg-white text-gray-900"
-                                            value="${Utils.escapeHTML(s?.translationStatus||"\u063A\u064A\u0631 \u0645\u062A\u0631\u062C\u0645")}"
-                                            placeholder="\u0645\u062B\u0627\u0644: \u063A\u064A\u0631 \u0645\u062A\u0631\u062C\u0645" style="color: #111827 !important; background-color: #ffffff !important;">
+                                            value="${Utils.escapeHTML(sdsData?.translationStatus || 'غير مترجم')}"
+                                            placeholder="مثال: غير مترجم" style="color: #111827 !important; background-color: #ffffff !important;">
                                     </div>
                                     <div class="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0639\u0644\u0645\u064A \u0644\u0644\u0645\u0627\u062F\u0629</label>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">الاسم العلمي للمادة</label>
                                         <input type="text" id="sds-scientific-name" class="form-input bg-white text-gray-900"
-                                            value="${Utils.escapeHTML(s?.scientificName||t?.rmName||"")}"
-                                            placeholder="\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0639\u0644\u0645\u064A" style="color: #111827 !important; background-color: #ffffff !important;">
+                                            value="${Utils.escapeHTML(sdsData?.scientificName || data?.rmName || '')}"
+                                            placeholder="الاسم العلمي" style="color: #111827 !important; background-color: #ffffff !important;">
                                     </div>
                                     <div class="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u062A\u062C\u0627\u0631\u064A \u0644\u0644\u0645\u0627\u062F\u0629</label>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">الاسم التجاري للمادة</label>
                                         <input type="text" id="sds-trade-name" class="form-input bg-white text-gray-900"
-                                            value="${Utils.escapeHTML(s?.tradeName||t?.rmName||"")}"
-                                            placeholder="\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u062A\u062C\u0627\u0631\u064A" style="color: #111827 !important; background-color: #ffffff !important;">
+                                            value="${Utils.escapeHTML(sdsData?.tradeName || data?.rmName || '')}"
+                                            placeholder="الاسم التجاري" style="color: #111827 !important; background-color: #ffffff !important;">
                                     </div>
                                 </div>
 
                                 <!-- GHS Pictograms -->
                                 <div class="bg-white p-4 rounded-lg border border-gray-200 mb-4">
-                                    <label class="block text-sm font-bold text-gray-700 mb-3">\u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u0645\u0627\u062F\u0629 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 (GHS)</label>
+                                    <label class="block text-sm font-bold text-gray-700 mb-3">مخاطر المادة الكيميائية (GHS)</label>
                                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                        ${GHS_PICTOGRAMS.map(o=>`
-                                            <label class="flex flex-col items-center gap-2 p-3 rounded-lg border-2 ${n.includes(o.key)?"border-blue-400 bg-blue-50":"border-gray-200 bg-gray-50"} cursor-pointer hover:border-blue-300 transition-colors">
-                                                <input type="checkbox" class="sds-ghs-checkbox" value="${Utils.escapeHTML(o.key)}" ${n.includes(o.key)?"checked":""}>
-                                                <div class="bg-white rounded-lg p-2 border border-gray-200">${o.svg}</div>
-                                                <div class="text-xs font-semibold text-gray-700 text-center">${Utils.escapeHTML(o.labelAr)}</div>
+                                        ${GHS_PICTOGRAMS.map(p => `
+                                            <label class="flex flex-col items-center gap-2 p-3 rounded-lg border-2 ${sdsPictograms.includes(p.key) ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-gray-50'} cursor-pointer hover:border-blue-300 transition-colors">
+                                                <input type="checkbox" class="sds-ghs-checkbox" value="${Utils.escapeHTML(p.key)}" ${sdsPictograms.includes(p.key) ? 'checked' : ''}>
+                                                <div class="bg-white rounded-lg p-2 border border-gray-200">${p.svg}</div>
+                                                <div class="text-xs font-semibold text-gray-700 text-center">${Utils.escapeHTML(p.labelAr)}</div>
                                             </label>
-                                        `).join("")}
+                                        `).join('')}
                                     </div>
-                                    <p class="text-xs text-gray-500 mt-2">\u0627\u062E\u062A\u0631 \u0627\u0644\u0639\u0644\u0627\u0645\u0627\u062A \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629 \u0644\u062A\u0638\u0647\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627 \u0641\u064A \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0637\u0628\u0627\u0639\u0629.</p>
+                                    <p class="text-xs text-gray-500 mt-2">اختر العلامات المناسبة لتظهر تلقائيًا في نموذج الطباعة.</p>
                                 </div>
 
                                 <!-- SDS Instructions -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">\u0627\u0644\u0625\u0633\u0639\u0627\u0641\u0627\u062A \u0627\u0644\u0623\u0648\u0644\u064A\u0629</label>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">الإسعافات الأولية</label>
                                         <textarea id="sds-first-aid" class="form-input bg-white text-gray-900 w-full" rows="4"
-                                            placeholder="\u0627\u0643\u062A\u0628 \u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0625\u0633\u0639\u0627\u0641\u0627\u062A \u0627\u0644\u0623\u0648\u0644\u064A\u0629..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(i?.firstAid||"")}</textarea>
+                                            placeholder="اكتب تعليمات الإسعافات الأولية..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(sdsInstructions?.firstAid || '')}</textarea>
                                     </div>
                                     <div class="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">\u0627\u0644\u0648\u0633\u064A\u0644\u0629 \u0627\u0644\u0625\u0637\u0641\u0627\u0626\u064A\u0629</label>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">الوسيلة الإطفائية</label>
                                         <textarea id="sds-fire-fighting" class="form-input bg-white text-gray-900 w-full" rows="4"
-                                            placeholder="\u0627\u0643\u062A\u0628 \u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0645\u0643\u0627\u0641\u062D\u0629 \u0627\u0644\u062D\u0631\u064A\u0642..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(i?.fireFighting||"")}</textarea>
+                                            placeholder="اكتب تعليمات مكافحة الحريق..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(sdsInstructions?.fireFighting || '')}</textarea>
                                     </div>
                                     <div class="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">\u0641\u064A \u062D\u0627\u0644\u0629 \u0627\u0644\u0627\u0646\u0633\u0643\u0627\u0628\u0627\u062A</label>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">في حالة الانسكابات</label>
                                         <textarea id="sds-spill-response" class="form-input bg-white text-gray-900 w-full" rows="4"
-                                            placeholder="\u0627\u0643\u062A\u0628 \u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u062A\u0639\u0627\u0645\u0644 \u0645\u0639 \u0627\u0644\u0627\u0646\u0633\u0643\u0627\u0628\u0627\u062A..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(i?.spillResponse||"")}</textarea>
+                                            placeholder="اكتب تعليمات التعامل مع الانسكابات..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(sdsInstructions?.spillResponse || '')}</textarea>
                                     </div>
                                     <div class="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">\u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0648\u0627\u0644\u062A\u062E\u0632\u064A\u0646</label>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">التداول والتخزين</label>
                                         <textarea id="sds-handling-storage" class="form-input bg-white text-gray-900 w-full" rows="4"
-                                            placeholder="\u0627\u0643\u062A\u0628 \u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0648\u0627\u0644\u062A\u062E\u0632\u064A\u0646..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(i?.handlingStorage||"")}</textarea>
+                                            placeholder="اكتب تعليمات التداول والتخزين..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(sdsInstructions?.handlingStorage || '')}</textarea>
                                     </div>
                                     <div class="bg-white p-4 rounded-lg border border-gray-200 md:col-span-2">
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629</label>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">مهمات الوقاية الشخصية</label>
                                         <textarea id="sds-ppe" class="form-input bg-white text-gray-900 w-full" rows="4"
-                                            placeholder="\u0627\u0643\u062A\u0628 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(i?.ppe||"")}</textarea>
+                                            placeholder="اكتب مهمات الوقاية الشخصية المطلوبة..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(sdsInstructions?.ppe || '')}</textarea>
                                     </div>
                                     <div class="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">\u0627\u0644\u062E\u0648\u0627\u0635 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629</label>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">الخواص الكيميائية</label>
                                         <textarea id="sds-chemical-properties" class="form-input bg-white text-gray-900 w-full" rows="4"
-                                            placeholder="\u0627\u0643\u062A\u0628 \u0627\u0644\u062E\u0648\u0627\u0635 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(i?.chemicalProperties||"")}</textarea>
+                                            placeholder="اكتب الخواص الكيميائية..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(sdsInstructions?.chemicalProperties || '')}</textarea>
                                     </div>
                                     <div class="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">\u0627\u0644\u062E\u0648\u0627\u0635 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0626\u064A\u0629</label>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">الخواص الفيزيائية</label>
                                         <textarea id="sds-physical-properties" class="form-input bg-white text-gray-900 w-full" rows="4"
-                                            placeholder="\u0627\u0643\u062A\u0628 \u0627\u0644\u062E\u0648\u0627\u0635 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0626\u064A\u0629..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(i?.physicalProperties||"")}</textarea>
+                                            placeholder="اكتب الخواص الفيزيائية..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(sdsInstructions?.physicalProperties || '')}</textarea>
                                     </div>
                                     <div class="bg-white p-4 rounded-lg border border-gray-200 md:col-span-2">
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">\u0645\u062A\u0637\u0644\u0628\u0627\u062A \u0623\u062E\u0631\u0649</label>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">متطلبات أخرى</label>
                                         <textarea id="sds-other-requirements" class="form-input bg-white text-gray-900 w-full" rows="3"
-                                            placeholder="\u0623\u064A \u0645\u062A\u0637\u0644\u0628\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(i?.otherRequirements||"")}</textarea>
+                                            placeholder="أي متطلبات إضافية..." style="color: #111827 !important; background-color: #ffffff !important;">${Utils.escapeHTML(sdsInstructions?.otherRequirements || '')}</textarea>
                                     </div>
                                 </div>
 
                                 <!-- Approval -->
                                 <div class="mt-6 bg-white p-4 rounded-lg border border-gray-200">
-                                    <h4 class="text-sm font-bold text-gray-800 mb-3">\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F</h4>
+                                    <h4 class="text-sm font-bold text-gray-800 mb-3">الاعتماد</h4>
                                     <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                                         <div>
-                                            <label class="block text-xs font-semibold text-gray-600 mb-1">\u0627\u0644\u0648\u0638\u064A\u0641\u0629</label>
+                                            <label class="block text-xs font-semibold text-gray-600 mb-1">الوظيفة</label>
                                             <input type="text" id="sds-approval-job" class="form-input bg-white text-gray-900"
-                                                value="${Utils.escapeHTML(b?.jobTitle||"")}" placeholder="\u0627\u0644\u0648\u0638\u064A\u0641\u0629"
+                                                value="${Utils.escapeHTML(sdsApproval?.jobTitle || '')}" placeholder="الوظيفة"
                                                 style="color: #111827 !important; background-color: #ffffff !important;">
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-semibold text-gray-600 mb-1">\u0627\u0644\u0627\u0633\u0645</label>
+                                            <label class="block text-xs font-semibold text-gray-600 mb-1">الاسم</label>
                                             <input type="text" id="sds-approval-name" class="form-input bg-white text-gray-900"
-                                                value="${Utils.escapeHTML(b?.name||"")}" placeholder="\u0627\u0644\u0627\u0633\u0645"
+                                                value="${Utils.escapeHTML(sdsApproval?.name || '')}" placeholder="الاسم"
                                                 style="color: #111827 !important; background-color: #ffffff !important;">
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-semibold text-gray-600 mb-1">\u0627\u0644\u062A\u0648\u0642\u064A\u0639</label>
+                                            <label class="block text-xs font-semibold text-gray-600 mb-1">التوقيع</label>
                                             <input type="text" id="sds-approval-signature" class="form-input bg-white text-gray-900"
-                                                value="${Utils.escapeHTML(b?.signature||"")}" placeholder="\u0627\u0644\u062A\u0648\u0642\u064A\u0639"
+                                                value="${Utils.escapeHTML(sdsApproval?.signature || '')}" placeholder="التوقيع"
                                                 style="color: #111827 !important; background-color: #ffffff !important;">
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-semibold text-gray-600 mb-1">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</label>
+                                            <label class="block text-xs font-semibold text-gray-600 mb-1">التاريخ</label>
                                             <input type="date" id="sds-approval-date" class="form-input bg-white text-gray-900"
-                                                value="${Utils.escapeHTML(b?.date||"")}"
+                                                value="${Utils.escapeHTML(sdsApproval?.date || '')}"
                                                 style="color: #111827 !important; background-color: #ffffff !important;">
                                         </div>
                                     </div>
@@ -1089,24 +1524,24 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                             </div>
                         </div>
 
-                        <!-- Tab Content: \u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0627\u0644\u0643\u0645\u064A\u0629 -->
+                        <!-- Tab Content: الموقع والكمية -->
                         <div class="tab-content" id="tab-location">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="bg-gradient-to-br from-sky-50 to-white p-4 rounded-lg border-2 border-sky-200 shadow-sm">
                                     <label class="block text-sm font-bold text-sky-800 mb-2 flex items-center gap-2">
-                                        <i class="fas fa-map-marker-alt text-sky-600"></i>\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u062E\u0632\u0646 *
+                                        <i class="fas fa-map-marker-alt text-sky-600"></i>الموقع / المخزن *
                                     </label>
                                     <input type="text" id="location-store" class="form-input bg-white text-gray-900" 
-                                        value="${Utils.escapeHTML(t?.locationStore||"")}" 
-                                        placeholder="\u0627\u0644\u0645\u0648\u0642\u0639 \u0623\u0648 \u0627\u0644\u0645\u062E\u0632\u0646" style="color: #111827 !important; background-color: #ffffff !important;">
+                                        value="${Utils.escapeHTML(data?.locationStore || '')}" 
+                                        placeholder="الموقع أو المخزن" style="color: #111827 !important; background-color: #ffffff !important;">
                                 </div>
                                 <div class="bg-gradient-to-br from-blue-50 to-white p-4 rounded-lg border-2 border-blue-200 shadow-sm">
                                     <label class="block text-sm font-bold text-blue-800 mb-2 flex items-center gap-2">
-                                        <i class="fas fa-calculator text-blue-600"></i>\u0627\u0644\u0643\u0645\u064A\u0629 / \u0627\u0644\u0633\u0646\u0629
+                                        <i class="fas fa-calculator text-blue-600"></i>الكمية / السنة
                                     </label>
                                     <input type="text" id="qty-year" class="form-input bg-white text-gray-900" 
-                                        value="${Utils.escapeHTML(t?.qtyYear||"")}" 
-                                        placeholder="\u0627\u0644\u0643\u0645\u064A\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0629 \u0633\u0646\u0648\u064A\u0627\u064B" style="color: #111827 !important; background-color: #ffffff !important;">
+                                        value="${Utils.escapeHTML(data?.qtyYear || '')}" 
+                                        placeholder="الكمية المستخدمة سنوياً" style="color: #111827 !important; background-color: #ffffff !important;">
                                 </div>
                             </div>
                         </div>
@@ -1114,43 +1549,535 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                 </div>
                 <div class="modal-footer bg-gray-50 border-t border-gray-200 p-4 flex justify-center gap-3">
                     <button type="button" id="prev-tab-btn" class="btn-warning px-5 py-2" disabled>
-                        <i class="fas fa-arrow-right ml-2"></i>\u0627\u0644\u0633\u0627\u0628\u0642
+                        <i class="fas fa-arrow-right ml-2"></i>السابق
                     </button>
                     <button type="button" class="btn-danger px-5 py-2" onclick="this.closest('.modal-overlay').remove()">
-                        <i class="fas fa-times ml-2"></i>\u0625\u0644\u063A\u0627\u0621
+                        <i class="fas fa-times ml-2"></i>إلغاء
                     </button>
                     <button type="button" id="next-tab-btn" class="btn-info px-5 py-2">
-                        <i class="fas fa-arrow-left ml-2"></i>\u0627\u0644\u062A\u0627\u0644\u064A
+                        <i class="fas fa-arrow-left ml-2"></i>التالي
                     </button>
                     <button type="button" id="save-chemical-btn" class="btn-primary text-lg px-6 py-3">
-                        <i class="fas fa-save ml-2"></i>\u062D\u0641\u0638 \u0627\u0644\u0645\u0627\u062F\u0629
+                        <i class="fas fa-save ml-2"></i>حفظ المادة
                     </button>
                 </div>
             </div>
-        `,document.body.appendChild(e),e.querySelector("#save-chemical-btn").addEventListener("click",()=>this.handleSubmit(e));const m=e.querySelector("#msds-arabic"),x=e.querySelector("#msds-english");m&&m.addEventListener("change",o=>{this.msdsFiles.arabic=o.target.files[0]}),x&&x.addEventListener("change",o=>{this.msdsFiles.english=o.target.files[0]});const g=e.querySelector("#purpose-dropdown-btn"),h=e.querySelector("#purpose-dropdown-menu");g&&h&&(g.addEventListener("click",o=>{o.stopPropagation(),h.classList.toggle("hidden");const d=g.querySelector("i");d&&(d.classList.toggle("fa-chevron-down"),d.classList.toggle("fa-chevron-up"))}),document.addEventListener("click",function(d){if(!h.contains(d.target)&&!g.contains(d.target)){h.classList.add("hidden");const f=g.querySelector("i");f&&(f.classList.remove("fa-chevron-up"),f.classList.add("fa-chevron-down"))}}));const y=e.querySelectorAll(".tab-btn"),C=e.querySelectorAll(".tab-content"),k=e.querySelector("#prev-tab-btn"),L=e.querySelector("#next-tab-btn"),w=["basic-info","documents","manufacturer","container","hazards","location","sds"],A=()=>{const o=e.querySelector(".tab-btn.active");if(!o)return;const d=w.indexOf(o.getAttribute("data-tab"));k.disabled=d===0,L.disabled=d===w.length-1};y.forEach(o=>{o.addEventListener("click",()=>{const d=o.getAttribute("data-tab");y.forEach(l=>l.classList.remove("active")),C.forEach(l=>l.classList.remove("active")),o.classList.add("active");const f=e.querySelector(`#tab-${d}`);f&&f.classList.add("active"),A()})}),k&&k.addEventListener("click",()=>{const o=e.querySelector(".tab-btn.active");if(!o)return;const d=w.indexOf(o.getAttribute("data-tab"));if(d>0){const f=w[d-1],l=e.querySelector(`[data-tab="${f}"]`);l&&l.click()}}),L&&L.addEventListener("click",()=>{const o=e.querySelector(".tab-btn.active");if(!o)return;const d=w.indexOf(o.getAttribute("data-tab"));if(d<w.length-1){const f=w[d+1],l=e.querySelector(`[data-tab="${f}"]`);l&&l.click()}}),A(),(()=>{const o=["rm-name","physical-shape","purpose-of-use","department"];let d=!1;const f=()=>{const l=e.querySelector(".tab-btn.active");if(!l||l.getAttribute("data-tab")!=="basic-info")return;let v=0;o.forEach(E=>{const S=e.querySelector(`#${E}`);if(S){let $=!1;S.tagName==="SELECT"?$=S.value&&S.value!=="":(S.type,$=S.value&&S.value.trim()!==""),$&&v++}}),v===o.length&&!d&&(d=!0,setTimeout(()=>{L&&!L.disabled&&L.click()},500))};o.forEach(l=>{const v=e.querySelector(`#${l}`);v&&(v.addEventListener("input",f),v.addEventListener("change",f))}),y.forEach(l=>{l.addEventListener("click",()=>{l.getAttribute("data-tab")==="basic-info"&&(d=!1)})})})(),(()=>{if(this.currentEditId)return;const o=c=>e.querySelector(`#${c}`),d=c=>(o(c)?.value||"").trim(),f=o("sds-company-branch"),l=o("sds-scientific-name"),v=o("sds-trade-name"),E=o("sds-chemical-properties"),S=o("sds-physical-properties"),$=o("sds-other-requirements"),U=[f,l,v,E,S,$].filter(Boolean),I=c=>{c&&(c.dataset.sdsUserEdited="1")};U.forEach(c=>{c.addEventListener("input",()=>I(c)),c.addEventListener("change",()=>I(c))});const M=(c,u)=>{if(!c||c.dataset.sdsUserEdited==="1")return;const D=(u||"").trim();if(c.value!==D){c.value=D,c.dataset.sdsAutofilled="1";try{c.dispatchEvent(new Event("input",{bubbles:!0}))}catch{}}},z=()=>{const c=(AppState?.companySettings?.name||AppState?.companyName||"").trim(),u=d("department");return c&&u?`${c} - ${u}`:c||u},B=()=>{const c=d("hazard-class"),u=d("hazard-description"),D=[];return c&&D.push(`\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u062E\u0637\u0648\u0631\u0629: ${c}`),u&&D.push(`\u0648\u0635\u0641 \u0627\u0644\u062E\u0637\u0648\u0631\u0629: ${u}`),D.join(`
-`)},P=()=>{const c=d("physical-shape"),u=d("qty-year"),D=d("location-store"),T=[];return c&&T.push(`\u0627\u0644\u0634\u0643\u0644 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0626\u064A: ${c}`),D&&T.push(`\u0645\u0648\u0642\u0639 \u0627\u0644\u062A\u062E\u0632\u064A\u0646: ${D}`),u&&T.push(`\u0627\u0644\u0643\u0645\u064A\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0629 \u0633\u0646\u0648\u064A\u0627\u064B: ${u}`),T.join(`
-`)},N=()=>{const c=d("local-import"),u=d("manufacturer"),D=d("agent-egypt"),T=(e.querySelector("#nfpa-health-dropdown")?.value||"").trim(),R=(e.querySelector("#nfpa-fire-dropdown")?.value||"").trim(),O=(e.querySelector("#nfpa-reactivity-dropdown")?.value||"").trim(),q=(e.querySelector("#nfpa-special-dropdown")?.value||"").trim(),W=[T||"0",R||"0",O||"0",q||""].join("-"),j=[];return c&&j.push(`\u0645\u062D\u0644\u064A/\u0645\u0633\u062A\u0648\u0631\u062F: ${c}`),u&&j.push(`\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0645\u0635\u0646\u0639\u0629: ${u}`),D&&j.push(`\u0627\u0644\u0648\u0643\u064A\u0644 \u0641\u064A \u0645\u0635\u0631: ${D}`),j.push(`NFPA: ${W}`),j.filter(Boolean).join(`
-`)},H=()=>{const c=d("rm-name");M(l,c),M(v,c),M(f,z()),M(E,B()),M(S,P()),M($,N())};["rm-name","department","local-import","manufacturer","agent-egypt","hazard-class","hazard-description","physical-shape","location-store","qty-year"].forEach(c=>{const u=o(c);u&&(u.addEventListener("input",H),u.addEventListener("change",H))}),["nfpa-health-dropdown","nfpa-fire-dropdown","nfpa-reactivity-dropdown","nfpa-special-dropdown"].forEach(c=>{const u=o(c);u&&u.addEventListener("change",H)}),H()})(),e.addEventListener("click",o=>{o.target===e&&e.remove()})},togglePurposeOption(t,e){const a=document.getElementById("purpose-selected-tags"),r=document.getElementById("purpose-of-use");if(!a||!r)return;if(e){const n=document.createElement("span");n.className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold purpose-tag",n.setAttribute("data-value",t),n.innerHTML=`
-                ${Utils.escapeHTML(t)}
-                <button type="button" onclick="ChemicalSafety.removePurposeTag('${Utils.escapeHTML(t)}')" 
+        `;
+
+        document.body.appendChild(modal);
+
+        // إعداد مستمعي الأحداث
+        const saveBtn = modal.querySelector('#save-chemical-btn');
+        saveBtn.addEventListener('click', () => this.handleSubmit(modal));
+
+        // إعداد رفع الملفات
+        const msdsArabicInput = modal.querySelector('#msds-arabic');
+        const msdsEnglishInput = modal.querySelector('#msds-english');
+        
+        if (msdsArabicInput) {
+            msdsArabicInput.addEventListener('change', (e) => {
+                this.msdsFiles.arabic = e.target.files[0];
+            });
+        }
+        if (msdsEnglishInput) {
+            msdsEnglishInput.addEventListener('change', (e) => {
+                this.msdsFiles.english = e.target.files[0];
+            });
+        }
+
+        // إعداد dropdown للغرض من الاستخدام
+        const dropdownBtn = modal.querySelector('#purpose-dropdown-btn');
+        const dropdownMenu = modal.querySelector('#purpose-dropdown-menu');
+        
+        if (dropdownBtn && dropdownMenu) {
+            dropdownBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdownMenu.classList.toggle('hidden');
+                const icon = dropdownBtn.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('fa-chevron-down');
+                    icon.classList.toggle('fa-chevron-up');
+                }
+            });
+
+            // إغلاق عند النقر خارج القائمة
+            document.addEventListener('click', function closeDropdown(e) {
+                if (!dropdownMenu.contains(e.target) && !dropdownBtn.contains(e.target)) {
+                    dropdownMenu.classList.add('hidden');
+                    const icon = dropdownBtn.querySelector('i');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-up');
+                        icon.classList.add('fa-chevron-down');
+                    }
+                }
+            });
+        }
+
+        // إعداد التبويبات
+        const tabButtons = modal.querySelectorAll('.tab-btn');
+        const tabContents = modal.querySelectorAll('.tab-content');
+        const prevBtn = modal.querySelector('#prev-tab-btn');
+        const nextBtn = modal.querySelector('#next-tab-btn');
+
+        // قائمة بالتبويبات بالترتيب
+        const tabOrder = ['basic-info', 'documents', 'manufacturer', 'container', 'hazards', 'location', 'sds'];
+
+        const updateTabButtons = () => {
+            const activeTab = modal.querySelector('.tab-btn.active');
+            if (!activeTab) return;
+
+            const currentIndex = tabOrder.indexOf(activeTab.getAttribute('data-tab'));
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex === tabOrder.length - 1;
+        };
+
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetTab = btn.getAttribute('data-tab');
+
+                // إزالة active من جميع الأزرار والمحتويات
+                tabButtons.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+
+                // إضافة active للزر والمحتوى المحدد
+                btn.classList.add('active');
+                const targetContent = modal.querySelector(`#tab-${targetTab}`);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+
+                // تحديث أزرار التنقل
+                updateTabButtons();
+            });
+        });
+
+        // إعداد أزرار التنقل السابق والتالي
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                const activeTab = modal.querySelector('.tab-btn.active');
+                if (!activeTab) return;
+
+                const currentIndex = tabOrder.indexOf(activeTab.getAttribute('data-tab'));
+                if (currentIndex > 0) {
+                    const prevTab = tabOrder[currentIndex - 1];
+                    const prevTabBtn = modal.querySelector(`[data-tab="${prevTab}"]`);
+                    if (prevTabBtn) {
+                        prevTabBtn.click();
+                    }
+                }
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                const activeTab = modal.querySelector('.tab-btn.active');
+                if (!activeTab) return;
+
+                const currentIndex = tabOrder.indexOf(activeTab.getAttribute('data-tab'));
+                if (currentIndex < tabOrder.length - 1) {
+                    const nextTab = tabOrder[currentIndex + 1];
+                    const nextTabBtn = modal.querySelector(`[data-tab="${nextTab}"]`);
+                    if (nextTabBtn) {
+                        nextTabBtn.click();
+                    }
+                }
+            });
+        }
+
+        // تحديث أزرار التنقل في البداية
+        updateTabButtons();
+
+        // إعداد الانتقال التلقائي للتبويب التالي عند إدخال البيانات في التبويب الأول
+        const setupAutoTabTransition = () => {
+            const requiredFields = [
+                'rm-name', // اسم المادة
+                'physical-shape', // الشكل الفيزيائي
+                'purpose-of-use', // الغرض من الاستخدام
+                'department' // القسم
+            ];
+
+            let hasTransitioned = false; // علامة لمنع الانتقال المتكرر
+
+            const checkAllFields = () => {
+                // تحقق فقط إذا كان التبويب الحالي هو المعلومات الأساسية
+                const activeTab = modal.querySelector('.tab-btn.active');
+                if (!activeTab || activeTab.getAttribute('data-tab') !== 'basic-info') {
+                    return;
+                }
+
+                // إعادة حساب جميع الحقول المملوءة
+                let filledCount = 0;
+                requiredFields.forEach(fieldId => {
+                    const field = modal.querySelector(`#${fieldId}`);
+                    if (field) {
+                        let isFilled = false;
+                        if (field.tagName === 'SELECT') {
+                            isFilled = field.value && field.value !== '';
+                        } else if (field.type === 'hidden') {
+                            isFilled = field.value && field.value.trim() !== '';
+                        } else {
+                            isFilled = field.value && field.value.trim() !== '';
+                        }
+                        if (isFilled) filledCount++;
+                    }
+                });
+
+                // إذا تم ملء جميع الحقول المطلوبة ولم ينتقل بعد، انتقل للتبويب التالي
+                if (filledCount === requiredFields.length && !hasTransitioned) {
+                    hasTransitioned = true;
+                    setTimeout(() => {
+                        if (nextBtn && !nextBtn.disabled) {
+                            nextBtn.click();
+                        }
+                    }, 500); // تأخير بسيط لإظهار التأثير
+                }
+            };
+
+            // إضافة مستمعي الأحداث لجميع الحقول المطلوبة
+            requiredFields.forEach(fieldId => {
+                const field = modal.querySelector(`#${fieldId}`);
+                if (field) {
+                    field.addEventListener('input', checkAllFields);
+                    field.addEventListener('change', checkAllFields);
+                }
+            });
+
+            // إعادة تعيين العلامة عند الرجوع للتبويب الأول
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (btn.getAttribute('data-tab') === 'basic-info') {
+                        hasTransitioned = false;
+                    }
+                });
+            });
+        };
+
+        // تشغيل إعداد الانتقال التلقائي
+        setupAutoTabTransition();
+
+        // ربط تبويب SDS تلقائياً ببيانات التبويبات الأخرى (عند إضافة مادة جديدة فقط)
+        // ملاحظة: المزامنة أحادية الاتجاه (من التبويبات الأخرى -> SDS)،
+        // وأي تعديل يدوي في حقل داخل SDS يوقف المزامنة لهذا الحقل فقط.
+        const setupSdsSmartAutofill = () => {
+            // فقط عند إضافة مادة جديدة (data == null)
+            if (this.currentEditId) return;
+
+            const getEl = (id) => modal.querySelector(`#${id}`);
+            const getVal = (id) => (getEl(id)?.value || '').trim();
+
+            const sdsCompanyBranchEl = getEl('sds-company-branch');
+            const sdsScientificNameEl = getEl('sds-scientific-name');
+            const sdsTradeNameEl = getEl('sds-trade-name');
+            const sdsChemicalPropsEl = getEl('sds-chemical-properties');
+            const sdsPhysicalPropsEl = getEl('sds-physical-properties');
+            const sdsOtherReqEl = getEl('sds-other-requirements');
+
+            const sdsTargets = [
+                sdsCompanyBranchEl,
+                sdsScientificNameEl,
+                sdsTradeNameEl,
+                sdsChemicalPropsEl,
+                sdsPhysicalPropsEl,
+                sdsOtherReqEl
+            ].filter(Boolean);
+
+            const markUserEdited = (el) => {
+                if (!el) return;
+                el.dataset.sdsUserEdited = '1';
+            };
+
+            // إذا المستخدم كتب داخل أي حقل SDS => أوقف المزامنة لهذا الحقل
+            sdsTargets.forEach(el => {
+                el.addEventListener('input', () => markUserEdited(el));
+                el.addEventListener('change', () => markUserEdited(el));
+            });
+
+            const syncIfNotEdited = (el, value) => {
+                if (!el) return;
+                if (el.dataset.sdsUserEdited === '1') return; // لا نغيّر لو المستخدم عدّل
+                const nextVal = (value || '').trim();
+                if (el.value !== nextVal) {
+                    el.value = nextVal;
+                    el.dataset.sdsAutofilled = '1';
+                    try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+                }
+            };
+
+            const buildCompanyBranch = () => {
+                const companyName = (AppState?.companySettings?.name || AppState?.companyName || '').trim();
+                const department = getVal('department');
+                if (companyName && department) return `${companyName} - ${department}`;
+                if (companyName) return companyName;
+                return department;
+            };
+
+            const buildChemicalProps = () => {
+                const hazardClass = getVal('hazard-class');
+                const hazardDesc = getVal('hazard-description');
+                const parts = [];
+                if (hazardClass) parts.push(`تصنيف الخطورة: ${hazardClass}`);
+                if (hazardDesc) parts.push(`وصف الخطورة: ${hazardDesc}`);
+                return parts.join('\n');
+            };
+
+            const buildPhysicalProps = () => {
+                const shape = getVal('physical-shape');
+                const qtyYear = getVal('qty-year');
+                const location = getVal('location-store');
+                const parts = [];
+                if (shape) parts.push(`الشكل الفيزيائي: ${shape}`);
+                if (location) parts.push(`موقع التخزين: ${location}`);
+                if (qtyYear) parts.push(`الكمية المستخدمة سنوياً: ${qtyYear}`);
+                return parts.join('\n');
+            };
+
+            const buildOtherReq = () => {
+                const localImport = getVal('local-import');
+                const manufacturer = getVal('manufacturer');
+                const agentEgypt = getVal('agent-egypt');
+
+                const h = (modal.querySelector('#nfpa-health-dropdown')?.value || '').trim();
+                const f = (modal.querySelector('#nfpa-fire-dropdown')?.value || '').trim();
+                const r = (modal.querySelector('#nfpa-reactivity-dropdown')?.value || '').trim();
+                const s = (modal.querySelector('#nfpa-special-dropdown')?.value || '').trim();
+                const nfpa = [h || '0', f || '0', r || '0', s || ''].join('-');
+
+                const parts = [];
+                if (localImport) parts.push(`محلي/مستورد: ${localImport}`);
+                if (manufacturer) parts.push(`الشركة المصنعة: ${manufacturer}`);
+                if (agentEgypt) parts.push(`الوكيل في مصر: ${agentEgypt}`);
+                parts.push(`NFPA: ${nfpa}`);
+                return parts.filter(Boolean).join('\n');
+            };
+
+            const applySync = () => {
+                const rmName = getVal('rm-name');
+
+                // أسماء المادة
+                syncIfNotEdited(sdsScientificNameEl, rmName);
+                syncIfNotEdited(sdsTradeNameEl, rmName);
+
+                // الشركة/الفرع
+                syncIfNotEdited(sdsCompanyBranchEl, buildCompanyBranch());
+
+                // خصائص/معلومات مشتقة
+                syncIfNotEdited(sdsChemicalPropsEl, buildChemicalProps());
+                syncIfNotEdited(sdsPhysicalPropsEl, buildPhysicalProps());
+                syncIfNotEdited(sdsOtherReqEl, buildOtherReq());
+            };
+
+            // ربط التغييرات من التبويبات الأخرى
+            const sourceIds = [
+                'rm-name',
+                'department',
+                'local-import',
+                'manufacturer',
+                'agent-egypt',
+                'hazard-class',
+                'hazard-description',
+                'physical-shape',
+                'location-store',
+                'qty-year'
+            ];
+            sourceIds.forEach(id => {
+                const el = getEl(id);
+                if (!el) return;
+                el.addEventListener('input', applySync);
+                el.addEventListener('change', applySync);
+            });
+
+            // NFPA dropdowns
+            ['nfpa-health-dropdown', 'nfpa-fire-dropdown', 'nfpa-reactivity-dropdown', 'nfpa-special-dropdown'].forEach(id => {
+                const el = getEl(id);
+                if (!el) return;
+                el.addEventListener('change', applySync);
+            });
+
+            // تطبيق أولي
+            applySync();
+        };
+
+        setupSdsSmartAutofill();
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    /**
+     * إضافة/إزالة خيار من الغرض من الاستخدام
+     */
+    togglePurposeOption(value, checked) {
+        const tagsContainer = document.getElementById('purpose-selected-tags');
+        const hiddenInput = document.getElementById('purpose-of-use');
+        
+        if (!tagsContainer || !hiddenInput) return;
+
+        if (checked) {
+            // إضافة tag
+            const tag = document.createElement('span');
+            tag.className = 'inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold purpose-tag';
+            tag.setAttribute('data-value', value);
+            tag.innerHTML = `
+                ${Utils.escapeHTML(value)}
+                <button type="button" onclick="ChemicalSafety.removePurposeTag('${Utils.escapeHTML(value)}')" 
                     class="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors">
                     <i class="fas fa-times text-xs"></i>
                 </button>
-            `,a.innerHTML=a.innerHTML.replace('<span class="text-gray-400 text-sm">\u0644\u0645 \u064A\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0623\u064A \u063A\u0631\u0636</span>',""),a.appendChild(n)}else{const n=a.querySelector(`[data-value="${Utils.escapeHTML(t)}"]`);n&&n.remove();const i=document.querySelector(`.purpose-checkbox[value="${Utils.escapeHTML(t)}"]`);i&&(i.checked=!1)}const s=Array.from(a.querySelectorAll(".purpose-tag")).map(n=>n.getAttribute("data-value"));r.value=s.join(","),s.length===0?(a.innerHTML='<span class="text-gray-400 text-sm">\u0644\u0645 \u064A\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0623\u064A \u063A\u0631\u0636</span>',r.setCustomValidity("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u063A\u0631\u0636 \u0648\u0627\u062D\u062F \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644")):r.setCustomValidity("");try{r.dispatchEvent(new Event("change",{bubbles:!0}))}catch{}},removePurposeTag(t){const e=document.querySelector(`.purpose-checkbox[value="${Utils.escapeHTML(t)}"]`);e&&(e.checked=!1,this.togglePurposeOption(t,!1))},renderNFPADiamond(t,e="normal"){const a=t.health||0,r=t.flammability||0,s=t.instability||0,n=String(t.special||"").trim().toUpperCase(),i=e==="compact",b=a>0||r>0||s>0||n,p=i?280:320,m=i?56:64,g=(d=>{const l=String(d||"").length;return l<=1?i?32:36:l===2?i?28:32:l===3?i?24:28:l===4?i?20:24:i?18:20})(n),h=Utils.escapeHTML(n),y=i?4:5,C=i?"0":"30px",k=i?"0":"30px",L=!i,w=(d,f)=>f==="health"?"#0066CC":f==="flammability"?"#FF0000":f==="instability"?"#FFCC00":"#F5F5F5",A=(d,f)=>f==="health"||f==="flammability"||f==="instability"?"#FFFFFF":"#000000",F=d=>({0:"Normal Material",1:"Slightly Hazardous",2:"Hazardous",3:"Extreme Danger",4:"Deadly"})[d]||"",_=d=>({0:"Will Not Burn",1:"Above 200\xB0F",2:"Below 200\xB0F",3:"Below 100\xB0F",4:"Below 73\xB0F"})[d]||"",o=d=>({0:"Stable",1:"Unstable if Heated",2:"Violent Chemical Change",3:"Shock and Heat May Detonate",4:"May Detonate"})[d]||"";return`
+            `;
+            tagsContainer.innerHTML = tagsContainer.innerHTML.replace('<span class="text-gray-400 text-sm">لم يتم اختيار أي غرض</span>', '');
+            tagsContainer.appendChild(tag);
+        } else {
+            // إزالة tag
+            const tag = tagsContainer.querySelector(`[data-value="${Utils.escapeHTML(value)}"]`);
+            if (tag) tag.remove();
+            
+            // إلغاء تحديد checkbox
+            const checkbox = document.querySelector(`.purpose-checkbox[value="${Utils.escapeHTML(value)}"]`);
+            if (checkbox) checkbox.checked = false;
+        }
+
+        // تحديث hidden input
+        const selectedTags = Array.from(tagsContainer.querySelectorAll('.purpose-tag')).map(tag => tag.getAttribute('data-value'));
+        hiddenInput.value = selectedTags.join(',');
+        
+        // التحقق من الحقل المطلوب
+        if (selectedTags.length === 0) {
+            tagsContainer.innerHTML = '<span class="text-gray-400 text-sm">لم يتم اختيار أي غرض</span>';
+            hiddenInput.setCustomValidity('يرجى اختيار غرض واحد على الأقل');
+        } else {
+            hiddenInput.setCustomValidity('');
+        }
+
+        // إطلاق حدث change للحقل المخفي حتى تعمل ميزات مثل الانتقال التلقائي للتبويب التالي
+        try {
+            hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (e) {
+            // قد تفشل في بعض البيئات القديمة، تجاهل
+        }
+    },
+
+    /**
+     * إزالة tag من الغرض من الاستخدام
+     */
+    removePurposeTag(value) {
+        const checkbox = document.querySelector(`.purpose-checkbox[value="${Utils.escapeHTML(value)}"]`);
+        if (checkbox) {
+            checkbox.checked = false;
+            this.togglePurposeOption(value, false);
+        }
+    },
+
+    /**
+     * رسم مربع NFPA Diamond بشكل احترافي مطابق للصورة
+     */
+    renderNFPADiamond(nfpa, size = 'normal') {
+        const health = nfpa.health || 0;
+        const flammability = nfpa.flammability || 0;
+        const instability = nfpa.instability || 0;
+        const special = String(nfpa.special || '').trim().toUpperCase();
+        
+        // تحديد الحجم بناءً على المعامل والبيانات
+        const isCompact = size === 'compact';
+        const hasData = health > 0 || flammability > 0 || instability > 0 || special;
+        
+        // أحجام محسّنة ليطابق الصورة بدقة - مطابقة للصورة المرفقة
+        const diamondSize = isCompact ? 280 : 320;
+        const fontSize = isCompact ? 56 : 64;
+        const getSpecialFontSize = (value) => {
+            const v = String(value || '');
+            const len = v.length;
+            if (len <= 1) return isCompact ? 32 : 36;
+            if (len === 2) return isCompact ? 28 : 32;
+            if (len === 3) return isCompact ? 24 : 28;
+            if (len === 4) return isCompact ? 20 : 24;
+            return isCompact ? 18 : 20;
+        };
+        const specialFontSize = getSpecialFontSize(special);
+        const specialDisplay = Utils.escapeHTML(special);
+        const strokeWidth = isCompact ? 4 : 5; // إطار رفيع كما في الصورة
+        const wrapperPadding = isCompact ? '0' : '30px';
+        const wrapperGap = isCompact ? '0' : '30px';
+        const showInfoGrid = !isCompact;
+
+        // الألوان الثابتة والواضحة حسب NFPA 704 - مطابقة للصورة المرفقة
+        const getColor = (value, type) => {
+            // الألوان الثابتة حسب النوع - مطابقة للصورة بدقة
+            if (type === 'health') {
+                // Health - أزرق واضح ومشرق
+                return '#0066CC';
+            }
+            if (type === 'flammability') {
+                // Fire - أحمر واضح ومشرق
+                return '#FF0000';
+            }
+            if (type === 'instability') {
+                // Instability - أصفر واضح ومشرق
+                return '#FFCC00';
+            }
+            // Special - رمادي فاتح (كما في الصورة)
+            return '#F5F5F5';
+        };
+
+        // لون النص - جميع الأرقام بيضاء على الألوان الملونة (مطابق للصورة المرفقة)
+        const getTextColor = (value, type) => {
+            // الأرقام بيضاء على الأحمر والأزرق والأصفر
+            if (type === 'health' || type === 'flammability' || type === 'instability') {
+                return '#FFFFFF';
+            }
+            // النص أسود على الأبيض
+            return '#000000';
+        };
+
+        // التفسيرات حسب NFPA
+        const getHealthDescription = (value) => {
+            const descriptions = {
+                0: 'Normal Material',
+                1: 'Slightly Hazardous',
+                2: 'Hazardous',
+                3: 'Extreme Danger',
+                4: 'Deadly'
+            };
+            return descriptions[value] || '';
+        };
+
+        const getFlammabilityDescription = (value) => {
+            const descriptions = {
+                0: 'Will Not Burn',
+                1: 'Above 200°F',
+                2: 'Below 200°F',
+                3: 'Below 100°F',
+                4: 'Below 73°F'
+            };
+            return descriptions[value] || '';
+        };
+
+        const getInstabilityDescription = (value) => {
+            const descriptions = {
+                0: 'Stable',
+                1: 'Unstable if Heated',
+                2: 'Violent Chemical Change',
+                3: 'Shock and Heat May Detonate',
+                4: 'May Detonate'
+            };
+            return descriptions[value] || '';
+        };
+
+        return `
             <style>
                 .nfpa-diamond-wrapper {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: ${k};
-                    padding: ${C};
-                    background: ${i?"transparent":"linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)"};
-                    border-radius: ${i?"0":"16px"};
-                    box-shadow: ${i?"none":"0 8px 16px rgba(0,0,0,0.1)"};
+                    gap: ${wrapperGap};
+                    padding: ${wrapperPadding};
+                    background: ${isCompact ? 'transparent' : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'};
+                    border-radius: ${isCompact ? '0' : '16px'};
+                    box-shadow: ${isCompact ? 'none' : '0 8px 16px rgba(0,0,0,0.1)'};
                     position: relative;
                 }
                 .nfpa-info-grid {
-                    display: ${L?"grid":"none"};
+                    display: ${showInfoGrid ? 'grid' : 'none'};
                     grid-template-columns: repeat(2, 1fr);
                     gap: 15px;
                     width: 100%;
@@ -1194,31 +2121,31 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     border-bottom: none;
                 }
                 .nfpa-diamond-main {
-                    width: ${p}px;
-                    height: ${p}px;
+                    width: ${diamondSize}px;
+                    height: ${diamondSize}px;
                     position: relative;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    margin: ${i?"20px auto":"30px auto"};
+                    margin: ${isCompact ? '20px auto' : '30px auto'};
                     overflow: visible;
                     flex-shrink: 0;
                 }
                 .nfpa-diamond-main svg {
-                    width: ${p}px;
-                    height: ${p}px;
+                    width: ${diamondSize}px;
+                    height: ${diamondSize}px;
                     display: block;
                     overflow: visible;
                     shape-rendering: geometricPrecision;
                     flex-shrink: 0;
                 }
                 .nfpa-diamond-main svg polygon {
-                    stroke-width: ${y};
+                    stroke-width: ${strokeWidth};
                     stroke-linejoin: miter;
                     stroke-miterlimit: 10;
                 }
                 .nfpa-diamond-main svg path {
-                    stroke-width: ${y};
+                    stroke-width: ${strokeWidth};
                     stroke-linejoin: miter;
                     stroke-miterlimit: 10;
                 }
@@ -1286,7 +2213,7 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     margin-right: auto;
                 }
             </style>
-            ${i?"":`
+            ${isCompact ? '' : `
             <div class="nfpa-diamond-wrapper">
                 <!-- Info Boxes Grid -->
                 <div class="nfpa-info-grid">
@@ -1303,10 +2230,10 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     <!-- Fire Info Box -->
                     <div class="nfpa-info-box fire">
                         <div class="nfpa-info-title">FIRE HAZARD</div>
-                        <div class="nfpa-info-item"><strong>4</strong> Below 73\xB0F</div>
-                        <div class="nfpa-info-item"><strong>3</strong> Below 100\xB0F</div>
-                        <div class="nfpa-info-item"><strong>2</strong> Below 200\xB0F</div>
-                        <div class="nfpa-info-item"><strong>1</strong> Above 200\xB0F</div>
+                        <div class="nfpa-info-item"><strong>4</strong> Below 73°F</div>
+                        <div class="nfpa-info-item"><strong>3</strong> Below 100°F</div>
+                        <div class="nfpa-info-item"><strong>2</strong> Below 200°F</div>
+                        <div class="nfpa-info-item"><strong>1</strong> Above 200°F</div>
                         <div class="nfpa-info-item"><strong>0</strong> Will Not Burn</div>
                     </div>
 
@@ -1332,277 +2259,510 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                 </div>
             </div>
             `}
-            <!-- Main Diamond Layout - \u0645\u0637\u0627\u0628\u0642 \u0644\u0644\u0635\u0648\u0631\u0629 \u0628\u062F\u0642\u0629 -->
-            <div class="${i?"nfpa-compact-layout":""}">
-                <!-- Main Diamond - \u0645\u0637\u0627\u0628\u0642 \u0644\u0644\u0635\u0648\u0631\u0629 \u0628\u062F\u0642\u0629 -->
+            <!-- Main Diamond Layout - مطابق للصورة بدقة -->
+            <div class="${isCompact ? 'nfpa-compact-layout' : ''}">
+                <!-- Main Diamond - مطابق للصورة بدقة -->
             <div class="nfpa-diamond-main">
-                <svg width="${p}" height="${p}" viewBox="-6 -6 232 232" preserveAspectRatio="xMidYMid meet" style="filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));">
+                <svg width="${diamondSize}" height="${diamondSize}" viewBox="-6 -6 232 232" preserveAspectRatio="xMidYMid meet" style="filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));">
                     <!-- Outer border - square rotated 45 degrees with thin border -->
                     <path d="M 110 0 L 220 110 L 110 220 L 0 110 Z" 
                         fill="none" 
                         stroke="#000000" 
-                        stroke-width="${y}" 
+                        stroke-width="${strokeWidth}" 
                         stroke-linejoin="miter"
                         stroke-miterlimit="10"/>
                     
-                    <!-- NFPA 704 quadrants (rhombus) - \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0644\u062A\u0642\u0633\u064A\u0645 \u0627\u0644\u0642\u064A\u0627\u0633\u064A -->
+                    <!-- NFPA 704 quadrants (rhombus) - مطابقة للتقسيم القياسي -->
                     <!-- Midpoints: (55,55) (165,55) (55,165) (165,165) -->
                     <!-- Top (Flammability) - Red -->
                     <polygon points="110,0 165,55 110,110 55,55" 
-                        fill="${w(r,"flammability")}"/>
+                        fill="${getColor(flammability, 'flammability')}"/>
                     <!-- Left (Health) - Blue -->
                     <polygon points="0,110 55,55 110,110 55,165" 
-                        fill="${w(a,"health")}"/>
+                        fill="${getColor(health, 'health')}"/>
                     <!-- Right (Instability) - Yellow -->
                     <polygon points="220,110 165,55 110,110 165,165" 
-                        fill="${w(s,"instability")}"/>
+                        fill="${getColor(instability, 'instability')}"/>
                     <!-- Bottom (Special) - White/Light Grey -->
                     <polygon points="110,220 55,165 110,110 165,165" 
                         fill="#F5F5F5"/>
 
                     <!-- Divider lines -->
-                    <path d="M 55 55 L 165 165" stroke="#000000" stroke-width="${y}" stroke-linejoin="miter" stroke-miterlimit="10"/>
-                    <path d="M 165 55 L 55 165" stroke="#000000" stroke-width="${y}" stroke-linejoin="miter" stroke-miterlimit="10"/>
+                    <path d="M 55 55 L 165 165" stroke="#000000" stroke-width="${strokeWidth}" stroke-linejoin="miter" stroke-miterlimit="10"/>
+                    <path d="M 165 55 L 55 165" stroke="#000000" stroke-width="${strokeWidth}" stroke-linejoin="miter" stroke-miterlimit="10"/>
 
-                    <!-- Text values - centered \u062F\u0627\u062E\u0644 \u0643\u0644 \u062C\u0632\u0621 -->
+                    <!-- Text values - centered داخل كل جزء -->
                     <text x="110" y="55"
                         dy=".35em"
                         text-anchor="middle"
-                        font-size="${m}" 
+                        font-size="${fontSize}" 
                         font-weight="900" 
-                        fill="${A(r,"flammability")}" 
+                        fill="${getTextColor(flammability, 'flammability')}" 
                         font-family="Arial, Helvetica, sans-serif"
                         style="user-select: none; pointer-events: none; font-stretch: normal;">
-                        ${r}
+                        ${flammability}
                     </text>
                     
                     <text x="55" y="110"
                         dy=".35em"
                         text-anchor="middle"
-                        font-size="${m}" 
+                        font-size="${fontSize}" 
                         font-weight="900" 
-                        fill="${A(a,"health")}" 
+                        fill="${getTextColor(health, 'health')}" 
                         font-family="Arial, Helvetica, sans-serif"
                         style="user-select: none; pointer-events: none; font-stretch: normal;">
-                        ${a}
+                        ${health}
                     </text>
                     
                     <text x="165" y="110"
                         dy=".35em"
                         text-anchor="middle"
-                        font-size="${m}" 
+                        font-size="${fontSize}" 
                         font-weight="900" 
-                        fill="${A(s,"instability")}" 
+                        fill="${getTextColor(instability, 'instability')}" 
                         font-family="Arial, Helvetica, sans-serif"
                         style="user-select: none; pointer-events: none; font-stretch: normal;">
-                        ${s}
+                        ${instability}
                     </text>
                     
-                    ${n?`
+                    ${special ? `
                     <text x="110" y="165"
                         dy=".35em"
                         text-anchor="middle"
-                        font-size="${g}" 
+                        font-size="${specialFontSize}" 
                         font-weight="900" 
                         fill="#000000" 
                         font-family="Arial, Helvetica, sans-serif"
                         letter-spacing="1px"
                         style="user-select: none; pointer-events: none;">
-                        ${h}
+                        ${specialDisplay}
                     </text>
-                    `:""}
+                    ` : ''}
                 </svg>
             </div>
-            ${i?`
-            <!-- Compact Values List - \u0645\u0637\u0627\u0628\u0642 \u0644\u0644\u0635\u0648\u0631\u0629 -->
+            ${isCompact ? `
+            <!-- Compact Values List - مطابق للصورة -->
             <div class="nfpa-compact-values">
                 <div class="nfpa-compact-value-item health">
                     <span class="nfpa-compact-value-label">Health</span>
-                    <span class="nfpa-compact-value-number">${a}</span>
+                    <span class="nfpa-compact-value-number">${health}</span>
                 </div>
                 <div class="nfpa-compact-value-item fire">
                     <span class="nfpa-compact-value-label">Fire</span>
-                    <span class="nfpa-compact-value-number">${r}</span>
+                    <span class="nfpa-compact-value-number">${flammability}</span>
                 </div>
                 <div class="nfpa-compact-value-item reactivity">
                     <span class="nfpa-compact-value-label">Reactivity</span>
-                    <span class="nfpa-compact-value-number">${s}</span>
+                    <span class="nfpa-compact-value-number">${instability}</span>
                 </div>
                 <div class="nfpa-compact-value-item protection">
                     <span class="nfpa-compact-value-label">Special</span>
-                    <span class="nfpa-compact-value-number">${h||"-"}</span>
+                    <span class="nfpa-compact-value-number">${specialDisplay || '-'}</span>
                 </div>
             </div>
-            `:`
+            ` : `
             <!-- Current Values Description -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-3xl">
                 <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-300 shadow-sm">
                     <div class="text-xs font-bold text-blue-800 mb-2 flex items-center gap-2">
-                        <i class="fas fa-heartbeat"></i>HEALTH (\u0627\u0644\u0635\u062D\u0629)
+                        <i class="fas fa-heartbeat"></i>HEALTH (الصحة)
                     </div>
-                    <div class="text-sm text-blue-900 font-semibold">${F(a)}</div>
+                    <div class="text-sm text-blue-900 font-semibold">${getHealthDescription(health)}</div>
                 </div>
                 <div class="bg-red-50 p-4 rounded-lg border-2 border-red-300 shadow-sm">
                     <div class="text-xs font-bold text-red-800 mb-2 flex items-center gap-2">
-                        <i class="fas fa-fire"></i>FIRE (\u0627\u0644\u0627\u0634\u062A\u0639\u0627\u0644)
+                        <i class="fas fa-fire"></i>FIRE (الاشتعال)
                     </div>
-                    <div class="text-sm text-red-900 font-semibold">${_(r)}</div>
+                    <div class="text-sm text-red-900 font-semibold">${getFlammabilityDescription(flammability)}</div>
                 </div>
                 <div class="bg-yellow-50 p-4 rounded-lg border-2 border-yellow-300 shadow-sm">
                     <div class="text-xs font-bold text-yellow-800 mb-2 flex items-center gap-2">
-                        <i class="fas fa-exclamation-triangle"></i>INSTABILITY (\u0627\u0644\u0627\u0633\u062A\u0642\u0631\u0627\u0631)
+                        <i class="fas fa-exclamation-triangle"></i>INSTABILITY (الاستقرار)
                     </div>
-                    <div class="text-sm text-yellow-900 font-semibold">${o(s)}</div>
+                    <div class="text-sm text-yellow-900 font-semibold">${getInstabilityDescription(instability)}</div>
                 </div>
             </div>
             `}
             </div>
-        `},updateNFPADiamond(){const t=parseInt(document.getElementById("nfpa-health")?.value||0),e=parseInt(document.getElementById("nfpa-flammability")?.value||0),a=parseInt(document.getElementById("nfpa-instability")?.value||0),r=document.getElementById("nfpa-special")?.value||"",s=document.getElementById("nfpa-diamond-container");s&&(s.innerHTML=this.renderNFPADiamond({health:t,flammability:e,instability:a,special:r}))},updateNFPADiamondFromDropdown(){const t=document.getElementById("nfpa-health-dropdown"),e=document.getElementById("nfpa-fire-dropdown"),a=document.getElementById("nfpa-reactivity-dropdown"),r=document.getElementById("nfpa-special-dropdown"),s=parseInt(t?.value||0),n=parseInt(e?.value||0),i=parseInt(a?.value||0),b=r?.value||"",p=document.getElementById("nfpa-diamond-container");p&&(p.innerHTML=this.renderNFPADiamond({health:s,flammability:n,instability:i,special:b},"compact"))},async handleSubmit(t){const e=t.querySelector("#chemical-form");if(!e.checkValidity()){e.reportValidity();return}Loading.show("\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...");try{const a=document.getElementById("purpose-of-use"),r=a?.value?a.value.split(",").filter(l=>l.trim()):[];if(r.length===0){Notification.error("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u063A\u0631\u0636 \u0648\u0627\u062D\u062F \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0645\u0646 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645");return}const s={id:this.currentEditId||Utils.generateId("CHEM"),serialNumber:document.getElementById("serial-number").value||(AppState.appData.chemicalRegister?.length||0)+1,rmName:document.getElementById("rm-name").value.trim(),physicalShape:document.getElementById("physical-shape").value,purposeOfUse:r,methodOfApplication:document.getElementById("method-of-application").value.trim(),department:document.getElementById("department").value.trim(),localImport:document.getElementById("local-import").value,manufacturer:document.getElementById("manufacturer").value.trim(),agentEgypt:document.getElementById("agent-egypt").value.trim(),containerType:document.getElementById("container-type").value.trim(),containerDisposalMethod:document.getElementById("container-disposal").value.trim(),hazardClass:document.getElementById("hazard-class").value.trim(),hazardDescription:document.getElementById("hazard-description").value.trim(),locationStore:document.getElementById("location-store").value.trim(),qtyYear:document.getElementById("qty-year").value.trim(),nfpaDiamond:{health:parseInt(document.getElementById("nfpa-health-dropdown")?.value||document.getElementById("nfpa-health")?.value||0),flammability:parseInt(document.getElementById("nfpa-fire-dropdown")?.value||document.getElementById("nfpa-flammability")?.value||0),instability:parseInt(document.getElementById("nfpa-reactivity-dropdown")?.value||document.getElementById("nfpa-instability")?.value||0),special:(document.getElementById("nfpa-special-dropdown")?.value||document.getElementById("nfpa-special")?.value||"").trim()},createdAt:this.currentEditId?AppState.appData.chemicalRegister.find(l=>l.id===this.currentEditId)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},n=Array.from(document.querySelectorAll(".sds-ghs-checkbox:checked")).map(l=>(l?.value||"").trim()).filter(Boolean),i=(document.getElementById("sds-company-branch")?.value||"").trim(),b=(document.getElementById("sds-translation-status")?.value||"").trim(),p=(document.getElementById("sds-scientific-name")?.value||"").trim(),m=(document.getElementById("sds-trade-name")?.value||"").trim(),x=p||s.rmName||"",g=m||s.rmName||"",h=(document.getElementById("sds-first-aid")?.value||"").trim(),y=(document.getElementById("sds-fire-fighting")?.value||"").trim(),C=(document.getElementById("sds-spill-response")?.value||"").trim(),k=(document.getElementById("sds-handling-storage")?.value||"").trim(),L=(document.getElementById("sds-ppe")?.value||"").trim(),w=(document.getElementById("sds-chemical-properties")?.value||"").trim(),A=(document.getElementById("sds-physical-properties")?.value||"").trim(),F=(document.getElementById("sds-other-requirements")?.value||"").trim(),_=(document.getElementById("sds-approval-job")?.value||"").trim(),o=(document.getElementById("sds-approval-name")?.value||"").trim(),d=(document.getElementById("sds-approval-signature")?.value||"").trim(),f=(document.getElementById("sds-approval-date")?.value||"").trim();if(s.sds={companyBranch:i,translationStatus:b||"\u063A\u064A\u0631 \u0645\u062A\u0631\u062C\u0645",scientificName:x,tradeName:g,ghsPictograms:n,instructions:{firstAid:h,fireFighting:y,spillResponse:C,handlingStorage:k,ppe:L,chemicalProperties:w,physicalProperties:A,otherRequirements:F},approval:{jobTitle:_,name:o,signature:d,date:f}},this.msdsFiles.arabic){const l=await GoogleIntegration.uploadMultipleFilesToDrive([{file:this.msdsFiles.arabic,name:`MSDS_Arabic_${s.id}.pdf`}],"ChemicalManagement");l&&l.success&&l.files&&l.files[0]&&(s.msdsArabic=l.files[0].shareableLink||l.files[0].directLink)}else if(this.currentEditId){const l=AppState.appData.chemicalRegister.find(v=>v.id===this.currentEditId);l?.msdsArabic&&(s.msdsArabic=l.msdsArabic)}if(this.msdsFiles.english){const l=await GoogleIntegration.uploadMultipleFilesToDrive([{file:this.msdsFiles.english,name:`MSDS_English_${s.id}.pdf`}],"ChemicalManagement");l&&l.success&&l.files&&l.files[0]&&(s.msdsEnglish=l.files[0].shareableLink||l.files[0].directLink)}else if(this.currentEditId){const l=AppState.appData.chemicalRegister.find(v=>v.id===this.currentEditId);l?.msdsEnglish&&(s.msdsEnglish=l.msdsEnglish)}if(AppState.appData.chemicalRegister||(AppState.appData.chemicalRegister=[]),this.currentEditId){const l=AppState.appData.chemicalRegister.findIndex(v=>v.id===this.currentEditId);l!==-1&&(AppState.appData.chemicalRegister[l]=s)}else AppState.appData.chemicalRegister.push(s);await GoogleIntegration.sendRequest({action:"saveToSheet",data:{sheetName:"Chemical_Register",data:s,spreadsheetId:AppState.googleConfig?.sheets?.spreadsheetId}}),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),Loading.hide(),Notification.success(this.currentEditId?"\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0627\u062F\u0629 \u0628\u0646\u062C\u0627\u062D":"\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0627\u062F\u0629 \u0628\u0646\u062C\u0627\u062D"),t.remove(),this.currentEditId=null,this.msdsFiles={arabic:null,english:null},await this.loadChemicalList()}catch(a){Loading.hide(),Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0645\u0627\u062F\u0629:",a),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0641\u0638: "+(a.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}},async viewChemical(t){const e=AppState.appData.chemicalRegister.find(n=>n.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0627\u062F\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const a=e.hazardClass&&(e.hazardClass.toLowerCase().includes("hazard")||e.hazardClass.toLowerCase().includes("\u062E\u0637")||e.hazardClass.toLowerCase().includes("danger")),r=!!(e.msdsArabic||e.msdsEnglish),s=document.createElement("div");s.className="modal-overlay",s.style.zIndex="10000",s.innerHTML=`
+        `;
+    },
+
+    /**
+     * تحديث مربع NFPA Diamond
+     */
+    updateNFPADiamond() {
+        const health = parseInt(document.getElementById('nfpa-health')?.value || 0);
+        const flammability = parseInt(document.getElementById('nfpa-flammability')?.value || 0);
+        const instability = parseInt(document.getElementById('nfpa-instability')?.value || 0);
+        const special = document.getElementById('nfpa-special')?.value || '';
+
+        const container = document.getElementById('nfpa-diamond-container');
+        if (container) {
+            container.innerHTML = this.renderNFPADiamond({ health, flammability, instability, special });
+        }
+    },
+
+    /**
+     * تحديث مربع NFPA Diamond من القوائم المنسدلة
+     */
+    updateNFPADiamondFromDropdown() {
+        const healthDropdown = document.getElementById('nfpa-health-dropdown');
+        const fireDropdown = document.getElementById('nfpa-fire-dropdown');
+        const reactivityDropdown = document.getElementById('nfpa-reactivity-dropdown');
+        const specialDropdown = document.getElementById('nfpa-special-dropdown');
+
+        const health = parseInt(healthDropdown?.value || 0);
+        const flammability = parseInt(fireDropdown?.value || 0);
+        const instability = parseInt(reactivityDropdown?.value || 0);
+        const special = specialDropdown?.value || '';
+
+        const container = document.getElementById('nfpa-diamond-container');
+        if (container) {
+            container.innerHTML = this.renderNFPADiamond({ health, flammability, instability, special }, 'compact');
+        }
+    },
+
+    /**
+     * معالجة حفظ النموذج
+     */
+    async handleSubmit(modal) {
+        const form = modal.querySelector('#chemical-form');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        Loading.show('جاري الحفظ...');
+
+        try {
+            // جمع بيانات النموذج - الغرض من الاستخدام
+            const purposeHiddenInput = document.getElementById('purpose-of-use');
+            const selectedPurposes = purposeHiddenInput?.value 
+                ? purposeHiddenInput.value.split(',').filter(v => v.trim())
+                : [];
+            
+            if (selectedPurposes.length === 0) {
+                Notification.error('يرجى اختيار غرض واحد على الأقل من الاستخدام');
+                return;
+            }
+
+            const formData = {
+                id: this.currentEditId || Utils.generateId('CHEM'),
+                serialNumber: document.getElementById('serial-number').value || 
+                    (AppState.appData.chemicalRegister?.length || 0) + 1,
+                rmName: document.getElementById('rm-name').value.trim(),
+                physicalShape: document.getElementById('physical-shape').value,
+                purposeOfUse: selectedPurposes,
+                methodOfApplication: document.getElementById('method-of-application').value.trim(),
+                department: document.getElementById('department').value.trim(),
+                localImport: document.getElementById('local-import').value,
+                manufacturer: document.getElementById('manufacturer').value.trim(),
+                agentEgypt: document.getElementById('agent-egypt').value.trim(),
+                containerType: document.getElementById('container-type').value.trim(),
+                containerDisposalMethod: document.getElementById('container-disposal').value.trim(),
+                hazardClass: document.getElementById('hazard-class').value.trim(),
+                hazardDescription: document.getElementById('hazard-description').value.trim(),
+                locationStore: document.getElementById('location-store').value.trim(),
+                qtyYear: document.getElementById('qty-year').value.trim(),
+                nfpaDiamond: {
+                    health: parseInt(document.getElementById('nfpa-health-dropdown')?.value || document.getElementById('nfpa-health')?.value || 0),
+                    flammability: parseInt(document.getElementById('nfpa-fire-dropdown')?.value || document.getElementById('nfpa-flammability')?.value || 0),
+                    instability: parseInt(document.getElementById('nfpa-reactivity-dropdown')?.value || document.getElementById('nfpa-instability')?.value || 0),
+                    special: (document.getElementById('nfpa-special-dropdown')?.value || document.getElementById('nfpa-special')?.value || '').trim()
+                },
+                createdAt: this.currentEditId 
+                    ? AppState.appData.chemicalRegister.find(c => c.id === this.currentEditId)?.createdAt 
+                    : new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            // جمع بيانات SDS (تعليمات السلامة) - اختياري
+            const sdsSelectedPictograms = Array.from(document.querySelectorAll('.sds-ghs-checkbox:checked'))
+                .map(el => (el?.value || '').trim())
+                .filter(Boolean);
+
+            const sdsCompanyBranch = (document.getElementById('sds-company-branch')?.value || '').trim();
+            const sdsTranslationStatus = (document.getElementById('sds-translation-status')?.value || '').trim();
+            const sdsScientificNameRaw = (document.getElementById('sds-scientific-name')?.value || '').trim();
+            const sdsTradeNameRaw = (document.getElementById('sds-trade-name')?.value || '').trim();
+            // إذا لم يتم إدخال الاسم العلمي/التجاري في SDS، نأخذه تلقائياً من اسم المادة (RM Name)
+            const sdsScientificName = sdsScientificNameRaw || formData.rmName || '';
+            const sdsTradeName = sdsTradeNameRaw || formData.rmName || '';
+
+            const sdsFirstAid = (document.getElementById('sds-first-aid')?.value || '').trim();
+            const sdsFireFighting = (document.getElementById('sds-fire-fighting')?.value || '').trim();
+            const sdsSpillResponse = (document.getElementById('sds-spill-response')?.value || '').trim();
+            const sdsHandlingStorage = (document.getElementById('sds-handling-storage')?.value || '').trim();
+            const sdsPPE = (document.getElementById('sds-ppe')?.value || '').trim();
+            const sdsChemicalProperties = (document.getElementById('sds-chemical-properties')?.value || '').trim();
+            const sdsPhysicalProperties = (document.getElementById('sds-physical-properties')?.value || '').trim();
+            const sdsOtherRequirements = (document.getElementById('sds-other-requirements')?.value || '').trim();
+
+            const sdsApprovalJob = (document.getElementById('sds-approval-job')?.value || '').trim();
+            const sdsApprovalName = (document.getElementById('sds-approval-name')?.value || '').trim();
+            const sdsApprovalSignature = (document.getElementById('sds-approval-signature')?.value || '').trim();
+            const sdsApprovalDate = (document.getElementById('sds-approval-date')?.value || '').trim();
+
+            formData.sds = {
+                companyBranch: sdsCompanyBranch,
+                translationStatus: sdsTranslationStatus || 'غير مترجم',
+                scientificName: sdsScientificName,
+                tradeName: sdsTradeName,
+                ghsPictograms: sdsSelectedPictograms,
+                instructions: {
+                    firstAid: sdsFirstAid,
+                    fireFighting: sdsFireFighting,
+                    spillResponse: sdsSpillResponse,
+                    handlingStorage: sdsHandlingStorage,
+                    ppe: sdsPPE,
+                    chemicalProperties: sdsChemicalProperties,
+                    physicalProperties: sdsPhysicalProperties,
+                    otherRequirements: sdsOtherRequirements
+                },
+                approval: {
+                    jobTitle: sdsApprovalJob,
+                    name: sdsApprovalName,
+                    signature: sdsApprovalSignature,
+                    date: sdsApprovalDate
+                }
+            };
+
+            // رفع ملفات MSDS
+            if (this.msdsFiles.arabic) {
+                const uploadResult = await GoogleIntegration.uploadMultipleFilesToDrive(
+                    [{ file: this.msdsFiles.arabic, name: `MSDS_Arabic_${formData.id}.pdf` }],
+                    'ChemicalManagement'
+                );
+                if (uploadResult && uploadResult.success && uploadResult.files && uploadResult.files[0]) {
+                    formData.msdsArabic = uploadResult.files[0].shareableLink || uploadResult.files[0].directLink;
+                }
+            } else if (this.currentEditId) {
+                const existing = AppState.appData.chemicalRegister.find(c => c.id === this.currentEditId);
+                if (existing?.msdsArabic) formData.msdsArabic = existing.msdsArabic;
+            }
+
+            if (this.msdsFiles.english) {
+                const uploadResult = await GoogleIntegration.uploadMultipleFilesToDrive(
+                    [{ file: this.msdsFiles.english, name: `MSDS_English_${formData.id}.pdf` }],
+                    'ChemicalManagement'
+                );
+                if (uploadResult && uploadResult.success && uploadResult.files && uploadResult.files[0]) {
+                    formData.msdsEnglish = uploadResult.files[0].shareableLink || uploadResult.files[0].directLink;
+                }
+            } else if (this.currentEditId) {
+                const existing = AppState.appData.chemicalRegister.find(c => c.id === this.currentEditId);
+                if (existing?.msdsEnglish) formData.msdsEnglish = existing.msdsEnglish;
+            }
+
+            // حفظ في AppState
+            if (!AppState.appData.chemicalRegister) {
+                AppState.appData.chemicalRegister = [];
+            }
+
+            if (this.currentEditId) {
+                const index = AppState.appData.chemicalRegister.findIndex(c => c.id === this.currentEditId);
+                if (index !== -1) {
+                    AppState.appData.chemicalRegister[index] = formData;
+                }
+            } else {
+                AppState.appData.chemicalRegister.push(formData);
+            }
+
+            // حفظ في Google Sheets
+            await GoogleIntegration.sendRequest({
+                action: 'saveToSheet',
+                data: {
+                    sheetName: 'Chemical_Register',
+                    data: formData,
+                    spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
+                }
+            });
+
+            // حفظ محلي
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            window.DataManager.save();
+        }
+
+            Loading.hide();
+            Notification.success(this.currentEditId ? 'تم تحديث المادة بنجاح' : 'تم إضافة المادة بنجاح');
+            modal.remove();
+            this.currentEditId = null;
+            this.msdsFiles = { arabic: null, english: null };
+            await this.loadChemicalList();
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('❌ خطأ في حفظ المادة:', error);
+            Notification.error('حدث خطأ أثناء الحفظ: ' + (error.message || 'خطأ غير معروف'));
+        }
+    },
+
+    /**
+     * عرض تفاصيل مادة بشكل احترافي
+     */
+    async viewChemical(id) {
+        const chemical = AppState.appData.chemicalRegister.find(c => c.id === id);
+        if (!chemical) {
+            Notification.error('المادة غير موجودة');
+            return;
+        }
+
+        const isHazardous = chemical.hazardClass && 
+            (chemical.hazardClass.toLowerCase().includes('hazard') || 
+             chemical.hazardClass.toLowerCase().includes('خط') ||
+             chemical.hazardClass.toLowerCase().includes('danger'));
+        const hasMSDS = !!(chemical.msdsArabic || chemical.msdsEnglish);
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.zIndex = '10000';
+        modal.innerHTML = `
             <div class="modal-content chem-detail-modal" style="max-width: 900px; max-height: 90vh; overflow-y: auto; overflow-x: hidden; border-radius: 18px; overflow: hidden;">
                 <div class="modal-header chem-detail-modal__header" style="background: linear-gradient(90deg, #0b2a55 0%, #1e40af 60%, #2563eb 100%); color: white; padding: 20px;">
                     <h2 class="modal-title" style="color: white; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;">
                         <i class="fas fa-flask"></i>
-                        <span>\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0627\u062F\u0629 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629</span>
-                        ${a?'<span class="badge badge-danger mr-2 bg-red-500"><i class="fas fa-exclamation-triangle ml-1"></i>\u062E\u0637\u064A\u0631</span>':""}
+                        <span>تفاصيل المادة الكيميائية</span>
+                        ${isHazardous ? '<span class="badge badge-danger mr-2 bg-red-500"><i class="fas fa-exclamation-triangle ml-1"></i>خطير</span>' : ''}
                     </h2>
                     <button class="modal-close" style="color: white;" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body" style="background: #f8f9fa; padding: 25px;">
-                    <!-- \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0623\u0633\u0627\u0633\u064A\u0629 -->
+                    <!-- معلومات أساسية -->
                     <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg mb-6 border-l-4 border-blue-500" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-left: 4px solid #2196F3;">
                         <h3 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: #1565C0;">
                             <i class="fas fa-info-circle" style="color: #1976D2;"></i>
-                            \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629
+                            المعلومات الأساسية
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-white p-3 rounded-lg shadow-sm">
-                                <label class="text-xs mb-1" style="color: #64748b;">\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u062A\u0633\u0644\u0633\u0644\u064A</label>
-                                <p class="font-bold" style="color: #111827;">${Utils.escapeHTML(e.serialNumber||"-")}</p>
+                                <label class="text-xs mb-1" style="color: #64748b;">الرقم التسلسلي</label>
+                                <p class="font-bold" style="color: #111827;">${Utils.escapeHTML(chemical.serialNumber || '-')}</p>
                             </div>
                             <div class="bg-white p-3 rounded-lg shadow-sm">
-                                <label class="text-xs mb-1" style="color: #64748b;">\u0627\u0633\u0645 \u0627\u0644\u0645\u0627\u062F\u0629</label>
-                                <p class="font-bold" style="color: #111827;">${Utils.escapeHTML(e.rmName||"-")}</p>
+                                <label class="text-xs mb-1" style="color: #64748b;">اسم المادة</label>
+                                <p class="font-bold" style="color: #111827;">${Utils.escapeHTML(chemical.rmName || '-')}</p>
                             </div>
                             <div class="bg-white p-3 rounded-lg shadow-sm">
-                                <label class="text-xs mb-1" style="color: #64748b;">\u0627\u0644\u0634\u0643\u0644 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0626\u064A</label>
-                                <p class="font-semibold" style="color: #111827;">${Utils.escapeHTML(e.physicalShape||"-")}</p>
+                                <label class="text-xs mb-1" style="color: #64748b;">الشكل الفيزيائي</label>
+                                <p class="font-semibold" style="color: #111827;">${Utils.escapeHTML(chemical.physicalShape || '-')}</p>
                             </div>
                             <div class="bg-white p-3 rounded-lg shadow-sm">
-                                <label class="text-xs mb-1" style="color: #64748b;">\u0627\u0644\u0642\u0633\u0645</label>
-                                <p class="font-semibold" style="color: #111827;">${Utils.escapeHTML(e.department||"-")}</p>
+                                <label class="text-xs mb-1" style="color: #64748b;">القسم</label>
+                                <p class="font-semibold" style="color: #111827;">${Utils.escapeHTML(chemical.department || '-')}</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- \u0627\u0644\u063A\u0631\u0636 \u0645\u0646 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 -->
+                    <!-- الغرض من الاستخدام -->
                     <div class="mb-6">
                         <h3 class="text-lg font-bold mb-3 flex items-center gap-2" style="color: #111827;">
                             <i class="fas fa-list-check" style="color: #4CAF50;"></i>
-                            \u0627\u0644\u063A\u0631\u0636 \u0645\u0646 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645
+                            الغرض من الاستخدام
                         </h3>
                         <div class="p-4 rounded-lg border" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 2px solid #4CAF50;">
                             <div class="flex flex-wrap gap-2">
-                                ${Array.isArray(e.purposeOfUse)?e.purposeOfUse.map(n=>`
+                                ${Array.isArray(chemical.purposeOfUse) 
+                                    ? chemical.purposeOfUse.map(p => `
                                         <span class="px-3 py-1 rounded-full text-sm font-semibold" style="background: #4CAF50; color: white;">
-                                            ${Utils.escapeHTML(n)}
+                                            ${Utils.escapeHTML(p)}
                                         </span>
-                                    `).join(""):`<span class="px-3 py-1 rounded-full text-sm" style="background: #4CAF50; color: white;">${Utils.escapeHTML(e.purposeOfUse||"-")}</span>`}
+                                    `).join('')
+                                    : `<span class="px-3 py-1 rounded-full text-sm" style="background: #4CAF50; color: white;">${Utils.escapeHTML(chemical.purposeOfUse || '-')}</span>`}
                             </div>
                         </div>
                     </div>
 
-                    <!-- \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629 -->
+                    <!-- معلومات إضافية -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div class="bg-white p-4 rounded-lg border shadow-sm" style="border: 1px solid #e5e7eb;">
                             <label class="text-xs mb-1 flex items-center gap-1" style="color: #64748b;">
-                                <i class="fas fa-tools" style="color: #9ca3af;"></i>\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642
+                                <i class="fas fa-tools" style="color: #9ca3af;"></i>طريقة التطبيق
                             </label>
-                            <p style="color: #111827;">${Utils.escapeHTML(e.methodOfApplication||"-")}</p>
+                            <p style="color: #111827;">${Utils.escapeHTML(chemical.methodOfApplication || '-')}</p>
                         </div>
                         <div class="bg-white p-4 rounded-lg border shadow-sm" style="border: 1px solid #e5e7eb;">
                             <label class="text-xs mb-1 flex items-center gap-1" style="color: #64748b;">
-                                <i class="fas fa-globe" style="color: #9ca3af;"></i>\u0645\u062D\u0644\u064A / \u0645\u0633\u062A\u0648\u0631\u062F
+                                <i class="fas fa-globe" style="color: #9ca3af;"></i>محلي / مستورد
                             </label>
                             <p style="color: #111827;">
-                                <span class="px-2 py-1 rounded ${e.localImport==="Local"?"bg-green-100 text-green-800":"bg-blue-100 text-blue-800"}">
-                                    ${Utils.escapeHTML(e.localImport||"-")}
+                                <span class="px-2 py-1 rounded ${chemical.localImport === 'Local' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">
+                                    ${Utils.escapeHTML(chemical.localImport || '-')}
                                 </span>
                             </p>
                         </div>
                         <div class="bg-white p-4 rounded-lg border shadow-sm" style="border: 1px solid #e5e7eb;">
                             <label class="text-xs mb-1 flex items-center gap-1" style="color: #64748b;">
-                                <i class="fas fa-industry" style="color: #9ca3af;"></i>\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0645\u0635\u0646\u0639\u0629
+                                <i class="fas fa-industry" style="color: #9ca3af;"></i>الشركة المصنعة
                             </label>
-                            <p style="color: #111827;">${Utils.escapeHTML(e.manufacturer||"-")}</p>
+                            <p style="color: #111827;">${Utils.escapeHTML(chemical.manufacturer || '-')}</p>
                         </div>
                         <div class="bg-white p-4 rounded-lg border shadow-sm" style="border: 1px solid #e5e7eb;">
                             <label class="text-xs mb-1 flex items-center gap-1" style="color: #64748b;">
-                                <i class="fas fa-handshake" style="color: #9ca3af;"></i>\u0627\u0644\u0648\u0643\u064A\u0644 \u0641\u064A \u0645\u0635\u0631
+                                <i class="fas fa-handshake" style="color: #9ca3af;"></i>الوكيل في مصر
                             </label>
-                            <p style="color: #111827;">${Utils.escapeHTML(e.agentEgypt||"-")}</p>
+                            <p style="color: #111827;">${Utils.escapeHTML(chemical.agentEgypt || '-')}</p>
                         </div>
                         <div class="bg-white p-4 rounded-lg border shadow-sm" style="border: 1px solid #e5e7eb;">
                             <label class="text-xs mb-1 flex items-center gap-1" style="color: #64748b;">
-                                <i class="fas fa-box" style="color: #9ca3af;"></i>\u0646\u0648\u0639 \u0627\u0644\u062D\u0627\u0648\u064A\u0629
+                                <i class="fas fa-box" style="color: #9ca3af;"></i>نوع الحاوية
                             </label>
-                            <p style="color: #111827;">${Utils.escapeHTML(e.containerType||"-")}</p>
+                            <p style="color: #111827;">${Utils.escapeHTML(chemical.containerType || '-')}</p>
                         </div>
                         <div class="bg-white p-4 rounded-lg border shadow-sm" style="border: 1px solid #e5e7eb;">
                             <label class="text-xs mb-1 flex items-center gap-1" style="color: #64748b;">
-                                <i class="fas fa-recycle" style="color: #9ca3af;"></i>\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062A\u062E\u0644\u0635
+                                <i class="fas fa-recycle" style="color: #9ca3af;"></i>طريقة التخلص
                             </label>
-                            <p style="color: #111827;">${Utils.escapeHTML(e.containerDisposalMethod||"-")}</p>
+                            <p style="color: #111827;">${Utils.escapeHTML(chemical.containerDisposalMethod || '-')}</p>
                         </div>
                         <div class="bg-white p-4 rounded-lg border shadow-sm" style="border: 1px solid #e5e7eb;">
                             <label class="text-xs mb-1 flex items-center gap-1" style="color: #64748b;">
-                                <i class="fas fa-map-marker-alt" style="color: #9ca3af;"></i>\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u062E\u0632\u0646
+                                <i class="fas fa-map-marker-alt" style="color: #9ca3af;"></i>الموقع / المخزن
                             </label>
-                            <p style="color: #111827;">${Utils.escapeHTML(e.locationStore||"-")}</p>
+                            <p style="color: #111827;">${Utils.escapeHTML(chemical.locationStore || '-')}</p>
                         </div>
                         <div class="bg-white p-4 rounded-lg border shadow-sm" style="border: 1px solid #e5e7eb;">
                             <label class="text-xs mb-1 flex items-center gap-1" style="color: #64748b;">
-                                <i class="fas fa-calculator" style="color: #9ca3af;"></i>\u0627\u0644\u0643\u0645\u064A\u0629 / \u0627\u0644\u0633\u0646\u0629
+                                <i class="fas fa-calculator" style="color: #9ca3af;"></i>الكمية / السنة
                             </label>
-                            <p class="font-semibold" style="color: #111827;">${Utils.escapeHTML(e.qtyYear||"-")}</p>
+                            <p class="font-semibold" style="color: #111827;">${Utils.escapeHTML(chemical.qtyYear || '-')}</p>
                         </div>
                     </div>
 
-                    <!-- \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u062E\u0637\u0648\u0631\u0629 -->
-                    ${a||e.hazardClass||e.hazardDescription?`
+                    <!-- معلومات الخطورة -->
+                    ${isHazardous || chemical.hazardClass || chemical.hazardDescription ? `
                         <div class="p-4 rounded-lg mb-6 border-l-4" style="background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); border-left: 4px solid #f44336;">
                             <h3 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: #c62828;">
                                 <i class="fas fa-exclamation-triangle" style="color: #d32f2f;"></i>
-                                \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u062E\u0637\u0648\u0631\u0629
+                                معلومات الخطورة
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                ${e.hazardClass?`
+                                ${chemical.hazardClass ? `
                                     <div class="bg-white p-3 rounded-lg shadow-sm">
-                                        <label class="text-xs mb-1" style="color: #64748b;">\u0627\u0644\u062A\u0635\u0646\u064A\u0641</label>
-                                        <p class="font-bold" style="color: #c62828;">${Utils.escapeHTML(e.hazardClass)}</p>
+                                        <label class="text-xs mb-1" style="color: #64748b;">التصنيف</label>
+                                        <p class="font-bold" style="color: #c62828;">${Utils.escapeHTML(chemical.hazardClass)}</p>
                                     </div>
-                                `:""}
-                                ${e.hazardDescription?`
+                                ` : ''}
+                                ${chemical.hazardDescription ? `
                                     <div class="bg-white p-3 rounded-lg shadow-sm md:col-span-2">
-                                        <label class="text-xs mb-1" style="color: #64748b;">\u0648\u0635\u0641 \u0627\u0644\u062E\u0637\u0648\u0631\u0629</label>
-                                        <p class="whitespace-pre-line" style="color: #111827;">${Utils.escapeHTML(e.hazardDescription)}</p>
+                                        <label class="text-xs mb-1" style="color: #64748b;">وصف الخطورة</label>
+                                        <p class="whitespace-pre-line" style="color: #111827;">${Utils.escapeHTML(chemical.hazardDescription)}</p>
                                     </div>
-                                `:""}
+                                ` : ''}
                             </div>
                         </div>
-                    `:""}
+                    ` : ''}
 
-                    <!-- \u0645\u0644\u0641\u0627\u062A MSDS -->
-                    ${r?`
+                    <!-- ملفات MSDS -->
+                    ${hasMSDS ? `
                         <div class="p-4 rounded-lg mb-6 border-l-4" style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-left: 4px solid #9C27B0;">
                             <h3 class="text-lg font-bold mb-4 flex items-center gap-2" style="color: #6A1B9A;">
                                 <i class="fas fa-file-pdf" style="color: #7B1FA2;"></i>
-                                \u0645\u0644\u0641\u0627\u062A MSDS
+                                ملفات MSDS
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                ${e.msdsArabic?`
-                                    <a href="${Utils.escapeHTML(e.msdsArabic)}" target="_blank" 
+                                ${chemical.msdsArabic ? `
+                                    <a href="${Utils.escapeHTML(chemical.msdsArabic)}" target="_blank" 
                                        class="bg-white p-4 rounded-lg border-2 border-purple-200 hover:border-purple-400 hover:shadow-lg transition-all flex items-center justify-between group">
                                         <div class="flex items-center gap-3">
                                             <div class="bg-purple-100 p-3 rounded-lg group-hover:bg-purple-200 transition-colors">
@@ -1610,14 +2770,14 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                                             </div>
                                             <div>
                                                 <p class="font-semibold text-gray-800">MSDS (Arabic)</p>
-                                                <p class="text-xs text-gray-500">\u0627\u0636\u063A\u0637 \u0644\u0644\u0641\u062A\u062D</p>
+                                                <p class="text-xs text-gray-500">اضغط للفتح</p>
                                             </div>
                                         </div>
                                         <i class="fas fa-external-link-alt text-purple-600 group-hover:translate-x-1 transition-transform"></i>
                                     </a>
-                                `:""}
-                                ${e.msdsEnglish?`
-                                    <a href="${Utils.escapeHTML(e.msdsEnglish)}" target="_blank" 
+                                ` : ''}
+                                ${chemical.msdsEnglish ? `
+                                    <a href="${Utils.escapeHTML(chemical.msdsEnglish)}" target="_blank" 
                                        class="bg-white p-4 rounded-lg border-2 border-purple-200 hover:border-purple-400 hover:shadow-lg transition-all flex items-center justify-between group">
                                         <div class="flex items-center gap-3">
                                             <div class="bg-purple-100 p-3 rounded-lg group-hover:bg-purple-200 transition-colors">
@@ -1625,62 +2785,212 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                                             </div>
                                             <div>
                                                 <p class="font-semibold text-gray-800">MSDS (English)</p>
-                                                <p class="text-xs text-gray-500">\u0627\u0636\u063A\u0637 \u0644\u0644\u0641\u062A\u062D</p>
+                                                <p class="text-xs text-gray-500">اضغط للفتح</p>
                                             </div>
                                         </div>
                                         <i class="fas fa-external-link-alt text-purple-600 group-hover:translate-x-1 transition-transform"></i>
                                     </a>
-                                `:""}
+                                ` : ''}
                             </div>
                         </div>
-                    `:""}
+                    ` : ''}
 
                     <!-- NFPA Diamond -->
-                    ${e.nfpaDiamond?`
+                    ${chemical.nfpaDiamond ? `
                         <div class="p-4 rounded-lg border-2 mb-6" style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border: 2px solid #FF9800;">
                             <h3 class="text-lg font-bold mb-3 flex items-center gap-2" style="color: #E65100;">
                                 <i class="fas fa-gem" style="color: #F57C00;"></i>
-                                \u0645\u0631\u0628\u0639 NFPA (NFPA Diamond)
+                                مربع NFPA (NFPA Diamond)
                             </h3>
                             <div class="flex justify-center">
-                                ${this.renderNFPADiamond(e.nfpaDiamond,"compact")}
+                                ${this.renderNFPADiamond(chemical.nfpaDiamond, 'compact')}
                             </div>
                         </div>
-                    `:""}
+                    ` : ''}
                 </div>
                 <div class="modal-footer" style="background: #f8f9fa; border-top: 1px solid #e5e7eb; padding: 20px; display: flex; justify-content: center; gap: 12px;">
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px;">
-                        <i class="fas fa-times ml-2"></i>\u0625\u063A\u0644\u0627\u0642
+                        <i class="fas fa-times ml-2"></i>إغلاق
                     </button>
-                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("chemical-safety"):""}
-                    <button type="button" onclick="ChemicalSafety.exportPDF('${e.id}');"
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('chemical-safety') : ''}
+                    <button type="button" onclick="ChemicalSafety.exportPDF('${chemical.id}');"
                         class="btn-success" style="padding: 10px 20px;">
-                        <i class="fas fa-file-pdf ml-2"></i>\u0637\u0628\u0627\u0639\u0629 / \u062A\u0635\u062F\u064A\u0631 PDF
+                        <i class="fas fa-file-pdf ml-2"></i>طباعة / تصدير PDF
                     </button>
-                    <button type="button" onclick="ChemicalSafety.downloadChemicalPDF('${e.id}');"
+                    <button type="button" onclick="ChemicalSafety.downloadChemicalPDF('${chemical.id}');"
                         class="btn-primary" style="padding: 10px 20px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border: none;">
-                        <i class="fas fa-download ml-2"></i>\u062A\u062D\u0645\u064A\u0644 PDF (A4)
+                        <i class="fas fa-download ml-2"></i>تحميل PDF (A4)
                     </button>
-                    <button type="button" onclick="ChemicalSafety.editChemical('${e.id}'); this.closest('.modal-overlay').remove();"
+                    <button type="button" onclick="ChemicalSafety.editChemical('${chemical.id}'); this.closest('.modal-overlay').remove();"
                         class="btn-primary" style="padding: 10px 20px;">
-                        <i class="fas fa-edit ml-2"></i>\u062A\u0639\u062F\u064A\u0644
+                        <i class="fas fa-edit ml-2"></i>تعديل
                     </button>
                 </div>
             </div>
-        `,document.body.appendChild(s),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(s,{moduleKey:"chemical-safety",record:e,recordId:e.id||e.isoCode||""}),s.addEventListener("click",n=>{n.target===s&&s.remove()})},async editChemical(t){const e=AppState.appData.chemicalRegister.find(a=>a.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0627\u062F\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}await this.showForm(e)},async deleteChemical(t){const e=AppState.appData.chemicalRegister.find(a=>a.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0627\u062F\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}if(confirm(`\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0627\u0644\u0645\u0627\u062F\u0629 "${e.rmName}"\u061F`)){Loading.show("\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0630\u0641...");try{AppState.appData.chemicalRegister=AppState.appData.chemicalRegister.filter(a=>a.id!==t),await GoogleIntegration.sendRequest({action:"deleteFromSheet",data:{sheetName:"Chemical_Register",id:t,spreadsheetId:AppState.googleConfig?.sheets?.spreadsheetId}}),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),Loading.hide(),Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0645\u0627\u062F\u0629 \u0628\u0646\u062C\u0627\u062D"),await this.loadChemicalList()}catch(a){Loading.hide(),Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0645\u0627\u062F\u0629:",a),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0630\u0641: "+(a.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}}},_escapePrint(t){try{return Utils.escapeHTML(t||"")}catch{return String(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}},_formatSDSCell(t,e="\u064A\u0638\u0647\u0631 \u0628\u0634\u0643\u0644 \u062A\u0644\u0642\u0627\u0626\u064A"){const a=String(t||"").trim();return a?`<div class="sds-pre">${this._escapePrint(a)}</div>`:`<div class="sds-placeholder">${this._escapePrint(e)}</div>`},_getSDSData(t){const e=t?.sds||{},a=e?.instructions||{},r=e?.approval||{},s=Array.isArray(e?.ghsPictograms)?e.ghsPictograms:typeof e?.ghsPictograms=="string"?e.ghsPictograms.split(",").map(n=>n.trim()).filter(Boolean):[];return{companyBranch:e?.companyBranch||"",translationStatus:e?.translationStatus||"\u063A\u064A\u0631 \u0645\u062A\u0631\u062C\u0645",scientificName:e?.scientificName||"",tradeName:e?.tradeName||"",ghsPictograms:s,instructions:{firstAid:a?.firstAid||"",fireFighting:a?.fireFighting||"",spillResponse:a?.spillResponse||"",handlingStorage:a?.handlingStorage||"",ppe:a?.ppe||"",chemicalProperties:a?.chemicalProperties||"",physicalProperties:a?.physicalProperties||"",otherRequirements:a?.otherRequirements||""},approval:{jobTitle:r?.jobTitle||"",name:r?.name||"",signature:r?.signature||"",date:r?.date||""}}},_renderGHSPictogramsPrint(t=[]){const e=new Set(Array.isArray(t)?t:[]),a=["environment","corrosion","skull","flame"],r=s=>GHS_PICTOGRAMS.find(n=>n.key===s);return`
+        `;
+        document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'chemical-safety', record: chemical, recordId: chemical.id || chemical.isoCode || '' });
+        }
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    /**
+     * تعديل مادة
+     */
+    async editChemical(id) {
+        const chemical = AppState.appData.chemicalRegister.find(c => c.id === id);
+        if (!chemical) {
+            Notification.error('المادة غير موجودة');
+            return;
+        }
+        await this.showForm(chemical);
+    },
+
+    /**
+     * حذف مادة
+     */
+    async deleteChemical(id) {
+        const chemical = AppState.appData.chemicalRegister.find(c => c.id === id);
+        if (!chemical) {
+            Notification.error('المادة غير موجودة');
+            return;
+        }
+
+        if (!confirm(`هل أنت متأكد من حذف المادة "${chemical.rmName}"؟`)) {
+            return;
+        }
+
+        Loading.show('جاري الحذف...');
+        try {
+            // حذف من AppState
+            AppState.appData.chemicalRegister = AppState.appData.chemicalRegister.filter(c => c.id !== id);
+
+            // حذف من Google Sheets
+            await GoogleIntegration.sendRequest({
+                action: 'deleteFromSheet',
+                data: {
+                    sheetName: 'Chemical_Register',
+                    id: id,
+                    spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
+                }
+            });
+
+            // حفظ محلي
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+
+            Loading.hide();
+            Notification.success('تم حذف المادة بنجاح');
+            await this.loadChemicalList();
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('❌ خطأ في حذف المادة:', error);
+            Notification.error('حدث خطأ أثناء الحذف: ' + (error.message || 'خطأ غير معروف'));
+        }
+    },
+
+    // ==============================
+    // SDS Printing (Template like provided image)
+    // ==============================
+    _escapePrint(value) {
+        try {
+            return Utils.escapeHTML(value || '');
+        } catch (e) {
+            // Fallback (shouldn't happen in this app)
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    },
+
+    _formatSDSCell(text, placeholder = 'يظهر بشكل تلقائي') {
+        const v = String(text || '').trim();
+        if (!v) {
+            return `<div class="sds-placeholder">${this._escapePrint(placeholder)}</div>`;
+        }
+        return `<div class="sds-pre">${this._escapePrint(v)}</div>`;
+    },
+
+    _getSDSData(chemical) {
+        const sds = chemical?.sds || {};
+        const instructions = sds?.instructions || {};
+        const approval = sds?.approval || {};
+        const ghs = Array.isArray(sds?.ghsPictograms)
+            ? sds.ghsPictograms
+            : (typeof sds?.ghsPictograms === 'string'
+                ? sds.ghsPictograms.split(',').map(v => v.trim()).filter(Boolean)
+                : []);
+
+        return {
+            companyBranch: sds?.companyBranch || '',
+            translationStatus: sds?.translationStatus || 'غير مترجم',
+            scientificName: sds?.scientificName || '',
+            tradeName: sds?.tradeName || '',
+            ghsPictograms: ghs,
+            instructions: {
+                firstAid: instructions?.firstAid || '',
+                fireFighting: instructions?.fireFighting || '',
+                spillResponse: instructions?.spillResponse || '',
+                handlingStorage: instructions?.handlingStorage || '',
+                ppe: instructions?.ppe || '',
+                chemicalProperties: instructions?.chemicalProperties || '',
+                physicalProperties: instructions?.physicalProperties || '',
+                otherRequirements: instructions?.otherRequirements || ''
+            },
+            approval: {
+                jobTitle: approval?.jobTitle || '',
+                name: approval?.name || '',
+                signature: approval?.signature || '',
+                date: approval?.date || ''
+            }
+        };
+    },
+
+    _renderGHSPictogramsPrint(selectedKeys = []) {
+        const selected = new Set(Array.isArray(selectedKeys) ? selectedKeys : []);
+        // Keep the same 2x2 layout as the provided template image
+        const ordered = ['environment', 'corrosion', 'skull', 'flame'];
+        const byKey = (k) => GHS_PICTOGRAMS.find(p => p.key === k);
+
+        return `
             <div class="ghs-wrap">
                 <div class="ghs-title">GHS</div>
                 <div class="ghs-grid">
-                    ${a.map(s=>{const n=r(s);if(!n)return"";const i=e.has(s);return`
-                            <div class="ghs-item ${i?"selected":"unselected"}">
-                                <div class="ghs-icon">${n.svg}</div>
-                                <div class="ghs-caption">${this._escapePrint(n.labelAr)}</div>
-                                <div class="ghs-checkbox ${i?"checked":""}"></div>
+                    ${ordered.map(k => {
+                        const p = byKey(k);
+                        if (!p) return '';
+                        const isSelected = selected.has(k);
+                        return `
+                            <div class="ghs-item ${isSelected ? 'selected' : 'unselected'}">
+                                <div class="ghs-icon">${p.svg}</div>
+                                <div class="ghs-caption">${this._escapePrint(p.labelAr)}</div>
+                                <div class="ghs-checkbox ${isSelected ? 'checked' : ''}"></div>
                             </div>
-                        `}).join("")}
+                        `;
+                    }).join('')}
                 </div>
             </div>
-        `},generateSDSPrintContent(t){const e=this._getSDSData(t),a=b=>this._escapePrint(b),r=e.scientificName||t?.rmName||"",s=e.tradeName||t?.rmName||"",n=this.renderNFPADiamond(t?.nfpaDiamond||{},"compact"),i=this._renderGHSPictogramsPrint(e.ghsPictograms||[]);return`
+        `;
+    },
+
+    generateSDSPrintContent(chemical) {
+        const sds = this._getSDSData(chemical);
+        const escape = (v) => this._escapePrint(v);
+
+        const scientificName = sds.scientificName || chemical?.rmName || '';
+        const tradeName = sds.tradeName || chemical?.rmName || '';
+
+        const nfpaHTML = this.renderNFPADiamond(chemical?.nfpaDiamond || {}, 'compact');
+        const ghsHTML = this._renderGHSPictogramsPrint(sds.ghsPictograms || []);
+
+        return `
             <style>
                 /* Try to keep SDS in one page when possible (content-dependent) */
                 @page { size: A4; margin: 12mm 10mm; }
@@ -1777,7 +3087,7 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     display: block;
                     margin: 0 auto;
                 }
-                /* \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0638\u0647\u0648\u0631 \u0627\u0644\u0623\u0644\u0648\u0627\u0646 \u0641\u064A \u0627\u0644\u0637\u0628\u0627\u0639\u0629 */
+                /* التأكد من ظهور الألوان في الطباعة */
                 .ghs-icon svg polygon,
                 .ghs-icon svg path,
                 .ghs-icon svg line,
@@ -1804,7 +3114,7 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     background: #000;
                 }
                 .ghs-checkbox.checked::after {
-                    content: '\u2713';
+                    content: '✓';
                     color: #ffffff;
                     font-size: 10px;
                     font-weight: bold;
@@ -1835,97 +3145,126 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
 
             <div class="sds-page">
                 <div class="top-bar">
-                    <div class="top-box">${a(e.companyBranch||"")}</div>
-                    <div class="title">\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629</div>
-                    <div class="top-box">${a(e.translationStatus||"\u063A\u064A\u0631 \u0645\u062A\u0631\u062C\u0645")}</div>
+                    <div class="top-box">${escape(sds.companyBranch || '')}</div>
+                    <div class="title">تعليمات السلامة للمواد الكيميائية</div>
+                    <div class="top-box">${escape(sds.translationStatus || 'غير مترجم')}</div>
                 </div>
 
                 <table class="sds-table">
                     <tr>
-                        <td class="sds-label">\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0639\u0644\u0645\u064A \u0644\u0644\u0645\u0627\u062F\u0629</td>
-                        <td class="sds-value">${this._formatSDSCell(r,"")}</td>
+                        <td class="sds-label">الاسم العلمي للمادة</td>
+                        <td class="sds-value">${this._formatSDSCell(scientificName, '')}</td>
                     </tr>
                     <tr>
-                        <td class="sds-label">\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u062A\u062C\u0627\u0631\u064A \u0644\u0644\u0645\u0627\u062F\u0629</td>
-                        <td class="sds-value">${this._formatSDSCell(s,"")}</td>
+                        <td class="sds-label">الاسم التجاري للمادة</td>
+                        <td class="sds-value">${this._formatSDSCell(tradeName, '')}</td>
                     </tr>
                     <tr>
-                        <td class="sds-label">\u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u0645\u0627\u062F\u0629 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629</td>
+                        <td class="sds-label">مخاطر المادة الكيميائية</td>
                         <td class="sds-value hazards-row">
                             <div class="hazards-inner">
                                 <div class="nfpa-wrap">
                                     <div class="nfpa-title">NFPA</div>
-                                    ${n}
+                                    ${nfpaHTML}
                                     <div class="nfpa-legend">
-                                        <div><span class="c-red">\u0627\u0644\u0623\u062D\u0645\u0631</span>: \u062E\u0637\u0631 \u062D\u0631\u064A\u0642</div>
-                                        <div><span class="c-yellow">\u0627\u0644\u0623\u0635\u0641\u0631</span>: \u0642\u0627\u0628\u0644\u064A\u0629 \u0627\u0644\u062A\u0641\u0627\u0639\u0644</div>
-                                        <div><span class="c-blue">\u0627\u0644\u0623\u0632\u0631\u0642</span>: \u062E\u0637\u0631 \u0639\u0644\u0649 \u0635\u062D\u0629 \u0627\u0644\u0625\u0646\u0633\u0627\u0646</div>
-                                        <div><span class="c-white">\u0627\u0644\u0623\u0628\u064A\u0636</span>: \u062E\u0637\u0631 \u062E\u0627\u0635</div>
+                                        <div><span class="c-red">الأحمر</span>: خطر حريق</div>
+                                        <div><span class="c-yellow">الأصفر</span>: قابلية التفاعل</div>
+                                        <div><span class="c-blue">الأزرق</span>: خطر على صحة الإنسان</div>
+                                        <div><span class="c-white">الأبيض</span>: خطر خاص</div>
                                     </div>
                                 </div>
-                                ${i}
+                                ${ghsHTML}
                             </div>
                         </td>
                     </tr>
                     <tr>
-                        <td class="sds-label">\u0627\u0644\u0625\u0633\u0639\u0627\u0641\u0627\u062A \u0627\u0644\u0623\u0648\u0644\u064A\u0629</td>
-                        <td class="sds-value">${this._formatSDSCell(e.instructions.firstAid)}</td>
+                        <td class="sds-label">الإسعافات الأولية</td>
+                        <td class="sds-value">${this._formatSDSCell(sds.instructions.firstAid)}</td>
                     </tr>
                     <tr>
-                        <td class="sds-label">\u0627\u0644\u0648\u0633\u064A\u0644\u0629 \u0627\u0644\u0625\u0637\u0641\u0627\u0626\u064A\u0629</td>
-                        <td class="sds-value">${this._formatSDSCell(e.instructions.fireFighting)}</td>
+                        <td class="sds-label">الوسيلة الإطفائية</td>
+                        <td class="sds-value">${this._formatSDSCell(sds.instructions.fireFighting)}</td>
                     </tr>
                     <tr>
-                        <td class="sds-label">\u0641\u064A \u062D\u0627\u0644\u0629 \u0627\u0644\u0627\u0646\u0633\u0643\u0627\u0628\u0627\u062A</td>
-                        <td class="sds-value">${this._formatSDSCell(e.instructions.spillResponse)}</td>
+                        <td class="sds-label">في حالة الانسكابات</td>
+                        <td class="sds-value">${this._formatSDSCell(sds.instructions.spillResponse)}</td>
                     </tr>
                     <tr>
-                        <td class="sds-label">\u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0648\u0627\u0644\u062A\u062E\u0632\u064A\u0646</td>
-                        <td class="sds-value">${this._formatSDSCell(e.instructions.handlingStorage)}</td>
+                        <td class="sds-label">التداول والتخزين</td>
+                        <td class="sds-value">${this._formatSDSCell(sds.instructions.handlingStorage)}</td>
                     </tr>
                     <tr>
-                        <td class="sds-label">\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629</td>
-                        <td class="sds-value">${this._formatSDSCell(e.instructions.ppe)}</td>
+                        <td class="sds-label">مهمات الوقاية الشخصية</td>
+                        <td class="sds-value">${this._formatSDSCell(sds.instructions.ppe)}</td>
                     </tr>
                     <tr>
-                        <td class="sds-label">\u0627\u0644\u062E\u0648\u0627\u0635 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629</td>
-                        <td class="sds-value">${this._formatSDSCell(e.instructions.chemicalProperties)}</td>
+                        <td class="sds-label">الخواص الكيميائية</td>
+                        <td class="sds-value">${this._formatSDSCell(sds.instructions.chemicalProperties)}</td>
                     </tr>
                     <tr>
-                        <td class="sds-label">\u0627\u0644\u062E\u0648\u0627\u0635 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0626\u064A\u0629</td>
-                        <td class="sds-value">${this._formatSDSCell(e.instructions.physicalProperties)}</td>
+                        <td class="sds-label">الخواص الفيزيائية</td>
+                        <td class="sds-value">${this._formatSDSCell(sds.instructions.physicalProperties)}</td>
                     </tr>
                     <tr>
-                        <td class="sds-label">\u0645\u062A\u0637\u0644\u0628\u0627\u062A \u0623\u062E\u0631\u0649</td>
-                        <td class="sds-value">${this._formatSDSCell(e.instructions.otherRequirements)}</td>
+                        <td class="sds-label">متطلبات أخرى</td>
+                        <td class="sds-value">${this._formatSDSCell(sds.instructions.otherRequirements)}</td>
                     </tr>
                 </table>
 
-                <div class="approval-title">\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F:</div>
+                <div class="approval-title">الاعتماد:</div>
                 <table class="approval">
                     <thead>
                         <tr>
-                            <th style="width: 25%;">\u0627\u0644\u0648\u0638\u064A\u0641\u0629</th>
-                            <th style="width: 25%;">\u0627\u0644\u0627\u0633\u0645</th>
-                            <th style="width: 25%;">\u0627\u0644\u062A\u0648\u0642\u064A\u0639</th>
-                            <th style="width: 25%;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                            <th style="width: 25%;">الوظيفة</th>
+                            <th style="width: 25%;">الاسم</th>
+                            <th style="width: 25%;">التوقيع</th>
+                            <th style="width: 25%;">التاريخ</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>${a(e.approval.jobTitle)}</td>
-                            <td>${a(e.approval.name)}</td>
-                            <td>${a(e.approval.signature)}</td>
-                            <td>${a(e.approval.date)}</td>
+                            <td>${escape(sds.approval.jobTitle)}</td>
+                            <td>${escape(sds.approval.name)}</td>
+                            <td>${escape(sds.approval.signature)}</td>
+                            <td>${escape(sds.approval.date)}</td>
                         </tr>
                     </tbody>
                 </table>
 
-                <div class="meta">Printed: ${a(new Date().toLocaleString("ar-EG"))}</div>
+                <div class="meta">Printed: ${escape(new Date().toLocaleString('ar-EG'))}</div>
             </div>
-        `},async exportPDF(t){const e=AppState.appData.chemicalRegister.find(a=>a.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0627\u062F\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}try{Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 PDF...");const a=e.serialNumber||`CHEM-${e.id?.substring(0,8)||"UNKNOWN"}`,r=this.generateSDSPrintContent(e),s="\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 (SDS)",n={type:"ChemicalSDS",id:e.id,code:a,url:`${window.location.origin}/chemical/${e.id}`},i=r+`
+        `;
+    },
+
+    /**
+     * تصدير سجل مادة كيميائية إلى PDF
+     */
+    async exportPDF(id) {
+        const chemical = AppState.appData.chemicalRegister.find(c => c.id === id);
+        if (!chemical) {
+            Notification.error('المادة غير موجودة');
+            return;
+        }
+
+        try {
+            Loading.show('جاري إنشاء PDF...');
+
+            const formCode = chemical.serialNumber || `CHEM-${chemical.id?.substring(0, 8) || 'UNKNOWN'}`;
+            const content = this.generateSDSPrintContent(chemical);
+            const formTitle = 'تعليمات السلامة للمواد الكيميائية (SDS)';
+
+            const qrPayload = {
+                type: 'ChemicalSDS',
+                id: chemical.id,
+                code: formCode,
+                url: `${window.location.origin}/chemical/${chemical.id}`
+            };
+
+            // Use standard header/footer template like other forms (logo + company name + footer)
+            // تقليل حجم الفوتر بإضافة CSS مخصص
+            const contentWithFooterStyle = content + `
                 <style>
-                    /* \u062A\u0642\u0644\u064A\u0644 \u062D\u062C\u0645 \u0627\u0644\u0641\u0648\u062A\u0631 */
+                    /* تقليل حجم الفوتر */
                     .report-footer {
                         margin-top: 15px !important;
                     }
@@ -1953,7 +3292,7 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     .footer-bottom-text {
                         font-size: 10px !important;
                     }
-                    /* \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0638\u0647\u0648\u0631 \u0623\u0644\u0648\u0627\u0646 GHS \u0641\u064A \u0627\u0644\u0637\u0628\u0627\u0639\u0629 */
+                    /* التأكد من ظهور ألوان GHS في الطباعة */
                     @media print {
                         .ghs-icon svg * {
                             -webkit-print-color-adjust: exact !important;
@@ -1962,36 +3301,261 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                         }
                     }
                 </style>
-            `,b=typeof FormHeader<"u"&&typeof FormHeader.generatePDFHTML=="function"?FormHeader.generatePDFHTML(a,s,i,!1,!0,{version:"1.0",releaseDate:e.createdAt,revisionDate:e.updatedAt||e.createdAt,qrData:n},e.createdAt,e.updatedAt||e.createdAt):`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${s}</title></head><body>${r}</body></html>`,p=new Blob([b],{type:"text/html;charset=utf-8"}),m=URL.createObjectURL(p),x=window.open(m,"_blank");x?x.onload=()=>{setTimeout(()=>{x.print(),setTimeout(()=>{URL.revokeObjectURL(m),Loading.hide()},800)},500)}:(Loading.hide(),Notification.error("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0631\u064A\u0631"))}catch(a){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF \u0644\u0644\u0645\u0627\u062F\u0629 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629:",a),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF: "+a.message)}},async downloadChemicalPDF(t){const e=AppState.appData.chemicalRegister.find(r=>r.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0627\u062F\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}let a=null;try{Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 PDF...");const r=(l,v)=>new Promise((E,S)=>{if(v())return E();const $=document.createElement("script");$.src=l,$.onload=()=>E(),$.onerror=()=>S(new Error("Failed to load: "+l)),document.head.appendChild($)});await r("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>typeof window.html2canvas<"u"),await r("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>typeof window.jspdf<"u");const s=e.serialNumber||`CHEM-${e.id?.substring(0,8)||"UNKNOWN"}`,n=this.generateSDSPrintContent(e);a=document.createElement("div"),a.id="chemical-pdf-temp-container",a.style.cssText=["position: fixed","top: -10000px","left: 0","width: 794px","background: #ffffff","padding: 24px 32px","box-sizing: border-box","font-family: Tahoma, Arial, sans-serif","direction: rtl","color: #111827","z-index: -1"].join("; ");const i=AppState&&(AppState.companySettings?.name||AppState.companyName)||"",b=AppState&&AppState.companyLogo||AppState&&AppState.companySettings?.logo||"",p=new Date().toLocaleDateString("en-GB");a.innerHTML=`
+            `;
+            const htmlContent = (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function')
+                ? FormHeader.generatePDFHTML(
+                    formCode,
+                    formTitle,
+                    contentWithFooterStyle,
+                    false,
+                    true,
+                    {
+                        version: '1.0',
+                        releaseDate: chemical.createdAt,
+                        revisionDate: chemical.updatedAt || chemical.createdAt,
+                        qrData: qrPayload
+                    },
+                    chemical.createdAt,
+                    chemical.updatedAt || chemical.createdAt
+                )
+                : `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body>${content}</body></html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+
+            if (printWindow) {
+                printWindow.onload = () => {
+                    setTimeout(() => {
+                        printWindow.print();
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                            Loading.hide();
+                        }, 800);
+                    }, 500);
+                };
+            } else {
+                Loading.hide();
+                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+            }
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في تصدير PDF للمادة الكيميائية:', error);
+            Notification.error('فشل في تصدير PDF: ' + error.message);
+        }
+    },
+
+    /**
+     * تحميل PDF مباشر لنموذج بيانات المادة في صفحة A4 واحدة
+     *
+     * يستخدم html2canvas + jsPDF لالتقاط محتوى SDS المُولَّد وتحويله إلى PDF
+     * يُحمَّل مباشرة (بدون نافذة طباعة) ويُجبَر على ورقة A4 واحدة فقط:
+     * - إذا كان المحتوى مناسباً للارتفاع → يملأ الصفحة
+     * - إذا كان أطول → يُقلَّص بنسبة scale ليتسع في صفحة واحدة (بدون قص)
+     *
+     * النمط مأخوذ من incidents.js (_incidentExportPDF) مع تعديل:
+     * - حاوية مؤقتة off-screen بأبعاد A4 (210×297mm)
+     * - بدون pagination — صفحة واحدة فقط
+     */
+    async downloadChemicalPDF(id) {
+        const chemical = AppState.appData.chemicalRegister.find(c => c.id === id);
+        if (!chemical) {
+            Notification.error('المادة غير موجودة');
+            return;
+        }
+
+        let tempContainer = null;
+        try {
+            Loading.show('جاري إنشاء PDF...');
+
+            // 1) تحميل المكتبات المطلوبة (مع cache: لو محمَّلة سابقاً، يعود فوراً)
+            const loadLib = (src, check) => new Promise((resolve, reject) => {
+                if (check()) return resolve();
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = () => resolve();
+                s.onerror = () => reject(new Error('Failed to load: ' + src));
+                document.head.appendChild(s);
+            });
+            await loadLib(
+                'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+                () => typeof window.html2canvas !== 'undefined'
+            );
+            await loadLib(
+                'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+                () => typeof window.jspdf !== 'undefined'
+            );
+
+            // 2) بناء محتوى SDS داخل حاوية مؤقتة off-screen بأبعاد A4
+            //    A4 portrait = 210mm × 297mm. عند 96 DPI ≈ 794px × 1123px (CSS)
+            //    نستخدم scale أعلى للحصول على دقة طباعة جيدة
+            const formCode = chemical.serialNumber || `CHEM-${chemical.id?.substring(0, 8) || 'UNKNOWN'}`;
+            const sdsHTML = this.generateSDSPrintContent(chemical);
+
+            tempContainer = document.createElement('div');
+            tempContainer.id = 'chemical-pdf-temp-container';
+            tempContainer.style.cssText = [
+                'position: fixed',
+                'top: -10000px',         // off-screen
+                'left: 0',
+                'width: 794px',          // A4 width @ 96dpi
+                'background: #ffffff',
+                'padding: 24px 32px',
+                'box-sizing: border-box',
+                'font-family: Tahoma, Arial, sans-serif',
+                'direction: rtl',
+                'color: #111827',
+                'z-index: -1'
+            ].join('; ');
+
+            // إضافة هيدر مبسّط (شعار + اسم الشركة + رمز النموذج)
+            const companyName = (AppState && (AppState.companySettings?.name || AppState.companyName)) || '';
+            const rawLogo = (AppState && AppState.companyLogo) || (AppState && AppState.companySettings?.logo) || '';
+            const dateStr = new Date().toLocaleDateString('en-GB');
+
+            tempContainer.innerHTML = `
                 <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #dc2626;padding-bottom:10px;margin-bottom:14px;gap:12px;">
                     <div style="flex:0 0 auto;min-width:80px;">
-                        ${b?`<img src="${b}" alt="" crossorigin="anonymous" style="max-height:54px;max-width:130px;object-fit:contain;">`:""}
+                        ${rawLogo ? `<img src="${rawLogo}" alt="" crossorigin="anonymous" style="max-height:54px;max-width:130px;object-fit:contain;">` : ''}
                     </div>
                     <div style="flex:1;text-align:center;">
-                        <div style="font-size:18px;font-weight:800;color:#991b1b;line-height:1.2;">\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0644\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 (SDS)</div>
-                        <div style="font-size:11px;color:#6b7280;margin-top:4px;">Chemical Safety Data Sheet \u2014 ${s}</div>
+                        <div style="font-size:18px;font-weight:800;color:#991b1b;line-height:1.2;">تعليمات السلامة للمواد الكيميائية (SDS)</div>
+                        <div style="font-size:11px;color:#6b7280;margin-top:4px;">Chemical Safety Data Sheet — ${formCode}</div>
                     </div>
                     <div style="flex:0 0 auto;min-width:80px;text-align:left;font-size:11px;color:#374151;">
-                        <div style="font-weight:700;white-space:nowrap;word-break:keep-all;">${Utils.escapeHTML(i)}</div>
-                        <div style="margin-top:3px;color:#6b7280;">${p}</div>
+                        <div style="font-weight:700;white-space:nowrap;word-break:keep-all;">${Utils.escapeHTML(companyName)}</div>
+                        <div style="margin-top:3px;color:#6b7280;">${dateStr}</div>
                     </div>
                 </div>
                 <div id="chemical-pdf-body" style="font-size:11px;line-height:1.5;">
-                    ${n}
+                    ${sdsHTML}
                 </div>
-            `,document.body.appendChild(a);const m=a.querySelector("img");m&&!m.complete&&await new Promise(l=>{m.onload=l,m.onerror=l,setTimeout(l,2e3)});const x=await window.html2canvas(a,{scale:2,useCORS:!0,allowTaint:!1,backgroundColor:"#ffffff",logging:!1,scrollX:0,scrollY:0,windowWidth:a.scrollWidth,windowHeight:a.scrollHeight}),{jsPDF:g}=window.jspdf,h=new g({orientation:"portrait",unit:"mm",format:"a4"}),y=h.internal.pageSize.getWidth(),C=h.internal.pageSize.getHeight(),k=8,L=y-k*2,w=C-k*2,A=x.width/x.height;let F=L,_=F/A;_>w&&(_=w,F=_*A);const o=(y-F)/2,d=k;h.addImage(x.toDataURL("image/jpeg",.92),"JPEG",o,d,F,_),h.setDrawColor(220,38,38),h.setLineWidth(.3),h.line(k,C-7,y-k,C-7),h.setTextColor(120,120,120),h.setFontSize(8),h.text(`${s}`,k,C-3,{align:"left"}),h.text(`${new Date().toISOString().slice(0,10)}`,y/2,C-3,{align:"center"}),h.text("1 / 1",y-k,C-3,{align:"right"});const f=(e.materialName||e.tradeName||s).toString().replace(/[\/\\:*?"<>|]/g,"_").substring(0,60);h.save(`SDS_${f}_${s}.pdf`),Loading.hide(),typeof Notification<"u"&&Notification.success&&Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0646\u062C\u0627\u062D")}catch(r){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 PDF \u0644\u0644\u0645\u0627\u062F\u0629 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629:",r),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF: "+(r?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}finally{a&&a.parentNode&&a.parentNode.removeChild(a)}},async exportToPDF(){const t=this.getFilteredChemicals(AppState.appData.chemicalRegister||[]);if(t.length===0){Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631");return}Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 PDF...");try{const e=t.map(g=>{const h=g.hazardClass&&(g.hazardClass.toLowerCase().includes("hazard")||g.hazardClass.toLowerCase().includes("\u062E\u0637")||g.hazardClass.toLowerCase().includes("danger"));return`
-                    <tr class="${h?"hazardous-row":""}">
-                        <td>${Utils.escapeHTML(g.serialNumber||"")}</td>
-                        <td><strong>${Utils.escapeHTML(g.rmName||"")}</strong>${h?" \u26A0\uFE0F":""}</td>
-                        <td>${Utils.escapeHTML(g.physicalShape||"")}</td>
-                        <td>${Array.isArray(g.purposeOfUse)?g.purposeOfUse.join(", "):Utils.escapeHTML(g.purposeOfUse||"")}</td>
-                        <td>${Utils.escapeHTML(g.department||"")}</td>
-                        <td><strong>${Utils.escapeHTML(g.hazardClass||"-")}</strong></td>
-                        <td>${Utils.escapeHTML(g.locationStore||"")}</td>
-                        <td>${Utils.escapeHTML(g.qtyYear||"")}</td>
-                        <td>${h?'<strong style="color: #dc2626;">\u062E\u0637\u064A\u0631</strong>':'<span style="color: #16a34a;">\u0622\u0645\u0646</span>'}</td>
+            `;
+            document.body.appendChild(tempContainer);
+
+            // 3) انتظار تحميل الشعار (إن وُجد) قبل اللقطة
+            const logoImg = tempContainer.querySelector('img');
+            if (logoImg && !logoImg.complete) {
+                await new Promise(res => {
+                    logoImg.onload = res;
+                    logoImg.onerror = res;
+                    setTimeout(res, 2000); // timeout safety
+                });
+            }
+
+            // 4) التقاط الحاوية كـ canvas
+            const canvas = await window.html2canvas(tempContainer, {
+                scale: 2,                    // دقة مضاعفة لجودة طباعة جيدة
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                logging: false,
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: tempContainer.scrollWidth,
+                windowHeight: tempContainer.scrollHeight
+            });
+
+            // 5) إنشاء PDF بحجم A4 portrait + تركيب الصورة في صفحة واحدة
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pageWidth = pdf.internal.pageSize.getWidth();   // 210 mm
+            const pageHeight = pdf.internal.pageSize.getHeight(); // 297 mm
+            const margin = 8;
+            const availableW = pageWidth - margin * 2;
+            const availableH = pageHeight - margin * 2;
+
+            // حساب الأبعاد للحفاظ على نسبة العرض/الارتفاع مع الإجبار على صفحة واحدة
+            const canvasAspect = canvas.width / canvas.height;
+            let imgW = availableW;
+            let imgH = imgW / canvasAspect;
+
+            // إذا تجاوز الارتفاع المتاح → نُقلِّص ليتسع في صفحة واحدة (مع توسيط أفقي)
+            if (imgH > availableH) {
+                imgH = availableH;
+                imgW = imgH * canvasAspect;
+            }
+            const xPos = (pageWidth - imgW) / 2;   // توسيط أفقي
+            const yPos = margin;                    // أعلى الصفحة
+
+            pdf.addImage(
+                canvas.toDataURL('image/jpeg', 0.92),
+                'JPEG',
+                xPos,
+                yPos,
+                imgW,
+                imgH
+            );
+
+            // 6) إضافة فوتر صغير برقم النموذج + التاريخ + 1/1
+            pdf.setDrawColor(220, 38, 38);
+            pdf.setLineWidth(0.3);
+            pdf.line(margin, pageHeight - 7, pageWidth - margin, pageHeight - 7);
+            pdf.setTextColor(120, 120, 120);
+            pdf.setFontSize(8);
+            pdf.text(`${formCode}`, margin, pageHeight - 3, { align: 'left' });
+            pdf.text(`${new Date().toISOString().slice(0, 10)}`, pageWidth / 2, pageHeight - 3, { align: 'center' });
+            pdf.text('1 / 1', pageWidth - margin, pageHeight - 3, { align: 'right' });
+
+            // 7) حفظ الملف
+            const safeName = (chemical.materialName || chemical.tradeName || formCode)
+                .toString()
+                .replace(/[\/\\:*?"<>|]/g, '_')
+                .substring(0, 60);
+            pdf.save(`SDS_${safeName}_${formCode}.pdf`);
+
+            Loading.hide();
+            if (typeof Notification !== 'undefined' && Notification.success) {
+                Notification.success('تم تصدير البيانات بنجاح');
+            }
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في تحميل PDF للمادة الكيميائية:', error);
+            Notification.error('فشل في تصدير PDF: ' + (error?.message || 'خطأ غير معروف'));
+        } finally {
+            // تنظيف الحاوية المؤقتة دائماً (نجاح أو خطأ)
+            if (tempContainer && tempContainer.parentNode) {
+                tempContainer.parentNode.removeChild(tempContainer);
+            }
+        }
+    },
+
+    /**
+     * تصدير إلى PDF
+     */
+    async exportToPDF() {
+        const chemicals = this.getFilteredChemicals(AppState.appData.chemicalRegister || []);
+        if (chemicals.length === 0) {
+            Notification.warning('لا توجد بيانات للتصدير');
+            return;
+        }
+
+        Loading.show('جاري إنشاء PDF...');
+        try {
+            const rows = chemicals.map(chem => {
+                const isHazardous = chem.hazardClass && 
+                    (chem.hazardClass.toLowerCase().includes('hazard') || 
+                     chem.hazardClass.toLowerCase().includes('خط') ||
+                     chem.hazardClass.toLowerCase().includes('danger'));
+                return `
+                    <tr class="${isHazardous ? 'hazardous-row' : ''}">
+                        <td>${Utils.escapeHTML(chem.serialNumber || '')}</td>
+                        <td><strong>${Utils.escapeHTML(chem.rmName || '')}</strong>${isHazardous ? ' ⚠️' : ''}</td>
+                        <td>${Utils.escapeHTML(chem.physicalShape || '')}</td>
+                        <td>${Array.isArray(chem.purposeOfUse) ? chem.purposeOfUse.join(', ') : Utils.escapeHTML(chem.purposeOfUse || '')}</td>
+                        <td>${Utils.escapeHTML(chem.department || '')}</td>
+                        <td><strong>${Utils.escapeHTML(chem.hazardClass || '-')}</strong></td>
+                        <td>${Utils.escapeHTML(chem.locationStore || '')}</td>
+                        <td>${Utils.escapeHTML(chem.qtyYear || '')}</td>
+                        <td>${isHazardous ? '<strong style="color: #dc2626;">خطير</strong>' : '<span style="color: #16a34a;">آمن</span>'}</td>
                     </tr>
-                `}).join(""),a=this.getStatistics(),r=`
+                `;
+            }).join('');
+
+            const stats = this.getStatistics();
+            
+            // بناء محتوى التقرير مع الحفاظ على التصميم الحالي
+            const content = `
                 <style>
                     .chemical-report-info {
                         display: flex;
@@ -2041,7 +3605,7 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                     .chemical-report-table .hazardous-row {
                         background-color: #fef2f2 !important;
                     }
-                    /* \u062A\u062E\u0635\u064A\u0635 \u0627\u0644\u0641\u0648\u062A\u0631 \u0644\u064A\u0643\u0648\u0646 \u0623\u0635\u063A\u0631 */
+                    /* تخصيص الفوتر ليكون أصغر */
                     .report-footer {
                         margin-top: 20px !important;
                     }
@@ -2076,41 +3640,248 @@ const PHYSICAL_SHAPES=["Powder","Flakes","Pellets","Liquid","Lubricant","Oil","G
                 </style>
                 <div class="chemical-report-info">
                     <div class="chemical-report-info-item">
-                        <div class="chemical-report-info-label">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0635\u062F\u064A\u0631</div>
-                        <div class="chemical-report-info-value">${new Date().toLocaleDateString("ar-EG")}</div>
+                        <div class="chemical-report-info-label">تاريخ التصدير</div>
+                        <div class="chemical-report-info-value">${new Date().toLocaleDateString('ar-EG')}</div>
                     </div>
                     <div class="chemical-report-info-item">
-                        <div class="chemical-report-info-label">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0648\u0627\u062F</div>
-                        <div class="chemical-report-info-value">${a.total}</div>
+                        <div class="chemical-report-info-label">إجمالي المواد</div>
+                        <div class="chemical-report-info-value">${stats.total}</div>
                     </div>
                     <div class="chemical-report-info-item">
-                        <div class="chemical-report-info-label">\u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u062E\u0637\u0631\u0629</div>
-                        <div class="chemical-report-info-value" style="color: #dc2626;">${a.hazardous}</div>
+                        <div class="chemical-report-info-label">المواد الخطرة</div>
+                        <div class="chemical-report-info-value" style="color: #dc2626;">${stats.hazardous}</div>
                     </div>
                     <div class="chemical-report-info-item">
-                        <div class="chemical-report-info-label">\u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0622\u0645\u0646\u0629</div>
-                        <div class="chemical-report-info-value" style="color: #16a34a;">${a.safe}</div>
+                        <div class="chemical-report-info-label">المواد الآمنة</div>
+                        <div class="chemical-report-info-value" style="color: #16a34a;">${stats.safe}</div>
                     </div>
                 </div>
                 <table class="chemical-report-table">
                     <thead>
                         <tr>
-                            <th>\u0645</th>
-                            <th>\u0627\u0633\u0645 \u0627\u0644\u0645\u0627\u062F\u0629</th>
-                            <th>\u0627\u0644\u0634\u0643\u0644 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0626\u064A</th>
-                            <th>\u0627\u0644\u063A\u0631\u0636 \u0645\u0646 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645</th>
-                            <th>\u0627\u0644\u0642\u0633\u0645</th>
-                            <th>\u0627\u0644\u062A\u0635\u0646\u064A\u0641</th>
-                            <th>\u0627\u0644\u0645\u0648\u0642\u0639/\u0627\u0644\u0645\u062E\u0632\u0646</th>
-                            <th>\u0627\u0644\u0643\u0645\u064A\u0629/\u0627\u0644\u0633\u0646\u0629</th>
-                            <th>\u062E\u0637\u0648\u0631\u0629</th>
+                            <th>م</th>
+                            <th>اسم المادة</th>
+                            <th>الشكل الفيزيائي</th>
+                            <th>الغرض من الاستخدام</th>
+                            <th>القسم</th>
+                            <th>التصنيف</th>
+                            <th>الموقع/المخزن</th>
+                            <th>الكمية/السنة</th>
+                            <th>خطورة</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${e}
+                        ${rows}
                     </tbody>
                 </table>
                 <p style="margin-top: 20px; text-align: center; font-size: 12px; color: #6b7280;">
-                    \u0639\u062F\u062F \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0639\u0631\u0648\u0636\u0629: ${t.length}
+                    عدد السجلات المعروضة: ${chemicals.length}
                 </p>
-            `,s="\u0633\u062C\u0644 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629",n="CHEMICAL-REGISTER",i=new Date().toISOString(),b=typeof FormHeader<"u"&&typeof FormHeader.generatePDFHTML=="function"?FormHeader.generatePDFHTML(n,s,r,!1,!1,{version:"1.0",releaseDate:i,revisionDate:i},i,i):`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${s}</title></head><body>${r}</body></html>`,p=new Blob([b],{type:"text/html;charset=utf-8"}),m=URL.createObjectURL(p),x=window.open(m,"_blank");x?x.onload=()=>{setTimeout(()=>{x.print(),setTimeout(()=>{URL.revokeObjectURL(m),Loading.hide()},800)},500)}:(Loading.hide(),Notification.error("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0631\u064A\u0631"))}catch(e){Loading.hide(),Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF:",e),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062A\u0635\u062F\u064A\u0631: "+(e.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}},async exportToExcel(){const t=this.getFilteredChemicals(AppState.appData.chemicalRegister||[]);if(t.length===0){Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631");return}Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 Excel...");try{if(typeof XLSX>"u"){Loading.hide(),Notification.error("\u0645\u0643\u062A\u0628\u0629 SheetJS \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629");return}const e=t.map(i=>{const b=i.hazardClass&&(i.hazardClass.toLowerCase().includes("hazard")||i.hazardClass.toLowerCase().includes("\u062E\u0637")||i.hazardClass.toLowerCase().includes("danger")),p=i.nfpaDiamond||{};return{\u0645:i.serialNumber||"","\u0627\u0633\u0645 \u0627\u0644\u0645\u0627\u062F\u0629":i.rmName||"","\u0627\u0644\u0634\u0643\u0644 \u0627\u0644\u0641\u064A\u0632\u064A\u0627\u0626\u064A":i.physicalShape||"","\u0627\u0644\u063A\u0631\u0636 \u0645\u0646 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645":Array.isArray(i.purposeOfUse)?i.purposeOfUse.join("; "):i.purposeOfUse||"","\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642":i.methodOfApplication||"",\u0627\u0644\u0642\u0633\u0645:i.department||"","MSDS (Arabic)":i.msdsArabic||"","MSDS (English)":i.msdsEnglish||"","\u0645\u062D\u0644\u064A / \u0645\u0633\u062A\u0648\u0631\u062F":i.localImport||"","\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0645\u0635\u0646\u0639\u0629":i.manufacturer||"","\u0627\u0644\u0648\u0643\u064A\u0644 \u0641\u064A \u0645\u0635\u0631":i.agentEgypt||"","\u0646\u0648\u0639 \u0627\u0644\u062D\u0627\u0648\u064A\u0629":i.containerType||"","\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062A\u062E\u0644\u0635":i.containerDisposalMethod||"",\u0627\u0644\u062A\u0635\u0646\u064A\u0641:i.hazardClass||"","\u0648\u0635\u0641 \u0627\u0644\u062E\u0637\u0648\u0631\u0629":i.hazardDescription||"","\u0627\u0644\u0645\u0648\u0642\u0639 / \u0627\u0644\u0645\u062E\u0632\u0646":i.locationStore||"","\u0627\u0644\u0643\u0645\u064A\u0629 / \u0627\u0644\u0633\u0646\u0629":i.qtyYear||"","NFPA Health":p.health||0,"NFPA Flammability":p.flammability||0,"NFPA Instability":p.instability||0,"NFPA Special":p.special||"","\u062D\u0627\u0644\u0629 \u0627\u0644\u062E\u0637\u0648\u0631\u0629":b?"\u062E\u0637\u064A\u0631":"\u0622\u0645\u0646"}}),a=XLSX.utils.json_to_sheet(e),r=[{wch:8},{wch:25},{wch:15},{wch:30},{wch:20},{wch:15},{wch:30},{wch:30},{wch:12},{wch:20},{wch:20},{wch:15},{wch:20},{wch:20},{wch:30},{wch:20},{wch:15},{wch:12},{wch:15},{wch:15},{wch:12},{wch:12}];a["!cols"]=r;const s=XLSX.utils.book_new();XLSX.utils.book_append_sheet(s,a,"\u0633\u062C\u0644 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629");const n=`\u0633\u062C\u0644_\u0627\u0644\u0645\u0648\u0627\u062F_\u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629_${new Date().toISOString().slice(0,10)}.xlsx`;XLSX.writeFile(s,n),Loading.hide(),Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0646\u062C\u0627\u062D")}catch(e){Loading.hide(),Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 Excel:",e),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062A\u0635\u062F\u064A\u0631: "+(e.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}},cleanup(){try{typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u{1F9F9} \u062A\u0646\u0638\u064A\u0641 \u0645\u0648\u0627\u0631\u062F ChemicalSafety module..."),this._eventListenersAbortController&&(this._eventListenersAbortController.abort(),this._eventListenersAbortController=null),this._setupTimeoutId&&(clearTimeout(this._setupTimeoutId),this._setupTimeoutId=null),this.currentEditId=null,this.msdsFiles={arabic:null,english:null},this.filters={search:"",department:"",physicalShape:"",classification:""},typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0646\u0638\u064A\u0641 \u0645\u0648\u0627\u0631\u062F ChemicalSafety module")}catch(t){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0646\u0638\u064A\u0641 ChemicalSafety module:",t)}}};(function(){"use strict";try{typeof window<"u"&&typeof ChemicalSafety<"u"&&(window.ChemicalSafety=ChemicalSafety,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 ChemicalSafety module loaded and available on window.ChemicalSafety"))}catch{if(typeof window<"u"&&typeof ChemicalSafety<"u")try{window.ChemicalSafety=ChemicalSafety}catch{}}})();
+            `;
+
+            const formTitle = 'سجل المواد الكيميائية';
+            const formCode = 'CHEMICAL-REGISTER';
+            const exportDate = new Date().toISOString();
+
+            // استخدام FormHeader.generatePDFHTML لإضافة الهيدر والشعار والفوتر بدون QR
+            const htmlContent = (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function')
+                ? FormHeader.generatePDFHTML(
+                    formCode,
+                    formTitle,
+                    content,
+                    false,  // includeQrInHeader = false
+                    false,  // includeQrInFooter = false (بدون QR)
+                    {
+                        version: '1.0',
+                        releaseDate: exportDate,
+                        revisionDate: exportDate
+                    },
+                    exportDate,
+                    exportDate
+                )
+                : `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body>${content}</body></html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+
+            if (printWindow) {
+                printWindow.onload = () => {
+                    setTimeout(() => {
+                        printWindow.print();
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                            Loading.hide();
+                        }, 800);
+                    }, 500);
+                };
+            } else {
+                Loading.hide();
+                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+            }
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('❌ خطأ في تصدير PDF:', error);
+            Notification.error('حدث خطأ أثناء التصدير: ' + (error.message || 'خطأ غير معروف'));
+        }
+    },
+
+    /**
+     * تصدير إلى Excel
+     */
+    async exportToExcel() {
+        const chemicals = this.getFilteredChemicals(AppState.appData.chemicalRegister || []);
+        if (chemicals.length === 0) {
+            Notification.warning('لا توجد بيانات للتصدير');
+            return;
+        }
+
+        Loading.show('جاري إنشاء Excel...');
+        try {
+            if (typeof XLSX === 'undefined') {
+                Loading.hide();
+                Notification.error('مكتبة SheetJS غير محمّلة');
+                return;
+            }
+
+            const excelData = chemicals.map(chem => {
+                const isHazardous = chem.hazardClass && 
+                    (chem.hazardClass.toLowerCase().includes('hazard') || 
+                     chem.hazardClass.toLowerCase().includes('خط') ||
+                     chem.hazardClass.toLowerCase().includes('danger'));
+                const nfpa = chem.nfpaDiamond || {};
+                return {
+                    'م': chem.serialNumber || '',
+                    'اسم المادة': chem.rmName || '',
+                    'الشكل الفيزيائي': chem.physicalShape || '',
+                    'الغرض من الاستخدام': Array.isArray(chem.purposeOfUse) ? chem.purposeOfUse.join('; ') : (chem.purposeOfUse || ''),
+                    'طريقة التطبيق': chem.methodOfApplication || '',
+                    'القسم': chem.department || '',
+                    'MSDS (Arabic)': chem.msdsArabic || '',
+                    'MSDS (English)': chem.msdsEnglish || '',
+                    'محلي / مستورد': chem.localImport || '',
+                    'الشركة المصنعة': chem.manufacturer || '',
+                    'الوكيل في مصر': chem.agentEgypt || '',
+                    'نوع الحاوية': chem.containerType || '',
+                    'طريقة التخلص': chem.containerDisposalMethod || '',
+                    'التصنيف': chem.hazardClass || '',
+                    'وصف الخطورة': chem.hazardDescription || '',
+                    'الموقع / المخزن': chem.locationStore || '',
+                    'الكمية / السنة': chem.qtyYear || '',
+                    'NFPA Health': nfpa.health || 0,
+                    'NFPA Flammability': nfpa.flammability || 0,
+                    'NFPA Instability': nfpa.instability || 0,
+                    'NFPA Special': nfpa.special || '',
+                    'حالة الخطورة': isHazardous ? 'خطير' : 'آمن'
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            
+            // تحسين عرض الأعمدة
+            const colWidths = [
+                { wch: 8 },   // م
+                { wch: 25 },  // اسم المادة
+                { wch: 15 },  // الشكل الفيزيائي
+                { wch: 30 },  // الغرض من الاستخدام
+                { wch: 20 },  // طريقة التطبيق
+                { wch: 15 },  // القسم
+                { wch: 30 },  // MSDS Arabic
+                { wch: 30 },  // MSDS English
+                { wch: 12 },  // محلي/مستورد
+                { wch: 20 },  // الشركة المصنعة
+                { wch: 20 },  // الوكيل
+                { wch: 15 },  // نوع الحاوية
+                { wch: 20 },  // طريقة التخلص
+                { wch: 20 },  // التصنيف
+                { wch: 30 },  // وصف الخطورة
+                { wch: 20 },  // الموقع
+                { wch: 15 },  // الكمية
+                { wch: 12 },  // NFPA Health
+                { wch: 15 },  // NFPA Flammability
+                { wch: 15 },  // NFPA Instability
+                { wch: 12 },  // NFPA Special
+                { wch: 12 }   // حالة الخطورة
+            ];
+            ws['!cols'] = colWidths;
+            
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'سجل المواد الكيميائية');
+
+            const fileName = `سجل_المواد_الكيميائية_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+
+            Loading.hide();
+            Notification.success('تم تصدير البيانات بنجاح');
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('❌ خطأ في تصدير Excel:', error);
+            Notification.error('حدث خطأ أثناء التصدير: ' + (error.message || 'خطأ غير معروف'));
+        }
+    },
+
+    /**
+     * تنظيف جميع الموارد عند إلغاء تحميل الموديول
+     * يمنع تسريبات الذاكرة (Memory Leaks)
+     */
+    cleanup() {
+        try {
+            if (typeof Utils !== 'undefined' && Utils.safeLog) {
+                Utils.safeLog('🧹 تنظيف موارد ChemicalSafety module...');
+            }
+
+            // تنظيف event listeners باستخدام AbortController
+            if (this._eventListenersAbortController) {
+                this._eventListenersAbortController.abort();
+                this._eventListenersAbortController = null;
+            }
+
+            // تنظيف timeout
+            if (this._setupTimeoutId) {
+                clearTimeout(this._setupTimeoutId);
+                this._setupTimeoutId = null;
+            }
+
+            // تنظيف مراجع DOM والبيانات المؤقتة
+            this.currentEditId = null;
+            this.msdsFiles = { arabic: null, english: null };
+            this.filters = {
+                search: '',
+                department: '',
+                physicalShape: '',
+                classification: ''
+            };
+
+            if (typeof Utils !== 'undefined' && Utils.safeLog) {
+                Utils.safeLog('✅ تم تنظيف موارد ChemicalSafety module');
+            }
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ خطأ في تنظيف ChemicalSafety module:', error);
+            }
+        }
+    }
+};
+
+// ===== Export module to global scope =====
+(function () {
+    'use strict';
+    try {
+        if (typeof window !== 'undefined' && typeof ChemicalSafety !== 'undefined') {
+            window.ChemicalSafety = ChemicalSafety;
+            
+            if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
+                Utils.safeLog('✅ ChemicalSafety module loaded and available on window.ChemicalSafety');
+            }
+        }
+    } catch (error) {
+        console.error('❌ خطأ في تصدير ChemicalSafety:', error);
+        if (typeof window !== 'undefined' && typeof ChemicalSafety !== 'undefined') {
+            try {
+                window.ChemicalSafety = ChemicalSafety;
+            } catch (e) {
+                console.error('❌ فشل تصدير ChemicalSafety:', e);
+            }
+        }
+    }
+})();

@@ -7477,9 +7477,7 @@
 
     async function fetchObservationsAnalyticsFromCloud(force = false) {
         try {
-            const url = (typeof DEPLOYMENT_URL !== 'undefined' && DEPLOYMENT_URL) 
-                ? DEPLOYMENT_URL 
-                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            const url = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://ent-measured-weighted-deaf.trycloudflare.com/exec';
 
             const res = await fetch(url, {
                 method: 'POST',
@@ -7959,9 +7957,7 @@
                 updatePtwWidgetsAndModal();
             }
 
-            const url = (typeof HSE_GAS_URL !== 'undefined' && HSE_GAS_URL) 
-                ? HSE_GAS_URL 
-                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            const url = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://ent-measured-weighted-deaf.trycloudflare.com/exec';
 
             const response = await fetch(url, {
                 method: 'POST',

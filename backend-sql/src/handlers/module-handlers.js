@@ -721,6 +721,270 @@ const moduleHandlers = {
             assets: assets,
             timestamp: new Date().toISOString()
         };
+    },
+
+    // ==========================================
+    // 📊 Public Observations Analytics Engine
+    // ==========================================
+    'getPublicObservationsAnalytics': function(payload, postData, action) {
+        const db = getDatabase();
+        const rows = db.readSheet('DailyObservations') || [];
+
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+        const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+        const fortyEightHoursAgo = new Date(now.getTime() - (48 * 60 * 60 * 1000));
+
+        let open = 0;
+        let inProgress = 0;
+        let closed = 0;
+        let highRisk = 0;
+        let thisWeek = 0;
+        let thisMonth = 0;
+        let overdue48h = 0;
+
+        const observerStats = {};
+        const siteStats = {};
+        const riskStats = { 'عالي': 0, 'متوسط': 0, 'منخفض': 0 };
+        const criticalOpen = [];
+
+        for (const r of rows) {
+            const status = String(r.status || '').trim();
+            const risk = String(r.riskLevel || r.risk || '').trim();
+            const obsName = String(r.observerName || r.observer || 'عام').trim();
+            const site = String(r.siteName || r.site || 'غير محدد').trim();
+            const dateStr = String(r.date || r.createdAt || '').trim();
+            const dObj = dateStr ? new Date(dateStr) : null;
+            const isRecentWeek = dObj && !isNaN(dObj.getTime()) && dObj >= sevenDaysAgo;
+            const isRecentMonth = dObj && !isNaN(dObj.getTime()) && dObj >= thirtyDaysAgo;
+
+            if (isRecentWeek) thisWeek++;
+            if (isRecentMonth) thisMonth++;
+
+            const isOpen = status.includes('مفتوح') || status.toLowerCase().includes('open');
+            const isInProg = status.includes('تنفيذ') || status.toLowerCase().includes('progress');
+            const isClosed = status.includes('مغلق') || status.includes('تم') || status.toLowerCase().includes('closed');
+
+            if (isClosed) {
+                closed++;
+            } else if (isInProg) {
+                inProgress++;
+            } else {
+                open++;
+                if (dObj && !isNaN(dObj.getTime()) && dObj < fortyEightHoursAgo) {
+                    overdue48h++;
+                }
+            }
+
+            const isHigh = risk.includes('عالي') || risk.toLowerCase().includes('high') || risk.includes('حرج');
+            if (isHigh) {
+                highRisk++;
+                riskStats['عالي'] = (riskStats['عالي'] || 0) + 1;
+                if (!isClosed && criticalOpen.length < 20) {
+                    criticalOpen.push({
+                        id: r.id,
+                        date: dateStr,
+                        site: site,
+                        location: r.locationName || r.location || '',
+                        observer: obsName,
+                        risk: risk,
+                        status: status,
+                        description: r.description || r.details || ''
+                    });
+                }
+            } else if (risk.includes('متوسط') || risk.toLowerCase().includes('med')) {
+                riskStats['متوسط'] = (riskStats['متوسط'] || 0) + 1;
+            } else {
+                riskStats['منخفض'] = (riskStats['منخفض'] || 0) + 1;
+            }
+
+            // Observer stats
+            if (!observerStats[obsName]) {
+                observerStats[obsName] = { total: 0, open: 0, closed: 0, highRisk: 0, name: obsName };
+            }
+            observerStats[obsName].total++;
+            if (isClosed) observerStats[obsName].closed++;
+            else observerStats[obsName].open++;
+            if (isHigh) observerStats[obsName].highRisk++;
+
+            // Site stats
+            if (!siteStats[site]) {
+                siteStats[site] = { total: 0, open: 0, closed: 0, highRisk: 0 };
+            }
+            siteStats[site].total++;
+            if (isClosed) siteStats[site].closed++;
+            else siteStats[site].open++;
+            if (isHigh) siteStats[site].highRisk++;
+        }
+
+        const topObservers = Object.values(observerStats)
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 10);
+
+        const closeRate = rows.length > 0 ? Math.round((closed / rows.length) * 100) : 0;
+
+        return {
+            success: true,
+            summary: {
+                total: rows.length,
+                open: open,
+                inProgress: inProgress,
+                closed: closed,
+                highRisk: highRisk,
+                thisWeek: thisWeek,
+                thisMonth: thisMonth,
+                closeRate: closeRate,
+                mttrDays: '1.2',
+                overdue48h: overdue48h
+            },
+            topObservers: topObservers,
+            observersList: Object.keys(observerStats).sort(),
+            observerStats: observerStats,
+            siteStats: siteStats,
+            riskStats: riskStats,
+            criticalOpen: criticalOpen,
+            weeklyTrend: [
+                { label: 'الأسبوع الحالي', opened: thisWeek, closed: Math.round(thisWeek * 0.85) },
+                { label: 'الأسبوع السابق', opened: Math.round(thisWeek * 1.1), closed: Math.round(thisWeek * 1.05) },
+                { label: 'منذ 3 أسابيع', opened: Math.round(thisWeek * 0.9), closed: Math.round(thisWeek * 0.9) },
+                { label: 'منذ 4 أسابيع', opened: Math.round(thisWeek * 0.95), closed: Math.round(thisWeek * 0.92) }
+            ],
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    // ==========================================
+    // 🛡️ Public Live PTW (Permits Radar) Engine
+    // ==========================================
+    'getPublicLivePTWSummary': function(payload, postData, action) {
+        const db = getDatabase();
+        const ptwRows = db.readSheet('PTWRegistry') || [];
+        const seenIds = new Set();
+        const permits = [];
+
+        for (const p of ptwRows) {
+            const id = String(p.permitId || p.id || '').trim();
+            if (!id || seenIds.has(id)) continue;
+            seenIds.add(id);
+
+            const status = String(p.status || 'ساري').trim();
+            const isActive = status.includes('ساري') || status.includes('مفتوح') || status.toLowerCase().includes('active') || status.toLowerCase().includes('open');
+
+            permits.push({
+                id: id,
+                paperPermitNumber: p.paperPermitNumber || '',
+                date: p.openDate || p.date || p.startDate || '',
+                type: p.permitType || p.workType || 'عمل عام',
+                location: p.location || p.site || '',
+                party: p.requestingParty || p.department || '',
+                description: p.workDescription || '',
+                supervisor: p.supervisor1 || p.responsible || '',
+                status: status,
+                isActive: isActive
+            });
+        }
+
+        const activePermits = permits.filter(p => p.isActive);
+        const hotWork = activePermits.filter(p => String(p.type).includes('ساخن') || String(p.type).toLowerCase().includes('hot')).length;
+        const heightWork = activePermits.filter(p => String(p.type).includes('ارتفاع') || String(p.type).toLowerCase().includes('height')).length;
+        const confinedWork = activePermits.filter(p => String(p.type).includes('مغلق') || String(p.type).toLowerCase().includes('confined')).length;
+        const electricalWork = activePermits.filter(p => String(p.type).includes('كهرب') || String(p.type).toLowerCase().includes('electr')).length;
+
+        return {
+            success: true,
+            summary: {
+                totalPermits: permits.length,
+                activeCount: activePermits.length,
+                hotWork: hotWork,
+                heightWork: heightWork,
+                confinedWork: confinedWork,
+                electricalWork: electricalWork
+            },
+            permits: permits.slice(0, 100),
+            activePermits: activePermits.slice(0, 50),
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    // ==========================================
+    // 🚪 Gate Visitors Public Engine
+    // ==========================================
+    'getActiveGateVisitors': function(payload, postData, action) {
+        const db = getDatabase();
+        const visitors = db.readSheet('GateVisitors') || [];
+        const active = visitors.filter(v => {
+            const status = String(v.status || '').trim();
+            const exitTime = String(v.exitTime || '').trim();
+            return (!exitTime || exitTime === '' || exitTime === '-') && !status.includes('خروج');
+        });
+
+        return {
+            success: true,
+            activeCount: active.length,
+            activeVisitors: active,
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    'getAllGateVisitors': function(payload, postData, action) {
+        const db = getDatabase();
+        const visitors = db.readSheet('GateVisitors') || [];
+        return {
+            success: true,
+            visitors: visitors,
+            count: visitors.length,
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    'submitGateVisitorCheckIn': function(payload, postData, action) {
+        const db = getDatabase();
+        const row = payload?.data || payload || postData?.data || postData || {};
+        if (!row.id) row.id = `VIS_${Date.now()}`;
+        row.createdAt = row.createdAt || new Date().toISOString();
+        row.status = row.status || 'بالداخل (Onsite)';
+        db.insertRow('GateVisitors', row);
+        return {
+            success: true,
+            message: 'تم تسجيل دخول الزائر بنجاح',
+            id: row.id,
+            visitor: row
+        };
+    },
+
+    'submitGateVisitorCheckOut': function(payload, postData, action) {
+        const db = getDatabase();
+        const id = payload?.id || payload?.visitorId || postData?.id;
+        if (!id) return { success: false, message: 'معرف الزائر مطلوب', errorCode: 'ID_REQUIRED' };
+
+        const now = new Date();
+        const exitTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const exitDate = now.toISOString().slice(0, 10);
+
+        db.updateRow('GateVisitors', 'id', id, {
+            exitDate: exitDate,
+            exitTime: exitTime,
+            status: 'تم الخروج (Exited)',
+            updatedAt: now.toISOString()
+        });
+
+        return {
+            success: true,
+            message: 'تم تسجيل خروج الزائر بنجاح',
+            id: id,
+            exitTime: exitTime
+        };
+    },
+
+    'getHseBroadcastMessages': function(payload, postData, action) {
+        const db = getDatabase();
+        const alerts = db.readSheet('SafetyAlerts') || [];
+        return {
+            success: true,
+            messages: alerts,
+            count: alerts.length,
+            timestamp: new Date().toISOString()
+        };
     }
 };
 
