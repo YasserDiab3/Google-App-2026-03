@@ -73,11 +73,6 @@
                     ? this.t('common.offline.backend', 'Server unreachable — working locally for now; saves may be delayed until connection returns.')
                     : this.t('common.offline.backend', 'تعذر الوصول للخادم — العمل محلياً مؤقتاً؛ الحفظ قد يتأخر حتى عودة الاتصال.');
             }
-            if (this._lightStorage) {
-                return en
-                    ? this.t('common.storage.light', 'Local copy is shortened (storage limit).')
-                    : this.t('common.storage.light', 'النسخة المحلية مختصرة (حد التخزين).');
-            }
             return '';
         },
 
@@ -86,24 +81,21 @@
                 this._browserOffline = (typeof navigator !== 'undefined' && navigator.onLine === false);
                 const el = this.ensureDom();
                 const msgEl = document.getElementById(MSG_ID);
-                const show = this._browserOffline || this._backendOffline || this._lightStorage;
+                const show = this._browserOffline || this._backendOffline;
                 const msg = this.messageForState();
 
                 if (msgEl) msgEl.textContent = msg;
                 el.setAttribute(
                     'data-mode',
-                    this._browserOffline ? 'browser' : (this._backendOffline ? 'backend' : (this._lightStorage ? 'light' : 'ok'))
+                    this._browserOffline ? 'browser' : (this._backendOffline ? 'backend' : 'ok')
                 );
                 el.classList.toggle('is-visible', show);
                 el.style.display = show ? 'flex' : 'none';
                 document.body.classList.toggle(BODY_CLASS, show);
 
                 if (show) {
-                    const toastKey = this._browserOffline ? 'browser' : (this._backendOffline ? 'backend' : 'light');
-                    // light: لا toast مكرر من البانر — DataManager يتولى إشعاراً واحداً
-                    if (toastKey === 'light') {
-                        /* banner only, auto-hide via setLightLocalData */
-                    } else if (toastKey !== this._lastToastKey) {
+                    const toastKey = this._browserOffline ? 'browser' : 'backend';
+                    if (toastKey !== this._lastToastKey) {
                         this._lastToastKey = toastKey;
                         this.notifyOnce(msg);
                     }
@@ -126,37 +118,9 @@
             this.sync();
         },
 
-        /** P4.2: تنبيه مؤقت لنسخة localStorage مخففة — toast عبر DataManager؛ البانر يختفي تلقائياً */
+        /** تنبيه النسخة المخففة معطل لمنع إزعاج المستخدم */
         setLightLocalData(isLight) {
-            if (!isLight) {
-                this._lightStorage = false;
-                if (this._lightHideTimer) {
-                    try { clearTimeout(this._lightHideTimer); } catch (_e) { /* ignore */ }
-                    this._lightHideTimer = null;
-                }
-                this.sync();
-                return;
-            }
-
-            // إظهار البانر مرة واحدة فقط لكل جلسة متصفح لمنع التكرار المزعج عند كل حفظ محلي
-            if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hse_light_banner_shown')) {
-                return;
-            }
-            if (typeof sessionStorage !== 'undefined') {
-                try { sessionStorage.setItem('hse_light_banner_shown', 'true'); } catch (_) {}
-            }
-
-            this._lightStorage = true;
-            this.sync();
-            if (this._lightHideTimer) {
-                try { clearTimeout(this._lightHideTimer); } catch (_e2) { /* ignore */ }
-            }
-            const self = this;
-            this._lightHideTimer = setTimeout(() => {
-                self._lightStorage = false;
-                self._lightHideTimer = null;
-                try { self.sync(); } catch (_e3) { /* ignore */ }
-            }, 5000);
+            this._lightStorage = false;
         },
 
         init() {

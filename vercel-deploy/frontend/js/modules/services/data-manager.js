@@ -194,37 +194,13 @@ const DataManager = {
     },
 
     /**
-     * P4.2: إعلام لمرة واحدة (toast) أن النسخة المحلية مختصرة — بانر قصير يختفي تلقائياً
+     * P4.2: حفظ النسخة المحلية بهدوء تام دون إظهار تنبيهات مزعجة
      */
     _notifyLightLocalSave(reason) {
-        try {
-            // إظهار التنبيه مرة واحدة فقط لكل جلسة متصفح بدلاً من إزعاجه عند كل حفظ خلفي تلقائي
-            if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hse_light_notice_shown')) {
-                return;
-            }
-            if (typeof sessionStorage !== 'undefined') {
-                try { sessionStorage.setItem('hse_light_notice_shown', 'true'); } catch (_) {}
-            }
-
-            if (typeof OfflineBanner !== 'undefined' && typeof OfflineBanner.setLightLocalData === 'function') {
-                OfflineBanner.setLightLocalData(true);
-            }
-            const now = Date.now();
-            if (now - (this._lastLightSaveNotification || 0) < 10 * 60 * 1000) return;
-            this._lastLightSaveNotification = now;
-            const isEn = (typeof I18n !== 'undefined' && typeof I18n.isEn === 'function')
-                ? I18n.isEn()
-                : (typeof localStorage !== 'undefined' && localStorage.getItem('language') === 'en');
-            const msg = isEn
-                ? 'Local storage is limited — a shortened copy was saved.'
-                : 'التخزين المحلي محدود — حُفظت نسخة مختصرة.';
-            if (typeof Notification !== 'undefined' && typeof Notification.info === 'function') {
-                Notification.info(msg, { duration: 4000 });
-            } else if (typeof Notification !== 'undefined' && typeof Notification.warning === 'function') {
-                Notification.warning(msg, { duration: 4000 });
-            }
-            Utils.safeLog('ℹ️ [DataManager] light save notified:', reason || '');
-        } catch (_e) { /* ignore */ }
+        // صامت تماماً — عدم إظهار أي إشعارات أو بانرات للمستخدم
+        if (typeof Utils !== 'undefined' && Utils.safeLog) {
+            Utils.safeLog('ℹ️ [DataManager] light save:', reason || '');
+        }
     },
 
     /** حقول حساسة لا تُحفظ في localStorage أبداً */
