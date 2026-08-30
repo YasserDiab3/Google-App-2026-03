@@ -20,11 +20,32 @@ if (!fs.existsSync(DATA_DIR)) {
     } catch (_) {}
 }
 
+const targetDbPath = path.join(DATA_DIR, 'clinic_hse.db');
+
+// Seed from bundled pre-populated database if running on Vercel
+if (isVercel) {
+    const candidatePaths = [
+        path.resolve(__dirname, '../data/clinic_hse.db'),
+        path.resolve(__dirname, '../../data/clinic_hse.db'),
+        path.resolve(__dirname, 'data/clinic_hse.db')
+    ];
+    for (const cand of candidatePaths) {
+        if (fs.existsSync(cand)) {
+            try {
+                if (!fs.existsSync(targetDbPath) || fs.statSync(targetDbPath).size < fs.statSync(cand).size) {
+                    fs.copyFileSync(cand, targetDbPath);
+                }
+                break;
+            } catch (_) {}
+        }
+    }
+}
+
 module.exports = {
     port: parseInt(process.env.PORT || '3001', 10),
     host: process.env.HOST || '0.0.0.0',
-    dbType: process.env.DB_TYPE || 'sqlite', // 'sqlite' or 'postgres'
-    sqlitePath: process.env.SQLITE_PATH || path.join(DATA_DIR, 'clinic_hse.db'),
+    dbType: process.env.DB_TYPE || 'sqlite',
+    sqlitePath: process.env.SQLITE_PATH || targetDbPath,
     databaseUrl: process.env.DATABASE_URL || '',
     corsOrigin: process.env.CORS_ORIGIN || '*',
     sessionSecret: process.env.SESSION_SECRET || 'hse_secure_local_dev_secret_2026',
