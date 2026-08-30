@@ -8,14 +8,14 @@ const path = require('path');
 const config = require('../config/config');
 const { headersMap } = require('./headers-schema');
 
-const IDENTIFIER_REGEX = /^[a-zA-Z0-9_]+$/;
+const SAFE_IDENTIFIER_REGEX = /^[a-zA-Z0-9_\s\-\/#\(\)\.\&%:\+,أ-ي]+$/;
 
 function sanitizeIdentifier(name) {
     if (!name || typeof name !== 'string') {
         throw new Error('اسم الحقل أو الجدول غير صالح');
     }
     const clean = name.trim();
-    if (!IDENTIFIER_REGEX.test(clean)) {
+    if (!SAFE_IDENTIFIER_REGEX.test(clean) || clean.includes('"') || clean.includes(';') || clean.includes('--') || clean.includes('/*')) {
         throw new Error(`محاولة إدخال غير آمنة في اسم الحقل/الجدول: "${name}"`);
     }
     return clean;
@@ -223,9 +223,11 @@ function initDatabase(overridePath = null) {
                 const tableName = `"${safeTable}"`;
                 const setClauses = [];
                 const values = [];
+                const validCols = headersMap[sheetName] ? new Set(headersMap[sheetName]) : null;
 
                 for (const [key, val] of Object.entries(updatedFields || {})) {
                     if (key === keyCol) continue;
+                    if (validCols && !validCols.has(key)) continue;
                     const safeCol = sanitizeIdentifier(key);
                     setClauses.push(`"${safeCol}" = ?`);
                     values.push(typeof val === 'object' && val !== null ? JSON.stringify(val) : val);

@@ -1239,10 +1239,57 @@ const moduleHandlers = {
     'getActiveGateVisitors': function(payload, postData, action) {
         const db = getDatabase();
         const visitors = db.readSheet('GateVisitors') || [];
-        const active = visitors.filter(v => {
-            const status = String(v.status || '').trim();
+        
+        function normalizeVisitor(v) {
+            if (!v || typeof v !== 'object') return v;
+            const id = v.id || v.visitorId || v['Record ID'] || '';
+            const name = v.visitorName || v.name || v['Visitor Name'] || '';
+            const org = v.organization || v.company || v.org || v['Organization / Company'] || '';
+            const status = v.status || v['Status'] || '';
+            const exitTime = v.exitTime || v['Exit Time'] || '';
+            const entryDate = v.entryDate || v['Entry Date'] || '';
+            const entryTime = v.entryTime || v['Entry Time'] || '';
+            const badge = v.badge || v.badgeNumber || v['Badge #'] || '';
+            const site = v.site || v.targetSite || v['Target Site'] || '';
+            const hall = v.hall || v.targetHall || v['Target Hall / Area'] || '';
+            const host = v.host || v.hostPerson || v['Host Person & Dept'] || '';
+            const phone = v.phone || v.phoneNumber || v['Phone Number'] || '';
+            const idNumber = v.idNumber || v.nationalId || v['National ID / Passport'] || '';
+            const vehiclePlate = v.vehiclePlate || v['Vehicle Plate'] || '';
+            const purpose = v.visitPurpose || v['Visit Purpose'] || '';
+            const officer = v.securityOfficer || v['Security Officer / Registered By'] || '';
+
+            return {
+                ...v,
+                id: id,
+                visitorId: id,
+                name: name,
+                visitorName: name,
+                org: org,
+                company: org,
+                organization: org,
+                status: status,
+                exitTime: exitTime,
+                entryDate: entryDate,
+                entryTime: entryTime,
+                badge: badge,
+                site: site,
+                hall: hall,
+                host: host,
+                phone: phone,
+                idNumber: idNumber,
+                vehiclePlate: vehiclePlate,
+                visitPurpose: purpose,
+                securityOfficer: officer
+            };
+        }
+
+        const active = visitors.map(normalizeVisitor).filter(v => {
+            const status = String(v.status || '').trim().toLowerCase();
             const exitTime = String(v.exitTime || '').trim();
-            return (!exitTime || exitTime === '' || exitTime === '-') && !status.includes('خروج');
+            const isDeparted = status.includes('خروج') || status.includes('departed') || status.includes('exited');
+            const hasExitTime = exitTime !== '' && exitTime !== '0' && exitTime !== '-';
+            return !isDeparted && !hasExitTime;
         });
 
         return {
@@ -1256,10 +1303,56 @@ const moduleHandlers = {
     'getAllGateVisitors': function(payload, postData, action) {
         const db = getDatabase();
         const visitors = db.readSheet('GateVisitors') || [];
+        
+        function normalizeVisitor(v) {
+            if (!v || typeof v !== 'object') return v;
+            const id = v.id || v.visitorId || v['Record ID'] || '';
+            const name = v.visitorName || v.name || v['Visitor Name'] || '';
+            const org = v.organization || v.company || v.org || v['Organization / Company'] || '';
+            const status = v.status || v['Status'] || '';
+            const exitTime = v.exitTime || v['Exit Time'] || '';
+            const entryDate = v.entryDate || v['Entry Date'] || '';
+            const entryTime = v.entryTime || v['Entry Time'] || '';
+            const badge = v.badge || v.badgeNumber || v['Badge #'] || '';
+            const site = v.site || v.targetSite || v['Target Site'] || '';
+            const hall = v.hall || v.targetHall || v['Target Hall / Area'] || '';
+            const host = v.host || v.hostPerson || v['Host Person & Dept'] || '';
+            const phone = v.phone || v.phoneNumber || v['Phone Number'] || '';
+            const idNumber = v.idNumber || v.nationalId || v['National ID / Passport'] || '';
+            const vehiclePlate = v.vehiclePlate || v['Vehicle Plate'] || '';
+            const purpose = v.visitPurpose || v['Visit Purpose'] || '';
+            const officer = v.securityOfficer || v['Security Officer / Registered By'] || '';
+
+            return {
+                ...v,
+                id: id,
+                visitorId: id,
+                name: name,
+                visitorName: name,
+                org: org,
+                company: org,
+                organization: org,
+                status: status,
+                exitTime: exitTime,
+                entryDate: entryDate,
+                entryTime: entryTime,
+                badge: badge,
+                site: site,
+                hall: hall,
+                host: host,
+                phone: phone,
+                idNumber: idNumber,
+                vehiclePlate: vehiclePlate,
+                visitPurpose: purpose,
+                securityOfficer: officer
+            };
+        }
+
+        const normalized = visitors.map(normalizeVisitor);
         return {
             success: true,
-            visitors: visitors,
-            count: visitors.length,
+            visitors: normalized,
+            count: normalized.length,
             timestamp: new Date().toISOString()
         };
     },
@@ -1267,31 +1360,68 @@ const moduleHandlers = {
     'submitGateVisitorCheckIn': function(payload, postData, action) {
         const db = getDatabase();
         const row = payload?.data || payload || postData?.data || postData || {};
-        if (!row.id) row.id = `VIS_${Date.now()}`;
-        row.createdAt = row.createdAt || new Date().toISOString();
-        row.status = row.status || 'بالداخل (Onsite)';
-        db.insertRow('GateVisitors', row);
+        const id = row.id || row['Record ID'] || `VIS-${Date.now().toString().slice(-6)}`;
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10);
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        
+        const record = {
+            'Record ID': id,
+            id: id,
+            'Entry Date': row.entryDate || dateStr,
+            entryDate: row.entryDate || dateStr,
+            'Entry Time': row.entryTime || timeStr,
+            entryTime: row.entryTime || timeStr,
+            'Visitor Name': row.name || row.visitorName || '',
+            visitorName: row.name || row.visitorName || '',
+            'Organization / Company': row.org || row.company || '',
+            company: row.org || row.company || '',
+            'National ID / Passport': row.idNumber || row.nationalId || '',
+            'Phone Number': row.phone || row.phoneNumber || '',
+            'Vehicle Plate': row.vehiclePlate || 'بدون',
+            'Target Site': row.site || row.targetSite || 'ICAPP-1',
+            'Target Hall / Area': row.hall || row.targetHall || '',
+            'Host Person & Dept': row.host || row.hostPerson || '',
+            'Visit Purpose': row.visitPurpose || row.purpose || '',
+            'Badge #': row.badge || row.badgeNumber || '',
+            'Security Officer / Registered By': row.securityOfficer || 'مسؤول الأمن',
+            'Status': 'داخل المنشأة (Active / Inside)',
+            status: 'داخل المنشأة (Active / Inside)',
+            'Exit Time': '',
+            exitTime: '',
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString()
+        };
+
+        db.insertRow('GateVisitors', record);
         return {
             success: true,
             message: 'تم تسجيل دخول الزائر بنجاح',
-            id: row.id,
-            visitor: row
+            id: id,
+            visitor: record
         };
     },
 
     'submitGateVisitorCheckOut': function(payload, postData, action) {
         const db = getDatabase();
-        const id = payload?.id || payload?.visitorId || postData?.id;
+        const id = payload?.id || payload?.visitorId || postData?.id || (payload?.data && (payload.data.id || payload.data.visitorId));
         if (!id) return { success: false, message: 'معرف الزائر مطلوب', errorCode: 'ID_REQUIRED' };
 
-        const now = new Date();
-        const exitTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const exitDate = now.toISOString().slice(0, 10);
+        const visitors = db.readSheet('GateVisitors') || [];
+        const found = visitors.find(v => (v.id === id || v['Record ID'] === id || v.visitorId === id));
+        const idCol = (found && found['Record ID']) ? 'Record ID' : 'id';
+        const targetId = (found && found['Record ID']) ? found['Record ID'] : id;
 
-        db.updateRow('GateVisitors', 'id', id, {
-            exitDate: exitDate,
-            exitTime: exitTime,
-            status: 'تم الخروج (Exited)',
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const dateStr = now.toISOString().slice(0, 10);
+        const exitDisplay = `${timeStr} (${dateStr})`;
+
+        db.updateRow('GateVisitors', idCol, targetId, {
+            'Exit Time': exitDisplay,
+            exitTime: exitDisplay,
+            'Status': 'تم الخروج (Departed)',
+            status: 'تم الخروج (Departed)',
             updatedAt: now.toISOString()
         });
 
@@ -1299,7 +1429,7 @@ const moduleHandlers = {
             success: true,
             message: 'تم تسجيل خروج الزائر بنجاح',
             id: id,
-            exitTime: exitTime
+            exitTime: exitDisplay
         };
     },
 

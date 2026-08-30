@@ -24,12 +24,7 @@ const authHandlers = {
 
         const db = getDatabase();
         const users = db.readSheet('Users');
-        let user = users.find(u => String(u.email || '').toLowerCase() === email);
-
-        // Fallback matching for administrative login aliases
-        if (!user && (email.startsWith('admin@') || email.includes('admin'))) {
-            user = users.find(u => String(u.role || '').toLowerCase() === 'admin');
-        }
+        const user = users.find(u => String(u.email || '').toLowerCase() === email);
 
         if (!user) {
             return { success: false, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', errorCode: 'INVALID_CREDENTIALS' };

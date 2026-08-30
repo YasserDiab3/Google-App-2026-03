@@ -2821,27 +2821,19 @@
             populateVisitorAutocompleteDatalists();
         }
 
+        function isVisitorActive(v) {
+            if (!v || typeof v !== 'object') return false;
+            const ex = String(v.exitTime || v['Exit Time'] || '').trim();
+            const st = String(v.status || v['Status'] || '').trim().toLowerCase();
+            const isDeparted = st.includes('خروج') || st.includes('departed') || st.includes('exited');
+            const hasExit = ex !== '' && ex !== '0' && ex !== '-';
+            return !isDeparted && !hasExit;
+        }
+
         function updateStatsBadges() {
             const list = Array.isArray(getVisitorsRegistry()) ? getVisitorsRegistry() : [];
-            const todayStr = new Date().toISOString().split('T')[0];
-
-            // 1. الزوار المتواجدون حالياً بالداخل
-            const active = list.filter(v => {
-                if (!v) return false;
-                const ex = String(v.exitTime || '').trim();
-                const isDeparted = String(v.status || '').indexOf('تم الخروج') !== -1;
-                const isInside = String(v.status || '').indexOf('بالداخل') !== -1;
-                return (!ex || ex === '0' || ex === '-') && !isDeparted && (isInside || !v.status);
-            });
-
-            // 2. جميع من تم تسجيل خروجهم
-            const exited = list.filter(v => {
-                if (!v) return false;
-                const ex = String(v.exitTime || '').trim();
-                const isDeparted = String(v.status || '').indexOf('تم الخروج') !== -1;
-                return isDeparted || (ex && ex !== '0' && ex !== '-');
-            });
-
+            const active = list.filter(isVisitorActive);
+            const exited = list.filter(v => v && !isVisitorActive(v));
             const total = Math.max(list.length, active.length + exited.length);
 
             const countBadge = document.getElementById('activeCountBadge');
@@ -3175,11 +3167,7 @@ function resetCheckInForm() {
 
             const t = GATE_I18N[currentLang] || GATE_I18N.ar;
             const list = getVisitorsRegistry();
-            let active = (Array.isArray(list) ? list : []).filter(v => {
-                if (!v) return false;
-                const ex = String(v.exitTime || '').trim();
-                return !ex || ex === '0' || ex === '-';
-            });
+            let active = (Array.isArray(list) ? list : []).filter(isVisitorActive);
 
             if (query && query.trim().length > 0) {
                 const q = query.trim().toLowerCase();
