@@ -23,6 +23,8 @@
         }
     };
 
+    let realtimeDataInterval = null;
+
     // الانتظار حتى يتم تحميل DOM و CSS
     function waitForCSSAndInit() {
         // التحقق من تحميل CSS

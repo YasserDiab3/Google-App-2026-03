@@ -1,94 +1,26 @@
-/**
- * SafetyBudget Module
- * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
- */
-// ===== Safety Budget Module (ميزانية السلامة وتتبع الإنفاق) =====
-const SafetyBudget = {
-    currentView: 'dashboard', // dashboard, list, form, edit
-    currentEditId: null,
-    currentBudgetId: null,
-    currencies: {
-        'EGP': { symbol: 'ج.م', name: 'جنيه مصري', locale: 'ar-EG' },
-        'USD': { symbol: '$', name: 'دولار أمريكي', locale: 'en-US' }
-    },
-    defaultCurrency: 'EGP',
-    expenseCategories: ['معدات', 'تدريب', 'صيانة', 'أدوات حماية', 'طوارئ', 'OPEX', 'CAPEX', 'أخرى'],
-
-    getCurrencySymbol(currency = null) {
-        const curr = currency || this.defaultCurrency;
-        return this.currencies[curr]?.symbol || curr;
-    },
-
-    formatCurrency(amount, currency = null) {
-        const curr = currency || this.defaultCurrency;
-        const currencyInfo = this.currencies[curr];
-        if (!currencyInfo) return amount.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-        if (curr === 'EGP') {
-            return amount.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + currencyInfo.symbol;
-        } else if (curr === 'USD') {
-            return currencyInfo.symbol + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-        return amount.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + currencyInfo.symbol;
-    },
-
-    async load() {
-        // Add language change listener
-        if (!this._languageChangeListenerAdded) {
-            document.addEventListener('language-changed', () => {
-                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
-                this.load();
-            });
-            this._languageChangeListenerAdded = true;
-        }
-
-        // التحقق من وجود التبعيات المطلوبة
-        if (typeof Utils === 'undefined') {
-            console.error('Utils غير متوفر!');
-            return;
-        }
-        const section = document.getElementById('safety-budget-section');
-        if (!section) {
-            if (typeof Utils !== 'undefined' && Utils.safeError) {
-                Utils.safeError('قسم safety-budget-section غير موجود!');
-            } else {
-                console.error('قسم safety-budget-section غير موجود!');
-            }
-            return;
-        }
-
-        if (typeof AppState === 'undefined') {
-            // لا تترك الواجهة فارغة
-            section.innerHTML = `
+const SafetyBudget={currentView:"dashboard",currentEditId:null,currentBudgetId:null,currencies:{EGP:{symbol:"\u062C.\u0645",name:"\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A",locale:"ar-EG"},USD:{symbol:"$",name:"\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A",locale:"en-US"}},defaultCurrency:"EGP",expenseCategories:["\u0645\u0639\u062F\u0627\u062A","\u062A\u062F\u0631\u064A\u0628","\u0635\u064A\u0627\u0646\u0629","\u0623\u062F\u0648\u0627\u062A \u062D\u0645\u0627\u064A\u0629","\u0637\u0648\u0627\u0631\u0626","OPEX","CAPEX","\u0623\u062E\u0631\u0649"],getCurrencySymbol(e=null){const a=e||this.defaultCurrency;return this.currencies[a]?.symbol||a},formatCurrency(e,a=null){const t=a||this.defaultCurrency,s=this.currencies[t];return s?t==="EGP"?e.toLocaleString("ar-EG",{minimumFractionDigits:2,maximumFractionDigits:2})+" "+s.symbol:t==="USD"?s.symbol+e.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}):e.toLocaleString("ar-SA",{minimumFractionDigits:2,maximumFractionDigits:2})+" "+s.symbol:e.toLocaleString("ar-SA",{minimumFractionDigits:2,maximumFractionDigits:2})},async load(){if(this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0),typeof Utils>"u")return;const e=document.getElementById("safety-budget-section");if(!e){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u0642\u0633\u0645 safety-budget-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!");return}if(typeof AppState>"u"){e.innerHTML=`
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                            <p class="text-gray-500 mb-2">تعذر تحميل ميزانية السلامة</p>
-                            <p class="text-sm text-gray-400">AppState غير متوفر حالياً. جرّب تحديث الصفحة.</p>
+                            <p class="text-gray-500 mb-2">\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629</p>
+                            <p class="text-sm text-gray-400">AppState \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 \u062D\u0627\u0644\u064A\u0627\u064B. \u062C\u0631\u0651\u0628 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629.</p>
                             <button onclick="location.reload()" class="btn-primary mt-4">
                                 <i class="fas fa-redo ml-2"></i>
-                                تحديث الصفحة
+                                \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629
                             </button>
                         </div>
                     </div>
                 </div>
-            `;
-            Utils.safeError('AppState غير متوفر!');
-            return;
-        }
-
-        try {
-            // Skeleton فوري قبل أي render قد يكون بطيئاً
-            section.innerHTML = `
+            `,Utils.safeError("AppState \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631!");return}try{e.innerHTML=`
                 <div class="section-header">
                     <div class="flex items-center justify-between">
                         <div>
                             <h1 class="section-title">
                                 <i class="fas fa-wallet ml-3" aria-hidden="true"></i>
-                                ميزانية السلامة وتتبع الإنفاق
+                                \u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u062A\u062A\u0628\u0639 \u0627\u0644\u0625\u0646\u0641\u0627\u0642
                             </h1>
-                            <p class="section-subtitle">جاري التحميل...</p>
+                            <p class="section-subtitle">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
                         </div>
                     </div>
                 </div>
@@ -101,85 +33,54 @@ const SafetyBudget = {
                                         <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                     </div>
                                 </div>
-                                <p class="text-gray-500">جاري تجهيز الواجهة...</p>
+                                <p class="text-gray-500">\u062C\u0627\u0631\u064A \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0648\u0627\u062C\u0647\u0629...</p>
                             </div>
                         </div>
                     </div>
                 </div>
-            `;
-
-            // التأكد من وجود البيانات
-            if (!AppState.appData) {
-                AppState.appData = {};
-            }
-            if (!AppState.appData.safetyBudget) {
-                AppState.appData.safetyBudget = { expenses: [], budgets: [] };
-            }
-
-            const budgetTitle = (typeof i18n !== 'undefined' && i18n.translate) ? i18n.translate('budget.title') : 'ميزانية السلامة وتتبع الإنفاق';
-            const budgetSubtitle = (typeof i18n !== 'undefined' && i18n.translate) ? i18n.translate('budget.subtitle') : 'إدارة ومتابعة مصروفات وأنشطة السلامة';
-
-            // محاولة تحميل لوحة التحكم مع معالجة الأخطاء
-            let dashboardContent = '';
-            try {
-                const dashboardPromise = this.renderDashboard();
-                dashboardContent = await Utils.promiseWithTimeout(
-                    dashboardPromise,
-                    10000,
-                    () => new Error('Timeout: renderDashboard took too long')
-                );
-            } catch (error) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('⚠️ خطأ في تحميل لوحة التحكم:', error);
-                } else {
-                    console.warn('⚠️ خطأ في تحميل لوحة التحكم:', error);
-                }
-                dashboardContent = `
+            `,AppState.appData||(AppState.appData={}),AppState.appData.safetyBudget||(AppState.appData.safetyBudget={expenses:[],budgets:[]});const a=typeof i18n<"u"&&i18n.translate?i18n.translate("budget.title"):"\u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u062A\u062A\u0628\u0639 \u0627\u0644\u0625\u0646\u0641\u0627\u0642",t=typeof i18n<"u"&&i18n.translate?i18n.translate("budget.subtitle"):"\u0625\u062F\u0627\u0631\u0629 \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0648\u0623\u0646\u0634\u0637\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629";let s="";try{const i=this.renderDashboard();s=await Utils.promiseWithTimeout(i,1e4,()=>new Error("Timeout: renderDashboard took too long"))}catch(i){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645:",i),s=`
                     <div class="content-card">
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">حدث خطأ في تحميل البيانات</p>
+                                <p class="text-gray-500 mb-4">\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
                                 <button onclick="SafetyBudget.load()" class="btn-primary">
                                     <i class="fas fa-redo ml-2"></i>
-                                    إعادة المحاولة
+                                    \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
                                 </button>
                             </div>
                         </div>
                     </div>
-                `;
-            }
-
-        section.innerHTML = `
+                `}e.innerHTML=`
             <div class="section-header">
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-wallet ml-3" aria-hidden="true"></i>
-                            ${budgetTitle}
+                            ${a}
                         </h1>
-                        <p class="section-subtitle">${budgetSubtitle}</p>
+                        <p class="section-subtitle">${t}</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <button id="import-budget-btn" class="btn-secondary" onclick="SafetyBudget.showImportModal()">
                             <i class="fas fa-file-import ml-2"></i>
-                            استيراد من Excel
+                            \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u0646 Excel
                         </button>
                         <button id="export-report-pdf-btn" class="btn-secondary" onclick="SafetyBudget.exportReport('pdf')">
                             <i class="fas fa-file-pdf ml-2"></i>
-                            تصدير PDF
+                            \u062A\u0635\u062F\u064A\u0631 PDF
                         </button>
                         <button id="export-report-excel-btn" class="btn-secondary" onclick="SafetyBudget.exportReport('excel')">
                             <i class="fas fa-file-excel ml-2"></i>
-                            تصدير Excel
+                            \u062A\u0635\u062F\u064A\u0631 Excel
                         </button>
                         <button id="add-budget-btn" class="btn-secondary">
                             <i class="fas fa-plus ml-2"></i>
-                            إضافة ميزانية
+                            \u0625\u0636\u0627\u0641\u0629 \u0645\u064A\u0632\u0627\u0646\u064A\u0629
                         </button>
                         <button id="add-expense-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
-                            تسجيل مصروف جديد
+                            \u062A\u0633\u062C\u064A\u0644 \u0645\u0635\u0631\u0648\u0641 \u062C\u062F\u064A\u062F
                         </button>
                     </div>
                 </div>
@@ -190,19 +91,19 @@ const SafetyBudget = {
                     <div class="flex items-center gap-2 border-b border-gray-200" style="border-bottom: 2px solid #e5e7eb;">
                         <button class="tab-btn active" data-tab="dashboard" onclick="SafetyBudget.switchTab('dashboard')" style="padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;">
                             <i class="fas fa-chart-pie ml-2"></i>
-                            لوحة التحكم
+                            \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645
                         </button>
                         <button class="tab-btn" data-tab="all" onclick="SafetyBudget.switchTab('all')" style="padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;">
                             <i class="fas fa-list ml-2"></i>
-                            جميع المصروفات
+                            \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A
                         </button>
                         <button class="tab-btn" data-tab="opex" onclick="SafetyBudget.switchTab('opex')" style="padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;">
                             <i class="fas fa-chart-line ml-2"></i>
-                            OPEX (مصروفات تشغيلية)
+                            OPEX (\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u062A\u0634\u063A\u064A\u0644\u064A\u0629)
                         </button>
                         <button class="tab-btn" data-tab="capex" onclick="SafetyBudget.switchTab('capex')" style="padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;">
                             <i class="fas fa-building ml-2"></i>
-                            CAPEX (مصروفات رأسمالية)
+                            CAPEX (\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0631\u0623\u0633\u0645\u0627\u0644\u064A\u0629)
                         </button>
                     </div>
                     <style>
@@ -219,51 +120,15 @@ const SafetyBudget = {
                 
                 <!-- Tab Content -->
                 <div id="safety-budget-tab-content">
-                    ${dashboardContent}
+                    ${s}
                 </div>
             </div>
-        `;
-            this.setupEventListeners();
-            this.currentTab = 'dashboard';
-            
-            // تحميل لوحة التحكم فوراً بعد عرض الواجهة (حتى لو كانت البيانات فارغة)
-            // هذا يضمن عدم بقاء الواجهة فارغة بعد التحميل
-            try {
-                // استخدام setTimeout بسيط لضمان أن DOM جاهز
-                setTimeout(() => {
-                    this.loadDashboard();
-                }, 0);
-            } catch (error) {
-                Utils.safeWarn('⚠️ خطأ في تحميل لوحة التحكم الأولي:', error);
-            }
-            
-            // تحميل البيانات بشكل غير متزامن بعد عرض الواجهة (للتحديث)
-            setTimeout(() => {
-                try {
-                    this.loadDashboard().then(() => {
-                        // تحديث الواجهة بعد تحميل البيانات لضمان عرض البيانات المحدثة
-                        if (this.currentTab === 'dashboard') {
-                            this.switchTab('dashboard', { silent: true });
-                        }
-                    }).catch(error => {
-                        Utils.safeWarn('⚠️ تعذر تحميل بيانات الميزانية:', error);
-                        // حتى في حالة الخطأ، تأكد من تحميل لوحة التحكم
-                        this.loadDashboard();
-                    });
-                } catch (error) {
-                    Utils.safeWarn('⚠️ تعذر تحميل بيانات الميزانية:', error);
-                    // حتى في حالة الخطأ، تأكد من تحميل لوحة التحكم
-                    this.loadDashboard();
-                }
-            }, 100);
-        } catch (error) {
-            Utils.safeError('❌ خطأ في تحميل مديول ميزانية السلامة:', error);
-            section.innerHTML = `
+        `,this.setupEventListeners(),this.currentTab="dashboard";try{setTimeout(()=>{this.loadDashboard()},0)}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645 \u0627\u0644\u0623\u0648\u0644\u064A:",i)}setTimeout(()=>{try{this.loadDashboard().then(()=>{this.currentTab==="dashboard"&&this.switchTab("dashboard",{silent:!0})}).catch(i=>{Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629:",i),this.loadDashboard()})}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629:",i),this.loadDashboard()}},100)}catch(a){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629:",a),e.innerHTML=`
                 <div class="section-header">
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-wallet ml-3"></i>
-                            ميزانية السلامة وتتبع الإنفاق
+                            \u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u062A\u062A\u0628\u0639 \u0627\u0644\u0625\u0646\u0641\u0627\u0642
                         </h1>
                     </div>
                 </div>
@@ -272,63 +137,26 @@ const SafetyBudget = {
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-2">حدث خطأ أثناء تحميل البيانات</p>
-                                <p class="text-sm text-gray-400 mb-4">${error && error.message ? Utils.escapeHTML(error.message) : 'خطأ غير معروف'}</p>
+                                <p class="text-gray-500 mb-2">\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
+                                <p class="text-sm text-gray-400 mb-4">${a&&a.message?Utils.escapeHTML(a.message):"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"}</p>
                                 <button onclick="SafetyBudget.load()" class="btn-primary">
                                     <i class="fas fa-redo ml-2"></i>
-                                    إعادة المحاولة
+                                    \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
-            `;
-        }
-    },
-
-    async switchTab(tabName, options = {}) {
-        this.currentTab = tabName;
-
-        // Update tab buttons
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.tab === tabName) {
-                btn.classList.add('active');
-            }
-        });
-
-        // Load appropriate content
-        const contentContainer = document.getElementById('safety-budget-tab-content');
-        if (!contentContainer) return;
-
-        if (tabName === 'dashboard') {
-            contentContainer.innerHTML = await this.renderDashboard();
-            this.loadDashboard();
-        } else if (tabName === 'all') {
-            contentContainer.innerHTML = await this.renderExpensesList('all');
-            this.loadExpensesList();
-        } else if (tabName === 'opex') {
-            contentContainer.innerHTML = await this.renderExpensesList('OPEX');
-            this.setupOPEXEventListeners();
-            this.loadOPEXList();
-        } else if (tabName === 'capex') {
-            contentContainer.innerHTML = await this.renderExpensesList('CAPEX');
-            this.setupCAPEXEventListeners();
-            this.loadCAPEXList();
-        }
-    },
-
-    async renderDashboard() {
-        return `
+            `}},async switchTab(e,a={}){this.currentTab=e,document.querySelectorAll(".tab-btn").forEach(s=>{s.classList.remove("active"),s.dataset.tab===e&&s.classList.add("active")});const t=document.getElementById("safety-budget-tab-content");t&&(e==="dashboard"?(t.innerHTML=await this.renderDashboard(),this.loadDashboard()):e==="all"?(t.innerHTML=await this.renderExpensesList("all"),this.loadExpensesList()):e==="opex"?(t.innerHTML=await this.renderExpensesList("OPEX"),this.setupOPEXEventListeners(),this.loadOPEXList()):e==="capex"&&(t.innerHTML=await this.renderExpensesList("CAPEX"),this.setupCAPEXEventListeners(),this.loadCAPEXList()))},async renderDashboard(){return`
             <!-- Dashboard Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <div class="content-card">
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600 mb-1">إجمالي الميزانية المعتمدة</p>
+                                <p class="text-sm text-gray-600 mb-1">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629</p>
                                 <p class="text-2xl font-bold text-blue-600" id="total-budget">0.00</p>
-                                <p class="text-xs text-gray-500 mt-1" id="total-budget-currency">جنيه مصري</p>
+                                <p class="text-xs text-gray-500 mt-1" id="total-budget-currency">\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A</p>
                             </div>
                             <div class="bg-blue-100 rounded-full p-4">
                                 <i class="fas fa-wallet text-2xl text-blue-600"></i>
@@ -340,9 +168,9 @@ const SafetyBudget = {
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600 mb-1">إجمالي المصروفات</p>
+                                <p class="text-sm text-gray-600 mb-1">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A</p>
                                 <p class="text-2xl font-bold text-red-600" id="total-expenses">0.00</p>
-                                <p class="text-xs text-gray-500 mt-1" id="total-expenses-currency">جنيه مصري</p>
+                                <p class="text-xs text-gray-500 mt-1" id="total-expenses-currency">\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A</p>
                             </div>
                             <div class="bg-red-100 rounded-full p-4">
                                 <i class="fas fa-money-bill-wave text-2xl text-red-600"></i>
@@ -354,9 +182,9 @@ const SafetyBudget = {
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600 mb-1">المتبقي</p>
+                                <p class="text-sm text-gray-600 mb-1">\u0627\u0644\u0645\u062A\u0628\u0642\u064A</p>
                                 <p class="text-2xl font-bold text-green-600" id="remaining-budget">0.00</p>
-                                <p class="text-xs text-gray-500 mt-1" id="remaining-budget-currency">جنيه مصري</p>
+                                <p class="text-xs text-gray-500 mt-1" id="remaining-budget-currency">\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A</p>
                             </div>
                             <div class="bg-green-100 rounded-full p-4">
                                 <i class="fas fa-coins text-2xl text-green-600"></i>
@@ -368,7 +196,7 @@ const SafetyBudget = {
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600 mb-1">نسبة الاستهلاك</p>
+                                <p class="text-sm text-gray-600 mb-1">\u0646\u0633\u0628\u0629 \u0627\u0644\u0627\u0633\u062A\u0647\u0644\u0627\u0643</p>
                                 <p class="text-2xl font-bold" id="consumption-percentage">0%</p>
                                 <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
                                     <div class="bg-blue-600 h-2 rounded-full transition-all duration-500" id="consumption-bar" style="width: 0%"></div>
@@ -388,7 +216,7 @@ const SafetyBudget = {
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-chart-pie ml-2"></i>
-                            الإنفاق حسب الفئة
+                            \u0627\u0644\u0625\u0646\u0641\u0627\u0642 \u062D\u0633\u0628 \u0627\u0644\u0641\u0626\u0629
                         </h2>
                     </div>
                     <div class="card-body">
@@ -399,7 +227,7 @@ const SafetyBudget = {
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-chart-line ml-2"></i>
-                            الإنفاق الشهري
+                            \u0627\u0644\u0625\u0646\u0641\u0627\u0642 \u0627\u0644\u0634\u0647\u0631\u064A
                         </h2>
                     </div>
                     <div class="card-body">
@@ -414,7 +242,7 @@ const SafetyBudget = {
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-list-ol ml-2"></i>
-                            أعلى بنود الإنفاق
+                            \u0623\u0639\u0644\u0649 \u0628\u0646\u0648\u062F \u0627\u0644\u0625\u0646\u0641\u0627\u0642
                         </h2>
                     </div>
                     <div class="card-body">
@@ -425,7 +253,7 @@ const SafetyBudget = {
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-history ml-2"></i>
-                            العمليات الأخيرة
+                            \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u0623\u062E\u064A\u0631\u0629
                         </h2>
                     </div>
                     <div class="card-body">
@@ -440,26 +268,26 @@ const SafetyBudget = {
                     <div class="flex items-center justify-between">
                         <h2 class="card-title">
                             <i class="fas fa-table ml-2"></i>
-                            قائمة المصروفات
+                            \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A
                         </h2>
                         <div class="flex items-center gap-4">
-                            <input type="text" id="expense-search" class="form-input" style="max-width: 300px;" placeholder="البحث...">
+                            <input type="text" id="expense-search" class="form-input" style="max-width: 300px;" placeholder="\u0627\u0644\u0628\u062D\u062B...">
                             <select id="expense-filter-category" class="form-input" style="max-width: 200px;">
-                                <option value="">جميع الفئات</option>
-                                <option value="معدات">معدات</option>
-                                <option value="تدريب">تدريب</option>
-                                <option value="صيانة">صيانة</option>
-                                <option value="أدوات حماية">أدوات حماية</option>
-                                <option value="طوارئ">طوارئ</option>
+                                <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0641\u0626\u0627\u062A</option>
+                                <option value="\u0645\u0639\u062F\u0627\u062A">\u0645\u0639\u062F\u0627\u062A</option>
+                                <option value="\u062A\u062F\u0631\u064A\u0628">\u062A\u062F\u0631\u064A\u0628</option>
+                                <option value="\u0635\u064A\u0627\u0646\u0629">\u0635\u064A\u0627\u0646\u0629</option>
+                                <option value="\u0623\u062F\u0648\u0627\u062A \u062D\u0645\u0627\u064A\u0629">\u0623\u062F\u0648\u0627\u062A \u062D\u0645\u0627\u064A\u0629</option>
+                                <option value="\u0637\u0648\u0627\u0631\u0626">\u0637\u0648\u0627\u0631\u0626</option>
                                 <option value="OPEX">OPEX</option>
                                 <option value="CAPEX">CAPEX</option>
-                                <option value="أخرى">أخرى</option>
+                                <option value="\u0623\u062E\u0631\u0649">\u0623\u062E\u0631\u0649</option>
                             </select>
                             <select id="expense-filter-year" class="form-input" style="max-width: 150px;">
-                                <option value="">جميع السنوات</option>
+                                <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0633\u0646\u0648\u0627\u062A</option>
                             </select>
                             <select id="expense-filter-month" class="form-input" style="max-width: 150px;">
-                                <option value="">جميع الأشهر</option>
+                                <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0634\u0647\u0631</option>
                             </select>
                         </div>
                     </div>
@@ -472,405 +300,122 @@ const SafetyBudget = {
                                     <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p class="text-gray-500">جاري التحميل...</p>
+                            <p class="text-gray-500">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `;
-    },
-
-    setupEventListeners() {
-        const addBudgetBtn = document.getElementById('add-budget-btn');
-        const addExpenseBtn = document.getElementById('add-expense-btn');
-        const expenseSearch = document.getElementById('expense-search');
-        const allSearch = document.getElementById('all-search');
-        const expenseFilterCategory = document.getElementById('expense-filter-category');
-        const allFilterCategory = document.getElementById('all-filter-category');
-        const expenseFilterYear = document.getElementById('expense-filter-year');
-        const allFilterYear = document.getElementById('all-filter-year');
-        const expenseFilterMonth = document.getElementById('expense-filter-month');
-        const allFilterMonth = document.getElementById('all-filter-month');
-
-        if (addBudgetBtn) {
-            addBudgetBtn.addEventListener('click', () => this.showBudgetForm());
-        }
-        if (addExpenseBtn) {
-            addExpenseBtn.addEventListener('click', () => this.showExpenseForm());
-        }
-        if (expenseSearch) {
-            expenseSearch.addEventListener('input', () => this.loadExpensesList());
-        }
-        if (allSearch) {
-            allSearch.addEventListener('input', () => this.loadExpensesList());
-        }
-        if (expenseFilterCategory) {
-            expenseFilterCategory.addEventListener('change', () => this.loadExpensesList());
-        }
-        if (allFilterCategory) {
-            allFilterCategory.addEventListener('change', () => this.loadExpensesList());
-        }
-        if (expenseFilterYear) {
-            expenseFilterYear.addEventListener('change', () => this.loadExpensesList());
-        }
-        if (allFilterYear) {
-            allFilterYear.addEventListener('change', () => this.loadExpensesList());
-        }
-        if (expenseFilterMonth) {
-            expenseFilterMonth.addEventListener('change', () => this.loadExpensesList());
-        }
-        if (allFilterMonth) {
-            allFilterMonth.addEventListener('change', () => this.loadExpensesList());
-        }
-    },
-
-    loadDashboard() {
-        this.updateDashboardStats();
-        this.loadExpensesList();
-        this.loadTopExpenses();
-        this.loadRecentTransactions();
-        this.renderCharts();
-        this.populateYearMonthFilters('all');
-        this.populateYearMonthFilters('expense'); // Keep for backward compatibility
-    },
-
-    updateDashboardStats() {
-        const budgets = AppState.appData.safetyBudgets || [];
-        const transactions = AppState.appData.safetyBudgetTransactions || [];
-
-        const currentYear = new Date().getFullYear();
-        const currentBudget = budgets.find(b => {
-            const budgetYear = b.year ? parseInt(b.year) : new Date(b.createdAt || b.startDate).getFullYear();
-            return budgetYear === currentYear && (b.status === 'نشط' || b.status === 'active' || !b.status);
-        }) || budgets[budgets.length - 1];
-
-        const budgetCurrency = currentBudget?.currency || this.defaultCurrency;
-        const totalBudget = currentBudget ? (parseFloat(currentBudget.amount) || 0) : 0;
-
-        // حساب المصروفات بنفس عملة الميزانية
-        const totalExpenses = transactions
-            .filter(t => (t.currency || this.defaultCurrency) === budgetCurrency)
-            .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-
-        const remaining = totalBudget - totalExpenses;
-        const consumptionPercent = totalBudget > 0 ? ((totalExpenses / totalBudget) * 100).toFixed(1) : 0;
-
-        const totalBudgetEl = document.getElementById('total-budget');
-        const totalExpensesEl = document.getElementById('total-expenses');
-        const remainingEl = document.getElementById('remaining-budget');
-        const consumptionEl = document.getElementById('consumption-percentage');
-        const consumptionBar = document.getElementById('consumption-bar');
-        const budgetCurrencyEl = document.getElementById('total-budget-currency');
-        const expensesCurrencyEl = document.getElementById('total-expenses-currency');
-        const remainingCurrencyEl = document.getElementById('remaining-budget-currency');
-
-        if (totalBudgetEl) totalBudgetEl.textContent = this.formatCurrency(totalBudget, budgetCurrency);
-        if (totalExpensesEl) totalExpensesEl.textContent = this.formatCurrency(totalExpenses, budgetCurrency);
-        if (budgetCurrencyEl) budgetCurrencyEl.textContent = this.currencies[budgetCurrency]?.name || 'جنيه مصري';
-        if (expensesCurrencyEl) expensesCurrencyEl.textContent = this.currencies[budgetCurrency]?.name || 'جنيه مصري';
-        if (remainingCurrencyEl) remainingCurrencyEl.textContent = this.currencies[budgetCurrency]?.name || 'جنيه مصري';
-
-        if (remainingEl) {
-            remainingEl.textContent = this.formatCurrency(remaining, budgetCurrency);
-            remainingEl.className = remaining >= 0 ? 'text-2xl font-bold text-green-600' : 'text-2xl font-bold text-red-600';
-        }
-        if (consumptionEl) {
-            consumptionEl.textContent = consumptionPercent + '%';
-            consumptionEl.className = parseFloat(consumptionPercent) > 90 ? 'text-2xl font-bold text-red-600' :
-                parseFloat(consumptionPercent) > 70 ? 'text-2xl font-bold text-yellow-600' :
-                    'text-2xl font-bold text-green-600';
-        }
-        if (consumptionBar) {
-            const percent = Math.min(100, Math.max(0, parseFloat(consumptionPercent)));
-            consumptionBar.style.width = percent + '%';
-            consumptionBar.className = percent > 90 ? 'bg-red-600 h-2 rounded-full transition-all duration-500' :
-                percent > 70 ? 'bg-yellow-600 h-2 rounded-full transition-all duration-500' :
-                    'bg-blue-600 h-2 rounded-full transition-all duration-500';
-        }
-    },
-
-    loadExpensesList() {
-        const container = document.getElementById('all-table-container') || document.getElementById('expenses-table-container');
-        if (!container) return;
-
-        const transactions = AppState.appData.safetyBudgetTransactions || [];
-        const searchTerm = (document.getElementById('all-search')?.value || document.getElementById('expense-search')?.value || '').toLowerCase();
-        const categoryFilter = document.getElementById('all-filter-category')?.value || document.getElementById('expense-filter-category')?.value || '';
-        const yearFilter = document.getElementById('all-filter-year')?.value || document.getElementById('expense-filter-year')?.value || '';
-        const monthFilter = document.getElementById('all-filter-month')?.value || document.getElementById('expense-filter-month')?.value || '';
-
-        let filtered = transactions.filter(t => {
-            const matchesSearch = !searchTerm ||
-                (t.description || '').toLowerCase().includes(searchTerm) ||
-                (t.vendor || '').toLowerCase().includes(searchTerm) ||
-                (t.invoiceNumber || '').toLowerCase().includes(searchTerm);
-            const matchesCategory = !categoryFilter || t.category === categoryFilter;
-            const transactionDate = t.date ? new Date(t.date) : new Date(t.createdAt);
-            const matchesYear = !yearFilter || transactionDate.getFullYear().toString() === yearFilter;
-            const matchesMonth = !monthFilter || (transactionDate.getMonth() + 1).toString() === monthFilter;
-            return matchesSearch && matchesCategory && matchesYear && matchesMonth;
-        });
-
-        filtered.sort((a, b) => {
-            const dateA = new Date(a.date || a.createdAt);
-            const dateB = new Date(b.date || b.createdAt);
-            return dateB - dateA;
-        });
-
-        if (filtered.length === 0) {
-            container.innerHTML = `
+        `},setupEventListeners(){const e=document.getElementById("add-budget-btn"),a=document.getElementById("add-expense-btn"),t=document.getElementById("expense-search"),s=document.getElementById("all-search"),i=document.getElementById("expense-filter-category"),r=document.getElementById("all-filter-category"),d=document.getElementById("expense-filter-year"),o=document.getElementById("all-filter-year"),n=document.getElementById("expense-filter-month"),l=document.getElementById("all-filter-month");e&&e.addEventListener("click",()=>this.showBudgetForm()),a&&a.addEventListener("click",()=>this.showExpenseForm()),t&&t.addEventListener("input",()=>this.loadExpensesList()),s&&s.addEventListener("input",()=>this.loadExpensesList()),i&&i.addEventListener("change",()=>this.loadExpensesList()),r&&r.addEventListener("change",()=>this.loadExpensesList()),d&&d.addEventListener("change",()=>this.loadExpensesList()),o&&o.addEventListener("change",()=>this.loadExpensesList()),n&&n.addEventListener("change",()=>this.loadExpensesList()),l&&l.addEventListener("change",()=>this.loadExpensesList())},loadDashboard(){this.updateDashboardStats(),this.loadExpensesList(),this.loadTopExpenses(),this.loadRecentTransactions(),this.renderCharts(),this.populateYearMonthFilters("all"),this.populateYearMonthFilters("expense")},updateDashboardStats(){const e=AppState.appData.safetyBudgets||[],a=AppState.appData.safetyBudgetTransactions||[],t=new Date().getFullYear(),s=e.find(f=>(f.year?parseInt(f.year):new Date(f.createdAt||f.startDate).getFullYear())===t&&(f.status==="\u0646\u0634\u0637"||f.status==="active"||!f.status))||e[e.length-1],i=s?.currency||this.defaultCurrency,r=s&&parseFloat(s.amount)||0,d=a.filter(f=>(f.currency||this.defaultCurrency)===i).reduce((f,v)=>f+(parseFloat(v.amount)||0),0),o=r-d,n=r>0?(d/r*100).toFixed(1):0,l=document.getElementById("total-budget"),c=document.getElementById("total-expenses"),u=document.getElementById("remaining-budget"),b=document.getElementById("consumption-percentage"),y=document.getElementById("consumption-bar"),m=document.getElementById("total-budget-currency"),g=document.getElementById("total-expenses-currency"),p=document.getElementById("remaining-budget-currency");if(l&&(l.textContent=this.formatCurrency(r,i)),c&&(c.textContent=this.formatCurrency(d,i)),m&&(m.textContent=this.currencies[i]?.name||"\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A"),g&&(g.textContent=this.currencies[i]?.name||"\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A"),p&&(p.textContent=this.currencies[i]?.name||"\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A"),u&&(u.textContent=this.formatCurrency(o,i),u.className=o>=0?"text-2xl font-bold text-green-600":"text-2xl font-bold text-red-600"),b&&(b.textContent=n+"%",b.className=parseFloat(n)>90?"text-2xl font-bold text-red-600":parseFloat(n)>70?"text-2xl font-bold text-yellow-600":"text-2xl font-bold text-green-600"),y){const f=Math.min(100,Math.max(0,parseFloat(n)));y.style.width=f+"%",y.className=f>90?"bg-red-600 h-2 rounded-full transition-all duration-500":f>70?"bg-yellow-600 h-2 rounded-full transition-all duration-500":"bg-blue-600 h-2 rounded-full transition-all duration-500"}},loadExpensesList(){const e=document.getElementById("all-table-container")||document.getElementById("expenses-table-container");if(!e)return;const a=AppState.appData.safetyBudgetTransactions||[],t=(document.getElementById("all-search")?.value||document.getElementById("expense-search")?.value||"").toLowerCase(),s=document.getElementById("all-filter-category")?.value||document.getElementById("expense-filter-category")?.value||"",i=document.getElementById("all-filter-year")?.value||document.getElementById("expense-filter-year")?.value||"",r=document.getElementById("all-filter-month")?.value||document.getElementById("expense-filter-month")?.value||"";let d=a.filter(o=>{const n=!t||(o.description||"").toLowerCase().includes(t)||(o.vendor||"").toLowerCase().includes(t)||(o.invoiceNumber||"").toLowerCase().includes(t),l=!s||o.category===s,c=o.date?new Date(o.date):new Date(o.createdAt),u=!i||c.getFullYear().toString()===i,b=!r||(c.getMonth()+1).toString()===r;return n&&l&&u&&b});if(d.sort((o,n)=>{const l=new Date(o.date||o.createdAt);return new Date(n.date||n.createdAt)-l}),d.length===0){e.innerHTML=`
                 <div class="empty-state">
                     <i class="fas fa-receipt text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">لا توجد مصروفات مسجلة</p>
+                    <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0645\u0633\u062C\u0644\u0629</p>
                 </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = `
+            `;return}e.innerHTML=`
             <div class="table-wrapper">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>التاريخ</th>
-                            <th>الفئة</th>
-                            <th>الوصف</th>
-                            <th>الجهة</th>
-                            <th>المبلغ</th>
-                            <th>العملة</th>
-                            <th>رقم الفاتورة</th>
-                            <th>المرفقات</th>
-                            <th>الإجراءات</th>
+                            <th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                            <th>\u0627\u0644\u0641\u0626\u0629</th>
+                            <th>\u0627\u0644\u0648\u0635\u0641</th>
+                            <th>\u0627\u0644\u062C\u0647\u0629</th>
+                            <th>\u0627\u0644\u0645\u0628\u0644\u063A</th>
+                            <th>\u0627\u0644\u0639\u0645\u0644\u0629</th>
+                            <th>\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629</th>
+                            <th>\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A</th>
+                            <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${filtered.map(t => `
+                        ${d.map(o=>`
                             <tr>
-                                <td>${Utils.formatDate(t.date || t.createdAt)}</td>
-                                <td><span class="badge badge-info">${Utils.escapeHTML(t.category || '')}</span></td>
-                                <td>${Utils.escapeHTML(t.description || '')}</td>
-                                <td>${Utils.escapeHTML(t.vendor || '')}</td>
-                                <td class="font-semibold">${this.formatCurrency(parseFloat(t.amount) || 0, t.currency || this.defaultCurrency)}</td>
-                                <td><span class="badge badge-secondary">${this.currencies[t.currency || this.defaultCurrency]?.symbol || 'ج.م'}</span></td>
-                                <td>${Utils.escapeHTML(t.invoiceNumber || '-')}</td>
+                                <td>${Utils.formatDate(o.date||o.createdAt)}</td>
+                                <td><span class="badge badge-info">${Utils.escapeHTML(o.category||"")}</span></td>
+                                <td>${Utils.escapeHTML(o.description||"")}</td>
+                                <td>${Utils.escapeHTML(o.vendor||"")}</td>
+                                <td class="font-semibold">${this.formatCurrency(parseFloat(o.amount)||0,o.currency||this.defaultCurrency)}</td>
+                                <td><span class="badge badge-secondary">${this.currencies[o.currency||this.defaultCurrency]?.symbol||"\u062C.\u0645"}</span></td>
+                                <td>${Utils.escapeHTML(o.invoiceNumber||"-")}</td>
                                 <td>
-                                    ${(t.attachments || []).length > 0 ?
-                `<span class="badge badge-success">${(t.attachments || []).length} مرفق</span>` :
-                '<span class="text-gray-400">-</span>'}
+                                    ${(o.attachments||[]).length>0?`<span class="badge badge-success">${(o.attachments||[]).length} \u0645\u0631\u0641\u0642</span>`:'<span class="text-gray-400">-</span>'}
                                 </td>
                                 <td>
                                     <div class="flex items-center gap-2">
-                                        <button class="btn-icon btn-icon-primary" onclick="SafetyBudget.viewExpense('${t.id}')" title="عرض">
+                                        <button class="btn-icon btn-icon-primary" onclick="SafetyBudget.viewExpense('${o.id}')" title="\u0639\u0631\u0636">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        ${Permissions.hasAccess('safety-budget') ? `
-                                            <button class="btn-icon btn-icon-warning" onclick="SafetyBudget.editExpense('${t.id}')" title="تعديل">
+                                        ${Permissions.hasAccess("safety-budget")?`
+                                            <button class="btn-icon btn-icon-warning" onclick="SafetyBudget.editExpense('${o.id}')" title="\u062A\u0639\u062F\u064A\u0644">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn-icon btn-icon-danger" onclick="SafetyBudget.deleteExpense('${t.id}')" title="حذف">
+                                            <button class="btn-icon btn-icon-danger" onclick="SafetyBudget.deleteExpense('${o.id}')" title="\u062D\u0630\u0641">
                                                 <i class="fas fa-trash"></i>
                                             </button>
-                                        ` : ''}
+                                        `:""}
                                     </div>
                                 </td>
                             </tr>
-                        `).join('')}
+                        `).join("")}
                     </tbody>
                 </table>
             </div>
-        `;
-    },
-
-    loadTopExpenses() {
-        const container = document.getElementById('top-expenses-list');
-        if (!container) return;
-
-        const transactions = AppState.appData.safetyBudgetTransactions || [];
-        const topExpenses = [...transactions]
-            .sort((a, b) => (parseFloat(b.amount) || 0) - (parseFloat(a.amount) || 0))
-            .slice(0, 5);
-
-        if (topExpenses.length === 0) {
-            container.innerHTML = '<p class="text-sm text-gray-500">لا توجد مصروفات مسجلة</p>';
-            return;
-        }
-
-        container.innerHTML = topExpenses.map((expense, index) => `
+        `},loadTopExpenses(){const e=document.getElementById("top-expenses-list");if(!e)return;const t=[...AppState.appData.safetyBudgetTransactions||[]].sort((s,i)=>(parseFloat(i.amount)||0)-(parseFloat(s.amount)||0)).slice(0,5);if(t.length===0){e.innerHTML='<p class="text-sm text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0645\u0633\u062C\u0644\u0629</p>';return}e.innerHTML=t.map((s,i)=>`
             <div class="flex items-center justify-between p-3 border-b border-gray-200 last:border-b-0">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                        ${index + 1}
+                        ${i+1}
                     </div>
                     <div>
-                        <p class="text-sm font-semibold text-gray-800">${Utils.escapeHTML(expense.description || '')}</p>
-                        <p class="text-xs text-gray-500">${Utils.escapeHTML(expense.category || '')} - ${Utils.formatDate(expense.date || expense.createdAt)}</p>
+                        <p class="text-sm font-semibold text-gray-800">${Utils.escapeHTML(s.description||"")}</p>
+                        <p class="text-xs text-gray-500">${Utils.escapeHTML(s.category||"")} - ${Utils.formatDate(s.date||s.createdAt)}</p>
                     </div>
                 </div>
                 <div class="text-left">
-                    <p class="text-sm font-bold text-red-600">${this.formatCurrency(parseFloat(expense.amount) || 0, expense.currency || this.defaultCurrency)}</p>
+                    <p class="text-sm font-bold text-red-600">${this.formatCurrency(parseFloat(s.amount)||0,s.currency||this.defaultCurrency)}</p>
                 </div>
             </div>
-        `).join('');
-    },
-
-    loadRecentTransactions() {
-        const container = document.getElementById('recent-transactions-list');
-        if (!container) return;
-
-        const transactions = AppState.appData.safetyBudgetTransactions || [];
-        const recent = [...transactions]
-            .sort((a, b) => {
-                const dateA = new Date(a.date || a.createdAt);
-                const dateB = new Date(b.date || b.createdAt);
-                return dateB - dateA;
-            })
-            .slice(0, 5);
-
-        if (recent.length === 0) {
-            container.innerHTML = '<p class="text-sm text-gray-500">لا توجد عمليات مسجلة</p>';
-            return;
-        }
-
-        container.innerHTML = recent.map(t => `
+        `).join("")},loadRecentTransactions(){const e=document.getElementById("recent-transactions-list");if(!e)return;const t=[...AppState.appData.safetyBudgetTransactions||[]].sort((s,i)=>{const r=new Date(s.date||s.createdAt);return new Date(i.date||i.createdAt)-r}).slice(0,5);if(t.length===0){e.innerHTML='<p class="text-sm text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0639\u0645\u0644\u064A\u0627\u062A \u0645\u0633\u062C\u0644\u0629</p>';return}e.innerHTML=t.map(s=>`
             <div class="flex items-center justify-between p-3 border-b border-gray-200 last:border-b-0">
                 <div>
-                    <p class="text-sm font-semibold text-gray-800">${Utils.escapeHTML(t.description || '')}</p>
-                    <p class="text-xs text-gray-500">${Utils.formatDate(t.date || t.createdAt)}</p>
+                    <p class="text-sm font-semibold text-gray-800">${Utils.escapeHTML(s.description||"")}</p>
+                    <p class="text-xs text-gray-500">${Utils.formatDate(s.date||s.createdAt)}</p>
                 </div>
                 <div class="text-left">
-                    <p class="text-sm font-bold text-blue-600">${this.formatCurrency(parseFloat(t.amount) || 0, t.currency || this.defaultCurrency)}</p>
-                    <span class="badge badge-info text-xs">${Utils.escapeHTML(t.category || '')}</span>
+                    <p class="text-sm font-bold text-blue-600">${this.formatCurrency(parseFloat(s.amount)||0,s.currency||this.defaultCurrency)}</p>
+                    <span class="badge badge-info text-xs">${Utils.escapeHTML(s.category||"")}</span>
                 </div>
             </div>
-        `).join('');
-    },
-
-    renderCharts() {
-        this.renderCategoryChart();
-        this.renderMonthlyChart();
-    },
-
-    renderCategoryChart() {
-        const container = document.getElementById('expenses-by-category-chart');
-        if (!container) return;
-
-        const transactions = AppState.appData.safetyBudgetTransactions || [];
-        const categories = this.expenseCategories;
-        const categoryTotals = {};
-
-        categories.forEach(cat => {
-            categoryTotals[cat] = transactions
-                .filter(t => t.category === cat)
-                .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-        });
-
-        const total = Object.values(categoryTotals).reduce((sum, val) => sum + val, 0);
-        if (total === 0) {
-            container.innerHTML = '<div class="empty-state"><p class="text-gray-500">لا توجد بيانات</p></div>';
-            return;
-        }
-
-        container.innerHTML = categories.map(cat => {
-            const amount = categoryTotals[cat] || 0;
-            const percent = total > 0 ? ((amount / total) * 100).toFixed(1) : 0;
-            return `
+        `).join("")},renderCharts(){this.renderCategoryChart(),this.renderMonthlyChart()},renderCategoryChart(){const e=document.getElementById("expenses-by-category-chart");if(!e)return;const a=AppState.appData.safetyBudgetTransactions||[],t=this.expenseCategories,s={};t.forEach(r=>{s[r]=a.filter(d=>d.category===r).reduce((d,o)=>d+(parseFloat(o.amount)||0),0)});const i=Object.values(s).reduce((r,d)=>r+d,0);if(i===0){e.innerHTML='<div class="empty-state"><p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</p></div>';return}e.innerHTML=t.map(r=>{const d=s[r]||0,o=i>0?(d/i*100).toFixed(1):0;return`
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm font-semibold">${cat}</span>
-                        <span class="text-sm font-bold">${this.formatCurrency(amount)} (${percent}%)</span>
+                        <span class="text-sm font-semibold">${r}</span>
+                        <span class="text-sm font-bold">${this.formatCurrency(d)} (${o}%)</span>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-3">
-                        <div class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                        <div class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: ${o}%"></div>
                     </div>
                 </div>
-            `;
-        }).join('');
-    },
-
-    renderMonthlyChart() {
-        const container = document.getElementById('monthly-expenses-chart');
-        if (!container) return;
-
-        const transactions = AppState.appData.safetyBudgetTransactions || [];
-        const monthlyTotals = {};
-        const currentYear = new Date().getFullYear();
-
-        transactions.forEach(t => {
-            const date = t.date ? new Date(t.date) : new Date(t.createdAt);
-            if (date.getFullYear() === currentYear) {
-                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + (parseFloat(t.amount) || 0);
-            }
-        });
-
-        const months = [];
-        for (let i = 1; i <= 12; i++) {
-            const monthKey = `${currentYear}-${String(i).padStart(2, '0')}`;
-            months.push({
-                key: monthKey,
-                name: new Date(currentYear, i - 1).toLocaleDateString('ar-SA', { month: 'long' }),
-                amount: monthlyTotals[monthKey] || 0
-            });
-        }
-
-        const maxAmount = Math.max(...months.map(m => m.amount), 1);
-
-        container.innerHTML = `
+            `}).join("")},renderMonthlyChart(){const e=document.getElementById("monthly-expenses-chart");if(!e)return;const a=AppState.appData.safetyBudgetTransactions||[],t={},s=new Date().getFullYear();a.forEach(d=>{const o=d.date?new Date(d.date):new Date(d.createdAt);if(o.getFullYear()===s){const n=`${o.getFullYear()}-${String(o.getMonth()+1).padStart(2,"0")}`;t[n]=(t[n]||0)+(parseFloat(d.amount)||0)}});const i=[];for(let d=1;d<=12;d++){const o=`${s}-${String(d).padStart(2,"0")}`;i.push({key:o,name:new Date(s,d-1).toLocaleDateString("ar-SA",{month:"long"}),amount:t[o]||0})}const r=Math.max(...i.map(d=>d.amount),1);e.innerHTML=`
             <div class="flex items-end gap-2" style="height: 100%;">
-                ${months.map(month => {
-            const height = maxAmount > 0 ? ((month.amount / maxAmount) * 100) : 0;
-            return `
+                ${i.map(d=>`
                         <div class="flex-1 flex flex-col items-center gap-2">
                             <div class="w-full bg-gray-200 rounded-t relative" style="height: 200px;">
                                 <div class="bg-blue-500 rounded-t transition-all duration-500 hover:bg-blue-600 absolute bottom-0 w-full" 
-                                     style="height: ${height}%;" 
-                                     title="${month.name}: ${this.formatCurrency(month.amount)}">
+                                     style="height: ${r>0?d.amount/r*100:0}%;" 
+                                     title="${d.name}: ${this.formatCurrency(d.amount)}">
                                 </div>
                             </div>
-                            <span class="text-xs text-gray-600" style="writing-mode: vertical-rl; text-orientation: mixed;">${month.name.substring(0, 3)}</span>
-                            <span class="text-xs font-semibold text-gray-700">${month.amount.toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                            <span class="text-xs text-gray-600" style="writing-mode: vertical-rl; text-orientation: mixed;">${d.name.substring(0,3)}</span>
+                            <span class="text-xs font-semibold text-gray-700">${d.amount.toLocaleString("ar-SA",{minimumFractionDigits:0,maximumFractionDigits:0})}</span>
                         </div>
-                    `;
-        }).join('')}
+                    `).join("")}
             </div>
-        `;
-    },
-
-    populateYearMonthFilters(prefix = 'expense') {
-        const transactions = AppState.appData.safetyBudgetTransactions || [];
-        const years = new Set();
-        transactions.forEach(t => {
-            const date = t.date ? new Date(t.date) : new Date(t.createdAt);
-            years.add(date.getFullYear());
-        });
-
-        const yearSelect = document.getElementById(`${prefix}-filter-year`);
-        const monthSelect = document.getElementById(`${prefix}-filter-month`);
-
-        if (yearSelect) {
-            const sortedYears = Array.from(years).sort((a, b) => b - a);
-            yearSelect.innerHTML = '<option value="">جميع السنوات</option>' +
-                sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
-        }
-
-        if (monthSelect) {
-            const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-            monthSelect.innerHTML = '<option value="">جميع الأشهر</option>' +
-                months.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
-        }
-    },
-
-    showBudgetForm(budgetData = null) {
-        const isEdit = !!budgetData;
-        const currentCurrency = budgetData?.currency || this.defaultCurrency;
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        `},populateYearMonthFilters(e="expense"){const a=AppState.appData.safetyBudgetTransactions||[],t=new Set;a.forEach(r=>{const d=r.date?new Date(r.date):new Date(r.createdAt);t.add(d.getFullYear())});const s=document.getElementById(`${e}-filter-year`),i=document.getElementById(`${e}-filter-month`);if(s){const r=Array.from(t).sort((d,o)=>o-d);s.innerHTML='<option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0633\u0646\u0648\u0627\u062A</option>'+r.map(d=>`<option value="${d}">${d}</option>`).join("")}if(i){const r=["\u064A\u0646\u0627\u064A\u0631","\u0641\u0628\u0631\u0627\u064A\u0631","\u0645\u0627\u0631\u0633","\u0623\u0628\u0631\u064A\u0644","\u0645\u0627\u064A\u0648","\u064A\u0648\u0646\u064A\u0648","\u064A\u0648\u0644\u064A\u0648","\u0623\u063A\u0633\u0637\u0633","\u0633\u0628\u062A\u0645\u0628\u0631","\u0623\u0643\u062A\u0648\u0628\u0631","\u0646\u0648\u0641\u0645\u0628\u0631","\u062F\u064A\u0633\u0645\u0628\u0631"];i.innerHTML='<option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0634\u0647\u0631</option>'+r.map((d,o)=>`<option value="${o+1}">${d}</option>`).join("")}},showBudgetForm(e=null){const a=!!e,t=e?.currency||this.defaultCurrency,s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0;">
                     <h2 class="modal-title" style="color: white;">
                         <i class="fas fa-wallet ml-2"></i>
-                        ${isEdit ? 'تعديل الميزانية' : 'إضافة ميزانية جديدة'}
+                        ${a?"\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629":"\u0625\u0636\u0627\u0641\u0629 \u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u062C\u062F\u064A\u062F\u0629"}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="color: white;">
                         <i class="fas fa-times"></i>
@@ -882,71 +427,71 @@ const SafetyBudget = {
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-calendar-alt ml-2 text-blue-600"></i>
-                                    السنة المالية *
+                                    \u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 *
                                 </label>
                                 <input type="number" id="budget-year" class="form-input" 
-                                       value="${budgetData ? (budgetData.year || new Date(budgetData.createdAt).getFullYear()) : new Date().getFullYear()}" 
+                                       value="${e?e.year||new Date(e.createdAt).getFullYear():new Date().getFullYear()}" 
                                        min="2020" max="2100" required
                                        style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-coins ml-2 text-green-600"></i>
-                                    العملة *
+                                    \u0627\u0644\u0639\u0645\u0644\u0629 *
                                 </label>
                                 <select id="budget-currency" class="form-input" required
                                         style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
-                                    <option value="EGP" ${currentCurrency === 'EGP' ? 'selected' : ''}>جنيه مصري (ج.م)</option>
-                                    <option value="USD" ${currentCurrency === 'USD' ? 'selected' : ''}>دولار أمريكي ($)</option>
+                                    <option value="EGP" ${t==="EGP"?"selected":""}>\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A (\u062C.\u0645)</option>
+                                    <option value="USD" ${t==="USD"?"selected":""}>\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A ($)</option>
                                 </select>
                             </div>
                         </div>
                         <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border-2 border-blue-200">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-money-bill-wave ml-2 text-blue-600"></i>
-                                المبلغ المعتمد *
+                                \u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u0639\u062A\u0645\u062F *
                             </label>
                             <div class="flex items-center gap-2">
                                 <input type="number" id="budget-amount" class="form-input flex-1" 
-                                       value="${budgetData ? (parseFloat(budgetData.amount) || 0) : ''}" 
+                                       value="${e?parseFloat(e.amount)||0:""}" 
                                        step="0.01" min="0" required
-                                       placeholder="أدخل المبلغ"
+                                       placeholder="\u0623\u062F\u062E\u0644 \u0627\u0644\u0645\u0628\u0644\u063A"
                                        style="border: 2px solid #3b82f6; border-radius: 8px; padding: 12px; font-size: 18px; font-weight: bold;">
                                 <span id="budget-currency-display" class="text-lg font-bold text-blue-600 px-3 py-2 bg-white rounded-lg border-2 border-blue-200">
-                                    ${this.getCurrencySymbol(currentCurrency)}
+                                    ${this.getCurrencySymbol(t)}
                                 </span>
                             </div>
                             <p class="text-xs text-gray-500 mt-2">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                سيتم استخدام هذه العملة كعملة افتراضية لجميع المصروفات المرتبطة بهذه الميزانية
+                                \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0647\u0630\u0647 \u0627\u0644\u0639\u0645\u0644\u0629 \u0643\u0639\u0645\u0644\u0629 \u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0644\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0647\u0630\u0647 \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629
                             </p>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-file-alt ml-2 text-purple-600"></i>
-                                الوصف / الملاحظات
+                                \u0627\u0644\u0648\u0635\u0641 / \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A
                             </label>
                             <textarea id="budget-description" class="form-input" rows="3" 
-                                      placeholder="أدخل وصفاً أو ملاحظات حول الميزانية..."
-                                      style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px; resize: vertical;">${Utils.escapeHTML(budgetData?.description || '')}</textarea>
+                                      placeholder="\u0623\u062F\u062E\u0644 \u0648\u0635\u0641\u0627\u064B \u0623\u0648 \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062D\u0648\u0644 \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629..."
+                                      style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px; resize: vertical;">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-toggle-on ml-2 text-orange-600"></i>
-                                    الحالة
+                                    \u0627\u0644\u062D\u0627\u0644\u0629
                                 </label>
                                 <select id="budget-status" class="form-input"
                                         style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
-                                    <option value="نشط" ${budgetData?.status === 'نشط' || !budgetData ? 'selected' : ''}>نشط</option>
-                                    <option value="مغلق" ${budgetData?.status === 'مغلق' ? 'selected' : ''}>مغلق</option>
+                                    <option value="\u0646\u0634\u0637" ${e?.status==="\u0646\u0634\u0637"||!e?"selected":""}>\u0646\u0634\u0637</option>
+                                    <option value="\u0645\u063A\u0644\u0642" ${e?.status==="\u0645\u063A\u0644\u0642"?"selected":""}>\u0645\u063A\u0644\u0642</option>
                                 </select>
                             </div>
                             <div class="flex items-end">
                                 <div class="w-full p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                    <p class="text-xs text-gray-500 mb-1">تاريخ الإنشاء</p>
+                                    <p class="text-xs text-gray-500 mb-1">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621</p>
                                     <p class="text-sm font-semibold text-gray-700">
-                                        ${budgetData ? Utils.formatDate(budgetData.createdAt) : Utils.formatDate(new Date().toISOString())}
+                                        ${e?Utils.formatDate(e.createdAt):Utils.formatDate(new Date().toISOString())}
                                     </p>
                                 </div>
                             </div>
@@ -954,115 +499,21 @@ const SafetyBudget = {
                     </div>
                     <div class="flex items-center justify-end gap-4 pt-6 border-t mt-6">
                         <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px;">
-                            <i class="fas fa-times ml-2"></i>إلغاء
+                            <i class="fas fa-times ml-2"></i>\u0625\u0644\u063A\u0627\u0621
                         </button>
                         <button type="submit" class="btn-primary" style="padding: 10px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                             <i class="fas fa-save ml-2"></i>
-                            ${isEdit ? 'حفظ التعديلات' : 'حفظ الميزانية'}
+                            ${a?"\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A":"\u062D\u0641\u0638 \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629"}
                         </button>
                     </div>
                 </form>
             </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-
-        // تحديث رمز العملة عند تغيير العملة
-        const currencySelect = modal.querySelector('#budget-currency');
-        const currencyDisplay = modal.querySelector('#budget-currency-display');
-        if (currencySelect && currencyDisplay) {
-            currencySelect.addEventListener('change', (e) => {
-                const selectedCurrency = e.target.value;
-                currencyDisplay.textContent = this.getCurrencySymbol(selectedCurrency);
-            });
-        }
-
-        const form = document.getElementById('budget-form');
-        if (form) {
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleBudgetSubmit(budgetData?.id, modal);
-            });
-        }
-    },
-
-    async handleBudgetSubmit(budgetId, modal) {
-        // فحص العناصر قبل الاستخدام
-        const yearEl = document.getElementById('budget-year');
-        const amountEl = document.getElementById('budget-amount');
-        const currencyEl = document.getElementById('budget-currency');
-        const descriptionEl = document.getElementById('budget-description');
-        const statusEl = document.getElementById('budget-status');
-        
-        if (!yearEl || !amountEl || !statusEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            return;
-        }
-
-        const formData = {
-            id: budgetId || Utils.generateId('BUDGET'),
-            year: parseInt(yearEl.value),
-            amount: parseFloat(amountEl.value),
-            currency: currencyEl?.value || this.defaultCurrency,
-            description: descriptionEl?.value.trim() || '',
-            status: statusEl.value,
-            createdAt: budgetId ? AppState.appData.safetyBudgets.find(b => b.id === budgetId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        if (!formData.year || !formData.amount || formData.amount <= 0) {
-            Notification.error('يرجى ملء جميع الحقول المطلوبة بشكل صحيح');
-            return;
-        }
-
-        Loading.show();
-        try {
-            if (budgetId) {
-                const index = AppState.appData.safetyBudgets.findIndex(b => b.id === budgetId);
-                if (index !== -1) {
-                    AppState.appData.safetyBudgets[index] = formData;
-                    Notification.success('تم تحديث الميزانية بنجاح');
-                }
-            } else {
-                AppState.appData.safetyBudgets.push(formData);
-                Notification.success('تم إضافة الميزانية بنجاح');
-            }
-
-            // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-            await GoogleIntegration.autoSave('SafetyBudgets', AppState.appData.safetyBudgets);
-
-            AuditLog.log(budgetId ? 'update_budget' : 'create_budget', 'SafetyBudget', formData.id, {
-                year: formData.year,
-                amount: formData.amount
-            });
-
-            Loading.hide();
-            modal.remove();
-            this.loadDashboard();
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
-        }
-    },
-
-    showExpenseForm(expenseData = null) {
-        const isEdit = !!expenseData;
-        const currentCurrency = expenseData?.currency || this.defaultCurrency;
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        `,document.body.appendChild(s),s.addEventListener("click",o=>{o.target===s&&s.remove()});const i=s.querySelector("#budget-currency"),r=s.querySelector("#budget-currency-display");i&&r&&i.addEventListener("change",o=>{const n=o.target.value;r.textContent=this.getCurrencySymbol(n)});const d=document.getElementById("budget-form");d&&d.addEventListener("submit",o=>{o.preventDefault(),this.handleBudgetSubmit(e?.id,s)})},async handleBudgetSubmit(e,a){const t=document.getElementById("budget-year"),s=document.getElementById("budget-amount"),i=document.getElementById("budget-currency"),r=document.getElementById("budget-description"),d=document.getElementById("budget-status");if(!t||!s||!d){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const o={id:e||Utils.generateId("BUDGET"),year:parseInt(t.value),amount:parseFloat(s.value),currency:i?.value||this.defaultCurrency,description:r?.value.trim()||"",status:d.value,createdAt:e?AppState.appData.safetyBudgets.find(n=>n.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};if(!o.year||!o.amount||o.amount<=0){Notification.error("\u064A\u0631\u062C\u0649 \u0645\u0644\u0621 \u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");return}Loading.show();try{if(e){const n=AppState.appData.safetyBudgets.findIndex(l=>l.id===e);n!==-1&&(AppState.appData.safetyBudgets[n]=o,Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0628\u0646\u062C\u0627\u062D"))}else AppState.appData.safetyBudgets.push(o),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0628\u0646\u062C\u0627\u062D");typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("SafetyBudgets",AppState.appData.safetyBudgets),AuditLog.log(e?"update_budget":"create_budget","SafetyBudget",o.id,{year:o.year,amount:o.amount}),Loading.hide(),a.remove(),this.loadDashboard()}catch(n){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+n.message)}},showExpenseForm(e=null){const a=!!e,t=e?.currency||this.defaultCurrency,s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
             <div class="modal-content" style="max-width: 900px;">
                 <div class="modal-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border-radius: 8px 8px 0 0;">
                     <h2 class="modal-title" style="color: white;">
                         <i class="fas fa-receipt ml-2"></i>
-                        ${isEdit ? 'تعديل المصروف' : 'تسجيل مصروف جديد'}
+                        ${a?"\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641":"\u062A\u0633\u062C\u064A\u0644 \u0645\u0635\u0631\u0648\u0641 \u062C\u062F\u064A\u062F"}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="color: white;">
                         <i class="fas fa-times"></i>
@@ -1073,350 +524,143 @@ const SafetyBudget = {
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-calendar-alt ml-2 text-blue-600"></i>
-                                التاريخ *
+                                \u0627\u0644\u062A\u0627\u0631\u064A\u062E *
                             </label>
                             <input type="date" id="expense-date" class="form-input" 
-                                   value="${expenseData ? (expenseData.date ? new Date(expenseData.date).toISOString().split('T')[0] : '') : new Date().toISOString().split('T')[0]}" 
+                                   value="${e?e.date?new Date(e.date).toISOString().split("T")[0]:"":new Date().toISOString().split("T")[0]}" 
                                    required
                                    style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-tags ml-2 text-purple-600"></i>
-                                نوع المصروف (الفئة) *
+                                \u0646\u0648\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641 (\u0627\u0644\u0641\u0626\u0629) *
                             </label>
                             <select id="expense-category" class="form-input" required
                                     style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
-                                <option value="">اختر الفئة</option>
-                                <option value="معدات" ${expenseData?.category === 'معدات' ? 'selected' : ''}>معدات</option>
-                                <option value="تدريب" ${expenseData?.category === 'تدريب' ? 'selected' : ''}>تدريب</option>
-                                <option value="صيانة" ${expenseData?.category === 'صيانة' ? 'selected' : ''}>صيانة</option>
-                                <option value="أدوات حماية" ${expenseData?.category === 'أدوات حماية' ? 'selected' : ''}>أدوات حماية</option>
-                                <option value="طوارئ" ${expenseData?.category === 'طوارئ' ? 'selected' : ''}>طوارئ</option>
-                                <option value="OPEX" ${expenseData?.category === 'OPEX' ? 'selected' : ''}>OPEX (مصروفات تشغيلية)</option>
-                                <option value="CAPEX" ${expenseData?.category === 'CAPEX' ? 'selected' : ''}>CAPEX (مصروفات رأسمالية)</option>
-                                <option value="أخرى" ${expenseData?.category === 'أخرى' ? 'selected' : ''}>أخرى</option>
+                                <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0641\u0626\u0629</option>
+                                <option value="\u0645\u0639\u062F\u0627\u062A" ${e?.category==="\u0645\u0639\u062F\u0627\u062A"?"selected":""}>\u0645\u0639\u062F\u0627\u062A</option>
+                                <option value="\u062A\u062F\u0631\u064A\u0628" ${e?.category==="\u062A\u062F\u0631\u064A\u0628"?"selected":""}>\u062A\u062F\u0631\u064A\u0628</option>
+                                <option value="\u0635\u064A\u0627\u0646\u0629" ${e?.category==="\u0635\u064A\u0627\u0646\u0629"?"selected":""}>\u0635\u064A\u0627\u0646\u0629</option>
+                                <option value="\u0623\u062F\u0648\u0627\u062A \u062D\u0645\u0627\u064A\u0629" ${e?.category==="\u0623\u062F\u0648\u0627\u062A \u062D\u0645\u0627\u064A\u0629"?"selected":""}>\u0623\u062F\u0648\u0627\u062A \u062D\u0645\u0627\u064A\u0629</option>
+                                <option value="\u0637\u0648\u0627\u0631\u0626" ${e?.category==="\u0637\u0648\u0627\u0631\u0626"?"selected":""}>\u0637\u0648\u0627\u0631\u0626</option>
+                                <option value="OPEX" ${e?.category==="OPEX"?"selected":""}>OPEX (\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u062A\u0634\u063A\u064A\u0644\u064A\u0629)</option>
+                                <option value="CAPEX" ${e?.category==="CAPEX"?"selected":""}>CAPEX (\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0631\u0623\u0633\u0645\u0627\u0644\u064A\u0629)</option>
+                                <option value="\u0623\u062E\u0631\u0649" ${e?.category==="\u0623\u062E\u0631\u0649"?"selected":""}>\u0623\u062E\u0631\u0649</option>
                             </select>
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-align-right ml-2 text-green-600"></i>
-                                الوصف *
+                                \u0627\u0644\u0648\u0635\u0641 *
                             </label>
                             <input type="text" id="expense-description" class="form-input" 
-                                   value="${Utils.escapeHTML(expenseData?.description || '')}" 
+                                   value="${Utils.escapeHTML(e?.description||"")}" 
                                    required
-                                   placeholder="أدخل وصفاً تفصيلياً للمصروف..."
+                                   placeholder="\u0623\u062F\u062E\u0644 \u0648\u0635\u0641\u0627\u064B \u062A\u0641\u0635\u064A\u0644\u064A\u0627\u064B \u0644\u0644\u0645\u0635\u0631\u0648\u0641..."
                                    style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-building ml-2 text-orange-600"></i>
-                                الجهة / المورد *
+                                \u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0645\u0648\u0631\u062F *
                             </label>
                             <input type="text" id="expense-vendor" class="form-input" 
-                                   value="${Utils.escapeHTML(expenseData?.vendor || '')}" 
+                                   value="${Utils.escapeHTML(e?.vendor||"")}" 
                                    required
-                                   placeholder="اسم المورد أو الجهة"
+                                   placeholder="\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0631\u062F \u0623\u0648 \u0627\u0644\u062C\u0647\u0629"
                                    style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-coins ml-2 text-yellow-600"></i>
-                                العملة *
+                                \u0627\u0644\u0639\u0645\u0644\u0629 *
                             </label>
                             <select id="expense-currency" class="form-input" required
                                     style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
-                                <option value="EGP" ${currentCurrency === 'EGP' ? 'selected' : ''}>جنيه مصري (ج.م)</option>
-                                <option value="USD" ${currentCurrency === 'USD' ? 'selected' : ''}>دولار أمريكي ($)</option>
+                                <option value="EGP" ${t==="EGP"?"selected":""}>\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A (\u062C.\u0645)</option>
+                                <option value="USD" ${t==="USD"?"selected":""}>\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A ($)</option>
                             </select>
                         </div>
                         <div class="bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-lg border-2 border-red-200">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-money-bill-wave ml-2 text-red-600"></i>
-                                القيمة *
+                                \u0627\u0644\u0642\u064A\u0645\u0629 *
                             </label>
                             <div class="flex items-center gap-2">
                                 <input type="number" id="expense-amount" class="form-input flex-1" 
-                                       value="${expenseData ? (parseFloat(expenseData.amount) || 0) : ''}" 
+                                       value="${e?parseFloat(e.amount)||0:""}" 
                                        step="0.01" min="0" required
-                                       placeholder="أدخل المبلغ"
+                                       placeholder="\u0623\u062F\u062E\u0644 \u0627\u0644\u0645\u0628\u0644\u063A"
                                        style="border: 2px solid #ef4444; border-radius: 8px; padding: 12px; font-size: 18px; font-weight: bold;">
                                 <span id="expense-currency-display" class="text-lg font-bold text-red-600 px-3 py-2 bg-white rounded-lg border-2 border-red-200">
-                                    ${this.getCurrencySymbol(currentCurrency)}
+                                    ${this.getCurrencySymbol(t)}
                                 </span>
                             </div>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-file-invoice ml-2"></i>
-                                رقم الفاتورة
+                                \u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629
                             </label>
                             <input type="text" id="expense-invoice" class="form-input" 
-                                   value="${Utils.escapeHTML(expenseData?.invoiceNumber || '')}">
+                                   value="${Utils.escapeHTML(e?.invoiceNumber||"")}">
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-paperclip ml-2"></i>
-                                المرفقات (PDF / صورة)
+                                \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A (PDF / \u0635\u0648\u0631\u0629)
                             </label>
                             <input type="file" id="expense-attachments" class="form-input" 
                                    accept=".pdf,.jpg,.jpeg,.png" multiple>
-                            <p class="text-xs text-gray-500 mt-1">يمكن رفع عدة ملفات (PDF أو صور)</p>
+                            <p class="text-xs text-gray-500 mt-1">\u064A\u0645\u0643\u0646 \u0631\u0641\u0639 \u0639\u062F\u0629 \u0645\u0644\u0641\u0627\u062A (PDF \u0623\u0648 \u0635\u0648\u0631)</p>
                             <div id="expense-attachments-list" class="mt-3 space-y-2"></div>
-                            ${expenseData && expenseData.attachments && expenseData.attachments.length > 0 ? `
+                            ${e&&e.attachments&&e.attachments.length>0?`
                                 <div class="mt-3">
-                                    <p class="text-sm font-semibold mb-2">المرفقات الحالية:</p>
-                                    ${expenseData.attachments.map((att, idx) => `
+                                    <p class="text-sm font-semibold mb-2">\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A \u0627\u0644\u062D\u0627\u0644\u064A\u0629:</p>
+                                    ${e.attachments.map((n,l)=>`
                                         <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded px-3 py-2 mb-2">
                                             <div class="flex items-center gap-2">
                                                 <i class="fas fa-paperclip text-blue-500"></i>
-                                                <span class="text-sm">${Utils.escapeHTML(att.name || 'مرفق')}</span>
+                                                <span class="text-sm">${Utils.escapeHTML(n.name||"\u0645\u0631\u0641\u0642")}</span>
                                             </div>
                                             <button type="button" class="btn-icon btn-icon-danger" onclick="this.closest('div').remove()">
                                                 <i class="fas fa-times"></i>
                                             </button>
                                         </div>
-                                    `).join('')}
+                                    `).join("")}
                                 </div>
-                            ` : ''}
+                            `:""}
                         </div>
                     </div>
                     <div class="flex items-center justify-end gap-4 pt-4 border-t mt-6">
-                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
                         <button type="submit" class="btn-primary">
                             <i class="fas fa-save ml-2"></i>
-                            ${isEdit ? 'حفظ التعديلات' : 'تسجيل المصروف'}
+                            ${a?"\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A":"\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641"}
                         </button>
                     </div>
                 </form>
             </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-
-        // تحديث رمز العملة عند تغيير العملة
-        const currencySelect = modal.querySelector('#expense-currency');
-        const currencyDisplay = modal.querySelector('#expense-currency-display');
-        if (currencySelect && currencyDisplay) {
-            currencySelect.addEventListener('change', (e) => {
-                const selectedCurrency = e.target.value;
-                currencyDisplay.textContent = this.getCurrencySymbol(selectedCurrency);
-            });
-        }
-
-        const attachmentsInput = document.getElementById('expense-attachments');
-        if (attachmentsInput) {
-            attachmentsInput.addEventListener('change', (e) => {
-                this.handleAttachmentsChange(e.target.files, modal);
-            });
-        }
-
-        const form = document.getElementById('expense-form');
-        if (form) {
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleExpenseSubmit(expenseData?.id, modal);
-            });
-        }
-
-        this.currentAttachments = expenseData?.attachments ? [...expenseData.attachments] : [];
-    },
-
-    async handleAttachmentsChange(fileList, modal) {
-        if (!fileList || fileList.length === 0) return;
-        const files = Array.from(fileList);
-        const validFiles = [];
-
-        for (const file of files) {
-            if (file.size > 5 * 1024 * 1024) {
-                Notification.error(`الملف ${file.name} يتجاوز الحد الأقصى (5MB)`);
-                continue;
-            }
-            validFiles.push(file);
-        }
-
-        if (validFiles.length === 0) return;
-
-        Loading.show('جاري معالجة المرفقات...');
-        try {
-            for (const file of validFiles) {
-                const base64 = await this.readFileAsBase64(file);
-                const attachment = {
-                    id: Utils.generateId('ATT'),
-                    name: file.name,
-                    type: file.type,
-                    data: base64,
-                    size: Math.round(file.size / 1024)
-                };
-                if (!this.currentAttachments) this.currentAttachments = [];
-                this.currentAttachments.push(attachment);
-            }
-            this.renderAttachmentsList(modal);
-            const input = document.getElementById('expense-attachments');
-            if (input) input.value = '';
-        } catch (error) {
-            Notification.error('فشل تحميل المرفقات: ' + error.message);
-        } finally {
-            Loading.hide();
-        }
-    },
-
-    async readFileAsBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = (err) => reject(err);
-            reader.readAsDataURL(file);
-        });
-    },
-
-    renderAttachmentsList(modal) {
-        const container = modal.querySelector('#expense-attachments-list');
-        if (!container) return;
-
-        if (!this.currentAttachments || this.currentAttachments.length === 0) {
-            container.innerHTML = '';
-            return;
-        }
-
-        container.innerHTML = this.currentAttachments.map((att, index) => `
-            <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded px-3 py-2" data-attachment-index="${index}">
+        `,document.body.appendChild(s),s.addEventListener("click",n=>{n.target===s&&s.remove()});const i=s.querySelector("#expense-currency"),r=s.querySelector("#expense-currency-display");i&&r&&i.addEventListener("change",n=>{const l=n.target.value;r.textContent=this.getCurrencySymbol(l)});const d=document.getElementById("expense-attachments");d&&d.addEventListener("change",n=>{this.handleAttachmentsChange(n.target.files,s)});const o=document.getElementById("expense-form");o&&o.addEventListener("submit",n=>{n.preventDefault(),this.handleExpenseSubmit(e?.id,s)}),this.currentAttachments=e?.attachments?[...e.attachments]:[]},async handleAttachmentsChange(e,a){if(!e||e.length===0)return;const t=Array.from(e),s=[];for(const i of t){if(i.size>5242880){Notification.error(`\u0627\u0644\u0645\u0644\u0641 ${i.name} \u064A\u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 (5MB)`);continue}s.push(i)}if(s.length!==0){Loading.show("\u062C\u0627\u0631\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A...");try{for(const r of s){const d=await this.readFileAsBase64(r),o={id:Utils.generateId("ATT"),name:r.name,type:r.type,data:d,size:Math.round(r.size/1024)};this.currentAttachments||(this.currentAttachments=[]),this.currentAttachments.push(o)}this.renderAttachmentsList(a);const i=document.getElementById("expense-attachments");i&&(i.value="")}catch(i){Notification.error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A: "+i.message)}finally{Loading.hide()}}},async readFileAsBase64(e){return new Promise((a,t)=>{const s=new FileReader;s.onload=()=>a(s.result),s.onerror=i=>t(i),s.readAsDataURL(e)})},renderAttachmentsList(e){const a=e.querySelector("#expense-attachments-list");if(a){if(!this.currentAttachments||this.currentAttachments.length===0){a.innerHTML="";return}a.innerHTML=this.currentAttachments.map((t,s)=>`
+            <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded px-3 py-2" data-attachment-index="${s}">
                 <div class="flex items-center gap-2">
                     <i class="fas fa-paperclip text-blue-500"></i>
                     <div>
-                        <div class="text-sm font-medium text-gray-700">${Utils.escapeHTML(att.name || 'attachment')}</div>
-                        <div class="text-xs text-gray-500">${att.size || 0} KB</div>
+                        <div class="text-sm font-medium text-gray-700">${Utils.escapeHTML(t.name||"attachment")}</div>
+                        <div class="text-xs text-gray-500">${t.size||0} KB</div>
                     </div>
                 </div>
-                <button type="button" class="btn-icon btn-icon-danger" onclick="SafetyBudget.removeAttachment(${index}, this)">
+                <button type="button" class="btn-icon btn-icon-danger" onclick="SafetyBudget.removeAttachment(${s}, this)">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-        `).join('');
-    },
-
-    removeAttachment(index, button) {
-        if (this.currentAttachments && this.currentAttachments[index]) {
-            this.currentAttachments.splice(index, 1);
-            const container = button.closest('.modal-overlay')?.querySelector('#expense-attachments-list');
-            if (container) this.renderAttachmentsList(button.closest('.modal-overlay'));
-        }
-    },
-
-    async handleExpenseSubmit(expenseId, modal) {
-        // فحص العناصر قبل الاستخدام
-        const dateEl = document.getElementById('expense-date');
-        const categoryEl = document.getElementById('expense-category');
-        const descriptionEl = document.getElementById('expense-description');
-        const vendorEl = document.getElementById('expense-vendor');
-        const currencyEl = document.getElementById('expense-currency');
-        const amountEl = document.getElementById('expense-amount');
-        const invoiceEl = document.getElementById('expense-invoice');
-        
-        if (!dateEl || !categoryEl || !descriptionEl || !vendorEl || !amountEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            return;
-        }
-
-        const formData = {
-            id: expenseId || Utils.generateId('EXPENSE'),
-            date: new Date(dateEl.value).toISOString(),
-            category: categoryEl.value,
-            description: descriptionEl.value.trim(),
-            vendor: vendorEl.value.trim(),
-            currency: currencyEl?.value || this.defaultCurrency,
-            amount: parseFloat(amountEl.value),
-            invoiceNumber: invoiceEl?.value.trim() || '',
-            attachments: this.currentAttachments || [],
-            createdAt: expenseId ? AppState.appData.safetyBudgetTransactions.find(e => e.id === expenseId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        if (!formData.date || !formData.category || !formData.description || !formData.vendor || !formData.amount || formData.amount <= 0) {
-            Notification.error('يرجى ملء جميع الحقول المطلوبة بشكل صحيح');
-            return;
-        }
-
-        Loading.show();
-        try {
-            if (expenseId) {
-                const index = AppState.appData.safetyBudgetTransactions.findIndex(e => e.id === expenseId);
-                if (index !== -1) {
-                    AppState.appData.safetyBudgetTransactions[index] = formData;
-                    Notification.success('تم تحديث المصروف بنجاح');
-                }
-            } else {
-                AppState.appData.safetyBudgetTransactions.push(formData);
-                Notification.success('تم تسجيل المصروف بنجاح');
-            }
-
-            // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-            await GoogleIntegration.autoSave('SafetyBudgetTransactions', AppState.appData.safetyBudgetTransactions);
-
-            AuditLog.log(expenseId ? 'update_expense' : 'create_expense', 'SafetyBudget', formData.id, {
-                category: formData.category,
-                amount: formData.amount
-            });
-
-            Loading.hide();
-            modal.remove();
-            this.loadDashboard();
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
-        }
-    },
-
-    editExpense(id) {
-        const expense = AppState.appData.safetyBudgetTransactions.find(e => e.id === id);
-        if (expense) this.showExpenseForm(expense);
-    },
-
-    async deleteExpense(id) {
-        if (!confirm('هل أنت متأكد من حذف هذا المصروف؟')) return;
-
-        Loading.show();
-        try {
-            AppState.appData.safetyBudgetTransactions = AppState.appData.safetyBudgetTransactions.filter(e => e.id !== id);
-            // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-            await GoogleIntegration.autoSave('SafetyBudgetTransactions', AppState.appData.safetyBudgetTransactions);
-
-            AuditLog.log('delete_expense', 'SafetyBudget', id);
-
-            Loading.hide();
-            Notification.success('تم حذف المصروف بنجاح');
-            this.loadDashboard();
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
-        }
-    },
-
-    viewExpense(id) {
-        const expense = AppState.appData.safetyBudgetTransactions.find(e => e.id === id);
-        if (!expense) return;
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        `).join("")}},removeAttachment(e,a){this.currentAttachments&&this.currentAttachments[e]&&(this.currentAttachments.splice(e,1),a.closest(".modal-overlay")?.querySelector("#expense-attachments-list")&&this.renderAttachmentsList(a.closest(".modal-overlay")))},async handleExpenseSubmit(e,a){const t=document.getElementById("expense-date"),s=document.getElementById("expense-category"),i=document.getElementById("expense-description"),r=document.getElementById("expense-vendor"),d=document.getElementById("expense-currency"),o=document.getElementById("expense-amount"),n=document.getElementById("expense-invoice");if(!t||!s||!i||!r||!o){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const l={id:e||Utils.generateId("EXPENSE"),date:new Date(t.value).toISOString(),category:s.value,description:i.value.trim(),vendor:r.value.trim(),currency:d?.value||this.defaultCurrency,amount:parseFloat(o.value),invoiceNumber:n?.value.trim()||"",attachments:this.currentAttachments||[],createdAt:e?AppState.appData.safetyBudgetTransactions.find(c=>c.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};if(!l.date||!l.category||!l.description||!l.vendor||!l.amount||l.amount<=0){Notification.error("\u064A\u0631\u062C\u0649 \u0645\u0644\u0621 \u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");return}Loading.show();try{if(e){const c=AppState.appData.safetyBudgetTransactions.findIndex(u=>u.id===e);c!==-1&&(AppState.appData.safetyBudgetTransactions[c]=l,Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0635\u0631\u0648\u0641 \u0628\u0646\u062C\u0627\u062D"))}else AppState.appData.safetyBudgetTransactions.push(l),Notification.success("\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641 \u0628\u0646\u062C\u0627\u062D");typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("SafetyBudgetTransactions",AppState.appData.safetyBudgetTransactions),AuditLog.log(e?"update_expense":"create_expense","SafetyBudget",l.id,{category:l.category,amount:l.amount}),Loading.hide(),a.remove(),this.loadDashboard()}catch(c){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+c.message)}},editExpense(e){const a=AppState.appData.safetyBudgetTransactions.find(t=>t.id===e);a&&this.showExpenseForm(a)},async deleteExpense(e){if(confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u061F")){Loading.show();try{AppState.appData.safetyBudgetTransactions=AppState.appData.safetyBudgetTransactions.filter(a=>a.id!==e),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("SafetyBudgetTransactions",AppState.appData.safetyBudgetTransactions),AuditLog.log("delete_expense","SafetyBudget",e),Loading.hide(),Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0645\u0635\u0631\u0648\u0641 \u0628\u0646\u062C\u0627\u062D"),this.loadDashboard()}catch(a){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+a.message)}}},viewExpense(e){const a=AppState.appData.safetyBudgetTransactions.find(s=>s.id===e);if(!a)return;const t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-receipt ml-2"></i>
-                        تفاصيل المصروف
+                        \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -1426,408 +670,212 @@ const SafetyBudget = {
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <p class="text-sm text-gray-600">التاريخ</p>
-                                <p class="text-base font-semibold">${Utils.formatDate(expense.date || expense.createdAt)}</p>
+                                <p class="text-sm text-gray-600">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</p>
+                                <p class="text-base font-semibold">${Utils.formatDate(a.date||a.createdAt)}</p>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-600">الفئة</p>
-                                <p class="text-base font-semibold"><span class="badge badge-info">${Utils.escapeHTML(expense.category || '')}</span></p>
+                                <p class="text-sm text-gray-600">\u0627\u0644\u0641\u0626\u0629</p>
+                                <p class="text-base font-semibold"><span class="badge badge-info">${Utils.escapeHTML(a.category||"")}</span></p>
                             </div>
                             <div class="col-span-2">
-                                <p class="text-sm text-gray-600">الوصف</p>
-                                <p class="text-base font-semibold">${Utils.escapeHTML(expense.description || '')}</p>
+                                <p class="text-sm text-gray-600">\u0627\u0644\u0648\u0635\u0641</p>
+                                <p class="text-base font-semibold">${Utils.escapeHTML(a.description||"")}</p>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-600">الجهة / المورد</p>
-                                <p class="text-base font-semibold">${Utils.escapeHTML(expense.vendor || '')}</p>
+                                <p class="text-sm text-gray-600">\u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0645\u0648\u0631\u062F</p>
+                                <p class="text-base font-semibold">${Utils.escapeHTML(a.vendor||"")}</p>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-600">المبلغ</p>
-                                <p class="text-2xl font-bold text-red-600">${this.formatCurrency(parseFloat(expense.amount) || 0, expense.currency || this.defaultCurrency)}</p>
+                                <p class="text-sm text-gray-600">\u0627\u0644\u0645\u0628\u0644\u063A</p>
+                                <p class="text-2xl font-bold text-red-600">${this.formatCurrency(parseFloat(a.amount)||0,a.currency||this.defaultCurrency)}</p>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-600">العملة</p>
-                                <p class="text-base font-semibold"><span class="badge badge-info">${this.currencies[expense.currency || this.defaultCurrency]?.name || 'جنيه مصري'}</span></p>
+                                <p class="text-sm text-gray-600">\u0627\u0644\u0639\u0645\u0644\u0629</p>
+                                <p class="text-base font-semibold"><span class="badge badge-info">${this.currencies[a.currency||this.defaultCurrency]?.name||"\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A"}</span></p>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-600">رقم الفاتورة</p>
-                                <p class="text-base font-semibold">${Utils.escapeHTML(expense.invoiceNumber || '-')}</p>
+                                <p class="text-sm text-gray-600">\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629</p>
+                                <p class="text-base font-semibold">${Utils.escapeHTML(a.invoiceNumber||"-")}</p>
                             </div>
                         </div>
-                        ${expense.attachments && expense.attachments.length > 0 ? `
+                        ${a.attachments&&a.attachments.length>0?`
                             <div class="border-t pt-4">
-                                <p class="text-sm font-semibold mb-3">المرفقات (${expense.attachments.length})</p>
+                                <p class="text-sm font-semibold mb-3">\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A (${a.attachments.length})</p>
                                 <div class="space-y-2">
-                                    ${expense.attachments.map(att => `
+                                    ${a.attachments.map(s=>`
                                         <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded px-3 py-2">
                                             <div class="flex items-center gap-2">
                                                 <i class="fas fa-paperclip text-blue-500"></i>
-                                                <span class="text-sm">${Utils.escapeHTML(att.name || 'مرفق')}</span>
-                                                <span class="text-xs text-gray-500">(${att.size || 0} KB)</span>
+                                                <span class="text-sm">${Utils.escapeHTML(s.name||"\u0645\u0631\u0641\u0642")}</span>
+                                                <span class="text-xs text-gray-500">(${s.size||0} KB)</span>
                                             </div>
-                                            <button class="btn-icon btn-icon-primary" onclick="SafetyBudget.downloadAttachment('${att.id}', '${expense.id}')" title="تحميل">
+                                            <button class="btn-icon btn-icon-primary" onclick="SafetyBudget.downloadAttachment('${s.id}', '${a.id}')" title="\u062A\u062D\u0645\u064A\u0644">
                                                 <i class="fas fa-download"></i>
                                             </button>
                                         </div>
-                                    `).join('')}
+                                    `).join("")}
                                 </div>
                             </div>
-                        ` : ''}
+                        `:""}
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('safety-budget') : ''}
-                    ${Permissions.hasAccess('safety-budget') ? `
-                        <button class="btn-primary" onclick="SafetyBudget.editExpense('${expense.id}'); this.closest('.modal-overlay').remove();">
-                            <i class="fas fa-edit ml-2"></i>تعديل
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u063A\u0644\u0627\u0642</button>
+                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("safety-budget"):""}
+                    ${Permissions.hasAccess("safety-budget")?`
+                        <button class="btn-primary" onclick="SafetyBudget.editExpense('${a.id}'); this.closest('.modal-overlay').remove();">
+                            <i class="fas fa-edit ml-2"></i>\u062A\u0639\u062F\u064A\u0644
                         </button>
-                    ` : ''}
+                    `:""}
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        if (typeof EmailDispatch !== 'undefined') {
-            EmailDispatch.bindFooterButtons(modal, {
-                moduleKey: 'safety-budget',
-                record: { ...expense, title: expense.description || expense.category || '' },
-                recordId: expense.id || ''
-            });
-        }
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    downloadAttachment(attachmentId, expenseId) {
-        const expense = AppState.appData.safetyBudgetTransactions.find(e => e.id === expenseId);
-        if (!expense || !expense.attachments) return;
-
-        const attachment = expense.attachments.find(a => a.id === attachmentId);
-        if (!attachment || !attachment.data) return;
-
-        const link = document.createElement('a');
-        link.href = attachment.data;
-        link.download = attachment.name || 'attachment';
-        link.click();
-    },
-
-    async exportReport(format = 'pdf', categoryFilter = null) {
-        // التحقق من وجود AppState و appData
-        if (typeof AppState === 'undefined' || !AppState.appData) {
-            Notification.error('البيانات غير متوفرة. يرجى تحديث الصفحة');
-            return;
-        }
-
-        const budgets = AppState.appData.safetyBudgets || [];
-        let transactions = AppState.appData.safetyBudgetTransactions || [];
-
-        // التحقق من أن البيانات هي arrays
-        if (!Array.isArray(budgets)) {
-            Notification.error('بيانات الميزانيات غير صحيحة');
-            return;
-        }
-        if (!Array.isArray(transactions)) {
-            Notification.error('بيانات المعاملات غير صحيحة');
-            return;
-        }
-
-        // فلترة حسب الفئة إذا تم تحديدها
-        if (categoryFilter && (categoryFilter === 'OPEX' || categoryFilter === 'CAPEX')) {
-            transactions = transactions.filter(t => t.category === categoryFilter);
-        }
-        const currentYear = new Date().getFullYear();
-        const currentBudget = budgets.find(b => {
-            const budgetYear = b.year ? parseInt(b.year) : new Date(b.createdAt || b.startDate).getFullYear();
-            return budgetYear === currentYear && (b.status === 'نشط' || b.status === 'active' || !b.status);
-        }) || budgets[budgets.length - 1];
-
-        const budgetCurrency = currentBudget?.currency || this.defaultCurrency;
-        const totalBudget = currentBudget ? (parseFloat(currentBudget.amount) || 0) : 0;
-        const totalExpenses = transactions
-            .filter(t => (t.currency || this.defaultCurrency) === budgetCurrency)
-            .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-        const remaining = totalBudget - totalExpenses;
-
-        if (format === 'excel') {
-            if (typeof XLSX === 'undefined') {
-                Notification.error('مكتبة Excel غير متوفرة');
-                return;
-            }
-
-            const wb = XLSX.utils.book_new();
-            const wsData = [
-                ['تاريخ', 'الفئة', 'الوصف', 'الجهة', 'المبلغ', 'العملة', 'رقم الفاتورة']
-            ];
-
-            transactions.forEach(t => {
-                wsData.push([
-                    Utils.formatDate(t.date || t.createdAt),
-                    t.category || '',
-                    t.description || '',
-                    t.vendor || '',
-                    parseFloat(t.amount) || 0,
-                    t.currency || this.defaultCurrency,
-                    t.invoiceNumber || ''
-                ]);
-            });
-
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-            XLSX.utils.book_append_sheet(wb, ws, 'مصروفات السلامة');
-            XLSX.writeFile(wb, `تقرير_ميزانية_السلامة_${currentYear}.xlsx`);
-            Notification.success('تم تصدير التقرير بنجاح');
-            return;
-        }
-
-        // PDF Report
-        const content = `
+        `,document.body.appendChild(t),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(t,{moduleKey:"safety-budget",record:{...a,title:a.description||a.category||""},recordId:a.id||""}),t.addEventListener("click",s=>{s.target===t&&t.remove()})},downloadAttachment(e,a){const t=AppState.appData.safetyBudgetTransactions.find(r=>r.id===a);if(!t||!t.attachments)return;const s=t.attachments.find(r=>r.id===e);if(!s||!s.data)return;const i=document.createElement("a");i.href=s.data,i.download=s.name||"attachment",i.click()},async exportReport(e="pdf",a=null){if(typeof AppState>"u"||!AppState.appData){Notification.error("\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629");return}const t=AppState.appData.safetyBudgets||[];let s=AppState.appData.safetyBudgetTransactions||[];if(!Array.isArray(t)){Notification.error("\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0627\u062A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629");return}if(!Array.isArray(s)){Notification.error("\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0639\u0627\u0645\u0644\u0627\u062A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629");return}a&&(a==="OPEX"||a==="CAPEX")&&(s=s.filter(p=>p.category===a));const i=new Date().getFullYear(),r=t.find(p=>(p.year?parseInt(p.year):new Date(p.createdAt||p.startDate).getFullYear())===i&&(p.status==="\u0646\u0634\u0637"||p.status==="active"||!p.status))||t[t.length-1],d=r?.currency||this.defaultCurrency,o=r&&parseFloat(r.amount)||0,n=s.filter(p=>(p.currency||this.defaultCurrency)===d).reduce((p,f)=>p+(parseFloat(f.amount)||0),0),l=o-n;if(e==="excel"){if(typeof XLSX>"u"){Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631\u0629");return}const p=XLSX.utils.book_new(),f=[["\u062A\u0627\u0631\u064A\u062E","\u0627\u0644\u0641\u0626\u0629","\u0627\u0644\u0648\u0635\u0641","\u0627\u0644\u062C\u0647\u0629","\u0627\u0644\u0645\u0628\u0644\u063A","\u0627\u0644\u0639\u0645\u0644\u0629","\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"]];s.forEach(h=>{f.push([Utils.formatDate(h.date||h.createdAt),h.category||"",h.description||"",h.vendor||"",parseFloat(h.amount)||0,h.currency||this.defaultCurrency,h.invoiceNumber||""])});const v=XLSX.utils.aoa_to_sheet(f);XLSX.utils.book_append_sheet(p,v,"\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629"),XLSX.writeFile(p,`\u062A\u0642\u0631\u064A\u0631_\u0645\u064A\u0632\u0627\u0646\u064A\u0629_\u0627\u0644\u0633\u0644\u0627\u0645\u0629_${i}.xlsx`),Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0628\u0646\u062C\u0627\u062D");return}const c=`
             <div style="direction: rtl; text-align: right; font-family: 'Cairo', Arial, sans-serif; padding: 20px;">
-                <h1 style="color: #1e40af; margin-bottom: 20px;">تقرير ميزانية السلامة وتتبع الإنفاق</h1>
+                <h1 style="color: #1e40af; margin-bottom: 20px;">\u062A\u0642\u0631\u064A\u0631 \u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u062A\u062A\u0628\u0639 \u0627\u0644\u0625\u0646\u0641\u0627\u0642</h1>
                 <div style="margin-bottom: 30px;">
-                    <p><strong>السنة:</strong> ${currentYear}</p>
-                    <p><strong>العملة:</strong> ${this.currencies[budgetCurrency]?.name || 'جنيه مصري'}</p>
-                    <p><strong>الميزانية المعتمدة:</strong> ${this.formatCurrency(totalBudget, budgetCurrency)}</p>
-                    <p><strong>إجمالي المصروفات:</strong> ${this.formatCurrency(totalExpenses, budgetCurrency)}</p>
-                    <p><strong>المتبقي:</strong> ${this.formatCurrency(remaining, budgetCurrency)}</p>
-                    <p><strong>نسبة الاستهلاك:</strong> ${totalBudget > 0 ? ((totalExpenses / totalBudget) * 100).toFixed(1) : 0}%</p>
+                    <p><strong>\u0627\u0644\u0633\u0646\u0629:</strong> ${i}</p>
+                    <p><strong>\u0627\u0644\u0639\u0645\u0644\u0629:</strong> ${this.currencies[d]?.name||"\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A"}</p>
+                    <p><strong>\u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629:</strong> ${this.formatCurrency(o,d)}</p>
+                    <p><strong>\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A:</strong> ${this.formatCurrency(n,d)}</p>
+                    <p><strong>\u0627\u0644\u0645\u062A\u0628\u0642\u064A:</strong> ${this.formatCurrency(l,d)}</p>
+                    <p><strong>\u0646\u0633\u0628\u0629 \u0627\u0644\u0627\u0633\u062A\u0647\u0644\u0627\u0643:</strong> ${o>0?(n/o*100).toFixed(1):0}%</p>
                 </div>
-                <h2 style="color: #1e40af; margin-top: 30px; margin-bottom: 15px;">تفاصيل المصروفات</h2>
+                <h2 style="color: #1e40af; margin-top: 30px; margin-bottom: 15px;">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A</h2>
                 <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
                     <thead>
                         <tr style="background: #f3f4f6;">
-                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">التاريخ</th>
-                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">الفئة</th>
-                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">الوصف</th>
-                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">الجهة</th>
-                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">المبلغ</th>
-                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">العملة</th>
-                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">رقم الفاتورة</th>
+                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">\u0627\u0644\u0641\u0626\u0629</th>
+                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">\u0627\u0644\u0648\u0635\u0641</th>
+                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">\u0627\u0644\u062C\u0647\u0629</th>
+                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">\u0627\u0644\u0645\u0628\u0644\u063A</th>
+                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">\u0627\u0644\u0639\u0645\u0644\u0629</th>
+                            <th style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${transactions.map(t => `
+                        ${s.map(p=>`
                             <tr>
-                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${Utils.formatDate(t.date || t.createdAt)}</td>
-                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${Utils.escapeHTML(t.category || '')}</td>
-                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${Utils.escapeHTML(t.description || '')}</td>
-                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${Utils.escapeHTML(t.vendor || '')}</td>
-                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${this.formatCurrency(parseFloat(t.amount) || 0, t.currency || this.defaultCurrency)}</td>
-                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${this.currencies[t.currency || this.defaultCurrency]?.name || 'جنيه مصري'}</td>
-                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${Utils.escapeHTML(t.invoiceNumber || '-')}</td>
+                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${Utils.formatDate(p.date||p.createdAt)}</td>
+                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${Utils.escapeHTML(p.category||"")}</td>
+                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${Utils.escapeHTML(p.description||"")}</td>
+                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${Utils.escapeHTML(p.vendor||"")}</td>
+                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${this.formatCurrency(parseFloat(p.amount)||0,p.currency||this.defaultCurrency)}</td>
+                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${this.currencies[p.currency||this.defaultCurrency]?.name||"\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A"}</td>
+                                <td style="border: 1px solid #e5e7eb; padding: 8px;">${Utils.escapeHTML(p.invoiceNumber||"-")}</td>
                             </tr>
-                        `).join('')}
+                        `).join("")}
                     </tbody>
                 </table>
-                <p style="margin-top: 30px; color: #6b7280; font-size: 12px;">تاريخ الإنشاء: ${new Date().toLocaleDateString('ar-SA')}</p>
+                <p style="margin-top: 30px; color: #6b7280; font-size: 12px;">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621: ${new Date().toLocaleDateString("ar-SA")}</p>
             </div>
-        `;
-
-        const formCode = `BUDGET-REPORT-${currentYear}`;
-        const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-            ? FormHeader.generatePDFHTML(formCode, 'تقرير ميزانية السلامة وتتبع الإنفاق', content, false, true, { version: '1.0' }, new Date().toISOString(), new Date().toISOString())
-            : `<html><body>${content}</body></html>`;
-
-        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const printWindow = window.open(url, '_blank');
-
-        if (printWindow) {
-            printWindow.onload = () => {
-                setTimeout(() => {
-                    printWindow.print();
-                    setTimeout(() => {
-                        URL.revokeObjectURL(url);
-                    }, 1000);
-                }, 500);
-            };
-        } else {
-            Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
-        }
-    },
-
-    // ===== OPEX Section =====
-    async loadOPEX() {
-        const section = document.getElementById('safety-budget-opex-section');
-        if (!section) {
-            Utils.safeError('قسم safety-budget-opex-section غير موجود!');
-            return;
-        }
-
-        // ✅ تحميل القائمة بشكل آمن
-        let opexListContent = '';
-        try {
-            opexListContent = await this.renderExpensesList('OPEX');
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في تحميل قائمة OPEX:', error);
-            opexListContent = `
+        `,u=`BUDGET-REPORT-${i}`,b=typeof FormHeader<"u"&&FormHeader.generatePDFHTML?FormHeader.generatePDFHTML(u,"\u062A\u0642\u0631\u064A\u0631 \u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u062A\u062A\u0628\u0639 \u0627\u0644\u0625\u0646\u0641\u0627\u0642",c,!1,!0,{version:"1.0"},new Date().toISOString(),new Date().toISOString()):`<html><body>${c}</body></html>`,y=new Blob([b],{type:"text/html;charset=utf-8"}),m=URL.createObjectURL(y),g=window.open(m,"_blank");g?g.onload=()=>{setTimeout(()=>{g.print(),setTimeout(()=>{URL.revokeObjectURL(m)},1e3)},500)}:Notification.error("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0631\u064A\u0631")},async loadOPEX(){const e=document.getElementById("safety-budget-opex-section");if(!e){Utils.safeError("\u0642\u0633\u0645 safety-budget-opex-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!");return}let a="";try{a=await this.renderExpensesList("OPEX")}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 OPEX:",t),a=`
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                            <p class="text-gray-500 mb-4">حدث خطأ في تحميل البيانات</p>
+                            <p class="text-gray-500 mb-4">\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
                             <button onclick="SafetyBudget.showOPEXTab()" class="btn-primary">
                                 <i class="fas fa-redo ml-2"></i>
-                                إعادة المحاولة
+                                \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
                             </button>
                         </div>
                     </div>
                 </div>
-            `;
-        }
-        
-        section.innerHTML = `
+            `}e.innerHTML=`
             <div class="section-header">
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-chart-line ml-3" aria-hidden="true"></i>
-                            OPEX - مصروفات تشغيلية
+                            OPEX - \u0645\u0635\u0631\u0648\u0641\u0627\u062A \u062A\u0634\u063A\u064A\u0644\u064A\u0629
                         </h1>
-                        <p class="section-subtitle">إدارة ومتابعة المصروفات التشغيلية للسلامة</p>
+                        <p class="section-subtitle">\u0625\u062F\u0627\u0631\u0629 \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0627\u0644\u062A\u0634\u063A\u064A\u0644\u064A\u0629 \u0644\u0644\u0633\u0644\u0627\u0645\u0629</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <button id="export-opex-pdf-btn" class="btn-secondary" onclick="SafetyBudget.exportReport('pdf', 'OPEX')">
                             <i class="fas fa-file-pdf ml-2"></i>
-                            تصدير PDF
+                            \u062A\u0635\u062F\u064A\u0631 PDF
                         </button>
                         <button id="add-opex-expense-btn" class="btn-primary" onclick="SafetyBudget.showExpenseForm(null, 'OPEX')">
                             <i class="fas fa-plus ml-2"></i>
-                            إضافة مصروف OPEX
+                            \u0625\u0636\u0627\u0641\u0629 \u0645\u0635\u0631\u0648\u0641 OPEX
                         </button>
                     </div>
                 </div>
             </div>
             <div class="mt-6">
-                ${opexListContent}
+                ${a}
             </div>
-        `;
-        this.setupOPEXEventListeners();
-        this.loadOPEXList();
-    },
-
-    async renderExpensesList(category) {
-        const categoryName = category === 'all' ? 'جميع المصروفات' : category;
-        const prefix = category === 'all' ? 'all' : category.toLowerCase();
-        return `
+        `,this.setupOPEXEventListeners(),this.loadOPEXList()},async renderExpensesList(e){const a=e==="all"?"\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A":e,t=e==="all"?"all":e.toLowerCase();return`
             <div class="content-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between">
                         <h2 class="card-title">
                             <i class="fas fa-table ml-2"></i>
-                            قائمة مصروفات ${categoryName}
+                            \u0642\u0627\u0626\u0645\u0629 \u0645\u0635\u0631\u0648\u0641\u0627\u062A ${a}
                         </h2>
                         <div class="flex items-center gap-4">
-                            <input type="text" id="${prefix}-search" class="form-input" style="max-width: 300px;" placeholder="البحث...">
-                            ${category === 'all' ? `
-                                <select id="${prefix}-filter-category" class="form-input" style="max-width: 200px;">
-                                    <option value="">جميع الفئات</option>
-                                    <option value="معدات">معدات</option>
-                                    <option value="تدريب">تدريب</option>
-                                    <option value="صيانة">صيانة</option>
-                                    <option value="أدوات حماية">أدوات حماية</option>
-                                    <option value="طوارئ">طوارئ</option>
+                            <input type="text" id="${t}-search" class="form-input" style="max-width: 300px;" placeholder="\u0627\u0644\u0628\u062D\u062B...">
+                            ${e==="all"?`
+                                <select id="${t}-filter-category" class="form-input" style="max-width: 200px;">
+                                    <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0641\u0626\u0627\u062A</option>
+                                    <option value="\u0645\u0639\u062F\u0627\u062A">\u0645\u0639\u062F\u0627\u062A</option>
+                                    <option value="\u062A\u062F\u0631\u064A\u0628">\u062A\u062F\u0631\u064A\u0628</option>
+                                    <option value="\u0635\u064A\u0627\u0646\u0629">\u0635\u064A\u0627\u0646\u0629</option>
+                                    <option value="\u0623\u062F\u0648\u0627\u062A \u062D\u0645\u0627\u064A\u0629">\u0623\u062F\u0648\u0627\u062A \u062D\u0645\u0627\u064A\u0629</option>
+                                    <option value="\u0637\u0648\u0627\u0631\u0626">\u0637\u0648\u0627\u0631\u0626</option>
                                     <option value="OPEX">OPEX</option>
                                     <option value="CAPEX">CAPEX</option>
-                                    <option value="أخرى">أخرى</option>
+                                    <option value="\u0623\u062E\u0631\u0649">\u0623\u062E\u0631\u0649</option>
                                 </select>
-                            ` : ''}
-                            <select id="${prefix}-filter-year" class="form-input" style="max-width: 150px;">
-                                <option value="">جميع السنوات</option>
+                            `:""}
+                            <select id="${t}-filter-year" class="form-input" style="max-width: 150px;">
+                                <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0633\u0646\u0648\u0627\u062A</option>
                             </select>
-                            <select id="${prefix}-filter-month" class="form-input" style="max-width: 150px;">
-                                <option value="">جميع الأشهر</option>
+                            <select id="${t}-filter-month" class="form-input" style="max-width: 150px;">
+                                <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0634\u0647\u0631</option>
                             </select>
                         </div>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div id="${prefix}-table-container">
+                    <div id="${t}-table-container">
                         <div class="empty-state">
                             <div style="width: 300px; margin: 0 auto 16px;">
                                 <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
                                     <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p class="text-gray-500">جاري التحميل...</p>
+                            <p class="text-gray-500">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `;
-    },
-
-    setupOPEXEventListeners() {
-        const search = document.getElementById('opex-search');
-        const yearFilter = document.getElementById('opex-filter-year');
-        const monthFilter = document.getElementById('opex-filter-month');
-
-        if (search) search.addEventListener('input', () => this.loadOPEXList());
-        if (yearFilter) yearFilter.addEventListener('change', () => this.loadOPEXList());
-        if (monthFilter) monthFilter.addEventListener('change', () => this.loadOPEXList());
-    },
-
-    loadOPEXList() {
-        const container = document.getElementById('opex-table-container');
-        if (!container) return;
-
-        const transactions = (AppState.appData.safetyBudgetTransactions || []).filter(t => t.category === 'OPEX');
-        const searchTerm = (document.getElementById('opex-search')?.value || '').toLowerCase();
-        const yearFilter = document.getElementById('opex-filter-year')?.value || '';
-        const monthFilter = document.getElementById('opex-filter-month')?.value || '';
-
-        let filtered = transactions.filter(t => {
-            const matchesSearch = !searchTerm ||
-                (t.description || '').toLowerCase().includes(searchTerm) ||
-                (t.vendor || '').toLowerCase().includes(searchTerm) ||
-                (t.invoiceNumber || '').toLowerCase().includes(searchTerm);
-            const transactionDate = t.date ? new Date(t.date) : new Date(t.createdAt);
-            const matchesYear = !yearFilter || transactionDate.getFullYear().toString() === yearFilter;
-            const matchesMonth = !monthFilter || (transactionDate.getMonth() + 1).toString() === monthFilter;
-            return matchesSearch && matchesYear && matchesMonth;
-        });
-
-        filtered.sort((a, b) => {
-            const dateA = new Date(a.date || a.createdAt);
-            const dateB = new Date(b.date || b.createdAt);
-            return dateB - dateA;
-        });
-
-        if (filtered.length === 0) {
-            container.innerHTML = `
+        `},setupOPEXEventListeners(){const e=document.getElementById("opex-search"),a=document.getElementById("opex-filter-year"),t=document.getElementById("opex-filter-month");e&&e.addEventListener("input",()=>this.loadOPEXList()),a&&a.addEventListener("change",()=>this.loadOPEXList()),t&&t.addEventListener("change",()=>this.loadOPEXList())},loadOPEXList(){const e=document.getElementById("opex-table-container");if(!e)return;const a=(AppState.appData.safetyBudgetTransactions||[]).filter(n=>n.category==="OPEX"),t=(document.getElementById("opex-search")?.value||"").toLowerCase(),s=document.getElementById("opex-filter-year")?.value||"",i=document.getElementById("opex-filter-month")?.value||"";let r=a.filter(n=>{const l=!t||(n.description||"").toLowerCase().includes(t)||(n.vendor||"").toLowerCase().includes(t)||(n.invoiceNumber||"").toLowerCase().includes(t),c=n.date?new Date(n.date):new Date(n.createdAt),u=!s||c.getFullYear().toString()===s,b=!i||(c.getMonth()+1).toString()===i;return l&&u&&b});if(r.sort((n,l)=>{const c=new Date(n.date||n.createdAt);return new Date(l.date||l.createdAt)-c}),r.length===0){e.innerHTML=`
                 <div class="empty-state">
                     <i class="fas fa-chart-line text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">لا توجد مصروفات OPEX مسجلة</p>
+                    <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0635\u0631\u0648\u0641\u0627\u062A OPEX \u0645\u0633\u062C\u0644\u0629</p>
                     <button class="btn-primary mt-4" onclick="SafetyBudget.showExpenseForm(null, 'OPEX')">
                         <i class="fas fa-plus ml-2"></i>
-                        إضافة مصروف OPEX جديد
+                        \u0625\u0636\u0627\u0641\u0629 \u0645\u0635\u0631\u0648\u0641 OPEX \u062C\u062F\u064A\u062F
                     </button>
                 </div>
-            `;
-            return;
-        }
-
-        const totalOPEX = filtered.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-        const currencies = {};
-        filtered.forEach(t => {
-            const curr = t.currency || this.defaultCurrency;
-            currencies[curr] = (currencies[curr] || 0) + (parseFloat(t.amount) || 0);
-        });
-
-        container.innerHTML = `
+            `;return}const d=r.reduce((n,l)=>n+(parseFloat(l.amount)||0),0),o={};r.forEach(n=>{const l=n.currency||this.defaultCurrency;o[l]=(o[l]||0)+(parseFloat(n.amount)||0)}),e.innerHTML=`
             <div class="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-600">إجمالي مصروفات OPEX</p>
+                        <p class="text-sm text-gray-600">\u0625\u062C\u0645\u0627\u0644\u064A \u0645\u0635\u0631\u0648\u0641\u0627\u062A OPEX</p>
                         <div class="flex items-center gap-4 mt-2">
-                            ${Object.entries(currencies).map(([curr, amount]) => `
+                            ${Object.entries(o).map(([n,l])=>`
                                 <div>
-                                    <p class="text-2xl font-bold text-blue-600">${this.formatCurrency(amount, curr)}</p>
+                                    <p class="text-2xl font-bold text-blue-600">${this.formatCurrency(l,n)}</p>
                                 </div>
-                            `).join('')}
+                            `).join("")}
                         </div>
                     </div>
                     <div class="text-sm text-gray-600">
-                        <p>عدد المصروفات: <strong>${filtered.length}</strong></p>
+                        <p>\u0639\u062F\u062F \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A: <strong>${r.length}</strong></p>
                     </div>
                 </div>
             </div>
@@ -1835,187 +883,110 @@ const SafetyBudget = {
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>التاريخ</th>
-                            <th>الوصف</th>
-                            <th>الجهة</th>
-                            <th>المبلغ</th>
-                            <th>العملة</th>
-                            <th>رقم الفاتورة</th>
-                            <th>المرفقات</th>
-                            <th>الإجراءات</th>
+                            <th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                            <th>\u0627\u0644\u0648\u0635\u0641</th>
+                            <th>\u0627\u0644\u062C\u0647\u0629</th>
+                            <th>\u0627\u0644\u0645\u0628\u0644\u063A</th>
+                            <th>\u0627\u0644\u0639\u0645\u0644\u0629</th>
+                            <th>\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629</th>
+                            <th>\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A</th>
+                            <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${filtered.map(t => `
+                        ${r.map(n=>`
                             <tr>
-                                <td>${Utils.formatDate(t.date || t.createdAt)}</td>
-                                <td>${Utils.escapeHTML(t.description || '')}</td>
-                                <td>${Utils.escapeHTML(t.vendor || '')}</td>
-                                <td class="font-semibold">${this.formatCurrency(parseFloat(t.amount) || 0, t.currency || this.defaultCurrency)}</td>
-                                <td><span class="badge badge-secondary">${this.currencies[t.currency || this.defaultCurrency]?.symbol || 'ج.م'}</span></td>
-                                <td>${Utils.escapeHTML(t.invoiceNumber || '-')}</td>
+                                <td>${Utils.formatDate(n.date||n.createdAt)}</td>
+                                <td>${Utils.escapeHTML(n.description||"")}</td>
+                                <td>${Utils.escapeHTML(n.vendor||"")}</td>
+                                <td class="font-semibold">${this.formatCurrency(parseFloat(n.amount)||0,n.currency||this.defaultCurrency)}</td>
+                                <td><span class="badge badge-secondary">${this.currencies[n.currency||this.defaultCurrency]?.symbol||"\u062C.\u0645"}</span></td>
+                                <td>${Utils.escapeHTML(n.invoiceNumber||"-")}</td>
                                 <td>
-                                    ${(t.attachments || []).length > 0 ?
-                `<span class="badge badge-success">${(t.attachments || []).length} مرفق</span>` :
-                '<span class="text-gray-400">-</span>'}
+                                    ${(n.attachments||[]).length>0?`<span class="badge badge-success">${(n.attachments||[]).length} \u0645\u0631\u0641\u0642</span>`:'<span class="text-gray-400">-</span>'}
                                 </td>
                                 <td>
                                     <div class="flex items-center gap-2">
-                                        <button class="btn-icon btn-icon-primary" onclick="SafetyBudget.viewExpense('${t.id}')" title="عرض">
+                                        <button class="btn-icon btn-icon-primary" onclick="SafetyBudget.viewExpense('${n.id}')" title="\u0639\u0631\u0636">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        ${Permissions.hasAccess('safety-budget') ? `
-                                            <button class="btn-icon btn-icon-warning" onclick="SafetyBudget.editExpense('${t.id}')" title="تعديل">
+                                        ${Permissions.hasAccess("safety-budget")?`
+                                            <button class="btn-icon btn-icon-warning" onclick="SafetyBudget.editExpense('${n.id}')" title="\u062A\u0639\u062F\u064A\u0644">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn-icon btn-icon-danger" onclick="SafetyBudget.deleteExpense('${t.id}')" title="حذف">
+                                            <button class="btn-icon btn-icon-danger" onclick="SafetyBudget.deleteExpense('${n.id}')" title="\u062D\u0630\u0641">
                                                 <i class="fas fa-trash"></i>
                                             </button>
-                                        ` : ''}
+                                        `:""}
                                     </div>
                                 </td>
                             </tr>
-                        `).join('')}
+                        `).join("")}
                     </tbody>
                 </table>
             </div>
-        `;
-
-        this.populateYearMonthFilters('opex');
-    },
-
-    // ===== CAPEX Section =====
-    async loadCAPEX() {
-        const section = document.getElementById('safety-budget-capex-section');
-        if (!section) {
-            Utils.safeError('قسم safety-budget-capex-section غير موجود!');
-            return;
-        }
-
-        // ✅ تحميل القائمة بشكل آمن
-        let capexListContent = '';
-        try {
-            capexListContent = await this.renderExpensesList('CAPEX');
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في تحميل قائمة CAPEX:', error);
-            capexListContent = `
+        `,this.populateYearMonthFilters("opex")},async loadCAPEX(){const e=document.getElementById("safety-budget-capex-section");if(!e){Utils.safeError("\u0642\u0633\u0645 safety-budget-capex-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!");return}let a="";try{a=await this.renderExpensesList("CAPEX")}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 CAPEX:",t),a=`
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                            <p class="text-gray-500 mb-4">حدث خطأ في تحميل البيانات</p>
+                            <p class="text-gray-500 mb-4">\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
                             <button onclick="SafetyBudget.showCAPEXTab()" class="btn-primary">
                                 <i class="fas fa-redo ml-2"></i>
-                                إعادة المحاولة
+                                \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
                             </button>
                         </div>
                     </div>
                 </div>
-            `;
-        }
-        
-        section.innerHTML = `
+            `}e.innerHTML=`
             <div class="section-header">
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-building ml-3" aria-hidden="true"></i>
-                            CAPEX - مصروفات رأسمالية
+                            CAPEX - \u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0631\u0623\u0633\u0645\u0627\u0644\u064A\u0629
                         </h1>
-                        <p class="section-subtitle">إدارة ومتابعة المصروفات الرأسمالية للسلامة</p>
+                        <p class="section-subtitle">\u0625\u062F\u0627\u0631\u0629 \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0627\u0644\u0631\u0623\u0633\u0645\u0627\u0644\u064A\u0629 \u0644\u0644\u0633\u0644\u0627\u0645\u0629</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <button id="export-capex-pdf-btn" class="btn-secondary" onclick="SafetyBudget.exportReport('pdf', 'CAPEX')">
                             <i class="fas fa-file-pdf ml-2"></i>
-                            تصدير PDF
+                            \u062A\u0635\u062F\u064A\u0631 PDF
                         </button>
                         <button id="add-capex-expense-btn" class="btn-primary" onclick="SafetyBudget.showExpenseForm(null, 'CAPEX')">
                             <i class="fas fa-plus ml-2"></i>
-                            إضافة مصروف CAPEX
+                            \u0625\u0636\u0627\u0641\u0629 \u0645\u0635\u0631\u0648\u0641 CAPEX
                         </button>
                     </div>
                 </div>
             </div>
             <div class="mt-6">
-                ${capexListContent}
+                ${a}
             </div>
-        `;
-        this.setupCAPEXEventListeners();
-        this.loadCAPEXList();
-    },
-
-    setupCAPEXEventListeners() {
-        const search = document.getElementById('capex-search');
-        const yearFilter = document.getElementById('capex-filter-year');
-        const monthFilter = document.getElementById('capex-filter-month');
-
-        if (search) search.addEventListener('input', () => this.loadCAPEXList());
-        if (yearFilter) yearFilter.addEventListener('change', () => this.loadCAPEXList());
-        if (monthFilter) monthFilter.addEventListener('change', () => this.loadCAPEXList());
-    },
-
-    loadCAPEXList() {
-        const container = document.getElementById('capex-table-container');
-        if (!container) return;
-
-        const transactions = (AppState.appData.safetyBudgetTransactions || []).filter(t => t.category === 'CAPEX');
-        const searchTerm = (document.getElementById('capex-search')?.value || '').toLowerCase();
-        const yearFilter = document.getElementById('capex-filter-year')?.value || '';
-        const monthFilter = document.getElementById('capex-filter-month')?.value || '';
-
-        let filtered = transactions.filter(t => {
-            const matchesSearch = !searchTerm ||
-                (t.description || '').toLowerCase().includes(searchTerm) ||
-                (t.vendor || '').toLowerCase().includes(searchTerm) ||
-                (t.invoiceNumber || '').toLowerCase().includes(searchTerm);
-            const transactionDate = t.date ? new Date(t.date) : new Date(t.createdAt);
-            const matchesYear = !yearFilter || transactionDate.getFullYear().toString() === yearFilter;
-            const matchesMonth = !monthFilter || (transactionDate.getMonth() + 1).toString() === monthFilter;
-            return matchesSearch && matchesYear && matchesMonth;
-        });
-
-        filtered.sort((a, b) => {
-            const dateA = new Date(a.date || a.createdAt);
-            const dateB = new Date(b.date || b.createdAt);
-            return dateB - dateA;
-        });
-
-        if (filtered.length === 0) {
-            container.innerHTML = `
+        `,this.setupCAPEXEventListeners(),this.loadCAPEXList()},setupCAPEXEventListeners(){const e=document.getElementById("capex-search"),a=document.getElementById("capex-filter-year"),t=document.getElementById("capex-filter-month");e&&e.addEventListener("input",()=>this.loadCAPEXList()),a&&a.addEventListener("change",()=>this.loadCAPEXList()),t&&t.addEventListener("change",()=>this.loadCAPEXList())},loadCAPEXList(){const e=document.getElementById("capex-table-container");if(!e)return;const a=(AppState.appData.safetyBudgetTransactions||[]).filter(n=>n.category==="CAPEX"),t=(document.getElementById("capex-search")?.value||"").toLowerCase(),s=document.getElementById("capex-filter-year")?.value||"",i=document.getElementById("capex-filter-month")?.value||"";let r=a.filter(n=>{const l=!t||(n.description||"").toLowerCase().includes(t)||(n.vendor||"").toLowerCase().includes(t)||(n.invoiceNumber||"").toLowerCase().includes(t),c=n.date?new Date(n.date):new Date(n.createdAt),u=!s||c.getFullYear().toString()===s,b=!i||(c.getMonth()+1).toString()===i;return l&&u&&b});if(r.sort((n,l)=>{const c=new Date(n.date||n.createdAt);return new Date(l.date||l.createdAt)-c}),r.length===0){e.innerHTML=`
                 <div class="empty-state">
                     <i class="fas fa-building text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">لا توجد مصروفات CAPEX مسجلة</p>
+                    <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0635\u0631\u0648\u0641\u0627\u062A CAPEX \u0645\u0633\u062C\u0644\u0629</p>
                     <button class="btn-primary mt-4" onclick="SafetyBudget.showExpenseForm(null, 'CAPEX')">
                         <i class="fas fa-plus ml-2"></i>
-                        إضافة مصروف CAPEX جديد
+                        \u0625\u0636\u0627\u0641\u0629 \u0645\u0635\u0631\u0648\u0641 CAPEX \u062C\u062F\u064A\u062F
                     </button>
                 </div>
-            `;
-            return;
-        }
-
-        const totalCAPEX = filtered.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-        const currencies = {};
-        filtered.forEach(t => {
-            const curr = t.currency || this.defaultCurrency;
-            currencies[curr] = (currencies[curr] || 0) + (parseFloat(t.amount) || 0);
-        });
-
-        container.innerHTML = `
+            `;return}const d=r.reduce((n,l)=>n+(parseFloat(l.amount)||0),0),o={};r.forEach(n=>{const l=n.currency||this.defaultCurrency;o[l]=(o[l]||0)+(parseFloat(n.amount)||0)}),e.innerHTML=`
             <div class="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-600">إجمالي مصروفات CAPEX</p>
+                        <p class="text-sm text-gray-600">\u0625\u062C\u0645\u0627\u0644\u064A \u0645\u0635\u0631\u0648\u0641\u0627\u062A CAPEX</p>
                         <div class="flex items-center gap-4 mt-2">
-                            ${Object.entries(currencies).map(([curr, amount]) => `
+                            ${Object.entries(o).map(([n,l])=>`
                                 <div>
-                                    <p class="text-2xl font-bold text-purple-600">${this.formatCurrency(amount, curr)}</p>
+                                    <p class="text-2xl font-bold text-purple-600">${this.formatCurrency(l,n)}</p>
                                 </div>
-                            `).join('')}
+                            `).join("")}
                         </div>
                     </div>
                     <div class="text-sm text-gray-600">
-                        <p>عدد المصروفات: <strong>${filtered.length}</strong></p>
+                        <p>\u0639\u062F\u062F \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A: <strong>${r.length}</strong></p>
                     </div>
                 </div>
             </div>
@@ -2023,69 +994,54 @@ const SafetyBudget = {
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>التاريخ</th>
-                            <th>الوصف</th>
-                            <th>الجهة</th>
-                            <th>المبلغ</th>
-                            <th>العملة</th>
-                            <th>رقم الفاتورة</th>
-                            <th>المرفقات</th>
-                            <th>الإجراءات</th>
+                            <th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                            <th>\u0627\u0644\u0648\u0635\u0641</th>
+                            <th>\u0627\u0644\u062C\u0647\u0629</th>
+                            <th>\u0627\u0644\u0645\u0628\u0644\u063A</th>
+                            <th>\u0627\u0644\u0639\u0645\u0644\u0629</th>
+                            <th>\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629</th>
+                            <th>\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A</th>
+                            <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${filtered.map(t => `
+                        ${r.map(n=>`
                             <tr>
-                                <td>${Utils.formatDate(t.date || t.createdAt)}</td>
-                                <td>${Utils.escapeHTML(t.description || '')}</td>
-                                <td>${Utils.escapeHTML(t.vendor || '')}</td>
-                                <td class="font-semibold">${this.formatCurrency(parseFloat(t.amount) || 0, t.currency || this.defaultCurrency)}</td>
-                                <td><span class="badge badge-secondary">${this.currencies[t.currency || this.defaultCurrency]?.symbol || 'ج.م'}</span></td>
-                                <td>${Utils.escapeHTML(t.invoiceNumber || '-')}</td>
+                                <td>${Utils.formatDate(n.date||n.createdAt)}</td>
+                                <td>${Utils.escapeHTML(n.description||"")}</td>
+                                <td>${Utils.escapeHTML(n.vendor||"")}</td>
+                                <td class="font-semibold">${this.formatCurrency(parseFloat(n.amount)||0,n.currency||this.defaultCurrency)}</td>
+                                <td><span class="badge badge-secondary">${this.currencies[n.currency||this.defaultCurrency]?.symbol||"\u062C.\u0645"}</span></td>
+                                <td>${Utils.escapeHTML(n.invoiceNumber||"-")}</td>
                                 <td>
-                                    ${(t.attachments || []).length > 0 ?
-                `<span class="badge badge-success">${(t.attachments || []).length} مرفق</span>` :
-                '<span class="text-gray-400">-</span>'}
+                                    ${(n.attachments||[]).length>0?`<span class="badge badge-success">${(n.attachments||[]).length} \u0645\u0631\u0641\u0642</span>`:'<span class="text-gray-400">-</span>'}
                                 </td>
                                 <td>
                                     <div class="flex items-center gap-2">
-                                        <button class="btn-icon btn-icon-primary" onclick="SafetyBudget.viewExpense('${t.id}')" title="عرض">
+                                        <button class="btn-icon btn-icon-primary" onclick="SafetyBudget.viewExpense('${n.id}')" title="\u0639\u0631\u0636">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        ${Permissions.hasAccess('safety-budget') ? `
-                                            <button class="btn-icon btn-icon-warning" onclick="SafetyBudget.editExpense('${t.id}')" title="تعديل">
+                                        ${Permissions.hasAccess("safety-budget")?`
+                                            <button class="btn-icon btn-icon-warning" onclick="SafetyBudget.editExpense('${n.id}')" title="\u062A\u0639\u062F\u064A\u0644">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn-icon btn-icon-danger" onclick="SafetyBudget.deleteExpense('${t.id}')" title="حذف">
+                                            <button class="btn-icon btn-icon-danger" onclick="SafetyBudget.deleteExpense('${n.id}')" title="\u062D\u0630\u0641">
                                                 <i class="fas fa-trash"></i>
                                             </button>
-                                        ` : ''}
+                                        `:""}
                                     </div>
                                 </td>
                             </tr>
-                        `).join('')}
+                        `).join("")}
                     </tbody>
                 </table>
             </div>
-        `;
-
-        this.populateYearMonthFilters('capex');
-    },
-
-
-
-    showExpenseForm(expenseData = null, defaultCategory = null) {
-        const isEdit = !!expenseData;
-        const currentCurrency = expenseData?.currency || this.defaultCurrency;
-        const selectedCategory = expenseData?.category || defaultCategory || '';
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        `,this.populateYearMonthFilters("capex")},showExpenseForm(e=null,a=null){const t=!!e,s=e?.currency||this.defaultCurrency,i=e?.category||a||"",r=document.createElement("div");r.className="modal-overlay",r.innerHTML=`
             <div class="modal-content" style="max-width: 900px;">
                 <div class="modal-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border-radius: 8px 8px 0 0;">
                     <h2 class="modal-title" style="color: white;">
                         <i class="fas fa-receipt ml-2"></i>
-                        ${isEdit ? 'تعديل المصروف' : 'تسجيل مصروف جديد'}
+                        ${t?"\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641":"\u062A\u0633\u062C\u064A\u0644 \u0645\u0635\u0631\u0648\u0641 \u062C\u062F\u064A\u062F"}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="color: white;">
                         <i class="fas fa-times"></i>
@@ -2096,260 +1052,134 @@ const SafetyBudget = {
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-calendar-alt ml-2 text-blue-600"></i>
-                                التاريخ *
+                                \u0627\u0644\u062A\u0627\u0631\u064A\u062E *
                             </label>
                             <input type="date" id="expense-date" class="form-input" 
-                                   value="${expenseData ? (expenseData.date ? new Date(expenseData.date).toISOString().split('T')[0] : '') : new Date().toISOString().split('T')[0]}" 
+                                   value="${e?e.date?new Date(e.date).toISOString().split("T")[0]:"":new Date().toISOString().split("T")[0]}" 
                                    required
                                    style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-tags ml-2 text-purple-600"></i>
-                                نوع المصروف (الفئة) *
+                                \u0646\u0648\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641 (\u0627\u0644\u0641\u0626\u0629) *
                             </label>
                             <select id="expense-category" class="form-input" required
                                     style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
-                                <option value="">اختر الفئة</option>
-                                <option value="معدات" ${selectedCategory === 'معدات' ? 'selected' : ''}>معدات</option>
-                                <option value="تدريب" ${selectedCategory === 'تدريب' ? 'selected' : ''}>تدريب</option>
-                                <option value="صيانة" ${selectedCategory === 'صيانة' ? 'selected' : ''}>صيانة</option>
-                                <option value="أدوات حماية" ${selectedCategory === 'أدوات حماية' ? 'selected' : ''}>أدوات حماية</option>
-                                <option value="طوارئ" ${selectedCategory === 'طوارئ' ? 'selected' : ''}>طوارئ</option>
-                                <option value="OPEX" ${selectedCategory === 'OPEX' ? 'selected' : ''}>OPEX (مصروفات تشغيلية)</option>
-                                <option value="CAPEX" ${selectedCategory === 'CAPEX' ? 'selected' : ''}>CAPEX (مصروفات رأسمالية)</option>
-                                <option value="أخرى" ${selectedCategory === 'أخرى' ? 'selected' : ''}>أخرى</option>
+                                <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0641\u0626\u0629</option>
+                                <option value="\u0645\u0639\u062F\u0627\u062A" ${i==="\u0645\u0639\u062F\u0627\u062A"?"selected":""}>\u0645\u0639\u062F\u0627\u062A</option>
+                                <option value="\u062A\u062F\u0631\u064A\u0628" ${i==="\u062A\u062F\u0631\u064A\u0628"?"selected":""}>\u062A\u062F\u0631\u064A\u0628</option>
+                                <option value="\u0635\u064A\u0627\u0646\u0629" ${i==="\u0635\u064A\u0627\u0646\u0629"?"selected":""}>\u0635\u064A\u0627\u0646\u0629</option>
+                                <option value="\u0623\u062F\u0648\u0627\u062A \u062D\u0645\u0627\u064A\u0629" ${i==="\u0623\u062F\u0648\u0627\u062A \u062D\u0645\u0627\u064A\u0629"?"selected":""}>\u0623\u062F\u0648\u0627\u062A \u062D\u0645\u0627\u064A\u0629</option>
+                                <option value="\u0637\u0648\u0627\u0631\u0626" ${i==="\u0637\u0648\u0627\u0631\u0626"?"selected":""}>\u0637\u0648\u0627\u0631\u0626</option>
+                                <option value="OPEX" ${i==="OPEX"?"selected":""}>OPEX (\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u062A\u0634\u063A\u064A\u0644\u064A\u0629)</option>
+                                <option value="CAPEX" ${i==="CAPEX"?"selected":""}>CAPEX (\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0631\u0623\u0633\u0645\u0627\u0644\u064A\u0629)</option>
+                                <option value="\u0623\u062E\u0631\u0649" ${i==="\u0623\u062E\u0631\u0649"?"selected":""}>\u0623\u062E\u0631\u0649</option>
                             </select>
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-align-right ml-2 text-green-600"></i>
-                                الوصف *
+                                \u0627\u0644\u0648\u0635\u0641 *
                             </label>
                             <input type="text" id="expense-description" class="form-input" 
-                                   value="${Utils.escapeHTML(expenseData?.description || '')}" 
+                                   value="${Utils.escapeHTML(e?.description||"")}" 
                                    required
-                                   placeholder="أدخل وصفاً تفصيلياً للمصروف..."
+                                   placeholder="\u0623\u062F\u062E\u0644 \u0648\u0635\u0641\u0627\u064B \u062A\u0641\u0635\u064A\u0644\u064A\u0627\u064B \u0644\u0644\u0645\u0635\u0631\u0648\u0641..."
                                    style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-building ml-2 text-orange-600"></i>
-                                الجهة / المورد *
+                                \u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0645\u0648\u0631\u062F *
                             </label>
                             <input type="text" id="expense-vendor" class="form-input" 
-                                   value="${Utils.escapeHTML(expenseData?.vendor || '')}" 
+                                   value="${Utils.escapeHTML(e?.vendor||"")}" 
                                    required
-                                   placeholder="اسم المورد أو الجهة"
+                                   placeholder="\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0631\u062F \u0623\u0648 \u0627\u0644\u062C\u0647\u0629"
                                    style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-coins ml-2 text-yellow-600"></i>
-                                العملة *
+                                \u0627\u0644\u0639\u0645\u0644\u0629 *
                             </label>
                             <select id="expense-currency" class="form-input" required
                                     style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
-                                <option value="EGP" ${currentCurrency === 'EGP' ? 'selected' : ''}>جنيه مصري (ج.م)</option>
-                                <option value="USD" ${currentCurrency === 'USD' ? 'selected' : ''}>دولار أمريكي ($)</option>
+                                <option value="EGP" ${s==="EGP"?"selected":""}>\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A (\u062C.\u0645)</option>
+                                <option value="USD" ${s==="USD"?"selected":""}>\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A ($)</option>
                             </select>
                         </div>
                         <div class="bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-lg border-2 border-red-200">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-money-bill-wave ml-2 text-red-600"></i>
-                                القيمة *
+                                \u0627\u0644\u0642\u064A\u0645\u0629 *
                             </label>
                             <div class="flex items-center gap-2">
                                 <input type="number" id="expense-amount" class="form-input flex-1" 
-                                       value="${expenseData ? (parseFloat(expenseData.amount) || 0) : ''}" 
+                                       value="${e?parseFloat(e.amount)||0:""}" 
                                        step="0.01" min="0" required
-                                       placeholder="أدخل المبلغ"
+                                       placeholder="\u0623\u062F\u062E\u0644 \u0627\u0644\u0645\u0628\u0644\u063A"
                                        style="border: 2px solid #ef4444; border-radius: 8px; padding: 12px; font-size: 18px; font-weight: bold;">
                                 <span id="expense-currency-display" class="text-lg font-bold text-red-600 px-3 py-2 bg-white rounded-lg border-2 border-red-200">
-                                    ${this.getCurrencySymbol(currentCurrency)}
+                                    ${this.getCurrencySymbol(s)}
                                 </span>
                             </div>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-file-invoice ml-2"></i>
-                                رقم الفاتورة
+                                \u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629
                             </label>
                             <input type="text" id="expense-invoice" class="form-input" 
-                                   value="${Utils.escapeHTML(expenseData?.invoiceNumber || '')}"
+                                   value="${Utils.escapeHTML(e?.invoiceNumber||"")}"
                                    style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-paperclip ml-2"></i>
-                                المرفقات (PDF / صورة)
+                                \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A (PDF / \u0635\u0648\u0631\u0629)
                             </label>
                             <input type="file" id="expense-attachments" class="form-input" 
                                    accept=".pdf,.jpg,.jpeg,.png" multiple
                                    style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px;">
-                            <p class="text-xs text-gray-500 mt-1">يمكن رفع عدة ملفات (PDF أو صور)</p>
+                            <p class="text-xs text-gray-500 mt-1">\u064A\u0645\u0643\u0646 \u0631\u0641\u0639 \u0639\u062F\u0629 \u0645\u0644\u0641\u0627\u062A (PDF \u0623\u0648 \u0635\u0648\u0631)</p>
                             <div id="expense-attachments-list" class="mt-3 space-y-2"></div>
-                            ${expenseData && expenseData.attachments && expenseData.attachments.length > 0 ? `
+                            ${e&&e.attachments&&e.attachments.length>0?`
                                 <div class="mt-3">
-                                    <p class="text-sm font-semibold mb-2">المرفقات الحالية:</p>
-                                    ${expenseData.attachments.map((att, idx) => `
+                                    <p class="text-sm font-semibold mb-2">\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A \u0627\u0644\u062D\u0627\u0644\u064A\u0629:</p>
+                                    ${e.attachments.map((c,u)=>`
                                         <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded px-3 py-2 mb-2">
                                             <div class="flex items-center gap-2">
                                                 <i class="fas fa-paperclip text-blue-500"></i>
-                                                <span class="text-sm">${Utils.escapeHTML(att.name || 'مرفق')}</span>
+                                                <span class="text-sm">${Utils.escapeHTML(c.name||"\u0645\u0631\u0641\u0642")}</span>
                                             </div>
                                             <button type="button" class="btn-icon btn-icon-danger" onclick="this.closest('div').remove()">
                                                 <i class="fas fa-times"></i>
                                             </button>
                                         </div>
-                                    `).join('')}
+                                    `).join("")}
                                 </div>
-                            ` : ''}
+                            `:""}
                         </div>
                     </div>
                     <div class="flex items-center justify-end gap-4 pt-6 border-t mt-6">
                         <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px;">
-                            <i class="fas fa-times ml-2"></i>إلغاء
+                            <i class="fas fa-times ml-2"></i>\u0625\u0644\u063A\u0627\u0621
                         </button>
                         <button type="submit" class="btn-primary" style="padding: 10px 24px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                             <i class="fas fa-save ml-2"></i>
-                            ${isEdit ? 'حفظ التعديلات' : 'تسجيل المصروف'}
+                            ${t?"\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A":"\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641"}
                         </button>
                     </div>
                 </form>
             </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-
-        // تحديث رمز العملة عند تغيير العملة
-        const currencySelect = modal.querySelector('#expense-currency');
-        const currencyDisplay = modal.querySelector('#expense-currency-display');
-        if (currencySelect && currencyDisplay) {
-            currencySelect.addEventListener('change', (e) => {
-                const selectedCurrency = e.target.value;
-                currencyDisplay.textContent = this.getCurrencySymbol(selectedCurrency);
-            });
-        }
-
-        const attachmentsInput = document.getElementById('expense-attachments');
-        if (attachmentsInput) {
-            attachmentsInput.addEventListener('change', (e) => {
-                this.handleAttachmentsChange(e.target.files, modal);
-            });
-        }
-
-        const form = document.getElementById('expense-form');
-        if (form) {
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleExpenseSubmit(expenseData?.id, modal, defaultCategory);
-            });
-        }
-
-        this.currentAttachments = expenseData?.attachments ? [...expenseData.attachments] : [];
-    },
-
-    async handleExpenseSubmit(expenseId, modal, defaultCategory = null) {
-        // فحص العناصر قبل الاستخدام
-        const dateEl = document.getElementById('expense-date');
-        const categoryEl = document.getElementById('expense-category');
-        const descriptionEl = document.getElementById('expense-description');
-        const vendorEl = document.getElementById('expense-vendor');
-        const currencyEl = document.getElementById('expense-currency');
-        const amountEl = document.getElementById('expense-amount');
-        const invoiceEl = document.getElementById('expense-invoice');
-        
-        if (!dateEl || !categoryEl || !descriptionEl || !vendorEl || !amountEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            return;
-        }
-
-        const formData = {
-            id: expenseId || Utils.generateId('EXPENSE'),
-            date: new Date(dateEl.value).toISOString(),
-            category: categoryEl.value || defaultCategory,
-            description: descriptionEl.value.trim(),
-            vendor: vendorEl.value.trim(),
-            currency: currencyEl?.value || this.defaultCurrency,
-            amount: parseFloat(amountEl.value),
-            invoiceNumber: invoiceEl?.value.trim() || '',
-            attachments: this.currentAttachments || [],
-            createdAt: expenseId ? AppState.appData.safetyBudgetTransactions.find(e => e.id === expenseId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        if (!formData.date || !formData.category || !formData.description || !formData.vendor || !formData.amount || formData.amount <= 0) {
-            Notification.error('يرجى ملء جميع الحقول المطلوبة بشكل صحيح');
-            return;
-        }
-
-        Loading.show();
-        try {
-            if (expenseId) {
-                const index = AppState.appData.safetyBudgetTransactions.findIndex(e => e.id === expenseId);
-                if (index !== -1) {
-                    AppState.appData.safetyBudgetTransactions[index] = formData;
-                    Notification.success('تم تحديث المصروف بنجاح');
-                }
-            } else {
-                AppState.appData.safetyBudgetTransactions.push(formData);
-                Notification.success('تم تسجيل المصروف بنجاح');
-            }
-
-            // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-            await GoogleIntegration.autoSave('SafetyBudgetTransactions', AppState.appData.safetyBudgetTransactions);
-
-            AuditLog.log(expenseId ? 'update_expense' : 'create_expense', 'SafetyBudget', formData.id, {
-                category: formData.category,
-                amount: formData.amount
-            });
-
-            Loading.hide();
-            modal.remove();
-
-            // إعادة تحميل القسم المناسب
-            if (this.currentTab === 'opex' && formData.category === 'OPEX') {
-                this.loadOPEXList();
-            } else if (this.currentTab === 'capex' && formData.category === 'CAPEX') {
-                this.loadCAPEXList();
-            } else if (this.currentTab === 'all') {
-                this.loadExpensesList();
-            } else if (this.currentTab === 'dashboard') {
-                this.loadDashboard();
-            } else {
-                // إذا كان في تبويب آخر، نعيد تحميل التبويب المناسب
-                if (formData.category === 'OPEX') {
-                    this.switchTab('opex');
-                } else if (formData.category === 'CAPEX') {
-                    this.switchTab('capex');
-                } else {
-                    this.switchTab('all');
-                }
-            }
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
-        }
-    },
-
-    // ===== Import from Excel =====
-    showImportModal() {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        `,document.body.appendChild(r),r.addEventListener("click",c=>{c.target===r&&r.remove()});const d=r.querySelector("#expense-currency"),o=r.querySelector("#expense-currency-display");d&&o&&d.addEventListener("change",c=>{const u=c.target.value;o.textContent=this.getCurrencySymbol(u)});const n=document.getElementById("expense-attachments");n&&n.addEventListener("change",c=>{this.handleAttachmentsChange(c.target.files,r)});const l=document.getElementById("expense-form");l&&l.addEventListener("submit",c=>{c.preventDefault(),this.handleExpenseSubmit(e?.id,r,a)}),this.currentAttachments=e?.attachments?[...e.attachments]:[]},async handleExpenseSubmit(e,a,t=null){const s=document.getElementById("expense-date"),i=document.getElementById("expense-category"),r=document.getElementById("expense-description"),d=document.getElementById("expense-vendor"),o=document.getElementById("expense-currency"),n=document.getElementById("expense-amount"),l=document.getElementById("expense-invoice");if(!s||!i||!r||!d||!n){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const c={id:e||Utils.generateId("EXPENSE"),date:new Date(s.value).toISOString(),category:i.value||t,description:r.value.trim(),vendor:d.value.trim(),currency:o?.value||this.defaultCurrency,amount:parseFloat(n.value),invoiceNumber:l?.value.trim()||"",attachments:this.currentAttachments||[],createdAt:e?AppState.appData.safetyBudgetTransactions.find(u=>u.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};if(!c.date||!c.category||!c.description||!c.vendor||!c.amount||c.amount<=0){Notification.error("\u064A\u0631\u062C\u0649 \u0645\u0644\u0621 \u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");return}Loading.show();try{if(e){const u=AppState.appData.safetyBudgetTransactions.findIndex(b=>b.id===e);u!==-1&&(AppState.appData.safetyBudgetTransactions[u]=c,Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0635\u0631\u0648\u0641 \u0628\u0646\u062C\u0627\u062D"))}else AppState.appData.safetyBudgetTransactions.push(c),Notification.success("\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641 \u0628\u0646\u062C\u0627\u062D");typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("SafetyBudgetTransactions",AppState.appData.safetyBudgetTransactions),AuditLog.log(e?"update_expense":"create_expense","SafetyBudget",c.id,{category:c.category,amount:c.amount}),Loading.hide(),a.remove(),this.currentTab==="opex"&&c.category==="OPEX"?this.loadOPEXList():this.currentTab==="capex"&&c.category==="CAPEX"?this.loadCAPEXList():this.currentTab==="all"?this.loadExpensesList():this.currentTab==="dashboard"?this.loadDashboard():c.category==="OPEX"?this.switchTab("opex"):c.category==="CAPEX"?this.switchTab("capex"):this.switchTab("all")}catch(u){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+u.message)}},showImportModal(){const e=document.createElement("div");e.className="modal-overlay",e.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border-radius: 8px 8px 0 0;">
                     <h2 class="modal-title" style="color: white;">
                         <i class="fas fa-file-import ml-2"></i>
-                        استيراد الميزانية من Excel
+                        \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629 \u0645\u0646 Excel
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="color: white;">
                         <i class="fas fa-times"></i>
@@ -2360,20 +1190,20 @@ const SafetyBudget = {
                         <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
                             <h3 class="text-sm font-semibold text-gray-700 mb-3">
                                 <i class="fas fa-info-circle ml-2 text-blue-600"></i>
-                                تعليمات الاستيراد
+                                \u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F
                             </h3>
                             <ul class="text-sm text-gray-600 space-y-2 list-disc list-inside">
-                                <li>يجب أن يحتوي ملف Excel على الأعمدة التالية: التاريخ، الفئة، الوصف، الجهة، المبلغ، العملة (اختياري)، رقم الفاتورة (اختياري)</li>
-                                <li>التاريخ يجب أن يكون بصيغة YYYY-MM-DD أو DD/MM/YYYY</li>
-                                <li>الفئة يجب أن تكون واحدة من: معدات، تدريب، صيانة، أدوات حماية، طوارئ، OPEX، CAPEX، أخرى</li>
-                                <li>العملة: EGP أو USD (افتراضي: EGP)</li>
-                                <li>المبلغ يجب أن يكون رقماً صحيحاً</li>
+                                <li>\u064A\u062C\u0628 \u0623\u0646 \u064A\u062D\u062A\u0648\u064A \u0645\u0644\u0641 Excel \u0639\u0644\u0649 \u0627\u0644\u0623\u0639\u0645\u062F\u0629 \u0627\u0644\u062A\u0627\u0644\u064A\u0629: \u0627\u0644\u062A\u0627\u0631\u064A\u062E\u060C \u0627\u0644\u0641\u0626\u0629\u060C \u0627\u0644\u0648\u0635\u0641\u060C \u0627\u0644\u062C\u0647\u0629\u060C \u0627\u0644\u0645\u0628\u0644\u063A\u060C \u0627\u0644\u0639\u0645\u0644\u0629 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)\u060C \u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</li>
+                                <li>\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u064A\u062C\u0628 \u0623\u0646 \u064A\u0643\u0648\u0646 \u0628\u0635\u064A\u063A\u0629 YYYY-MM-DD \u0623\u0648 DD/MM/YYYY</li>
+                                <li>\u0627\u0644\u0641\u0626\u0629 \u064A\u062C\u0628 \u0623\u0646 \u062A\u0643\u0648\u0646 \u0648\u0627\u062D\u062F\u0629 \u0645\u0646: \u0645\u0639\u062F\u0627\u062A\u060C \u062A\u062F\u0631\u064A\u0628\u060C \u0635\u064A\u0627\u0646\u0629\u060C \u0623\u062F\u0648\u0627\u062A \u062D\u0645\u0627\u064A\u0629\u060C \u0637\u0648\u0627\u0631\u0626\u060C OPEX\u060C CAPEX\u060C \u0623\u062E\u0631\u0649</li>
+                                <li>\u0627\u0644\u0639\u0645\u0644\u0629: EGP \u0623\u0648 USD (\u0627\u0641\u062A\u0631\u0627\u0636\u064A: EGP)</li>
+                                <li>\u0627\u0644\u0645\u0628\u0644\u063A \u064A\u062C\u0628 \u0623\u0646 \u064A\u0643\u0648\u0646 \u0631\u0642\u0645\u0627\u064B \u0635\u062D\u064A\u062D\u0627\u064B</li>
                             </ul>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-file-excel ml-2 text-green-600"></i>
-                                اختر ملف Excel (.xlsx, .xls) *
+                                \u0627\u062E\u062A\u0631 \u0645\u0644\u0641 Excel (.xlsx, .xls) *
                             </label>
                             <input type="file" id="budget-excel-file" class="form-input" 
                                    accept=".xlsx,.xls" required
@@ -2381,38 +1211,38 @@ const SafetyBudget = {
                             <p class="text-xs text-gray-500 mt-2">
                                 <i class="fas fa-download ml-1"></i>
                                 <a href="#" onclick="SafetyBudget.downloadTemplate(); return false;" class="text-blue-600 hover:underline">
-                                    تحميل نموذج Excel
+                                    \u062A\u062D\u0645\u064A\u0644 \u0646\u0645\u0648\u0630\u062C Excel
                                 </a>
                             </p>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-cog ml-2 text-purple-600"></i>
-                                خيارات الاستيراد
+                                \u062E\u064A\u0627\u0631\u0627\u062A \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F
                             </label>
                             <div class="space-y-2">
                                 <label class="flex items-center gap-2">
                                     <input type="checkbox" id="import-overwrite" class="rounded border-gray-300 text-blue-600">
-                                    <span class="text-sm text-gray-700">استبدال البيانات الموجودة (إن وجدت)</span>
+                                    <span class="text-sm text-gray-700">\u0627\u0633\u062A\u0628\u062F\u0627\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u062C\u0648\u062F\u0629 (\u0625\u0646 \u0648\u062C\u062F\u062A)</span>
                                 </label>
                                 <label class="flex items-center gap-2">
                                     <input type="checkbox" id="import-skip-duplicates" class="rounded border-gray-300 text-blue-600" checked>
-                                    <span class="text-sm text-gray-700">تخطي السجلات المكررة (حسب رقم الفاتورة)</span>
+                                    <span class="text-sm text-gray-700">\u062A\u062E\u0637\u064A \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0643\u0631\u0631\u0629 (\u062D\u0633\u0628 \u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629)</span>
                                 </label>
                             </div>
                         </div>
                         <div id="import-preview" class="hidden">
-                            <h3 class="text-sm font-semibold text-gray-700 mb-2">معاينة البيانات:</h3>
+                            <h3 class="text-sm font-semibold text-gray-700 mb-2">\u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:</h3>
                             <div class="max-h-60 overflow-y-auto border border-gray-200 rounded p-2">
                                 <table class="data-table text-xs">
                                     <thead>
                                         <tr>
-                                            <th>التاريخ</th>
-                                            <th>الفئة</th>
-                                            <th>الوصف</th>
-                                            <th>الجهة</th>
-                                            <th>المبلغ</th>
-                                            <th>العملة</th>
+                                            <th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                                            <th>\u0627\u0644\u0641\u0626\u0629</th>
+                                            <th>\u0627\u0644\u0648\u0635\u0641</th>
+                                            <th>\u0627\u0644\u062C\u0647\u0629</th>
+                                            <th>\u0627\u0644\u0645\u0628\u0644\u063A</th>
+                                            <th>\u0627\u0644\u0639\u0645\u0644\u0629</th>
                                         </tr>
                                     </thead>
                                     <tbody id="import-preview-body"></tbody>
@@ -2422,430 +1252,33 @@ const SafetyBudget = {
                     </div>
                     <div class="flex items-center justify-end gap-4 pt-6 border-t mt-6">
                         <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px;">
-                            <i class="fas fa-times ml-2"></i>إلغاء
+                            <i class="fas fa-times ml-2"></i>\u0625\u0644\u063A\u0627\u0621
                         </button>
                         <button type="button" id="import-preview-btn" class="btn-secondary" onclick="SafetyBudget.previewImport()" style="padding: 10px 20px;">
-                            <i class="fas fa-eye ml-2"></i>معاينة
+                            <i class="fas fa-eye ml-2"></i>\u0645\u0639\u0627\u064A\u0646\u0629
                         </button>
                         <button type="button" id="import-execute-btn" class="btn-primary" onclick="SafetyBudget.executeImport()" style="padding: 10px 24px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                            <i class="fas fa-upload ml-2"></i>استيراد
+                            <i class="fas fa-upload ml-2"></i>\u0627\u0633\u062A\u064A\u0631\u0627\u062F
                         </button>
                     </div>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    downloadTemplate() {
-        if (typeof XLSX === 'undefined') {
-            Notification.error('مكتبة Excel غير متوفرة');
-            return;
-        }
-
-        const templateData = [
-            ['التاريخ', 'الفئة', 'الوصف', 'الجهة', 'المبلغ', 'العملة', 'رقم الفاتورة'],
-            ['2024-01-15', 'OPEX', 'مثال: صيانة معدات السلامة', 'شركة الصيانة', '5000', 'EGP', 'INV-001'],
-            ['2024-01-20', 'CAPEX', 'مثال: شراء معدات جديدة', 'مورد المعدات', '50000', 'EGP', 'INV-002'],
-            ['2024-02-10', 'تدريب', 'مثال: دورة تدريبية', 'مركز التدريب', '3000', 'USD', 'INV-003']
-        ];
-
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(templateData);
-        XLSX.utils.book_append_sheet(wb, ws, 'نموذج الميزانية');
-        XLSX.writeFile(wb, 'نموذج_استيراد_الميزانية.xlsx');
-        Notification.success('تم تحميل النموذج بنجاح');
-    },
-
-    async previewImport() {
-        const fileInput = document.getElementById('budget-excel-file');
-        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            Notification.error('يرجى اختيار ملف Excel أولاً');
-            return;
-        }
-
-        if (typeof XLSX === 'undefined') {
-            Notification.error('مكتبة Excel غير متوفرة');
-            return;
-        }
-
-        Loading.show('جاري قراءة الملف...');
-        try {
-            const file = fileInput.files[0];
-            const data = await file.arrayBuffer();
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
-            if (jsonData.length === 0) {
-                Notification.error('الملف فارغ أو لا يحتوي على بيانات');
-                Loading.hide();
-                return;
-            }
-
-            // تحليل البيانات
-            const previewData = jsonData.slice(0, 10).map(row => {
-                const date = this.parseDate(row['التاريخ'] || row['Date'] || row['تاريخ'] || '');
-                const category = String(row['الفئة'] || row['Category'] || row['الفئة'] || '').trim();
-                const description = String(row['الوصف'] || row['Description'] || row['وصف'] || '').trim();
-                const vendor = String(row['الجهة'] || row['Vendor'] || row['المورد'] || '').trim();
-                const amount = parseFloat(row['المبلغ'] || row['Amount'] || row['المبلغ'] || 0);
-                const currency = String(row['العملة'] || row['Currency'] || row['عملة'] || 'EGP').trim().toUpperCase();
-                const invoice = String(row['رقم الفاتورة'] || row['Invoice'] || row['Invoice Number'] || '').trim();
-
-                return {
-                    date: date ? Utils.formatDate(date) : 'غير صحيح',
-                    category: category || 'غير محدد',
-                    description: description || 'غير محدد',
-                    vendor: vendor || 'غير محدد',
-                    amount: isNaN(amount) ? 0 : amount,
-                    currency: currency === 'EGP' || currency === 'USD' ? currency : 'EGP',
-                    invoice: invoice || '-'
-                };
-            });
-
-            const previewBody = document.getElementById('import-preview-body');
-            const previewDiv = document.getElementById('import-preview');
-
-            if (previewBody && previewDiv) {
-                previewBody.innerHTML = previewData.map(row => `
+        `,document.body.appendChild(e),e.addEventListener("click",a=>{a.target===e&&e.remove()})},downloadTemplate(){if(typeof XLSX>"u"){Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631\u0629");return}const e=[["\u0627\u0644\u062A\u0627\u0631\u064A\u062E","\u0627\u0644\u0641\u0626\u0629","\u0627\u0644\u0648\u0635\u0641","\u0627\u0644\u062C\u0647\u0629","\u0627\u0644\u0645\u0628\u0644\u063A","\u0627\u0644\u0639\u0645\u0644\u0629","\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"],["2024-01-15","OPEX","\u0645\u062B\u0627\u0644: \u0635\u064A\u0627\u0646\u0629 \u0645\u0639\u062F\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629","\u0634\u0631\u0643\u0629 \u0627\u0644\u0635\u064A\u0627\u0646\u0629","5000","EGP","INV-001"],["2024-01-20","CAPEX","\u0645\u062B\u0627\u0644: \u0634\u0631\u0627\u0621 \u0645\u0639\u062F\u0627\u062A \u062C\u062F\u064A\u062F\u0629","\u0645\u0648\u0631\u062F \u0627\u0644\u0645\u0639\u062F\u0627\u062A","50000","EGP","INV-002"],["2024-02-10","\u062A\u062F\u0631\u064A\u0628","\u0645\u062B\u0627\u0644: \u062F\u0648\u0631\u0629 \u062A\u062F\u0631\u064A\u0628\u064A\u0629","\u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u062F\u0631\u064A\u0628","3000","USD","INV-003"]],a=XLSX.utils.book_new(),t=XLSX.utils.aoa_to_sheet(e);XLSX.utils.book_append_sheet(a,t,"\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629"),XLSX.writeFile(a,"\u0646\u0645\u0648\u0630\u062C_\u0627\u0633\u062A\u064A\u0631\u0627\u062F_\u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629.xlsx"),Notification.success("\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0628\u0646\u062C\u0627\u062D")},async previewImport(){const e=document.getElementById("budget-excel-file");if(!e||!e.files||e.files.length===0){Notification.error("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0644\u0641 Excel \u0623\u0648\u0644\u0627\u064B");return}if(typeof XLSX>"u"){Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631\u0629");return}Loading.show("\u062C\u0627\u0631\u064A \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0644\u0641...");try{const t=await e.files[0].arrayBuffer(),s=XLSX.read(t,{type:"array"}),i=s.Sheets[s.SheetNames[0]],r=XLSX.utils.sheet_to_json(i);if(r.length===0){Notification.error("\u0627\u0644\u0645\u0644\u0641 \u0641\u0627\u0631\u063A \u0623\u0648 \u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A"),Loading.hide();return}const d=r.slice(0,10).map(l=>{const c=this.parseDate(l.\u0627\u0644\u062A\u0627\u0631\u064A\u062E||l.Date||l.\u062A\u0627\u0631\u064A\u062E||""),u=String(l.\u0627\u0644\u0641\u0626\u0629||l.Category||l.\u0627\u0644\u0641\u0626\u0629||"").trim(),b=String(l.\u0627\u0644\u0648\u0635\u0641||l.Description||l.\u0648\u0635\u0641||"").trim(),y=String(l.\u0627\u0644\u062C\u0647\u0629||l.Vendor||l.\u0627\u0644\u0645\u0648\u0631\u062F||"").trim(),m=parseFloat(l.\u0627\u0644\u0645\u0628\u0644\u063A||l.Amount||l.\u0627\u0644\u0645\u0628\u0644\u063A||0),g=String(l.\u0627\u0644\u0639\u0645\u0644\u0629||l.Currency||l.\u0639\u0645\u0644\u0629||"EGP").trim().toUpperCase(),p=String(l["\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"]||l.Invoice||l["Invoice Number"]||"").trim();return{date:c?Utils.formatDate(c):"\u063A\u064A\u0631 \u0635\u062D\u064A\u062D",category:u||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",description:b||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",vendor:y||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",amount:isNaN(m)?0:m,currency:g==="EGP"||g==="USD"?g:"EGP",invoice:p||"-"}}),o=document.getElementById("import-preview-body"),n=document.getElementById("import-preview");o&&n&&(o.innerHTML=d.map(l=>`
                     <tr>
-                        <td>${Utils.escapeHTML(row.date)}</td>
-                        <td>${Utils.escapeHTML(row.category)}</td>
-                        <td>${Utils.escapeHTML(row.description)}</td>
-                        <td>${Utils.escapeHTML(row.vendor)}</td>
-                        <td>${row.amount.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td>${Utils.escapeHTML(row.currency)}</td>
+                        <td>${Utils.escapeHTML(l.date)}</td>
+                        <td>${Utils.escapeHTML(l.category)}</td>
+                        <td>${Utils.escapeHTML(l.description)}</td>
+                        <td>${Utils.escapeHTML(l.vendor)}</td>
+                        <td>${l.amount.toLocaleString("ar-SA",{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                        <td>${Utils.escapeHTML(l.currency)}</td>
                     </tr>
-                `).join('');
-                previewDiv.classList.remove('hidden');
-            }
-
-            Notification.success(`تم تحليل ${jsonData.length} سطر. عرض أول 10 سطور للمعاينة.`);
-            Loading.hide();
-        } catch (error) {
-            Loading.hide();
-            Notification.error('فشل قراءة الملف: ' + error.message);
-        }
-    },
-
-    parseDate(dateStr) {
-        if (!dateStr) return null;
-
-        // محاولة تحليل التاريخ بصيغ مختلفة
-        const str = String(dateStr).trim();
-
-        // YYYY-MM-DD
-        if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-            return new Date(str);
-        }
-
-        // DD/MM/YYYY
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
-            const parts = str.split('/');
-            return new Date(parts[2], parts[1] - 1, parts[0]);
-        }
-
-        // MM/DD/YYYY
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
-            const parts = str.split('/');
-            return new Date(parts[2], parts[0] - 1, parts[1]);
-        }
-
-        // معالجة Excel serial date مع دعم الوقت (الجزء الكسري)
-        const excelDate = parseFloat(str);
-        if (!isNaN(excelDate) && excelDate > 1) {
-            // Excel يخزن التاريخ كعدد الأيام من 1899-12-30
-            // والوقت كجزء كسري من اليوم
-            const totalDays = Math.floor(excelDate);
-            const timeFraction = excelDate - totalDays;
-            const baseDate = new Date(1899, 11, 30); // 30 ديسمبر 1899 (التوقيت المحلي)
-            const date = new Date(baseDate.getTime() + totalDays * 24 * 60 * 60 * 1000);
-            // إضافة الوقت من الجزء الكسري
-            if (timeFraction > 0) {
-                const totalSeconds = Math.round(timeFraction * 24 * 60 * 60);
-                const hours = Math.floor(totalSeconds / 3600);
-                const minutes = Math.floor((totalSeconds % 3600) / 60);
-                const seconds = totalSeconds % 60;
-                date.setHours(hours, minutes, seconds, 0);
-            }
-            return date;
-        }
-
-        // محاولة تحليل كتاريخ عادي
-        const date = new Date(str);
-        if (!isNaN(date.getTime())) {
-            return date;
-        }
-
-        return null;
-    },
-
-    async executeImport() {
-        const fileInput = document.getElementById('budget-excel-file');
-        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            Notification.error('يرجى اختيار ملف Excel أولاً');
-            return;
-        }
-
-        if (typeof XLSX === 'undefined') {
-            Notification.error('مكتبة Excel غير متوفرة');
-            return;
-        }
-
-        const overwrite = document.getElementById('import-overwrite')?.checked || false;
-        const skipDuplicates = document.getElementById('import-skip-duplicates')?.checked || true;
-
-        Loading.show('جاري استيراد البيانات...');
-        try {
-            const file = fileInput.files[0];
-            const data = await file.arrayBuffer();
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
-            if (jsonData.length === 0) {
-                Notification.error('الملف فارغ أو لا يحتوي على بيانات');
-                Loading.hide();
-                return;
-            }
-
-            const existingTransactions = AppState.appData.safetyBudgetTransactions || [];
-            const existingInvoiceNumbers = new Set(
-                existingTransactions
-                    .map(t => t.invoiceNumber)
-                    .filter(Boolean)
-            );
-
-            let imported = 0;
-            let skipped = 0;
-            let errors = 0;
-
-            for (const row of jsonData) {
-                try {
-                    const date = this.parseDate(row['التاريخ'] || row['Date'] || row['تاريخ'] || '');
-                    const category = String(row['الفئة'] || row['Category'] || row['الفئة'] || '').trim();
-                    const description = String(row['الوصف'] || row['Description'] || row['وصف'] || '').trim();
-                    const vendor = String(row['الجهة'] || row['Vendor'] || row['المورد'] || '').trim();
-                    const amount = parseFloat(row['المبلغ'] || row['Amount'] || row['المبلغ'] || 0);
-                    const currency = String(row['العملة'] || row['Currency'] || row['عملة'] || 'EGP').trim().toUpperCase();
-                    const invoiceNumber = String(row['رقم الفاتورة'] || row['Invoice'] || row['Invoice Number'] || '').trim();
-
-                    // التحقق من صحة البيانات
-                    if (!date || isNaN(date.getTime())) {
-                        errors++;
-                        continue;
-                    }
-
-                    if (!category || !description || !vendor || isNaN(amount) || amount <= 0) {
-                        errors++;
-                        continue;
-                    }
-
-                    // التحقق من التكرار
-                    if (skipDuplicates && invoiceNumber && existingInvoiceNumbers.has(invoiceNumber)) {
-                        skipped++;
-                        continue;
-                    }
-
-                    // إنشاء السجل
-                    const transaction = {
-                        id: Utils.generateId('EXPENSE'),
-                        date: date.toISOString(),
-                        category: category,
-                        description: description,
-                        vendor: vendor,
-                        currency: currency === 'EGP' || currency === 'USD' ? currency : 'EGP',
-                        amount: amount,
-                        invoiceNumber: invoiceNumber || '',
-                        attachments: [],
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    };
-
-                    if (overwrite && invoiceNumber) {
-                        const existingIndex = existingTransactions.findIndex(t => t.invoiceNumber === invoiceNumber);
-                        if (existingIndex !== -1) {
-                            transaction.id = existingTransactions[existingIndex].id;
-                            transaction.createdAt = existingTransactions[existingIndex].createdAt;
-                            existingTransactions[existingIndex] = transaction;
-                            imported++;
-                            continue;
-                        }
-                    }
-
-                    AppState.appData.safetyBudgetTransactions.push(transaction);
-                    if (invoiceNumber) {
-                        existingInvoiceNumbers.add(invoiceNumber);
-                    }
-                    imported++;
-                } catch (error) {
-                    errors++;
-                    Utils.safeError('خطأ في استيراد سطر:', error);
-                }
-            }
-
-            // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-            await GoogleIntegration.autoSave('SafetyBudgetTransactions', AppState.appData.safetyBudgetTransactions);
-
-            AuditLog.log('import_budget', 'SafetyBudget', null, {
-                imported,
-                skipped,
-                errors,
-                total: jsonData.length
-            });
-
-            Loading.hide();
-
-            const modal = document.querySelector('.modal-overlay');
-            if (modal) modal.remove();
-
-            Notification.success(`تم الاستيراد بنجاح: ${imported} سجل جديد، ${skipped} تم تخطيه، ${errors} أخطاء`);
-
-            // إعادة تحميل Dashboard
-            this.loadDashboard();
-        } catch (error) {
-            Loading.hide();
-            Notification.error('فشل الاستيراد: ' + error.message);
-        }
-    }
-};
-
-SafetyBudget.purchaseOrderSheetName = 'SafetyBudgetPurchaseOrders';
-SafetyBudget.purchaseOrderPrStatuses = [
-    { value: 'draft', label: 'Draft' },
-    { value: 'submitted', label: 'Submitted' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'rejected', label: 'Rejected' },
-    { value: 'closed', label: 'Closed' }
-];
-SafetyBudget.purchaseOrderPoStatuses = [
-    { value: 'not-issued', label: 'Not Issued' },
-    { value: 'open', label: 'Open' },
-    { value: 'partial', label: 'Partial' },
-    { value: 'closed', label: 'Closed' },
-    { value: 'cancelled', label: 'Cancelled' }
-];
-
-SafetyBudget.ensurePurchaseOrdersCollection = function () {
-    if (!AppState.appData) AppState.appData = {};
-    if (!Array.isArray(AppState.appData.safetyBudgetPurchaseOrders)) {
-        AppState.appData.safetyBudgetPurchaseOrders = [];
-    }
-    return AppState.appData.safetyBudgetPurchaseOrders;
-};
-
-SafetyBudget.normalizePurchaseOrderRecord = function (record = {}) {
-    return {
-        id: String(record.id || '').trim(),
-        prNo: String(record.prNo || record.PRNo || '').trim(),
-        prDate: String(record.prDate || record.PRDate || '').trim(),
-        itemCodeNo: String(record.itemCodeNo || record.itemCode || '').trim(),
-        itemsDescription: String(record.itemsDescription || record.itemDescription || '').trim(),
-        detailsRemarks: String(record.detailsRemarks || record.remarks || '').trim(),
-        quantity: parseFloat(record.quantity || 0) || 0,
-        prStatus: String(record.prStatus || 'submitted').trim(),
-        poNo: String(record.poNo || '').trim(),
-        poStatus: String(record.poStatus || 'not-issued').trim(),
-        note: String(record.note || record.notes || '').trim(),
-        createdAt: String(record.createdAt || '').trim(),
-        updatedAt: String(record.updatedAt || '').trim(),
-        updatedBy: String(record.updatedBy || '').trim()
-    };
-};
-
-SafetyBudget.ensurePurchaseOrdersLoaded = async function (forceReload = false) {
-    const current = this.ensurePurchaseOrdersCollection();
-    if (!forceReload && current.length > 0) {
-        return current;
-    }
-
-    if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) {
-        return current;
-    }
-
-    try {
-        const rows = await GoogleIntegration.readFromSheets(this.purchaseOrderSheetName, 12000);
-        if (Array.isArray(rows)) {
-            AppState.appData.safetyBudgetPurchaseOrders = rows.map((row) => this.normalizePurchaseOrderRecord(row));
-        }
-    } catch (error) {
-        Utils.safeWarn('تعذر تحميل طلبات الشراء المسجلة:', error);
-    }
-
-    return this.ensurePurchaseOrdersCollection();
-};
-
-SafetyBudget.getPurchaseOrderPrStatusLabel = function (value) {
-    return this.purchaseOrderPrStatuses.find((status) => status.value === value)?.label || value || '-';
-};
-
-SafetyBudget.getPurchaseOrderPoStatusLabel = function (value) {
-    return this.purchaseOrderPoStatuses.find((status) => status.value === value)?.label || value || '-';
-};
-
-SafetyBudget.getPurchaseOrderStatusBadge = function (type, value) {
-    const palette = {
-        approved: 'background:#dcfce7;color:#166534;',
-        closed: 'background:#dbeafe;color:#1d4ed8;',
-        submitted: 'background:#e0f2fe;color:#075985;',
-        draft: 'background:#f1f5f9;color:#334155;',
-        rejected: 'background:#fee2e2;color:#b91c1c;',
-        'not-issued': 'background:#f8fafc;color:#475569;',
-        open: 'background:#ede9fe;color:#6d28d9;',
-        partial: 'background:#fef3c7;color:#b45309;',
-        cancelled: 'background:#f3f4f6;color:#4b5563;'
-    };
-    const label = type === 'pr'
-        ? this.getPurchaseOrderPrStatusLabel(value)
-        : this.getPurchaseOrderPoStatusLabel(value);
-    return `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold" style="${palette[value] || 'background:#e5e7eb;color:#374151;'}">${Utils.escapeHTML(label)}</span>`;
-};
-
-SafetyBudget.injectPurchaseOrdersUI = function () {
-    const addExpenseBtn = document.getElementById('add-expense-btn');
-    if (addExpenseBtn && !document.getElementById('add-purchase-order-btn')) {
-        const button = document.createElement('button');
-        button.id = 'add-purchase-order-btn';
-        button.className = 'btn-primary';
-        button.innerHTML = '<i class="fas fa-file-signature ml-2"></i>Track registered purchase orders';
-        button.onclick = () => this.showPurchaseOrderForm();
-        addExpenseBtn.insertAdjacentElement('afterend', button);
-    }
-
-    const tabsBar = document.querySelector('#safety-budget-section .tab-btn[data-tab="capex"]')?.parentElement;
-    if (tabsBar && !tabsBar.querySelector('[data-tab="purchase-orders"]')) {
-        const button = document.createElement('button');
-        button.className = 'tab-btn';
-        button.dataset.tab = 'purchase-orders';
-        button.setAttribute('onclick', "SafetyBudget.switchTab('purchase-orders')");
-        button.style.cssText = 'padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;';
-        button.innerHTML = '<i class="fas fa-clipboard-list ml-2"></i>Track registered purchase orders';
-        tabsBar.appendChild(button);
-    }
-};
-
-SafetyBudget.renderPurchaseOrdersTab = async function () {
-    const records = this.ensurePurchaseOrdersCollection();
-    const approvedCount = records.filter((record) => record.prStatus === 'approved').length;
-    const linkedPoCount = records.filter((record) => String(record.poNo || '').trim() !== '').length;
-    const openPoCount = records.filter((record) => ['open', 'partial'].includes(record.poStatus)).length;
-
-    return `
+                `).join(""),n.classList.remove("hidden")),Notification.success(`\u062A\u0645 \u062A\u062D\u0644\u064A\u0644 ${r.length} \u0633\u0637\u0631. \u0639\u0631\u0636 \u0623\u0648\u0644 10 \u0633\u0637\u0648\u0631 \u0644\u0644\u0645\u0639\u0627\u064A\u0646\u0629.`),Loading.hide()}catch(a){Loading.hide(),Notification.error("\u0641\u0634\u0644 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0644\u0641: "+a.message)}},parseDate(e){if(!e)return null;const a=String(e).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(a))return new Date(a);if(/^\d{2}\/\d{2}\/\d{4}$/.test(a)){const i=a.split("/");return new Date(i[2],i[1]-1,i[0])}if(/^\d{2}\/\d{2}\/\d{4}$/.test(a)){const i=a.split("/");return new Date(i[2],i[0]-1,i[1])}const t=parseFloat(a);if(!isNaN(t)&&t>1){const i=Math.floor(t),r=t-i,d=new Date(1899,11,30),o=new Date(d.getTime()+i*24*60*60*1e3);if(r>0){const n=Math.round(r*24*60*60),l=Math.floor(n/3600),c=Math.floor(n%3600/60),u=n%60;o.setHours(l,c,u,0)}return o}const s=new Date(a);return isNaN(s.getTime())?null:s},async executeImport(){const e=document.getElementById("budget-excel-file");if(!e||!e.files||e.files.length===0){Notification.error("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0644\u0641 Excel \u0623\u0648\u0644\u0627\u064B");return}if(typeof XLSX>"u"){Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631\u0629");return}const a=document.getElementById("import-overwrite")?.checked||!1,t=document.getElementById("import-skip-duplicates")?.checked||!0;Loading.show("\u062C\u0627\u0631\u064A \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A...");try{const i=await e.files[0].arrayBuffer(),r=XLSX.read(i,{type:"array"}),d=r.Sheets[r.SheetNames[0]],o=XLSX.utils.sheet_to_json(d);if(o.length===0){Notification.error("\u0627\u0644\u0645\u0644\u0641 \u0641\u0627\u0631\u063A \u0623\u0648 \u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A"),Loading.hide();return}const n=AppState.appData.safetyBudgetTransactions||[],l=new Set(n.map(m=>m.invoiceNumber).filter(Boolean));let c=0,u=0,b=0;for(const m of o)try{const g=this.parseDate(m.\u0627\u0644\u062A\u0627\u0631\u064A\u062E||m.Date||m.\u062A\u0627\u0631\u064A\u062E||""),p=String(m.\u0627\u0644\u0641\u0626\u0629||m.Category||m.\u0627\u0644\u0641\u0626\u0629||"").trim(),f=String(m.\u0627\u0644\u0648\u0635\u0641||m.Description||m.\u0648\u0635\u0641||"").trim(),v=String(m.\u0627\u0644\u062C\u0647\u0629||m.Vendor||m.\u0627\u0644\u0645\u0648\u0631\u062F||"").trim(),h=parseFloat(m.\u0627\u0644\u0645\u0628\u0644\u063A||m.Amount||m.\u0627\u0644\u0645\u0628\u0644\u063A||0),S=String(m.\u0627\u0644\u0639\u0645\u0644\u0629||m.Currency||m.\u0639\u0645\u0644\u0629||"EGP").trim().toUpperCase(),x=String(m["\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"]||m.Invoice||m["Invoice Number"]||"").trim();if(!g||isNaN(g.getTime())){b++;continue}if(!p||!f||!v||isNaN(h)||h<=0){b++;continue}if(t&&x&&l.has(x)){u++;continue}const E={id:Utils.generateId("EXPENSE"),date:g.toISOString(),category:p,description:f,vendor:v,currency:S==="EGP"||S==="USD"?S:"EGP",amount:h,invoiceNumber:x||"",attachments:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};if(a&&x){const w=n.findIndex(L=>L.invoiceNumber===x);if(w!==-1){E.id=n[w].id,E.createdAt=n[w].createdAt,n[w]=E,c++;continue}}AppState.appData.safetyBudgetTransactions.push(E),x&&l.add(x),c++}catch(g){b++,Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0633\u0637\u0631:",g)}typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("SafetyBudgetTransactions",AppState.appData.safetyBudgetTransactions),AuditLog.log("import_budget","SafetyBudget",null,{imported:c,skipped:u,errors:b,total:o.length}),Loading.hide();const y=document.querySelector(".modal-overlay");y&&y.remove(),Notification.success(`\u062A\u0645 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0628\u0646\u062C\u0627\u062D: ${c} \u0633\u062C\u0644 \u062C\u062F\u064A\u062F\u060C ${u} \u062A\u0645 \u062A\u062E\u0637\u064A\u0647\u060C ${b} \u0623\u062E\u0637\u0627\u0621`),this.loadDashboard()}catch(s){Loading.hide(),Notification.error("\u0641\u0634\u0644 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F: "+s.message)}}};SafetyBudget.purchaseOrderSheetName="SafetyBudgetPurchaseOrders",SafetyBudget.purchaseOrderPrStatuses=[{value:"draft",label:"Draft"},{value:"submitted",label:"Submitted"},{value:"approved",label:"Approved"},{value:"rejected",label:"Rejected"},{value:"closed",label:"Closed"}],SafetyBudget.purchaseOrderPoStatuses=[{value:"not-issued",label:"Not Issued"},{value:"open",label:"Open"},{value:"partial",label:"Partial"},{value:"closed",label:"Closed"},{value:"cancelled",label:"Cancelled"}],SafetyBudget.ensurePurchaseOrdersCollection=function(){return AppState.appData||(AppState.appData={}),Array.isArray(AppState.appData.safetyBudgetPurchaseOrders)||(AppState.appData.safetyBudgetPurchaseOrders=[]),AppState.appData.safetyBudgetPurchaseOrders},SafetyBudget.normalizePurchaseOrderRecord=function(e={}){return{id:String(e.id||"").trim(),prNo:String(e.prNo||e.PRNo||"").trim(),prDate:String(e.prDate||e.PRDate||"").trim(),itemCodeNo:String(e.itemCodeNo||e.itemCode||"").trim(),itemsDescription:String(e.itemsDescription||e.itemDescription||"").trim(),detailsRemarks:String(e.detailsRemarks||e.remarks||"").trim(),quantity:parseFloat(e.quantity||0)||0,prStatus:String(e.prStatus||"submitted").trim(),poNo:String(e.poNo||"").trim(),poStatus:String(e.poStatus||"not-issued").trim(),note:String(e.note||e.notes||"").trim(),createdAt:String(e.createdAt||"").trim(),updatedAt:String(e.updatedAt||"").trim(),updatedBy:String(e.updatedBy||"").trim()}},SafetyBudget.ensurePurchaseOrdersLoaded=async function(e=!1){const a=this.ensurePurchaseOrdersCollection();if(!e&&a.length>0||typeof GoogleIntegration>"u"||!GoogleIntegration.readFromSheets)return a;try{const t=await GoogleIntegration.readFromSheets(this.purchaseOrderSheetName,12e3);Array.isArray(t)&&(AppState.appData.safetyBudgetPurchaseOrders=t.map(s=>this.normalizePurchaseOrderRecord(s)))}catch(t){Utils.safeWarn("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0633\u062C\u0644\u0629:",t)}return this.ensurePurchaseOrdersCollection()},SafetyBudget.getPurchaseOrderPrStatusLabel=function(e){return this.purchaseOrderPrStatuses.find(a=>a.value===e)?.label||e||"-"},SafetyBudget.getPurchaseOrderPoStatusLabel=function(e){return this.purchaseOrderPoStatuses.find(a=>a.value===e)?.label||e||"-"},SafetyBudget.getPurchaseOrderStatusBadge=function(e,a){const t={approved:"background:#dcfce7;color:#166534;",closed:"background:#dbeafe;color:#1d4ed8;",submitted:"background:#e0f2fe;color:#075985;",draft:"background:#f1f5f9;color:#334155;",rejected:"background:#fee2e2;color:#b91c1c;","not-issued":"background:#f8fafc;color:#475569;",open:"background:#ede9fe;color:#6d28d9;",partial:"background:#fef3c7;color:#b45309;",cancelled:"background:#f3f4f6;color:#4b5563;"},s=e==="pr"?this.getPurchaseOrderPrStatusLabel(a):this.getPurchaseOrderPoStatusLabel(a);return`<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold" style="${t[a]||"background:#e5e7eb;color:#374151;"}">${Utils.escapeHTML(s)}</span>`},SafetyBudget.injectPurchaseOrdersUI=function(){const e=document.getElementById("add-expense-btn");if(e&&!document.getElementById("add-purchase-order-btn")){const t=document.createElement("button");t.id="add-purchase-order-btn",t.className="btn-primary",t.innerHTML='<i class="fas fa-file-signature ml-2"></i>Track registered purchase orders',t.onclick=()=>this.showPurchaseOrderForm(),e.insertAdjacentElement("afterend",t)}const a=document.querySelector('#safety-budget-section .tab-btn[data-tab="capex"]')?.parentElement;if(a&&!a.querySelector('[data-tab="purchase-orders"]')){const t=document.createElement("button");t.className="tab-btn",t.dataset.tab="purchase-orders",t.setAttribute("onclick","SafetyBudget.switchTab('purchase-orders')"),t.style.cssText="padding: 12px 20px; border: none; background: transparent; color: #6b7280; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s;",t.innerHTML='<i class="fas fa-clipboard-list ml-2"></i>Track registered purchase orders',a.appendChild(t)}},SafetyBudget.renderPurchaseOrdersTab=async function(){const e=this.ensurePurchaseOrdersCollection(),a=e.filter(i=>i.prStatus==="approved").length,t=e.filter(i=>String(i.poNo||"").trim()!=="").length,s=e.filter(i=>["open","partial"].includes(i.poStatus)).length;return`
         <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div class="content-card"><div class="card-body"><div class="flex items-center justify-between"><div><p class="text-sm text-gray-500">Total PRs</p><p class="text-3xl font-black text-slate-900">${records.length}</p></div><div class="bg-blue-100 rounded-2xl p-4"><i class="fas fa-file-alt text-blue-600 text-xl"></i></div></div></div></div>
-                <div class="content-card"><div class="card-body"><div class="flex items-center justify-between"><div><p class="text-sm text-gray-500">Approved PRs</p><p class="text-3xl font-black text-emerald-600">${approvedCount}</p></div><div class="bg-emerald-100 rounded-2xl p-4"><i class="fas fa-circle-check text-emerald-600 text-xl"></i></div></div></div></div>
-                <div class="content-card"><div class="card-body"><div class="flex items-center justify-between"><div><p class="text-sm text-gray-500">Linked POs</p><p class="text-3xl font-black text-indigo-600">${linkedPoCount}</p></div><div class="bg-indigo-100 rounded-2xl p-4"><i class="fas fa-link text-indigo-600 text-xl"></i></div></div></div></div>
-                <div class="content-card"><div class="card-body"><div class="flex items-center justify-between"><div><p class="text-sm text-gray-500">Open PO Status</p><p class="text-3xl font-black text-amber-600">${openPoCount}</p></div><div class="bg-amber-100 rounded-2xl p-4"><i class="fas fa-hourglass-half text-amber-600 text-xl"></i></div></div></div></div>
+                <div class="content-card"><div class="card-body"><div class="flex items-center justify-between"><div><p class="text-sm text-gray-500">Total PRs</p><p class="text-3xl font-black text-slate-900">${e.length}</p></div><div class="bg-blue-100 rounded-2xl p-4"><i class="fas fa-file-alt text-blue-600 text-xl"></i></div></div></div></div>
+                <div class="content-card"><div class="card-body"><div class="flex items-center justify-between"><div><p class="text-sm text-gray-500">Approved PRs</p><p class="text-3xl font-black text-emerald-600">${a}</p></div><div class="bg-emerald-100 rounded-2xl p-4"><i class="fas fa-circle-check text-emerald-600 text-xl"></i></div></div></div></div>
+                <div class="content-card"><div class="card-body"><div class="flex items-center justify-between"><div><p class="text-sm text-gray-500">Linked POs</p><p class="text-3xl font-black text-indigo-600">${t}</p></div><div class="bg-indigo-100 rounded-2xl p-4"><i class="fas fa-link text-indigo-600 text-xl"></i></div></div></div></div>
+                <div class="content-card"><div class="card-body"><div class="flex items-center justify-between"><div><p class="text-sm text-gray-500">Open PO Status</p><p class="text-3xl font-black text-amber-600">${s}</p></div><div class="bg-amber-100 rounded-2xl p-4"><i class="fas fa-hourglass-half text-amber-600 text-xl"></i></div></div></div></div>
             </div>
 
             <div class="content-card">
@@ -2856,31 +1289,31 @@ SafetyBudget.renderPurchaseOrdersTab = async function () {
                                 <i class="fas fa-clipboard-list ml-2 text-blue-600"></i>
                                 Track registered purchase orders.
                             </h2>
-                            <p class="text-sm text-gray-500 mt-2">جدول مركزي لمتابعة طلبات الشراء وربط حالة PR و PO داخل نفس مديول الميزانية.</p>
+                            <p class="text-sm text-gray-500 mt-2">\u062C\u062F\u0648\u0644 \u0645\u0631\u0643\u0632\u064A \u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0634\u0631\u0627\u0621 \u0648\u0631\u0628\u0637 \u062D\u0627\u0644\u0629 PR \u0648 PO \u062F\u0627\u062E\u0644 \u0646\u0641\u0633 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u064A\u0632\u0627\u0646\u064A\u0629.</p>
                         </div>
                         <button class="btn-primary" onclick="SafetyBudget.showPurchaseOrderForm()">
                             <i class="fas fa-plus ml-2"></i>
-                            تسجيل طلب شراء
+                            \u062A\u0633\u062C\u064A\u0644 \u0637\u0644\u0628 \u0634\u0631\u0627\u0621
                         </button>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">بحث سريع</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0628\u062D\u062B \u0633\u0631\u064A\u0639</label>
                             <input id="purchase-order-search" class="form-input" placeholder="PR No / PO No / Item / Notes">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">PR Status</label>
                             <select id="purchase-order-pr-status-filter" class="form-input">
                                 <option value="">All</option>
-                                ${this.purchaseOrderPrStatuses.map((status) => `<option value="${status.value}">${status.label}</option>`).join('')}
+                                ${this.purchaseOrderPrStatuses.map(i=>`<option value="${i.value}">${i.label}</option>`).join("")}
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">PO Status</label>
                             <select id="purchase-order-po-status-filter" class="form-input">
                                 <option value="">All</option>
-                                ${this.purchaseOrderPoStatuses.map((status) => `<option value="${status.value}">${status.label}</option>`).join('')}
+                                ${this.purchaseOrderPoStatuses.map(i=>`<option value="${i.value}">${i.label}</option>`).join("")}
                             </select>
                         </div>
                         <div>
@@ -2891,77 +1324,22 @@ SafetyBudget.renderPurchaseOrdersTab = async function () {
 
                     <div class="mt-5" id="purchase-orders-table-container">
                         <div class="empty-state">
-                            <p class="text-gray-500">جاري تجهيز الجدول...</p>
+                            <p class="text-gray-500">\u062C\u0627\u0631\u064A \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u062C\u062F\u0648\u0644...</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    `;
-};
-
-SafetyBudget.setupPurchaseOrderEventListeners = function () {
-    const rerender = () => this.loadPurchaseOrdersList();
-    const search = document.getElementById('purchase-order-search');
-    const prStatus = document.getElementById('purchase-order-pr-status-filter');
-    const poStatus = document.getElementById('purchase-order-po-status-filter');
-    const year = document.getElementById('purchase-order-year-filter');
-
-    if (search) search.addEventListener('input', rerender);
-    if (prStatus) prStatus.addEventListener('change', rerender);
-    if (poStatus) poStatus.addEventListener('change', rerender);
-    if (year) year.addEventListener('input', rerender);
-};
-
-SafetyBudget.getFilteredPurchaseOrders = function () {
-    const records = this.ensurePurchaseOrdersCollection().slice();
-    const search = String(document.getElementById('purchase-order-search')?.value || '').trim().toLowerCase();
-    const prStatus = String(document.getElementById('purchase-order-pr-status-filter')?.value || '').trim();
-    const poStatus = String(document.getElementById('purchase-order-po-status-filter')?.value || '').trim();
-    const year = String(document.getElementById('purchase-order-year-filter')?.value || '').trim();
-
-    return records
-        .filter((record) => {
-            const haystack = [
-                record.prNo,
-                record.poNo,
-                record.itemCodeNo,
-                record.itemsDescription,
-                record.detailsRemarks,
-                record.note
-            ].join(' ').toLowerCase();
-
-            const recordYear = String(new Date(record.prDate || record.createdAt || Date.now()).getFullYear());
-
-            return (!search || haystack.includes(search)) &&
-                (!prStatus || record.prStatus === prStatus) &&
-                (!poStatus || record.poStatus === poStatus) &&
-                (!year || recordYear === year);
-        })
-        .sort((a, b) => new Date(b.prDate || b.updatedAt || 0) - new Date(a.prDate || a.updatedAt || 0));
-};
-
-SafetyBudget.loadPurchaseOrdersList = function () {
-    const container = document.getElementById('purchase-orders-table-container');
-    if (!container) return;
-
-    const records = this.getFilteredPurchaseOrders();
-
-    if (records.length === 0) {
-        container.innerHTML = `
+    `},SafetyBudget.setupPurchaseOrderEventListeners=function(){const e=()=>this.loadPurchaseOrdersList(),a=document.getElementById("purchase-order-search"),t=document.getElementById("purchase-order-pr-status-filter"),s=document.getElementById("purchase-order-po-status-filter"),i=document.getElementById("purchase-order-year-filter");a&&a.addEventListener("input",e),t&&t.addEventListener("change",e),s&&s.addEventListener("change",e),i&&i.addEventListener("input",e)},SafetyBudget.getFilteredPurchaseOrders=function(){const e=this.ensurePurchaseOrdersCollection().slice(),a=String(document.getElementById("purchase-order-search")?.value||"").trim().toLowerCase(),t=String(document.getElementById("purchase-order-pr-status-filter")?.value||"").trim(),s=String(document.getElementById("purchase-order-po-status-filter")?.value||"").trim(),i=String(document.getElementById("purchase-order-year-filter")?.value||"").trim();return e.filter(r=>{const d=[r.prNo,r.poNo,r.itemCodeNo,r.itemsDescription,r.detailsRemarks,r.note].join(" ").toLowerCase(),o=String(new Date(r.prDate||r.createdAt||Date.now()).getFullYear());return(!a||d.includes(a))&&(!t||r.prStatus===t)&&(!s||r.poStatus===s)&&(!i||o===i)}).sort((r,d)=>new Date(d.prDate||d.updatedAt||0)-new Date(r.prDate||r.updatedAt||0))},SafetyBudget.loadPurchaseOrdersList=function(){const e=document.getElementById("purchase-orders-table-container");if(!e)return;const a=this.getFilteredPurchaseOrders();if(a.length===0){e.innerHTML=`
             <div class="empty-state">
                 <i class="fas fa-folder-open text-4xl text-gray-300 mb-3"></i>
-                <p class="text-gray-500 mb-3">لا توجد طلبات شراء مطابقة حاليًا</p>
+                <p class="text-gray-500 mb-3">\u0644\u0627 \u062A\u0648\u062C\u062F \u0637\u0644\u0628\u0627\u062A \u0634\u0631\u0627\u0621 \u0645\u0637\u0627\u0628\u0642\u0629 \u062D\u0627\u0644\u064A\u064B\u0627</p>
                 <button class="btn-primary" onclick="SafetyBudget.showPurchaseOrderForm()">
                     <i class="fas fa-plus ml-2"></i>
-                    تسجيل أول طلب شراء
+                    \u062A\u0633\u062C\u064A\u0644 \u0623\u0648\u0644 \u0637\u0644\u0628 \u0634\u0631\u0627\u0621
                 </button>
             </div>
-        `;
-        return;
-    }
-
-    container.innerHTML = `
+        `;return}e.innerHTML=`
         <div class="table-wrapper">
             <table class="data-table">
                 <thead>
@@ -2976,51 +1354,43 @@ SafetyBudget.loadPurchaseOrdersList = function () {
                         <th>PO No</th>
                         <th>PO Status</th>
                         <th>Note</th>
-                        <th>الإجراءات</th>
+                        <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${records.map((record) => `
+                    ${a.map(t=>`
                         <tr>
-                            <td class="font-bold text-slate-900">${Utils.escapeHTML(record.prNo || '-')}</td>
-                            <td>${record.prDate ? Utils.formatDate(record.prDate) : '-'}</td>
-                            <td>${Utils.escapeHTML(record.itemCodeNo || '-')}</td>
-                            <td style="min-width: 220px;">${Utils.escapeHTML(record.itemsDescription || '-')}</td>
-                            <td style="min-width: 220px;">${Utils.escapeHTML(record.detailsRemarks || '-')}</td>
-                            <td>${(parseFloat(record.quantity) || 0).toLocaleString('en-US')}</td>
-                            <td>${this.getPurchaseOrderStatusBadge('pr', record.prStatus)}</td>
-                            <td>${Utils.escapeHTML(record.poNo || '-')}</td>
-                            <td>${this.getPurchaseOrderStatusBadge('po', record.poStatus)}</td>
-                            <td style="min-width: 180px;">${Utils.escapeHTML(record.note || '-')}</td>
+                            <td class="font-bold text-slate-900">${Utils.escapeHTML(t.prNo||"-")}</td>
+                            <td>${t.prDate?Utils.formatDate(t.prDate):"-"}</td>
+                            <td>${Utils.escapeHTML(t.itemCodeNo||"-")}</td>
+                            <td style="min-width: 220px;">${Utils.escapeHTML(t.itemsDescription||"-")}</td>
+                            <td style="min-width: 220px;">${Utils.escapeHTML(t.detailsRemarks||"-")}</td>
+                            <td>${(parseFloat(t.quantity)||0).toLocaleString("en-US")}</td>
+                            <td>${this.getPurchaseOrderStatusBadge("pr",t.prStatus)}</td>
+                            <td>${Utils.escapeHTML(t.poNo||"-")}</td>
+                            <td>${this.getPurchaseOrderStatusBadge("po",t.poStatus)}</td>
+                            <td style="min-width: 180px;">${Utils.escapeHTML(t.note||"-")}</td>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    <button class="btn-icon btn-icon-primary" onclick="SafetyBudget.viewPurchaseOrder('${record.id}')" title="عرض">
+                                    <button class="btn-icon btn-icon-primary" onclick="SafetyBudget.viewPurchaseOrder('${t.id}')" title="\u0639\u0631\u0636">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    ${Permissions.hasAccess('safety-budget') ? `
-                                        <button class="btn-icon btn-icon-warning" onclick="SafetyBudget.editPurchaseOrder('${record.id}')" title="تعديل">
+                                    ${Permissions.hasAccess("safety-budget")?`
+                                        <button class="btn-icon btn-icon-warning" onclick="SafetyBudget.editPurchaseOrder('${t.id}')" title="\u062A\u0639\u062F\u064A\u0644">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="btn-icon btn-icon-danger" onclick="SafetyBudget.deletePurchaseOrder('${record.id}')" title="حذف">
+                                        <button class="btn-icon btn-icon-danger" onclick="SafetyBudget.deletePurchaseOrder('${t.id}')" title="\u062D\u0630\u0641">
                                             <i class="fas fa-trash"></i>
                                         </button>
-                                    ` : ''}
+                                    `:""}
                                 </div>
                             </td>
                         </tr>
-                    `).join('')}
+                    `).join("")}
                 </tbody>
             </table>
         </div>
-    `;
-};
-
-SafetyBudget.showPurchaseOrderForm = function (record = null) {
-    const isEdit = !!record;
-    const normalized = this.normalizePurchaseOrderRecord(record || {});
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
+    `},SafetyBudget.showPurchaseOrderForm=function(e=null){const a=!!e,t=this.normalizePurchaseOrderRecord(e||{}),s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
         <div class="modal-content" style="max-width: 1040px; overflow:hidden; border-radius: 24px;">
             <div class="modal-header" style="background: linear-gradient(135deg, #eff6ff 0%, #ffffff 58%, #f0fdf4 100%); border-bottom: 1px solid rgba(148,163,184,0.2);">
                 <div class="flex items-start justify-between gap-4 w-full flex-wrap">
@@ -3030,9 +1400,9 @@ SafetyBudget.showPurchaseOrderForm = function (record = null) {
                             Purchase Order Form
                         </div>
                         <h2 class="modal-title mt-3" style="font-size: 1.5rem;">
-                            ${isEdit ? 'تعديل طلب شراء' : 'تسجيل طلب شراء جديد'}
+                            ${a?"\u062A\u0639\u062F\u064A\u0644 \u0637\u0644\u0628 \u0634\u0631\u0627\u0621":"\u062A\u0633\u062C\u064A\u0644 \u0637\u0644\u0628 \u0634\u0631\u0627\u0621 \u062C\u062F\u064A\u062F"}
                         </h2>
-                        <p class="text-sm text-slate-500 mt-2">نموذج مبسّط وسريع لتسجيل حالة الطلب وربطها بحالة أمر الشراء مع تمييز بصري أوضح للبيانات الأساسية.</p>
+                        <p class="text-sm text-slate-500 mt-2">\u0646\u0645\u0648\u0630\u062C \u0645\u0628\u0633\u0651\u0637 \u0648\u0633\u0631\u064A\u0639 \u0644\u062A\u0633\u062C\u064A\u0644 \u062D\u0627\u0644\u0629 \u0627\u0644\u0637\u0644\u0628 \u0648\u0631\u0628\u0637\u0647\u0627 \u0628\u062D\u0627\u0644\u0629 \u0623\u0645\u0631 \u0627\u0644\u0634\u0631\u0627\u0621 \u0645\u0639 \u062A\u0645\u064A\u064A\u0632 \u0628\u0635\u0631\u064A \u0623\u0648\u0636\u062D \u0644\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629.</p>
                     </div>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -3047,35 +1417,35 @@ SafetyBudget.showPurchaseOrderForm = function (record = null) {
                                 <i class="fas fa-clipboard-check"></i>
                             </div>
                             <div>
-                                <h3 class="text-base font-black text-slate-900">بيانات الطلب الأساسية</h3>
-                                <p class="text-xs text-slate-500 mt-1">الحقول الأساسية المطلوبة لاعتماد سجل PR بشكل صحيح.</p>
+                                <h3 class="text-base font-black text-slate-900">\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0637\u0644\u0628 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629</h3>
+                                <p class="text-xs text-slate-500 mt-1">\u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0633\u062C\u0644 PR \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D.</p>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">PR No *</label>
-                                <input id="purchase-order-pr-no" class="form-input" required value="${Utils.escapeHTML(normalized.prNo)}" style="border-width:2px;">
+                                <input id="purchase-order-pr-no" class="form-input" required value="${Utils.escapeHTML(t.prNo)}" style="border-width:2px;">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">PR Date *</label>
-                                <input id="purchase-order-pr-date" type="date" class="form-input" required value="${Utils.escapeHTML(normalized.prDate ? normalized.prDate.slice(0, 10) : '')}" style="border-width:2px;">
+                                <input id="purchase-order-pr-date" type="date" class="form-input" required value="${Utils.escapeHTML(t.prDate?t.prDate.slice(0,10):"")}" style="border-width:2px;">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Item Code No</label>
-                                <input id="purchase-order-item-code" class="form-input" value="${Utils.escapeHTML(normalized.itemCodeNo)}">
+                                <input id="purchase-order-item-code" class="form-input" value="${Utils.escapeHTML(t.itemCodeNo)}">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Quantity *</label>
-                                <input id="purchase-order-quantity" type="number" min="0" step="0.01" class="form-input" required value="${normalized.quantity || ''}">
+                                <input id="purchase-order-quantity" type="number" min="0" step="0.01" class="form-input" required value="${t.quantity||""}">
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Items Description *</label>
-                                <textarea id="purchase-order-description" class="form-input" rows="4" required style="min-height: 112px;">${Utils.escapeHTML(normalized.itemsDescription)}</textarea>
+                                <textarea id="purchase-order-description" class="form-input" rows="4" required style="min-height: 112px;">${Utils.escapeHTML(t.itemsDescription)}</textarea>
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Details / Remarks</label>
-                                <textarea id="purchase-order-remarks" class="form-input" rows="4" style="min-height: 112px;">${Utils.escapeHTML(normalized.detailsRemarks)}</textarea>
+                                <textarea id="purchase-order-remarks" class="form-input" rows="4" style="min-height: 112px;">${Utils.escapeHTML(t.detailsRemarks)}</textarea>
                             </div>
                         </div>
                     </div>
@@ -3087,8 +1457,8 @@ SafetyBudget.showPurchaseOrderForm = function (record = null) {
                                     <i class="fas fa-circle-check"></i>
                                 </div>
                                 <div>
-                                    <h3 class="text-base font-black text-slate-900">حالة PR / PO</h3>
-                                    <p class="text-xs text-slate-500 mt-1">مؤشرات واضحة للحالة الحالية وسهولة التحديث لاحقًا.</p>
+                                    <h3 class="text-base font-black text-slate-900">\u062D\u0627\u0644\u0629 PR / PO</h3>
+                                    <p class="text-xs text-slate-500 mt-1">\u0645\u0624\u0634\u0631\u0627\u062A \u0648\u0627\u0636\u062D\u0629 \u0644\u0644\u062D\u0627\u0644\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u0648\u0633\u0647\u0648\u0644\u0629 \u0627\u0644\u062A\u062D\u062F\u064A\u062B \u0644\u0627\u062D\u0642\u064B\u0627.</p>
                                 </div>
                             </div>
 
@@ -3096,17 +1466,17 @@ SafetyBudget.showPurchaseOrderForm = function (record = null) {
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">PR Status</label>
                                     <select id="purchase-order-pr-status" class="form-input">
-                                        ${this.purchaseOrderPrStatuses.map((status) => `<option value="${status.value}" ${normalized.prStatus === status.value ? 'selected' : ''}>${status.label}</option>`).join('')}
+                                        ${this.purchaseOrderPrStatuses.map(r=>`<option value="${r.value}" ${t.prStatus===r.value?"selected":""}>${r.label}</option>`).join("")}
                                     </select>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">PO No</label>
-                                    <input id="purchase-order-po-no" class="form-input" value="${Utils.escapeHTML(normalized.poNo)}">
+                                    <input id="purchase-order-po-no" class="form-input" value="${Utils.escapeHTML(t.poNo)}">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">PO Status</label>
                                     <select id="purchase-order-po-status" class="form-input">
-                                        ${this.purchaseOrderPoStatuses.map((status) => `<option value="${status.value}" ${normalized.poStatus === status.value ? 'selected' : ''}>${status.label}</option>`).join('')}
+                                        ${this.purchaseOrderPoStatuses.map(r=>`<option value="${r.value}" ${t.poStatus===r.value?"selected":""}>${r.label}</option>`).join("")}
                                     </select>
                                 </div>
                             </div>
@@ -3118,13 +1488,13 @@ SafetyBudget.showPurchaseOrderForm = function (record = null) {
                                     <i class="fas fa-note-sticky"></i>
                                 </div>
                                 <div>
-                                    <h3 class="text-base font-black text-slate-900">ملاحظات إضافية</h3>
-                                    <p class="text-xs text-slate-500 mt-1">أي معلومات داعمة أو تفاصيل خاصة بسير الشراء.</p>
+                                    <h3 class="text-base font-black text-slate-900">\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629</h3>
+                                    <p class="text-xs text-slate-500 mt-1">\u0623\u064A \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u062F\u0627\u0639\u0645\u0629 \u0623\u0648 \u062A\u0641\u0627\u0635\u064A\u0644 \u062E\u0627\u0635\u0629 \u0628\u0633\u064A\u0631 \u0627\u0644\u0634\u0631\u0627\u0621.</p>
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Note</label>
-                                <textarea id="purchase-order-note" class="form-input" rows="6" style="min-height: 158px;">${Utils.escapeHTML(normalized.note)}</textarea>
+                                <textarea id="purchase-order-note" class="form-input" rows="6" style="min-height: 158px;">${Utils.escapeHTML(t.note)}</textarea>
                             </div>
                         </div>
                     </div>
@@ -3133,117 +1503,19 @@ SafetyBudget.showPurchaseOrderForm = function (record = null) {
                 <div class="flex justify-between items-center gap-3 flex-wrap mt-6 border-t border-slate-200 pt-5">
                     <div class="text-xs text-slate-500">
                         <i class="fas fa-bolt ml-1 text-blue-500"></i>
-                        بعد الضغط على الحفظ سيتم إغلاق النموذج مباشرة وتحديث الجدول تلقائيًا.
+                        \u0628\u0639\u062F \u0627\u0644\u0636\u063A\u0637 \u0639\u0644\u0649 \u0627\u0644\u062D\u0641\u0638 \u0633\u064A\u062A\u0645 \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0645\u0628\u0627\u0634\u0631\u0629 \u0648\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062C\u062F\u0648\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627.
                     </div>
                     <div class="flex justify-end gap-3">
-                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
                         <button type="submit" class="btn-primary" id="purchase-order-submit-btn" style="box-shadow: 0 14px 26px rgba(37,99,235,0.24);">
                             <i class="fas fa-save ml-2"></i>
-                            ${isEdit ? 'حفظ التعديلات' : 'تسجيل الطلب'}
+                            ${a?"\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A":"\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0637\u0644\u0628"}
                         </button>
                     </div>
                 </div>
             </form>
         </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    const form = modal.querySelector('#purchase-order-form');
-    if (form) {
-        form.addEventListener('submit', (event) => {
-            event.preventDefault();
-            this.handlePurchaseOrderSubmit(normalized.id || null, modal);
-        });
-    }
-};
-
-SafetyBudget.handlePurchaseOrderSubmit = async function (recordId, modal) {
-    const collection = this.ensurePurchaseOrdersCollection();
-    const existing = recordId ? collection.find((record) => record.id === recordId) : null;
-    const submitButton = document.getElementById('purchase-order-submit-btn');
-    const formData = this.normalizePurchaseOrderRecord({
-        id: existing?.id || Utils.generateSequentialId('SPO', collection),
-        prNo: document.getElementById('purchase-order-pr-no')?.value,
-        prDate: document.getElementById('purchase-order-pr-date')?.value,
-        itemCodeNo: document.getElementById('purchase-order-item-code')?.value,
-        itemsDescription: document.getElementById('purchase-order-description')?.value,
-        detailsRemarks: document.getElementById('purchase-order-remarks')?.value,
-        quantity: document.getElementById('purchase-order-quantity')?.value,
-        prStatus: document.getElementById('purchase-order-pr-status')?.value,
-        poNo: document.getElementById('purchase-order-po-no')?.value,
-        poStatus: document.getElementById('purchase-order-po-status')?.value,
-        note: document.getElementById('purchase-order-note')?.value,
-        createdAt: existing?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        updatedBy: AppState.currentUser?.name || AppState.currentUser?.email || ''
-    });
-
-    if (!formData.prNo || !formData.prDate || !formData.itemsDescription || !(parseFloat(formData.quantity) > 0)) {
-        Notification.error('يرجى إدخال PR No و PR Date و Items Description و Quantity بشكل صحيح');
-        return;
-    }
-
-    if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.style.opacity = '0.7';
-    }
-
-    try {
-        if (existing) {
-            const index = collection.findIndex((record) => record.id === existing.id);
-            collection[index] = formData;
-        } else {
-            collection.push(formData);
-        }
-
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        }
-
-        modal?.remove();
-
-        if (this.currentTab === 'purchase-orders') {
-            const contentContainer = document.getElementById('safety-budget-tab-content');
-            if (contentContainer) {
-                contentContainer.innerHTML = await this.renderPurchaseOrdersTab();
-                this.setupPurchaseOrderEventListeners();
-                this.loadPurchaseOrdersList();
-            }
-        } else {
-            this.loadDashboard();
-        }
-
-        Notification.success(existing ? 'تم تحديث طلب الشراء بنجاح' : 'تم تسجيل طلب الشراء بنجاح');
-
-        GoogleIntegration.autoSave(this.purchaseOrderSheetName, collection)
-            .then(() => {
-                AuditLog.log(existing ? 'update_purchase_order' : 'create_purchase_order', 'SafetyBudget', formData.id, {
-                    prNo: formData.prNo,
-                    poNo: formData.poNo,
-                    prStatus: formData.prStatus,
-                    poStatus: formData.poStatus
-                });
-            })
-            .catch((error) => {
-                Notification.warning('تم حفظ الطلب محليًا، وجارٍ مزامنته مع قاعدة البيانات: ' + error.message);
-            });
-    } catch (error) {
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.style.opacity = '1';
-        }
-        Notification.error('حدث خطأ أثناء حفظ طلب الشراء: ' + error.message);
-    }
-};
-
-SafetyBudget.viewPurchaseOrder = function (recordId) {
-    const record = this.ensurePurchaseOrdersCollection().find((item) => item.id === recordId);
-    if (!record) return;
-
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
+    `,document.body.appendChild(s);const i=s.querySelector("#purchase-order-form");i&&i.addEventListener("submit",r=>{r.preventDefault(),this.handlePurchaseOrderSubmit(t.id||null,s)})},SafetyBudget.handlePurchaseOrderSubmit=async function(e,a){const t=this.ensurePurchaseOrdersCollection(),s=e?t.find(d=>d.id===e):null,i=document.getElementById("purchase-order-submit-btn"),r=this.normalizePurchaseOrderRecord({id:s?.id||Utils.generateSequentialId("SPO",t),prNo:document.getElementById("purchase-order-pr-no")?.value,prDate:document.getElementById("purchase-order-pr-date")?.value,itemCodeNo:document.getElementById("purchase-order-item-code")?.value,itemsDescription:document.getElementById("purchase-order-description")?.value,detailsRemarks:document.getElementById("purchase-order-remarks")?.value,quantity:document.getElementById("purchase-order-quantity")?.value,prStatus:document.getElementById("purchase-order-pr-status")?.value,poNo:document.getElementById("purchase-order-po-no")?.value,poStatus:document.getElementById("purchase-order-po-status")?.value,note:document.getElementById("purchase-order-note")?.value,createdAt:s?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),updatedBy:AppState.currentUser?.name||AppState.currentUser?.email||""});if(!r.prNo||!r.prDate||!r.itemsDescription||!(parseFloat(r.quantity)>0)){Notification.error("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 PR No \u0648 PR Date \u0648 Items Description \u0648 Quantity \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D");return}i&&(i.disabled=!0,i.style.opacity="0.7");try{if(s){const d=t.findIndex(o=>o.id===s.id);t[d]=r}else t.push(r);if(typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),a?.remove(),this.currentTab==="purchase-orders"){const d=document.getElementById("safety-budget-tab-content");d&&(d.innerHTML=await this.renderPurchaseOrdersTab(),this.setupPurchaseOrderEventListeners(),this.loadPurchaseOrdersList())}else this.loadDashboard();Notification.success(s?"\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0637\u0644\u0628 \u0627\u0644\u0634\u0631\u0627\u0621 \u0628\u0646\u062C\u0627\u062D":"\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0637\u0644\u0628 \u0627\u0644\u0634\u0631\u0627\u0621 \u0628\u0646\u062C\u0627\u062D"),GoogleIntegration.autoSave(this.purchaseOrderSheetName,t).then(()=>{AuditLog.log(s?"update_purchase_order":"create_purchase_order","SafetyBudget",r.id,{prNo:r.prNo,poNo:r.poNo,prStatus:r.prStatus,poStatus:r.poStatus})}).catch(d=>{Notification.warning("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0637\u0644\u0628 \u0645\u062D\u0644\u064A\u064B\u0627\u060C \u0648\u062C\u0627\u0631\u064D \u0645\u0632\u0627\u0645\u0646\u062A\u0647 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: "+d.message)})}catch(d){i&&(i.disabled=!1,i.style.opacity="1"),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0641\u0638 \u0637\u0644\u0628 \u0627\u0644\u0634\u0631\u0627\u0621: "+d.message)}},SafetyBudget.viewPurchaseOrder=function(e){const a=this.ensurePurchaseOrdersCollection().find(s=>s.id===e);if(!a)return;const t=document.createElement("div");t.className="modal-overlay",t.innerHTML=`
         <div class="modal-content" style="max-width: 900px; overflow:hidden; border-radius: 24px;">
             <div class="modal-header" style="background: linear-gradient(135deg, #f8fafc 0%, #ffffff 56%, #eff6ff 100%); border-bottom: 1px solid rgba(148,163,184,0.2);">
                 <div class="flex items-start justify-between gap-4 w-full flex-wrap">
@@ -3252,148 +1524,49 @@ SafetyBudget.viewPurchaseOrder = function (recordId) {
                             <i class="fas fa-eye"></i>
                             Purchase Order Details
                         </div>
-                        <h2 class="modal-title mt-3">تفاصيل طلب الشراء</h2>
-                        <p class="text-sm text-slate-500 mt-2">عرض سريع وواضح لكامل بيانات PR و PO مع تمييز بصري للحالة.</p>
+                        <h2 class="modal-title mt-3">\u062A\u0641\u0627\u0635\u064A\u0644 \u0637\u0644\u0628 \u0627\u0644\u0634\u0631\u0627\u0621</h2>
+                        <p class="text-sm text-slate-500 mt-2">\u0639\u0631\u0636 \u0633\u0631\u064A\u0639 \u0648\u0648\u0627\u0636\u062D \u0644\u0643\u0627\u0645\u0644 \u0628\u064A\u0627\u0646\u0627\u062A PR \u0648 PO \u0645\u0639 \u062A\u0645\u064A\u064A\u0632 \u0628\u0635\u0631\u064A \u0644\u0644\u062D\u0627\u0644\u0629.</p>
                     </div>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
                 </div>
             </div>
             <div class="modal-body" style="padding: 24px; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);">
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
-                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4"><p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">PR No</p><p class="text-lg font-black text-slate-900 mt-2">${Utils.escapeHTML(record.prNo || '-')}</p></div>
-                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4"><p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">PR Date</p><p class="text-lg font-black text-slate-900 mt-2">${record.prDate ? Utils.formatDate(record.prDate) : '-'}</p></div>
-                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4"><p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Item Code</p><p class="text-lg font-black text-slate-900 mt-2">${Utils.escapeHTML(record.itemCodeNo || '-')}</p></div>
-                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4"><p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Quantity</p><p class="text-lg font-black text-slate-900 mt-2">${(parseFloat(record.quantity) || 0).toLocaleString('en-US')}</p></div>
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4"><p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">PR No</p><p class="text-lg font-black text-slate-900 mt-2">${Utils.escapeHTML(a.prNo||"-")}</p></div>
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4"><p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">PR Date</p><p class="text-lg font-black text-slate-900 mt-2">${a.prDate?Utils.formatDate(a.prDate):"-"}</p></div>
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4"><p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Item Code</p><p class="text-lg font-black text-slate-900 mt-2">${Utils.escapeHTML(a.itemCodeNo||"-")}</p></div>
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4"><p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Quantity</p><p class="text-lg font-black text-slate-900 mt-2">${(parseFloat(a.quantity)||0).toLocaleString("en-US")}</p></div>
                 </div>
 
                 <div class="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-5">
                     <div class="space-y-4">
                         <div class="rounded-[22px] border border-blue-100 bg-white p-5" style="box-shadow: 0 14px 34px rgba(59,130,246,0.08);">
                             <p class="text-sm font-black text-slate-900 mb-3">Items Description</p>
-                            <p class="text-base leading-8 text-slate-700">${Utils.escapeHTML(record.itemsDescription || '-')}</p>
+                            <p class="text-base leading-8 text-slate-700">${Utils.escapeHTML(a.itemsDescription||"-")}</p>
                         </div>
                         <div class="rounded-[22px] border border-amber-100 bg-white p-5" style="box-shadow: 0 14px 34px rgba(245,158,11,0.08);">
                             <p class="text-sm font-black text-slate-900 mb-3">Details / Remarks</p>
-                            <p class="text-base leading-8 text-slate-700">${Utils.escapeHTML(record.detailsRemarks || '-')}</p>
+                            <p class="text-base leading-8 text-slate-700">${Utils.escapeHTML(a.detailsRemarks||"-")}</p>
                         </div>
                         <div class="rounded-[22px] border border-slate-200 bg-white p-5">
                             <p class="text-sm font-black text-slate-900 mb-3">Note</p>
-                            <p class="text-base leading-8 text-slate-700">${Utils.escapeHTML(record.note || '-')}</p>
+                            <p class="text-base leading-8 text-slate-700">${Utils.escapeHTML(a.note||"-")}</p>
                         </div>
                     </div>
 
                     <div class="space-y-4">
                         <div class="rounded-[22px] border border-emerald-100 bg-white p-5" style="box-shadow: 0 14px 34px rgba(16,185,129,0.08);">
                             <p class="text-sm font-black text-slate-900 mb-3">PR Status</p>
-                            <div>${this.getPurchaseOrderStatusBadge('pr', record.prStatus)}</div>
+                            <div>${this.getPurchaseOrderStatusBadge("pr",a.prStatus)}</div>
                         </div>
                         <div class="rounded-[22px] border border-indigo-100 bg-white p-5" style="box-shadow: 0 14px 34px rgba(99,102,241,0.08);">
                             <p class="text-sm font-black text-slate-900 mb-2">PO No</p>
-                            <p class="text-lg font-black text-slate-900">${Utils.escapeHTML(record.poNo || '-')}</p>
+                            <p class="text-lg font-black text-slate-900">${Utils.escapeHTML(a.poNo||"-")}</p>
                             <p class="text-sm font-black text-slate-900 mt-4 mb-3">PO Status</p>
-                            <div>${this.getPurchaseOrderStatusBadge('po', record.poStatus)}</div>
+                            <div>${this.getPurchaseOrderStatusBadge("po",a.poStatus)}</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    `;
-    document.body.appendChild(modal);
-};
-
-SafetyBudget.editPurchaseOrder = function (recordId) {
-    const record = this.ensurePurchaseOrdersCollection().find((item) => item.id === recordId);
-    if (record) this.showPurchaseOrderForm(record);
-};
-
-SafetyBudget.deletePurchaseOrder = async function (recordId) {
-    if (!confirm('هل أنت متأكد من حذف طلب الشراء هذا؟')) return;
-
-    Loading.show();
-    try {
-        AppState.appData.safetyBudgetPurchaseOrders = this.ensurePurchaseOrdersCollection().filter((record) => record.id !== recordId);
-
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        }
-
-        await GoogleIntegration.autoSave(this.purchaseOrderSheetName, AppState.appData.safetyBudgetPurchaseOrders);
-        AuditLog.log('delete_purchase_order', 'SafetyBudget', recordId);
-
-        Loading.hide();
-        Notification.success('تم حذف طلب الشراء بنجاح');
-        if (this.currentTab === 'purchase-orders') {
-            const contentContainer = document.getElementById('safety-budget-tab-content');
-            if (contentContainer) {
-                contentContainer.innerHTML = await this.renderPurchaseOrdersTab();
-                this.setupPurchaseOrderEventListeners();
-                this.loadPurchaseOrdersList();
-            }
-        } else {
-            this.loadDashboard();
-        }
-    } catch (error) {
-        Loading.hide();
-        Notification.error('حدث خطأ أثناء حذف طلب الشراء: ' + error.message);
-    }
-};
-
-const __originalSafetyBudgetLoad = SafetyBudget.load;
-SafetyBudget.load = async function () {
-    this.ensurePurchaseOrdersCollection();
-    await __originalSafetyBudgetLoad.call(this);
-    this.injectPurchaseOrdersUI();
-    this.ensurePurchaseOrdersLoaded().then(() => {
-        if (this.currentTab === 'purchase-orders') {
-            this.switchTab('purchase-orders', { silent: true });
-        }
-    }).catch(() => {});
-};
-
-const __originalSafetyBudgetSwitchTab = SafetyBudget.switchTab;
-SafetyBudget.switchTab = async function (tabName, options = {}) {
-    if (tabName !== 'purchase-orders') {
-        const result = await __originalSafetyBudgetSwitchTab.call(this, tabName, options);
-        this.injectPurchaseOrdersUI();
-        return result;
-    }
-
-    this.currentTab = tabName;
-    document.querySelectorAll('.tab-btn').forEach((btn) => {
-        btn.classList.toggle('active', btn.dataset.tab === tabName);
-    });
-
-    const contentContainer = document.getElementById('safety-budget-tab-content');
-    if (!contentContainer) return;
-
-    await this.ensurePurchaseOrdersLoaded();
-    contentContainer.innerHTML = await this.renderPurchaseOrdersTab();
-    this.setupPurchaseOrderEventListeners();
-    this.loadPurchaseOrdersList();
-};
-
-// ===== Export module to global scope =====
-// تصدير الموديول إلى window فوراً لضمان توافره
-(function () {
-    'use strict';
-    try {
-        if (typeof window !== 'undefined' && typeof SafetyBudget !== 'undefined') {
-            window.SafetyBudget = SafetyBudget;
-            
-            // إشعار عند تحميل الموديول بنجاح
-            if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
-                Utils.safeLog('✅ SafetyBudget module loaded and available on window.SafetyBudget');
-            }
-        }
-    } catch (error) {
-        console.error('❌ خطأ في تصدير SafetyBudget:', error);
-        // محاولة التصدير مرة أخرى حتى في حالة الخطأ
-        if (typeof window !== 'undefined' && typeof SafetyBudget !== 'undefined') {
-            try {
-                window.SafetyBudget = SafetyBudget;
-            } catch (e) {
-                console.error('❌ فشل تصدير SafetyBudget:', e);
-            }
-        }
-    }
-})();
+    `,document.body.appendChild(t)},SafetyBudget.editPurchaseOrder=function(e){const a=this.ensurePurchaseOrdersCollection().find(t=>t.id===e);a&&this.showPurchaseOrderForm(a)},SafetyBudget.deletePurchaseOrder=async function(e){if(confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0637\u0644\u0628 \u0627\u0644\u0634\u0631\u0627\u0621 \u0647\u0630\u0627\u061F")){Loading.show();try{if(AppState.appData.safetyBudgetPurchaseOrders=this.ensurePurchaseOrdersCollection().filter(a=>a.id!==e),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),await GoogleIntegration.autoSave(this.purchaseOrderSheetName,AppState.appData.safetyBudgetPurchaseOrders),AuditLog.log("delete_purchase_order","SafetyBudget",e),Loading.hide(),Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0637\u0644\u0628 \u0627\u0644\u0634\u0631\u0627\u0621 \u0628\u0646\u062C\u0627\u062D"),this.currentTab==="purchase-orders"){const a=document.getElementById("safety-budget-tab-content");a&&(a.innerHTML=await this.renderPurchaseOrdersTab(),this.setupPurchaseOrderEventListeners(),this.loadPurchaseOrdersList())}else this.loadDashboard()}catch(a){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0637\u0644\u0628 \u0627\u0644\u0634\u0631\u0627\u0621: "+a.message)}}};const __originalSafetyBudgetLoad=SafetyBudget.load;SafetyBudget.load=async function(){this.ensurePurchaseOrdersCollection(),await __originalSafetyBudgetLoad.call(this),this.injectPurchaseOrdersUI(),this.ensurePurchaseOrdersLoaded().then(()=>{this.currentTab==="purchase-orders"&&this.switchTab("purchase-orders",{silent:!0})}).catch(()=>{})};const __originalSafetyBudgetSwitchTab=SafetyBudget.switchTab;SafetyBudget.switchTab=async function(e,a={}){if(e!=="purchase-orders"){const s=await __originalSafetyBudgetSwitchTab.call(this,e,a);return this.injectPurchaseOrdersUI(),s}this.currentTab=e,document.querySelectorAll(".tab-btn").forEach(s=>{s.classList.toggle("active",s.dataset.tab===e)});const t=document.getElementById("safety-budget-tab-content");t&&(await this.ensurePurchaseOrdersLoaded(),t.innerHTML=await this.renderPurchaseOrdersTab(),this.setupPurchaseOrderEventListeners(),this.loadPurchaseOrdersList())},(function(){"use strict";try{typeof window<"u"&&typeof SafetyBudget<"u"&&(window.SafetyBudget=SafetyBudget,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 SafetyBudget module loaded and available on window.SafetyBudget"))}catch{if(typeof window<"u"&&typeof SafetyBudget<"u")try{window.SafetyBudget=SafetyBudget}catch{}}})();
