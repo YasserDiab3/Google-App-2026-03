@@ -1,1365 +1,194 @@
-/**
- * Violations Module
- * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
- */
-// ===== Violations Module (مخالفات الموظفين والمقاولين) =====
-const Violations = {
-    _t(key, fallback) {
-        if (window.AppI18n && typeof window.AppI18n.t === 'function') return window.AppI18n.t(key, fallback);
-        if (window.I18n && typeof window.I18n.t === 'function') return window.I18n.t(key, fallback);
-        return fallback;
-    },
-
-    applyModuleI18n(root) {
-        const i18nCore = (window.AppI18n && typeof window.AppI18n.applyI18n === 'function')
-            ? window.AppI18n
-            : ((window.I18n && typeof window.I18n.applyI18n === 'function') ? window.I18n : null);
-        if (!i18nCore) return;
-        const target = root || document.getElementById('viol-analytics-root');
-        if (!target) return;
-        if (typeof i18nCore.applyI18n === 'function') i18nCore.applyI18n(target);
-        if (typeof i18nCore.applyLiteralTranslations === 'function') i18nCore.applyLiteralTranslations(target);
-    },
-
-    currentFilters: {
-        search: '',
-        personType: '',
-        violationType: '',
-        severity: '',
-        status: ''
-    },
-
-    parseFineAmount(value) {
-        if (value === null || value === undefined || value === '') return 0;
-        if (typeof value === 'number') {
-            return Number.isFinite(value) && value >= 0 ? value : 0;
-        }
-        const arabicIndicDigits = '٠١٢٣٤٥٦٧٨٩';
-        const easternArabicDigits = '۰۱۲۳۴۵۶۷۸۹';
-        const toAsciiDigits = (input) => String(input || '').replace(/[٠-٩۰-۹]/g, (char) => {
-            const idxArabicIndic = arabicIndicDigits.indexOf(char);
-            if (idxArabicIndic >= 0) return String(idxArabicIndic);
-            const idxEasternArabic = easternArabicDigits.indexOf(char);
-            return idxEasternArabic >= 0 ? String(idxEasternArabic) : char;
-        });
-        const normalized = String(value)
-            .trim();
-        const normalizedDigits = toAsciiDigits(normalized)
-            .replace(/[,\u066C]/g, '')
-            .replace(/\u066B/g, '.')
-            .replace(/[^\d.\-]/g, '');
-        const parsed = Number(normalizedDigits);
-        return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
-    },
-
-    // ═══════════════════════════════════════════════════════════════════
-    // ✅ Currency Manager — تحويل العملة (EGP افتراضي + USD اختياري)
-    // كل القيم في قاعدة البيانات مخزّنة بالجنيه المصري (EGP).
-    // التحويل لـ USD يحدث فقط وقت العرض حسب exchange rate القابل للتعديل.
-    // ═══════════════════════════════════════════════════════════════════
-    _VIOL_CURRENCY_KEY: 'viol_currency',
-    _VIOL_RATE_KEY: 'viol_exchange_rate',
-    _VIOL_DEFAULT_RATE: 50, // 1 USD ≈ 50 EGP (افتراضي قابل للتعديل)
-
-    getCurrentCurrency() {
-        try {
-            const stored = localStorage.getItem(this._VIOL_CURRENCY_KEY);
-            return (stored === 'USD') ? 'USD' : 'EGP';
-        } catch (e) { return 'EGP'; }
-    },
-
-    setCurrentCurrency(code) {
-        const normalized = (code === 'USD') ? 'USD' : 'EGP';
-        try { localStorage.setItem(this._VIOL_CURRENCY_KEY, normalized); } catch (e) {}
-        return normalized;
-    },
-
-    getExchangeRate() {
-        try {
-            const stored = parseFloat(localStorage.getItem(this._VIOL_RATE_KEY));
-            return (Number.isFinite(stored) && stored > 0) ? stored : this._VIOL_DEFAULT_RATE;
-        } catch (e) { return this._VIOL_DEFAULT_RATE; }
-    },
-
-    setExchangeRate(rate) {
-        const num = parseFloat(rate);
-        if (!Number.isFinite(num) || num <= 0) return false;
-        try { localStorage.setItem(this._VIOL_RATE_KEY, String(num)); } catch (e) {}
-        return true;
-    },
-
-    /**
-     * تحويل المبلغ من EGP إلى العملة المطلوبة
-     * @param {number} amountEGP - المبلغ بالجنيه المصري
-     * @param {string} [toCurrency] - العملة المستهدفة (افتراضي: الحالية)
-     * @returns {number} المبلغ بالعملة المستهدفة
-     */
-    convertFineAmount(amountEGP, toCurrency) {
-        const target = toCurrency || this.getCurrentCurrency();
-        const num = Number(amountEGP) || 0;
-        if (target === 'USD') {
-            const rate = this.getExchangeRate();
-            return rate > 0 ? num / rate : 0;
-        }
-        return num; // EGP
-    },
-
-    /**
-     * تنسيق المبلغ بصورة جاهزة للعرض (مع رمز العملة الحالية)
-     * مثال: 1500 → "1,500 ج.م" أو "30 $"
-     */
-    formatFineAmount(amountEGP, options = {}) {
-        const currency = options.currency || this.getCurrentCurrency();
-        const symbol = currency === 'USD' ? '$' : 'ج.م';
-        const converted = this.convertFineAmount(amountEGP, currency);
-        // الجنيه المصري: بدون كسور. الدولار: حتى منزلتين عشريتين
-        const formatted = currency === 'USD'
-            ? converted.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-            : converted.toLocaleString('en-US', { maximumFractionDigits: 0 });
-        return currency === 'USD' ? `${formatted} $` : `${formatted} ${symbol}`;
-    },
-
-    /**
-     * إرجاع رمز/اسم العملة الحالية للاستخدام في عناوين المخططات
-     */
-    getCurrencyLabel(form = 'short') {
-        const currency = this.getCurrentCurrency();
-        if (currency === 'USD') return form === 'long' ? this._t('module.violations.analytics.currency.usd_long', 'دولار أمريكي') : '$';
-        return form === 'long' ? this._t('module.violations.analytics.currency.egp_long', 'جنيه مصري') : this._t('module.violations.analytics.currency.egp_short', 'ج.م');
-    },
-
-    normalizeViolationRecord(record) {
-        if (!record || typeof record !== 'object') return null;
-        const fineAmountRaw =
-            record.fineAmount ??
-            record.defaultFineAmount ??
-            record.fine_amount ??
-            record.fine ??
-            record.amount ??
-            record['القيمة المالية'] ??
-            record['قيمة مالية'] ??
-            0;
-        const fineAmount = this.parseFineAmount(fineAmountRaw);
-        const personType = record.personType || (record.contractorName ? 'contractor' : 'employee');
-        return {
-            ...record,
-            personType,
-            fineAmount
-        };
-    },
-
-    /** معرّف آمن لاستخدامه داخل onclick (يفادي كسر السلسلة عند وجود علامات اقتباس أو شرطة مائلة) */
-    _escapeIdForHandler(id) {
-        return JSON.stringify(id == null ? '' : String(id));
-    },
-
-    /**
-     * القيمة المالية المعروضة: إن كانت 0 أو فارغة في السجل لكن نوع المخالفة له غرامة افتراضية، تُعرض غرامة النوع فوراً (بدون انتظار مزامنة الشيت).
-     */
-    getEffectiveFineAmount(record) {
-        const norm = this.normalizeViolationRecord(record);
-        if (!norm) return 0;
-        const stored = this.parseFineAmount(norm.fineAmount);
-        if (stored > 0) return stored;
-        let types = [];
-        try {
-            if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized && ViolationTypesManager.getAll) {
-                ViolationTypesManager.ensureInitialized();
-                types = ViolationTypesManager.getAll() || [];
-            }
-        } catch (e) {
-            types = [];
-        }
-        if (!types.length && typeof AppState !== 'undefined' && Array.isArray(AppState?.appData?.violationTypes)) {
-            types = AppState.appData.violationTypes;
-        }
-        const id = String(norm.violationTypeId || '').trim();
-        const name = String(norm.violationType || '').trim().toLowerCase();
-        let typeFine = 0;
-        if (id) {
-            const t = types.find((x) => x && String(x.id) === id);
-            if (t) typeFine = this.parseFineAmount(t.fineAmount);
-        }
-        if (typeFine <= 0 && name) {
-            const t = types.find((x) => x && String(x.name || '').trim().toLowerCase() === name);
-            if (t) typeFine = this.parseFineAmount(t.fineAmount);
-        }
-        return typeFine > 0 ? typeFine : stored;
-    },
-
-    _normKeyStr(v) {
-        if (v == null) return '';
-        let str = String(v).trim().toLowerCase();
-        // إزالة الحركات (التشكيل)
-        str = str.replace(/[\u064B-\u065F\u0670]/g, '');
-        // توحيد الألف (أ، إ، آ) إلى ألف عادية (ا)
-        str = str.replace(/[أإآ]/g, 'ا');
-        // توحيد التاء المربوطة (ة) إلى هاء (ه)
-        str = str.replace(/ة/g, 'ه');
-        // توحيد الياء والألف المقصورة (ى) إلى ياء عادية (ي)
-        str = str.replace(/[ى]/g, 'ي');
-        // إزالة المسافات المتعددة
-        str = str.replace(/\s+/g, ' ');
-        // إزالة الرموز وعلامات الترقيم التي قد تختلف
-        str = str.replace(/[^\w\s\u0600-\u06FF]/g, '');
-        return str.trim();
-    },
-
-    sameViolationPersonForSequence(draft, existing) {
-        const pt = this._normKeyStr(draft.personType) || 'employee';
-        const p2 = this._normKeyStr(existing.personType) || 'employee';
-        if (pt !== p2) return false;
-        if (pt === 'contractor') {
-            const n1 = this._normKeyStr(draft.contractorName);
-            const n2 = this._normKeyStr(existing.contractorName);
-            if (!n1 || !n2 || n1 !== n2) return false;
-            const w1 = this._normKeyStr(draft.contractorWorker);
-            const w2 = this._normKeyStr(existing.contractorWorker);
-            if (!w1 && !w2) return true;
-            return w1 === w2;
-        }
-        const c1 = this._normKeyStr(draft.employeeCode || draft.employeeNumber);
-        const c2 = this._normKeyStr(existing.employeeCode || existing.employeeNumber);
-        return !!c1 && c1 === c2;
-    },
-
-    getViolationYearMonthKey(violationDate) {
-        const d = new Date(violationDate);
-        if (isNaN(d.getTime())) return null;
-        return d.getFullYear() * 12 + d.getMonth();
-    },
-
-    // ───────── دائرة اعتماد المخالفات ─────────
-    // Cache للإعدادات (يُجدَّد كل 5 دقائق)
-    _violApprovalSettingsCache: null,
-    _violApprovalSettingsCacheAt: 0,
-    _violApprovalRequestsCache: null,
-    _violApprovalRequestsCacheAt: 0,
-    _violApprovalRequestsCacheKey: '',
-
-    /**
-     * احصل على إعدادات دائرة الاعتماد (مع cache)
-     */
-    async getViolationApprovalSettings() {
-        const now = Date.now();
-        if (this._violApprovalSettingsCache && (now - this._violApprovalSettingsCacheAt) < 5 * 60 * 1000) {
-            return this._violApprovalSettingsCache;
-        }
-        try {
-            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                const res = await GoogleIntegration.sendRequest({
-                    action: 'getViolationApprovalSettings',
-                    data: { __timeoutMs: 20000 }
-                });
-                if (res && res.success && res.data) {
-                    this._violApprovalSettingsCache = {
-                        requireApproval: res.data.requireApproval === true,
-                        defaultApprovers: Array.isArray(res.data.defaultApprovers) ? res.data.defaultApprovers : [],
-                        bypassRoles: Array.isArray(res.data.bypassRoles) ? res.data.bypassRoles : ['admin', 'مدير النظام']
-                    };
-                    this._violApprovalSettingsCacheAt = now;
-                    return this._violApprovalSettingsCache;
-                }
-            }
-        } catch (e) {
-            if (AppState.debugMode) Utils.safeWarn('getViolationApprovalSettings:', e);
-        }
-        // Fallback افتراضي (آمن: لا اعتماد)
-        return { requireApproval: false, defaultApprovers: [], bypassRoles: ['admin', 'مدير النظام'] };
-    },
-
-    /**
-     * هل المستخدم الحالي يتجاوز دائرة الاعتماد؟ (مدير النظام مثلاً)
-     */
-    isCurrentUserBypassApproval(bypassRoles) {
-        try {
-            if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function') {
-                if (Permissions.isCurrentUserEffectiveAdmin()) return true;
-            }
-            const role = AppState.currentUser?.role || '';
-            if (Array.isArray(bypassRoles) && bypassRoles.length > 0) {
-                const roleLower = String(role).toLowerCase();
-                return bypassRoles.some(br => String(br).toLowerCase() === roleLower || String(br) === role);
-            }
-        } catch (e) { /* ignore */ }
-        return false;
-    },
-
-    /**
-     * فحص بوابة الاعتماد قبل الحفظ
-     * يُرجع { requiresApproval: boolean, settings }
-     */
-    async checkViolationApprovalGate(formData, opts = {}) {
-        const settings = await this.getViolationApprovalSettings();
-        if (!settings || !settings.requireApproval) {
-            return { requiresApproval: false, settings };
-        }
-        // المدير يتجاوز
-        if (this.isCurrentUserBypassApproval(settings.bypassRoles)) {
-            return { requiresApproval: false, settings, bypassed: true };
-        }
-        // لا توجد قائمة معتمدين → لا يمكن الاعتماد، نسمح بالحفظ المباشر
-        if (!Array.isArray(settings.defaultApprovers) || settings.defaultApprovers.length === 0) {
-            if (AppState.debugMode) Utils.safeWarn('approval required but no approvers configured — allowing direct save');
-            return { requiresApproval: false, settings, reason: 'no_approvers' };
-        }
-        return { requiresApproval: true, settings };
-    },
-
-    /**
-     * إرسال المخالفة لدائرة الاعتماد
-     */
-    async submitViolationForApproval(formData, opts = {}) {
-        try {
-            const settings = await this.getViolationApprovalSettings();
-            const approvers = (settings.defaultApprovers || []).slice();
-            const cu = AppState.currentUser || {};
-
-            const payload = {
-                requestType: opts.isEdit ? 'update' : 'add',
-                violationData: formData,
-                originalViolationId: opts.originalId || '',
-                approvers: approvers,
-                createdBy: cu.id || cu.email || '',
-                createdByName: cu.name || cu.email || '',
-                notes: opts.notes || ''
-            };
-
-            const res = await GoogleIntegration.sendRequest({
-                action: 'addViolationApprovalRequest',
-                data: { ...payload, __timeoutMs: 30000 }
-            });
-
-            return res || { success: false, message: 'لا توجد استجابة من الخادم' };
-        } catch (error) {
-            return { success: false, message: error?.message || String(error) };
-        }
-    },
-
-    /**
-     * جلب طلبات اعتماد المخالفات (للوحة الإدارة)
-     */
-    async fetchViolationApprovalRequests(filters = {}) {
-        try {
-            const res = await GoogleIntegration.sendRequest({
-                action: 'getAllViolationApprovalRequests',
-                data: { ...filters, __timeoutMs: 25000 }
-            });
-            return (res && res.success && Array.isArray(res.data)) ? res.data : [];
-        } catch (e) {
-            if (AppState.debugMode) Utils.safeWarn('fetchViolationApprovalRequests:', e);
-            return [];
-        }
-    },
-
-    /**
-     * اعتماد طلب
-     */
-    async approveViolationRequest(requestId, opts = {}) {
-        const cu = AppState.currentUser || {};
-        const approver = {
-            userId: cu.id || cu.email || '',
-            userName: cu.name || '',
-            userEmail: cu.email || ''
-        };
-        try {
-            const res = await GoogleIntegration.sendRequest({
-                action: 'approveViolationApprovalRequest',
-                data: { requestId, approver, notes: opts.notes || '', force: opts.force === true, __timeoutMs: 30000 }
-            });
-            // إبطال cache الإعدادات
-            this._violApprovalSettingsCache = null;
-            this._invalidateViolationApprovalRequestsCache();
-            return res || { success: false, message: 'لا توجد استجابة' };
-        } catch (e) {
-            return { success: false, message: e?.message || String(e) };
-        }
-    },
-
-    /**
-     * رفض طلب
-     */
-    async rejectViolationRequest(requestId, reason) {
-        const cu = AppState.currentUser || {};
-        const approver = {
-            userId: cu.id || cu.email || '',
-            userName: cu.name || '',
-            userEmail: cu.email || ''
-        };
-        try {
-            const res = await GoogleIntegration.sendRequest({
-                action: 'rejectViolationApprovalRequest',
-                data: { requestId, approver, reason: String(reason || '').trim(), __timeoutMs: 30000 }
-            });
-            this._invalidateViolationApprovalRequestsCache();
-            return res || { success: false, message: 'لا توجد استجابة' };
-        } catch (e) {
-            return { success: false, message: e?.message || String(e) };
-        }
-    },
-
-    /**
-     * حفظ إعدادات دائرة الاعتماد (للمدير)
-     */
-    async saveViolationApprovalSettings(settings) {
-        const cu = AppState.currentUser || {};
-        try {
-            const res = await GoogleIntegration.sendRequest({
-                action: 'updateViolationApprovalSettings',
-                data: {
-                    requireApproval: settings.requireApproval === true,
-                    defaultApprovers: Array.isArray(settings.defaultApprovers) ? settings.defaultApprovers : [],
-                    bypassRoles: Array.isArray(settings.bypassRoles) ? settings.bypassRoles : ['admin', 'مدير النظام'],
-                    updatedBy: cu.id || cu.email || '',
-                    updatedByName: cu.name || '',
-                    __timeoutMs: 25000
-                }
-            });
-            // إبطال cache
-            this._violApprovalSettingsCache = null;
-            this._invalidateViolationApprovalRequestsCache();
-            return res || { success: false, message: 'لا توجد استجابة' };
-        } catch (e) {
-            return { success: false, message: e?.message || String(e) };
-        }
-    },
-
-    _getViolationApprovalRequestsCacheKey(isAdmin, cu) {
-        return isAdmin ? 'admin' : String(cu?.email || cu?.id || 'user');
-    },
-
-    _getCachedViolationApprovalRequests(isAdmin, cu) {
-        const key = this._getViolationApprovalRequestsCacheKey(isAdmin, cu);
-        const now = Date.now();
-        if (this._violApprovalRequestsCache && this._violApprovalRequestsCacheKey === key &&
-            (now - this._violApprovalRequestsCacheAt) < 2 * 60 * 1000) {
-            return this._violApprovalRequestsCache;
-        }
-        return null;
-    },
-
-    _setCachedViolationApprovalRequests(requests, isAdmin, cu) {
-        this._violApprovalRequestsCache = Array.isArray(requests) ? requests : [];
-        this._violApprovalRequestsCacheKey = this._getViolationApprovalRequestsCacheKey(isAdmin, cu);
-        this._violApprovalRequestsCacheAt = Date.now();
-    },
-
-    _invalidateViolationApprovalRequestsCache() {
-        this._violApprovalRequestsCache = null;
-        this._violApprovalRequestsCacheAt = 0;
-        this._violApprovalRequestsCacheKey = '';
-    },
-
-    _cloneViolationApprovalSettings(settings) {
-        const s = settings || {};
-        return {
-            requireApproval: s.requireApproval === true,
-            defaultApprovers: Array.isArray(s.defaultApprovers) ? s.defaultApprovers.map(a => ({ ...a })) : [],
-            bypassRoles: Array.isArray(s.bypassRoles) ? [...s.bypassRoles] : ['admin', 'مدير النظام']
-        };
-    },
-
-    _getViolationApprovalSettingsSnapshot() {
-        const now = Date.now();
-        if (this._violApprovalSettingsCache && (now - this._violApprovalSettingsCacheAt) < 5 * 60 * 1000) {
-            return this._cloneViolationApprovalSettings(this._violApprovalSettingsCache);
-        }
-        return { requireApproval: false, defaultApprovers: [], bypassRoles: ['admin', 'مدير النظام'] };
-    },
-
-    _prefetchViolationApprovalPanelData() {
-        const isAdmin = (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function')
-            ? Permissions.isCurrentUserEffectiveAdmin()
-            : false;
-        const cu = AppState.currentUser || {};
-        const filters = {
-            userEmail: isAdmin ? '' : (cu.email || ''),
-            userId: isAdmin ? '' : (cu.id || '')
-        };
-        void Promise.all([
-            this.getViolationApprovalSettings(),
-            this.fetchViolationApprovalRequests(filters)
-        ]).then(([, requests]) => {
-            this._setCachedViolationApprovalRequests(requests, isAdmin, cu);
-        }).catch(() => { /* خلفية فقط */ });
-    },
-
-    _buildViolationApprovalsSettingsHtml(settings, isAdmin, allUsers) {
-        if (!isAdmin) return '';
-        const s = settings || { requireApproval: false, defaultApprovers: [] };
-        return `
+const Violations={_t(e,t){return window.AppI18n&&typeof window.AppI18n.t=="function"?window.AppI18n.t(e,t):window.I18n&&typeof window.I18n.t=="function"?window.I18n.t(e,t):t},applyModuleI18n(e){const t=window.AppI18n&&typeof window.AppI18n.applyI18n=="function"?window.AppI18n:window.I18n&&typeof window.I18n.applyI18n=="function"?window.I18n:null;if(!t)return;const i=e||document.getElementById("viol-analytics-root");i&&(typeof t.applyI18n=="function"&&t.applyI18n(i),typeof t.applyLiteralTranslations=="function"&&t.applyLiteralTranslations(i))},currentFilters:{search:"",personType:"",violationType:"",severity:"",status:""},parseFineAmount(e){if(e==null||e==="")return 0;if(typeof e=="number")return Number.isFinite(e)&&e>=0?e:0;const t="\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669",i="\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9",a=l=>String(l||"").replace(/[٠-٩۰-۹]/g,c=>{const s=t.indexOf(c);if(s>=0)return String(s);const d=i.indexOf(c);return d>=0?String(d):c}),n=String(e).trim(),o=a(n).replace(/[,\u066C]/g,"").replace(/\u066B/g,".").replace(/[^\d.\-]/g,""),r=Number(o);return Number.isFinite(r)&&r>=0?r:0},_VIOL_CURRENCY_KEY:"viol_currency",_VIOL_RATE_KEY:"viol_exchange_rate",_VIOL_DEFAULT_RATE:50,getCurrentCurrency(){try{return localStorage.getItem(this._VIOL_CURRENCY_KEY)==="USD"?"USD":"EGP"}catch{return"EGP"}},setCurrentCurrency(e){const t=e==="USD"?"USD":"EGP";try{localStorage.setItem(this._VIOL_CURRENCY_KEY,t)}catch{}return t},getExchangeRate(){try{const e=parseFloat(localStorage.getItem(this._VIOL_RATE_KEY));return Number.isFinite(e)&&e>0?e:this._VIOL_DEFAULT_RATE}catch{return this._VIOL_DEFAULT_RATE}},setExchangeRate(e){const t=parseFloat(e);if(!Number.isFinite(t)||t<=0)return!1;try{localStorage.setItem(this._VIOL_RATE_KEY,String(t))}catch{}return!0},convertFineAmount(e,t){const i=t||this.getCurrentCurrency(),a=Number(e)||0;if(i==="USD"){const n=this.getExchangeRate();return n>0?a/n:0}return a},formatFineAmount(e,t={}){const i=t.currency||this.getCurrentCurrency(),a=i==="USD"?"$":"\u062C.\u0645",n=this.convertFineAmount(e,i),o=i==="USD"?n.toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:2}):n.toLocaleString("en-US",{maximumFractionDigits:0});return i==="USD"?`${o} $`:`${o} ${a}`},getCurrencyLabel(e="short"){return this.getCurrentCurrency()==="USD"?e==="long"?this._t("module.violations.analytics.currency.usd_long","\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A"):"$":e==="long"?this._t("module.violations.analytics.currency.egp_long","\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A"):this._t("module.violations.analytics.currency.egp_short","\u062C.\u0645")},normalizeViolationRecord(e){if(!e||typeof e!="object")return null;const t=e.fineAmount??e.defaultFineAmount??e.fine_amount??e.fine??e.amount??e["\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629"]??e["\u0642\u064A\u0645\u0629 \u0645\u0627\u0644\u064A\u0629"]??0,i=this.parseFineAmount(t),a=e.personType||(e.contractorName?"contractor":"employee");return{...e,personType:a,fineAmount:i}},_escapeIdForHandler(e){return JSON.stringify(e==null?"":String(e))},getEffectiveFineAmount(e){const t=this.normalizeViolationRecord(e);if(!t)return 0;const i=this.parseFineAmount(t.fineAmount);if(i>0)return i;let a=[];try{typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.getAll&&(ViolationTypesManager.ensureInitialized(),a=ViolationTypesManager.getAll()||[])}catch{a=[]}!a.length&&typeof AppState<"u"&&Array.isArray(AppState?.appData?.violationTypes)&&(a=AppState.appData.violationTypes);const n=String(t.violationTypeId||"").trim(),o=String(t.violationType||"").trim().toLowerCase();let r=0;if(n){const l=a.find(c=>c&&String(c.id)===n);l&&(r=this.parseFineAmount(l.fineAmount))}if(r<=0&&o){const l=a.find(c=>c&&String(c.name||"").trim().toLowerCase()===o);l&&(r=this.parseFineAmount(l.fineAmount))}return r>0?r:i},_normKeyStr(e){if(e==null)return"";let t=String(e).trim().toLowerCase();return t=t.replace(/[\u064B-\u065F\u0670]/g,""),t=t.replace(/[أإآ]/g,"\u0627"),t=t.replace(/ة/g,"\u0647"),t=t.replace(/[ى]/g,"\u064A"),t=t.replace(/\s+/g," "),t=t.replace(/[^\w\s\u0600-\u06FF]/g,""),t.trim()},sameViolationPersonForSequence(e,t){const i=this._normKeyStr(e.personType)||"employee",a=this._normKeyStr(t.personType)||"employee";if(i!==a)return!1;if(i==="contractor"){const r=this._normKeyStr(e.contractorName),l=this._normKeyStr(t.contractorName);if(!r||!l||r!==l)return!1;const c=this._normKeyStr(e.contractorWorker),s=this._normKeyStr(t.contractorWorker);return!c&&!s?!0:c===s}const n=this._normKeyStr(e.employeeCode||e.employeeNumber),o=this._normKeyStr(t.employeeCode||t.employeeNumber);return!!n&&n===o},getViolationYearMonthKey(e){const t=new Date(e);return isNaN(t.getTime())?null:t.getFullYear()*12+t.getMonth()},_violApprovalSettingsCache:null,_violApprovalSettingsCacheAt:0,_violApprovalRequestsCache:null,_violApprovalRequestsCacheAt:0,_violApprovalRequestsCacheKey:"",async getViolationApprovalSettings(){const e=Date.now();if(this._violApprovalSettingsCache&&e-this._violApprovalSettingsCacheAt<3e5)return this._violApprovalSettingsCache;try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendRequest){const t=await GoogleIntegration.sendRequest({action:"getViolationApprovalSettings",data:{__timeoutMs:2e4}});if(t&&t.success&&t.data)return this._violApprovalSettingsCache={requireApproval:t.data.requireApproval===!0,defaultApprovers:Array.isArray(t.data.defaultApprovers)?t.data.defaultApprovers:[],bypassRoles:Array.isArray(t.data.bypassRoles)?t.data.bypassRoles:["admin","\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"]},this._violApprovalSettingsCacheAt=e,this._violApprovalSettingsCache}}catch(t){AppState.debugMode&&Utils.safeWarn("getViolationApprovalSettings:",t)}return{requireApproval:!1,defaultApprovers:[],bypassRoles:["admin","\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"]}},isCurrentUserBypassApproval(e){try{if(typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin())return!0;const t=AppState.currentUser?.role||"";if(Array.isArray(e)&&e.length>0){const i=String(t).toLowerCase();return e.some(a=>String(a).toLowerCase()===i||String(a)===t)}}catch{}return!1},async checkViolationApprovalGate(e,t={}){const i=await this.getViolationApprovalSettings();return!i||!i.requireApproval?{requiresApproval:!1,settings:i}:this.isCurrentUserBypassApproval(i.bypassRoles)?{requiresApproval:!1,settings:i,bypassed:!0}:!Array.isArray(i.defaultApprovers)||i.defaultApprovers.length===0?(AppState.debugMode&&Utils.safeWarn("approval required but no approvers configured \u2014 allowing direct save"),{requiresApproval:!1,settings:i,reason:"no_approvers"}):{requiresApproval:!0,settings:i}},async submitViolationForApproval(e,t={}){try{const a=((await this.getViolationApprovalSettings()).defaultApprovers||[]).slice(),n=AppState.currentUser||{},o={requestType:t.isEdit?"update":"add",violationData:e,originalViolationId:t.originalId||"",approvers:a,createdBy:n.id||n.email||"",createdByName:n.name||n.email||"",notes:t.notes||""};return await GoogleIntegration.sendRequest({action:"addViolationApprovalRequest",data:{...o,__timeoutMs:3e4}})||{success:!1,message:"\u0644\u0627 \u062A\u0648\u062C\u062F \u0627\u0633\u062A\u062C\u0627\u0628\u0629 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645"}}catch(i){return{success:!1,message:i?.message||String(i)}}},async fetchViolationApprovalRequests(e={}){try{const t=await GoogleIntegration.sendRequest({action:"getAllViolationApprovalRequests",data:{...e,__timeoutMs:25e3}});return t&&t.success&&Array.isArray(t.data)?t.data:[]}catch(t){return AppState.debugMode&&Utils.safeWarn("fetchViolationApprovalRequests:",t),[]}},async approveViolationRequest(e,t={}){const i=AppState.currentUser||{},a={userId:i.id||i.email||"",userName:i.name||"",userEmail:i.email||""};try{const n=await GoogleIntegration.sendRequest({action:"approveViolationApprovalRequest",data:{requestId:e,approver:a,notes:t.notes||"",force:t.force===!0,__timeoutMs:3e4}});return this._violApprovalSettingsCache=null,this._invalidateViolationApprovalRequestsCache(),n||{success:!1,message:"\u0644\u0627 \u062A\u0648\u062C\u062F \u0627\u0633\u062A\u062C\u0627\u0628\u0629"}}catch(n){return{success:!1,message:n?.message||String(n)}}},async rejectViolationRequest(e,t){const i=AppState.currentUser||{},a={userId:i.id||i.email||"",userName:i.name||"",userEmail:i.email||""};try{const n=await GoogleIntegration.sendRequest({action:"rejectViolationApprovalRequest",data:{requestId:e,approver:a,reason:String(t||"").trim(),__timeoutMs:3e4}});return this._invalidateViolationApprovalRequestsCache(),n||{success:!1,message:"\u0644\u0627 \u062A\u0648\u062C\u062F \u0627\u0633\u062A\u062C\u0627\u0628\u0629"}}catch(n){return{success:!1,message:n?.message||String(n)}}},async saveViolationApprovalSettings(e){const t=AppState.currentUser||{};try{const i=await GoogleIntegration.sendRequest({action:"updateViolationApprovalSettings",data:{requireApproval:e.requireApproval===!0,defaultApprovers:Array.isArray(e.defaultApprovers)?e.defaultApprovers:[],bypassRoles:Array.isArray(e.bypassRoles)?e.bypassRoles:["admin","\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"],updatedBy:t.id||t.email||"",updatedByName:t.name||"",__timeoutMs:25e3}});return this._violApprovalSettingsCache=null,this._invalidateViolationApprovalRequestsCache(),i||{success:!1,message:"\u0644\u0627 \u062A\u0648\u062C\u062F \u0627\u0633\u062A\u062C\u0627\u0628\u0629"}}catch(i){return{success:!1,message:i?.message||String(i)}}},_getViolationApprovalRequestsCacheKey(e,t){return e?"admin":String(t?.email||t?.id||"user")},_getCachedViolationApprovalRequests(e,t){const i=this._getViolationApprovalRequestsCacheKey(e,t),a=Date.now();return this._violApprovalRequestsCache&&this._violApprovalRequestsCacheKey===i&&a-this._violApprovalRequestsCacheAt<12e4?this._violApprovalRequestsCache:null},_setCachedViolationApprovalRequests(e,t,i){this._violApprovalRequestsCache=Array.isArray(e)?e:[],this._violApprovalRequestsCacheKey=this._getViolationApprovalRequestsCacheKey(t,i),this._violApprovalRequestsCacheAt=Date.now()},_invalidateViolationApprovalRequestsCache(){this._violApprovalRequestsCache=null,this._violApprovalRequestsCacheAt=0,this._violApprovalRequestsCacheKey=""},_cloneViolationApprovalSettings(e){const t=e||{};return{requireApproval:t.requireApproval===!0,defaultApprovers:Array.isArray(t.defaultApprovers)?t.defaultApprovers.map(i=>({...i})):[],bypassRoles:Array.isArray(t.bypassRoles)?[...t.bypassRoles]:["admin","\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"]}},_getViolationApprovalSettingsSnapshot(){const e=Date.now();return this._violApprovalSettingsCache&&e-this._violApprovalSettingsCacheAt<3e5?this._cloneViolationApprovalSettings(this._violApprovalSettingsCache):{requireApproval:!1,defaultApprovers:[],bypassRoles:["admin","\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"]}},_prefetchViolationApprovalPanelData(){const e=typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"?Permissions.isCurrentUserEffectiveAdmin():!1,t=AppState.currentUser||{},i={userEmail:e?"":t.email||"",userId:e?"":t.id||""};Promise.all([this.getViolationApprovalSettings(),this.fetchViolationApprovalRequests(i)]).then(([,a])=>{this._setCachedViolationApprovalRequests(a,e,t)}).catch(()=>{})},_buildViolationApprovalsSettingsHtml(e,t,i){if(!t)return"";const a=e||{requireApproval:!1,defaultApprovers:[]};return`
                     <div id="viol-approvals-settings-panel" style="background:#fef2f2;border:2px solid #fecaca;border-radius:12px;padding:16px;margin-bottom:18px;">
                         <h4 style="margin:0 0 12px 0;color:#991b1b;font-size:1rem;display:flex;align-items:center;gap:8px;">
-                            <i class="fas fa-cog"></i> إعدادات دائرة الاعتماد (للمدير)
+                            <i class="fas fa-cog"></i> \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F (\u0644\u0644\u0645\u062F\u064A\u0631)
                         </h4>
                         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:14px;">
-                            <input type="checkbox" id="viol-require-approval" ${s.requireApproval ? 'checked' : ''}
+                            <input type="checkbox" id="viol-require-approval" ${a.requireApproval?"checked":""}
                                    style="width:18px;height:18px;cursor:pointer;">
-                            <span style="font-weight:600;color:#374151;">تفعيل دائرة الاعتماد للمخالفات الجديدة</span>
+                            <span style="font-weight:600;color:#374151;">\u062A\u0641\u0639\u064A\u0644 \u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0644\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u062C\u062F\u064A\u062F\u0629</span>
                         </label>
 
                         <div style="margin-bottom:12px;">
-                            <label style="display:block;font-weight:600;color:#374151;margin-bottom:6px;">المعتمدون المعيَّنون:</label>
+                            <label style="display:block;font-weight:600;color:#374151;margin-bottom:6px;">\u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0648\u0646 \u0627\u0644\u0645\u0639\u064A\u064E\u0651\u0646\u0648\u0646:</label>
                             <div id="viol-approvers-list" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;min-height:48px;">
-                                ${(s.defaultApprovers || []).map((a, idx) => `
-                                    <span data-approver-idx="${idx}" style="background:#dbeafe;color:#1e40af;padding:5px 10px;border-radius:20px;font-size:0.85rem;display:inline-flex;align-items:center;gap:6px;">
+                                ${(a.defaultApprovers||[]).map((n,o)=>`
+                                    <span data-approver-idx="${o}" style="background:#dbeafe;color:#1e40af;padding:5px 10px;border-radius:20px;font-size:0.85rem;display:inline-flex;align-items:center;gap:6px;">
                                         <i class="fas fa-user"></i>
-                                        ${Utils.escapeHTML(a.userName || a.userEmail || a.userId || '?')}
-                                        <button type="button" class="viol-remove-approver" data-idx="${idx}" style="background:none;border:none;color:#dc2626;cursor:pointer;padding:0;font-size:14px;">×</button>
+                                        ${Utils.escapeHTML(n.userName||n.userEmail||n.userId||"?")}
+                                        <button type="button" class="viol-remove-approver" data-idx="${o}" style="background:none;border:none;color:#dc2626;cursor:pointer;padding:0;font-size:14px;">\xD7</button>
                                     </span>
-                                `).join('') || '<span style="color:#94a3b8;font-size:0.85rem;">لم يُضَف معتمدون بعد</span>'}
+                                `).join("")||'<span style="color:#94a3b8;font-size:0.85rem;">\u0644\u0645 \u064A\u064F\u0636\u064E\u0641 \u0645\u0639\u062A\u0645\u062F\u0648\u0646 \u0628\u0639\u062F</span>'}
                             </div>
                         </div>
 
                         <div style="display:flex;gap:8px;align-items:flex-end;">
                             <div style="flex:1;">
-                                <label style="display:block;font-size:0.8rem;color:#6b7280;margin-bottom:4px;">إضافة معتمد من قائمة المستخدمين:</label>
+                                <label style="display:block;font-size:0.8rem;color:#6b7280;margin-bottom:4px;">\u0625\u0636\u0627\u0641\u0629 \u0645\u0639\u062A\u0645\u062F \u0645\u0646 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646:</label>
                                 <select id="viol-add-approver-select" class="form-input" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;">
-                                    <option value="">-- اختر مستخدماً --</option>
-                                    ${allUsers.map(u => `
-                                        <option value="${Utils.escapeHTML(String(u.id || u.email || ''))}"
-                                                data-name="${Utils.escapeHTML(String(u.name || ''))}"
-                                                data-email="${Utils.escapeHTML(String(u.email || ''))}"
-                                                data-role="${Utils.escapeHTML(String(u.role || ''))}">
-                                            ${Utils.escapeHTML(u.name || u.email || u.id)} ${u.role ? '(' + Utils.escapeHTML(u.role) + ')' : ''}
+                                    <option value="">-- \u0627\u062E\u062A\u0631 \u0645\u0633\u062A\u062E\u062F\u0645\u0627\u064B --</option>
+                                    ${i.map(n=>`
+                                        <option value="${Utils.escapeHTML(String(n.id||n.email||""))}"
+                                                data-name="${Utils.escapeHTML(String(n.name||""))}"
+                                                data-email="${Utils.escapeHTML(String(n.email||""))}"
+                                                data-role="${Utils.escapeHTML(String(n.role||""))}">
+                                            ${Utils.escapeHTML(n.name||n.email||n.id)} ${n.role?"("+Utils.escapeHTML(n.role)+")":""}
                                         </option>
-                                    `).join('')}
+                                    `).join("")}
                                 </select>
                             </div>
                             <button type="button" id="viol-add-approver-btn" style="background:#1e40af;color:#fff;border:none;padding:9px 16px;border-radius:8px;cursor:pointer;font-weight:600;">
-                                <i class="fas fa-plus"></i> إضافة
+                                <i class="fas fa-plus"></i> \u0625\u0636\u0627\u0641\u0629
                             </button>
                         </div>
 
                         <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px;">
                             <button type="button" id="viol-save-settings-btn" style="background:#059669;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:600;">
-                                <i class="fas fa-save"></i> حفظ الإعدادات
+                                <i class="fas fa-save"></i> \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A
                             </button>
                         </div>
-                    </div>`;
-    },
-
-    _buildViolationApprovalsRequestsHtml(state) {
-        if (state.loading) {
-            return `<div style="text-align:center;padding:32px;color:#6b7280;background:#f9fafb;border-radius:10px;">
+                    </div>`},_buildViolationApprovalsRequestsHtml(e){if(e.loading)return`<div style="text-align:center;padding:32px;color:#6b7280;background:#f9fafb;border-radius:10px;">
                 <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;margin-bottom:10px;display:block;"></i>
-                جاري تحميل الطلبات...
-            </div>`;
-        }
-        const pending = (state.requests || []).filter(r => r.status === 'pending');
-        return this._renderViolationApprovalRequests(pending, { isAdmin: state.isAdmin });
-    },
-
-    _refreshViolationApprovalsModalBody(modal, state) {
-        const pendingCount = (state.requests || []).filter(r => r.status === 'pending').length;
-        const countEl = modal.querySelector('#viol-approval-pending-count');
-        if (countEl) countEl.textContent = state.loading ? '...' : String(pendingCount);
-
-        const settingsPanel = modal.querySelector('#viol-approvals-settings-panel');
-        if (settingsPanel && state.isAdmin) {
-            const tmp = document.createElement('div');
-            tmp.innerHTML = this._buildViolationApprovalsSettingsHtml(state.settings, true, state.allUsers);
-            const fresh = tmp.firstElementChild;
-            if (fresh) settingsPanel.replaceWith(fresh);
-        }
-
-        const listEl = modal.querySelector('#viol-approval-requests-list');
-        if (listEl) {
-            const activeFilter = modal.querySelector('.viol-req-filter.viol-req-filter-active')?.getAttribute('data-filter') || 'pending';
-            const filtered = activeFilter === 'all'
-                ? (state.requests || [])
-                : (state.requests || []).filter(r => r.status === activeFilter);
-            listEl.innerHTML = state.loading
-                ? this._buildViolationApprovalsRequestsHtml(state)
-                : this._renderViolationApprovalRequests(filtered, { isAdmin: state.isAdmin });
-            this._wireViolationApprovalActions(modal, state.isAdmin);
-        }
-    },
-
-    async _loadViolationApprovalsPanelData(modal, state) {
-        try {
-            const [requests, settings] = await Promise.all([
-                this.fetchViolationApprovalRequests(state.filters),
-                this.getViolationApprovalSettings()
-            ]);
-            if (!modal.isConnected) return;
-            state.requests = Array.isArray(requests) ? requests : [];
-            state.settings = this._cloneViolationApprovalSettings(settings);
-            state.loading = false;
-            this._setCachedViolationApprovalRequests(state.requests, state.isAdmin, AppState.currentUser || {});
-            this._refreshViolationApprovalsModalBody(modal, state);
-            this._wireViolationApprovalActions(modal, state.isAdmin);
-        } catch (e) {
-            if (!modal.isConnected) return;
-            state.loading = false;
-            const listEl = modal.querySelector('#viol-approval-requests-list');
-            if (listEl) {
-                listEl.innerHTML = `<div style="text-align:center;padding:24px;color:#dc2626;background:#fef2f2;border-radius:10px;">
-                    <i class="fas fa-exclamation-circle"></i> تعذّر تحميل الطلبات — أعد المحاولة
-                </div>`;
-            }
-            if (AppState.debugMode) Utils.safeWarn('_loadViolationApprovalsPanelData:', e);
-        }
-    },
-
-    _bindViolationApprovalsModalEvents(modal) {
-        if (modal._violApprovalsEventsBound) return;
-        modal._violApprovalsEventsBound = true;
-        const state = () => modal._violApprovalState;
-
-        modal.addEventListener('click', (e) => {
-            if (e.target.closest('#viol-approvals-close')) {
-                modal.remove();
-                return;
-            }
-
-            const removeBtn = e.target.closest('.viol-remove-approver');
-            if (removeBtn) {
-                const idx = parseInt(removeBtn.getAttribute('data-idx'), 10);
-                const st = state();
-                if (!st || isNaN(idx)) return;
-                st.settings.defaultApprovers.splice(idx, 1);
-                this._refreshViolationApprovalsModalBody(modal, st);
-                return;
-            }
-
-            const filterBtn = e.target.closest('.viol-req-filter');
-            if (filterBtn) {
-                const st = state();
-                if (!st) return;
-                modal.querySelectorAll('.viol-req-filter').forEach(b => b.classList.remove('viol-req-filter-active'));
-                filterBtn.classList.add('viol-req-filter-active');
-                const filter = filterBtn.getAttribute('data-filter');
-                const filtered = filter === 'all' ? st.requests : st.requests.filter(r => r.status === filter);
-                const listEl = modal.querySelector('#viol-approval-requests-list');
-                if (listEl) {
-                    listEl.innerHTML = st.loading
-                        ? this._buildViolationApprovalsRequestsHtml(st)
-                        : this._renderViolationApprovalRequests(filtered, { isAdmin: st.isAdmin });
-                    this._wireViolationApprovalActions(modal, st.isAdmin);
-                }
-                return;
-            }
-
-            if (e.target.closest('#viol-add-approver-btn')) {
-                const st = state();
-                if (!st) return;
-                const sel = modal.querySelector('#viol-add-approver-select');
-                const val = sel?.value;
-                if (!val) { Notification.warning('اختر مستخدماً'); return; }
-                const opt = sel.options[sel.selectedIndex];
-                const newApprover = {
-                    userId: val,
-                    userName: opt?.dataset?.name || '',
-                    userEmail: opt?.dataset?.email || '',
-                    role: opt?.dataset?.role || ''
-                };
-                if (st.settings.defaultApprovers.some(a => a.userId === newApprover.userId)) {
-                    Notification.warning('هذا المستخدم مضاف بالفعل');
-                    return;
-                }
-                st.settings.defaultApprovers.push(newApprover);
-                this._refreshViolationApprovalsModalBody(modal, st);
-                return;
-            }
-
-            if (e.target.closest('#viol-save-settings-btn')) {
-                const st = state();
-                if (!st) return;
-                const btn = e.target.closest('#viol-save-settings-btn');
-                if (btn.disabled) return;
-                btn.disabled = true;
-                const requireApproval = modal.querySelector('#viol-require-approval')?.checked === true;
-                const newSettings = {
-                    requireApproval,
-                    defaultApprovers: st.settings.defaultApprovers,
-                    bypassRoles: st.settings.bypassRoles
-                };
-                this.saveViolationApprovalSettings(newSettings).then((res) => {
-                    btn.disabled = false;
-                    if (res && res.success) {
-                        st.settings = this._cloneViolationApprovalSettings(newSettings);
-                        Notification.success('تم حفظ الإعدادات بنجاح');
-                    } else {
-                        Notification.error((res && res.message) || 'فشل حفظ الإعدادات');
-                    }
-                }).catch(() => { btn.disabled = false; });
-            }
-        });
-    },
-
-    /**
-     * عرض شاشة إدارة طلبات الاعتماد + الإعدادات
-     */
-    showViolationApprovalsManager() {
-        const isAdmin = (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function')
-            ? Permissions.isCurrentUserEffectiveAdmin()
-            : false;
-        const cu = AppState.currentUser || {};
-        const allUsers = (AppState.appData?.users || []).filter(u => u && (u.email || u.id || u.name));
-        const filters = {
-            userEmail: isAdmin ? '' : (cu.email || ''),
-            userId: isAdmin ? '' : (cu.id || '')
-        };
-
-        const cachedRequests = this._getCachedViolationApprovalRequests(isAdmin, cu);
-        const state = {
-            settings: this._getViolationApprovalSettingsSnapshot(),
-            requests: cachedRequests || [],
-            isAdmin,
-            allUsers,
-            filters,
-            loading: !cachedRequests
-        };
-
-        const existing = document.getElementById('viol-approvals-manager-modal');
-        if (existing) existing.remove();
-
-        const modal = document.createElement('div');
-        modal.id = 'viol-approvals-manager-modal';
-        modal.className = 'modal modal-open';
-        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;';
-        const pendingCount = state.loading ? '...' : String(state.requests.filter(r => r.status === 'pending').length);
-        modal.innerHTML = `
+                \u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0637\u0644\u0628\u0627\u062A...
+            </div>`;const t=(e.requests||[]).filter(i=>i.status==="pending");return this._renderViolationApprovalRequests(t,{isAdmin:e.isAdmin})},_refreshViolationApprovalsModalBody(e,t){const i=(t.requests||[]).filter(r=>r.status==="pending").length,a=e.querySelector("#viol-approval-pending-count");a&&(a.textContent=t.loading?"...":String(i));const n=e.querySelector("#viol-approvals-settings-panel");if(n&&t.isAdmin){const r=document.createElement("div");r.innerHTML=this._buildViolationApprovalsSettingsHtml(t.settings,!0,t.allUsers);const l=r.firstElementChild;l&&n.replaceWith(l)}const o=e.querySelector("#viol-approval-requests-list");if(o){const r=e.querySelector(".viol-req-filter.viol-req-filter-active")?.getAttribute("data-filter")||"pending",l=r==="all"?t.requests||[]:(t.requests||[]).filter(c=>c.status===r);o.innerHTML=t.loading?this._buildViolationApprovalsRequestsHtml(t):this._renderViolationApprovalRequests(l,{isAdmin:t.isAdmin}),this._wireViolationApprovalActions(e,t.isAdmin)}},async _loadViolationApprovalsPanelData(e,t){try{const[i,a]=await Promise.all([this.fetchViolationApprovalRequests(t.filters),this.getViolationApprovalSettings()]);if(!e.isConnected)return;t.requests=Array.isArray(i)?i:[],t.settings=this._cloneViolationApprovalSettings(a),t.loading=!1,this._setCachedViolationApprovalRequests(t.requests,t.isAdmin,AppState.currentUser||{}),this._refreshViolationApprovalsModalBody(e,t),this._wireViolationApprovalActions(e,t.isAdmin)}catch(i){if(!e.isConnected)return;t.loading=!1;const a=e.querySelector("#viol-approval-requests-list");a&&(a.innerHTML=`<div style="text-align:center;padding:24px;color:#dc2626;background:#fef2f2;border-radius:10px;">
+                    <i class="fas fa-exclamation-circle"></i> \u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u2014 \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
+                </div>`),AppState.debugMode&&Utils.safeWarn("_loadViolationApprovalsPanelData:",i)}},_bindViolationApprovalsModalEvents(e){if(e._violApprovalsEventsBound)return;e._violApprovalsEventsBound=!0;const t=()=>e._violApprovalState;e.addEventListener("click",i=>{if(i.target.closest("#viol-approvals-close")){e.remove();return}const a=i.target.closest(".viol-remove-approver");if(a){const o=parseInt(a.getAttribute("data-idx"),10),r=t();if(!r||isNaN(o))return;r.settings.defaultApprovers.splice(o,1),this._refreshViolationApprovalsModalBody(e,r);return}const n=i.target.closest(".viol-req-filter");if(n){const o=t();if(!o)return;e.querySelectorAll(".viol-req-filter").forEach(s=>s.classList.remove("viol-req-filter-active")),n.classList.add("viol-req-filter-active");const r=n.getAttribute("data-filter"),l=r==="all"?o.requests:o.requests.filter(s=>s.status===r),c=e.querySelector("#viol-approval-requests-list");c&&(c.innerHTML=o.loading?this._buildViolationApprovalsRequestsHtml(o):this._renderViolationApprovalRequests(l,{isAdmin:o.isAdmin}),this._wireViolationApprovalActions(e,o.isAdmin));return}if(i.target.closest("#viol-add-approver-btn")){const o=t();if(!o)return;const r=e.querySelector("#viol-add-approver-select"),l=r?.value;if(!l){Notification.warning("\u0627\u062E\u062A\u0631 \u0645\u0633\u062A\u062E\u062F\u0645\u0627\u064B");return}const c=r.options[r.selectedIndex],s={userId:l,userName:c?.dataset?.name||"",userEmail:c?.dataset?.email||"",role:c?.dataset?.role||""};if(o.settings.defaultApprovers.some(d=>d.userId===s.userId)){Notification.warning("\u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0636\u0627\u0641 \u0628\u0627\u0644\u0641\u0639\u0644");return}o.settings.defaultApprovers.push(s),this._refreshViolationApprovalsModalBody(e,o);return}if(i.target.closest("#viol-save-settings-btn")){const o=t();if(!o)return;const r=i.target.closest("#viol-save-settings-btn");if(r.disabled)return;r.disabled=!0;const c={requireApproval:e.querySelector("#viol-require-approval")?.checked===!0,defaultApprovers:o.settings.defaultApprovers,bypassRoles:o.settings.bypassRoles};this.saveViolationApprovalSettings(c).then(s=>{r.disabled=!1,s&&s.success?(o.settings=this._cloneViolationApprovalSettings(c),Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0628\u0646\u062C\u0627\u062D")):Notification.error(s&&s.message||"\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A")}).catch(()=>{r.disabled=!1})}})},showViolationApprovalsManager(){const e=typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"?Permissions.isCurrentUserEffectiveAdmin():!1,t=AppState.currentUser||{},i=(AppState.appData?.users||[]).filter(s=>s&&(s.email||s.id||s.name)),a={userEmail:e?"":t.email||"",userId:e?"":t.id||""},n=this._getCachedViolationApprovalRequests(e,t),o={settings:this._getViolationApprovalSettingsSnapshot(),requests:n||[],isAdmin:e,allUsers:i,filters:a,loading:!n},r=document.getElementById("viol-approvals-manager-modal");r&&r.remove();const l=document.createElement("div");l.id="viol-approvals-manager-modal",l.className="modal modal-open",l.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;";const c=o.loading?"...":String(o.requests.filter(s=>s.status==="pending").length);l.innerHTML=`
             <div style="background:#fff;border-radius:14px;max-width:1100px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,0.3);">
                 <div style="background:linear-gradient(135deg,#991b1b,#7f1d1d);color:#fff;padding:18px 22px;border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:space-between;">
                     <div style="display:flex;align-items:center;gap:10px;">
                         <i class="fas fa-clipboard-check" style="font-size:22px;"></i>
-                        <h3 style="margin:0;font-size:1.15rem;">دائرة اعتماد المخالفات</h3>
+                        <h3 style="margin:0;font-size:1.15rem;">\u062F\u0627\u0626\u0631\u0629 \u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</h3>
                     </div>
-                    <button type="button" id="viol-approvals-close" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:#fff;width:36px;height:36px;cursor:pointer;font-size:18px;">×</button>
+                    <button type="button" id="viol-approvals-close" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:#fff;width:36px;height:36px;cursor:pointer;font-size:18px;">\xD7</button>
                 </div>
 
                 <div id="viol-approvals-modal-body" style="padding:18px 22px;">
-                    ${this._buildViolationApprovalsSettingsHtml(state.settings, isAdmin, allUsers)}
+                    ${this._buildViolationApprovalsSettingsHtml(o.settings,e,i)}
 
                     <div>
                         <h4 style="margin:0 0 12px 0;color:#374151;font-size:1rem;display:flex;align-items:center;gap:8px;">
-                            <i class="fas fa-list-ul"></i> طلبات الاعتماد
-                            <span id="viol-approval-pending-count" style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:12px;font-size:0.75rem;">${pendingCount}</span>
-                            <span style="font-size:0.75rem;color:#94a3b8;font-weight:400;">معلَّقة</span>
+                            <i class="fas fa-list-ul"></i> \u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F
+                            <span id="viol-approval-pending-count" style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:12px;font-size:0.75rem;">${c}</span>
+                            <span style="font-size:0.75rem;color:#94a3b8;font-weight:400;">\u0645\u0639\u0644\u064E\u0651\u0642\u0629</span>
                         </h4>
                         <div style="display:flex;gap:8px;margin-bottom:12px;">
-                            <button type="button" class="viol-req-filter viol-req-filter-active" data-filter="pending" style="background:#fbbf24;color:#78350f;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;">معلَّقة</button>
-                            <button type="button" class="viol-req-filter" data-filter="approved" style="background:#dcfce7;color:#166534;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.85rem;">معتمدة</button>
-                            <button type="button" class="viol-req-filter" data-filter="rejected" style="background:#fee2e2;color:#991b1b;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.85rem;">مرفوضة</button>
-                            <button type="button" class="viol-req-filter" data-filter="all" style="background:#e5e7eb;color:#374151;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.85rem;">الكل</button>
+                            <button type="button" class="viol-req-filter viol-req-filter-active" data-filter="pending" style="background:#fbbf24;color:#78350f;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;">\u0645\u0639\u0644\u064E\u0651\u0642\u0629</button>
+                            <button type="button" class="viol-req-filter" data-filter="approved" style="background:#dcfce7;color:#166534;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.85rem;">\u0645\u0639\u062A\u0645\u062F\u0629</button>
+                            <button type="button" class="viol-req-filter" data-filter="rejected" style="background:#fee2e2;color:#991b1b;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.85rem;">\u0645\u0631\u0641\u0648\u0636\u0629</button>
+                            <button type="button" class="viol-req-filter" data-filter="all" style="background:#e5e7eb;color:#374151;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.85rem;">\u0627\u0644\u0643\u0644</button>
                         </div>
                         <div id="viol-approval-requests-list">
-                            ${this._buildViolationApprovalsRequestsHtml(state)}
+                            ${this._buildViolationApprovalsRequestsHtml(o)}
                         </div>
                     </div>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        modal._violApprovalState = state;
-        modal._violApprovalsEventsBound = false;
-        this._bindViolationApprovalsModalEvents(modal);
-        if (!state.loading) {
-            this._wireViolationApprovalActions(modal, isAdmin);
-        }
-
-        void this._loadViolationApprovalsPanelData(modal, state);
-    },
-
-    _renderViolationApprovalRequests(requests, opts = {}) {
-        if (!requests || requests.length === 0) {
-            return '<div style="text-align:center;padding:24px;color:#94a3b8;background:#f9fafb;border-radius:10px;">لا توجد طلبات</div>';
-        }
-        return requests.map(r => {
-            const vd = r.violationData || {};
-            const personName = vd.employeeName || vd.contractorName || '—';
-            const statusBadge = {
-                'pending': '<span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">معلَّق</span>',
-                'approved': '<span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">معتمد</span>',
-                'committed': '<span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">مسجَّل</span>',
-                'rejected': '<span style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">مرفوض</span>'
-            }[r.status] || `<span style="background:#e5e7eb;color:#374151;padding:3px 10px;border-radius:12px;font-size:0.75rem;">${r.status}</span>`;
-
-            const dateStr = r.createdAt
-                ? (typeof Utils.formatDateTime === 'function'
-                    ? Utils.formatDateTime(r.createdAt)
-                    : String(r.createdAt))
-                : '—';
-            const approvers = Array.isArray(r.approvers) ? r.approvers : [];
-            const currentIdx = parseInt(r.currentApproverIndex, 10) || 0;
-
-            const showActions = r.status === 'pending' && opts.isAdmin; // المدير يستطيع اعتماد/رفض دائماً
-
-            return `
-                <div data-request-id="${Utils.escapeHTML(String(r.id))}" style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+        `,document.body.appendChild(l),l._violApprovalState=o,l._violApprovalsEventsBound=!1,this._bindViolationApprovalsModalEvents(l),o.loading||this._wireViolationApprovalActions(l,e),this._loadViolationApprovalsPanelData(l,o)},_renderViolationApprovalRequests(e,t={}){return!e||e.length===0?'<div style="text-align:center;padding:24px;color:#94a3b8;background:#f9fafb;border-radius:10px;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0637\u0644\u0628\u0627\u062A</div>':e.map(i=>{const a=i.violationData||{},n=a.employeeName||a.contractorName||"\u2014",o={pending:'<span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">\u0645\u0639\u0644\u064E\u0651\u0642</span>',approved:'<span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">\u0645\u0639\u062A\u0645\u062F</span>',committed:'<span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">\u0645\u0633\u062C\u064E\u0651\u0644</span>',rejected:'<span style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">\u0645\u0631\u0641\u0648\u0636</span>'}[i.status]||`<span style="background:#e5e7eb;color:#374151;padding:3px 10px;border-radius:12px;font-size:0.75rem;">${i.status}</span>`,r=i.createdAt?typeof Utils.formatDateTime=="function"?Utils.formatDateTime(i.createdAt):String(i.createdAt):"\u2014",l=Array.isArray(i.approvers)?i.approvers:[],c=parseInt(i.currentApproverIndex,10)||0,s=i.status==="pending"&&t.isAdmin;return`
+                <div data-request-id="${Utils.escapeHTML(String(i.id))}" style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
                         <div>
-                            <div style="font-weight:700;color:#374151;font-size:0.95rem;">${Utils.escapeHTML(personName)} — ${Utils.escapeHTML(vd.violationType || '—')}</div>
-                            <div style="font-size:0.78rem;color:#6b7280;margin-top:3px;">رقم الطلب: ${Utils.escapeHTML(String(r.id))} • أُنشئ: ${dateStr} • بواسطة: ${Utils.escapeHTML(r.createdByName || r.createdBy || '—')}</div>
+                            <div style="font-weight:700;color:#374151;font-size:0.95rem;">${Utils.escapeHTML(n)} \u2014 ${Utils.escapeHTML(a.violationType||"\u2014")}</div>
+                            <div style="font-size:0.78rem;color:#6b7280;margin-top:3px;">\u0631\u0642\u0645 \u0627\u0644\u0637\u0644\u0628: ${Utils.escapeHTML(String(i.id))} \u2022 \u0623\u064F\u0646\u0634\u0626: ${r} \u2022 \u0628\u0648\u0627\u0633\u0637\u0629: ${Utils.escapeHTML(i.createdByName||i.createdBy||"\u2014")}</div>
                         </div>
-                        ${statusBadge}
+                        ${o}
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;font-size:0.82rem;color:#4b5563;background:#f9fafb;padding:10px;border-radius:8px;margin-bottom:10px;">
-                        <div><strong>الموقع:</strong> ${Utils.escapeHTML(vd.violationLocation || '—')}</div>
-                        <div><strong>الشدة:</strong> ${Utils.escapeHTML(vd.severity || '—')}</div>
-                        <div><strong>التاريخ:</strong> ${vd.violationDate ? new Date(vd.violationDate).toLocaleDateString('ar-EG-u-nu-latn') : '—'}</div>
-                        <div><strong>الغرامة:</strong> ${vd.fineAmount ? Number(vd.fineAmount).toLocaleString('en-US') + ' ج.م' : '—'}</div>
+                        <div><strong>\u0627\u0644\u0645\u0648\u0642\u0639:</strong> ${Utils.escapeHTML(a.violationLocation||"\u2014")}</div>
+                        <div><strong>\u0627\u0644\u0634\u062F\u0629:</strong> ${Utils.escapeHTML(a.severity||"\u2014")}</div>
+                        <div><strong>\u0627\u0644\u062A\u0627\u0631\u064A\u062E:</strong> ${a.violationDate?new Date(a.violationDate).toLocaleDateString("ar-EG-u-nu-latn"):"\u2014"}</div>
+                        <div><strong>\u0627\u0644\u063A\u0631\u0627\u0645\u0629:</strong> ${a.fineAmount?Number(a.fineAmount).toLocaleString("en-US")+" \u062C.\u0645":"\u2014"}</div>
                     </div>
-                    ${approvers.length > 0 ? `
+                    ${l.length>0?`
                         <div style="font-size:0.78rem;color:#6b7280;margin-bottom:8px;">
-                            <strong>المعتمدون:</strong>
-                            ${approvers.map((a, i) => `
-                                <span style="background:${a.approved ? '#dcfce7' : (i === currentIdx ? '#fef3c7' : '#f3f4f6')};color:${a.approved ? '#166534' : (i === currentIdx ? '#92400e' : '#6b7280')};padding:2px 8px;border-radius:10px;margin-right:4px;">
-                                    ${a.approved ? '✓' : (i === currentIdx ? '⏳' : '○')} ${Utils.escapeHTML(a.userName || a.userEmail || '?')}
+                            <strong>\u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0648\u0646:</strong>
+                            ${l.map((d,p)=>`
+                                <span style="background:${d.approved?"#dcfce7":p===c?"#fef3c7":"#f3f4f6"};color:${d.approved?"#166534":p===c?"#92400e":"#6b7280"};padding:2px 8px;border-radius:10px;margin-right:4px;">
+                                    ${d.approved?"\u2713":p===c?"\u23F3":"\u25CB"} ${Utils.escapeHTML(d.userName||d.userEmail||"?")}
                                 </span>
-                            `).join('')}
+                            `).join("")}
                         </div>
-                    ` : ''}
-                    ${r.rejectionReason ? `<div style="background:#fef2f2;border-right:3px solid #dc2626;padding:8px 10px;border-radius:6px;font-size:0.82rem;color:#7f1d1d;margin-bottom:8px;"><strong>سبب الرفض:</strong> ${Utils.escapeHTML(r.rejectionReason)}</div>` : ''}
-                    ${showActions ? `
+                    `:""}
+                    ${i.rejectionReason?`<div style="background:#fef2f2;border-right:3px solid #dc2626;padding:8px 10px;border-radius:6px;font-size:0.82rem;color:#7f1d1d;margin-bottom:8px;"><strong>\u0633\u0628\u0628 \u0627\u0644\u0631\u0641\u0636:</strong> ${Utils.escapeHTML(i.rejectionReason)}</div>`:""}
+                    ${s?`
                         <div style="display:flex;gap:8px;justify-content:flex-end;">
-                            <button type="button" class="viol-req-reject-btn" data-id="${Utils.escapeHTML(String(r.id))}" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;">
-                                <i class="fas fa-times"></i> رفض
+                            <button type="button" class="viol-req-reject-btn" data-id="${Utils.escapeHTML(String(i.id))}" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;">
+                                <i class="fas fa-times"></i> \u0631\u0641\u0636
                             </button>
-                            <button type="button" class="viol-req-approve-btn" data-id="${Utils.escapeHTML(String(r.id))}" style="background:#dcfce7;color:#166534;border:1px solid #86efac;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;">
-                                <i class="fas fa-check"></i> اعتماد
+                            <button type="button" class="viol-req-approve-btn" data-id="${Utils.escapeHTML(String(i.id))}" style="background:#dcfce7;color:#166534;border:1px solid #86efac;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;">
+                                <i class="fas fa-check"></i> \u0627\u0639\u062A\u0645\u0627\u062F
                             </button>
                         </div>
-                    ` : ''}
+                    `:""}
                 </div>
-            `;
-        }).join('');
-    },
-
-    _wireViolationApprovalActions(modal, isAdmin) {
-        modal.querySelectorAll('.viol-req-approve-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const id = btn.getAttribute('data-id');
-                if (!id) return;
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الاعتماد...';
-                const res = await this.approveViolationRequest(id, { force: isAdmin });
-                if (res && res.success) {
-                    Notification.success(res.message || 'تم الاعتماد');
-                    this._invalidateViolationApprovalRequestsCache();
-                    modal.remove();
-                    this.showViolationApprovalsManager();
-                    // تحديث قائمة المخالفات
-                    try { if (this.load) this.load(); } catch (e) {}
-                } else {
-                    Notification.error((res && res.message) || 'فشل الاعتماد');
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-check"></i> اعتماد';
-                }
-            });
-        });
-        modal.querySelectorAll('.viol-req-reject-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const id = btn.getAttribute('data-id');
-                if (!id) return;
-                const reason = (window.prompt('سبب الرفض:') || '').trim();
-                if (!reason) { Notification.warning('سبب الرفض إلزامي'); return; }
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الرفض...';
-                const res = await this.rejectViolationRequest(id, reason);
-                if (res && res.success) {
-                    Notification.success(res.message || 'تم الرفض');
-                    this._invalidateViolationApprovalRequestsCache();
-                    modal.remove();
-                    this.showViolationApprovalsManager();
-                } else {
-                    Notification.error((res && res.message) || 'فشل الرفض');
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-times"></i> رفض';
-                }
-            });
-        });
-    },
-
-    countPriorViolationsSamePersonMonth(draft, excludeId) {
-        const ym = this.getViolationYearMonthKey(draft.violationDate);
-        if (ym == null) return 0;
-        const list = AppState.appData.violations || [];
-        let n = 0;
-        for (let i = 0; i < list.length; i++) {
-            const v = list[i];
-            if (!v || (excludeId && String(v.id) === String(excludeId))) continue;
-            if (this.getViolationYearMonthKey(v.violationDate) !== ym) continue;
-            if (this.sameViolationPersonForSequence(draft, v)) n++;
-        }
-        return n;
-    },
-
-    refreshViolationSequenceBadgeInModal(modal, excludeViolationId) {
-        const info = modal && modal.querySelector ? modal.querySelector('#violation-sequence-info') : null;
-        const textEl = modal && modal.querySelector ? modal.querySelector('#violation-sequence-text') : null;
-        if (!info || !textEl) return;
-        const personType = document.getElementById('violation-person-type')?.value;
-        const violationDate = document.getElementById('violation-date')?.value;
-        if (!personType || !violationDate) {
-            info.classList.add('hidden');
-            return;
-        }
-        const draft = { personType, violationDate: `${violationDate}T12:00:00` };
-        if (personType === 'employee') {
-            draft.employeeCode = document.getElementById('violation-employee-code')?.value.trim() || '';
-            if (!draft.employeeCode) {
-                info.classList.add('hidden');
-                return;
-            }
-        } else {
-            const sel = document.getElementById('violation-contractor-select');
-            draft.contractorName = (sel?.value || '').trim();
-            draft.contractorWorker = document.getElementById('violation-contractor-worker')?.value.trim() || '';
-            if (!draft.contractorName) {
-                info.classList.add('hidden');
-                return;
-            }
-        }
-        const prior = this.countPriorViolationsSamePersonMonth(draft, excludeViolationId);
-        const seq = prior + 1;
-        textEl.textContent = seq <= 1
-            ? 'أول مخالفة في الشهر لهذا الشخص (يُحسب تلقائياً من سجل المخالفات لنفس الشخص ونفس الشهر).'
-            : `المخالفة رقم ${seq} في الشهر لنفس الشخص.`;
-        info.classList.remove('hidden');
-    },
-
-    _violationsImportNormalizeHeaderKey(h) {
-        return String(h == null ? '' : h).trim().replace(/\s+/g, '_').replace(/[^\w\u0600-\u06FF]/g, '').toLowerCase();
-    },
-
-    _violationsImportPick(row, candidates) {
-        const map = {};
-        Object.keys(row || {}).forEach((k) => {
-            map[this._violationsImportNormalizeHeaderKey(k)] = row[k];
-        });
-        for (let i = 0; i < candidates.length; i++) {
-            const ck = this._violationsImportNormalizeHeaderKey(candidates[i]);
-            if (map[ck] !== undefined && map[ck] !== null && String(map[ck]).trim() !== '') {
-                return map[ck];
-            }
-        }
-        return '';
-    },
-
-    downloadViolationsImportTemplate() {
-        if (typeof XLSX === 'undefined') {
-            Notification.error('مكتبة Excel غير محمّلة. حدّث الصفحة وحاول مرة أخرى.');
-            return;
-        }
-        const headers = [
-            'نوع_الشخص',
-            'الكود_الوظيفي',
-            'اسم_الموظف',
-            'اسم_المقاول',
-            'عامل_المقاول',
-            'نوع_المخالفة',
-            'تاريخ_المخالفة',
-            'وقت_المخالفة',
-            'الموقع',
-            'مكان_المخالفة',
-            'الشدة',
-            'الحالة',
-            'التفاصيل',
-            'الاجراء_المتخذ',
-            'الغرامة'
-        ];
-        const example = [
-            'موظف',
-            '12345',
-            '',
-            '',
-            '',
-            'تأخر عن العمل',
-            '2026-05-01',
-            '08:30',
-            'المصنع الرئيسي',
-            'خط الإنتاج 1',
-            'متوسطة',
-            'قيد المراجعة',
-            'وصف مختصر',
-            'إنذار شفهي',
-            '100'
-        ];
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet([headers, example]);
-        ws['!cols'] = headers.map(() => ({ wch: 18 }));
-        XLSX.utils.book_append_sheet(wb, ws, 'المخالفات');
-        const note = [
-            ['تعليمات:'],
-            ['• نوع_الشخص: اكتب "موظف" أو "مقاول".'],
-            ['• للموظف: عبّئ الكود_الوظيفي ونوع_المخالفة والتاريخ والوقت والموقع ومكان_المخالفة.'],
-            ['• للمقاول: عبّئ اسم_المقاول كما في القائمة ويمكن تعبئة عامل_المقاول.'],
-            ['• التاريخ بصيغة YYYY-MM-DD أو تنسيق تاريخ إكسل.']
-        ];
-        const ws2 = XLSX.utils.aoa_to_sheet(note);
-        XLSX.utils.book_append_sheet(wb, ws2, 'تعليمات');
-        XLSX.writeFile(wb, `قالب_استيراد_المخالفات_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    },
-
-    showViolationsImportModal() {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+            `}).join("")},_wireViolationApprovalActions(e,t){e.querySelectorAll(".viol-req-approve-btn").forEach(i=>{i.addEventListener("click",async()=>{const a=i.getAttribute("data-id");if(!a)return;i.disabled=!0,i.innerHTML='<i class="fas fa-spinner fa-spin"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F...';const n=await this.approveViolationRequest(a,{force:t});if(n&&n.success){Notification.success(n.message||"\u062A\u0645 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F"),this._invalidateViolationApprovalRequestsCache(),e.remove(),this.showViolationApprovalsManager();try{this.load&&this.load()}catch{}}else Notification.error(n&&n.message||"\u0641\u0634\u0644 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F"),i.disabled=!1,i.innerHTML='<i class="fas fa-check"></i> \u0627\u0639\u062A\u0645\u0627\u062F'})}),e.querySelectorAll(".viol-req-reject-btn").forEach(i=>{i.addEventListener("click",async()=>{const a=i.getAttribute("data-id");if(!a)return;const n=(window.prompt("\u0633\u0628\u0628 \u0627\u0644\u0631\u0641\u0636:")||"").trim();if(!n){Notification.warning("\u0633\u0628\u0628 \u0627\u0644\u0631\u0641\u0636 \u0625\u0644\u0632\u0627\u0645\u064A");return}i.disabled=!0,i.innerHTML='<i class="fas fa-spinner fa-spin"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u0631\u0641\u0636...';const o=await this.rejectViolationRequest(a,n);o&&o.success?(Notification.success(o.message||"\u062A\u0645 \u0627\u0644\u0631\u0641\u0636"),this._invalidateViolationApprovalRequestsCache(),e.remove(),this.showViolationApprovalsManager()):(Notification.error(o&&o.message||"\u0641\u0634\u0644 \u0627\u0644\u0631\u0641\u0636"),i.disabled=!1,i.innerHTML='<i class="fas fa-times"></i> \u0631\u0641\u0636')})})},countPriorViolationsSamePersonMonth(e,t){const i=this.getViolationYearMonthKey(e.violationDate);if(i==null)return 0;const a=AppState.appData.violations||[];let n=0;for(let o=0;o<a.length;o++){const r=a[o];!r||t&&String(r.id)===String(t)||this.getViolationYearMonthKey(r.violationDate)===i&&this.sameViolationPersonForSequence(e,r)&&n++}return n},refreshViolationSequenceBadgeInModal(e,t){const i=e&&e.querySelector?e.querySelector("#violation-sequence-info"):null,a=e&&e.querySelector?e.querySelector("#violation-sequence-text"):null;if(!i||!a)return;const n=document.getElementById("violation-person-type")?.value,o=document.getElementById("violation-date")?.value;if(!n||!o){i.classList.add("hidden");return}const r={personType:n,violationDate:`${o}T12:00:00`};if(n==="employee"){if(r.employeeCode=document.getElementById("violation-employee-code")?.value.trim()||"",!r.employeeCode){i.classList.add("hidden");return}}else{const s=document.getElementById("violation-contractor-select");if(r.contractorName=(s?.value||"").trim(),r.contractorWorker=document.getElementById("violation-contractor-worker")?.value.trim()||"",!r.contractorName){i.classList.add("hidden");return}}const c=this.countPriorViolationsSamePersonMonth(r,t)+1;a.textContent=c<=1?"\u0623\u0648\u0644 \u0645\u062E\u0627\u0644\u0641\u0629 \u0641\u064A \u0627\u0644\u0634\u0647\u0631 \u0644\u0647\u0630\u0627 \u0627\u0644\u0634\u062E\u0635 (\u064A\u064F\u062D\u0633\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0633\u062C\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0644\u0646\u0641\u0633 \u0627\u0644\u0634\u062E\u0635 \u0648\u0646\u0641\u0633 \u0627\u0644\u0634\u0647\u0631).":`\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0631\u0642\u0645 ${c} \u0641\u064A \u0627\u0644\u0634\u0647\u0631 \u0644\u0646\u0641\u0633 \u0627\u0644\u0634\u062E\u0635.`,i.classList.remove("hidden")},_violationsImportNormalizeHeaderKey(e){return String(e??"").trim().replace(/\s+/g,"_").replace(/[^\w\u0600-\u06FF]/g,"").toLowerCase()},_violationsImportPick(e,t){const i={};Object.keys(e||{}).forEach(a=>{i[this._violationsImportNormalizeHeaderKey(a)]=e[a]});for(let a=0;a<t.length;a++){const n=this._violationsImportNormalizeHeaderKey(t[a]);if(i[n]!==void 0&&i[n]!==null&&String(i[n]).trim()!=="")return i[n]}return""},downloadViolationsImportTemplate(){if(typeof XLSX>"u"){Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u062D\u062F\u0651\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const e=["\u0646\u0648\u0639_\u0627\u0644\u0634\u062E\u0635","\u0627\u0644\u0643\u0648\u062F_\u0627\u0644\u0648\u0638\u064A\u0641\u064A","\u0627\u0633\u0645_\u0627\u0644\u0645\u0648\u0638\u0641","\u0627\u0633\u0645_\u0627\u0644\u0645\u0642\u0627\u0648\u0644","\u0639\u0627\u0645\u0644_\u0627\u0644\u0645\u0642\u0627\u0648\u0644","\u0646\u0648\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u062A\u0627\u0631\u064A\u062E_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0648\u0642\u062A_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0627\u0644\u0645\u0648\u0642\u0639","\u0645\u0643\u0627\u0646_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0627\u0644\u0634\u062F\u0629","\u0627\u0644\u062D\u0627\u0644\u0629","\u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644","\u0627\u0644\u0627\u062C\u0631\u0627\u0621_\u0627\u0644\u0645\u062A\u062E\u0630","\u0627\u0644\u063A\u0631\u0627\u0645\u0629"],t=["\u0645\u0648\u0638\u0641","12345","","","","\u062A\u0623\u062E\u0631 \u0639\u0646 \u0627\u0644\u0639\u0645\u0644","2026-05-01","08:30","\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A","\u062E\u0637 \u0627\u0644\u0625\u0646\u062A\u0627\u062C 1","\u0645\u062A\u0648\u0633\u0637\u0629","\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629","\u0648\u0635\u0641 \u0645\u062E\u062A\u0635\u0631","\u0625\u0646\u0630\u0627\u0631 \u0634\u0641\u0647\u064A","100"],i=XLSX.utils.book_new(),a=XLSX.utils.aoa_to_sheet([e,t]);a["!cols"]=e.map(()=>({wch:18})),XLSX.utils.book_append_sheet(i,a,"\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A");const n=[["\u062A\u0639\u0644\u064A\u0645\u0627\u062A:"],['\u2022 \u0646\u0648\u0639_\u0627\u0644\u0634\u062E\u0635: \u0627\u0643\u062A\u0628 "\u0645\u0648\u0638\u0641" \u0623\u0648 "\u0645\u0642\u0627\u0648\u0644".'],["\u2022 \u0644\u0644\u0645\u0648\u0638\u0641: \u0639\u0628\u0651\u0626 \u0627\u0644\u0643\u0648\u062F_\u0627\u0644\u0648\u0638\u064A\u0641\u064A \u0648\u0646\u0648\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0648\u0642\u062A \u0648\u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0645\u0643\u0627\u0646_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629."],["\u2022 \u0644\u0644\u0645\u0642\u0627\u0648\u0644: \u0639\u0628\u0651\u0626 \u0627\u0633\u0645_\u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0643\u0645\u0627 \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0648\u064A\u0645\u0643\u0646 \u062A\u0639\u0628\u0626\u0629 \u0639\u0627\u0645\u0644_\u0627\u0644\u0645\u0642\u0627\u0648\u0644."],["\u2022 \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0628\u0635\u064A\u063A\u0629 YYYY-MM-DD \u0623\u0648 \u062A\u0646\u0633\u064A\u0642 \u062A\u0627\u0631\u064A\u062E \u0625\u0643\u0633\u0644."]],o=XLSX.utils.aoa_to_sheet(n);XLSX.utils.book_append_sheet(i,o,"\u062A\u0639\u0644\u064A\u0645\u0627\u062A"),XLSX.writeFile(i,`\u0642\u0627\u0644\u0628_\u0627\u0633\u062A\u064A\u0631\u0627\u062F_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A_${new Date().toISOString().slice(0,10)}.xlsx`)},showViolationsImportModal(){const e=document.createElement("div");e.className="modal-overlay",e.innerHTML=`
             <div class="modal-content" style="max-width: 720px;">
                 <div class="modal-header">
-                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>استيراد مخالفات من Excel</h2>
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0645\u0646 Excel</h2>
                     <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body space-y-4">
                     <div class="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
-                        <p class="m-0 mb-2"><i class="fas fa-download ml-2"></i>حمّل القالب الفارغ (صف عناوين + صف مثال)، عبّئ البيانات ثم ارفع الملف.</p>
+                        <p class="m-0 mb-2"><i class="fas fa-download ml-2"></i>\u062D\u0645\u0651\u0644 \u0627\u0644\u0642\u0627\u0644\u0628 \u0627\u0644\u0641\u0627\u0631\u063A (\u0635\u0641 \u0639\u0646\u0627\u0648\u064A\u0646 + \u0635\u0641 \u0645\u062B\u0627\u0644)\u060C \u0639\u0628\u0651\u0626 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u062B\u0645 \u0627\u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641.</p>
                         <button type="button" id="violations-import-download-template" class="btn-secondary btn-sm">
-                            <i class="fas fa-file-download ml-2"></i>تحميل قالب Excel
+                            <i class="fas fa-file-download ml-2"></i>\u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0644\u0628 Excel
                         </button>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">ملف Excel (.xlsx)</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0644\u0641 Excel (.xlsx)</label>
                         <input type="file" id="violations-import-file" accept=".xlsx,.xls" class="form-input">
                     </div>
                     <div id="violations-import-preview" class="hidden text-sm text-gray-600 max-h-48 overflow-auto border rounded p-2 bg-gray-50"></div>
                     <div class="flex justify-end gap-2 pt-2 border-t">
-                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
                         <button type="button" id="violations-import-confirm" class="btn-primary" disabled>
-                            <i class="fas fa-upload ml-2"></i>تأكيد الاستيراد
+                            <i class="fas fa-upload ml-2"></i>\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F
                         </button>
                     </div>
                 </div>
-            </div>`;
-        document.body.appendChild(modal);
-        let parsedRows = [];
-        const fileInput = modal.querySelector('#violations-import-file');
-        const preview = modal.querySelector('#violations-import-preview');
-        const confirmBtn = modal.querySelector('#violations-import-confirm');
-        modal.querySelector('#violations-import-download-template')?.addEventListener('click', () => this.downloadViolationsImportTemplate());
-        fileInput?.addEventListener('change', async (e) => {
-            const f = e.target.files && e.target.files[0];
-            parsedRows = [];
-            confirmBtn.disabled = true;
-            preview.classList.add('hidden');
-            if (!f) return;
-            if (typeof XLSX === 'undefined') {
-                Notification.error('مكتبة Excel غير محمّلة.');
-                return;
-            }
-            try {
-                const buf = await f.arrayBuffer();
-                const wb = XLSX.read(buf, { type: 'array' });
-                const sheet = wb.Sheets[wb.SheetNames[0]];
-                const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-                parsedRows = Array.isArray(json) ? json : [];
-                preview.innerHTML = `<p>تم قراءة <strong>${parsedRows.length}</strong> صفاً من الورقة الأولى «${Utils.escapeHTML(wb.SheetNames[0] || '')}».</p>`;
-                preview.classList.remove('hidden');
-                confirmBtn.disabled = parsedRows.length === 0;
-            } catch (err) {
-                Utils.safeError('استيراد مخالفات:', err);
-                Notification.error('تعذّر قراءة الملف: ' + (err.message || ''));
-            }
-        });
-        confirmBtn?.addEventListener('click', async () => {
-            if (!parsedRows.length) return;
-            confirmBtn.disabled = true;
-            await this.processViolationsImportRows(parsedRows, modal);
-        });
-        modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
-    },
-
-    async processViolationsImportRows(rows, modal) {
-        let ok = 0;
-        let fail = 0;
-        const errors = [];
-        if (!Array.isArray(AppState.appData.violations)) AppState.appData.violations = [];
-        let violationTypes = [];
-        if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized && ViolationTypesManager.getAll) {
-            try {
-                ViolationTypesManager.ensureInitialized();
-                violationTypes = ViolationTypesManager.getAll();
-            } catch (e) {
-                violationTypes = AppState.appData.violationTypes || [];
-            }
-        } else {
-            violationTypes = AppState.appData.violationTypes || [];
-        }
-        const typeByName = new Map((violationTypes || []).map(t => [String(t.name || '').trim().toLowerCase(), t]));
-        const uniqueMissingTypeNames = new Set();
-        for (let r = 0; r < rows.length; r++) {
-            const row0 = rows[r] || {};
-            const nm = String(this._violationsImportPick(row0, ['نوع_المخالفة', 'نوع المخالفة', 'violationType']) || '').trim();
-            if (nm && !typeByName.has(nm.toLowerCase())) uniqueMissingTypeNames.add(nm);
-        }
-        if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized && ViolationTypesManager.addType && ViolationTypesManager.getTypeByName) {
-            try {
-                ViolationTypesManager.ensureInitialized();
-                uniqueMissingTypeNames.forEach((typeName) => {
-                    const lk = typeName.toLowerCase();
-                    try {
-                        const nt = ViolationTypesManager.addType({ name: typeName, description: '', fineAmount: 0 });
-                        typeByName.set(lk, nt);
-                    } catch (addErr) {
-                        const ex = ViolationTypesManager.getTypeByName(typeName);
-                        if (ex) typeByName.set(lk, ex);
-                    }
-                });
-            } catch (batchVtErr) {
-                Utils.safeWarn('استيراد: تعذر إنشاء أنواع مخالفات جديدة من الملف:', batchVtErr);
-            }
-        }
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i] || {};
-            try {
-                const ptRaw = String(this._violationsImportPick(row, ['نوع_الشخص', 'نوع الشخص', 'personType', 'persontype']) || '').trim();
-                const ptLower = ptRaw.toLowerCase();
-                const personType = (ptLower.includes('مقاول') || ptLower === 'contractor') ? 'contractor' : 'employee';
-                const empCode = String(this._violationsImportPick(row, ['الكود_الوظيفي', 'الكود الوظيفي', 'employeeCode', 'employeenumber', 'employeeNumber']) || '').trim();
-                const empName = String(this._violationsImportPick(row, ['اسم_الموظف', 'اسم الموظف', 'employeeName']) || '').trim();
-                const cName = String(this._violationsImportPick(row, ['اسم_المقاول', 'اسم المقاول', 'contractorName']) || '').trim();
-                const cWorker = String(this._violationsImportPick(row, ['عامل_المقاول', 'عامل المقاول', 'contractorWorker']) || '').trim();
-                const vTypeName = String(this._violationsImportPick(row, ['نوع_المخالفة', 'نوع المخالفة', 'violationType']) || '').trim();
-                const vDateRaw = this._violationsImportPick(row, ['تاريخ_المخالفة', 'تاريخ المخالفة', 'violationDate', 'date']);
-                const vTimeRaw = String(this._violationsImportPick(row, ['وقت_المخالفة', 'وقت المخالفة', 'violationTime', 'time']) || '08:00');
-                const loc = String(this._violationsImportPick(row, ['الموقع', 'violationLocation', 'location']) || '').trim();
-                const place = String(this._violationsImportPick(row, ['مكان_المخالفة', 'مكان المخالفة', 'violationPlace', 'place']) || '').trim();
-                const sev = String(this._violationsImportPick(row, ['الشدة', 'severity']) || 'متوسطة').trim();
-                const st = String(this._violationsImportPick(row, ['الحالة', 'status']) || 'قيد المراجعة').trim();
-                const details = String(this._violationsImportPick(row, ['التفاصيل', 'violationDetails', 'details']) || '').trim();
-                const action = String(this._violationsImportPick(row, ['الاجراء_المتخذ', 'الإجراء المتخذ', 'actionTaken', 'action']) || '').trim();
-                const fineRaw = this._violationsImportPick(row, ['الغرامة', 'fineAmount', 'fine']);
-                if (!vTypeName || !vDateRaw) {
-                    fail++;
-                    errors.push(`صف ${i + 2}: نوع المخالفة أو التاريخ ناقص`);
-                    continue;
-                }
-                if (personType === 'employee' && !empCode) {
-                    fail++;
-                    errors.push(`صف ${i + 2}: الكود الوظيفي مطلوب للموظف`);
-                    continue;
-                }
-                if (personType === 'contractor' && !cName) {
-                    fail++;
-                    errors.push(`صف ${i + 2}: اسم المقاول مطلوب`);
-                    continue;
-                }
-                let violationDate = vDateRaw;
-                if (typeof violationDate === 'number' && typeof XLSX !== 'undefined' && XLSX.SSF) {
-                    try {
-                        const d = XLSX.SSF.parse_date_code(violationDate);
-                        if (d) violationDate = new Date(Date.UTC(d.y, d.m - 1, d.d)).toISOString();
-                    } catch (e1) { /* keep */ }
-                } else if (typeof violationDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(violationDate.trim())) {
-                    violationDate = new Date(violationDate.trim().slice(0, 10) + 'T12:00:00').toISOString();
-                } else {
-                    const dTry = new Date(violationDate);
-                    violationDate = isNaN(dTry.getTime()) ? new Date().toISOString() : dTry.toISOString();
-                }
-                const typeObj = typeByName.get(vTypeName.toLowerCase());
-                const violationTypeId = typeObj ? String(typeObj.id || '') : '';
-                const fineAmount = this.parseFineAmount(fineRaw !== '' && fineRaw !== undefined ? fineRaw : (typeObj ? typeObj.fineAmount : 0));
-                const draft = {
-                    personType,
-                    violationDate,
-                    employeeCode: empCode,
-                    employeeNumber: empCode,
-                    employeeName: empName,
-                    contractorName: cName,
-                    contractorWorker: cWorker
-                };
-                const seq = this.countPriorViolationsSamePersonMonth(draft, null) + 1;
-                const rec = {
-                    id: Utils.generateId('VIOLATION'),
-                    isoCode: typeof generateISOCode === 'function' ? generateISOCode('VIOL', AppState.appData.violations) : ('VIOL-' + Date.now() + '-' + i),
-                    personType,
-                    employeeId: personType === 'employee' ? Utils.generateId('EMP') : '',
-                    employeeName: personType === 'employee' ? empName : '',
-                    employeeCode: personType === 'employee' ? empCode : '',
-                    employeeNumber: personType === 'employee' ? empCode : '',
-                    employeePosition: '',
-                    employeeDepartment: '',
-                    contractorId: '',
-                    contractorName: personType === 'contractor' ? cName : '',
-                    contractorWorker: personType === 'contractor' ? cWorker : '',
-                    contractorPosition: '',
-                    contractorDepartment: '',
-                    violationTypeId,
-                    violationType: vTypeName,
-                    fineAmount,
-                    violationDate,
-                    violationTime: vTimeRaw.length >= 5 ? vTimeRaw.slice(0, 5) : '08:00',
-                    violationLocation: loc,
-                    violationLocationId: loc,
-                    violationPlace: place,
-                    violationPlaceId: place,
-                    violationDetails: details,
-                    severity: sev || 'متوسطة',
-                    actionTaken: action,
-                    status: st || 'قيد المراجعة',
-                    photo: '',
-                    violationSequenceInMonth: seq,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
-                AppState.appData.violations.push(this.normalizeViolationRecord(rec));
-                ok++;
-            } catch (rowErr) {
-                fail++;
-                errors.push(`صف ${i + 2}: ${rowErr.message || rowErr}`);
-            }
-        }
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            try { window.DataManager.save(); } catch (e) { /* ignore */ }
-        }
-        GoogleIntegration.autoSave('Violations', AppState.appData.violations).catch(() => {
-            Notification.warning('تم الاستيراد محلياً. راجع المزامنة مع الشيت لاحقاً.');
-        });
-        if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureViolationsTypeIds) {
-            try {
-                ViolationTypesManager.ensureViolationsTypeIds();
-            } catch (eId) { /* ignore */ }
-        }
-        if (modal && modal.parentNode) modal.remove();
-        Notification.success(`تم استيراد ${ok} مخالفة${fail ? ` (تخطي ${fail})` : ''}.`);
-        if (errors.length && errors.length <= 5) {
-            errors.forEach((m) => Utils.safeWarn(m));
-        } else if (errors.length) {
-            Utils.safeWarn('استيراد مخالفات: ' + errors.slice(0, 5).join(' | ') + ' ...');
-        }
-        this.load();
-    },
-
-    async load() {
-        // Add language change listener
-        if (!this._languageChangeListenerAdded) {
-            document.addEventListener('language-changed', () => {
-                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
-                this.load();
-            });
-            this._languageChangeListenerAdded = true;
-        }
-
-        // التحقق من المتطلبات الأساسية
-        if (typeof Utils === 'undefined') {
-            console.error('❌ Utils غير متوفر - يرجى تحديث الصفحة');
-            const section = document.getElementById('violations-section');
-            if (section) {
-                section.innerHTML = `
+            </div>`,document.body.appendChild(e);let t=[];const i=e.querySelector("#violations-import-file"),a=e.querySelector("#violations-import-preview"),n=e.querySelector("#violations-import-confirm");e.querySelector("#violations-import-download-template")?.addEventListener("click",()=>this.downloadViolationsImportTemplate()),i?.addEventListener("change",async o=>{const r=o.target.files&&o.target.files[0];if(t=[],n.disabled=!0,a.classList.add("hidden"),!!r){if(typeof XLSX>"u"){Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629.");return}try{const l=await r.arrayBuffer(),c=XLSX.read(l,{type:"array"}),s=c.Sheets[c.SheetNames[0]],d=XLSX.utils.sheet_to_json(s,{defval:""});t=Array.isArray(d)?d:[],a.innerHTML=`<p>\u062A\u0645 \u0642\u0631\u0627\u0621\u0629 <strong>${t.length}</strong> \u0635\u0641\u0627\u064B \u0645\u0646 \u0627\u0644\u0648\u0631\u0642\u0629 \u0627\u0644\u0623\u0648\u0644\u0649 \xAB${Utils.escapeHTML(c.SheetNames[0]||"")}\xBB.</p>`,a.classList.remove("hidden"),n.disabled=t.length===0}catch(l){Utils.safeError("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A:",l),Notification.error("\u062A\u0639\u0630\u0651\u0631 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0644\u0641: "+(l.message||""))}}}),n?.addEventListener("click",async()=>{t.length&&(n.disabled=!0,await this.processViolationsImportRows(t,e))}),e.addEventListener("click",o=>{o.target===e&&e.remove()})},async processViolationsImportRows(e,t){let i=0,a=0;const n=[];Array.isArray(AppState.appData.violations)||(AppState.appData.violations=[]);let o=[];if(typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.getAll)try{ViolationTypesManager.ensureInitialized(),o=ViolationTypesManager.getAll()}catch{o=AppState.appData.violationTypes||[]}else o=AppState.appData.violationTypes||[];const r=new Map((o||[]).map(c=>[String(c.name||"").trim().toLowerCase(),c])),l=new Set;for(let c=0;c<e.length;c++){const s=e[c]||{},d=String(this._violationsImportPick(s,["\u0646\u0648\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","violationType"])||"").trim();d&&!r.has(d.toLowerCase())&&l.add(d)}if(typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.addType&&ViolationTypesManager.getTypeByName)try{ViolationTypesManager.ensureInitialized(),l.forEach(c=>{const s=c.toLowerCase();try{const d=ViolationTypesManager.addType({name:c,description:"",fineAmount:0});r.set(s,d)}catch{const p=ViolationTypesManager.getTypeByName(c);p&&r.set(s,p)}})}catch(c){Utils.safeWarn("\u0627\u0633\u062A\u064A\u0631\u0627\u062F: \u062A\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u0623\u0646\u0648\u0627\u0639 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062C\u062F\u064A\u062F\u0629 \u0645\u0646 \u0627\u0644\u0645\u0644\u0641:",c)}for(let c=0;c<e.length;c++){const s=e[c]||{};try{const p=String(this._violationsImportPick(s,["\u0646\u0648\u0639_\u0627\u0644\u0634\u062E\u0635","\u0646\u0648\u0639 \u0627\u0644\u0634\u062E\u0635","personType","persontype"])||"").trim().toLowerCase(),f=p.includes("\u0645\u0642\u0627\u0648\u0644")||p==="contractor"?"contractor":"employee",u=String(this._violationsImportPick(s,["\u0627\u0644\u0643\u0648\u062F_\u0627\u0644\u0648\u0638\u064A\u0641\u064A","\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A","employeeCode","employeenumber","employeeNumber"])||"").trim(),w=String(this._violationsImportPick(s,["\u0627\u0633\u0645_\u0627\u0644\u0645\u0648\u0638\u0641","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641","employeeName"])||"").trim(),m=String(this._violationsImportPick(s,["\u0627\u0633\u0645_\u0627\u0644\u0645\u0642\u0627\u0648\u0644","\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644","contractorName"])||"").trim(),h=String(this._violationsImportPick(s,["\u0639\u0627\u0645\u0644_\u0627\u0644\u0645\u0642\u0627\u0648\u0644","\u0639\u0627\u0645\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644","contractorWorker"])||"").trim(),g=String(this._violationsImportPick(s,["\u0646\u0648\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","violationType"])||"").trim(),D=this._violationsImportPick(s,["\u062A\u0627\u0631\u064A\u062E_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","violationDate","date"]),B=String(this._violationsImportPick(s,["\u0648\u0642\u062A_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0648\u0642\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","violationTime","time"])||"08:00"),L=String(this._violationsImportPick(s,["\u0627\u0644\u0645\u0648\u0642\u0639","violationLocation","location"])||"").trim(),C=String(this._violationsImportPick(s,["\u0645\u0643\u0627\u0646_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","violationPlace","place"])||"").trim(),F=String(this._violationsImportPick(s,["\u0627\u0644\u0634\u062F\u0629","severity"])||"\u0645\u062A\u0648\u0633\u0637\u0629").trim(),$=String(this._violationsImportPick(s,["\u0627\u0644\u062D\u0627\u0644\u0629","status"])||"\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629").trim(),S=String(this._violationsImportPick(s,["\u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644","violationDetails","details"])||"").trim(),_=String(this._violationsImportPick(s,["\u0627\u0644\u0627\u062C\u0631\u0627\u0621_\u0627\u0644\u0645\u062A\u062E\u0630","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630","actionTaken","action"])||"").trim(),O=this._violationsImportPick(s,["\u0627\u0644\u063A\u0631\u0627\u0645\u0629","fineAmount","fine"]);if(!g||!D){a++,n.push(`\u0635\u0641 ${c+2}: \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0623\u0648 \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0646\u0627\u0642\u0635`);continue}if(f==="employee"&&!u){a++,n.push(`\u0635\u0641 ${c+2}: \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A \u0645\u0637\u0644\u0648\u0628 \u0644\u0644\u0645\u0648\u0638\u0641`);continue}if(f==="contractor"&&!m){a++,n.push(`\u0635\u0641 ${c+2}: \u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0645\u0637\u0644\u0648\u0628`);continue}let P=D;if(typeof P=="number"&&typeof XLSX<"u"&&XLSX.SSF)try{const W=XLSX.SSF.parse_date_code(P);W&&(P=new Date(Date.UTC(W.y,W.m-1,W.d)).toISOString())}catch{}else if(typeof P=="string"&&/^\d{4}-\d{2}-\d{2}/.test(P.trim()))P=new Date(P.trim().slice(0,10)+"T12:00:00").toISOString();else{const W=new Date(P);P=isNaN(W.getTime())?new Date().toISOString():W.toISOString()}const R=r.get(g.toLowerCase()),v=R?String(R.id||""):"",U=this.parseFineAmount(O!==""&&O!==void 0?O:R?R.fineAmount:0),G={personType:f,violationDate:P,employeeCode:u,employeeNumber:u,employeeName:w,contractorName:m,contractorWorker:h},it=this.countPriorViolationsSamePersonMonth(G,null)+1,ot={id:Utils.generateId("VIOLATION"),isoCode:typeof generateISOCode=="function"?generateISOCode("VIOL",AppState.appData.violations):"VIOL-"+Date.now()+"-"+c,personType:f,employeeId:f==="employee"?Utils.generateId("EMP"):"",employeeName:f==="employee"?w:"",employeeCode:f==="employee"?u:"",employeeNumber:f==="employee"?u:"",employeePosition:"",employeeDepartment:"",contractorId:"",contractorName:f==="contractor"?m:"",contractorWorker:f==="contractor"?h:"",contractorPosition:"",contractorDepartment:"",violationTypeId:v,violationType:g,fineAmount:U,violationDate:P,violationTime:B.length>=5?B.slice(0,5):"08:00",violationLocation:L,violationLocationId:L,violationPlace:C,violationPlaceId:C,violationDetails:S,severity:F||"\u0645\u062A\u0648\u0633\u0637\u0629",actionTaken:_,status:$||"\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629",photo:"",violationSequenceInMonth:it,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.violations.push(this.normalizeViolationRecord(ot)),i++}catch(d){a++,n.push(`\u0635\u0641 ${c+2}: ${d.message||d}`)}}if(typeof window.DataManager<"u"&&window.DataManager.save)try{window.DataManager.save()}catch{}if(GoogleIntegration.autoSave("Violations",AppState.appData.violations).catch(()=>{Notification.warning("\u062A\u0645 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u062D\u0644\u064A\u0627\u064B. \u0631\u0627\u062C\u0639 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u0627\u0644\u0634\u064A\u062A \u0644\u0627\u062D\u0642\u0627\u064B.")}),typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureViolationsTypeIds)try{ViolationTypesManager.ensureViolationsTypeIds()}catch{}t&&t.parentNode&&t.remove(),Notification.success(`\u062A\u0645 \u0627\u0633\u062A\u064A\u0631\u0627\u062F ${i} \u0645\u062E\u0627\u0644\u0641\u0629${a?` (\u062A\u062E\u0637\u064A ${a})`:""}.`),n.length&&n.length<=5?n.forEach(c=>Utils.safeWarn(c)):n.length&&Utils.safeWarn("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A: "+n.slice(0,5).join(" | ")+" ..."),this.load()},async load(){if(this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0),typeof Utils>"u"){const t=document.getElementById("violations-section");t&&(t.innerHTML=`
                     <div class="content-card">
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
-                                <h3 class="text-lg font-semibold text-gray-800 mb-2">فشل تحميل الموديول</h3>
-                                <p class="text-gray-500 mb-4">يرجى تحديث الصفحة</p>
+                                <h3 class="text-lg font-semibold text-gray-800 mb-2">\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644</h3>
+                                <p class="text-gray-500 mb-4">\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629</p>
                                 <button onclick="location.reload()" class="btn-primary">
-                                    <i class="fas fa-redo ml-2"></i>تحديث الصفحة
+                                    <i class="fas fa-redo ml-2"></i>\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629
                                 </button>
                             </div>
                         </div>
                     </div>
-                `;
-            }
-            return;
-        }
-
-        const section = document.getElementById('violations-section');
-        if (!section) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                Utils.safeWarn('⚠️ قسم violations-section غير موجود');
-            }
-            return;
-        }
-        try {
-            // التأكد من وجود AppState
-            if (typeof AppState === 'undefined') {
-                const errorMsg = '❌ AppState غير متوفر. يرجى تحديث الصفحة.';
-                Utils.safeError(errorMsg);
-                section.innerHTML = `
+                `);return}const e=document.getElementById("violations-section");if(!e){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u0642\u0633\u0645 violations-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}try{if(typeof AppState>"u"){Utils.safeError("\u274C AppState \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629."),e.innerHTML=`
                     <div class="content-card">
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
-                                <h3 class="text-lg font-semibold text-gray-800 mb-2">فشل تحميل الموديول</h3>
-                                <p class="text-gray-500 mb-4">يرجى تحديث الصفحة</p>
+                                <h3 class="text-lg font-semibold text-gray-800 mb-2">\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644</h3>
+                                <p class="text-gray-500 mb-4">\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629</p>
                                 <button onclick="location.reload()" class="btn-primary">
-                                    <i class="fas fa-redo ml-2"></i>تحديث الصفحة
+                                    <i class="fas fa-redo ml-2"></i>\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629
                                 </button>
                             </div>
                         </div>
                     </div>
-                `;
-                return;
-            }
-
-            // التأكد من وجود البيانات
-            if (!AppState.appData) {
-                AppState.appData = {};
-            }
-            if (!AppState.appData.violations) {
-                AppState.appData.violations = [];
-            }
-            if (!AppState.appData.blacklistRegister) {
-                AppState.appData.blacklistRegister = [];
-            }
-
-            // التحقق من وجود ViolationTypesManager قبل الاستدعاء
-            if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized) {
-                try {
-                    ViolationTypesManager.ensureInitialized();
-                } catch (vtError) {
-                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                        Utils.safeWarn('⚠️ خطأ في تهيئة ViolationTypesManager:', vtError);
-                    }
-                }
-            } else {
-                // استخدام القيم الافتراضية إذا لم يكن ViolationTypesManager متوفراً
-                if (!AppState.appData.violationTypes || !Array.isArray(AppState.appData.violationTypes)) {
-                    AppState.appData.violationTypes = [];
-                }
-            }
-
-            // ✅ تحميل مباشر من قاعدة البيانات/Sheets عند أول فتح (بدون تكرار طلبات متوازية)
-            const hasViolationsData = Array.isArray(AppState.appData.violations) && AppState.appData.violations.length > 0;
-            const lastSync = (() => {
-                try { return localStorage.getItem('violations_last_sync'); } catch (e) { return null; }
-            })();
-            const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
-            const CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
-            const isStale = cacheAge >= CACHE_DURATION;
-            const canFetch = typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets;
-            const isEnabled = AppState?.googleConfig?.appsScript?.enabled && AppState?.googleConfig?.appsScript?.scriptUrl;
-            if (!hasViolationsData && canFetch && isEnabled) {
-                try {
-                    await this.ensureViolationsCoreDataLoaded({ force: true });
-                } catch (e) {
-                    // عرض محلي ثم يكمّل التحديث في الخلفية
-                }
-            } else if (isStale && hasViolationsData && canFetch && isEnabled) {
-                void this.ensureViolationsCoreDataLoaded({ force: true }).then(() => {
-                    try {
-                        const stats = document.getElementById('violations-stats-cards');
-                        if (stats) stats.outerHTML = this.renderAllViolationsStats();
-                        const list = document.getElementById('violations-list');
-                        if (list) list.innerHTML = this.renderViolationsList();
-                        const filters = document.getElementById('violations-filters-container');
-                        if (filters) filters.innerHTML = this.renderFilters();
-                        this.bindFilters();
-                    } catch (e2) { /* ignore */ }
-                });
-            }
-
-            const t = (k, f) => this._t(k, f);
-            section.innerHTML = `
+                `;return}if(AppState.appData||(AppState.appData={}),AppState.appData.violations||(AppState.appData.violations=[]),AppState.appData.blacklistRegister||(AppState.appData.blacklistRegister=[]),typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized)try{ViolationTypesManager.ensureInitialized()}catch(s){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0647\u064A\u0626\u0629 ViolationTypesManager:",s)}else(!AppState.appData.violationTypes||!Array.isArray(AppState.appData.violationTypes))&&(AppState.appData.violationTypes=[]);const t=Array.isArray(AppState.appData.violations)&&AppState.appData.violations.length>0,i=(()=>{try{return localStorage.getItem("violations_last_sync")}catch{return null}})(),a=i?Date.now()-parseInt(i,10):1/0,n=600*1e3,o=a>=n,r=typeof GoogleIntegration<"u"&&GoogleIntegration.readFromSheets,l=AppState?.googleConfig?.appsScript?.enabled&&AppState?.googleConfig?.appsScript?.scriptUrl;if(!t&&r&&l)try{await this.ensureViolationsCoreDataLoaded({force:!0})}catch{}else o&&t&&r&&l&&this.ensureViolationsCoreDataLoaded({force:!0}).then(()=>{try{const s=document.getElementById("violations-stats-cards");s&&(s.outerHTML=this.renderAllViolationsStats());const d=document.getElementById("violations-list");d&&(d.innerHTML=this.renderViolationsList());const p=document.getElementById("violations-filters-container");p&&(p.innerHTML=this.renderFilters()),this.bindFilters()}catch{}});const c=(s,d)=>this._t(s,d);e.innerHTML=`
             <div class="section-header" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); border-radius: 16px; padding: 24px 32px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(220, 38, 38, 0.25);">
                 <div class="flex items-center justify-between flex-wrap gap-3">
                     <div class="text-center w-full" style="flex-grow: 1; min-width: 200px;">
                         <h1 class="section-title" style="color: white; font-size: 2rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 8px; display: flex; align-items: center; justify-content: center;">
                             <i class="fas fa-exclamation-triangle ml-3" style="font-size: 1.8rem;"></i>
-                            ${t('module.violations.title', 'سجل المخالفات')}
+                            ${c("module.violations.title","\u0633\u062C\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A")}
                         </h1>
-                        <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">${t('module.violations.subtitle', 'تسجيل ومتابعة مخالفات الموظفين والمقاولين')}</p>
+                        <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">${c("module.violations.subtitle","\u062A\u0633\u062C\u064A\u0644 \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646")}</p>
                     </div>
                     <div class="flex flex-shrink-0 flex-wrap gap-2 justify-center">
                         <button type="button" id="add-violation-btn" class="btn-primary" style="background: white; color: #dc2626; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
                             <i class="fas fa-plus ml-2"></i>
-                            ${t('module.violations.btn.new', 'تسجيل مخالفة جديدة')}
+                            ${c("module.violations.btn.new","\u062A\u0633\u062C\u064A\u0644 \u0645\u062E\u0627\u0644\u0641\u0629 \u062C\u062F\u064A\u062F\u0629")}
                         </button>
-                        <button type="button" id="viol-approvals-btn" onclick="Violations.showViolationApprovalsManager()" style="background: rgba(255,255,255,0.18); color: #fff; border: 2px solid rgba(255,255,255,0.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;" title="${t('module.violations.btn.approvals', 'دائرة اعتماد المخالفات')}">
+                        <button type="button" id="viol-approvals-btn" onclick="Violations.showViolationApprovalsManager()" style="background: rgba(255,255,255,0.18); color: #fff; border: 2px solid rgba(255,255,255,0.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;" title="${c("module.violations.btn.approvals","\u062F\u0627\u0626\u0631\u0629 \u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A")}">
                             <i class="fas fa-clipboard-check ml-2"></i>
-                            ${t('module.violations.btn.approvals', 'دائرة الاعتماد')}
+                            ${c("module.violations.btn.approvals","\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F")}
                         </button>
                     </div>
                 </div>
@@ -1369,22 +198,22 @@ const Violations = {
                 <div class="tabs-container mb-4">
                     <div class="tabs-nav" style="flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box;">
                         <button class="tab-btn active" data-tab="all" onclick="Violations.switchTab('all')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
-                            <i class="fas fa-list ml-2"></i>${t('module.violations.tab.all', 'جميع المخالفات')}
+                            <i class="fas fa-list ml-2"></i>${c("module.violations.tab.all","\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A")}
                         </button>
                         <button class="tab-btn" data-tab="employees" onclick="Violations.switchTab('employees')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
-                            <i class="fas fa-user-tie ml-2"></i>${t('module.violations.tab.employees', 'مخالفات الموظفين')}
+                            <i class="fas fa-user-tie ml-2"></i>${c("module.violations.tab.employees","\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646")}
                         </button>
                         <button class="tab-btn" data-tab="contractors" onclick="Violations.switchTab('contractors')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
-                            <i class="fas fa-users-cog ml-2"></i>${t('module.violations.tab.contractors', 'مخالفات المقاولين')}
+                            <i class="fas fa-users-cog ml-2"></i>${c("module.violations.tab.contractors","\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646")}
                         </button>
                         <button class="tab-btn" data-tab="analytics" onclick="Violations.switchTab('analytics')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
-                            <i class="fas fa-chart-bar ml-2"></i>${t('module.violations.tab.analytics', 'تحليل البيانات')}
+                            <i class="fas fa-chart-bar ml-2"></i>${c("module.violations.tab.analytics","\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}
                         </button>
                         <button class="tab-btn" data-tab="blacklist" onclick="Violations.switchTabAsync('blacklist')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
-                            <i class="fas fa-user-slash ml-2"></i>${t('module.violations.tab.blacklist', 'سجل الممنوعين من الدخول – Blacklist')}
+                            <i class="fas fa-user-slash ml-2"></i>${c("module.violations.tab.blacklist","\u0633\u062C\u0644 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u2013 Blacklist")}
                         </button>
-                        <button id="violations-btn-refresh" type="button" class="tab-btn" onclick="Violations.refreshModule()" title="${t('module.common.refresh', 'تحديث البيانات')}" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
-                            <i class="fas fa-sync-alt ml-2"></i>${t('module.common.refresh', 'تحديث')}
+                        <button id="violations-btn-refresh" type="button" class="tab-btn" onclick="Violations.refreshModule()" title="${c("module.common.refresh","\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
+                            <i class="fas fa-sync-alt ml-2"></i>${c("module.common.refresh","\u062A\u062D\u062F\u064A\u062B")}
                         </button>
                     </div>
                 </div>
@@ -1393,7 +222,7 @@ const Violations = {
                 <div id="violations-tab-content">
                     <div class="content-card" id="violations-list-tab">
                     <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-list ml-2"></i>قائمة المخالفات</h2>
+                        <h2 class="card-title"><i class="fas fa-list ml-2"></i>\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</h2>
                     </div>
                     <div class="card-body">
                         ${this.renderAllViolationsStats()}
@@ -1407,31 +236,12 @@ const Violations = {
                     </div>
                 </div>
             </div>
-        `;
-            this.setupEventListeners();
-            void this._prefetchViolationApprovalPanelData();
-
-            // ✅ تحديث خلفي بعد العرض (بدون إعادة بناء كامل إذا كانت البيانات محدثة)
-            Promise.resolve(this.ensureViolationsCoreDataLoaded({ force: false }))
-                .then(() => {
-                    try {
-                        const stats = document.getElementById('violations-stats-cards');
-                        if (stats) stats.outerHTML = this.renderAllViolationsStats();
-                        const list = document.getElementById('violations-list');
-                        if (list) list.innerHTML = this.renderViolationsList();
-                        const filters = document.getElementById('violations-filters-container');
-                        if (filters) filters.innerHTML = this.renderFilters();
-                    } catch (e) {}
-                })
-                .catch(() => {});
-        } catch (error) {
-            Utils.safeError('❌ خطأ في تحميل مديول المخالفات:', error);
-            section.innerHTML = `
+        `,this.setupEventListeners(),this._prefetchViolationApprovalPanelData(),Promise.resolve(this.ensureViolationsCoreDataLoaded({force:!1})).then(()=>{try{const s=document.getElementById("violations-stats-cards");s&&(s.outerHTML=this.renderAllViolationsStats());const d=document.getElementById("violations-list");d&&(d.innerHTML=this.renderViolationsList());const p=document.getElementById("violations-filters-container");p&&(p.innerHTML=this.renderFilters())}catch{}}).catch(()=>{})}catch(t){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A:",t),e.innerHTML=`
                 <div class="section-header">
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-exclamation-circle ml-3"></i>
-                            سجل المخالفات
+                            \u0633\u062C\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A
                         </h1>
                     </div>
                 </div>
@@ -1440,221 +250,93 @@ const Violations = {
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل البيانات</p>
+                                <p class="text-gray-500 mb-4">\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
                                 <button onclick="Violations.load()" class="btn-primary">
                                     <i class="fas fa-redo ml-2"></i>
-                                    إعادة المحاولة
+                                    \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
-            `;
-        }
-    },
-
-    /**
-     * تحميل بيانات المخالفات الأساسية من Google Sheets مرة واحدة (مع منع التكرار)
-     */
-    async ensureViolationsCoreDataLoaded({ force = false } = {}) {
-        if (this._violationsCoreLoadPromise && !force) {
-            return this._violationsCoreLoadPromise;
-        }
-        this._violationsCoreLoadPromise = (async () => {
-            if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) return;
-
-            const isEnabled = AppState?.googleConfig?.appsScript?.enabled && AppState?.googleConfig?.appsScript?.scriptUrl;
-            if (!isEnabled) return;
-
-            const [violationsData, typesData] = await Promise.all([
-                GoogleIntegration.readFromSheets('Violations').catch(() => null),
-                GoogleIntegration.readFromSheets('ViolationTypes').catch(() => null),
-            ]);
-
-            if (Array.isArray(violationsData)) {
-                const serverNormalized = violationsData
-                    .map((item) => this.normalizeViolationRecord(item))
-                    .filter(Boolean);
-                const localViolations = Array.isArray(AppState.appData.violations) ? AppState.appData.violations : [];
-                // P1.4: لا تستبدل محلياً غير فارغ بمصفوفة فارغة من الخادم (مثل العيادة)
-                if (serverNormalized.length === 0 && localViolations.length > 0) {
-                    Utils.safeWarn(`⚠️ تجاهل مخالفات فارغة من الخادم — الإبقاء على ${localViolations.length} مخالفة محلية`);
-                } else {
-                    // حماية إضافية: لا تفقد مخالفات محلية حديثة لم تصلها الخادم بعد
-                    const serverIds = new Set(serverNormalized.map(v => v && v.id).filter(Boolean));
-                    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-                    const localOnlyRecent = localViolations.filter(v => {
-                        if (!v || !v.id || serverIds.has(v.id)) return false;
-                        const created = new Date(v.createdAt || v.timestamp || 0).getTime();
-                        return created >= fiveMinutesAgo;
-                    });
-                    AppState.appData.violations = localOnlyRecent.length > 0
-                        ? [...localOnlyRecent, ...serverNormalized]
-                        : serverNormalized;
-                }
-            }
-            // لا تستبدل أنواعاً محلية/مستوردة بمصفوفة فارغة من الشيت (استجابة خاطئة أو تأخر) — يمنع الرجوع للافتراضي بعد التحديث
-            if (Array.isArray(typesData)) {
-                const localTypes = Array.isArray(AppState.appData.violationTypes) ? AppState.appData.violationTypes : [];
-                if (typesData.length > 0) {
-                    AppState.appData.violationTypes = typesData;
-                } else if (localTypes.length === 0) {
-                    AppState.appData.violationTypes = [];
-                }
-                if (typesData.length > 0 || (typesData.length === 0 && localTypes.length === 0)) {
-                    try {
-                        if (!AppState.syncMeta) AppState.syncMeta = { sheets: {}, users: 0, lastSyncTime: 0, userEmail: null };
-                        if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
-                        AppState.syncMeta.sheets.ViolationTypes = Date.now();
-                    } catch (eMeta) { /* ignore */ }
-                }
-            }
-
-            try {
-                if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized) {
-                    ViolationTypesManager.ensureInitialized();
-                }
-            } catch (e) {}
-
-            try { localStorage.setItem('violations_last_sync', String(Date.now())); } catch (e) {}
-
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                try { window.DataManager.save(); } catch (e) {}
-            }
-        })().finally(() => {
-            this._violationsCoreLoadPromise = null;
-        });
-        return this._violationsCoreLoadPromise;
-    },
-
-    renderViolationsList() {
-        try {
-            const violations = this.getFilteredViolations();
-            if (!violations || violations.length === 0) {
-                const message = this.hasActiveFilters()
-                    ? 'لا توجد مخالفات مطابقة لعوامل التصفية الحالية'
-                    : 'لا توجد مخالفات مسجلة';
-                return `<div class="empty-state"><p class="text-gray-500">${message}</p></div>`;
-            }
-            return `
+            `}},async ensureViolationsCoreDataLoaded({force:e=!1}={}){return this._violationsCoreLoadPromise&&!e?this._violationsCoreLoadPromise:(this._violationsCoreLoadPromise=(async()=>{if(typeof GoogleIntegration>"u"||!GoogleIntegration.readFromSheets||!(AppState?.googleConfig?.appsScript?.enabled&&AppState?.googleConfig?.appsScript?.scriptUrl))return;const[i,a]=await Promise.all([GoogleIntegration.readFromSheets("Violations").catch(()=>null),GoogleIntegration.readFromSheets("ViolationTypes").catch(()=>null)]);if(Array.isArray(i)){const n=i.map(r=>this.normalizeViolationRecord(r)).filter(Boolean),o=Array.isArray(AppState.appData.violations)?AppState.appData.violations:[];if(n.length===0&&o.length>0)Utils.safeWarn(`\u26A0\uFE0F \u062A\u062C\u0627\u0647\u0644 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0641\u0627\u0631\u063A\u0629 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645 \u2014 \u0627\u0644\u0625\u0628\u0642\u0627\u0621 \u0639\u0644\u0649 ${o.length} \u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u062D\u0644\u064A\u0629`);else{const r=new Set(n.map(s=>s&&s.id).filter(Boolean)),l=Date.now()-300*1e3,c=o.filter(s=>!s||!s.id||r.has(s.id)?!1:new Date(s.createdAt||s.timestamp||0).getTime()>=l);AppState.appData.violations=c.length>0?[...c,...n]:n}}if(Array.isArray(a)){const n=Array.isArray(AppState.appData.violationTypes)?AppState.appData.violationTypes:[];if(a.length>0?AppState.appData.violationTypes=a:n.length===0&&(AppState.appData.violationTypes=[]),a.length>0||a.length===0&&n.length===0)try{AppState.syncMeta||(AppState.syncMeta={sheets:{},users:0,lastSyncTime:0,userEmail:null}),AppState.syncMeta.sheets||(AppState.syncMeta.sheets={}),AppState.syncMeta.sheets.ViolationTypes=Date.now()}catch{}}try{typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.ensureInitialized()}catch{}try{localStorage.setItem("violations_last_sync",String(Date.now()))}catch{}if(typeof window.DataManager<"u"&&window.DataManager.save)try{window.DataManager.save()}catch{}})().finally(()=>{this._violationsCoreLoadPromise=null}),this._violationsCoreLoadPromise)},renderViolationsList(){try{const e=this.getFilteredViolations();return!e||e.length===0?`<div class="empty-state"><p class="text-gray-500">${this.hasActiveFilters()?"\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629":"\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0645\u0633\u062C\u0644\u0629"}</p></div>`:`
                 <div class="table-responsive" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
                     <table class="data-table" style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
-                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">اسم الموظف/المقاول</th>
-                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">نوع المخالفة</th>
-                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">القيمة المالية</th>
-                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الموقع</th>
-                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">التاريخ</th>
-                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.85rem;">تسلسل الشهر</th>
-                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الشدة</th>
-                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الحالة</th>
-                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الإجراءات</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641/\u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0645\u0648\u0642\u0639</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.85rem;">\u062A\u0633\u0644\u0633\u0644 \u0627\u0644\u0634\u0647\u0631</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0634\u062F\u0629</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${violations.map((violation, index) => `
-                                <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#fef2f2'}; transition: all 0.2s ease;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='${index % 2 === 0 ? '#ffffff' : '#fef2f2'}'">
+                            ${e.map((t,i)=>`
+                                <tr style="background: ${i%2===0?"#ffffff":"#fef2f2"}; transition: all 0.2s ease;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='${i%2===0?"#ffffff":"#fef2f2"}'">
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-weight: 500;">
                                         <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                            <i class="fas ${violation.employeeName ? 'fa-user-tie' : 'fa-hard-hat'}" style="color: ${violation.employeeName ? '#3b82f6' : '#f59e0b'};"></i>
-                                            ${Utils.escapeHTML(violation.employeeName || violation.contractorName || '-')}
+                                            <i class="fas ${t.employeeName?"fa-user-tie":"fa-hard-hat"}" style="color: ${t.employeeName?"#3b82f6":"#f59e0b"};"></i>
+                                            ${Utils.escapeHTML(t.employeeName||t.contractorName||"-")}
                                         </div>
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
-                                        ${Utils.escapeHTML(violation.violationType || '-')}
+                                        ${Utils.escapeHTML(t.violationType||"-")}
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-weight: 600; color: #166534;">
-                                        ${this.formatFineAmount(Number(violation.fineAmount || 0))}
+                                        ${this.formatFineAmount(Number(t.fineAmount||0))}
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-size: 0.85rem; color: #6b7280;">
-                                        ${Utils.escapeHTML(violation.violationLocation || '-')}
+                                        ${Utils.escapeHTML(t.violationLocation||"-")}
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
-                                        ${violation.violationDate ? Utils.formatDate(violation.violationDate) : '-'}
+                                        ${t.violationDate?Utils.formatDate(t.violationDate):"-"}
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-size: 0.85rem; color: #92400e;">
-                                        ${violation.violationSequenceInMonth != null && violation.violationSequenceInMonth !== '' ? Utils.escapeHTML(String(violation.violationSequenceInMonth)) : '—'}
+                                        ${t.violationSequenceInMonth!=null&&t.violationSequenceInMonth!==""?Utils.escapeHTML(String(t.violationSequenceInMonth)):"\u2014"}
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
-                                        <span style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; background: ${violation.severity === 'عالية' ? 'linear-gradient(135deg, #ef4444, #dc2626)' : violation.severity === 'متوسطة' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #3b82f6, #2563eb)'}; color: white; box-shadow: 0 2px 6px ${violation.severity === 'عالية' ? 'rgba(239,68,68,0.3)' : violation.severity === 'متوسطة' ? 'rgba(245,158,11,0.3)' : 'rgba(59,130,246,0.3)'};">
-                                            ${violation.severity || '-'}
+                                        <span style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; background: ${t.severity==="\u0639\u0627\u0644\u064A\u0629"?"linear-gradient(135deg, #ef4444, #dc2626)":t.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"linear-gradient(135deg, #f59e0b, #d97706)":"linear-gradient(135deg, #3b82f6, #2563eb)"}; color: white; box-shadow: 0 2px 6px ${t.severity==="\u0639\u0627\u0644\u064A\u0629"?"rgba(239,68,68,0.3)":t.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"rgba(245,158,11,0.3)":"rgba(59,130,246,0.3)"};">
+                                            ${t.severity||"-"}
                                         </span>
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
-                                        <span style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; background: ${violation.status === 'محلول' ? 'linear-gradient(135deg, #10b981, #059669)' : violation.status === 'قيد المراجعة' ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'linear-gradient(135deg, #f59e0b, #d97706)'}; color: white;">
-                                            ${violation.status || '-'}
+                                        <span style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; background: ${t.status==="\u0645\u062D\u0644\u0648\u0644"?"linear-gradient(135deg, #10b981, #059669)":t.status==="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"?"linear-gradient(135deg, #6366f1, #4f46e5)":"linear-gradient(135deg, #f59e0b, #d97706)"}; color: white;">
+                                            ${t.status||"-"}
                                         </span>
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
                                         <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                            <button type="button" onclick='Violations.viewViolation(${this._escapeIdForHandler(violation.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(59,130,246,0.3);" title="عرض التفاصيل">
+                                            <button type="button" onclick='Violations.viewViolation(${this._escapeIdForHandler(t.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(59,130,246,0.3);" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(violation.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(139,92,246,0.3);" title="تعديل">
+                                            <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(t.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(139,92,246,0.3);" title="\u062A\u0639\u062F\u064A\u0644">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button type="button" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(violation.id)}, this)' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(16,185,129,0.3);" title="تحميل تقرير المخالفة PDF مباشرة" aria-label="تحميل تقرير المخالفة PDF">
+                                            <button type="button" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(t.id)}, this)' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(16,185,129,0.3);" title="\u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 PDF \u0645\u0628\u0627\u0634\u0631\u0629" aria-label="\u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 PDF">
                                                 <i class="fas fa-file-download"></i>
                                             </button>
-                                            <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(violation.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(239,68,68,0.3);" title="حذف">
+                                            <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(t.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(239,68,68,0.3);" title="\u062D\u0630\u0641">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-                            `).join('')}
+                            `).join("")}
                         </tbody>
                     </table>
                 </div>
-            `;
-        } catch (error) {
-            if (typeof Utils !== 'undefined' && Utils.safeError) {
-                Utils.safeError('خطأ في renderViolationsList:', error);
-            }
-            return `<div class="empty-state"><p class="text-gray-500">حدث خطأ في عرض البيانات</p></div>`;
-        }
-    },
-
-    /**
-     * تحديث كروت إحصائيات "جميع المخالفات" بشكل فوري بدون إعادة تحميل
-     * يستبدل DOM الكروت فقط، فيظهر التحديث مباشرة بعد أي إضافة/تعديل/حذف
-     */
-    updateAllViolationsStats() {
-        try {
-            const container = document.getElementById('violations-stats-cards');
-            if (!container) return;
-            // إنشاء عنصر مؤقت لاستخراج HTML الكروت الجديدة
-            const wrapper = document.createElement('div');
-            wrapper.innerHTML = this.renderAllViolationsStats();
-            const newCards = wrapper.querySelector('#violations-stats-cards');
-            if (newCards) {
-                container.replaceWith(newCards);
-            }
-        } catch (e) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                Utils.safeWarn('⚠️ فشل تحديث كروت المخالفات الفوري:', e);
-            }
-        }
-    },
-
-    renderAllViolationsStats() {
-        const violations = this.getFilteredViolations();
-        const total = violations.length;
-        const employeeCount = violations.filter(v => v && (v.personType === 'employee' || (!!v.employeeName && !v.contractorName))).length;
-        const contractorCount = violations.filter(v => v && (v.personType === 'contractor' || !!v.contractorName)).length;
-        const totalFineAmount = violations.reduce((sum, violation) => {
-            const amount = Number(violation?.fineAmount || 0);
-            return sum + (Number.isFinite(amount) && amount > 0 ? amount : 0);
-        }, 0);
-
-        return `
+            `}catch(e){return typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u062E\u0637\u0623 \u0641\u064A renderViolationsList:",e),'<div class="empty-state"><p class="text-gray-500">\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p></div>'}},updateAllViolationsStats(){try{const e=document.getElementById("violations-stats-cards");if(!e)return;const t=document.createElement("div");t.innerHTML=this.renderAllViolationsStats();const i=t.querySelector("#violations-stats-cards");i&&e.replaceWith(i)}catch(e){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0643\u0631\u0648\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0641\u0648\u0631\u064A:",e)}},renderAllViolationsStats(){const e=this.getFilteredViolations(),t=e.length,i=e.filter(o=>o&&(o.personType==="employee"||!!o.employeeName&&!o.contractorName)).length,a=e.filter(o=>o&&(o.personType==="contractor"||!!o.contractorName)).length,n=e.reduce((o,r)=>{const l=Number(r?.fineAmount||0);return o+(Number.isFinite(l)&&l>0?l:0)},0);return`
             <div id="violations-stats-cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
                 <div class="stat-card" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border: 1px solid #fca5a5;">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="stat-label">إجمالي المخالفات</p>
-                            <p class="text-2xl font-bold text-red-700">${total}</p>
+                            <p class="stat-label">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</p>
+                            <p class="text-2xl font-bold text-red-700">${t}</p>
                         </div>
                         <i class="fas fa-list text-red-600 text-xl"></i>
                     </div>
@@ -1662,8 +344,8 @@ const Violations = {
                 <div class="stat-card" style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 1px solid #86efac;">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="stat-label">إجمالي القيمة المالية</p>
-                            <p class="text-2xl font-bold text-green-700">${this.formatFineAmount(totalFineAmount)}</p>
+                            <p class="stat-label">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629</p>
+                            <p class="text-2xl font-bold text-green-700">${this.formatFineAmount(n)}</p>
                         </div>
                         <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
                     </div>
@@ -1671,8 +353,8 @@ const Violations = {
                 <div class="stat-card" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border: 1px solid #93c5fd;">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="stat-label">مخالفات الموظفين</p>
-                            <p class="text-2xl font-bold text-blue-700">${employeeCount}</p>
+                            <p class="stat-label">\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646</p>
+                            <p class="text-2xl font-bold text-blue-700">${i}</p>
                         </div>
                         <i class="fas fa-user-tie text-blue-600 text-xl"></i>
                     </div>
@@ -1680,393 +362,72 @@ const Violations = {
                 <div class="stat-card" style="background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%); border: 1px solid #fdba74;">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="stat-label">مخالفات المقاولين</p>
-                            <p class="text-2xl font-bold text-orange-700">${contractorCount}</p>
+                            <p class="stat-label">\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</p>
+                            <p class="text-2xl font-bold text-orange-700">${a}</p>
                         </div>
                         <i class="fas fa-users-cog text-orange-600 text-xl"></i>
                     </div>
                 </div>
             </div>
-        `;
-    },
-
-    hasActiveFilters() {
-        const filters = this.currentFilters || {};
-        return !!(filters.search || filters.personType || filters.violationType || filters.severity || filters.status);
-    },
-
-    getViolationsPermissions(user = AppState.currentUser) {
-        if (!user) return { viewDepartmentOnly: true, viewAll: false };
-        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function' && Permissions.isCurrentUserEffectiveAdmin(user)) {
-            return { viewDepartmentOnly: false, viewAll: true };
-        }
-        const userPerms = user.permissions || {};
-        const normalized = typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function'
-            ? Permissions.normalizePermissions(userPerms)
-            : userPerms;
-
-        const detailed = (normalized && normalized.violationsPermissions) || {};
-        const canViewAll = detailed['violations-view-all'] === true;
-
-        return {
-            viewDepartmentOnly: !canViewAll,
-            viewAll: canViewAll
-        };
-    },
-
-    isDepartmentMatch(dept1, dept2) {
-        if (!dept1 || !dept2) return false;
-        const clean = (d) => String(d).trim().toLowerCase()
-            .replace(/^(إدارة|قسم)\s+/, '')
-            .replace(/\s+/g, ' ');
-        const d1 = clean(dept1);
-        const d2 = clean(dept2);
-        return d1 === d2 || d1.includes(d2) || d2.includes(d1);
-    },
-
-    isViolationVisibleToCurrentUser(violation) {
-        if (!violation) return false;
-        const norm = this.normalizeViolationRecord(violation);
-        if (!norm) return false;
-
-        // 1. المدراء ينالون الوصول الكامل تلقائياً
-        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function' && Permissions.isCurrentUserEffectiveAdmin()) {
-            return true;
-        }
-
-        // 2. فحص ما إذا تم منح صلاحية رؤية جميع الإدارات صراحة
-        const permScope = this.getViolationsPermissions();
-        if (permScope.viewAll) {
-            return true;
-        }
-
-        // 3. تقييد مخالفات الموظفين بإدارة المستخدم الحالي فقط
-        const isEmployeeRecord = norm.personType === 'employee' || !!String(norm.employeeName || '').trim();
-        if (isEmployeeRecord) {
-            const currentUserDept = String(AppState.currentUser?.department || '').trim();
-            let empDept = String(norm.employeeDepartment || '').trim();
-
-            if (!empDept && (norm.employeeId || norm.employeeCode || norm.employeeName)) {
-                const empList = AppState.appData?.employees || [];
-                const empCodeOrId = String(norm.employeeId || norm.employeeCode || norm.employeeName).trim().toLowerCase();
-                const matchedEmp = empList.find(e => {
-                    if (!e) return false;
-                    const code = String(e.id || e.employeeId || e.code || '').trim().toLowerCase();
-                    const name = String(e.name || e.employeeName || '').trim().toLowerCase();
-                    return (code && code === empCodeOrId) || (name && name === empCodeOrId);
-                });
-                if (matchedEmp) {
-                    empDept = String(matchedEmp.department || matchedEmp.section || '').trim();
-                }
-            }
-
-            if (!currentUserDept || !empDept) {
-                return false;
-            }
-
-            return this.isDepartmentMatch(currentUserDept, empDept);
-        }
-
-        // مخالفات المقاولين تظل ملموسة لجميع المستحقين للمديول
-        return true;
-    },
-
-    getFilteredViolations() {
-        try {
-            if (typeof AppState === 'undefined' || !AppState.appData) {
-                return [];
-            }
-            const violations = (AppState.appData.violations || [])
-                .map((item) => {
-                    const n = this.normalizeViolationRecord(item);
-                    if (!n) return null;
-                    const eff = this.getEffectiveFineAmount(n);
-                    return eff === n.fineAmount ? n : { ...n, fineAmount: eff };
-                })
-                .filter(Boolean)
-                .filter(v => this.isViolationVisibleToCurrentUser(v));
-            const filters = this.currentFilters || {};
-            const searchFilter = String(filters.search || '').trim().toLowerCase();
-            const personFilter = filters.personType || '';
-            const typeFilter = (filters.violationType || '').toLowerCase();
-            const severityFilter = filters.severity || '';
-            const statusFilter = filters.status || '';
-
-            let contractorMatchers = [];
-            if (searchFilter && typeof Utils !== 'undefined' && typeof Utils.findApprovedContractorByTerm === 'function') {
-                const approvedList = [
-                    ...(AppState?.appData?.approvedContractors || []),
-                    ...(AppState?.appData?.contractors || [])
-                ].filter(Boolean);
-                const searchRes = Utils.findApprovedContractorByTerm(searchFilter, approvedList);
-                const matchedContractors = (searchRes.matches && searchRes.matches.length > 0)
-                    ? searchRes.matches
-                    : (searchRes.contractor ? [searchRes.contractor] : []);
-                contractorMatchers = matchedContractors.map(c => Utils.buildContractorIdentityMatcher(c, searchFilter));
-            }
-
-            return violations.filter(violation => {
-                if (!violation) return false;
-
-                if (personFilter === 'employee' && !violation.employeeName && violation.personType !== 'employee') return false;
-                if (personFilter === 'contractor' && !violation.contractorName && !violation.contractorCode && !violation.contractorId && violation.personType !== 'contractor') return false;
-
-                if (typeFilter) {
-                    const violationType = (violation.violationType || '').trim().toLowerCase();
-                    if (violationType !== typeFilter) return false;
-                }
-
-                if (severityFilter && (violation.severity || '') !== severityFilter) return false;
-                if (statusFilter && (violation.status || '') !== statusFilter) return false;
-                if (searchFilter) {
-                    let matchesSearch = false;
-                    if (contractorMatchers.length > 0 && contractorMatchers.some(m => m.violationBelongsToContractor(violation))) {
-                        matchesSearch = true;
-                    }
-                    if (!matchesSearch) {
-                        const searchableText = Object.values(violation || {})
-                            .map((value) => String(value == null ? '' : value).toLowerCase())
-                            .join(' ');
-                        matchesSearch = searchableText.includes(searchFilter);
-                    }
-                    if (!matchesSearch) return false;
-                }
-
-                return true;
-            });
-        } catch (error) {
-            if (typeof Utils !== 'undefined' && Utils.safeError) {
-                Utils.safeError('خطأ في getFilteredViolations:', error);
-            }
-            return [];
-        }
-    },
-
-    renderFilters(defaultPersonType = '') {
-        const filters = this.currentFilters || {};
-        if (defaultPersonType) {
-            filters.personType = defaultPersonType;
-        }
-
-        // التحقق من وجود ViolationTypesManager
-        let types = [];
-        if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized && ViolationTypesManager.getAll) {
-            try {
-                ViolationTypesManager.ensureInitialized();
-                types = ViolationTypesManager.getAll();
-            } catch (vtError) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('⚠️ خطأ في الحصول على أنواع المخالفات:', vtError);
-                }
-                types = [];
-            }
-        } else {
-            // استخدام القيم الافتراضية
-            types = (typeof AppState !== 'undefined' && AppState?.appData?.violationTypes) ? AppState.appData.violationTypes : [];
-        }
-
-        const typeOptions = types.map(type => `
-            <option value="${Utils.escapeHTML(type.name)}" ${filters.violationType === type.name ? 'selected' : ''}>
-                ${Utils.escapeHTML(type.name)}
+        `},hasActiveFilters(){const e=this.currentFilters||{};return!!(e.search||e.personType||e.violationType||e.severity||e.status)},getViolationsPermissions(e=AppState.currentUser){if(!e)return{viewDepartmentOnly:!0,viewAll:!1};if(typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin(e))return{viewDepartmentOnly:!1,viewAll:!0};const t=e.permissions||{},i=typeof Permissions<"u"&&typeof Permissions.normalizePermissions=="function"?Permissions.normalizePermissions(t):t,n=(i&&i.violationsPermissions||{})["violations-view-all"]===!0;return{viewDepartmentOnly:!n,viewAll:n}},isDepartmentMatch(e,t){if(!e||!t)return!1;const i=o=>String(o).trim().toLowerCase().replace(/^(إدارة|قسم)\s+/,"").replace(/\s+/g," "),a=i(e),n=i(t);return a===n||a.includes(n)||n.includes(a)},isViolationVisibleToCurrentUser(e){if(!e)return!1;const t=this.normalizeViolationRecord(e);if(!t)return!1;if(typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin()||this.getViolationsPermissions().viewAll)return!0;if(t.personType==="employee"||!!String(t.employeeName||"").trim()){const n=String(AppState.currentUser?.department||"").trim();let o=String(t.employeeDepartment||"").trim();if(!o&&(t.employeeId||t.employeeCode||t.employeeName)){const r=AppState.appData?.employees||[],l=String(t.employeeId||t.employeeCode||t.employeeName).trim().toLowerCase(),c=r.find(s=>{if(!s)return!1;const d=String(s.id||s.employeeId||s.code||"").trim().toLowerCase(),p=String(s.name||s.employeeName||"").trim().toLowerCase();return d&&d===l||p&&p===l});c&&(o=String(c.department||c.section||"").trim())}return!n||!o?!1:this.isDepartmentMatch(n,o)}return!0},getFilteredViolations(){try{if(typeof AppState>"u"||!AppState.appData)return[];const e=(AppState.appData.violations||[]).map(c=>{const s=this.normalizeViolationRecord(c);if(!s)return null;const d=this.getEffectiveFineAmount(s);return d===s.fineAmount?s:{...s,fineAmount:d}}).filter(Boolean).filter(c=>this.isViolationVisibleToCurrentUser(c)),t=this.currentFilters||{},i=String(t.search||"").trim().toLowerCase(),a=t.personType||"",n=(t.violationType||"").toLowerCase(),o=t.severity||"",r=t.status||"";let l=[];if(i&&typeof Utils<"u"&&typeof Utils.findApprovedContractorByTerm=="function"){const c=[...AppState?.appData?.approvedContractors||[],...AppState?.appData?.contractors||[]].filter(Boolean),s=Utils.findApprovedContractorByTerm(i,c);l=(s.matches&&s.matches.length>0?s.matches:s.contractor?[s.contractor]:[]).map(p=>Utils.buildContractorIdentityMatcher(p,i))}return e.filter(c=>{if(!c||a==="employee"&&!c.employeeName&&c.personType!=="employee"||a==="contractor"&&!c.contractorName&&!c.contractorCode&&!c.contractorId&&c.personType!=="contractor"||n&&(c.violationType||"").trim().toLowerCase()!==n||o&&(c.severity||"")!==o||r&&(c.status||"")!==r)return!1;if(i){let s=!1;if(l.length>0&&l.some(d=>d.violationBelongsToContractor(c))&&(s=!0),s||(s=Object.values(c||{}).map(p=>String(p??"").toLowerCase()).join(" ").includes(i)),!s)return!1}return!0})}catch(e){return typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u062E\u0637\u0623 \u0641\u064A getFilteredViolations:",e),[]}},renderFilters(e=""){const t=this.currentFilters||{};e&&(t.personType=e);let i=[];if(typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.getAll)try{ViolationTypesManager.ensureInitialized(),i=ViolationTypesManager.getAll()}catch(n){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A:",n),i=[]}else i=typeof AppState<"u"&&AppState?.appData?.violationTypes?AppState.appData.violationTypes:[];const a=i.map(n=>`
+            <option value="${Utils.escapeHTML(n.name)}" ${t.violationType===n.name?"selected":""}>
+                ${Utils.escapeHTML(n.name)}
             </option>
-        `).join('');
-
-        return `
+        `).join("");return`
             <div style="background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 12px;">
                 <div style="display:grid; grid-template-columns: minmax(170px, 0.9fr) repeat(4, minmax(140px, 1fr)) minmax(150px, 0.9fr); gap: 10px; align-items:end;">
                     <div style="display:flex; flex-direction:column; gap:6px;">
-                        <label for="violations-filter-search" style="font-size:12px; font-weight:700; color:#4a5568;">بحث</label>
+                        <label for="violations-filter-search" style="font-size:12px; font-weight:700; color:#4a5568;">\u0628\u062D\u062B</label>
                         <div class="relative">
-                            <input type="text" id="violations-filter-search" class="form-input pr-10" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;" placeholder="بحث..." value="${Utils.escapeHTML(filters.search || '')}">
+                            <input type="text" id="violations-filter-search" class="form-input pr-10" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;" placeholder="\u0628\u062D\u062B..." value="${Utils.escapeHTML(t.search||"")}">
                             <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none"></i>
                         </div>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:6px;">
-                        <label for="violations-filter-person" style="font-size:12px; font-weight:700; color:#4a5568;">نوع الشخص</label>
+                        <label for="violations-filter-person" style="font-size:12px; font-weight:700; color:#4a5568;">\u0646\u0648\u0639 \u0627\u0644\u0634\u062E\u0635</label>
                         <select id="violations-filter-person" class="form-input" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;">
-                            <option value="" ${filters.personType === '' ? 'selected' : ''}>جميع الأشخاص</option>
-                            <option value="employee" ${filters.personType === 'employee' ? 'selected' : ''}>الموظفون</option>
-                            <option value="contractor" ${filters.personType === 'contractor' ? 'selected' : ''}>المقاولون</option>
+                            <option value="" ${t.personType===""?"selected":""}>\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0634\u062E\u0627\u0635</option>
+                            <option value="employee" ${t.personType==="employee"?"selected":""}>\u0627\u0644\u0645\u0648\u0638\u0641\u0648\u0646</option>
+                            <option value="contractor" ${t.personType==="contractor"?"selected":""}>\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u0648\u0646</option>
                         </select>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:6px;">
-                        <label for="violations-filter-type" style="font-size:12px; font-weight:700; color:#4a5568;">نوع المخالفة</label>
+                        <label for="violations-filter-type" style="font-size:12px; font-weight:700; color:#4a5568;">\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</label>
                         <select id="violations-filter-type" class="form-input" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;">
-                            <option value="" ${filters.violationType === '' ? 'selected' : ''}>جميع الأنواع</option>
-                            ${typeOptions}
+                            <option value="" ${t.violationType===""?"selected":""}>\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0646\u0648\u0627\u0639</option>
+                            ${a}
                         </select>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:6px;">
-                        <label for="violations-filter-severity" style="font-size:12px; font-weight:700; color:#4a5568;">الشدة</label>
+                        <label for="violations-filter-severity" style="font-size:12px; font-weight:700; color:#4a5568;">\u0627\u0644\u0634\u062F\u0629</label>
                         <select id="violations-filter-severity" class="form-input" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;">
-                            <option value="" ${filters.severity === '' ? 'selected' : ''}>جميع الدرجات</option>
-                            <option value="عالية" ${filters.severity === 'عالية' ? 'selected' : ''}>عالية</option>
-                            <option value="متوسطة" ${filters.severity === 'متوسطة' ? 'selected' : ''}>متوسطة</option>
-                            <option value="منخضة" ${filters.severity === 'منخضة' ? 'selected' : ''}>منخضة</option>
+                            <option value="" ${t.severity===""?"selected":""}>\u062C\u0645\u064A\u0639 \u0627\u0644\u062F\u0631\u062C\u0627\u062A</option>
+                            <option value="\u0639\u0627\u0644\u064A\u0629" ${t.severity==="\u0639\u0627\u0644\u064A\u0629"?"selected":""}>\u0639\u0627\u0644\u064A\u0629</option>
+                            <option value="\u0645\u062A\u0648\u0633\u0637\u0629" ${t.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"selected":""}>\u0645\u062A\u0648\u0633\u0637\u0629</option>
+                            <option value="\u0645\u0646\u062E\u0636\u0629" ${t.severity==="\u0645\u0646\u062E\u0636\u0629"?"selected":""}>\u0645\u0646\u062E\u0636\u0629</option>
                         </select>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:6px;">
-                        <label for="violations-filter-status" style="font-size:12px; font-weight:700; color:#4a5568;">الحالة</label>
+                        <label for="violations-filter-status" style="font-size:12px; font-weight:700; color:#4a5568;">\u0627\u0644\u062D\u0627\u0644\u0629</label>
                         <select id="violations-filter-status" class="form-input" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;">
-                            <option value="" ${filters.status === '' ? 'selected' : ''}>جميع الحالات</option>
-                            <option value="قيد المراجعة" ${filters.status === 'قيد المراجعة' ? 'selected' : ''}>قيد المراجعة</option>
-                            <option value="محلول" ${filters.status === 'محلول' ? 'selected' : ''}>محلول</option>
-                            <option value="غير محلول" ${filters.status === 'غير محلول' ? 'selected' : ''}>غير محلول</option>
+                            <option value="" ${t.status===""?"selected":""}>\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0627\u0644\u0627\u062A</option>
+                            <option value="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629" ${t.status==="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"?"selected":""}>\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629</option>
+                            <option value="\u0645\u062D\u0644\u0648\u0644" ${t.status==="\u0645\u062D\u0644\u0648\u0644"?"selected":""}>\u0645\u062D\u0644\u0648\u0644</option>
+                            <option value="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644" ${t.status==="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644"?"selected":""}>\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644</option>
                         </select>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:6px;">
                         <label style="font-size:12px; font-weight:700; color:#4a5568;">&nbsp;</label>
                         <button type="button" id="violations-filter-reset" style="width:100%; height:42px; border:none; border-radius:8px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:#fff; font-size:13px; font-weight:700; cursor:pointer;">
-                            <i class="fas fa-undo ml-2"></i>إعادة التعيين
+                            <i class="fas fa-undo ml-2"></i>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646
                         </button>
                     </div>
                 </div>
             </div>
-        `;
-    },
-
-    bindFilters() {
-        const searchInput = document.getElementById('violations-filter-search');
-        const personSelect = document.getElementById('violations-filter-person');
-        const typeSelect = document.getElementById('violations-filter-type');
-        const severitySelect = document.getElementById('violations-filter-severity');
-        const statusSelect = document.getElementById('violations-filter-status');
-        const resetBtn = document.getElementById('violations-filter-reset');
-
-        if (searchInput) {
-            searchInput.value = this.currentFilters.search || '';
-            searchInput.oninput = () => {
-                this.currentFilters.search = searchInput.value || '';
-                // لا نعيد رسم الفلاتر أثناء الكتابة حتى لا يفقد الحقل التركيز.
-                this.refreshViolationsView({ skipFilterRerender: true });
-            };
-        }
-
-        if (personSelect) {
-            personSelect.value = this.currentFilters.personType || '';
-            personSelect.onchange = () => {
-                this.currentFilters.personType = personSelect.value;
-                this.refreshViolationsView();
-            };
-        }
-
-        if (typeSelect) {
-            typeSelect.value = this.currentFilters.violationType || '';
-            typeSelect.onchange = () => {
-                this.currentFilters.violationType = typeSelect.value;
-                this.refreshViolationsView();
-            };
-        }
-
-        if (severitySelect) {
-            severitySelect.value = this.currentFilters.severity || '';
-            severitySelect.onchange = () => {
-                this.currentFilters.severity = severitySelect.value;
-                this.refreshViolationsView();
-            };
-        }
-
-        if (statusSelect) {
-            statusSelect.value = this.currentFilters.status || '';
-            statusSelect.onchange = () => {
-                this.currentFilters.status = statusSelect.value;
-                this.refreshViolationsView();
-            };
-        }
-
-        if (resetBtn) {
-            resetBtn.onclick = () => {
-                this.currentFilters = {
-                    search: '',
-                    personType: '',
-                    violationType: '',
-                    severity: '',
-                    status: ''
-                };
-                this.refreshViolationsView();
-            };
-        }
-    },
-
-    refreshViolationsView(options = {}) {
-        const skipFilterRerender = !!options.skipFilterRerender;
-        const listContainer = document.getElementById('violations-list');
-        if (listContainer) {
-            // Check which tab is active
-            const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'all';
-            switch (activeTab) {
-                case 'employees':
-                    listContainer.innerHTML = this.renderEmployeeViolationsList();
-                    break;
-                case 'contractors':
-                    listContainer.innerHTML = this.renderContractorViolationsList();
-                    break;
-                case 'analytics':
-                    // Analytics tab doesn't need refresh
-                    return;
-                default:
-                    listContainer.innerHTML = this.renderViolationsList();
-            }
-        }
-        const statsContainer = document.getElementById('violations-stats-cards');
-        if (statsContainer) {
-            statsContainer.outerHTML = this.renderAllViolationsStats();
-        }
-        const filtersContainer = document.getElementById('violations-filters-container');
-        if (filtersContainer && !skipFilterRerender) {
-            const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'all';
-            const defaultPersonType = activeTab === 'employees' ? 'employee' : activeTab === 'contractors' ? 'contractor' : '';
-            filtersContainer.innerHTML = this.renderFilters(defaultPersonType);
-        }
-        if (!skipFilterRerender) {
-            this.bindFilters();
-        }
-    },
-
-    setupEventListeners() {
-        setTimeout(() => {
-            const addBtn = document.getElementById('add-violation-btn');
-            if (addBtn) addBtn.addEventListener('click', () => this.showViolationForm());
-            this.bindFilters();
-        }, 100);
-    },
-
-    async switchTab(tabName) {
-        // Update tab buttons
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        tabButtons.forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.tab === tabName) {
-                btn.classList.add('active');
-            }
-            // التأكد من الحفاظ على styles لمنع التكسير
-            if (!btn.style.flexShrink) {
-                btn.style.setProperty('flex-shrink', '0', 'important');
-                btn.style.setProperty('min-width', 'fit-content', 'important');
-                btn.style.setProperty('white-space', 'nowrap', 'important');
-                btn.style.setProperty('width', 'auto', 'important');
-                btn.style.setProperty('max-width', 'none', 'important');
-            }
-        });
-        
-        // التأكد من الحفاظ على styles للـ container
-        const tabContainer = document.querySelector('.tabs-nav');
-        if (tabContainer && !tabContainer.style.flexWrap) {
-            tabContainer.style.setProperty('flex-wrap', 'nowrap', 'important');
-            tabContainer.style.setProperty('overflow-x', 'auto', 'important');
-            tabContainer.style.setProperty('overflow-y', 'visible', 'important');
-        }
-
-        // Update content
-        const contentContainer = document.getElementById('violations-tab-content');
-        if (!contentContainer) return;
-
-        switch (tabName) {
-            case 'all':
-                contentContainer.innerHTML = `
+        `},bindFilters(){const e=document.getElementById("violations-filter-search"),t=document.getElementById("violations-filter-person"),i=document.getElementById("violations-filter-type"),a=document.getElementById("violations-filter-severity"),n=document.getElementById("violations-filter-status"),o=document.getElementById("violations-filter-reset");e&&(e.value=this.currentFilters.search||"",e.oninput=()=>{this.currentFilters.search=e.value||"",this.refreshViolationsView({skipFilterRerender:!0})}),t&&(t.value=this.currentFilters.personType||"",t.onchange=()=>{this.currentFilters.personType=t.value,this.refreshViolationsView()}),i&&(i.value=this.currentFilters.violationType||"",i.onchange=()=>{this.currentFilters.violationType=i.value,this.refreshViolationsView()}),a&&(a.value=this.currentFilters.severity||"",a.onchange=()=>{this.currentFilters.severity=a.value,this.refreshViolationsView()}),n&&(n.value=this.currentFilters.status||"",n.onchange=()=>{this.currentFilters.status=n.value,this.refreshViolationsView()}),o&&(o.onclick=()=>{this.currentFilters={search:"",personType:"",violationType:"",severity:"",status:""},this.refreshViolationsView()})},refreshViolationsView(e={}){const t=!!e.skipFilterRerender,i=document.getElementById("violations-list");if(i)switch(document.querySelector(".tab-btn.active")?.dataset.tab||"all"){case"employees":i.innerHTML=this.renderEmployeeViolationsList();break;case"contractors":i.innerHTML=this.renderContractorViolationsList();break;case"analytics":return;default:i.innerHTML=this.renderViolationsList()}const a=document.getElementById("violations-stats-cards");a&&(a.outerHTML=this.renderAllViolationsStats());const n=document.getElementById("violations-filters-container");if(n&&!t){const o=document.querySelector(".tab-btn.active")?.dataset.tab||"all",r=o==="employees"?"employee":o==="contractors"?"contractor":"";n.innerHTML=this.renderFilters(r)}t||this.bindFilters()},setupEventListeners(){setTimeout(()=>{const e=document.getElementById("add-violation-btn");e&&e.addEventListener("click",()=>this.showViolationForm()),this.bindFilters()},100)},async switchTab(e){document.querySelectorAll(".tab-btn").forEach(n=>{n.classList.remove("active"),n.dataset.tab===e&&n.classList.add("active"),n.style.flexShrink||(n.style.setProperty("flex-shrink","0","important"),n.style.setProperty("min-width","fit-content","important"),n.style.setProperty("white-space","nowrap","important"),n.style.setProperty("width","auto","important"),n.style.setProperty("max-width","none","important"))});const i=document.querySelector(".tabs-nav");i&&!i.style.flexWrap&&(i.style.setProperty("flex-wrap","nowrap","important"),i.style.setProperty("overflow-x","auto","important"),i.style.setProperty("overflow-y","visible","important"));const a=document.getElementById("violations-tab-content");if(a)switch(e){case"all":a.innerHTML=`
                     <div class="content-card" id="violations-list-tab">
                         <div class="card-header">
-                            <h2 class="card-title"><i class="fas fa-list ml-2"></i>قائمة المخالفات</h2>
+                            <h2 class="card-title"><i class="fas fa-list ml-2"></i>\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</h2>
                         </div>
                         <div class="card-body">
                             ${this.renderAllViolationsStats()}
@@ -2078,40 +439,32 @@ const Violations = {
                             </div>
                         </div>
                     </div>
-                `;
-                this.bindFilters();
-                break;
-            case 'employees':
-                contentContainer.innerHTML = `
+                `,this.bindFilters();break;case"employees":a.innerHTML=`
                     <div class="content-card">
                         <div class="card-header">
-                            <h2 class="card-title"><i class="fas fa-user-tie ml-2"></i>مخالفات الموظفين</h2>
+                            <h2 class="card-title"><i class="fas fa-user-tie ml-2"></i>\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646</h2>
                         </div>
                         <div class="card-body">
                             <div id="violations-filters-container" class="mb-4">
-                                ${this.renderFilters('employee')}
+                                ${this.renderFilters("employee")}
                             </div>
                             <div id="violations-list">
                                 ${this.renderEmployeeViolationsList()}
                             </div>
                         </div>
                     </div>
-                `;
-                this.bindFilters();
-                break;
-            case 'contractors':
-                contentContainer.innerHTML = `
+                `,this.bindFilters();break;case"contractors":a.innerHTML=`
                     <div class="content-card">
                         <div class="card-header">
-                            <h2 class="card-title"><i class="fas fa-users-cog ml-2"></i>مخالفات المقاولين</h2>
+                            <h2 class="card-title"><i class="fas fa-users-cog ml-2"></i>\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</h2>
                         </div>
                         <div class="card-body">
                             <div id="violations-filters-container" class="mb-4">
-                                ${this.renderFilters('contractor')}
+                                ${this.renderFilters("contractor")}
                             </div>
                             <div class="mb-4 flex items-center justify-end">
                                 <button type="button" class="btn-primary" onclick="Violations.showContractorViolationsReportDialog()">
-                                    <i class="fas fa-file-export ml-2"></i>تصدير تقرير مخالفة المقاولين
+                                    <i class="fas fa-file-export ml-2"></i>\u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0629 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646
                                 </button>
                             </div>
                             <div id="violations-list">
@@ -2119,302 +472,117 @@ const Violations = {
                             </div>
                         </div>
                     </div>
-                `;
-                this.bindFilters();
-                break;
-            case 'analytics':
-                contentContainer.innerHTML = this.renderAnalyticsTab();
-                // تشغيل التحليل وربط الأحداث بعد رسم الـ DOM
-                setTimeout(() => {
-                    this.updateViolationAnalytics();
-                    this._vBindAnalyticsEvents();
-                }, 80);
-                break;
-            case 'blacklist':
-                // عرض الواجهة مباشرة مع البيانات المحلية (إن وجدت)
-                contentContainer.innerHTML = this.renderBlacklistTab();
-                this.setupBlacklistEventListeners();
-                // تحميل البيانات من Google Sheets في الخلفية وتحديث الواجهة
-                this.loadBlacklistDataAsync().then(() => {
-                    // تحديث الواجهة بعد تحميل البيانات
-                    this.refreshBlacklistDisplay();
-                }).catch(error => {
-                    Utils.safeWarn('⚠️ خطأ في تحميل بيانات Blacklist:', error);
-                });
-                break;
-        }
-    },
-
-    /**
-     * Wrapper function للتعامل مع async في onclick
-     */
-    async switchTabAsync(tabName) {
-        try {
-            await this.switchTab(tabName);
-        } catch (error) {
-            Utils.safeError('خطأ في التبديل إلى التبويب:', error);
-        }
-    },
-
-    /**
-     * تحديث المديول (إعادة تحميل البيانات مع الحفاظ على التبويب الحالي)
-     */
-    refreshModule() {
-        const btn = document.getElementById('violations-btn-refresh');
-        if (btn) {
-            btn.disabled = true;
-            const icon = btn.querySelector('i.fa-sync-alt');
-            if (icon) icon.classList.add('fa-spin');
-        }
-        const loadPromise = typeof this.load === 'function' ? this.load() : Promise.resolve();
-        Promise.resolve(loadPromise).finally(() => {
-            const refBtn = document.getElementById('violations-btn-refresh');
-            if (refBtn) {
-                refBtn.disabled = false;
-                const refIcon = refBtn.querySelector('i.fa-sync-alt');
-                if (refIcon) refIcon.classList.remove('fa-spin');
-            }
-        });
-    },
-
-    renderEmployeeViolationsList() {
-        const violations = this.getFilteredViolations().filter(v =>
-            v.employeeName || v.personType === 'employee' || (!v.contractorName && v.employeeName)
-        );
-        if (violations.length === 0) {
-            return `<div class="empty-state"><p class="text-gray-500">لا توجد مخالفات للموظفين</p></div>`;
-        }
-        return `
+                `,this.bindFilters();break;case"analytics":a.innerHTML=this.renderAnalyticsTab(),setTimeout(()=>{this.updateViolationAnalytics(),this._vBindAnalyticsEvents()},80);break;case"blacklist":a.innerHTML=this.renderBlacklistTab(),this.setupBlacklistEventListeners(),this.loadBlacklistDataAsync().then(()=>{this.refreshBlacklistDisplay()}).catch(n=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A Blacklist:",n)});break}},async switchTabAsync(e){try{await this.switchTab(e)}catch(t){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062A\u0628\u062F\u064A\u0644 \u0625\u0644\u0649 \u0627\u0644\u062A\u0628\u0648\u064A\u0628:",t)}},refreshModule(){const e=document.getElementById("violations-btn-refresh");if(e){e.disabled=!0;const i=e.querySelector("i.fa-sync-alt");i&&i.classList.add("fa-spin")}const t=typeof this.load=="function"?this.load():Promise.resolve();Promise.resolve(t).finally(()=>{const i=document.getElementById("violations-btn-refresh");if(i){i.disabled=!1;const a=i.querySelector("i.fa-sync-alt");a&&a.classList.remove("fa-spin")}})},renderEmployeeViolationsList(){const e=this.getFilteredViolations().filter(t=>t.employeeName||t.personType==="employee"||!t.contractorName&&t.employeeName);return e.length===0?'<div class="empty-state"><p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0644\u0644\u0645\u0648\u0638\u0641\u064A\u0646</p></div>':`
             <div class="table-responsive" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
             <table class="data-table" style="width: 100%; border-collapse: collapse;">
                 <thead>
                     <tr style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">اسم الموظف</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الكود الوظيفي</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">نوع المخالفة</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">التاريخ</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الشدة</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الإجراء المتخذ</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الحالة</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الإجراءات</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0634\u062F\u0629</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${violations.map(violation => `
+                    ${e.map(t=>`
                         <tr>
-                            <td>${Utils.escapeHTML(violation.employeeName || '')}</td>
-                            <td>${Utils.escapeHTML(violation.employeeCode || violation.employeeNumber || '-')}</td>
-                            <td>${Utils.escapeHTML(violation.violationType || '')}</td>
-                            <td>${violation.violationDate ? Utils.formatDate(violation.violationDate) : '-'}</td>
+                            <td>${Utils.escapeHTML(t.employeeName||"")}</td>
+                            <td>${Utils.escapeHTML(t.employeeCode||t.employeeNumber||"-")}</td>
+                            <td>${Utils.escapeHTML(t.violationType||"")}</td>
+                            <td>${t.violationDate?Utils.formatDate(t.violationDate):"-"}</td>
                             <td>
-                                <span class="badge badge-${violation.severity === 'عالية' ? 'danger' : violation.severity === 'متوسطة' ? 'warning' : 'info'}">
-                                    ${violation.severity || '-'}
+                                <span class="badge badge-${t.severity==="\u0639\u0627\u0644\u064A\u0629"?"danger":t.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"warning":"info"}">
+                                    ${t.severity||"-"}
                                 </span>
                             </td>
-                            <td>${Utils.escapeHTML(violation.actionTaken || '')}</td>
+                            <td>${Utils.escapeHTML(t.actionTaken||"")}</td>
                             <td>
-                                <span class="badge badge-${violation.status === 'محلول' ? 'success' : 'warning'}">
-                                    ${violation.status || '-'}
+                                <span class="badge badge-${t.status==="\u0645\u062D\u0644\u0648\u0644"?"success":"warning"}">
+                                    ${t.status||"-"}
                                 </span>
                             </td>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    <button type="button" onclick='Violations.viewViolation(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-primary" title="عرض">
+                                    <button type="button" onclick='Violations.viewViolation(${this._escapeIdForHandler(t.id)})' class="btn-icon btn-icon-primary" title="\u0639\u0631\u0636">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-warning" title="تعديل">
+                                    <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(t.id)})' class="btn-icon btn-icon-warning" title="\u062A\u0639\u062F\u064A\u0644">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-danger" title="حذف">
+                                    <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(t.id)})' class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
                             </td>
                         </tr>
-                    `).join('')}
+                    `).join("")}
                 </tbody>
             </table>
             </div>
-        `;
-    },
-
-    renderContractorViolationsList() {
-        const violations = this.getFilteredViolations().filter(v =>
-            v.contractorName || v.contractorCode || v.contractorId || v.personType === 'contractor'
-        );
-        if (violations.length === 0) {
-            return `<div class="empty-state"><p class="text-gray-500">لا توجد مخالفات للمقاولين</p></div>`;
-        }
-        return `
+        `},renderContractorViolationsList(){const e=this.getFilteredViolations().filter(t=>t.contractorName||t.contractorCode||t.contractorId||t.personType==="contractor");return e.length===0?'<div class="empty-state"><p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0644\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</p></div>':`
             <div class="table-responsive" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
             <table class="data-table" style="width: 100%; border-collapse: collapse;">
                 <thead>
                     <tr style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">اسم المقاول</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">نوع المخالفة</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">التاريخ</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الشدة</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الإجراء المتخذ</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الحالة</th>
-                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الإجراءات</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0634\u062F\u0629</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${violations.map(violation => `
+                    ${e.map(t=>`
                         <tr>
-                            <td>${Utils.escapeHTML(violation.contractorName || '')}</td>
-                            <td>${Utils.escapeHTML(violation.violationType || '')}</td>
-                            <td>${violation.violationDate ? Utils.formatDate(violation.violationDate) : '-'}</td>
+                            <td>${Utils.escapeHTML(t.contractorName||"")}</td>
+                            <td>${Utils.escapeHTML(t.violationType||"")}</td>
+                            <td>${t.violationDate?Utils.formatDate(t.violationDate):"-"}</td>
                             <td>
-                                <span class="badge badge-${violation.severity === 'عالية' ? 'danger' : violation.severity === 'متوسطة' ? 'warning' : 'info'}">
-                                    ${violation.severity || '-'}
+                                <span class="badge badge-${t.severity==="\u0639\u0627\u0644\u064A\u0629"?"danger":t.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"warning":"info"}">
+                                    ${t.severity||"-"}
                                 </span>
                             </td>
-                            <td>${Utils.escapeHTML(violation.actionTaken || '')}</td>
+                            <td>${Utils.escapeHTML(t.actionTaken||"")}</td>
                             <td>
-                                <span class="badge badge-${violation.status === 'محلول' ? 'success' : 'warning'}">
-                                    ${violation.status || '-'}
+                                <span class="badge badge-${t.status==="\u0645\u062D\u0644\u0648\u0644"?"success":"warning"}">
+                                    ${t.status||"-"}
                                 </span>
                             </td>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    <button type="button" onclick='Violations.viewViolation(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-primary" title="عرض">
+                                    <button type="button" onclick='Violations.viewViolation(${this._escapeIdForHandler(t.id)})' class="btn-icon btn-icon-primary" title="\u0639\u0631\u0636">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-warning" title="تعديل">
+                                    <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(t.id)})' class="btn-icon btn-icon-warning" title="\u062A\u0639\u062F\u064A\u0644">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button type="button" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(violation.id)}, this)' class="btn-icon violation-report-download-btn" title="تحميل تقرير المخالفة PDF مباشرة" aria-label="تحميل تقرير مخالفة المقاول PDF" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;border:1px solid rgba(4,120,87,.25);box-shadow:0 4px 10px rgba(5,150,105,.24);">
+                                    <button type="button" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(t.id)}, this)' class="btn-icon violation-report-download-btn" title="\u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 PDF \u0645\u0628\u0627\u0634\u0631\u0629" aria-label="\u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0629 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 PDF" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;border:1px solid rgba(4,120,87,.25);box-shadow:0 4px 10px rgba(5,150,105,.24);">
                                         <i class="fas fa-file-download"></i>
                                     </button>
-                                    <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-danger" title="حذف">
+                                    <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(t.id)})' class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
                             </td>
                         </tr>
-                    `).join('')}
+                    `).join("")}
                 </tbody>
             </table>
             </div>
-        `;
-    },
-
-    getContractorViolationsExportOptions() {
-        const optionsMap = new Map();
-        const addEntry = (id, name, code = '') => {
-            const cleanName = String(name || '').replace(/\s+/g, ' ').trim();
-            if (!cleanName) return;
-            const nameKey = this._normalizeContractorExportName(cleanName);
-            if (!nameKey || optionsMap.has(nameKey)) return;
-            optionsMap.set(nameKey, {
-                id: String(id || code || cleanName).trim(),
-                name: cleanName,
-                code: String(code || '').trim()
-            });
-        };
-
-        if (typeof Contractors !== 'undefined' && typeof Contractors.getContractorOptionsForModules === 'function') {
-            Contractors.getContractorOptionsForModules({ includeSuppliers: true, approvedOnly: false })
-                .forEach((c) => addEntry(c.id, c.name, c.code));
-        } else {
-            (AppState.appData?.contractors || []).forEach((c) => {
-                addEntry(c.id || c.contractorId, c.name || c.companyName, c.code || c.contractorCode || c.isoCode);
-            });
-            (AppState.appData?.approvedContractors || []).forEach((c) => {
-                addEntry(c.id || c.contractorId, c.companyName || c.name, c.code || c.contractorCode);
-            });
-        }
-
-        (AppState.appData?.violations || []).forEach((v) => {
-            if (!v?.contractorName) return;
-            addEntry(v.contractorId, v.contractorName, v.contractorCode || v.code || v.isoCode);
-        });
-
-        return Array.from(optionsMap.values())
-            .sort((a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' }));
-    },
-
-    _normalizeContractorExportName(name) {
-        const raw = String(name || '').replace(/\s+/g, ' ').trim();
-        if (!raw) return '';
-        const dashIdx = raw.indexOf(' - ');
-        const baseName = dashIdx > 0 ? raw.slice(0, dashIdx).trim() : raw;
-        return this._normKeyStr(baseName);
-    },
-
-    _buildContractorExportMatcher(contractorId = '', contractorName = '', contractorCode = '') {
-        const id = String(contractorId || '').trim();
-        const name = String(contractorName || '').trim();
-        const code = String(contractorCode || '').trim();
-        if (!id && !name && !code) return null;
-
-        let contractorRecord = null;
-        if (typeof Contractors !== 'undefined' && typeof Contractors.resolveContractorForAnalytics === 'function') {
-            contractorRecord = Contractors.resolveContractorForAnalytics(id || code, name);
-        }
-
-        const lookupKey = id || code || name;
-        const baseRecord = contractorRecord || {
-            id,
-            name,
-            companyName: name,
-            code,
-            contractorCode: code
-        };
-
-        if (typeof Utils !== 'undefined' && typeof Utils.buildContractorIdentityMatcher === 'function') {
-            return Utils.buildContractorIdentityMatcher(baseRecord, lookupKey);
-        }
-        if (typeof Contractors !== 'undefined' && typeof Contractors.buildContractorAnalyticsMatchers === 'function') {
-            return Contractors.buildContractorAnalyticsMatchers(baseRecord, lookupKey);
-        }
-
-        const targetName = this._normalizeContractorExportName(name || id);
-        const targetIds = new Set([id, code].filter(Boolean).map((v) => String(v).trim().toLowerCase()));
-        return {
-            violationBelongsToContractor: (record) => {
-                if (!record) return false;
-                const isContractorViolation = record.personType === 'contractor'
-                    || !!String(record.contractorName || '').trim();
-                if (!isContractorViolation) return false;
-
-                const recordName = this._normalizeContractorExportName(record.contractorName);
-                const recordId = String(record.contractorId || record.contractorCode || record.code || '').trim().toLowerCase();
-                const idMatches = recordId && targetIds.has(recordId);
-
-                if (idMatches) {
-                    return true;
-                }
-                return !!targetName && recordName === targetName;
-            }
-        };
-    },
-
-    showContractorViolationsReportDialog() {
-        const contractors = this.getContractorViolationsExportOptions();
-        const currentDate = new Date();
-        const currentYear = currentDate.getFullYear();
-        const months = [];
-        for (let i = 0; i < 24; i++) {
-            const date = new Date(currentYear, currentDate.getMonth() - i, 1);
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-            const monthLabel = date.toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: 'long' });
-            months.push({ value: monthKey, label: monthLabel });
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        `},getContractorViolationsExportOptions(){const e=new Map,t=(i,a,n="")=>{const o=String(a||"").replace(/\s+/g," ").trim();if(!o)return;const r=this._normalizeContractorExportName(o);!r||e.has(r)||e.set(r,{id:String(i||n||o).trim(),name:o,code:String(n||"").trim()})};return typeof Contractors<"u"&&typeof Contractors.getContractorOptionsForModules=="function"?Contractors.getContractorOptionsForModules({includeSuppliers:!0,approvedOnly:!1}).forEach(i=>t(i.id,i.name,i.code)):((AppState.appData?.contractors||[]).forEach(i=>{t(i.id||i.contractorId,i.name||i.companyName,i.code||i.contractorCode||i.isoCode)}),(AppState.appData?.approvedContractors||[]).forEach(i=>{t(i.id||i.contractorId,i.companyName||i.name,i.code||i.contractorCode)})),(AppState.appData?.violations||[]).forEach(i=>{i?.contractorName&&t(i.contractorId,i.contractorName,i.contractorCode||i.code||i.isoCode)}),Array.from(e.values()).sort((i,a)=>i.name.localeCompare(a.name,"ar",{sensitivity:"base"}))},_normalizeContractorExportName(e){const t=String(e||"").replace(/\s+/g," ").trim();if(!t)return"";const i=t.indexOf(" - "),a=i>0?t.slice(0,i).trim():t;return this._normKeyStr(a)},_buildContractorExportMatcher(e="",t="",i=""){const a=String(e||"").trim(),n=String(t||"").trim(),o=String(i||"").trim();if(!a&&!n&&!o)return null;let r=null;typeof Contractors<"u"&&typeof Contractors.resolveContractorForAnalytics=="function"&&(r=Contractors.resolveContractorForAnalytics(a||o,n));const l=a||o||n,c=r||{id:a,name:n,companyName:n,code:o,contractorCode:o};if(typeof Utils<"u"&&typeof Utils.buildContractorIdentityMatcher=="function")return Utils.buildContractorIdentityMatcher(c,l);if(typeof Contractors<"u"&&typeof Contractors.buildContractorAnalyticsMatchers=="function")return Contractors.buildContractorAnalyticsMatchers(c,l);const s=this._normalizeContractorExportName(n||a),d=new Set([a,o].filter(Boolean).map(p=>String(p).trim().toLowerCase()));return{violationBelongsToContractor:p=>{if(!p||!(p.personType==="contractor"||!!String(p.contractorName||"").trim()))return!1;const u=this._normalizeContractorExportName(p.contractorName),w=String(p.contractorId||p.contractorCode||p.code||"").trim().toLowerCase();return w&&d.has(w)?!0:!!s&&u===s}}},showContractorViolationsReportDialog(){const e=this.getContractorViolationsExportOptions(),t=new Date,i=t.getFullYear(),a=[];for(let p=0;p<24;p++){const f=new Date(i,t.getMonth()-p,1),u=f.getFullYear(),w=f.getMonth()+1,m=`${u}-${String(w).padStart(2,"0")}`,h=f.toLocaleDateString("ar-SA-u-nu-latn",{year:"numeric",month:"long"});a.push({value:m,label:h})}const n=document.createElement("div");n.className="modal-overlay",n.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-file-export ml-2"></i>
-                        تصدير تقرير مخالفات المقاولين
+                        \u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646
                     </h2>
-                    <button class="modal-close" title="إغلاق">
+                    <button class="modal-close" title="\u0625\u063A\u0644\u0627\u0642">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -2422,46 +590,46 @@ const Violations = {
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-building ml-2"></i>
-                            اختر المقاول
+                            \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644
                         </label>
                         <select id="contractor-violations-report-select" class="form-input">
-                            <option value="">جميع المقاولين</option>
-                            ${contractors.map(contractor => `
-                                <option value="${Utils.escapeHTML(String(contractor.id ?? '').trim())}" data-contractor-name="${Utils.escapeHTML(contractor.name || '')}" data-contractor-code="${Utils.escapeHTML(contractor.code || '')}">
-                                    ${Utils.escapeHTML(contractor.name || 'بدون اسم')}
+                            <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</option>
+                            ${e.map(p=>`
+                                <option value="${Utils.escapeHTML(String(p.id??"").trim())}" data-contractor-name="${Utils.escapeHTML(p.name||"")}" data-contractor-code="${Utils.escapeHTML(p.code||"")}">
+                                    ${Utils.escapeHTML(p.name||"\u0628\u062F\u0648\u0646 \u0627\u0633\u0645")}
                                 </option>
-                            `).join('')}
+                            `).join("")}
                         </select>
                         <p class="text-xs text-gray-500 mt-2">
                             <i class="fas fa-info-circle ml-1"></i>
-                            اختر مقاولاً محدداً لعرض تقريره فقط، أو اتركه فارغاً لعرض جميع المقاولين
+                            \u0627\u062E\u062A\u0631 \u0645\u0642\u0627\u0648\u0644\u0627\u064B \u0645\u062D\u062F\u062F\u0627\u064B \u0644\u0639\u0631\u0636 \u062A\u0642\u0631\u064A\u0631\u0647 \u0641\u0642\u0637\u060C \u0623\u0648 \u0627\u062A\u0631\u0643\u0647 \u0641\u0627\u0631\u063A\u0627\u064B \u0644\u0639\u0631\u0636 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646
                         </p>
                     </div>
 
                     <div style="border-top: 1px solid #E5E7EB; padding-top: 16px; margin-top: 16px;">
                         <label class="block text-sm font-semibold text-gray-700 mb-3">
                             <i class="fas fa-calendar-alt ml-2"></i>
-                            فترة التصدير
+                            \u0641\u062A\u0631\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631
                         </label>
                         <div class="space-y-3">
                             <div class="flex items-center">
                                 <input type="radio" id="contractor-violations-range-all" name="contractor-violations-range-type" value="all" class="ml-2" checked>
-                                <label for="contractor-violations-range-all" class="text-sm text-gray-700 cursor-pointer">جميع السجلات</label>
+                                <label for="contractor-violations-range-all" class="text-sm text-gray-700 cursor-pointer">\u062C\u0645\u064A\u0639 \u0627\u0644\u0633\u062C\u0644\u0627\u062A</label>
                             </div>
                             <div class="flex items-center">
                                 <input type="radio" id="contractor-violations-range-month" name="contractor-violations-range-type" value="month" class="ml-2">
-                                <label for="contractor-violations-range-month" class="text-sm text-gray-700 cursor-pointer mr-2">شهر محدد</label>
+                                <label for="contractor-violations-range-month" class="text-sm text-gray-700 cursor-pointer mr-2">\u0634\u0647\u0631 \u0645\u062D\u062F\u062F</label>
                                 <select id="contractor-violations-report-month" class="form-input flex-1" disabled style="max-width: 300px;">
-                                    <option value="">اختر الشهر</option>
-                                    ${months.map(month => `<option value="${month.value}">${month.label}</option>`).join('')}
+                                    <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0634\u0647\u0631</option>
+                                    ${a.map(p=>`<option value="${p.value}">${p.label}</option>`).join("")}
                                 </select>
                             </div>
                             <div class="flex items-center">
                                 <input type="radio" id="contractor-violations-range-custom" name="contractor-violations-range-type" value="custom" class="ml-2">
-                                <label for="contractor-violations-range-custom" class="text-sm text-gray-700 cursor-pointer mr-2">فترة محددة</label>
+                                <label for="contractor-violations-range-custom" class="text-sm text-gray-700 cursor-pointer mr-2">\u0641\u062A\u0631\u0629 \u0645\u062D\u062F\u062F\u0629</label>
                                 <div class="flex items-center gap-2 flex-1" style="max-width: 400px;">
                                     <input type="date" id="contractor-violations-report-from-date" class="form-input flex-1" disabled>
-                                    <span class="text-sm text-gray-600">إلى</span>
+                                    <span class="text-sm text-gray-600">\u0625\u0644\u0649</span>
                                     <input type="date" id="contractor-violations-report-to-date" class="form-input flex-1" disabled>
                                 </div>
                             </div>
@@ -2471,7 +639,7 @@ const Violations = {
                     <div style="border-top: 1px solid #E5E7EB; padding-top: 16px; margin-top: 16px;">
                         <label class="block text-sm font-semibold text-gray-700 mb-3">
                             <i class="fas fa-file ml-2"></i>
-                            صيغة التصدير
+                            \u0635\u064A\u063A\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631
                         </label>
                         <div class="flex flex-wrap items-center gap-4">
                             <div class="flex items-center">
@@ -2490,489 +658,86 @@ const Violations = {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" data-action="close">إلغاء</button>
+                    <button type="button" class="btn-secondary" data-action="close">\u0625\u0644\u063A\u0627\u0621</button>
                     <button type="button" class="btn-primary" id="generate-contractor-violations-report-btn">
                         <i class="fas fa-file-export ml-2"></i>
-                        إنشاء التقرير
+                        \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062A\u0642\u0631\u064A\u0631
                     </button>
                 </div>
             </div>
-        `;
-
-        document.body.appendChild(modal);
-        const close = () => modal.remove();
-        modal.querySelector('.modal-close')?.addEventListener('click', close);
-        modal.querySelector('[data-action="close"]')?.addEventListener('click', close);
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) close();
-        });
-
-        const rangeInputs = modal.querySelectorAll('input[name="contractor-violations-range-type"]');
-        const monthSelect = modal.querySelector('#contractor-violations-report-month');
-        const fromDateInput = modal.querySelector('#contractor-violations-report-from-date');
-        const toDateInput = modal.querySelector('#contractor-violations-report-to-date');
-
-        const updateDateFields = () => {
-            const selectedType = modal.querySelector('input[name="contractor-violations-range-type"]:checked')?.value || 'all';
-            monthSelect.disabled = selectedType !== 'month';
-            monthSelect.required = selectedType === 'month';
-            fromDateInput.disabled = selectedType !== 'custom';
-            fromDateInput.required = selectedType === 'custom';
-            toDateInput.disabled = selectedType !== 'custom';
-            toDateInput.required = selectedType === 'custom';
-        };
-        rangeInputs.forEach(input => input.addEventListener('change', updateDateFields));
-
-        modal.querySelector('#generate-contractor-violations-report-btn')?.addEventListener('click', async () => {
-            const contractorSelect = modal.querySelector('#contractor-violations-report-select');
-            const selectedOption = contractorSelect && contractorSelect.selectedIndex >= 0
-                ? contractorSelect.options[contractorSelect.selectedIndex]
-                : null;
-            const isAllContractors = contractorSelect?.selectedIndex === 0;
-            const selectedContractorId = !isAllContractors && selectedOption?.value
-                ? String(selectedOption.value).trim()
-                : '';
-            const selectedContractorName = !isAllContractors && selectedOption?.dataset?.contractorName
-                ? String(selectedOption.dataset.contractorName).trim()
-                : '';
-            const selectedContractorCode = !isAllContractors && selectedOption?.dataset?.contractorCode
-                ? String(selectedOption.dataset.contractorCode).trim()
-                : '';
-            const dateRangeType = modal.querySelector('input[name="contractor-violations-range-type"]:checked')?.value || 'all';
-            const month = modal.querySelector('#contractor-violations-report-month')?.value || '';
-            const fromDate = modal.querySelector('#contractor-violations-report-from-date')?.value || '';
-            const toDate = modal.querySelector('#contractor-violations-report-to-date')?.value || '';
-            const exportFormat = modal.querySelector('input[name="contractor-violations-export-format"]:checked')?.value || 'pdf';
-
-            if (dateRangeType === 'month' && !month) {
-                Notification.warning('يرجى اختيار الشهر المطلوب');
-                return;
-            }
-            if (dateRangeType === 'custom') {
-                if (!fromDate || !toDate) {
-                    Notification.warning('يرجى اختيار تاريخ البداية والنهاية للفترة');
-                    return;
-                }
-                if (new Date(fromDate) > new Date(toDate)) {
-                    Notification.warning('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
-                    return;
-                }
-            }
-
-            close();
-            await this.generateContractorViolationsReport(selectedContractorId, {
-                dateRangeType,
-                month,
-                fromDate,
-                toDate,
-                exportFormat
-            }, selectedContractorName, selectedContractorCode);
-        });
-    },
-
-    _collectContractorViolationsForExport_(contractorId = '', dateFilter = {}, selectedContractorName = '', selectedContractorCode = '') {
-        const contractorMatcher = this._buildContractorExportMatcher(
-            contractorId,
-            selectedContractorName,
-            selectedContractorCode
-        );
-        let violations = (AppState.appData.violations || [])
-            .map((item) => this.normalizeViolationRecord(item))
-            .filter(Boolean)
-            .filter(v => v?.personType === 'contractor' || !!String(v?.contractorName || '').trim());
-
-        if (contractorMatcher) {
-            violations = violations.filter(v => contractorMatcher.violationBelongsToContractor(v));
-        }
-
-        const { dateRangeType = 'all', month = '', fromDate = '', toDate = '' } = dateFilter || {};
-        if (dateRangeType === 'month' && month) {
-            const [year, monthNum] = month.split('-');
-            violations = violations.filter(v => {
-                if (!v.violationDate) return false;
-                const d = new Date(v.violationDate);
-                return d.getFullYear() === parseInt(year, 10) && (d.getMonth() + 1) === parseInt(monthNum, 10);
-            });
-        } else if (dateRangeType === 'custom' && fromDate && toDate) {
-            const start = new Date(fromDate); start.setHours(0, 0, 0, 0);
-            const end = new Date(toDate); end.setHours(23, 59, 59, 999);
-            violations = violations.filter(v => {
-                if (!v.violationDate) return false;
-                const d = new Date(v.violationDate);
-                return d >= start && d <= end;
-            });
-        }
-
-        let periodInfo = '';
-        if (dateRangeType === 'month' && month) {
-            const [y, m] = month.split('-');
-            const d = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
-            periodInfo = d.toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: 'long' });
-        } else if (dateRangeType === 'custom' && fromDate && toDate) {
-            periodInfo = `من ${Utils.formatDate(fromDate)} إلى ${Utils.formatDate(toDate)}`;
-        }
-
-        return { violations, periodInfo, dateRangeType };
-    },
-
-    exportContractorViolationsToExcel_(violations, selectedContractorName = '', periodInfo = '') {
-        if (typeof XLSX === 'undefined') {
-            Notification.error('مكتبة Excel غير محمّلة. حدّث الصفحة وحاول مرة أخرى.');
-            return false;
-        }
-
-        const excelData = violations.map((v, index) => ({
-            '#': index + 1,
-            'اسم المقاول': v.contractorName || '',
-            'كود المقاول': v.contractorCode || '',
-            'عامل المقاول': v.contractorWorker || '',
-            'نوع المخالفة': v.violationType || '',
-            'التاريخ': v.violationDate ? Utils.formatDate(v.violationDate) : '',
-            'الشدة': v.severity || '',
-            'الإجراء المتخذ': v.actionTaken || '',
-            'الحالة': v.status || '',
-            'القيمة المالية': Number(this.getEffectiveFineAmount(v)) || 0,
-            'الموقع': v.location || v.site || '',
-            'الوصف': v.description || v.notes || '',
-            'الفترة': periodInfo || ''
-        }));
-
-        const workbook = XLSX.utils.book_new();
-        const worksheet = XLSX.utils.json_to_sheet(excelData);
-        worksheet['!cols'] = [
-            { wch: 6 },
-            { wch: 28 },
-            { wch: 14 },
-            { wch: 18 },
-            { wch: 22 },
-            { wch: 14 },
-            { wch: 12 },
-            { wch: 24 },
-            { wch: 12 },
-            { wch: 14 },
-            { wch: 18 },
-            { wch: 36 },
-            { wch: 22 }
-        ];
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'مخالفات المقاولين');
-
-        const reportTitle = selectedContractorName
-            ? `تقرير_مخالفات_المقاول_${selectedContractorName}`
-            : 'تقرير_مخالفات_المقاولين';
-        const safeName = String(reportTitle).replace(/[\\/:*?"<>|]/g, '_').slice(0, 80);
-        const fileName = `${safeName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-        XLSX.writeFile(workbook, fileName);
-        return true;
-    },
-
-    async generateContractorViolationsReport(contractorId = '', dateFilter = {}, selectedContractorName = '', selectedContractorCode = '') {
-        const exportFormat = String(dateFilter?.exportFormat || 'pdf').toLowerCase() === 'excel' ? 'excel' : 'pdf';
-        const { violations, periodInfo } = this._collectContractorViolationsForExport_(
-            contractorId,
-            dateFilter,
-            selectedContractorName,
-            selectedContractorCode
-        );
-
-        if (!violations.length) {
-            Notification.warning('لا توجد بيانات لمخالفات المقاولين وفق المحددات المختارة');
-            return;
-        }
-
-        if (exportFormat === 'excel') {
-            try {
-                Loading.show('جاري إنشاء ملف Excel لمخالفات المقاولين...');
-                const ok = this.exportContractorViolationsToExcel_(violations, selectedContractorName, periodInfo);
-                Loading.hide();
-                if (ok) {
-                    Notification.success('تم تحميل تقرير مخالفات المقاولين بصيغة Excel بنجاح');
-                }
-            } catch (error) {
-                Loading.hide();
-                Utils.safeError('خطأ في تصدير Excel لمخالفات المقاولين:', error);
-                Notification.error('تعذر تصدير Excel: ' + (error.message || 'خطأ غير معروف'));
-            }
-            return;
-        }
-
-        try {
-            Loading.show('جاري إنشاء تقرير مخالفات المقاولين...');
-
-            const highCount = violations.filter(v => String(v.severity || '').trim() === 'عالية').length;
-            const mediumCount = violations.filter(v => String(v.severity || '').trim() === 'متوسطة').length;
-            const lowCount = violations.filter(v => String(v.severity || '').trim() === 'منخضة').length;
-            const resolvedCount = violations.filter(v => String(v.status || '').trim() === 'محلول').length;
-            const unresolvedCount = Math.max(0, violations.length - resolvedCount);
-            const resolutionRate = violations.length > 0 ? Math.round((resolvedCount / violations.length) * 100) : 0;
-            const uniqueContractors = new Set(violations.map(v => String(v.contractorName || '').trim()).filter(Boolean)).size;
-            const totalFineAmount = violations.reduce((sum, v) => sum + (Number(this.getEffectiveFineAmount(v)) || 0), 0);
-
-            const arCell = this._AR_PDF_TEXT_STYLE_;
-            const rowsHtml = violations.map((v, index) => `
+        `,document.body.appendChild(n);const o=()=>n.remove();n.querySelector(".modal-close")?.addEventListener("click",o),n.querySelector('[data-action="close"]')?.addEventListener("click",o),n.addEventListener("click",p=>{p.target===n&&o()});const r=n.querySelectorAll('input[name="contractor-violations-range-type"]'),l=n.querySelector("#contractor-violations-report-month"),c=n.querySelector("#contractor-violations-report-from-date"),s=n.querySelector("#contractor-violations-report-to-date"),d=()=>{const p=n.querySelector('input[name="contractor-violations-range-type"]:checked')?.value||"all";l.disabled=p!=="month",l.required=p==="month",c.disabled=p!=="custom",c.required=p==="custom",s.disabled=p!=="custom",s.required=p==="custom"};r.forEach(p=>p.addEventListener("change",d)),n.querySelector("#generate-contractor-violations-report-btn")?.addEventListener("click",async()=>{const p=n.querySelector("#contractor-violations-report-select"),f=p&&p.selectedIndex>=0?p.options[p.selectedIndex]:null,u=p?.selectedIndex===0,w=!u&&f?.value?String(f.value).trim():"",m=!u&&f?.dataset?.contractorName?String(f.dataset.contractorName).trim():"",h=!u&&f?.dataset?.contractorCode?String(f.dataset.contractorCode).trim():"",g=n.querySelector('input[name="contractor-violations-range-type"]:checked')?.value||"all",D=n.querySelector("#contractor-violations-report-month")?.value||"",B=n.querySelector("#contractor-violations-report-from-date")?.value||"",L=n.querySelector("#contractor-violations-report-to-date")?.value||"",C=n.querySelector('input[name="contractor-violations-export-format"]:checked')?.value||"pdf";if(g==="month"&&!D){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0634\u0647\u0631 \u0627\u0644\u0645\u0637\u0644\u0648\u0628");return}if(g==="custom"){if(!B||!L){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629 \u0648\u0627\u0644\u0646\u0647\u0627\u064A\u0629 \u0644\u0644\u0641\u062A\u0631\u0629");return}if(new Date(B)>new Date(L)){Notification.warning("\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629 \u064A\u062C\u0628 \u0623\u0646 \u064A\u0643\u0648\u0646 \u0642\u0628\u0644 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0646\u0647\u0627\u064A\u0629");return}}o(),await this.generateContractorViolationsReport(w,{dateRangeType:g,month:D,fromDate:B,toDate:L,exportFormat:C},m,h)})},_collectContractorViolationsForExport_(e="",t={},i="",a=""){const n=this._buildContractorExportMatcher(e,i,a);let o=(AppState.appData.violations||[]).map(p=>this.normalizeViolationRecord(p)).filter(Boolean).filter(p=>p?.personType==="contractor"||!!String(p?.contractorName||"").trim());n&&(o=o.filter(p=>n.violationBelongsToContractor(p)));const{dateRangeType:r="all",month:l="",fromDate:c="",toDate:s=""}=t||{};if(r==="month"&&l){const[p,f]=l.split("-");o=o.filter(u=>{if(!u.violationDate)return!1;const w=new Date(u.violationDate);return w.getFullYear()===parseInt(p,10)&&w.getMonth()+1===parseInt(f,10)})}else if(r==="custom"&&c&&s){const p=new Date(c);p.setHours(0,0,0,0);const f=new Date(s);f.setHours(23,59,59,999),o=o.filter(u=>{if(!u.violationDate)return!1;const w=new Date(u.violationDate);return w>=p&&w<=f})}let d="";if(r==="month"&&l){const[p,f]=l.split("-");d=new Date(parseInt(p,10),parseInt(f,10)-1,1).toLocaleDateString("ar-SA-u-nu-latn",{year:"numeric",month:"long"})}else r==="custom"&&c&&s&&(d=`\u0645\u0646 ${Utils.formatDate(c)} \u0625\u0644\u0649 ${Utils.formatDate(s)}`);return{violations:o,periodInfo:d,dateRangeType:r}},exportContractorViolationsToExcel_(e,t="",i=""){if(typeof XLSX>"u")return Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u062D\u062F\u0651\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."),!1;const a=e.map((s,d)=>({"#":d+1,"\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644":s.contractorName||"","\u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644":s.contractorCode||"","\u0639\u0627\u0645\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644":s.contractorWorker||"","\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629":s.violationType||"",\u0627\u0644\u062A\u0627\u0631\u064A\u062E:s.violationDate?Utils.formatDate(s.violationDate):"",\u0627\u0644\u0634\u062F\u0629:s.severity||"","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630":s.actionTaken||"",\u0627\u0644\u062D\u0627\u0644\u0629:s.status||"","\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629":Number(this.getEffectiveFineAmount(s))||0,\u0627\u0644\u0645\u0648\u0642\u0639:s.location||s.site||"",\u0627\u0644\u0648\u0635\u0641:s.description||s.notes||"",\u0627\u0644\u0641\u062A\u0631\u0629:i||""})),n=XLSX.utils.book_new(),o=XLSX.utils.json_to_sheet(a);o["!cols"]=[{wch:6},{wch:28},{wch:14},{wch:18},{wch:22},{wch:14},{wch:12},{wch:24},{wch:12},{wch:14},{wch:18},{wch:36},{wch:22}],XLSX.utils.book_append_sheet(n,o,"\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646");const r=t?`\u062A\u0642\u0631\u064A\u0631_\u0645\u062E\u0627\u0644\u0641\u0627\u062A_\u0627\u0644\u0645\u0642\u0627\u0648\u0644_${t}`:"\u062A\u0642\u0631\u064A\u0631_\u0645\u062E\u0627\u0644\u0641\u0627\u062A_\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646",c=`${String(r).replace(/[\\/:*?"<>|]/g,"_").slice(0,80)}_${new Date().toISOString().slice(0,10)}.xlsx`;return XLSX.writeFile(n,c),!0},async generateContractorViolationsReport(e="",t={},i="",a=""){const n=String(t?.exportFormat||"pdf").toLowerCase()==="excel"?"excel":"pdf",{violations:o,periodInfo:r}=this._collectContractorViolationsForExport_(e,t,i,a);if(!o.length){Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0648\u0641\u0642 \u0627\u0644\u0645\u062D\u062F\u062F\u0627\u062A \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u0629");return}if(n==="excel"){try{Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 \u0645\u0644\u0641 Excel \u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646...");const l=this.exportContractorViolationsToExcel_(o,i,r);Loading.hide(),l&&Notification.success("\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0628\u0635\u064A\u063A\u0629 Excel \u0628\u0646\u062C\u0627\u062D")}catch(l){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 Excel \u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646:",l),Notification.error("\u062A\u0639\u0630\u0631 \u062A\u0635\u062F\u064A\u0631 Excel: "+(l.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}return}try{Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646...");const l=o.filter(S=>String(S.severity||"").trim()==="\u0639\u0627\u0644\u064A\u0629").length,c=o.filter(S=>String(S.severity||"").trim()==="\u0645\u062A\u0648\u0633\u0637\u0629").length,s=o.filter(S=>String(S.severity||"").trim()==="\u0645\u0646\u062E\u0636\u0629").length,d=o.filter(S=>String(S.status||"").trim()==="\u0645\u062D\u0644\u0648\u0644").length,p=Math.max(0,o.length-d),f=o.length>0?Math.round(d/o.length*100):0,u=new Set(o.map(S=>String(S.contractorName||"").trim()).filter(Boolean)).size,w=o.reduce((S,_)=>S+(Number(this.getEffectiveFineAmount(_))||0),0),m=this._AR_PDF_TEXT_STYLE_,h=o.map((S,_)=>`
                 <tr>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${arCell}">${index + 1}</td>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.contractorName || '-')}</td>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.violationType || '-')}</td>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${arCell}">${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.severity || '-')}</td>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.actionTaken || '-')}</td>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.status || '-')}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${m}">${_+1}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${m}">${Utils.escapeHTML(S.contractorName||"-")}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${m}">${Utils.escapeHTML(S.violationType||"-")}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${m}">${S.violationDate?Utils.formatDate(S.violationDate):"-"}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${m}">${Utils.escapeHTML(S.severity||"-")}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${m}">${Utils.escapeHTML(S.actionTaken||"-")}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${m}">${Utils.escapeHTML(S.status||"-")}</td>
                 </tr>
-            `).join('');
-
-            const headingName = selectedContractorName ? ` - ${Utils.escapeHTML(selectedContractorName)}` : '';
-            const content = `
+            `).join(""),g=i?` - ${Utils.escapeHTML(i)}`:"",D=`
                 <div style="margin-bottom: 24px; direction: rtl;">
-                    <h2 dir="rtl" style="font-size: 20px; margin-bottom: 12px; color: #991B1B; font-weight: 700; ${arCell}">تقرير مخالفات المقاولين${headingName}</h2>
-                    ${periodInfo ? `<div style="margin-bottom: 16px; padding: 12px; background: #FFF7ED; border-right: 4px solid #F59E0B; border-radius: 8px;"><strong style="color: #D97706;">الفترة:</strong> <span style="color: #1F2937;">${Utils.escapeHTML(periodInfo)}</span></div>` : ''}
+                    <h2 dir="rtl" style="font-size: 20px; margin-bottom: 12px; color: #991B1B; font-weight: 700; ${m}">\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646${g}</h2>
+                    ${r?`<div style="margin-bottom: 16px; padding: 12px; background: #FFF7ED; border-right: 4px solid #F59E0B; border-radius: 8px;"><strong style="color: #D97706;">\u0627\u0644\u0641\u062A\u0631\u0629:</strong> <span style="color: #1F2937;">${Utils.escapeHTML(r)}</span></div>`:""}
                     <div style="display: flex; flex-wrap: wrap; gap: 16px;">
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA;"><div style="font-size: 12px; color: #B91C1C; margin-bottom: 6px; font-weight: 600;">إجمالي المخالفات</div><div style="font-size: 24px; font-weight: 700; color: #991B1B;">${violations.length}</div></div>
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #EFF6FF; border: 1px solid #BFDBFE;"><div style="font-size: 12px; color: #1D4ED8; margin-bottom: 6px; font-weight: 600;">عدد المقاولين</div><div style="font-size: 24px; font-weight: 700; color: #1E3A8A;">${uniqueContractors}</div></div>
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFFBEB; border: 1px solid #FDE68A;"><div style="font-size: 12px; color: #B45309; margin-bottom: 6px; font-weight: 600;">القيمة المالية للمخالفات</div><div style="font-size: 24px; font-weight: 700; color: #92400E;">${this.formatFineAmount(Number(totalFineAmount))}</div></div>
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFF7ED; border: 1px solid #FED7AA;"><div style="font-size: 12px; color: #C2410C; margin-bottom: 6px; font-weight: 600;">عالية / متوسطة / منخفضة</div><div style="font-size: 20px; font-weight: 700; color: #9A3412;">${highCount} / ${mediumCount} / ${lowCount}</div></div>
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #ECFDF5; border: 1px solid #BBF7D0;"><div style="font-size: 12px; color: #047857; margin-bottom: 6px; font-weight: 600;">معدل الحل</div><div style="font-size: 24px; font-weight: 700; color: #065F46;">${resolutionRate}%</div><div style="font-size: 11px; color: #065F46; margin-top: 4px;">محلول: ${resolvedCount} | غير محلول: ${unresolvedCount}</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA;"><div style="font-size: 12px; color: #B91C1C; margin-bottom: 6px; font-weight: 600;">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</div><div style="font-size: 24px; font-weight: 700; color: #991B1B;">${o.length}</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #EFF6FF; border: 1px solid #BFDBFE;"><div style="font-size: 12px; color: #1D4ED8; margin-bottom: 6px; font-weight: 600;">\u0639\u062F\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</div><div style="font-size: 24px; font-weight: 700; color: #1E3A8A;">${u}</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFFBEB; border: 1px solid #FDE68A;"><div style="font-size: 12px; color: #B45309; margin-bottom: 6px; font-weight: 600;">\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0644\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</div><div style="font-size: 24px; font-weight: 700; color: #92400E;">${this.formatFineAmount(Number(w))}</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFF7ED; border: 1px solid #FED7AA;"><div style="font-size: 12px; color: #C2410C; margin-bottom: 6px; font-weight: 600;">\u0639\u0627\u0644\u064A\u0629 / \u0645\u062A\u0648\u0633\u0637\u0629 / \u0645\u0646\u062E\u0641\u0636\u0629</div><div style="font-size: 20px; font-weight: 700; color: #9A3412;">${l} / ${c} / ${s}</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #ECFDF5; border: 1px solid #BBF7D0;"><div style="font-size: 12px; color: #047857; margin-bottom: 6px; font-weight: 600;">\u0645\u0639\u062F\u0644 \u0627\u0644\u062D\u0644</div><div style="font-size: 24px; font-weight: 700; color: #065F46;">${f}%</div><div style="font-size: 11px; color: #065F46; margin-top: 4px;">\u0645\u062D\u0644\u0648\u0644: ${d} | \u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644: ${p}</div></div>
                     </div>
                 </div>
                 <div style="margin-bottom: 16px; direction: rtl;">
-                    <h3 dir="rtl" style="font-size: 18px; margin-bottom: 12px; color: #991B1B; font-weight: 700; border-bottom: 2px solid #DC2626; padding-bottom: 8px; ${arCell}">جدول المخالفات</h3>
+                    <h3 dir="rtl" style="font-size: 18px; margin-bottom: 12px; color: #991B1B; font-weight: 700; border-bottom: 2px solid #DC2626; padding-bottom: 8px; ${m}">\u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</h3>
                 </div>
                 <div style="overflow-x: auto; direction: rtl;">
-                    <table dir="rtl" style="width: 100%; border-collapse: collapse; font-size: 11px; direction: rtl; ${arCell}">
+                    <table dir="rtl" style="width: 100%; border-collapse: collapse; font-size: 11px; direction: rtl; ${m}">
                         <thead>
                             <tr style="background: #B91C1C; color: #FFFFFF;">
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">#</th>
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">اسم المقاول</th>
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">نوع المخالفة</th>
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">التاريخ</th>
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">الشدة</th>
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">الإجراء المتخذ</th>
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">الحالة</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${m}">#</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${m}">\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${m}">\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${m}">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${m}">\u0627\u0644\u0634\u062F\u0629</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${m}">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${m}">\u0627\u0644\u062D\u0627\u0644\u0629</th>
                             </tr>
                         </thead>
-                        <tbody>${rowsHtml}</tbody>
+                        <tbody>${h}</tbody>
                     </table>
                 </div>
-            `;
-
-            const formCode = `CONTRACTOR-VIOL-${new Date().toISOString().slice(0, 10)}`;
-            const reportTitle = selectedContractorName ? `تقرير مخالفات المقاول: ${selectedContractorName}` : 'تقرير مخالفات المقاولين';
-            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, false, {
-                    source: 'ContractorViolationsTab',
-                    contractorId: contractorId || '',
-                    contractorName: selectedContractorName || '',
-                    titleAr: reportTitle,
-                    includeQRCode: false
-                }, new Date().toISOString(), new Date().toISOString())
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(reportTitle)}</title></head><body>${content}</body></html>`;
-
-            const safeFileName = `${String(reportTitle).replace(/[\\/:*?"<>|]/g, '_')}.pdf`;
-            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, safeFileName);
-            if (!downloaded) {
-                throw new Error('تعذّر إنشاء ملف PDF — تحقق من الاتصال بالإنترنت ثم أعد المحاولة');
-            }
-            Loading.hide();
-            Notification.success('تم تحميل تقرير مخالفات المقاولين بصيغة PDF بنجاح');
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في إنشاء تقرير مخالفات المقاولين:', error);
-            Notification.error('تعذر إنشاء تقرير مخالفات المقاولين: ' + (error.message || 'خطأ غير معروف'));
-        }
-    },
-
-    async deleteViolation(id) {
-        if (!id) {
-            if (typeof Utils !== 'undefined' && Utils.showToast) {
-                Utils.showToast('معرف المخالفة غير موجود', 'error');
-            }
-            return;
-        }
-
-        const targetViolation = (AppState.appData?.violations || []).find(v => v.id === id);
-        if (targetViolation && !this.isViolationVisibleToCurrentUser(targetViolation)) {
-            if (typeof Notification !== 'undefined') Notification.error('عذراً، ليس لديك صلاحية لحذف مخالفات تابعة لإدارة أخرى');
-            else if (typeof Utils !== 'undefined' && Utils.showToast) Utils.showToast('عذراً، ليس لديك صلاحية لحذف مخالفات تابعة لإدارة أخرى', 'error');
-            return;
-        }
-
-        if (!confirm('هل أنت متأكد من حذف هذه المخالفة؟ لا يمكن التراجع عن هذا الإجراء.')) {
-            return;
-        }
-
-        if (typeof Loading !== 'undefined' && Loading.show) {
-            Loading.show('جاري حذف المخالفة...');
-        }
-
-        try {
-            // 1. الحصول على بيانات المخالفة قبل الحذف للتنظيف
-            const violation = (AppState.appData?.violations || []).find(v => v.id === id);
-            const contractorId = violation?.contractorId || '';
-            const contractorName = violation?.contractorName || '';
-            const employeeId = violation?.employeeId || '';
-            const employeeCode = violation?.employeeCode || violation?.employeeNumber || '';
-            const employeeName = violation?.employeeName || '';
-
-            // 2. حذف من قاعدة البيانات (Backend)
-            let result;
-            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.callBackend) {
-                result = await GoogleIntegration.callBackend('deleteViolationFromSheet', { id: id });
-            } else {
-                throw new Error('خدمة الاتصال بالخلفية غير متوفرة');
-            }
-
-            if (result && result.success) {
-                // 3. تحديث البيانات المحلية
-                if (AppState.appData && AppState.appData.violations) {
-                    AppState.appData.violations = AppState.appData.violations.filter(v => v.id !== id);
-                }
-
-                // 4. تنظيف أي مراجع في بيانات المقاولين (إذا كانت موجودة)
-                if (contractorId || contractorName) {
-                    const contractors = AppState.appData?.contractors || [];
-                    contractors.forEach(contractor => {
-                        if (contractor && (
-                            contractor.id === contractorId || 
-                            contractor.name === contractorName ||
-                            contractor.contractorName === contractorName
-                        )) {
-                            // إذا كان المقاول يحتوي على مصفوفة violations، نزيل المخالفة منها
-                            if (Array.isArray(contractor.violations)) {
-                                contractor.violations = contractor.violations.filter(v => v.id !== id);
-                            }
-                            // تنظيف أي مراجع أخرى
-                            if (contractor.violationIds && Array.isArray(contractor.violationIds)) {
-                                contractor.violationIds = contractor.violationIds.filter(vId => vId !== id);
-                            }
-                        }
-                    });
-                }
-
-                // 5. تنظيف أي مراجع في بيانات الموظفين (إذا كانت موجودة)
-                if (employeeId || employeeCode || employeeName) {
-                    const employees = AppState.appData?.employees || [];
-                    employees.forEach(employee => {
-                        if (employee && (
-                            employee.id === employeeId ||
-                            employee.employeeNumber === employeeCode ||
-                            employee.employeeCode === employeeCode ||
-                            employee.name === employeeName
-                        )) {
-                            // إذا كان الموظف يحتوي على مصفوفة violations، نزيل المخالفة منها
-                            if (Array.isArray(employee.violations)) {
-                                employee.violations = employee.violations.filter(v => v.id !== id);
-                            }
-                            // تنظيف أي مراجع أخرى
-                            if (employee.violationIds && Array.isArray(employee.violationIds)) {
-                                employee.violationIds = employee.violationIds.filter(vId => vId !== id);
-                            }
-                        }
-                    });
-                }
-
-                // 6. حفظ البيانات المحلية
-                if (typeof DataManager !== 'undefined' && DataManager.save) {
-                    DataManager.save();
-                }
-
-                // 7. تحديث الكروت فوراً (مباشر) ثم العروض
-                try { this.updateAllViolationsStats(); } catch (e) { /* ignore */ }
-                this.refreshViolationsView();
-
-                // 8. تحديث عروض المقاولين والموظفين إذا كانت مفتوحة
-                if (typeof Contractors !== 'undefined' && Contractors.load) {
-                    try {
-                        const currentSection = AppState?.currentSection || '';
-                        // ✅ CRITICAL: منع استدعاء load إذا كان قيد التنفيذ
-                        if (currentSection === 'contractors' && !Contractors._isLoading) {
-                            Contractors.load();
-                        }
-                    } catch (e) {
-                        console.warn('Could not refresh contractors view:', e);
-                    }
-                }
-
-                if (typeof Employees !== 'undefined' && Employees.loadEmployeesList) {
-                    try {
-                        const currentSection = AppState?.currentSection || '';
-                        if (currentSection === 'employees') {
-                            Employees.loadEmployeesList();
-                        }
-                    } catch (e) {
-                        console.warn('Could not refresh employees view:', e);
-                    }
-                }
-
-                if (typeof Utils !== 'undefined' && Utils.showToast) {
-                    Utils.showToast('تم حذف المخالفة بنجاح من قاعدة البيانات وجميع السجلات المرتبطة', 'success');
-                }
-            } else {
-                throw new Error(result?.message || 'فشل حذف المخالفة من قاعدة البيانات');
-            }
-        } catch (error) {
-            console.error('Error deleting violation:', error);
-            if (typeof Utils !== 'undefined' && Utils.showToast) {
-                Utils.showToast('حدث خطأ أثناء حذف المخالفة: ' + error.message, 'error');
-            } else {
-                alert('حدث خطأ أثناء حذف المخالفة: ' + error.message);
-            }
-        } finally {
-            if (typeof Loading !== 'undefined' && Loading.hide) {
-                Loading.hide();
-            }
-        }
-    },
-
-    // ══════════════════════════════════════════════════════════════════
-    //  لوحة تحليل المخالفات الاحترافية
-    // ══════════════════════════════════════════════════════════════════
-
-    renderAnalyticsTab() {
-        // بدء تحميل Chart.js مبكراً
-        this._vEnsureChartJS().catch(() => {});
-        const t = (key, fallback) => this._t(key, fallback);
-        const currentCurrency = this.getCurrentCurrency();
-        return `
+            `,B=`CONTRACTOR-VIOL-${new Date().toISOString().slice(0,10)}`,L=i?`\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644: ${i}`:"\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646",C=typeof FormHeader<"u"&&typeof FormHeader.generatePDFHTML=="function"?FormHeader.generatePDFHTML(B,L,D,!1,!1,{source:"ContractorViolationsTab",contractorId:e||"",contractorName:i||"",titleAr:L,includeQRCode:!1},new Date().toISOString(),new Date().toISOString()):`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(L)}</title></head><body>${D}</body></html>`,F=`${String(L).replace(/[\\/:*?"<>|]/g,"_")}.pdf`;if(!await this._downloadHtmlReportAsPdf(C,F))throw new Error("\u062A\u0639\u0630\u0651\u0631 \u0625\u0646\u0634\u0627\u0621 \u0645\u0644\u0641 PDF \u2014 \u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A \u062B\u0645 \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629");Loading.hide(),Notification.success("\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0628\u0635\u064A\u063A\u0629 PDF \u0628\u0646\u062C\u0627\u062D")}catch(l){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0625\u0646\u0634\u0627\u0621 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646:",l),Notification.error("\u062A\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646: "+(l.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}},async deleteViolation(e){if(!e){typeof Utils<"u"&&Utils.showToast&&Utils.showToast("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F","error");return}const t=(AppState.appData?.violations||[]).find(i=>i.id===e);if(t&&!this.isViolationVisibleToCurrentUser(t)){typeof Notification<"u"?Notification.error("\u0639\u0630\u0631\u0627\u064B\u060C \u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u062D\u0630\u0641 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062A\u0627\u0628\u0639\u0629 \u0644\u0625\u062F\u0627\u0631\u0629 \u0623\u062E\u0631\u0649"):typeof Utils<"u"&&Utils.showToast&&Utils.showToast("\u0639\u0630\u0631\u0627\u064B\u060C \u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u062D\u0630\u0641 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062A\u0627\u0628\u0639\u0629 \u0644\u0625\u062F\u0627\u0631\u0629 \u0623\u062E\u0631\u0649","error");return}if(confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629\u061F \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621.")){typeof Loading<"u"&&Loading.show&&Loading.show("\u062C\u0627\u0631\u064A \u062D\u0630\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629...");try{const i=(AppState.appData?.violations||[]).find(s=>s.id===e),a=i?.contractorId||"",n=i?.contractorName||"",o=i?.employeeId||"",r=i?.employeeCode||i?.employeeNumber||"",l=i?.employeeName||"";let c;if(typeof GoogleIntegration<"u"&&GoogleIntegration.callBackend)c=await GoogleIntegration.callBackend("deleteViolationFromSheet",{id:e});else throw new Error("\u062E\u062F\u0645\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u062E\u0644\u0641\u064A\u0629 \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631\u0629");if(c&&c.success){AppState.appData&&AppState.appData.violations&&(AppState.appData.violations=AppState.appData.violations.filter(s=>s.id!==e)),(a||n)&&(AppState.appData?.contractors||[]).forEach(d=>{d&&(d.id===a||d.name===n||d.contractorName===n)&&(Array.isArray(d.violations)&&(d.violations=d.violations.filter(p=>p.id!==e)),d.violationIds&&Array.isArray(d.violationIds)&&(d.violationIds=d.violationIds.filter(p=>p!==e)))}),(o||r||l)&&(AppState.appData?.employees||[]).forEach(d=>{d&&(d.id===o||d.employeeNumber===r||d.employeeCode===r||d.name===l)&&(Array.isArray(d.violations)&&(d.violations=d.violations.filter(p=>p.id!==e)),d.violationIds&&Array.isArray(d.violationIds)&&(d.violationIds=d.violationIds.filter(p=>p!==e)))}),typeof DataManager<"u"&&DataManager.save&&DataManager.save();try{this.updateAllViolationsStats()}catch{}if(this.refreshViolationsView(),typeof Contractors<"u"&&Contractors.load)try{(AppState?.currentSection||"")==="contractors"&&!Contractors._isLoading&&Contractors.load()}catch{}if(typeof Employees<"u"&&Employees.loadEmployeesList)try{(AppState?.currentSection||"")==="employees"&&Employees.loadEmployeesList()}catch{}typeof Utils<"u"&&Utils.showToast&&Utils.showToast("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0628\u0646\u062C\u0627\u062D \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0648\u062C\u0645\u064A\u0639 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629","success")}else throw new Error(c?.message||"\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}catch(i){typeof Utils<"u"&&Utils.showToast?Utils.showToast("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629: "+i.message,"error"):alert("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629: "+i.message)}finally{typeof Loading<"u"&&Loading.hide&&Loading.hide()}}},renderAnalyticsTab(){this._vEnsureChartJS().catch(()=>{});const e=(i,a)=>this._t(i,a),t=this.getCurrentCurrency();return`
         <div id="viol-analytics-root" style="font-family:'Cairo','Inter',sans-serif !important;">
 
-            <!-- ── شريط الأدوات الرئيسي (يُخفى عند تصدير PDF) ── -->
+            <!-- \u2500\u2500 \u0634\u0631\u064A\u0637 \u0627\u0644\u0623\u062F\u0648\u0627\u062A \u0627\u0644\u0631\u0626\u064A\u0633\u064A (\u064A\u064F\u062E\u0641\u0649 \u0639\u0646\u062F \u062A\u0635\u062F\u064A\u0631 PDF) \u2500\u2500 -->
             <div id="viol-analytics-toolbar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#7f1d1d 0%,#dc2626 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(220,38,38,0.35);">
                 <div style="display:flex;align-items:center;gap:12px;">
                     <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
                         <i class="fas fa-chart-bar" style="font-size:20px;"></i>
                     </div>
                     <div>
-                        <h2 style="margin:0;font-size:1.3rem;font-weight:800;">${t('module.violations.analytics.title', 'لوحة تحليل المخالفات')}</h2>
-                        <p style="margin:4px 0 0 0;font-size:0.9rem;font-weight:500;opacity:0.95;">${t('module.violations.analytics.subtitle', 'تحليل شامل وفوري • فلاتر تفاعلية • تصدير PDF')}</p>
+                        <h2 style="margin:0;font-size:1.3rem;font-weight:800;">${e("module.violations.analytics.title","\u0644\u0648\u062D\u0629 \u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A")}</h2>
+                        <p style="margin:4px 0 0 0;font-size:0.9rem;font-weight:500;opacity:0.95;">${e("module.violations.analytics.subtitle","\u062A\u062D\u0644\u064A\u0644 \u0634\u0627\u0645\u0644 \u0648\u0641\u0648\u0631\u064A \u2022 \u0641\u0644\u0627\u062A\u0631 \u062A\u0641\u0627\u0639\u0644\u064A\u0629 \u2022 \u062A\u0635\u062F\u064A\u0631 PDF")}</p>
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                    <span style="font-size:0.85rem;font-weight:700;opacity:0.95;margin-left:2px;">${t('module.violations.analytics.period', 'الفترة:')}</span>
+                    <span style="font-size:0.85rem;font-weight:700;opacity:0.95;margin-left:2px;">${e("module.violations.analytics.period","\u0627\u0644\u0641\u062A\u0631\u0629:")}</span>
                     <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                        ${['30','90','180','365','0'].map((v,i) => {
-                            const labels = [
-                                t('module.violations.analytics.period.30d', '30 يوم'),
-                                t('module.violations.analytics.period.3m', '3 أشهر'),
-                                t('module.violations.analytics.period.6m', '6 أشهر'),
-                                t('module.violations.analytics.period.1y', 'سنة'),
-                                t('module.violations.analytics.period.all', 'الكل')
-                            ];
-                            const active = (this._violPeriod || '0') === v;
-                            return `<button class="viol-period-btn" data-period="${v}" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.18)'};color:${active?'#991b1b':'#fff'};">${labels[i]}</button>`;
-                        }).join('')}
+                        ${["30","90","180","365","0"].map((i,a)=>{const n=[e("module.violations.analytics.period.30d","30 \u064A\u0648\u0645"),e("module.violations.analytics.period.3m","3 \u0623\u0634\u0647\u0631"),e("module.violations.analytics.period.6m","6 \u0623\u0634\u0647\u0631"),e("module.violations.analytics.period.1y","\u0633\u0646\u0629"),e("module.violations.analytics.period.all","\u0627\u0644\u0643\u0644")],o=(this._violPeriod||"0")===i;return`<button class="viol-period-btn" data-period="${i}" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;transition:all .2s;background:${o?"#fff":"rgba(255,255,255,0.18)"};color:${o?"#991b1b":"#fff"};">${n[a]}</button>`}).join("")}
                     </div>
                     <button id="viol-toggle-filters-btn" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.85rem;font-weight:700;transition:all .2s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
-                        <i class="fas fa-sliders-h"></i><span>${t('module.violations.analytics.filters', 'فلاتر')}</span><span id="viol-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.72rem;padding:2px 6px;border-radius:10px;margin-right:2px;">●</span>
+                        <i class="fas fa-sliders-h"></i><span>${e("module.violations.analytics.filters","\u0641\u0644\u0627\u062A\u0631")}</span><span id="viol-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.72rem;padding:2px 6px;border-radius:10px;margin-right:2px;">\u25CF</span>
                     </button>
-                    <!-- ✅ تبديل العملة EGP ⇄ USD -->
+                    <!-- \u2705 \u062A\u0628\u062F\u064A\u0644 \u0627\u0644\u0639\u0645\u0644\u0629 EGP \u21C4 USD -->
                     <div style="display:inline-flex;align-items:center;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.4);border-radius:8px;overflow:hidden;">
-                        <button id="viol-curr-egp" data-curr="EGP" class="viol-curr-btn" style="padding:7px 12px;border:none;cursor:pointer;background:${currentCurrency==='EGP'?'#fff':'transparent'};color:${currentCurrency==='EGP'?'#991b1b':'#fff'};font-size:0.85rem;font-weight:800;transition:all .15s;" title="${t('module.violations.analytics.currency.egp_long', 'جنيه مصري')}">${t('module.violations.analytics.currency.egp_short', 'ج.م')}</button>
-                        <button id="viol-curr-usd" data-curr="USD" class="viol-curr-btn" style="padding:7px 12px;border:none;cursor:pointer;background:${currentCurrency==='USD'?'#fff':'transparent'};color:${currentCurrency==='USD'?'#991b1b':'#fff'};font-size:0.85rem;font-weight:800;transition:all .15s;" title="${t('module.violations.analytics.currency.usd_long', 'دولار أمريكي')}">$</button>
-                        <button id="viol-curr-rate-btn" style="padding:7px 10px;border:none;border-right:1px solid rgba(255,255,255,0.25);cursor:pointer;background:transparent;color:#fff;font-size:0.85rem;transition:all .15s;" title="${t('module.violations.analytics.currency.rate_edit', 'تعديل سعر الصرف')}" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='transparent'"><i class="fas fa-cog"></i></button>
+                        <button id="viol-curr-egp" data-curr="EGP" class="viol-curr-btn" style="padding:7px 12px;border:none;cursor:pointer;background:${t==="EGP"?"#fff":"transparent"};color:${t==="EGP"?"#991b1b":"#fff"};font-size:0.85rem;font-weight:800;transition:all .15s;" title="${e("module.violations.analytics.currency.egp_long","\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A")}">${e("module.violations.analytics.currency.egp_short","\u062C.\u0645")}</button>
+                        <button id="viol-curr-usd" data-curr="USD" class="viol-curr-btn" style="padding:7px 12px;border:none;cursor:pointer;background:${t==="USD"?"#fff":"transparent"};color:${t==="USD"?"#991b1b":"#fff"};font-size:0.85rem;font-weight:800;transition:all .15s;" title="${e("module.violations.analytics.currency.usd_long","\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A")}">$</button>
+                        <button id="viol-curr-rate-btn" style="padding:7px 10px;border:none;border-right:1px solid rgba(255,255,255,0.25);cursor:pointer;background:transparent;color:#fff;font-size:0.85rem;transition:all .15s;" title="${e("module.violations.analytics.currency.rate_edit","\u062A\u0639\u062F\u064A\u0644 \u0633\u0639\u0631 \u0627\u0644\u0635\u0631\u0641")}" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='transparent'"><i class="fas fa-cog"></i></button>
                     </div>
                     <button id="viol-export-pdf-btn" style="padding:7px 16px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.35);color:#fff;font-size:0.85rem;font-weight:700;transition:all .2s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='rgba(0,0,0,0.55)'" onmouseout="this.style.background='rgba(0,0,0,0.35)'">
                         <i class="fas fa-file-pdf"></i><span>PDF</span>
                     </button>
-                    <button id="viol-analytics-refresh" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.18);color:#fff;font-size:0.85rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'" title="${t('module.common.refresh', 'تحديث')}">
+                    <button id="viol-analytics-refresh" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.18);color:#fff;font-size:0.85rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'" title="${e("module.common.refresh","\u062A\u062D\u062F\u064A\u062B")}">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
@@ -2983,52 +748,45 @@ const Violations = {
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                     <div style="display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-sliders-h" style="color:#dc2626;font-size:16px;"></i>
-                        <span style="font-weight:800;font-size:1.05rem;color:#7f1d1d;">${t('module.violations.analytics.filters.interactive', 'الفلاتر التفاعلية')}</span>
+                        <span style="font-weight:800;font-size:1.05rem;color:#7f1d1d;">${e("module.violations.analytics.filters.interactive","\u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629")}</span>
                         <span id="viol-filter-count" style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
                     </div>
                     <button id="viol-filter-reset-btn" style="padding:6px 14px;border-radius:8px;border:1px solid #fecaca;background:#fff;color:#475569;font-size:0.82rem;font-weight:700;cursor:pointer;" onmouseover="this.style.background='#fee2e2';this.style.color='#dc2626'" onmouseout="this.style.background='#fff';this.style.color='#475569'">
-                        <i class="fas fa-times ml-1"></i>${t('module.common.reset', 'مسح الكل')}
+                        <i class="fas fa-times ml-1"></i>${e("module.common.reset","\u0645\u0633\u062D \u0627\u0644\u0643\u0644")}
                     </button>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
-                    ${[
-                        {id:'viol-af-factory', icon:'fas fa-industry',          color:'#ec4899', label:t('module.violations.analytics.filter.factory', 'المصنع الرئيسي')},
-                        {id:'viol-af-ptype',   icon:'fas fa-id-badge',          color:'#6366f1', label:t('module.violations.analytics.filter.personType', 'نوع الشخص')},
-                        {id:'viol-af-type',    icon:'fas fa-tag',               color:'#dc2626', label:t('module.violations.analytics.filter.type', 'نوع المخالفة')},
-                        {id:'viol-af-sev',     icon:'fas fa-exclamation-circle', color:'#f59e0b', label:t('module.violations.analytics.filter.severity', 'درجة الشدة')},
-                        {id:'viol-af-status',  icon:'fas fa-circle',            color:'#10b981', label:t('module.violations.analytics.filter.status', 'الحالة')},
-                        {id:'viol-af-loc',     icon:'fas fa-map-marker-alt',    color:'#3b82f6', label:t('module.violations.analytics.filter.location', 'الموقع الفرعي')},
-                    ].map(f => `
+                    ${[{id:"viol-af-factory",icon:"fas fa-industry",color:"#ec4899",label:e("module.violations.analytics.filter.factory","\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A")},{id:"viol-af-ptype",icon:"fas fa-id-badge",color:"#6366f1",label:e("module.violations.analytics.filter.personType","\u0646\u0648\u0639 \u0627\u0644\u0634\u062E\u0635")},{id:"viol-af-type",icon:"fas fa-tag",color:"#dc2626",label:e("module.violations.analytics.filter.type","\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629")},{id:"viol-af-sev",icon:"fas fa-exclamation-circle",color:"#f59e0b",label:e("module.violations.analytics.filter.severity","\u062F\u0631\u062C\u0629 \u0627\u0644\u0634\u062F\u0629")},{id:"viol-af-status",icon:"fas fa-circle",color:"#10b981",label:e("module.violations.analytics.filter.status","\u0627\u0644\u062D\u0627\u0644\u0629")},{id:"viol-af-loc",icon:"fas fa-map-marker-alt",color:"#3b82f6",label:e("module.violations.analytics.filter.location","\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0641\u0631\u0639\u064A")}].map(i=>`
                         <div>
                             <label style="font-size:0.85rem;font-weight:700;color:#334155;display:block;margin-bottom:6px;">
-                                <i class="${f.icon}" style="color:${f.color};margin-left:5px;"></i>${f.label}
+                                <i class="${i.icon}" style="color:${i.color};margin-left:5px;"></i>${i.label}
                             </label>
-                            <select id="${f.id}" style="width:100%;padding:8px 12px;border:1.5px solid #fecaca;border-radius:8px;font-size:0.92rem;font-weight:600;background:#fff;color:#1e293b;cursor:pointer;" onfocus="this.style.borderColor='#dc2626'" onblur="this.style.borderColor='#fecaca'">
-                                <option value="">${t('module.common.all', 'الكل')}</option>
+                            <select id="${i.id}" style="width:100%;padding:8px 12px;border:1.5px solid #fecaca;border-radius:8px;font-size:0.92rem;font-weight:600;background:#fff;color:#1e293b;cursor:pointer;" onfocus="this.style.borderColor='#dc2626'" onblur="this.style.borderColor='#fecaca'">
+                                <option value="">${e("module.common.all","\u0627\u0644\u0643\u0644")}</option>
                             </select>
                         </div>
-                    `).join('')}
+                    `).join("")}
                 </div>
             </div>
 
-            <!-- ── KPI Cards (تفاعلية عند النقر) ── -->
+            <!-- \u2500\u2500 KPI Cards (\u062A\u0641\u0627\u0639\u0644\u064A\u0629 \u0639\u0646\u062F \u0627\u0644\u0646\u0642\u0631) \u2500\u2500 -->
             <div id="viol-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
                 <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
             </div>
 
-            <!-- ── المصنع الرئيسي (توزيع ونسب المخالفات) ── -->
+            <!-- \u2500\u2500 \u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A (\u062A\u0648\u0632\u064A\u0639 \u0648\u0646\u0633\u0628 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A) \u2500\u2500 -->
             <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:18px;">
                 <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                     <div style="display:flex;align-items:center;gap:10px;">
                         <i class="fas fa-industry" style="color:#ec4899;font-size:1.15rem;"></i>
-                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.byFactory', 'توزيع ونسب المخالفات حسب المصانع الرئيسية')}</span>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.byFactory","\u062A\u0648\u0632\u064A\u0639 \u0648\u0646\u0633\u0628 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062D\u0633\u0628 \u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629")}</span>
                     </div>
                     <span id="viol-factory-total-badge" style="background:#fdf2f8;color:#be185d;padding:4px 12px;border-radius:12px;font-size:0.85rem;font-weight:700;"></span>
                 </div>
                 <div style="padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:24px;align-items:center;">
                     <div style="position:relative;height:260px;">
                         <canvas id="viol-chart-factory"></canvas>
-                        <div id="viol-chart-factory-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                        <div id="viol-chart-factory-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>
                     </div>
                     <div id="viol-factory-breakdown-list" style="display:flex;flex-direction:column;gap:12px;max-height:260px;overflow-y:auto;padding-left:4px;">
                         <!-- dynamic factory breakdown items -->
@@ -3036,56 +794,56 @@ const Violations = {
                 </div>
             </div>
 
-            <!-- ── Row 1: الحالة + الشدة ── -->
+            <!-- \u2500\u2500 Row 1: \u0627\u0644\u062D\u0627\u0644\u0629 + \u0627\u0644\u0634\u062F\u0629 \u2500\u2500 -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:18px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
                         <i class="fas fa-tasks" style="color:#3b82f6;font-size:1.15rem;"></i>
-                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.status', 'التوزيع حسب الحالة')}</span>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.status","\u0627\u0644\u062A\u0648\u0632\u064A\u0639 \u062D\u0633\u0628 \u0627\u0644\u062D\u0627\u0644\u0629")}</span>
                     </div>
                     <div style="padding:14px;position:relative;height:250px;">
                         <canvas id="viol-chart-status"></canvas>
-                        <div id="viol-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                        <div id="viol-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
                         <i class="fas fa-exclamation-circle" style="color:#ef4444;font-size:1.15rem;"></i>
-                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.severity', 'التوزيع حسب درجة الشدة')}</span>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.severity","\u0627\u0644\u062A\u0648\u0632\u064A\u0639 \u062D\u0633\u0628 \u062F\u0631\u062C\u0629 \u0627\u0644\u0634\u062F\u0629")}</span>
                     </div>
                     <div style="padding:14px;position:relative;height:250px;">
                         <canvas id="viol-chart-sev"></canvas>
-                        <div id="viol-chart-sev-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                        <div id="viol-chart-sev-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ── الاتجاه الزمني ── -->
+            <!-- \u2500\u2500 \u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0632\u0645\u0646\u064A \u2500\u2500 -->
             <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:18px;">
                 <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
                     <i class="fas fa-chart-area" style="color:#8b5cf6;font-size:1.15rem;"></i>
-                    <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.trend', 'الاتجاه الزمني للمخالفات (آخر 12 شهر)')}</span>
+                    <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.trend","\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0632\u0645\u0646\u064A \u0644\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A (\u0622\u062E\u0631 12 \u0634\u0647\u0631)")}</span>
                 </div>
                 <div style="padding:14px;position:relative;height:270px;">
                     <canvas id="viol-chart-trend"></canvas>
-                    <div id="viol-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                    <div id="viol-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>
                 </div>
             </div>
 
-            <!-- ── Row 2: نوع المخالفة + الموقع ── -->
+            <!-- \u2500\u2500 Row 2: \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 + \u0627\u0644\u0645\u0648\u0642\u0639 \u2500\u2500 -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:18px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                         <div style="display:flex;align-items:center;gap:10px;">
                             <i class="fas fa-tag" style="color:#dc2626;font-size:1.15rem;"></i>
-                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.byType', 'حسب نوع المخالفة (أعلى 10)')}</span>
+                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.byType","\u062D\u0633\u0628 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 (\u0623\u0639\u0644\u0649 10)")}</span>
                         </div>
                         <span id="viol-type-total-badge" style="background:#fef2f2;color:#b91c1c;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
                     </div>
                     <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;align-items:center;">
                         <div style="position:relative;height:240px;">
                             <canvas id="viol-chart-type"></canvas>
-                            <div id="viol-chart-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                            <div id="viol-chart-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>
                         </div>
                         <div id="viol-type-breakdown-list" style="display:flex;flex-direction:column;gap:10px;max-height:260px;overflow-y:auto;padding-left:4px;">
                         </div>
@@ -3095,34 +853,34 @@ const Violations = {
                     <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                         <div style="display:flex;align-items:center;gap:10px;">
                             <i class="fas fa-map-marker-alt" style="color:#f59e0b;font-size:1.15rem;"></i>
-                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.byLocation', 'حسب الموقع (أعلى 8)')}</span>
+                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.byLocation","\u062D\u0633\u0628 \u0627\u0644\u0645\u0648\u0642\u0639 (\u0623\u0639\u0644\u0649 8)")}</span>
                         </div>
                         <span id="viol-loc-total-badge" style="background:#fffbeb;color:#92400e;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
                     </div>
                     <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;align-items:center;">
                         <div style="position:relative;height:220px;">
                             <canvas id="viol-chart-loc"></canvas>
-                            <div id="viol-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                            <div id="viol-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>
                         </div>
                         <div id="viol-loc-breakdown-list" style="display:flex;flex-direction:column;gap:9px;max-height:240px;overflow-y:auto;padding-left:4px;"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- ── Row 3: أكثر الموظفين + أكثر المقاولين ── -->
+            <!-- \u2500\u2500 Row 3: \u0623\u0643\u062B\u0631 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 + \u0623\u0643\u062B\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u2500\u2500 -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:18px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                         <div style="display:flex;align-items:center;gap:10px;">
                             <i class="fas fa-user-tie" style="color:#6366f1;font-size:1.15rem;"></i>
-                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.topEmployees', 'أكثر الموظفين مخالفةً (أعلى 10)')}</span>
+                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.topEmployees","\u0623\u0643\u062B\u0631 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0645\u062E\u0627\u0644\u0641\u0629\u064B (\u0623\u0639\u0644\u0649 10)")}</span>
                         </div>
                         <span id="viol-emp-total-badge" style="background:#eef2ff;color:#4338ca;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
                     </div>
                     <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;align-items:center;">
                         <div style="position:relative;height:220px;">
                             <canvas id="viol-chart-emp"></canvas>
-                            <div id="viol-chart-emp-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.chart.noEmpViolations', 'لا توجد مخالفات موظفين')}</div>
+                            <div id="viol-chart-emp-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.chart.noEmpViolations","\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0645\u0648\u0638\u0641\u064A\u0646")}</div>
                         </div>
                         <div id="viol-emp-breakdown-list" style="display:flex;flex-direction:column;gap:9px;max-height:240px;overflow-y:auto;padding-left:4px;"></div>
                     </div>
@@ -3131,39 +889,39 @@ const Violations = {
                     <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                         <div style="display:flex;align-items:center;gap:10px;">
                             <i class="fas fa-users-cog" style="color:#f97316;font-size:1.15rem;"></i>
-                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.topContractors', 'أكثر المقاولين مخالفةً (أعلى 10)')}</span>
+                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.topContractors","\u0623\u0643\u062B\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0645\u062E\u0627\u0644\u0641\u0629\u064B (\u0623\u0639\u0644\u0649 10)")}</span>
                         </div>
                         <span id="viol-con-total-badge" style="background:#fff7ed;color:#c2410c;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
                     </div>
                     <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;align-items:center;">
                         <div style="position:relative;height:220px;">
                             <canvas id="viol-chart-con"></canvas>
-                            <div id="viol-chart-con-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.chart.noConViolations', 'لا توجد مخالفات مقاولين')}</div>
+                            <div id="viol-chart-con-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.chart.noConViolations","\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0645\u0642\u0627\u0648\u0644\u064A\u0646")}</div>
                         </div>
                         <div id="viol-con-breakdown-list" style="display:flex;flex-direction:column;gap:9px;max-height:240px;overflow-y:auto;padding-left:4px;"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- ── مخطط الغرامات حسب نوع المخالفة ── -->
+            <!-- \u2500\u2500 \u0645\u062E\u0637\u0637 \u0627\u0644\u063A\u0631\u0627\u0645\u0627\u062A \u062D\u0633\u0628 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u2500\u2500 -->
             <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:18px;">
                 <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
                     <i class="fas fa-coins" style="color:#d97706;font-size:1.15rem;"></i>
-                    <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.finesByType', 'إجمالي الغرامات حسب نوع المخالفة ({currency})').replace('{currency}', this.getCurrencyLabel('long') === 'دولار أمريكي' ? t('module.violations.analytics.currency.usd_long', 'دولار أمريكي') : t('module.violations.analytics.currency.egp_long', 'جنيه مصري'))}</span>
-                    <span style="font-size:0.82rem;font-weight:600;color:#64748b;margin-right:auto;">${t('module.violations.analytics.top10Types', '(أعلى 10 أنواع)')}</span>
+                    <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.finesByType","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u063A\u0631\u0627\u0645\u0627\u062A \u062D\u0633\u0628 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 ({currency})").replace("{currency}",this.getCurrencyLabel("long")==="\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A"?e("module.violations.analytics.currency.usd_long","\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A"):e("module.violations.analytics.currency.egp_long","\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A"))}</span>
+                    <span style="font-size:0.82rem;font-weight:600;color:#64748b;margin-right:auto;">${e("module.violations.analytics.top10Types","(\u0623\u0639\u0644\u0649 10 \u0623\u0646\u0648\u0627\u0639)")}</span>
                 </div>
                 <div style="padding:14px;position:relative;height:270px;">
                     <canvas id="viol-chart-fines"></canvas>
-                    <div id="viol-chart-fines-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.chart.noFinesData', 'لا توجد بيانات غرامات')}</div>
+                    <div id="viol-chart-fines-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.chart.noFinesData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u063A\u0631\u0627\u0645\u0627\u062A")}</div>
                 </div>
             </div>
 
-            <!-- ── جدول أشد المخالفات ── -->
+            <!-- \u2500\u2500 \u062C\u062F\u0648\u0644 \u0623\u0634\u062F \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u2500\u2500 -->
             <div class="content-card" style="padding:0;overflow:hidden;">
                 <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                     <div style="display:flex;align-items:center;gap:10px;">
                         <i class="fas fa-fire" style="color:#dc2626;font-size:1.15rem;"></i>
-                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.table.criticalTitle', 'أشد المخالفات (عالية الشدة — غير محلولة)')}</span>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.table.criticalTitle","\u0623\u0634\u062F \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A (\u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u0634\u062F\u0629 \u2014 \u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644\u0629)")}</span>
                     </div>
                     <span id="viol-critical-count" style="background:#fef2f2;color:#b91c1c;padding:4px 12px;border-radius:20px;font-size:0.85rem;font-weight:700;"></span>
                 </div>
@@ -3171,852 +929,92 @@ const Violations = {
                     <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
                         <thead>
                             <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
-                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.date', 'التاريخ')}</th>
-                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.name', 'الاسم')}</th>
-                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.personType', 'نوع الشخص')}</th>
-                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.type', 'نوع المخالفة')}</th>
-                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.location', 'الموقع')}</th>
-                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.severity', 'الشدة')}</th>
-                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.status', 'الحالة')}</th>
-                                <th style="padding:12px 14px;text-align:center;font-weight:800;color:#0f172a;white-space:nowrap;">${t('module.violations.analytics.table.fine', 'الغرامة ({currency})').replace('{currency}', this.getCurrencyLabel('short'))}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.date","\u0627\u0644\u062A\u0627\u0631\u064A\u062E")}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.name","\u0627\u0644\u0627\u0633\u0645")}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.personType","\u0646\u0648\u0639 \u0627\u0644\u0634\u062E\u0635")}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.type","\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629")}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.location","\u0627\u0644\u0645\u0648\u0642\u0639")}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.severity","\u0627\u0644\u0634\u062F\u0629")}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.status","\u0627\u0644\u062D\u0627\u0644\u0629")}</th>
+                                <th style="padding:12px 14px;text-align:center;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.fine","\u0627\u0644\u063A\u0631\u0627\u0645\u0629 ({currency})").replace("{currency}",this.getCurrencyLabel("short"))}</th>
                             </tr>
                         </thead>
                         <tbody id="viol-critical-tbody">
-                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.common.loading', 'جارٍ التحميل…')}</td></tr>
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.common.loading","\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0645\u064A\u0644\u2026")}</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
             </div>
-        </div>`;
-    },
-
-    // ── تحديث لوحة تحليل المخالفات ──
-    async updateViolationAnalytics() {
-        const root = document.getElementById('viol-analytics-root');
-        if (!root) return;
-        const t = (key, fallback) => this._t(key, fallback);
-        const lang = window.AppI18n && typeof window.AppI18n.getCurrentLang === 'function' ? window.AppI18n.getCurrentLang() : 'ar';
-        const dateLocale = lang === 'en' ? 'en-US' : 'ar-SA-u-nu-latn';
-
-        // ── 1. جمع البيانات وتطبيع السجلات ──
-        const period = parseInt(this._violPeriod || '0', 10);
-        const rawAll = AppState.appData.violations || [];
-        const allViol = rawAll.map(r => this.normalizeViolationRecord(r)).filter(v => v && this.isViolationVisibleToCurrentUser(v));
-
-        // ── 2. تصفية بالفترة الزمنية ──
-        const violByPeriod = this._vFilterByPeriod(allViol, period);
-
-        // ── 3. ملء قوائم الفلاتر من بيانات الفترة ──
-        this._vPopulateFilters(violByPeriod);
-
-        // ── 4. تطبيق الفلاتر التفاعلية ──
-        const viol = this._vApplyFilters(violByPeriod);
-        const total = viol.length;
-        const countEl = document.getElementById('viol-filter-count');
-        if (countEl) countEl.textContent = `${total} ${t('module.violations.analytics.violationUnit', 'مخالفة')}`;
-
-        // ── 5. حساب KPIs ──
-        const empViol  = viol.filter(v => v.personType === 'employee');
-        const conViol  = viol.filter(v => v.personType === 'contractor');
-        const highSev  = viol.filter(v => v.severity === 'عالية').length;
-        const resolved = viol.filter(v => v.status === 'محلول').length;
-        const unresol  = viol.filter(v => v.status === 'غير محلول').length;
-        const pending  = viol.filter(v => v.status === 'قيد المراجعة').length;
-        const resolRate= total > 0 ? Math.round((resolved/total)*100) : 0;
-        const totalFines = viol.reduce((s,v) => s + (Number(v.fineAmount)||0), 0);
-        const thisMonth  = viol.filter(v => {
-            if (!v.violationDate) return false;
-            const d = new Date(v.violationDate), n = new Date();
-            return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth();
-        }).length;
-
-        const kpiEl = document.getElementById('viol-kpi-strip');
-        if (kpiEl) {
-            const kpis = [
-                { id:'total',       label:t('module.violations.analytics.kpi.total', 'إجمالي المخالفات'),    value:total.toLocaleString('en-US'),    icon:'fas fa-exclamation-circle', color:'#dc2626', bg:'#fef2f2', border:'#fecaca' },
-                { id:'employees',   label:t('module.violations.analytics.kpi.employees', 'مخالفات الموظفين'),    value:empViol.length.toLocaleString('en-US'), icon:'fas fa-user-tie',           color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
-                { id:'contractors', label:t('module.violations.analytics.kpi.contractors', 'مخالفات المقاولين'),   value:conViol.length.toLocaleString('en-US'), icon:'fas fa-users-cog',          color:'#f97316', bg:'#fff7ed', border:'#fed7aa' },
-                { id:'highSev',     label:t('module.violations.analytics.kpi.highSeverity', 'عالية الشدة'),          value:highSev.toLocaleString('en-US'),       icon:'fas fa-bomb',               color:'#b91c1c', bg:'#fef2f2', border:'#fca5a5' },
-                { id:'resolved',    label:t('module.violations.analytics.kpi.resolved', 'محلولة'),               value:resolved.toLocaleString('en-US'),      icon:'fas fa-check-circle',       color:'#10b981', bg:'#ecfdf5', border:'#a7f3d0' },
-                { id:'unresolved',  label:t('module.violations.analytics.kpi.unresolved', 'غير محلولة'),           value:unresol.toLocaleString('en-US'),       icon:'fas fa-times-circle',       color:'#f59e0b', bg:'#fffbeb', border:'#fde68a' },
-                { id:'resolRate',   label:t('module.violations.analytics.kpi.resolRate', 'معدل الحل'),            value:resolRate.toLocaleString('en-US')+'%', icon:'fas fa-chart-pie',          color:'#0ea5e9', bg:'#f0f9ff', border:'#bae6fd' },
-                { id:'totalFines',  label:t('module.violations.analytics.kpi.totalFines', 'إجمالي الغرامات'),      value: totalFines > 0 ? this.formatFineAmount(totalFines) : '—', icon:'fas fa-coins', color:'#d97706', bg:'#fffbeb', border:'#fde68a' },
-                { id:'thisMonth',   label:t('module.violations.analytics.kpi.thisMonth', 'هذا الشهر'),            value:thisMonth.toLocaleString('en-US'),     icon:'fas fa-calendar-day',       color:'#8b5cf6', bg:'#f5f3ff', border:'#ddd6fe' },
-            ];
-            kpiEl.innerHTML = kpis.map(k => `
-                <div class="viol-kpi-card" data-kpi="${k.id}" title="انقر للتصفية التفاعلية حسب هذا المعيار" style="background:${k.bg};border:1.5px solid ${k.border};border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all .2s;cursor:pointer;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
-                    <div style="width:42px;height:42px;background:${k.color};border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i class="${k.icon}" style="color:#fff;font-size:17px;"></i>
+        </div>`},async updateViolationAnalytics(){const e=document.getElementById("viol-analytics-root");if(!e)return;const t=(v,U)=>this._t(v,U),a=(window.AppI18n&&typeof window.AppI18n.getCurrentLang=="function"?window.AppI18n.getCurrentLang():"ar")==="en"?"en-US":"ar-SA-u-nu-latn",n=parseInt(this._violPeriod||"0",10),r=(AppState.appData.violations||[]).map(v=>this.normalizeViolationRecord(v)).filter(v=>v&&this.isViolationVisibleToCurrentUser(v)),l=this._vFilterByPeriod(r,n);this._vPopulateFilters(l);const c=this._vApplyFilters(l),s=c.length,d=document.getElementById("viol-filter-count");d&&(d.textContent=`${s} ${t("module.violations.analytics.violationUnit","\u0645\u062E\u0627\u0644\u0641\u0629")}`);const p=c.filter(v=>v.personType==="employee"),f=c.filter(v=>v.personType==="contractor"),u=c.filter(v=>v.severity==="\u0639\u0627\u0644\u064A\u0629").length,w=c.filter(v=>v.status==="\u0645\u062D\u0644\u0648\u0644").length,m=c.filter(v=>v.status==="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644").length,h=c.filter(v=>v.status==="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629").length,g=s>0?Math.round(w/s*100):0,D=c.reduce((v,U)=>v+(Number(U.fineAmount)||0),0),B=c.filter(v=>{if(!v.violationDate)return!1;const U=new Date(v.violationDate),G=new Date;return U.getFullYear()===G.getFullYear()&&U.getMonth()===G.getMonth()}).length,L=document.getElementById("viol-kpi-strip");if(L){const v=[{id:"total",label:t("module.violations.analytics.kpi.total","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A"),value:s.toLocaleString("en-US"),icon:"fas fa-exclamation-circle",color:"#dc2626",bg:"#fef2f2",border:"#fecaca"},{id:"employees",label:t("module.violations.analytics.kpi.employees","\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646"),value:p.length.toLocaleString("en-US"),icon:"fas fa-user-tie",color:"#6366f1",bg:"#eef2ff",border:"#c7d2fe"},{id:"contractors",label:t("module.violations.analytics.kpi.contractors","\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646"),value:f.length.toLocaleString("en-US"),icon:"fas fa-users-cog",color:"#f97316",bg:"#fff7ed",border:"#fed7aa"},{id:"highSev",label:t("module.violations.analytics.kpi.highSeverity","\u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u0634\u062F\u0629"),value:u.toLocaleString("en-US"),icon:"fas fa-bomb",color:"#b91c1c",bg:"#fef2f2",border:"#fca5a5"},{id:"resolved",label:t("module.violations.analytics.kpi.resolved","\u0645\u062D\u0644\u0648\u0644\u0629"),value:w.toLocaleString("en-US"),icon:"fas fa-check-circle",color:"#10b981",bg:"#ecfdf5",border:"#a7f3d0"},{id:"unresolved",label:t("module.violations.analytics.kpi.unresolved","\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644\u0629"),value:m.toLocaleString("en-US"),icon:"fas fa-times-circle",color:"#f59e0b",bg:"#fffbeb",border:"#fde68a"},{id:"resolRate",label:t("module.violations.analytics.kpi.resolRate","\u0645\u0639\u062F\u0644 \u0627\u0644\u062D\u0644"),value:g.toLocaleString("en-US")+"%",icon:"fas fa-chart-pie",color:"#0ea5e9",bg:"#f0f9ff",border:"#bae6fd"},{id:"totalFines",label:t("module.violations.analytics.kpi.totalFines","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u063A\u0631\u0627\u0645\u0627\u062A"),value:D>0?this.formatFineAmount(D):"\u2014",icon:"fas fa-coins",color:"#d97706",bg:"#fffbeb",border:"#fde68a"},{id:"thisMonth",label:t("module.violations.analytics.kpi.thisMonth","\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631"),value:B.toLocaleString("en-US"),icon:"fas fa-calendar-day",color:"#8b5cf6",bg:"#f5f3ff",border:"#ddd6fe"}];L.innerHTML=v.map(U=>`
+                <div class="viol-kpi-card" data-kpi="${U.id}" title="\u0627\u0646\u0642\u0631 \u0644\u0644\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629 \u062D\u0633\u0628 \u0647\u0630\u0627 \u0627\u0644\u0645\u0639\u064A\u0627\u0631" style="background:${U.bg};border:1.5px solid ${U.border};border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all .2s;cursor:pointer;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:42px;height:42px;background:${U.color};border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${U.icon}" style="color:#fff;font-size:17px;"></i>
                     </div>
                     <div>
-                        <div style="font-size:1.4rem;font-weight:800;color:${k.color};line-height:1.1;">${k.value}</div>
-                        <div style="font-size:0.82rem;font-weight:700;color:#475569;margin-top:4px;white-space:nowrap;">${k.label}</div>
+                        <div style="font-size:1.4rem;font-weight:800;color:${U.color};line-height:1.1;">${U.value}</div>
+                        <div style="font-size:0.82rem;font-weight:700;color:#475569;margin-top:4px;white-space:nowrap;">${U.label}</div>
                     </div>
-                </div>`).join('');
-        }
-
-        // ── 6. تحميل Chart.js ──
-        const loaded = await this._vEnsureChartJS();
-        if (!loaded || typeof Chart === 'undefined') {
-            root.insertAdjacentHTML('afterbegin', `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">${t('module.violations.analytics.chartError', 'تعذّر تحميل مكتبة الرسوم البيانية. البيانات الإجمالية متاحة في الأرقام أعلاه.')}</span></div>`);
-            return;
-        }
-
-        // ── 7. الرسوم البيانية ──
-        // 🏭 المصنع الرئيسي (توزيع ونسب المخالفات)
-        this._vDrawFactoryBreakdown('viol-chart-factory', 'viol-factory-breakdown-list', viol);
-
-        // الحالة — يدعم عربي وإنجليزي
-        const statusG = this._vGroupBy(viol, 'status');
-        const statusColors = {
-            'محلول':'rgba(16,185,129,0.85)',    'resolved':'rgba(16,185,129,0.85)',
-            'غير محلول':'rgba(239,68,68,0.85)', 'unresolved':'rgba(239,68,68,0.85)', 'open':'rgba(239,68,68,0.85)',
-            'قيد المراجعة':'rgba(245,158,11,0.85)', 'in progress':'rgba(245,158,11,0.85)', 'under review':'rgba(245,158,11,0.85)'
-        };
-        this._vDrawDoughnut('viol-chart-status', statusG.labels.map(l => t('module.violations.status.' + l, l)), statusG.data, statusG.labels.map(l => statusColors[l.toLowerCase()] || statusColors[l] || 'rgba(148,163,184,0.8)'));
-
-        // الشدة — يدعم عربي وإنجليزي
-        const sevG = this._vGroupBy(viol, 'severity');
-        const sevColors = {
-            'عالية':'rgba(239,68,68,0.85)',   'high':'rgba(239,68,68,0.85)',
-            'متوسطة':'rgba(245,158,11,0.85)', 'medium':'rgba(245,158,11,0.85)', 'moderate':'rgba(245,158,11,0.85)',
-            'منخفضة':'rgba(16,185,129,0.85)', 'low':'rgba(16,185,129,0.85)',
-            'منخضة':'rgba(16,185,129,0.85)'
-        };
-        this._vDrawDoughnut('viol-chart-sev', sevG.labels.map(l => t('module.violations.severity.' + l, l)), sevG.data, sevG.labels.map(l => sevColors[l.toLowerCase()] || sevColors[l] || 'rgba(148,163,184,0.8)'));
-
-        // الاتجاه الزمني
-        this._vDrawTrend('viol-chart-trend', violByPeriod);
-
-        // نوع المخالفة (توزيع تفاعلي مع Doughnut + قائمة)
-        this._vDrawTypeBreakdown('viol-chart-type', 'viol-type-breakdown-list', viol, 10);
-
-        // الموقع (توزيع تفاعلي)
-        this._vDrawListBreakdown('viol-chart-loc', 'viol-loc-breakdown-list', viol, 'violationLocation', 8, [
-            'rgba(245,158,11,0.85)','rgba(234,179,8,0.85)','rgba(202,138,4,0.85)',
-            'rgba(161,98,7,0.85)','rgba(120,53,15,0.85)','rgba(234,88,12,0.85)',
-            'rgba(194,65,12,0.85)','rgba(154,52,18,0.85)'
-        ], '#fffbeb', '#92400e', 'viol-loc-total-badge', 'viol-af-loc', null);
-
-        // أكثر الموظفين مخالفة (توزيع تفاعلي)
-        this._vDrawListBreakdown('viol-chart-emp', 'viol-emp-breakdown-list', empViol, 'employeeName', 10, [
-            'rgba(99,102,241,0.85)','rgba(79,70,229,0.85)','rgba(67,56,202,0.85)',
-            'rgba(55,48,163,0.85)','rgba(109,40,217,0.85)','rgba(124,58,237,0.85)',
-            'rgba(139,92,246,0.85)','rgba(167,139,250,0.85)','rgba(196,181,253,0.9)','rgba(76,29,149,0.85)'
-        ], '#eef2ff', '#4338ca', 'viol-emp-total-badge', null, null);
-
-        // أكثر المقاولين مخالفة (توزيع تفاعلي)
-        this._vDrawListBreakdown('viol-chart-con', 'viol-con-breakdown-list', conViol, 'contractorName', 10, [
-            'rgba(249,115,22,0.85)','rgba(234,88,12,0.85)','rgba(194,65,12,0.85)',
-            'rgba(154,52,18,0.85)','rgba(180,83,9,0.85)','rgba(217,119,6,0.85)',
-            'rgba(245,158,11,0.85)','rgba(202,138,4,0.85)','rgba(161,98,7,0.85)','rgba(120,53,15,0.85)'
-        ], '#fff7ed', '#c2410c', 'viol-con-total-badge', null, null);
-
-        // الغرامات حسب النوع
-        this._vDrawFinesByType('viol-chart-fines', viol);
-
-        // ── 8. جدول المخالفات الحرجة ──
-        const critViol = viol
-            .filter(v => {
-                const sev = String(v.severity||'').trim().toLowerCase();
-                const sta = String(v.status||'').trim().toLowerCase();
-                const isHigh = sev === 'عالية' || sev === 'high';
-                const isResolved = sta === 'محلول' || sta === 'resolved';
-                return isHigh && !isResolved;
-            })
-            .sort((a,b) => (b.fineAmount||0) - (a.fineAmount||0))
-            .slice(0, 20);
-        const critCountEl = document.getElementById('viol-critical-count');
-        const tbody = document.getElementById('viol-critical-tbody');
-        if (critCountEl) critCountEl.textContent = `${critViol.length} ${t('module.violations.analytics.violationUnit', 'مخالفة')}`;
-        if (tbody) {
-            if (critViol.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="padding:24px;text-align:center;color:#10b981;"><i class="fas fa-check-circle ml-2"></i>${t('module.violations.analytics.table.noCritical', 'لا توجد مخالفات حرجة غير محلولة')}</td></tr>`;
-            } else {
-                tbody.innerHTML = critViol.map((v,i) => {
-                    const personName = Utils.escapeHTML(v.employeeName || v.contractorName || '—');
-                    const personTypeLbl = v.personType === 'contractor' 
-                        ? `<span style="background:#fff7ed;color:#c2410c;padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;">${t('module.violations.analytics.person.contractor', 'مقاول')}</span>` 
-                        : `<span style="background:#eef2ff;color:#4338ca;padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;">${t('module.violations.analytics.person.employee', 'موظف')}</span>`;
-                    const sevBadge = `<span style="background:#fef2f2;color:#b91c1c;padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;">${t('module.violations.analytics.severity.high', 'عالية')}</span>`;
-                    const statusBadge = { 'غير محلول':'background:#fef3c7;color:#92400e;', 'قيد المراجعة':'background:#ede9fe;color:#5b21b6;' }[v.status] || 'background:#f1f5f9;color:#374151;';
-                    const fine = Number(v.fineAmount)||0;
-                    const rowBg = i%2===0 ? '#fff' : '#fafafa';
-                    return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background='${rowBg}'">
-                        <td style="padding:9px 12px;white-space:nowrap;color:#374151;">${v.violationDate ? new Date(v.violationDate).toLocaleDateString(dateLocale,{year:'numeric',month:'short',day:'numeric'}) : '—'}</td>
-                        <td style="padding:9px 12px;font-weight:600;color:#1e40af;">${personName}</td>
-                        <td style="padding:9px 12px;">${personTypeLbl}</td>
-                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(v.violationType||'—')}</td>
-                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(v.violationLocation||'—')}</td>
-                        <td style="padding:9px 12px;">${sevBadge}</td>
-                        <td style="padding:9px 12px;"><span style="padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;${statusBadge}">${t('module.violations.status.' + v.status, v.status)}</span></td>
-                        <td style="padding:9px 12px;text-align:center;font-weight:700;color:${fine>0?'#dc2626':'#94a3b8'};">${fine>0 ? this.formatFineAmount(fine) : '—'}</td>
-                    </tr>`;
-                }).join('');
-            }
-        }
-    },
-
-    // ── مساعد: تصفية بالفترة الزمنية ──
-    _vFilterByPeriod(viol, days) {
-        if (!days || days === 0) return viol;
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - days);
-        return viol.filter(v => {
-            if (!v.violationDate) return true;
-            const d = new Date(v.violationDate);
-            return !isNaN(d.getTime()) && d >= cutoff;
-        });
-    },
-
-    // ── مساعد: تجميع حسب حقل ──
-    _vGroupBy(viol, field, limit = 0) {
-        const undefLabel = this._t ? this._t('module.violations.analytics.undefined', 'غير محدد') : 'غير محدد';
-        const map = {};
-        viol.forEach(v => {
-            const val = String(v[field] || undefLabel).trim() || undefLabel;
-            map[val] = (map[val] || 0) + 1;
-        });
-        let entries = Object.entries(map).sort((a,b) => b[1]-a[1]);
-        if (limit > 0) entries = entries.slice(0, limit);
-        return { labels: entries.map(e=>e[0]), data: entries.map(e=>e[1]) };
-    },
-
-    // ── مساعد: استخراج اسم المصنع الرئيسي ──
-    _vGetFactoryName(record) {
-        const undefLabel = this._t ? this._t('module.violations.analytics.undefined', 'غير محدد') : 'غير محدد';
-        if (!record || typeof record !== 'object') return undefLabel;
-        return String(record.factory || record.violationLocation || record.violationPlace || undefLabel).trim() || undefLabel;
-    },
-
-    // ── مساعد: تطبيق الفلاتر التفاعلية ──
-    _vApplyFilters(viol) {
-        const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-        const fFactory= get('viol-af-factory');
-        const fPtype  = get('viol-af-ptype');
-        const fType   = get('viol-af-type');
-        const fSev    = get('viol-af-sev');
-        const fStatus = get('viol-af-status');
-        const fLoc    = get('viol-af-loc');
-        const hasAny  = [fFactory,fPtype,fType,fSev,fStatus,fLoc].some(v => v !== '');
-        const badge = document.getElementById('viol-filter-badge');
-        if (badge) badge.style.display = hasAny ? 'inline' : 'none';
-        return viol.filter(v => {
-            if (fFactory&& this._vGetFactoryName(v) !== fFactory) return false;
-            if (fPtype  && String(v.personType||'').trim()          !== fPtype)  return false;
-            if (fType   && String(v.violationType||'').trim()        !== fType)   return false;
-            if (fSev    && String(v.severity||'').trim()             !== fSev)    return false;
-            if (fStatus && String(v.status||'').trim()               !== fStatus) return false;
-            if (fLoc    && String(v.violationLocation||'').trim()    !== fLoc)    return false;
-            return true;
-        });
-    },
-
-    // ── مساعد: ملء قوائم الفلاتر ──
-    _vPopulateFilters(viol) {
-        const t = (key, fallback) => this._t(key, fallback);
-        const unique = fn => [...new Set(viol.map(fn).filter(Boolean))].sort();
-        const fill = (id, values, translationPrefix) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            const cur = el.value;
-            el.innerHTML = `<option value="">${t('module.common.all', 'الكل')}</option>` + values.map(v => {
-                const label = translationPrefix ? t(translationPrefix + v, v) : v;
-                return `<option value="${v}"${v===cur?' selected':''}>${label}</option>`;
-            }).join('');
-        };
-        
-        // خيارات نوع الشخص
-        const ptypeEl = document.getElementById('viol-af-ptype');
-        if (ptypeEl) {
-            const cur = ptypeEl.value;
-            ptypeEl.innerHTML = `
-                <option value="">${t('module.common.all', 'الكل')}</option>
-                <option value="employee"${cur==='employee'?' selected':''}>${t('module.violations.analytics.person.employee', 'موظف')}</option>
-                <option value="contractor"${cur==='contractor'?' selected':''}>${t('module.violations.analytics.person.contractor', 'مقاول')}</option>
-            `;
-        }
-
-        fill('viol-af-factory',unique(v => this._vGetFactoryName(v)));
-        fill('viol-af-type',   unique(v => String(v.violationType||'').trim()));
-        fill('viol-af-sev',    unique(v => String(v.severity||'').trim()), 'module.violations.severity.');
-        fill('viol-af-status', unique(v => String(v.status||'').trim()), 'module.violations.status.');
-        fill('viol-af-loc',    unique(v => String(v.violationLocation||'').trim()));
-    },
-
-    // ── مساعد: رسم عام — Doughnut + قائمة Progress Bars ──
-    _vDrawListBreakdown(canvasId, listId, records, field, limit, colors, badgeBg, badgeColor, badgeId, filterSelectId, translationPrefix) {
-        const canvas  = document.getElementById(canvasId);
-        const emptyEl = document.getElementById(canvasId + '-empty');
-        const listEl  = document.getElementById(listId);
-        const badgeEl = badgeId ? document.getElementById(badgeId) : null;
-        if (!canvas) return;
-        const t = (key, fallback) => this._t(key, fallback);
-        const undefLabel = t('module.violations.analytics.undefined', 'غير محدد');
-
-        const map = {};
-        records.forEach(v => {
-            const val = String(v[field] || undefLabel).trim() || undefLabel;
-            map[val] = (map[val] || 0) + 1;
-        });
-        let sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
-        if (limit > 0) sorted = sorted.slice(0, limit);
-        const labels = sorted.map(e => e[0]);
-        const data   = sorted.map(e => e[1]);
-        const total  = records.length;
-
-        if (badgeEl) {
-            badgeEl.textContent = `${total.toLocaleString('en-US')} ${t('module.violations.analytics.violationUnit', 'مخالفة')}`;
-            if (badgeBg) badgeEl.style.background = badgeBg;
-            if (badgeColor) badgeEl.style.color = badgeColor;
-        }
-
-        if (!data.length || total === 0) {
-            canvas.style.display = 'none';
-            if (emptyEl) emptyEl.style.display = 'flex';
-            if (listEl) listEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.92rem;padding:20px;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>`;
-            return;
-        }
-        if (emptyEl) emptyEl.style.display = 'none';
-        canvas.style.display = '';
-
-        if (!this._violCharts) this._violCharts = {};
-        const prev = this._violCharts[canvasId];
-        if (prev) { try { prev.destroy(); } catch(e){} }
-        this._violCharts[canvasId] = new Chart(canvas, {
-            type: 'doughnut',
-            data: {
-                labels,
-                datasets: [{ data, backgroundColor: labels.map((_, i) => colors[i % colors.length]), borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, cutout: '60%',
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: ctx => {
-                        const val = ctx.parsed;
-                        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
-                        return ` ${ctx.label}: ${val.toLocaleString('en-US')} (${pct}%)`;
-                    }}}
-                }
-            }
-        });
-
-        if (listEl) {
-            listEl.innerHTML = sorted.map((item, idx) => {
-                const name  = item[0];
-                const cnt   = item[1];
-                const pct   = total > 0 ? ((cnt / total) * 100).toFixed(1) : 0;
-                const color = colors[idx % colors.length];
-                const rank  = idx + 1;
-                const label = translationPrefix ? t(translationPrefix + name, name) : name;
-                return `
-                <div class="viol-list-item" data-filter-val="${Utils.escapeHTML(name)}" data-filter-id="${filterSelectId || ''}" title="${Utils.escapeHTML(label)}" style="background:#fff;border:1.5px solid #f1f5f9;border-radius:10px;padding:9px 12px;cursor:${filterSelectId ? 'pointer' : 'default'};transition:all 0.2s;">
+                </div>`).join("")}if(!await this._vEnsureChartJS()||typeof Chart>"u"){e.insertAdjacentHTML("afterbegin",`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">${t("module.violations.analytics.chartError","\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629. \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A\u0629 \u0645\u062A\u0627\u062D\u0629 \u0641\u064A \u0627\u0644\u0623\u0631\u0642\u0627\u0645 \u0623\u0639\u0644\u0627\u0647.")}</span></div>`);return}this._vDrawFactoryBreakdown("viol-chart-factory","viol-factory-breakdown-list",c);const F=this._vGroupBy(c,"status"),$={\u0645\u062D\u0644\u0648\u0644:"rgba(16,185,129,0.85)",resolved:"rgba(16,185,129,0.85)","\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644":"rgba(239,68,68,0.85)",unresolved:"rgba(239,68,68,0.85)",open:"rgba(239,68,68,0.85)","\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629":"rgba(245,158,11,0.85)","in progress":"rgba(245,158,11,0.85)","under review":"rgba(245,158,11,0.85)"};this._vDrawDoughnut("viol-chart-status",F.labels.map(v=>t("module.violations.status."+v,v)),F.data,F.labels.map(v=>$[v.toLowerCase()]||$[v]||"rgba(148,163,184,0.8)"));const S=this._vGroupBy(c,"severity"),_={\u0639\u0627\u0644\u064A\u0629:"rgba(239,68,68,0.85)",high:"rgba(239,68,68,0.85)",\u0645\u062A\u0648\u0633\u0637\u0629:"rgba(245,158,11,0.85)",medium:"rgba(245,158,11,0.85)",moderate:"rgba(245,158,11,0.85)",\u0645\u0646\u062E\u0641\u0636\u0629:"rgba(16,185,129,0.85)",low:"rgba(16,185,129,0.85)",\u0645\u0646\u062E\u0636\u0629:"rgba(16,185,129,0.85)"};this._vDrawDoughnut("viol-chart-sev",S.labels.map(v=>t("module.violations.severity."+v,v)),S.data,S.labels.map(v=>_[v.toLowerCase()]||_[v]||"rgba(148,163,184,0.8)")),this._vDrawTrend("viol-chart-trend",l),this._vDrawTypeBreakdown("viol-chart-type","viol-type-breakdown-list",c,10),this._vDrawListBreakdown("viol-chart-loc","viol-loc-breakdown-list",c,"violationLocation",8,["rgba(245,158,11,0.85)","rgba(234,179,8,0.85)","rgba(202,138,4,0.85)","rgba(161,98,7,0.85)","rgba(120,53,15,0.85)","rgba(234,88,12,0.85)","rgba(194,65,12,0.85)","rgba(154,52,18,0.85)"],"#fffbeb","#92400e","viol-loc-total-badge","viol-af-loc",null),this._vDrawListBreakdown("viol-chart-emp","viol-emp-breakdown-list",p,"employeeName",10,["rgba(99,102,241,0.85)","rgba(79,70,229,0.85)","rgba(67,56,202,0.85)","rgba(55,48,163,0.85)","rgba(109,40,217,0.85)","rgba(124,58,237,0.85)","rgba(139,92,246,0.85)","rgba(167,139,250,0.85)","rgba(196,181,253,0.9)","rgba(76,29,149,0.85)"],"#eef2ff","#4338ca","viol-emp-total-badge",null,null),this._vDrawListBreakdown("viol-chart-con","viol-con-breakdown-list",f,"contractorName",10,["rgba(249,115,22,0.85)","rgba(234,88,12,0.85)","rgba(194,65,12,0.85)","rgba(154,52,18,0.85)","rgba(180,83,9,0.85)","rgba(217,119,6,0.85)","rgba(245,158,11,0.85)","rgba(202,138,4,0.85)","rgba(161,98,7,0.85)","rgba(120,53,15,0.85)"],"#fff7ed","#c2410c","viol-con-total-badge",null,null),this._vDrawFinesByType("viol-chart-fines",c);const O=c.filter(v=>{const U=String(v.severity||"").trim().toLowerCase(),G=String(v.status||"").trim().toLowerCase();return(U==="\u0639\u0627\u0644\u064A\u0629"||U==="high")&&!(G==="\u0645\u062D\u0644\u0648\u0644"||G==="resolved")}).sort((v,U)=>(U.fineAmount||0)-(v.fineAmount||0)).slice(0,20),P=document.getElementById("viol-critical-count"),R=document.getElementById("viol-critical-tbody");P&&(P.textContent=`${O.length} ${t("module.violations.analytics.violationUnit","\u0645\u062E\u0627\u0644\u0641\u0629")}`),R&&(O.length===0?R.innerHTML=`<tr><td colspan="8" style="padding:24px;text-align:center;color:#10b981;"><i class="fas fa-check-circle ml-2"></i>${t("module.violations.analytics.table.noCritical","\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062D\u0631\u062C\u0629 \u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644\u0629")}</td></tr>`:R.innerHTML=O.map((v,U)=>{const G=Utils.escapeHTML(v.employeeName||v.contractorName||"\u2014"),it=v.personType==="contractor"?`<span style="background:#fff7ed;color:#c2410c;padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;">${t("module.violations.analytics.person.contractor","\u0645\u0642\u0627\u0648\u0644")}</span>`:`<span style="background:#eef2ff;color:#4338ca;padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;">${t("module.violations.analytics.person.employee","\u0645\u0648\u0638\u0641")}</span>`,ot=`<span style="background:#fef2f2;color:#b91c1c;padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;">${t("module.violations.analytics.severity.high","\u0639\u0627\u0644\u064A\u0629")}</span>`,W={"\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644":"background:#fef3c7;color:#92400e;","\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629":"background:#ede9fe;color:#5b21b6;"}[v.status]||"background:#f1f5f9;color:#374151;",J=Number(v.fineAmount)||0,X=U%2===0?"#fff":"#fafafa";return`<tr style="border-bottom:1px solid #f8fafc;background:${X};" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background='${X}'">
+                        <td style="padding:9px 12px;white-space:nowrap;color:#374151;">${v.violationDate?new Date(v.violationDate).toLocaleDateString(a,{year:"numeric",month:"short",day:"numeric"}):"\u2014"}</td>
+                        <td style="padding:9px 12px;font-weight:600;color:#1e40af;">${G}</td>
+                        <td style="padding:9px 12px;">${it}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(v.violationType||"\u2014")}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(v.violationLocation||"\u2014")}</td>
+                        <td style="padding:9px 12px;">${ot}</td>
+                        <td style="padding:9px 12px;"><span style="padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;${W}">${t("module.violations.status."+v.status,v.status)}</span></td>
+                        <td style="padding:9px 12px;text-align:center;font-weight:700;color:${J>0?"#dc2626":"#94a3b8"};">${J>0?this.formatFineAmount(J):"\u2014"}</td>
+                    </tr>`}).join(""))},_vFilterByPeriod(e,t){if(!t||t===0)return e;const i=new Date;return i.setDate(i.getDate()-t),e.filter(a=>{if(!a.violationDate)return!0;const n=new Date(a.violationDate);return!isNaN(n.getTime())&&n>=i})},_vGroupBy(e,t,i=0){const a=this._t?this._t("module.violations.analytics.undefined","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",n={};e.forEach(r=>{const l=String(r[t]||a).trim()||a;n[l]=(n[l]||0)+1});let o=Object.entries(n).sort((r,l)=>l[1]-r[1]);return i>0&&(o=o.slice(0,i)),{labels:o.map(r=>r[0]),data:o.map(r=>r[1])}},_vGetFactoryName(e){const t=this._t?this._t("module.violations.analytics.undefined","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return!e||typeof e!="object"?t:String(e.factory||e.violationLocation||e.violationPlace||t).trim()||t},_vApplyFilters(e){const t=d=>{const p=document.getElementById(d);return p?p.value.trim():""},i=t("viol-af-factory"),a=t("viol-af-ptype"),n=t("viol-af-type"),o=t("viol-af-sev"),r=t("viol-af-status"),l=t("viol-af-loc"),c=[i,a,n,o,r,l].some(d=>d!==""),s=document.getElementById("viol-filter-badge");return s&&(s.style.display=c?"inline":"none"),e.filter(d=>!(i&&this._vGetFactoryName(d)!==i||a&&String(d.personType||"").trim()!==a||n&&String(d.violationType||"").trim()!==n||o&&String(d.severity||"").trim()!==o||r&&String(d.status||"").trim()!==r||l&&String(d.violationLocation||"").trim()!==l))},_vPopulateFilters(e){const t=(o,r)=>this._t(o,r),i=o=>[...new Set(e.map(o).filter(Boolean))].sort(),a=(o,r,l)=>{const c=document.getElementById(o);if(!c)return;const s=c.value;c.innerHTML=`<option value="">${t("module.common.all","\u0627\u0644\u0643\u0644")}</option>`+r.map(d=>{const p=l?t(l+d,d):d;return`<option value="${d}"${d===s?" selected":""}>${p}</option>`}).join("")},n=document.getElementById("viol-af-ptype");if(n){const o=n.value;n.innerHTML=`
+                <option value="">${t("module.common.all","\u0627\u0644\u0643\u0644")}</option>
+                <option value="employee"${o==="employee"?" selected":""}>${t("module.violations.analytics.person.employee","\u0645\u0648\u0638\u0641")}</option>
+                <option value="contractor"${o==="contractor"?" selected":""}>${t("module.violations.analytics.person.contractor","\u0645\u0642\u0627\u0648\u0644")}</option>
+            `}a("viol-af-factory",i(o=>this._vGetFactoryName(o))),a("viol-af-type",i(o=>String(o.violationType||"").trim())),a("viol-af-sev",i(o=>String(o.severity||"").trim()),"module.violations.severity."),a("viol-af-status",i(o=>String(o.status||"").trim()),"module.violations.status."),a("viol-af-loc",i(o=>String(o.violationLocation||"").trim()))},_vDrawListBreakdown(e,t,i,a,n,o,r,l,c,s,d){const p=document.getElementById(e),f=document.getElementById(e+"-empty"),u=document.getElementById(t),w=c?document.getElementById(c):null;if(!p)return;const m=($,S)=>this._t($,S),h=m("module.violations.analytics.undefined","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"),g={};i.forEach($=>{const S=String($[a]||h).trim()||h;g[S]=(g[S]||0)+1});let D=Object.entries(g).sort(($,S)=>S[1]-$[1]);n>0&&(D=D.slice(0,n));const B=D.map($=>$[0]),L=D.map($=>$[1]),C=i.length;if(w&&(w.textContent=`${C.toLocaleString("en-US")} ${m("module.violations.analytics.violationUnit","\u0645\u062E\u0627\u0644\u0641\u0629")}`,r&&(w.style.background=r),l&&(w.style.color=l)),!L.length||C===0){p.style.display="none",f&&(f.style.display="flex"),u&&(u.innerHTML=`<div style="text-align:center;color:#94a3b8;font-size:0.92rem;padding:20px;">${m("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>`);return}f&&(f.style.display="none"),p.style.display="",this._violCharts||(this._violCharts={});const F=this._violCharts[e];if(F)try{F.destroy()}catch{}this._violCharts[e]=new Chart(p,{type:"doughnut",data:{labels:B,datasets:[{data:L,backgroundColor:B.map(($,S)=>o[S%o.length]),borderWidth:2,borderColor:"#fff",hoverOffset:6}]},options:{responsive:!0,maintainAspectRatio:!1,cutout:"60%",plugins:{legend:{display:!1},tooltip:{callbacks:{label:$=>{const S=$.parsed,_=C>0?(S/C*100).toFixed(1):"0";return` ${$.label}: ${S.toLocaleString("en-US")} (${_}%)`}}}}}}),u&&(u.innerHTML=D.map(($,S)=>{const _=$[0],O=$[1],P=C>0?(O/C*100).toFixed(1):0,R=o[S%o.length],v=S+1,U=d?m(d+_,_):_;return`
+                <div class="viol-list-item" data-filter-val="${Utils.escapeHTML(_)}" data-filter-id="${s||""}" title="${Utils.escapeHTML(U)}" style="background:#fff;border:1.5px solid #f1f5f9;border-radius:10px;padding:9px 12px;cursor:${s?"pointer":"default"};transition:all 0.2s;">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
                         <div style="display:flex;align-items:center;gap:7px;">
-                            <span style="width:20px;height:20px;border-radius:50%;background:${color};color:#fff;font-size:0.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${rank}</span>
-                            <span style="font-weight:800;font-size:0.85rem;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:155px;">${Utils.escapeHTML(label)}</span>
+                            <span style="width:20px;height:20px;border-radius:50%;background:${R};color:#fff;font-size:0.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${v}</span>
+                            <span style="font-weight:800;font-size:0.85rem;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:155px;">${Utils.escapeHTML(U)}</span>
                         </div>
                         <div style="display:flex;align-items:center;gap:5px;white-space:nowrap;">
-                            <span style="font-weight:800;font-size:0.95rem;color:${color.replace('0.85','1')};">${cnt.toLocaleString('en-US')}</span>
-                            <span style="font-size:0.78rem;font-weight:700;color:#64748b;">(${pct}%)</span>
+                            <span style="font-weight:800;font-size:0.95rem;color:${R.replace("0.85","1")};">${O.toLocaleString("en-US")}</span>
+                            <span style="font-size:0.78rem;font-weight:700;color:#64748b;">(${P}%)</span>
                         </div>
                     </div>
                     <div style="height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden;">
-                        <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width 0.6s ease;"></div>
+                        <div style="width:${P}%;height:100%;background:${R};border-radius:3px;transition:width 0.6s ease;"></div>
                     </div>
-                </div>`;
-            }).join('');
-
-            if (filterSelectId) {
-                listEl.querySelectorAll('.viol-list-item').forEach(el => {
-                    el.addEventListener('mouseover', () => { el.style.background='#f8fafc'; el.style.borderColor='#cbd5e1'; });
-                    el.addEventListener('mouseout',  () => { el.style.background='#fff';    el.style.borderColor='#f1f5f9'; });
-                    el.addEventListener('click', () => {
-                        const val = el.getAttribute('data-filter-val');
-                        const sel = document.getElementById(filterSelectId);
-                        if (sel) { sel.value = sel.value === val ? '' : val; this.updateViolationAnalytics(); }
-                    });
-                });
-            }
-        }
-    },
-
-    // ── مساعد: رسم وتفصيل توزيع نوع المخالفة ──
-    _vDrawTypeBreakdown(canvasId, listContainerId, viol, limit) {
-        const canvas  = document.getElementById(canvasId);
-        const emptyEl = document.getElementById(canvasId + '-empty');
-        const listEl  = document.getElementById(listContainerId);
-        const badgeEl = document.getElementById('viol-type-total-badge');
-        if (!canvas) return;
-
-        const t = (key, fallback) => this._t(key, fallback);
-        const total = viol.length;
-        if (badgeEl) badgeEl.textContent = `${total.toLocaleString('en-US')} ${t('module.violations.analytics.violationUnit', 'مخالفة')}`;
-
-        // تجميع حسب نوع المخالفة
-        const typeMap = {};
-        viol.forEach(v => {
-            const tp = String(v.violationType || 'غير محدد').trim() || 'غير محدد';
-            if (!typeMap[tp]) typeMap[tp] = 0;
-            typeMap[tp]++;
-        });
-
-        let sorted = Object.entries(typeMap).sort((a, b) => b[1] - a[1]);
-        if (limit > 0) sorted = sorted.slice(0, limit);
-
-        const labels = sorted.map(e => e[0]);
-        const data   = sorted.map(e => e[1]);
-        const typeColors = [
-            'rgba(220,38,38,0.85)',  'rgba(234,88,12,0.85)',  'rgba(202,138,4,0.85)',
-            'rgba(22,163,74,0.85)',  'rgba(2,132,199,0.85)',  'rgba(99,102,241,0.85)',
-            'rgba(168,85,247,0.85)', 'rgba(236,72,153,0.85)', 'rgba(20,184,166,0.85)',
-            'rgba(107,114,128,0.85)'
-        ];
-
-        if (!data.length || total === 0) {
-            canvas.style.display = 'none';
-            if (emptyEl) emptyEl.style.display = 'flex';
-            if (listEl) listEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.92rem;padding:20px;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>`;
-            return;
-        }
-        if (emptyEl) emptyEl.style.display = 'none';
-        canvas.style.display = '';
-
-        // 1. Doughnut
-        if (!this._violCharts) this._violCharts = {};
-        const prev = this._violCharts[canvasId];
-        if (prev) { try { prev.destroy(); } catch(e){} }
-
-        this._violCharts[canvasId] = new Chart(canvas, {
-            type: 'doughnut',
-            data: {
-                labels,
-                datasets: [{
-                    data,
-                    backgroundColor: labels.map((_, i) => typeColors[i % typeColors.length]),
-                    borderWidth: 2,
-                    borderColor: '#fff',
-                    hoverOffset: 6
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, cutout: '60%',
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => {
-                                const val = ctx.parsed;
-                                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
-                                return ` ${ctx.label}: ${val.toLocaleString('en-US')} (${pct}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        // 2. قائمة Progress Bars مع فلترة تفاعلية
-        if (listEl) {
-            listEl.innerHTML = sorted.map((item, idx) => {
-                const typeName = item[0];
-                const cnt  = item[1];
-                const pct  = total > 0 ? ((cnt / total) * 100).toFixed(1) : 0;
-                const color = typeColors[idx % typeColors.length];
-                const rank  = idx + 1;
-                return `
-                <div class="viol-type-item" data-vtype="${Utils.escapeHTML(typeName)}" title="انقر لتصفية حسب نوع ${Utils.escapeHTML(typeName)}" style="background:#fff;border:1.5px solid #f1f5f9;border-radius:12px;padding:10px 14px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#fef2f2';this.style.borderColor='#fca5a5';" onmouseout="this.style.background='#fff';this.style.borderColor='#f1f5f9';">
+                </div>`}).join(""),s&&u.querySelectorAll(".viol-list-item").forEach($=>{$.addEventListener("mouseover",()=>{$.style.background="#f8fafc",$.style.borderColor="#cbd5e1"}),$.addEventListener("mouseout",()=>{$.style.background="#fff",$.style.borderColor="#f1f5f9"}),$.addEventListener("click",()=>{const S=$.getAttribute("data-filter-val"),_=document.getElementById(s);_&&(_.value=_.value===S?"":S,this.updateViolationAnalytics())})}))},_vDrawTypeBreakdown(e,t,i,a){const n=document.getElementById(e),o=document.getElementById(e+"-empty"),r=document.getElementById(t),l=document.getElementById("viol-type-total-badge");if(!n)return;const c=(h,g)=>this._t(h,g),s=i.length;l&&(l.textContent=`${s.toLocaleString("en-US")} ${c("module.violations.analytics.violationUnit","\u0645\u062E\u0627\u0644\u0641\u0629")}`);const d={};i.forEach(h=>{const g=String(h.violationType||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";d[g]||(d[g]=0),d[g]++});let p=Object.entries(d).sort((h,g)=>g[1]-h[1]);a>0&&(p=p.slice(0,a));const f=p.map(h=>h[0]),u=p.map(h=>h[1]),w=["rgba(220,38,38,0.85)","rgba(234,88,12,0.85)","rgba(202,138,4,0.85)","rgba(22,163,74,0.85)","rgba(2,132,199,0.85)","rgba(99,102,241,0.85)","rgba(168,85,247,0.85)","rgba(236,72,153,0.85)","rgba(20,184,166,0.85)","rgba(107,114,128,0.85)"];if(!u.length||s===0){n.style.display="none",o&&(o.style.display="flex"),r&&(r.innerHTML=`<div style="text-align:center;color:#94a3b8;font-size:0.92rem;padding:20px;">${c("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>`);return}o&&(o.style.display="none"),n.style.display="",this._violCharts||(this._violCharts={});const m=this._violCharts[e];if(m)try{m.destroy()}catch{}this._violCharts[e]=new Chart(n,{type:"doughnut",data:{labels:f,datasets:[{data:u,backgroundColor:f.map((h,g)=>w[g%w.length]),borderWidth:2,borderColor:"#fff",hoverOffset:6}]},options:{responsive:!0,maintainAspectRatio:!1,cutout:"60%",plugins:{legend:{display:!1},tooltip:{callbacks:{label:h=>{const g=h.parsed,D=s>0?(g/s*100).toFixed(1):"0";return` ${h.label}: ${g.toLocaleString("en-US")} (${D}%)`}}}}}}),r&&(r.innerHTML=p.map((h,g)=>{const D=h[0],B=h[1],L=s>0?(B/s*100).toFixed(1):0,C=w[g%w.length],F=g+1;return`
+                <div class="viol-type-item" data-vtype="${Utils.escapeHTML(D)}" title="\u0627\u0646\u0642\u0631 \u0644\u062A\u0635\u0641\u064A\u0629 \u062D\u0633\u0628 \u0646\u0648\u0639 ${Utils.escapeHTML(D)}" style="background:#fff;border:1.5px solid #f1f5f9;border-radius:12px;padding:10px 14px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#fef2f2';this.style.borderColor='#fca5a5';" onmouseout="this.style.background='#fff';this.style.borderColor='#f1f5f9';">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;">
                         <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="width:22px;height:22px;border-radius:50%;background:${color};color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${rank}</span>
-                            <span style="font-weight:800;font-size:0.88rem;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px;" title="${Utils.escapeHTML(typeName)}">${Utils.escapeHTML(typeName)}</span>
+                            <span style="width:22px;height:22px;border-radius:50%;background:${C};color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${F}</span>
+                            <span style="font-weight:800;font-size:0.88rem;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px;" title="${Utils.escapeHTML(D)}">${Utils.escapeHTML(D)}</span>
                         </div>
                         <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
-                            <span style="font-weight:800;font-size:1.0rem;color:${color.replace('0.85','1')};">${cnt.toLocaleString('en-US')}</span>
-                            <span style="font-size:0.82rem;font-weight:700;color:#64748b;">(${pct}%)</span>
+                            <span style="font-weight:800;font-size:1.0rem;color:${C.replace("0.85","1")};">${B.toLocaleString("en-US")}</span>
+                            <span style="font-size:0.82rem;font-weight:700;color:#64748b;">(${L}%)</span>
                         </div>
                     </div>
                     <div style="height:7px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
-                        <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width 0.6s ease;"></div>
+                        <div style="width:${L}%;height:100%;background:${C};border-radius:4px;transition:width 0.6s ease;"></div>
                     </div>
-                </div>`;
-            }).join('');
-
-            listEl.querySelectorAll('.viol-type-item').forEach(el => {
-                el.addEventListener('click', () => {
-                    const vtype = el.getAttribute('data-vtype');
-                    const sel = document.getElementById('viol-af-type');
-                    if (sel) {
-                        sel.value = sel.value === vtype ? '' : vtype;
-                        this.updateViolationAnalytics();
-                    }
-                });
-            });
-        }
-    },
-
-    // ── مساعد: رسم وتفصيل توزيع المصنع الرئيسي ──
-    _vDrawFactoryBreakdown(canvasId, listContainerId, viol) {
-        const canvas = document.getElementById(canvasId);
-        const emptyEl = document.getElementById(canvasId + '-empty');
-        const listEl = document.getElementById(listContainerId);
-        const badgeEl = document.getElementById('viol-factory-total-badge');
-        if (!canvas) return;
-        
-        const t = (key, fallback) => this._t(key, fallback);
-        const total = viol.length;
-        if (badgeEl) badgeEl.textContent = `${total.toLocaleString('en-US')} ${t('module.violations.analytics.violationUnit', 'مخالفة')}`;
-
-        // التجميع حسب المصنع الرئيسي
-        const factoryMap = {};
-        viol.forEach(v => {
-            const fac = this._vGetFactoryName(v);
-            if (!factoryMap[fac]) factoryMap[fac] = { count: 0, fineSum: 0 };
-            factoryMap[fac].count += 1;
-            factoryMap[fac].fineSum += (Number(v.fineAmount) || 0);
-        });
-
-        const sorted = Object.entries(factoryMap).sort((a, b) => b[1].count - a[1].count);
-        const labels = sorted.map(e => e[0]);
-        const data = sorted.map(e => e[1].count);
-        const factoryColors = [
-            'rgba(236,72,153,0.85)', 'rgba(99,102,241,0.85)', 'rgba(245,158,11,0.85)', 
-            'rgba(16,185,129,0.85)', 'rgba(59,130,246,0.85)', 'rgba(139,92,246,0.85)',
-            'rgba(239,68,68,0.85)',  'rgba(20,184,166,0.85)', 'rgba(107,114,128,0.85)'
-        ];
-
-        if (!data.length || total === 0) {
-            canvas.style.display = 'none';
-            if (emptyEl) emptyEl.style.display = 'flex';
-            if (listEl) listEl.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:20px;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>`;
-            return;
-        }
-
-        if (emptyEl) emptyEl.style.display = 'none';
-        canvas.style.display = '';
-
-        // 1. رسم Doughnut Chart للمصانع
-        if (!this._violCharts) this._violCharts = {};
-        const prev = this._violCharts[canvasId];
-        if (prev) { try { prev.destroy(); } catch(e){} }
-
-        this._violCharts[canvasId] = new Chart(canvas, {
-            type: 'doughnut',
-            data: {
-                labels,
-                datasets: [{
-                    data,
-                    backgroundColor: labels.map((_, i) => factoryColors[i % factoryColors.length]),
-                    borderWidth: 2,
-                    borderColor: '#fff',
-                    hoverOffset: 6
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, cutout: '65%',
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => {
-                                const val = ctx.parsed;
-                                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
-                                return ` ${ctx.label}: ${val.toLocaleString('en-US')} (${pct}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        // 2. قائمة التفاصيل والنسب المئوية مع الفلترة التفاعلية بالنقر
-        if (listEl) {
-            listEl.innerHTML = sorted.map((item, idx) => {
-                const facName = item[0];
-                const cnt = item[1].count;
-                const fineSum = item[1].fineSum;
-                const pct = total > 0 ? ((cnt / total) * 100).toFixed(1) : 0;
-                const color = factoryColors[idx % factoryColors.length];
-                const fineStr = fineSum > 0 ? this.formatFineAmount(fineSum) : '';
-
-                return `
-                <div class="viol-factory-item" data-factory="${Utils.escapeHTML(facName)}" title="انقر لتصفية التحليلات حسب مصنع ${Utils.escapeHTML(facName)}" style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:12px;padding:11px 14px;cursor:pointer;transition:all 0.2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.03);" onmouseover="this.style.background='#fdf2f8';this.style.borderColor='#fbcfe8';" onmouseout="this.style.background='#ffffff';this.style.borderColor='#e2e8f0';">
+                </div>`}).join(""),r.querySelectorAll(".viol-type-item").forEach(h=>{h.addEventListener("click",()=>{const g=h.getAttribute("data-vtype"),D=document.getElementById("viol-af-type");D&&(D.value=D.value===g?"":g,this.updateViolationAnalytics())})}))},_vDrawFactoryBreakdown(e,t,i){const a=document.getElementById(e),n=document.getElementById(e+"-empty"),o=document.getElementById(t),r=document.getElementById("viol-factory-total-badge");if(!a)return;const l=(m,h)=>this._t(m,h),c=i.length;r&&(r.textContent=`${c.toLocaleString("en-US")} ${l("module.violations.analytics.violationUnit","\u0645\u062E\u0627\u0644\u0641\u0629")}`);const s={};i.forEach(m=>{const h=this._vGetFactoryName(m);s[h]||(s[h]={count:0,fineSum:0}),s[h].count+=1,s[h].fineSum+=Number(m.fineAmount)||0});const d=Object.entries(s).sort((m,h)=>h[1].count-m[1].count),p=d.map(m=>m[0]),f=d.map(m=>m[1].count),u=["rgba(236,72,153,0.85)","rgba(99,102,241,0.85)","rgba(245,158,11,0.85)","rgba(16,185,129,0.85)","rgba(59,130,246,0.85)","rgba(139,92,246,0.85)","rgba(239,68,68,0.85)","rgba(20,184,166,0.85)","rgba(107,114,128,0.85)"];if(!f.length||c===0){a.style.display="none",n&&(n.style.display="flex"),o&&(o.innerHTML=`<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:20px;">${l("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>`);return}n&&(n.style.display="none"),a.style.display="",this._violCharts||(this._violCharts={});const w=this._violCharts[e];if(w)try{w.destroy()}catch{}this._violCharts[e]=new Chart(a,{type:"doughnut",data:{labels:p,datasets:[{data:f,backgroundColor:p.map((m,h)=>u[h%u.length]),borderWidth:2,borderColor:"#fff",hoverOffset:6}]},options:{responsive:!0,maintainAspectRatio:!1,cutout:"65%",plugins:{legend:{display:!1},tooltip:{callbacks:{label:m=>{const h=m.parsed,g=c>0?(h/c*100).toFixed(1):"0";return` ${m.label}: ${h.toLocaleString("en-US")} (${g}%)`}}}}}}),o&&(o.innerHTML=d.map((m,h)=>{const g=m[0],D=m[1].count,B=m[1].fineSum,L=c>0?(D/c*100).toFixed(1):0,C=u[h%u.length],F=B>0?this.formatFineAmount(B):"";return`
+                <div class="viol-factory-item" data-factory="${Utils.escapeHTML(g)}" title="\u0627\u0646\u0642\u0631 \u0644\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644\u0627\u062A \u062D\u0633\u0628 \u0645\u0635\u0646\u0639 ${Utils.escapeHTML(g)}" style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:12px;padding:11px 14px;cursor:pointer;transition:all 0.2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.03);" onmouseover="this.style.background='#fdf2f8';this.style.borderColor='#fbcfe8';" onmouseout="this.style.background='#ffffff';this.style.borderColor='#e2e8f0';">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
                         <div style="display:flex;align-items:center;gap:10px;font-weight:800;font-size:0.95rem;color:#0f172a;">
-                            <span style="width:12px;height:12px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0;box-shadow:0 0 6px ${color};"></span>
-                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;" title="${Utils.escapeHTML(facName)}">${Utils.escapeHTML(facName)}</span>
+                            <span style="width:12px;height:12px;border-radius:50%;background:${C};display:inline-block;flex-shrink:0;box-shadow:0 0 6px ${C};"></span>
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;" title="${Utils.escapeHTML(g)}">${Utils.escapeHTML(g)}</span>
                         </div>
                         <div style="display:flex;align-items:center;gap:8px;font-size:0.88rem;">
-                            <span style="font-weight:800;color:#be185d;font-size:1.05rem;">${cnt.toLocaleString('en-US')}</span>
-                            <span style="color:#64748b;font-size:0.85rem;font-weight:700;">(${pct}%)</span>
-                            ${fineStr ? `<span style="background:#fffbeb;color:#b45309;padding:2px 8px;border-radius:8px;font-weight:700;font-size:0.8rem;">${fineStr}</span>` : ''}
+                            <span style="font-weight:800;color:#be185d;font-size:1.05rem;">${D.toLocaleString("en-US")}</span>
+                            <span style="color:#64748b;font-size:0.85rem;font-weight:700;">(${L}%)</span>
+                            ${F?`<span style="background:#fffbeb;color:#b45309;padding:2px 8px;border-radius:8px;font-weight:700;font-size:0.8rem;">${F}</span>`:""}
                         </div>
                     </div>
                     <div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
-                        <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width 0.5s ease;"></div>
+                        <div style="width:${L}%;height:100%;background:${C};border-radius:4px;transition:width 0.5s ease;"></div>
                     </div>
-                </div>`;
-            }).join('');
-
-            // ربط أحداث النقر على المصنع في القائمة
-            listEl.querySelectorAll('.viol-factory-item').forEach(el => {
-                el.addEventListener('click', () => {
-                    const fac = el.getAttribute('data-factory');
-                    const select = document.getElementById('viol-af-factory');
-                    if (select) {
-                        select.value = select.value === fac ? '' : fac;
-                        this.updateViolationAnalytics();
-                    }
-                });
-            });
-        }
-    },
-
-    // ── مساعد: رسم Doughnut ──
-    _vDrawDoughnut(canvasId, labels, data, colors) {
-        const canvas  = document.getElementById(canvasId);
-        const emptyEl = document.getElementById(canvasId + '-empty');
-        if (!canvas) return;
-        if (!data.length || data.reduce((a,b)=>a+b,0) === 0) {
-            canvas.style.display = 'none';
-            if (emptyEl) emptyEl.style.display = 'flex';
-            return;
-        }
-        if (emptyEl) emptyEl.style.display = 'none';
-        canvas.style.display = '';
-        const total = data.reduce((a,b)=>a+b,0);
-        if (!this._violCharts) this._violCharts = {};
-        const prev = this._violCharts[canvasId];
-        if (prev) { try { prev.destroy(); } catch(e){} }
-        this._violCharts[canvasId] = new Chart(canvas, {
-            type: 'doughnut',
-            data: { labels, datasets: [{ data, backgroundColor: colors || this._vChartColors(data.length), borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }] },
-            options: {
-                responsive: true, maintainAspectRatio: false, cutout: '62%',
-                plugins: {
-                    legend: { position:'bottom', labels:{ padding:12, font:{size:13, weight:'bold', family:"'Cairo', sans-serif"}, usePointStyle:true, boxWidth:10 } },
-                    tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString('en-US')} (${total>0?((ctx.parsed/total)*100).toFixed(1):0}%)` } }
-                }
-            }
-        });
-    },
-
-    // ── مساعد: رسم HBar ──
-    _vDrawHBar(canvasId, labels, data, color) {
-        const canvas  = document.getElementById(canvasId);
-        const emptyEl = document.getElementById(canvasId + '-empty');
-        if (!canvas) return;
-        if (!data.length || data.reduce((a,b)=>a+b,0) === 0) {
-            canvas.style.display = 'none';
-            if (emptyEl) emptyEl.style.display = 'flex';
-            return;
-        }
-        if (emptyEl) emptyEl.style.display = 'none';
-        canvas.style.display = '';
-        if (!this._violCharts) this._violCharts = {};
-        const prev = this._violCharts[canvasId];
-        if (prev) { try { prev.destroy(); } catch(e){} }
-        this._violCharts[canvasId] = new Chart(canvas, {
-            type: 'bar',
-            data: { labels, datasets: [{ data, backgroundColor: color || 'rgba(220,38,38,0.75)', borderRadius: 5, borderSkipped: false }] },
-            options: {
-                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                plugins: { legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ` ${ctx.parsed.x.toLocaleString('en-US')}` } } },
-                scales: {
-                    x: { beginAtZero:true, ticks:{ precision:0, font:{size:12, weight:'bold'} }, grid:{color:'#f1f5f9'} },
-                    y: { ticks:{ font:{size:12, weight:'bold', family:"'Cairo', sans-serif"}, callback: v => String(labels[v]).length>22 ? String(labels[v]).slice(0,21)+'…' : labels[v] } }
-                }
-            }
-        });
-    },
-
-    // ── مساعد: رسم الاتجاه الزمني ──
-    _vDrawTrend(canvasId, viol) {
-        const canvas  = document.getElementById(canvasId);
-        const emptyEl = document.getElementById(canvasId + '-empty');
-        if (!canvas) return;
-        const t = (key, fallback) => this._t(key, fallback);
-        const lang = window.AppI18n && typeof window.AppI18n.getCurrentLang === 'function' ? window.AppI18n.getCurrentLang() : 'ar';
-        const dateLocale = lang === 'en' ? 'en-US' : 'ar-SA-u-nu-latn';
-        const now = new Date();
-        const months = [];
-        for (let i = 11; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const monthLabel = d.toLocaleDateString(dateLocale, { month: 'long' });
-            months.push({ year:d.getFullYear(), month:d.getMonth(), label:`${monthLabel} ${d.getFullYear()}` });
-        }
-        const counts = months.map(m => viol.filter(v => {
-            if (!v.violationDate) return false;
-            const d = new Date(v.violationDate);
-            return !isNaN(d.getTime()) && d.getFullYear()===m.year && d.getMonth()===m.month;
-        }).length);
-        if (counts.reduce((a,b)=>a+b,0) === 0) {
-            canvas.style.display = 'none';
-            if (emptyEl) emptyEl.style.display = 'flex';
-            return;
-        }
-        if (emptyEl) emptyEl.style.display = 'none';
-        canvas.style.display = '';
-        if (!this._violCharts) this._violCharts = {};
-        const prev = this._violCharts[canvasId];
-        if (prev) { try { prev.destroy(); } catch(e){} }
-        this._violCharts[canvasId] = new Chart(canvas, {
-            type: 'bar',
-            data: {
-                labels: months.map(m=>m.label),
-                datasets: [
-                    { label:t('module.violations.analytics.chart.violationCount', 'عدد المخالفات'), data:counts, backgroundColor: counts.map(c => c===Math.max(...counts) ? 'rgba(220,38,38,0.85)' : 'rgba(220,38,38,0.5)'), borderRadius:6, borderSkipped:false, order:1 },
-                    { label:t('module.violations.analytics.chart.trendLine', 'الاتجاه'), data:counts, type:'line', borderColor:'rgba(139,92,246,0.9)', backgroundColor:'rgba(139,92,246,0.08)', borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#8b5cf6', tension:0.4, fill:true, order:0 }
-                ]
-            },
-            options: {
-                responsive:true, maintainAspectRatio:false,
-                plugins:{ legend:{position:'top',labels:{usePointStyle:true,font:{size:11}}}, tooltip:{mode:'index',intersect:false} },
-                scales:{ x:{grid:{display:false},ticks:{font:{size:10},maxRotation:45}}, y:{beginAtZero:true,ticks:{precision:0,font:{size:11}},grid:{color:'#f8fafc'}} }
-            }
-        });
-    },
-
-    // ── مساعد: رسم الغرامات حسب النوع ──
-    _vDrawFinesByType(canvasId, viol) {
-        const canvas  = document.getElementById(canvasId);
-        const emptyEl = document.getElementById(canvasId + '-empty');
-        if (!canvas) return;
-        const withFines = viol.filter(v => (Number(v.fineAmount)||0) > 0);
-        if (!withFines.length) {
-            canvas.style.display = 'none';
-            if (emptyEl) emptyEl.style.display = 'flex';
-            return;
-        }
-        if (emptyEl) emptyEl.style.display = 'none';
-        canvas.style.display = '';
-        const map = {};
-        withFines.forEach(v => {
-            const t = String(v.violationType||'غير محدد').trim();
-            map[t] = (map[t]||0) + (Number(v.fineAmount)||0);
-        });
-        const entries = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
-        const labels  = entries.map(e=>e[0]);
-        // ✅ تحويل القيم إلى العملة المختارة (EGP افتراضي أو USD)
-        const currency = this.getCurrentCurrency();
-        const currencyLabel = this.getCurrencyLabel('long');
-        const data = entries.map(e => {
-            const converted = this.convertFineAmount(e[1], currency);
-            // الجنيه: تقريب لأقرب عدد صحيح. الدولار: منزلتان عشريتان
-            return currency === 'USD' ? Number(converted.toFixed(2)) : Math.round(converted);
-        });
-        if (!this._violCharts) this._violCharts = {};
-        const prev = this._violCharts[canvasId];
-        if (prev) { try { prev.destroy(); } catch(e){} }
-        // ✅ تنسيق tooltip حسب العملة (بدون كسور للجنيه، حتى منزلتين للدولار)
-        const fmt = (v) => currency === 'USD'
-            ? v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-            : v.toLocaleString('en-US', { maximumFractionDigits: 0 });
-        this._violCharts[canvasId] = new Chart(canvas, {
-            type: 'bar',
-            data: { labels, datasets: [{ data, backgroundColor: 'rgba(217,119,6,0.75)', borderRadius:5, borderSkipped:false }] },
-            options: {
-                indexAxis:'y', responsive:true, maintainAspectRatio:false,
-                plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ` ${fmt(ctx.parsed.x)} ${currencyLabel}` } } },
-                scales:{
-                    x:{ beginAtZero:true, ticks:{ font:{size:11}, callback: v => fmt(v) }, grid:{color:'#f1f5f9'}, title:{display:true,text:`الغرامة الإجمالية (${currencyLabel})`,font:{size:11}} },
-                    y:{ ticks:{ font:{size:11}, callback: v => String(labels[v]).length>18 ? String(labels[v]).slice(0,17)+'…' : labels[v] } }
-                }
-            }
-        });
-    },
-
-    // ── مساعد: تحميل Chart.js ──
-    async _vEnsureChartJS() {
-        if (typeof Chart !== 'undefined') return true;
-        const ex = document.querySelector('script[src*="chart.js"],script[src*="chartjs"]');
-        if (ex) {
-            return new Promise(resolve => {
-                const t = setInterval(() => { if (typeof Chart !== 'undefined') { clearInterval(t); resolve(true); } }, 100);
-                setTimeout(() => { clearInterval(t); resolve(false); }, 5000);
-            });
-        }
-        return new Promise(resolve => {
-            const s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
-            s.onload = () => resolve(true);
-            s.onerror = () => {
-                const s2 = document.createElement('script');
-                s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
-                s2.onload = () => resolve(true);
-                s2.onerror = () => resolve(false);
-                document.head.appendChild(s2);
-            };
-            document.head.appendChild(s);
-        });
-    },
-
-    // ── مساعد: ألوان احترافية ──
-    _vChartColors(n) {
-        const palette = ['rgba(220,38,38,0.8)','rgba(245,158,11,0.8)','rgba(16,185,129,0.8)','rgba(99,102,241,0.8)','rgba(249,115,22,0.8)','rgba(139,92,246,0.8)','rgba(59,130,246,0.8)','rgba(236,72,153,0.8)','rgba(20,184,166,0.8)','rgba(168,85,247,0.8)'];
-        return Array.from({length:n}, (_,i) => palette[i % palette.length]);
-    },
-
-    async _loadReportPdfLib_(src, checkFn) {
-        if (checkFn()) return true;
-        return new Promise((resolve) => {
-            const existing = Array.from(document.querySelectorAll('script[src]'))
-                .find((s) => String(s.src || '').includes(src));
-            if (existing) {
-                const done = () => resolve(!!checkFn());
-                existing.addEventListener('load', done, { once: true });
-                setTimeout(done, 4000);
-                return;
-            }
-            const script = document.createElement('script');
-            script.src = src;
-            script.async = true;
-            script.onload = () => resolve(!!checkFn());
-            script.onerror = () => resolve(false);
-            document.head.appendChild(script);
-        });
-    },
-
-    async _ensureReportPdfLibs_() {
-        const html2canvasOk = await this._loadReportPdfLib_(
-            'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-            () => typeof html2canvas !== 'undefined'
-        );
-        const jsPdfOk = await this._loadReportPdfLib_(
-            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-            () => typeof window.jspdf !== 'undefined'
-        );
-        return html2canvasOk && jsPdfOk;
-    },
-
-    /** أنماط عربية آمنة لـ PDF — منع تفكيك الحروف (letter-spacing) */
-    _AR_PDF_TEXT_STYLE_: "font-family:'Cairo','Tahoma','Segoe UI',sans-serif;direction:rtl;unicode-bidi:embed;letter-spacing:0;word-spacing:normal;",
-
-    _stripScriptsFromHtml_(htmlContent) {
-        return String(htmlContent || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-    },
-
-    async _preloadCairoFontForPdf_() {
-        if (!document.getElementById('viol-cairo-font-link')) {
-            const link = document.createElement('link');
-            link.id = 'viol-cairo-font-link';
-            link.rel = 'stylesheet';
-            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap';
-            document.head.appendChild(link);
-        }
-        try {
-            if (document.fonts && typeof document.fonts.load === 'function') {
-                await document.fonts.load("400 14px Cairo");
-                await document.fonts.load("700 20px Cairo");
-                await document.fonts.ready;
-            }
-        } catch (_e) { /* ignore */ }
-    },
-
-    _prepareArabicPdfHtml_(htmlContent) {
-        const arabicFix = `
+                </div>`}).join(""),o.querySelectorAll(".viol-factory-item").forEach(m=>{m.addEventListener("click",()=>{const h=m.getAttribute("data-factory"),g=document.getElementById("viol-af-factory");g&&(g.value=g.value===h?"":h,this.updateViolationAnalytics())})}))},_vDrawDoughnut(e,t,i,a){const n=document.getElementById(e),o=document.getElementById(e+"-empty");if(!n)return;if(!i.length||i.reduce((c,s)=>c+s,0)===0){n.style.display="none",o&&(o.style.display="flex");return}o&&(o.style.display="none"),n.style.display="";const r=i.reduce((c,s)=>c+s,0);this._violCharts||(this._violCharts={});const l=this._violCharts[e];if(l)try{l.destroy()}catch{}this._violCharts[e]=new Chart(n,{type:"doughnut",data:{labels:t,datasets:[{data:i,backgroundColor:a||this._vChartColors(i.length),borderWidth:2,borderColor:"#fff",hoverOffset:6}]},options:{responsive:!0,maintainAspectRatio:!1,cutout:"62%",plugins:{legend:{position:"bottom",labels:{padding:12,font:{size:13,weight:"bold",family:"'Cairo', sans-serif"},usePointStyle:!0,boxWidth:10}},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed.toLocaleString("en-US")} (${r>0?(c.parsed/r*100).toFixed(1):0}%)`}}}}})},_vDrawHBar(e,t,i,a){const n=document.getElementById(e),o=document.getElementById(e+"-empty");if(!n)return;if(!i.length||i.reduce((l,c)=>l+c,0)===0){n.style.display="none",o&&(o.style.display="flex");return}o&&(o.style.display="none"),n.style.display="",this._violCharts||(this._violCharts={});const r=this._violCharts[e];if(r)try{r.destroy()}catch{}this._violCharts[e]=new Chart(n,{type:"bar",data:{labels:t,datasets:[{data:i,backgroundColor:a||"rgba(220,38,38,0.75)",borderRadius:5,borderSkipped:!1}]},options:{indexAxis:"y",responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1},tooltip:{callbacks:{label:l=>` ${l.parsed.x.toLocaleString("en-US")}`}}},scales:{x:{beginAtZero:!0,ticks:{precision:0,font:{size:12,weight:"bold"}},grid:{color:"#f1f5f9"}},y:{ticks:{font:{size:12,weight:"bold",family:"'Cairo', sans-serif"},callback:l=>String(t[l]).length>22?String(t[l]).slice(0,21)+"\u2026":t[l]}}}}})},_vDrawTrend(e,t){const i=document.getElementById(e),a=document.getElementById(e+"-empty");if(!i)return;const n=(p,f)=>this._t(p,f),r=(window.AppI18n&&typeof window.AppI18n.getCurrentLang=="function"?window.AppI18n.getCurrentLang():"ar")==="en"?"en-US":"ar-SA-u-nu-latn",l=new Date,c=[];for(let p=11;p>=0;p--){const f=new Date(l.getFullYear(),l.getMonth()-p,1),u=f.toLocaleDateString(r,{month:"long"});c.push({year:f.getFullYear(),month:f.getMonth(),label:`${u} ${f.getFullYear()}`})}const s=c.map(p=>t.filter(f=>{if(!f.violationDate)return!1;const u=new Date(f.violationDate);return!isNaN(u.getTime())&&u.getFullYear()===p.year&&u.getMonth()===p.month}).length);if(s.reduce((p,f)=>p+f,0)===0){i.style.display="none",a&&(a.style.display="flex");return}a&&(a.style.display="none"),i.style.display="",this._violCharts||(this._violCharts={});const d=this._violCharts[e];if(d)try{d.destroy()}catch{}this._violCharts[e]=new Chart(i,{type:"bar",data:{labels:c.map(p=>p.label),datasets:[{label:n("module.violations.analytics.chart.violationCount","\u0639\u062F\u062F \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A"),data:s,backgroundColor:s.map(p=>p===Math.max(...s)?"rgba(220,38,38,0.85)":"rgba(220,38,38,0.5)"),borderRadius:6,borderSkipped:!1,order:1},{label:n("module.violations.analytics.chart.trendLine","\u0627\u0644\u0627\u062A\u062C\u0627\u0647"),data:s,type:"line",borderColor:"rgba(139,92,246,0.9)",backgroundColor:"rgba(139,92,246,0.08)",borderWidth:2.5,pointRadius:4,pointBackgroundColor:"#8b5cf6",tension:.4,fill:!0,order:0}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"top",labels:{usePointStyle:!0,font:{size:11}}},tooltip:{mode:"index",intersect:!1}},scales:{x:{grid:{display:!1},ticks:{font:{size:10},maxRotation:45}},y:{beginAtZero:!0,ticks:{precision:0,font:{size:11}},grid:{color:"#f8fafc"}}}}})},_vDrawFinesByType(e,t){const i=document.getElementById(e),a=document.getElementById(e+"-empty");if(!i)return;const n=t.filter(u=>(Number(u.fineAmount)||0)>0);if(!n.length){i.style.display="none",a&&(a.style.display="flex");return}a&&(a.style.display="none"),i.style.display="";const o={};n.forEach(u=>{const w=String(u.violationType||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").trim();o[w]=(o[w]||0)+(Number(u.fineAmount)||0)});const r=Object.entries(o).sort((u,w)=>w[1]-u[1]).slice(0,10),l=r.map(u=>u[0]),c=this.getCurrentCurrency(),s=this.getCurrencyLabel("long"),d=r.map(u=>{const w=this.convertFineAmount(u[1],c);return c==="USD"?Number(w.toFixed(2)):Math.round(w)});this._violCharts||(this._violCharts={});const p=this._violCharts[e];if(p)try{p.destroy()}catch{}const f=u=>c==="USD"?u.toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:2}):u.toLocaleString("en-US",{maximumFractionDigits:0});this._violCharts[e]=new Chart(i,{type:"bar",data:{labels:l,datasets:[{data:d,backgroundColor:"rgba(217,119,6,0.75)",borderRadius:5,borderSkipped:!1}]},options:{indexAxis:"y",responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1},tooltip:{callbacks:{label:u=>` ${f(u.parsed.x)} ${s}`}}},scales:{x:{beginAtZero:!0,ticks:{font:{size:11},callback:u=>f(u)},grid:{color:"#f1f5f9"},title:{display:!0,text:`\u0627\u0644\u063A\u0631\u0627\u0645\u0629 \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A\u0629 (${s})`,font:{size:11}}},y:{ticks:{font:{size:11},callback:u=>String(l[u]).length>18?String(l[u]).slice(0,17)+"\u2026":l[u]}}}}})},async _vEnsureChartJS(){return typeof Chart<"u"?!0:document.querySelector('script[src*="chart.js"],script[src*="chartjs"]')?new Promise(t=>{const i=setInterval(()=>{typeof Chart<"u"&&(clearInterval(i),t(!0))},100);setTimeout(()=>{clearInterval(i),t(!1)},5e3)}):new Promise(t=>{const i=document.createElement("script");i.src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js",i.onload=()=>t(!0),i.onerror=()=>{const a=document.createElement("script");a.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js",a.onload=()=>t(!0),a.onerror=()=>t(!1),document.head.appendChild(a)},document.head.appendChild(i)})},_vChartColors(e){const t=["rgba(220,38,38,0.8)","rgba(245,158,11,0.8)","rgba(16,185,129,0.8)","rgba(99,102,241,0.8)","rgba(249,115,22,0.8)","rgba(139,92,246,0.8)","rgba(59,130,246,0.8)","rgba(236,72,153,0.8)","rgba(20,184,166,0.8)","rgba(168,85,247,0.8)"];return Array.from({length:e},(i,a)=>t[a%t.length])},async _loadReportPdfLib_(e,t){return t()?!0:new Promise(i=>{const a=Array.from(document.querySelectorAll("script[src]")).find(o=>String(o.src||"").includes(e));if(a){const o=()=>i(!!t());a.addEventListener("load",o,{once:!0}),setTimeout(o,4e3);return}const n=document.createElement("script");n.src=e,n.async=!0,n.onload=()=>i(!!t()),n.onerror=()=>i(!1),document.head.appendChild(n)})},async _ensureReportPdfLibs_(){const e=await this._loadReportPdfLib_("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>typeof html2canvas<"u"),t=await this._loadReportPdfLib_("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>typeof window.jspdf<"u");return e&&t},_AR_PDF_TEXT_STYLE_:"font-family:'Cairo','Tahoma','Segoe UI',sans-serif;direction:rtl;unicode-bidi:embed;letter-spacing:0;word-spacing:normal;",_stripScriptsFromHtml_(e){return String(e||"").replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,"")},async _preloadCairoFontForPdf_(){if(!document.getElementById("viol-cairo-font-link")){const e=document.createElement("link");e.id="viol-cairo-font-link",e.rel="stylesheet",e.href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap",document.head.appendChild(e)}try{document.fonts&&typeof document.fonts.load=="function"&&(await document.fonts.load("400 14px Cairo"),await document.fonts.load("700 20px Cairo"),await document.fonts.ready)}catch{}},_prepareArabicPdfHtml_(e){const t=`
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -4059,1894 +1057,285 @@ const Violations = {
     }
     table, thead, tbody, tr, th, td { direction: rtl !important; }
     .header-info h1 { letter-spacing: 0 !important; }
-</style>`;
-        const cleaned = this._stripScriptsFromHtml_(htmlContent);
-        if (!cleaned) return arabicFix;
-        if (cleaned.includes('</head>')) {
-            return cleaned.replace('</head>', `${arabicFix}</head>`);
-        }
-        return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${arabicFix}</head><body>${cleaned}</body></html>`;
-    },
-
-    async _waitArabicPdfFontsReady_(doc) {
-        if (!doc || !doc.fonts || typeof doc.fonts.load !== 'function') return;
-        try {
-            await Promise.all([
-                doc.fonts.load("400 12px Cairo"),
-                doc.fonts.load("600 14px Cairo"),
-                doc.fonts.load("700 18px Cairo"),
-                doc.fonts.load("800 24px Cairo")
-            ]);
-            await doc.fonts.ready;
-        } catch (_e) { /* ignore */ }
-    },
-
-    /**
-     * تحويل HTML كامل إلى PDF وتحميله مباشرة (بدون نافذة طباعة)
-     */
-    async _captureHtmlToCanvas_(root, opts = {}) {
-        const baseOpts = {
-            scale: 2.5,
-            backgroundColor: '#ffffff',
-            logging: false,
-            windowWidth: Math.max(root.scrollWidth, 900),
-            windowHeight: Math.max(root.scrollHeight, 1),
-            scrollX: 0,
-            scrollY: 0
-        };
-        const attempts = [
-            { ...baseOpts, useCORS: true, allowTaint: false },
-            { ...baseOpts, useCORS: true, allowTaint: true },
-            { ...baseOpts, useCORS: false, allowTaint: true }
-        ];
-        let lastError = null;
-        for (let i = 0; i < attempts.length; i++) {
-            try {
-                const canvas = await html2canvas(root, attempts[i]);
-                if (canvas && canvas.width > 0 && canvas.height > 0) {
-                    return canvas;
-                }
-            } catch (err) {
-                lastError = err;
-            }
-        }
-        if (lastError) throw lastError;
-        return null;
-    },
-
-    async _downloadHtmlReportAsPdf(htmlContent, fileName = 'report.pdf') {
-        const libsReady = await this._ensureReportPdfLibs_();
-        if (!libsReady || typeof html2canvas === 'undefined' || !window.jspdf) {
-            return false;
-        }
-
-        await this._preloadCairoFontForPdf_();
-        const preparedHtml = this._prepareArabicPdfHtml_(htmlContent);
-        const pdfFileName = String(fileName || 'report.pdf').toLowerCase().endsWith('.pdf')
-            ? String(fileName)
-            : `${String(fileName)}.pdf`;
-
-        const iframe = document.createElement('iframe');
-        iframe.setAttribute('aria-hidden', 'true');
-        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:900px;height:1200px;border:0;visibility:hidden;';
-        document.body.appendChild(iframe);
-
-        try {
-            iframe.srcdoc = preparedHtml;
-            await new Promise((resolve) => {
-                iframe.onload = resolve;
-                iframe.onerror = resolve;
-                setTimeout(resolve, 6000);
-            });
-
-            const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
-            if (!iDoc) return false;
-
-            await this._waitArabicPdfFontsReady_(iDoc);
-
-            const images = Array.from(iDoc.images || []);
-            await Promise.all(images.map((img) => new Promise((resolve) => {
-                if (img.complete) return resolve();
-                img.onload = resolve;
-                img.onerror = resolve;
-                setTimeout(resolve, 3000);
-            })));
-
-            const root = iDoc.querySelector('.report-wrapper') || iDoc.body;
-            if (!root) return false;
-
-            const canvas = await this._captureHtmlToCanvas_(root);
-            if (!canvas) return false;
-
-            const pdf = Utils.PdfExport.createPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            if (!pdf) return false;
-            Utils.PdfExport.appendCanvasAsPdfPages(pdf, canvas, { marginMm: 8 });
-            Utils.PdfExport.savePdf(pdf, pdfFileName);
-            return true;
-        } catch (error) {
-            Utils.safeWarn('فشل تحميل تقرير PDF:', error);
-            return false;
-        } finally {
-            iframe.remove();
-        }
-    },
-
-    // ── تصدير لوحة المخالفات PDF ──
-    _getViolAnalyticsPeriodLabel_() {
-        const map = { '30': '30 يوم', '90': '3 أشهر', '180': '6 أشهر', '365': 'سنة', '0': 'الكل' };
-        return map[String(this._violPeriod || '0')] || 'الكل';
-    },
-
-    _buildViolAnalyticsExportLegend_() {
-        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(v) : String(v ?? '');
-        const period = esc(this._getViolAnalyticsPeriodLabel_());
-        const countText = esc(document.getElementById('viol-filter-count')?.textContent?.trim() || '');
-        const exportDate = esc(new Date().toLocaleString('ar-SA-u-nu-latn', { hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'long', day: 'numeric' }));
-        return `
+</style>`,i=this._stripScriptsFromHtml_(e);return i?i.includes("</head>")?i.replace("</head>",`${t}</head>`):`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${t}</head><body>${i}</body></html>`:t},async _waitArabicPdfFontsReady_(e){if(!(!e||!e.fonts||typeof e.fonts.load!="function"))try{await Promise.all([e.fonts.load("400 12px Cairo"),e.fonts.load("600 14px Cairo"),e.fonts.load("700 18px Cairo"),e.fonts.load("800 24px Cairo")]),await e.fonts.ready}catch{}},async _captureHtmlToCanvas_(e,t={}){const i={scale:2.5,backgroundColor:"#ffffff",logging:!1,windowWidth:Math.max(e.scrollWidth,900),windowHeight:Math.max(e.scrollHeight,1),scrollX:0,scrollY:0},a=[{...i,useCORS:!0,allowTaint:!1},{...i,useCORS:!0,allowTaint:!0},{...i,useCORS:!1,allowTaint:!0}];let n=null;for(let o=0;o<a.length;o++)try{const r=await html2canvas(e,a[o]);if(r&&r.width>0&&r.height>0)return r}catch(r){n=r}if(n)throw n;return null},async _downloadHtmlReportAsPdf(e,t="report.pdf"){if(!await this._ensureReportPdfLibs_()||typeof html2canvas>"u"||!window.jspdf)return!1;await this._preloadCairoFontForPdf_();const a=this._prepareArabicPdfHtml_(e),n=String(t||"report.pdf").toLowerCase().endsWith(".pdf")?String(t):`${String(t)}.pdf`,o=document.createElement("iframe");o.setAttribute("aria-hidden","true"),o.style.cssText="position:fixed;left:-100000px;top:0;width:900px;height:1200px;border:0;visibility:hidden;",document.body.appendChild(o);try{o.srcdoc=a,await new Promise(p=>{o.onload=p,o.onerror=p,setTimeout(p,6e3)});const r=o.contentDocument||o.contentWindow?.document;if(!r)return!1;await this._waitArabicPdfFontsReady_(r);const l=Array.from(r.images||[]);await Promise.all(l.map(p=>new Promise(f=>{if(p.complete)return f();p.onload=f,p.onerror=f,setTimeout(f,3e3)})));const c=r.querySelector(".report-wrapper")||r.body;if(!c)return!1;const s=await this._captureHtmlToCanvas_(c);if(!s)return!1;const d=Utils.PdfExport.createPdf({orientation:"portrait",unit:"mm",format:"a4"});return d?(Utils.PdfExport.appendCanvasAsPdfPages(d,s,{marginMm:8}),Utils.PdfExport.savePdf(d,n),!0):!1}catch(r){return Utils.safeWarn("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 PDF:",r),!1}finally{o.remove()}},_getViolAnalyticsPeriodLabel_(){return{30:"30 \u064A\u0648\u0645",90:"3 \u0623\u0634\u0647\u0631",180:"6 \u0623\u0634\u0647\u0631",365:"\u0633\u0646\u0629",0:"\u0627\u0644\u0643\u0644"}[String(this._violPeriod||"0")]||"\u0627\u0644\u0643\u0644"},_buildViolAnalyticsExportLegend_(){const e=n=>typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(n):String(n??""),t=e(this._getViolAnalyticsPeriodLabel_()),i=e(document.getElementById("viol-filter-count")?.textContent?.trim()||""),a=e(new Date().toLocaleString("ar-SA-u-nu-latn",{hour:"2-digit",minute:"2-digit",year:"numeric",month:"long",day:"numeric"}));return`
         <div class="ia-export-legend" dir="rtl" style="margin-top:12px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-            <div style="font-weight:700;font-size:12px;color:#475569;margin-bottom:10px;">ملخص التقرير</div>
+            <div style="font-weight:700;font-size:12px;color:#475569;margin-bottom:10px;">\u0645\u0644\u062E\u0635 \u0627\u0644\u062A\u0642\u0631\u064A\u0631</div>
             <div style="display:flex;flex-wrap:wrap;gap:10px 18px;font-size:11px;line-height:1.55;color:#334155;">
-                <div><strong style="color:#64748b;">الفترة:</strong> ${period}</div>
-                ${countText ? `<div><strong style="color:#64748b;">السجلات:</strong> ${countText}</div>` : ''}
-                <div><strong style="color:#64748b;">تاريخ التصدير:</strong> ${exportDate}</div>
+                <div><strong style="color:#64748b;">\u0627\u0644\u0641\u062A\u0631\u0629:</strong> ${t}</div>
+                ${i?`<div><strong style="color:#64748b;">\u0627\u0644\u0633\u062C\u0644\u0627\u062A:</strong> ${i}</div>`:""}
+                <div><strong style="color:#64748b;">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0635\u062F\u064A\u0631:</strong> ${a}</div>
             </div>
-        </div>`;
-    },
-
-    async _vExportPDF() {
-        const captureRoot = document.getElementById('viol-analytics-capture');
-        if (!captureRoot) return;
-        const btn = document.getElementById('viol-export-pdf-btn');
-        const origHtml = btn ? btn.innerHTML : '';
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
-        try {
-            await this._ensureReportPdfLibs_();
-            if (typeof html2canvas === 'undefined') {
-                throw new Error('html2canvas unavailable');
-            }
-
-            const filterPanel = document.getElementById('viol-filter-panel');
-            const wasVisible = filterPanel && filterPanel.style.display !== 'none';
-            if (wasVisible) filterPanel.style.display = 'none';
-
-            const scale = Utils.PdfExport.getOptimalCaptureScale(
-                captureRoot.scrollWidth,
-                captureRoot.scrollHeight,
-                Utils.PdfExport.DEFAULT_CAPTURE_SCALE
-            );
-            const canvas = await html2canvas(captureRoot, {
-                scale,
-                useCORS: true,
-                backgroundColor: '#f8fafc',
-                scrollX: 0,
-                scrollY: 0,
-                logging: false
-            });
-            if (wasVisible) filterPanel.style.display = '';
-
-            const { dataUrl } = Utils.PdfExport.compressCanvasToJpegDataUrl(canvas, Utils.PdfExport.TARGET_MAX_BYTES);
-            const content = `
+        </div>`},async _vExportPDF(){const e=document.getElementById("viol-analytics-capture");if(!e)return;const t=document.getElementById("viol-export-pdf-btn"),i=t?t.innerHTML:"";t&&(t.disabled=!0,t.innerHTML='<i class="fas fa-spinner fa-spin"></i>');try{if(await this._ensureReportPdfLibs_(),typeof html2canvas>"u")throw new Error("html2canvas unavailable");const a=document.getElementById("viol-filter-panel"),n=a&&a.style.display!=="none";n&&(a.style.display="none");const o=Utils.PdfExport.getOptimalCaptureScale(e.scrollWidth,e.scrollHeight,Utils.PdfExport.DEFAULT_CAPTURE_SCALE),r=await html2canvas(e,{scale:o,useCORS:!0,backgroundColor:"#f8fafc",scrollX:0,scrollY:0,logging:!1});n&&(a.style.display="");const{dataUrl:l}=Utils.PdfExport.compressCanvasToJpegDataUrl(r,Utils.PdfExport.TARGET_MAX_BYTES),c=`
                 <div style="margin:0 auto;max-width:100%;">
-                    <img src="${dataUrl}" alt="Violations Analytics Dashboard" style="width:100%;max-width:100%;height:auto;display:block;border-radius:8px;border:1px solid #e2e8f0;">
-                </div>`;
+                    <img src="${l}" alt="Violations Analytics Dashboard" style="width:100%;max-width:100%;height:auto;display:block;border-radius:8px;border:1px solid #e2e8f0;">
+                </div>`,s=`VIOL-ANALYTICS-${new Date().toISOString().slice(0,10)}`,d="\u0644\u0648\u062D\u0629 \u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A",p="Violations Analysis Report",f=new Date().toISOString(),u=typeof FormHeader<"u"&&typeof FormHeader.generatePDFHTML=="function"?FormHeader.generatePDFHTML(s,d,c,!1,!1,{source:"ViolationsAnalytics",titleEn:p,titleAr:d,version:AppState?.companySettings?.formVersion||"1.0",includeQRCode:!1,compactPdfFooter:!0,headerLayoutLtr:!0,footerLegendHtml:this._buildViolAnalyticsExportLegend_()},f,f):`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${d}</title></head><body>${c}</body></html>`,w=`Violations-Analysis-${new Date().toISOString().slice(0,10)}.pdf`;if(!await this._downloadHtmlReportAsPdf(u,w))throw new Error("PDF generation failed");typeof Notification<"u"&&Notification.success&&Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A PDF \u0628\u0646\u062C\u0627\u062D")}catch{typeof Notification<"u"&&Notification.error&&Notification.error("\u062A\u0639\u0630\u0651\u0631 \u062A\u0635\u062F\u064A\u0631 PDF \u2014 \u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A")}finally{t&&(t.disabled=!1,t.innerHTML=i)}},_vBindAnalyticsEvents(){const e=document.getElementById("viol-analytics-root");if(!e)return;e.querySelectorAll(".viol-period-btn").forEach(l=>{l.addEventListener("click",()=>{this._violPeriod=l.getAttribute("data-period"),e.querySelectorAll(".viol-period-btn").forEach(c=>{const s=c===l;c.style.background=s?"#fff":"rgba(255,255,255,0.15)",c.style.color=s?"#991b1b":"#fff"}),this.updateViolationAnalytics()})});const t=document.getElementById("viol-analytics-refresh");t&&t.addEventListener("click",()=>this.updateViolationAnalytics());const i=document.getElementById("viol-export-pdf-btn");i&&i.addEventListener("click",()=>this._vExportPDF());const a=document.getElementById("viol-toggle-filters-btn"),n=document.getElementById("viol-filter-panel");a&&n&&a.addEventListener("click",()=>{const l=n.style.display!=="none";n.style.display=l?"none":"block",a.style.background=l?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.35)"});const o=document.getElementById("viol-filter-reset-btn");o&&o.addEventListener("click",()=>{["viol-af-factory","viol-af-ptype","viol-af-type","viol-af-sev","viol-af-status","viol-af-loc"].forEach(l=>{const c=document.getElementById(l);c&&(c.value="")}),this.updateViolationAnalytics()}),["viol-af-factory","viol-af-ptype","viol-af-type","viol-af-sev","viol-af-status","viol-af-loc"].forEach(l=>{const c=document.getElementById(l);c&&c.addEventListener("change",()=>this.updateViolationAnalytics())}),e.querySelectorAll(".viol-kpi-card").forEach(l=>{l.addEventListener("click",()=>{const c=l.getAttribute("data-kpi");if(c==="total")["viol-af-factory","viol-af-ptype","viol-af-type","viol-af-sev","viol-af-status","viol-af-loc"].forEach(s=>{const d=document.getElementById(s);d&&(d.value="")});else if(c==="employees"){const s=document.getElementById("viol-af-ptype");s&&(s.value=s.value==="employee"?"":"employee")}else if(c==="contractors"){const s=document.getElementById("viol-af-ptype");s&&(s.value=s.value==="contractor"?"":"contractor")}else if(c==="highSev"){const s=document.getElementById("viol-af-sev");s&&(s.value=s.value==="\u0639\u0627\u0644\u064A\u0629"?"":"\u0639\u0627\u0644\u064A\u0629")}else if(c==="resolved"){const s=document.getElementById("viol-af-status");s&&(s.value=s.value==="\u0645\u062D\u0644\u0648\u0644"?"":"\u0645\u062D\u0644\u0648\u0644")}else if(c==="unresolved"){const s=document.getElementById("viol-af-status");s&&(s.value=s.value==="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644"?"":"\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644")}this.updateViolationAnalytics()})}),e.querySelectorAll(".viol-curr-btn").forEach(l=>{l.addEventListener("click",()=>{const c=l.getAttribute("data-curr");this.setCurrentCurrency(c),e.querySelectorAll(".viol-curr-btn").forEach(s=>{const d=s.getAttribute("data-curr")===c;s.style.background=d?"#fff":"transparent",s.style.color=d?"#991b1b":"#fff"}),this.updateViolationAnalytics()})});const r=document.getElementById("viol-curr-rate-btn");r&&r.addEventListener("click",()=>{const l=this.getExchangeRate(),c=window.prompt(`\u0623\u062F\u062E\u0644 \u0633\u0639\u0631 \u0635\u0631\u0641 \u0627\u0644\u062F\u0648\u0644\u0627\u0631 (\u0643\u0645 \u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A \u064A\u0633\u0627\u0648\u064A 1 \u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A):
 
-            const formCode = `VIOL-ANALYTICS-${new Date().toISOString().slice(0, 10)}`;
-            const formTitleAr = 'لوحة تحليل المخالفات';
-            const formTitleEn = 'Violations Analysis Report';
-            const nowIso = new Date().toISOString();
-            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(
-                    formCode,
-                    formTitleAr,
-                    content,
-                    false,
-                    false,
-                    {
-                        source: 'ViolationsAnalytics',
-                        titleEn: formTitleEn,
-                        titleAr: formTitleAr,
-                        version: AppState?.companySettings?.formVersion || '1.0',
-                        includeQRCode: false,
-                        compactPdfFooter: true,
-                        headerLayoutLtr: true,
-                        footerLegendHtml: this._buildViolAnalyticsExportLegend_()
-                    },
-                    nowIso,
-                    nowIso
-                )
-                : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitleAr}</title></head><body>${content}</body></html>`;
-
-            const fileName = `Violations-Analysis-${new Date().toISOString().slice(0, 10)}.pdf`;
-            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, fileName);
-            if (!downloaded) {
-                throw new Error('PDF generation failed');
-            }
-            if (typeof Notification !== 'undefined' && Notification.success) {
-                Notification.success('تم تصدير تقرير المخالفات PDF بنجاح');
-            }
-        } catch (err) {
-            console.error('PDF export error:', err);
-            if (typeof Notification !== 'undefined' && Notification.error) {
-                Notification.error('تعذّر تصدير PDF — تأكد من الاتصال بالإنترنت');
-            }
-        } finally {
-            if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
-        }
-    },
-
-    // ── ربط أحداث لوحة التحليل ──
-    _vBindAnalyticsEvents() {
-        const root = document.getElementById('viol-analytics-root');
-        if (!root) return;
-
-        // أزرار الفترة
-        root.querySelectorAll('.viol-period-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this._violPeriod = btn.getAttribute('data-period');
-                root.querySelectorAll('.viol-period-btn').forEach(b => {
-                    const active = b === btn;
-                    b.style.background = active ? '#fff' : 'rgba(255,255,255,0.15)';
-                    b.style.color      = active ? '#991b1b' : '#fff';
-                });
-                this.updateViolationAnalytics();
-            });
-        });
-
-        // زر تحديث
-        const refreshBtn = document.getElementById('viol-analytics-refresh');
-        if (refreshBtn) refreshBtn.addEventListener('click', () => this.updateViolationAnalytics());
-
-        // زر تصدير PDF
-        const pdfBtn = document.getElementById('viol-export-pdf-btn');
-        if (pdfBtn) pdfBtn.addEventListener('click', () => this._vExportPDF());
-
-        // زر تبديل لوحة الفلاتر
-        const toggleBtn  = document.getElementById('viol-toggle-filters-btn');
-        const filterPanel = document.getElementById('viol-filter-panel');
-        if (toggleBtn && filterPanel) {
-            toggleBtn.addEventListener('click', () => {
-                const isOpen = filterPanel.style.display !== 'none';
-                filterPanel.style.display = isOpen ? 'none' : 'block';
-                toggleBtn.style.background = isOpen ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.35)';
-            });
-        }
-
-        // زر إعادة تعيين الفلاتر
-        const resetBtn = document.getElementById('viol-filter-reset-btn');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                ['viol-af-factory','viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.value = '';
-                });
-                this.updateViolationAnalytics();
-            });
-        }
-
-        // قوائم الفلاتر
-        ['viol-af-factory','viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('change', () => this.updateViolationAnalytics());
-        });
-
-        // ✅ التفاعلية المباشرة لكروت KPI عند النقر
-        root.querySelectorAll('.viol-kpi-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const kpi = card.getAttribute('data-kpi');
-                if (kpi === 'total') {
-                    ['viol-af-factory','viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc'].forEach(id => {
-                        const el = document.getElementById(id);
-                        if (el) el.value = '';
-                    });
-                } else if (kpi === 'employees') {
-                    const el = document.getElementById('viol-af-ptype');
-                    if (el) el.value = el.value === 'employee' ? '' : 'employee';
-                } else if (kpi === 'contractors') {
-                    const el = document.getElementById('viol-af-ptype');
-                    if (el) el.value = el.value === 'contractor' ? '' : 'contractor';
-                } else if (kpi === 'highSev') {
-                    const el = document.getElementById('viol-af-sev');
-                    if (el) el.value = el.value === 'عالية' ? '' : 'عالية';
-                } else if (kpi === 'resolved') {
-                    const el = document.getElementById('viol-af-status');
-                    if (el) el.value = el.value === 'محلول' ? '' : 'محلول';
-                } else if (kpi === 'unresolved') {
-                    const el = document.getElementById('viol-af-status');
-                    if (el) el.value = el.value === 'غير محلول' ? '' : 'غير محلول';
-                }
-                this.updateViolationAnalytics();
-            });
-        });
-
-        // ✅ أزرار تبديل العملة (EGP / USD)
-        root.querySelectorAll('.viol-curr-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const newCurr = btn.getAttribute('data-curr');
-                this.setCurrentCurrency(newCurr);
-                // تحديث الأنماط البصرية فوراً
-                root.querySelectorAll('.viol-curr-btn').forEach(b => {
-                    const active = b.getAttribute('data-curr') === newCurr;
-                    b.style.background = active ? '#fff' : 'transparent';
-                    b.style.color = active ? '#991b1b' : '#fff';
-                });
-                // إعادة رسم التحليلات بالعملة الجديدة
-                this.updateViolationAnalytics();
-            });
-        });
-
-        // ✅ زر تعديل سعر الصرف
-        const rateBtn = document.getElementById('viol-curr-rate-btn');
-        if (rateBtn) {
-            rateBtn.addEventListener('click', () => {
-                const current = this.getExchangeRate();
-                const input = window.prompt(
-                    `أدخل سعر صرف الدولار (كم جنيه مصري يساوي 1 دولار أمريكي):\n\nالسعر الحالي: ${current} جنيه = 1 دولار`,
-                    String(current)
-                );
-                if (input === null) return; // إلغاء
-                const newRate = parseFloat(String(input).trim());
-                if (!Number.isFinite(newRate) || newRate <= 0) {
-                    if (typeof Notification !== 'undefined' && Notification.error) {
-                        Notification.error('سعر صرف غير صالح');
-                    } else {
-                        alert('سعر صرف غير صالح');
-                    }
-                    return;
-                }
-                this.setExchangeRate(newRate);
-                if (typeof Notification !== 'undefined' && Notification.success) {
-                    Notification.success(`تم تحديث سعر الصرف إلى ${newRate} جنيه = 1 دولار`);
-                }
-                this.updateViolationAnalytics();
-            });
-        }
-    },
-
-    /**
-     * تحميل قائمة المقاولين في select element
-     * @param {HTMLElement} selectElement - عنصر select المراد تحميل المقاولين فيه
-     * @param {string} selectedValue - القيمة المحددة مسبقاً (اسم المقاول)
-     * @param {string} selectedContractorId - معرف المقاول المحدد مسبقاً
-     */
-    loadContractorsIntoSelect(selectElement, selectedValue = '', selectedContractorId = '') {
-        if (!selectElement || selectElement.tagName !== 'SELECT') {
-            Utils.safeWarn('⚠️ loadContractorsIntoSelect: عنصر select غير صالح');
-            return;
-        }
-
-        // ✅ مصدر موحّد: استخدام Contractors مباشرة (بدون الاعتماد على Clinic)
-        if (typeof Contractors !== 'undefined' && typeof Contractors.populateContractorSelect === 'function') {
-            Contractors.populateContractorSelect(selectElement, {
-                placeholder: '-- اختر المقاول --',
-                selectedValue,
-                selectedContractorId,
-                valueMode: 'name', // نموذج المخالفة يحفظ الاسم + contractorId في dataset
-                showServiceType: true,
-                includeSuppliers: true,
-                approvedOnly: false // ✅ إصلاح: تضمين جميع المقاولين (بما فيهم غير المعتمدين)
-            });
-            return;
-        }
-
-        // بديل محسّن: تحميل جميع المقاولين من AppState
-        let contractors = [];
-
-        // محاولة استخدام الدالة المساعدة الجديدة أولاً
-        if (typeof Contractors !== 'undefined' && typeof Contractors.getAllContractorsForModules === 'function') {
-            try {
-                const allContractors = Contractors.getAllContractorsForModules();
-                if (allContractors && allContractors.length > 0) {
-                    const contractorMap = new Map(); // لإزالة التكرار
-                    allContractors.forEach(contractor => {
-                        const name = (contractor.name || '').trim();
-                        if (!name || name === 'غير معروف') return;
-
-                        // ✅ إصلاح: إزالة التكرار بشكل صحيح (code → id → name)
-                        const code = ((contractor.code || contractor.isoCode || '') + '').trim().toUpperCase();
-                        const lic = ((contractor.licenseNumber || '') + '').trim();
-                        const key = (/^CON-\d+$/i.test(code) ? `CODE:${code}` : (lic ? `LIC:${lic}` : (contractor.id ? `ID:${contractor.id}` : `NAME:${name.toLowerCase()}`)));
-
-                        if (!contractorMap.has(key)) {
-                            contractorMap.set(key, {
-                                id: contractor.id || '',
-                                name: name,
-                                serviceType: (contractor.serviceType || '').trim(),
-                                licenseNumber: (contractor.licenseNumber || '').trim()
-                            });
-                        }
-                    });
-                    contractors = Array.from(contractorMap.values())
-                        .sort((a, b) => {
-                            const nameA = a.name.toLowerCase();
-                            const nameB = b.name.toLowerCase();
-                            return nameA.localeCompare(nameB, 'ar', { sensitivity: 'base' });
-                        });
-                }
-            } catch (error) {
-                Utils.safeWarn('⚠️ خطأ في الحصول على المقاولين من getAllContractorsForModules:', error);
-            }
-        }
-
-        // بديل: استخدام getApprovedOptions
-        if (contractors.length === 0 && typeof Contractors !== 'undefined' && typeof Contractors.getApprovedOptions === 'function') {
-            try {
-                const approved = Contractors.getApprovedOptions(false);
-                if (approved && approved.length > 0) {
-                    contractors = approved.map(item => ({
-                        id: item.id || item.contractorId || '',
-                        name: (item.name || '').trim(),
-                        serviceType: (item.serviceType || '').trim(),
-                        licenseNumber: (item.licenseNumber || '').trim()
-                    })).filter(c => c.name); // تصفية المقاولين بدون أسماء
-                }
-            } catch (error) {
-                Utils.safeWarn('⚠️ خطأ في الحصول على المقاولين المعتمدة:', error);
-            }
-        }
-
-        // ✅ إذا لم توجد مقاولين، استخدم المقاولين المعتمدين النشطين من AppState
-        if (contractors.length === 0) {
-            const allContractors = AppState.appData.approvedContractors || [];
-            const contractorMap = new Map(); // لإزالة التكرار
-
-            allContractors
-                .filter(c => c && (c.companyName || c.name) && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE') // تصفية غير النشطين
-                .forEach(contractor => {
-                    const name = (contractor.companyName || contractor.name || '').trim();
-                    if (!name || name === 'غير معروف') return;
-
-                    // إزالة التكرار بناءً على الاسم
-                    if (!contractorMap.has(name)) {
-                        contractorMap.set(name, {
-                            id: contractor.id || '',
-                            name: name,
-                            serviceType: (contractor.serviceType || '').trim(),
-                            licenseNumber: (contractor.licenseNumber || contractor.contractNumber || '').trim()
-                        });
-                    }
-                });
-
-            contractors = Array.from(contractorMap.values())
-                .sort((a, b) => {
-                    const nameA = a.name.toLowerCase();
-                    const nameB = b.name.toLowerCase();
-                    return nameA.localeCompare(nameB, 'ar', { sensitivity: 'base' });
-                });
-        }
-
-        // مسح الخيارات الحالية
-        selectElement.innerHTML = '<option value="">-- اختر المقاول --</option>';
-
-        // استخدام DocumentFragment لتحسين الأداء
-        const fragment = document.createDocumentFragment();
-        let selectedOption = null;
-
-        // إضافة المقاولين
-        contractors.forEach(contractor => {
-            if (!contractor || !contractor.name) return;
-
-            const option = document.createElement('option');
-            option.value = contractor.name; // القيمة الأصلية للاستخدام في value
-            option.textContent = contractor.name; // textContent آمن تلقائياً من XSS
-            if (contractor.serviceType) {
-                option.textContent += ` - ${contractor.serviceType}`;
-            }
-            option.dataset.contractorId = contractor.id || '';
-
-            // تحديد القيمة المحددة مسبقاً
-            if (selectedValue && contractor.name === selectedValue) {
-                option.selected = true;
-                selectedOption = option;
-            } else if (selectedContractorId && contractor.id === selectedContractorId) {
-                option.selected = true;
-                selectedOption = option;
-            }
-
-            fragment.appendChild(option);
-        });
-
-        selectElement.appendChild(fragment);
-
-        // إذا لم يتم العثور على القيمة المحددة، حاول تعيينها يدوياً
-        if (selectedValue && !selectedOption && selectElement.value !== selectedValue) {
-            try {
-                selectElement.value = selectedValue;
-            } catch (e) {
-                // القيمة غير موجودة في القائمة
-                Utils.safeWarn('⚠️ المقاول المحدد غير موجود في القائمة:', selectedValue);
-            }
-        }
-    },
-
-    async showViolationForm(violationDataOrId = null) {
-        // دعم تمرير ID أو كائن كامل
-        let violationData = null;
-        if (typeof violationDataOrId === 'string') {
-            // إذا تم تمرير ID، نبحث عن البيانات
-            violationData = AppState.appData.violations?.find(v => v.id === violationDataOrId) || null;
-        } else if (typeof violationDataOrId === 'object') {
-            violationData = violationDataOrId;
-        }
-        violationData = this.normalizeViolationRecord(violationData);
-        if (violationData && !this.isViolationVisibleToCurrentUser(violationData)) {
-            if (typeof Notification !== 'undefined') {
-                Notification.error('عذراً، ليس لديك صلاحية لمشاهدة أو تعديل مخالفات تابعة لإدارة أخرى');
-            }
-            return;
-        }
-        const effectiveFineForForm = violationData ? this.getEffectiveFineAmount(violationData) : 0;
-        const isEdit = !!violationData;
-        const recordPersonType = String(violationData?.personType || '').trim().toLowerCase();
-        const isContractorRecord = recordPersonType === 'contractor' || (!!violationData?.contractorName && !violationData?.employeeName);
-        const isEmployeeRecord = !isContractorRecord;
-        const selectedLocationValue = String(violationData?.violationLocationId || violationData?.violationLocation || '').trim();
-        const selectedPlaceValue = String(violationData?.violationPlaceId || violationData?.violationPlace || '').trim();
-
-        // التحقق من وجود ViolationTypesManager
-        let violationTypes = [];
-        if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized && ViolationTypesManager.getAll) {
-            try {
-                ViolationTypesManager.ensureInitialized();
-                violationTypes = ViolationTypesManager.getAll();
-            } catch (vtError) {
-                Utils.safeWarn('⚠️ خطأ في الحصول على أنواع المخالفات:', vtError);
-                violationTypes = AppState?.appData?.violationTypes || [];
-            }
-        } else {
-            violationTypes = AppState?.appData?.violationTypes || [];
-        }
-        const selectedTypeId = violationData?.violationTypeId || '';
-        const selectedTypeName = (violationData?.violationType || '').trim();
-        const currentUserRole = (AppState?.currentUser?.role || '').toString().trim().toLowerCase();
-        const canManagerEditFineAmount = ['admin', 'manager', 'مدير', 'مدير النظام', 'system-manager', 'system_admin'].includes(currentUserRole);
-        const typeOptions = violationTypes.map(type => {
-            const isSelected = selectedTypeId
-                ? type.id === selectedTypeId
-                : type.name === selectedTypeName;
-            const typeFineAmount = Number(type?.fineAmount || 0);
-            return `
-                <option value="${Utils.escapeHTML(type.name)}" data-type-id="${Utils.escapeHTML(type.id)}" data-fine-amount="${typeFineAmount}" ${isSelected ? 'selected' : ''}>
-                    ${Utils.escapeHTML(type.name)}
+\u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u062D\u0627\u0644\u064A: ${l} \u062C\u0646\u064A\u0647 = 1 \u062F\u0648\u0644\u0627\u0631`,String(l));if(c===null)return;const s=parseFloat(String(c).trim());if(!Number.isFinite(s)||s<=0){typeof Notification<"u"&&Notification.error?Notification.error("\u0633\u0639\u0631 \u0635\u0631\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D"):alert("\u0633\u0639\u0631 \u0635\u0631\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D");return}this.setExchangeRate(s),typeof Notification<"u"&&Notification.success&&Notification.success(`\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0633\u0639\u0631 \u0627\u0644\u0635\u0631\u0641 \u0625\u0644\u0649 ${s} \u062C\u0646\u064A\u0647 = 1 \u062F\u0648\u0644\u0627\u0631`),this.updateViolationAnalytics()})},loadContractorsIntoSelect(e,t="",i=""){if(!e||e.tagName!=="SELECT"){Utils.safeWarn("\u26A0\uFE0F loadContractorsIntoSelect: \u0639\u0646\u0635\u0631 select \u063A\u064A\u0631 \u0635\u0627\u0644\u062D");return}if(typeof Contractors<"u"&&typeof Contractors.populateContractorSelect=="function"){Contractors.populateContractorSelect(e,{placeholder:"-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 --",selectedValue:t,selectedContractorId:i,valueMode:"name",showServiceType:!0,includeSuppliers:!0,approvedOnly:!1});return}let a=[];if(typeof Contractors<"u"&&typeof Contractors.getAllContractorsForModules=="function")try{const r=Contractors.getAllContractorsForModules();if(r&&r.length>0){const l=new Map;r.forEach(c=>{const s=(c.name||"").trim();if(!s||s==="\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641")return;const d=((c.code||c.isoCode||"")+"").trim().toUpperCase(),p=((c.licenseNumber||"")+"").trim(),f=/^CON-\d+$/i.test(d)?`CODE:${d}`:p?`LIC:${p}`:c.id?`ID:${c.id}`:`NAME:${s.toLowerCase()}`;l.has(f)||l.set(f,{id:c.id||"",name:s,serviceType:(c.serviceType||"").trim(),licenseNumber:(c.licenseNumber||"").trim()})}),a=Array.from(l.values()).sort((c,s)=>{const d=c.name.toLowerCase(),p=s.name.toLowerCase();return d.localeCompare(p,"ar",{sensitivity:"base"})})}}catch(r){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0645\u0646 getAllContractorsForModules:",r)}if(a.length===0&&typeof Contractors<"u"&&typeof Contractors.getApprovedOptions=="function")try{const r=Contractors.getApprovedOptions(!1);r&&r.length>0&&(a=r.map(l=>({id:l.id||l.contractorId||"",name:(l.name||"").trim(),serviceType:(l.serviceType||"").trim(),licenseNumber:(l.licenseNumber||"").trim()})).filter(l=>l.name))}catch(r){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629:",r)}if(a.length===0){const r=AppState.appData.approvedContractors||[],l=new Map;r.filter(c=>c&&(c.companyName||c.name)&&c.isActive!=="inactive"&&c.isActive!==!1&&c.isActive!=="false"&&c.isActive!=="FALSE").forEach(c=>{const s=(c.companyName||c.name||"").trim();!s||s==="\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"||l.has(s)||l.set(s,{id:c.id||"",name:s,serviceType:(c.serviceType||"").trim(),licenseNumber:(c.licenseNumber||c.contractNumber||"").trim()})}),a=Array.from(l.values()).sort((c,s)=>{const d=c.name.toLowerCase(),p=s.name.toLowerCase();return d.localeCompare(p,"ar",{sensitivity:"base"})})}e.innerHTML='<option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 --</option>';const n=document.createDocumentFragment();let o=null;if(a.forEach(r=>{if(!r||!r.name)return;const l=document.createElement("option");l.value=r.name,l.textContent=r.name,r.serviceType&&(l.textContent+=` - ${r.serviceType}`),l.dataset.contractorId=r.id||"",(t&&r.name===t||i&&r.id===i)&&(l.selected=!0,o=l),n.appendChild(l)}),e.appendChild(n),t&&!o&&e.value!==t)try{e.value=t}catch{Utils.safeWarn("\u26A0\uFE0F \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629:",t)}},async showViolationForm(e=null){let t=null;if(typeof e=="string"?t=AppState.appData.violations?.find(y=>y.id===e)||null:typeof e=="object"&&(t=e),t=this.normalizeViolationRecord(t),t&&!this.isViolationVisibleToCurrentUser(t)){typeof Notification<"u"&&Notification.error("\u0639\u0630\u0631\u0627\u064B\u060C \u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0645\u0634\u0627\u0647\u062F\u0629 \u0623\u0648 \u062A\u0639\u062F\u064A\u0644 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062A\u0627\u0628\u0639\u0629 \u0644\u0625\u062F\u0627\u0631\u0629 \u0623\u062E\u0631\u0649");return}const i=t?this.getEffectiveFineAmount(t):0,a=!!t,o=String(t?.personType||"").trim().toLowerCase()==="contractor"||!!t?.contractorName&&!t?.employeeName,r=!o,l=String(t?.violationLocationId||t?.violationLocation||"").trim(),c=String(t?.violationPlaceId||t?.violationPlace||"").trim();let s=[];if(typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.getAll)try{ViolationTypesManager.ensureInitialized(),s=ViolationTypesManager.getAll()}catch(y){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A:",y),s=AppState?.appData?.violationTypes||[]}else s=AppState?.appData?.violationTypes||[];const d=t?.violationTypeId||"",p=(t?.violationType||"").trim(),f=(AppState?.currentUser?.role||"").toString().trim().toLowerCase(),u=["admin","manager","\u0645\u062F\u064A\u0631","\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645","system-manager","system_admin"].includes(f),w=s.map(y=>{const k=d?y.id===d:y.name===p,A=Number(y?.fineAmount||0);return`
+                <option value="${Utils.escapeHTML(y.name)}" data-type-id="${Utils.escapeHTML(y.id)}" data-fine-amount="${A}" ${k?"selected":""}>
+                    ${Utils.escapeHTML(y.name)}
                 </option>
-            `;
-        }).join('');
-        const hasSelectedType = violationTypes.some(type => selectedTypeId
-            ? type.id === selectedTypeId
-            : type.name === selectedTypeName);
-        const legacyTypeOption = !hasSelectedType && selectedTypeName
-            ? `
-                <option value="${Utils.escapeHTML(selectedTypeName)}" data-type-id="${Utils.escapeHTML(selectedTypeId)}" data-fine-amount="${Number(effectiveFineForForm)}" selected>
-                    ${Utils.escapeHTML(selectedTypeName)} (غير معرف)
+            `}).join(""),h=!s.some(y=>d?y.id===d:y.name===p)&&p?`
+                <option value="${Utils.escapeHTML(p)}" data-type-id="${Utils.escapeHTML(d)}" data-fine-amount="${Number(i)}" selected>
+                    ${Utils.escapeHTML(p)} (\u063A\u064A\u0631 \u0645\u0639\u0631\u0641)
                 </option>
-            `
-            : '';
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+            `:"",g=document.createElement("div");g.className="modal-overlay",g.innerHTML=`
             <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-exclamation-triangle ml-2 text-yellow-600"></i>
-                        ${isEdit ? 'تعديل مخالفة' : 'تسجيل مخالفة جديدة'}
+                        ${a?"\u062A\u0639\u062F\u064A\u0644 \u0645\u062E\u0627\u0644\u0641\u0629":"\u062A\u0633\u062C\u064A\u0644 \u0645\u062E\u0627\u0644\u0641\u0629 \u062C\u062F\u064A\u062F\u0629"}
                     </h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" title="إغلاق">
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" title="\u0625\u063A\u0644\u0627\u0642">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <!-- ✅ شريط تنبيه داخل النموذج (يظهر أعلى الحقول) -->
+                    <!-- \u2705 \u0634\u0631\u064A\u0637 \u062A\u0646\u0628\u064A\u0647 \u062F\u0627\u062E\u0644 \u0627\u0644\u0646\u0645\u0648\u0630\u062C (\u064A\u0638\u0647\u0631 \u0623\u0639\u0644\u0649 \u0627\u0644\u062D\u0642\u0648\u0644) -->
                     <div id="violation-form-banner" class="hidden mb-4 rounded-lg border p-3 flex items-start gap-2.5" role="alert" style="font-size: 0.9rem;">
                         <i id="violation-form-banner-icon" class="fas fa-circle-info text-lg mt-0.5"></i>
                         <div class="flex-1 min-w-0">
                             <div id="violation-form-banner-title" class="font-bold mb-0.5"></div>
                             <div id="violation-form-banner-text" class="leading-relaxed"></div>
                         </div>
-                        <button type="button" id="violation-form-banner-close" class="text-gray-400 hover:text-gray-700 ms-2" title="إخفاء">
+                        <button type="button" id="violation-form-banner-close" class="text-gray-400 hover:text-gray-700 ms-2" title="\u0625\u062E\u0641\u0627\u0621">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
 
                     <form id="violation-form" class="space-y-4">
-                        <!-- الصف الأول: نوع المخالفة والكود الوظيفي -->
+                        <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u0623\u0648\u0644: \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A -->
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-user-tag ml-2 text-blue-600"></i>
-                                    نوع الشخص *
+                                    \u0646\u0648\u0639 \u0627\u0644\u0634\u062E\u0635 *
                                 </label>
                                 <select id="violation-person-type" required class="form-input">
-                                    <option value="">اختر النوع</option>
-                                    <option value="employee" ${isEmployeeRecord ? 'selected' : ''}>موظف</option>
-                                    <option value="contractor" ${isContractorRecord ? 'selected' : ''}>مقاول</option>
+                                    <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639</option>
+                                    <option value="employee" ${r?"selected":""}>\u0645\u0648\u0638\u0641</option>
+                                    <option value="contractor" ${o?"selected":""}>\u0645\u0642\u0627\u0648\u0644</option>
                                 </select>
                             </div>
-                            <div id="violation-employee-code-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
+                            <div id="violation-employee-code-container" style="display: ${r?"block":"none"};">
                                 <label for="violation-employee-code" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-id-card ml-2"></i>
-                                    الكود الوظيفي المخالف *
+                                    \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A \u0627\u0644\u0645\u062E\u0627\u0644\u0641 *
                                 </label>
                                 <input type="text" id="violation-employee-code" class="form-input"
-                                    value="${violationData?.employeeCode || violationData?.employeeNumber || ''}" 
-                                    placeholder="أدخل الكود الوظيفي (سيتم تعبئة البيانات تلقائياً)"
-                                    ${isEmployeeRecord ? 'required' : ''}>
+                                    value="${t?.employeeCode||t?.employeeNumber||""}" 
+                                    placeholder="\u0623\u062F\u062E\u0644 \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A (\u0633\u064A\u062A\u0645 \u062A\u0639\u0628\u0626\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B)"
+                                    ${r?"required":""}>
                             </div>
                         </div>
                         
-                        <!-- الصف الثاني: اسم الموظف والوظيفة -->
+                        <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u062B\u0627\u0646\u064A: \u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u0627\u0644\u0648\u0638\u064A\u0641\u0629 -->
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="violation-person-name" class="block text-sm font-semibold text-gray-700 mb-2" id="violation-person-name-label">اسم المخالف *</label>
+                                <label for="violation-person-name" class="block text-sm font-semibold text-gray-700 mb-2" id="violation-person-name-label">\u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0627\u0644\u0641 *</label>
                                 <input type="text" id="violation-person-name" required class="form-input"
-                                    value="${violationData?.employeeName || violationData?.contractorName || ''}" 
-                                    placeholder="${isEmployeeRecord ? 'سيتم التعبئة تلقائياً' : 'اسم المقاول'}"
-                                    ${isEmployeeRecord ? 'readonly' : ''}
-                                    style="display: ${isContractorRecord ? 'none' : 'block'};">
-                                <label for="violation-contractor-select" class="block text-sm font-semibold text-gray-700 mb-2" style="display: ${isContractorRecord ? 'block' : 'none'};">المقاول *</label>
+                                    value="${t?.employeeName||t?.contractorName||""}" 
+                                    placeholder="${r?"\u0633\u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u0628\u0626\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B":"\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644"}"
+                                    ${r?"readonly":""}
+                                    style="display: ${o?"none":"block"};">
+                                <label for="violation-contractor-select" class="block text-sm font-semibold text-gray-700 mb-2" style="display: ${o?"block":"none"};">\u0627\u0644\u0645\u0642\u0627\u0648\u0644 *</label>
                                 <select id="violation-contractor-select" class="form-input"
-                                    style="display: ${isContractorRecord ? 'block' : 'none'};"
-                                    ${isContractorRecord ? 'required' : ''}>
-                                    <option value="">-- اختر المقاول --</option>
+                                    style="display: ${o?"block":"none"};"
+                                    ${o?"required":""}>
+                                    <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 --</option>
                                 </select>
                             </div>
-                            <div id="violation-employee-position-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
-                                <label for="violation-employee-position" class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة</label>
+                            <div id="violation-employee-position-container" style="display: ${r?"block":"none"};">
+                                <label for="violation-employee-position" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0648\u0638\u064A\u0641\u0629</label>
                                 <input type="text" id="violation-employee-position" class="form-input"
-                                    value="${violationData?.employeePosition || ''}" 
-                                    placeholder="سيتم التعبئة تلقائياً" readonly>
+                                    value="${t?.employeePosition||""}" 
+                                    placeholder="\u0633\u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u0628\u0626\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B" readonly>
                             </div>
                         </div>
                         
-                        <!-- الصف الثالث: الإدارة وتاريخ المخالفة -->
+                        <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u062B\u0627\u0644\u062B: \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0648\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 -->
                         <div class="grid grid-cols-2 gap-4">
-                            <div id="violation-employee-department-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
-                                <label for="violation-employee-department" class="block text-sm font-semibold text-gray-700 mb-2">الإدارة</label>
+                            <div id="violation-employee-department-container" style="display: ${r?"block":"none"};">
+                                <label for="violation-employee-department" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</label>
                                 <input type="text" id="violation-employee-department" class="form-input"
-                                    value="${violationData?.employeeDepartment || ''}" 
-                                    placeholder="سيتم التعبئة تلقائياً" readonly>
+                                    value="${t?.employeeDepartment||""}" 
+                                    placeholder="\u0633\u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u0628\u0626\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B" readonly>
                             </div>
                             <div>
-                                <label for="violation-date" class="block text-sm font-semibold text-gray-700 mb-2">تاريخ المخالفة *</label>
+                                <label for="violation-date" class="block text-sm font-semibold text-gray-700 mb-2">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 *</label>
                                 <input type="date" id="violation-date" required class="form-input"
-                                    value="${violationData?.violationDate ? new Date(violationData.violationDate).toISOString().slice(0, 10) : ''}">
+                                    value="${t?.violationDate?new Date(t.violationDate).toISOString().slice(0,10):""}">
                             </div>
                         </div>
                         <div id="violation-sequence-info" class="hidden mb-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900">
                             <i class="fas fa-layer-group ml-2 text-amber-700"></i><span id="violation-sequence-text"></span>
                         </div>
                         
-                        <!-- الصف الرابع: وقت المخالفة ونوع المخالفة -->
+                        <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u0631\u0627\u0628\u0639: \u0648\u0642\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 -->
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label for="violation-time" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-clock ml-2 text-purple-600"></i>
-                                    وقت المخالفة *
+                                    \u0648\u0642\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 *
                                 </label>
                                 <input type="time" id="violation-time" required class="form-input"
-                                    value="${violationData?.violationTime || ''}">
+                                    value="${t?.violationTime||""}">
                             </div>
                             <div>
                                 <label for="violation-type" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-exclamation-circle ml-2 text-red-600"></i>
-                                    نوع المخالفة *
+                                    \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 *
                                 </label>
                                 <select id="violation-type" required class="form-input">
-                                    <option value="">اختر النوع</option>
-                                    ${legacyTypeOption}
-                                    ${typeOptions}
+                                    <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639</option>
+                                    ${h}
+                                    ${w}
                                 </select>
                             </div>
                             <div>
                                 <label for="violation-fine-amount" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-money-bill-wave ml-2 text-green-600"></i>
-                                    القيمة المالية (ج.م)
+                                    \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 (\u062C.\u0645)
                                 </label>
                                 <input type="number" id="violation-fine-amount" class="form-input" min="0" step="1"
-                                    value="${Number(effectiveFineForForm)}"
-                                    placeholder="القيمة المالية">
+                                    value="${Number(i)}"
+                                    placeholder="\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629">
                                 <p class="text-xs text-gray-500 mt-1">
-                                    ${canManagerEditFineAmount ? 'يتم التحديد تلقائياً ويمكنك التعديل لأنك مدير.' : 'يتم التحديد تلقائياً حسب نوع المخالفة، والتعديل متاح للمدير فقط.'}
+                                    ${u?"\u064A\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062F \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0648\u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u0644\u0623\u0646\u0643 \u0645\u062F\u064A\u0631.":"\u064A\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062F \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u062D\u0633\u0628 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629\u060C \u0648\u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u0645\u062A\u0627\u062D \u0644\u0644\u0645\u062F\u064A\u0631 \u0641\u0642\u0637."}
                                 </p>
                             </div>
                         </div>
-                        <!-- حقول المقاول (تظهر فقط عند اختيار مقاول) -->
-                        <div id="violation-contractor-fields-container" style="display: ${isContractorRecord ? 'block' : 'none'};">
+                        <!-- \u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 (\u062A\u0638\u0647\u0631 \u0641\u0642\u0637 \u0639\u0646\u062F \u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0642\u0627\u0648\u0644) -->
+                        <div id="violation-contractor-fields-container" style="display: ${o?"block":"none"};">
                             <div class="grid grid-cols-2 gap-4">
                                 <div id="violation-contractor-worker-container">
-                                    <label for="violation-contractor-worker" class="block text-sm font-semibold text-gray-700 mb-2">اسم العامل التابع للمقاول</label>
+                                    <label for="violation-contractor-worker" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0645\u0644 \u0627\u0644\u062A\u0627\u0628\u0639 \u0644\u0644\u0645\u0642\u0627\u0648\u0644</label>
                                     <input type="text" id="violation-contractor-worker" class="form-input"
-                                        value="${violationData?.contractorWorker || ''}" 
-                                        placeholder="اسم العامل">
+                                        value="${t?.contractorWorker||""}" 
+                                        placeholder="\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0645\u0644">
                                 </div>
                                 <div id="violation-contractor-position-container">
-                                    <label for="violation-contractor-position" class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة</label>
+                                    <label for="violation-contractor-position" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0648\u0638\u064A\u0641\u0629</label>
                                     <input type="text" id="violation-contractor-position" class="form-input"
-                                        value="${violationData?.contractorPosition || ''}" 
-                                        placeholder="وظيفة العامل">
+                                        value="${t?.contractorPosition||""}" 
+                                        placeholder="\u0648\u0638\u064A\u0641\u0629 \u0627\u0644\u0639\u0627\u0645\u0644">
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-4 mt-4">
                                 <div id="violation-contractor-department-container">
-                                    <label for="violation-contractor-department" class="block text-sm font-semibold text-gray-700 mb-2">الإدارة</label>
+                                    <label for="violation-contractor-department" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</label>
                                     <input type="text" id="violation-contractor-department" class="form-input"
-                                        value="${violationData?.contractorDepartment || ''}" 
-                                        placeholder="الإدارة التابعة له">
+                                        value="${t?.contractorDepartment||""}" 
+                                        placeholder="\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u0627\u0628\u0639\u0629 \u0644\u0647">
                             </div>
                             <div>
-                                    <label for="violation-contractor-location" class="block text-sm font-semibold text-gray-700 mb-2">الموقع *</label>
+                                    <label for="violation-contractor-location" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0645\u0648\u0642\u0639 *</label>
                                     <select id="violation-contractor-location" required class="form-input">
-                                        <option value="">-- اختر الموقع --</option>
+                                        <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 --</option>
                                     </select>
                             </div>
                             </div>
                             <div class="grid grid-cols-2 gap-4 mt-4">
                                 <div>
-                                    <label for="violation-contractor-place" class="block text-sm font-semibold text-gray-700 mb-2">مكان المخالفة *</label>
+                                    <label for="violation-contractor-place" class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 *</label>
                                     <select id="violation-contractor-place" required class="form-input">
-                                        <option value="">-- اختر مكان المخالفة --</option>
+                                        <option value="">-- \u0627\u062E\u062A\u0631 \u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 --</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- حقول الموقع ومكان المخالفة (للموظف) -->
-                        <div id="violation-location-fields-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
+                        <!-- \u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 (\u0644\u0644\u0645\u0648\u0638\u0641) -->
+                        <div id="violation-location-fields-container" style="display: ${r?"block":"none"};">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label for="violation-employee-location" class="block text-sm font-semibold text-gray-700 mb-2">الموقع *</label>
+                                    <label for="violation-employee-location" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0645\u0648\u0642\u0639 *</label>
                                     <select id="violation-employee-location" required class="form-input">
-                                        <option value="">-- اختر الموقع --</option>
+                                        <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 --</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="violation-employee-place" class="block text-sm font-semibold text-gray-700 mb-2">مكان المخالفة *</label>
+                                    <label for="violation-employee-place" class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 *</label>
                                     <select id="violation-employee-place" required class="form-input">
-                                        <option value="">-- اختر مكان المخالفة --</option>
+                                        <option value="">-- \u0627\u062E\u062A\u0631 \u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 --</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- الصف الخامس: الشدة والحالة -->
+                        <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u062E\u0627\u0645\u0633: \u0627\u0644\u0634\u062F\u0629 \u0648\u0627\u0644\u062D\u0627\u0644\u0629 -->
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-signal ml-2 text-orange-600"></i>
-                                    الشدة *
+                                    \u0627\u0644\u0634\u062F\u0629 *
                                 </label>
                                 <select id="violation-severity" required class="form-input">
-                                    <option value="">اختر الشدة</option>
-                                    <option value="عالية" ${violationData?.severity === 'عالية' ? 'selected' : ''}>عالية</option>
-                                    <option value="متوسطة" ${violationData?.severity === 'متوسطة' ? 'selected' : ''}>متوسطة</option>
-                                    <option value="منخضة" ${violationData?.severity === 'منخضة' ? 'selected' : ''}>منخضة</option>
+                                    <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0634\u062F\u0629</option>
+                                    <option value="\u0639\u0627\u0644\u064A\u0629" ${t?.severity==="\u0639\u0627\u0644\u064A\u0629"?"selected":""}>\u0639\u0627\u0644\u064A\u0629</option>
+                                    <option value="\u0645\u062A\u0648\u0633\u0637\u0629" ${t?.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"selected":""}>\u0645\u062A\u0648\u0633\u0637\u0629</option>
+                                    <option value="\u0645\u0646\u062E\u0636\u0629" ${t?.severity==="\u0645\u0646\u062E\u0636\u0629"?"selected":""}>\u0645\u0646\u062E\u0636\u0629</option>
                                 </select>
                             </div>
                             <div>
                                 <label for="violation-status" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-info-circle ml-2 text-blue-600"></i>
-                                    الحالة *
+                                    \u0627\u0644\u062D\u0627\u0644\u0629 *
                                 </label>
                                 <select id="violation-status" required class="form-input">
-                                    <option value="">اختر الحالة</option>
-                                    <option value="قيد المراجعة" ${violationData?.status === 'قيد المراجعة' ? 'selected' : ''}>قيد المراجعة</option>
-                                    <option value="محلول" ${violationData?.status === 'محلول' ? 'selected' : ''}>محلول</option>
-                                    <option value="غير محلول" ${violationData?.status === 'غير محلول' ? 'selected' : ''}>غير محلول</option>
+                                    <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u062D\u0627\u0644\u0629</option>
+                                    <option value="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629" ${t?.status==="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"?"selected":""}>\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629</option>
+                                    <option value="\u0645\u062D\u0644\u0648\u0644" ${t?.status==="\u0645\u062D\u0644\u0648\u0644"?"selected":""}>\u0645\u062D\u0644\u0648\u0644</option>
+                                    <option value="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644" ${t?.status==="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644"?"selected":""}>\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644</option>
                                 </select>
                             </div>
                         </div>
                         
-                        <!-- الصورة وتفاصيل المخالفة والإجراء المتخذ -->
+                        <!-- \u0627\u0644\u0635\u0648\u0631\u0629 \u0648\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630 -->
                             <div class="col-span-2">
                                 <label for="violation-photo-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-image ml-2"></i>
-                                    صورة المخالفة (غير إلزامي)
+                                    \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 (\u063A\u064A\u0631 \u0625\u0644\u0632\u0627\u0645\u064A)
                                 </label>
                                 <input type="file" id="violation-photo-input" accept="image/*" class="form-input">
-                                <div id="violation-photo-preview" class="mt-2 ${violationData?.photo ? '' : 'hidden'}">
-                                    <img src="${violationData?.photo || ''}" alt="صورة المخالفة" class="w-48 h-48 object-cover rounded border" id="violation-photo-img">
-                                <button type="button" onclick="const photoInput = document.getElementById('violation-photo-input'); if (photoInput) photoInput.value=''; const photoPreview = document.getElementById('violation-photo-preview'); if (photoPreview) photoPreview.classList.add('hidden');" class="mt-1 text-xs text-red-600">حذف الصورة</button>
+                                <div id="violation-photo-preview" class="mt-2 ${t?.photo?"":"hidden"}">
+                                    <img src="${t?.photo||""}" alt="\u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629" class="w-48 h-48 object-cover rounded border" id="violation-photo-img">
+                                <button type="button" onclick="const photoInput = document.getElementById('violation-photo-input'); if (photoInput) photoInput.value=''; const photoPreview = document.getElementById('violation-photo-preview'); if (photoPreview) photoPreview.classList.add('hidden');" class="mt-1 text-xs text-red-600">\u062D\u0630\u0641 \u0627\u0644\u0635\u0648\u0631\u0629</button>
                                 </div>
                             </div>
                             <div class="col-span-2">
                                 <label for="violation-details" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-file-alt ml-2 text-amber-600"></i>
-                                    تفاصيل المخالفة
+                                    \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629
                                 </label>
                                 <textarea id="violation-details" class="form-input" rows="3"
-                                    placeholder="اكتب تفاصيل المخالفة ووصفها الكامل...">${violationData?.violationDetails || ''}</textarea>
+                                    placeholder="\u0627\u0643\u062A\u0628 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0648\u0635\u0641\u0647\u0627 \u0627\u0644\u0643\u0627\u0645\u0644...">${t?.violationDetails||""}</textarea>
                             </div>
                             <div class="col-span-2">
                                 <label for="violation-action" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-tasks ml-2 text-indigo-600"></i>
-                                    الإجراء المتخذ
+                                    \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630
                                 </label>
                                 <textarea id="violation-action" class="form-input" rows="3"
-                                    placeholder="وصف الإجراء المتخذ بشأن المخالفة...">${violationData?.actionTaken || ''}</textarea>
+                                    placeholder="\u0648\u0635\u0641 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630 \u0628\u0634\u0623\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629...">${t?.actionTaken||""}</textarea>
                             </div>
                         </div>
                         <div class="flex items-center justify-end gap-4 pt-4 border-t">
                             <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
-                                <i class="fas fa-times ml-2"></i>إلغاء
+                                <i class="fas fa-times ml-2"></i>\u0625\u0644\u063A\u0627\u0621
                             </button>
                             <button type="submit" id="violation-submit-btn" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'تسجيل المخالفة'}
+                                <i class="fas fa-save ml-2"></i>${a?"\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A":"\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"}
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        // Setup employee autocomplete for employee type
-        const personTypeSelect = document.getElementById('violation-person-type');
-        const employeeCodeContainer = document.getElementById('violation-employee-code-container');
-        const employeeCodeInput = document.getElementById('violation-employee-code');
-        const personNameInput = document.getElementById('violation-person-name');
-        const personNameLabel = document.getElementById('violation-person-name-label');
-
-        const contractorSelect = document.getElementById('violation-contractor-select');
-
-        // تحميل قائمة المقاولين في القائمة المنسدلة
-        if (contractorSelect) {
-            const currentValue = violationData?.contractorName || '';
-            const currentContractorId = violationData?.contractorId || '';
-            this.loadContractorsIntoSelect(contractorSelect, currentValue, currentContractorId);
-        }
-
-        // الحصول على عناصر الحقول
-        const employeePositionContainer = document.getElementById('violation-employee-position-container');
-        const employeeDepartmentContainer = document.getElementById('violation-employee-department-container');
-        const employeePositionInput = document.getElementById('violation-employee-position');
-        const employeeDepartmentInput = document.getElementById('violation-employee-department');
-
-        const contractorFieldsContainer = document.getElementById('violation-contractor-fields-container');
-        const contractorWorkerContainer = document.getElementById('violation-contractor-worker-container');
-        const contractorPositionContainer = document.getElementById('violation-contractor-position-container');
-        const contractorDepartmentContainer = document.getElementById('violation-contractor-department-container');
-        const contractorWorkerInput = document.getElementById('violation-contractor-worker');
-        const contractorPositionInput = document.getElementById('violation-contractor-position');
-        const contractorDepartmentInput = document.getElementById('violation-contractor-department');
-
-        const locationFieldsContainer = document.getElementById('violation-location-fields-container');
-        const violationTypeSelect = document.getElementById('violation-type');
-        const fineAmountInput = document.getElementById('violation-fine-amount');
-        const typeById = new Map((violationTypes || []).map(type => [String(type.id || '').trim(), type]));
-        const typeByName = new Map((violationTypes || []).map(type => [String(type.name || '').trim().toLowerCase(), type]));
-
-        const getDefaultFineAmountForSelectedType = () => {
-            const selectedOption = violationTypeSelect?.selectedOptions?.[0];
-            const typeId = selectedOption?.getAttribute('data-type-id') || '';
-            const typeName = (violationTypeSelect?.value || '').trim().toLowerCase();
-            const type = (typeId && typeById.get(typeId)) || (typeName && typeByName.get(typeName)) || null;
-            const optionFine = Number(selectedOption?.getAttribute('data-fine-amount') || 0);
-            const mappedFine = Number(type?.fineAmount ?? optionFine ?? 0);
-            return Number.isFinite(mappedFine) && mappedFine >= 0 ? mappedFine : 0;
-        };
-
-        const applyFineAmountFromType = ({ force = false } = {}) => {
-            if (!fineAmountInput) return;
-            const defaultFineAmount = getDefaultFineAmountForSelectedType();
-            if (force || !canManagerEditFineAmount || fineAmountInput.value === '') {
-                fineAmountInput.value = String(defaultFineAmount);
-            }
-        };
-
-        if (fineAmountInput) {
-            fineAmountInput.readOnly = !canManagerEditFineAmount;
-        }
-        if (violationTypeSelect) {
-            violationTypeSelect.addEventListener('change', () => applyFineAmountFromType({ force: true }));
-            // دعم تحديث فوري إضافي على بعض المتصفحات التي تُطلق input أثناء التنقل
-            violationTypeSelect.addEventListener('input', () => applyFineAmountFromType({ force: true }));
-        }
-        if (fineAmountInput && canManagerEditFineAmount && violationData && violationData.fineAmount !== undefined && violationData.fineAmount !== null) {
-            fineAmountInput.value = String(Number(effectiveFineForForm));
-        } else {
-            applyFineAmountFromType({ force: true });
-        }
-
-        personTypeSelect.addEventListener('change', (e) => {
-            const personType = e.target.value;
-            if (personType === 'employee') {
-                // إظهار حقل الكود الوظيفي
-                employeeCodeContainer.style.display = 'block';
-                employeeCodeInput.required = true;
-                employeeCodeInput.placeholder = 'أدخل الكود الوظيفي (سيتم تعبئة البيانات تلقائياً)';
-
-                // إظهار حقل الاسم وإخفاء قائمة المقاولين
-                personNameInput.style.display = 'block';
-                personNameInput.readOnly = true;
-                personNameInput.placeholder = 'سيتم التعبئة تلقائياً';
-                personNameInput.value = '';
-                personNameInput.required = true;
-                if (contractorSelect) {
-                    contractorSelect.style.display = 'none';
-                    contractorSelect.required = false;
-                }
-
-                // إظهار حقول الموظف
-                if (employeePositionContainer) employeePositionContainer.style.display = 'block';
-                if (employeeDepartmentContainer) employeeDepartmentContainer.style.display = 'block';
-
-                // إخفاء حقول المقاول
-                if (contractorFieldsContainer) contractorFieldsContainer.style.display = 'none';
-
-                // إظهار حقول الموقع للموظف
-                if (locationFieldsContainer) locationFieldsContainer.style.display = 'block';
-
-                // تحميل خيارات الموقع للموظف
-                this.loadLocationOptions('employee').then(() => {
-                    const employeeLocationSelect = document.getElementById('violation-employee-location');
-                    if (employeeLocationSelect) {
-                        // إزالة المعالجات القديمة إن وجدت
-                        const newSelect = employeeLocationSelect.cloneNode(true);
-                        employeeLocationSelect.parentNode.replaceChild(newSelect, employeeLocationSelect);
-                        const updatedSelect = document.getElementById('violation-employee-location');
-                        if (updatedSelect) {
-                            updatedSelect.addEventListener('change', (e) => {
-                                const selectedSiteId = e.target.value;
-                                this.loadPlaceOptions(selectedSiteId, '', 'employee');
-                            });
-                        }
-                    }
-                });
-
-                // تحديث التسمية
-                if (personNameLabel) personNameLabel.textContent = 'اسم الموظف *';
-
-                // تعيل البحث بالكود الوظيي
-                if (typeof EmployeeHelper !== 'undefined' && employeeCodeInput && employeeCodeInput.parentNode) {
-                    try {
-                        // إزالة المعالجات القديمة
-                        const newCodeInput = employeeCodeInput.cloneNode(true);
-                        employeeCodeInput.parentNode.replaceChild(newCodeInput, employeeCodeInput);
-
-                        // الحصول على العنصر الجديد
-                        const updatedCodeInput = document.getElementById('violation-employee-code');
-                        if (updatedCodeInput) {
-                            EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
-                                if (employee) {
-                                    const nameField = document.getElementById('violation-person-name');
-                                    const positionField = document.getElementById('violation-employee-position');
-                                    const departmentField = document.getElementById('violation-employee-department');
-                                    if (nameField) nameField.value = employee.name || '';
-                                    if (positionField) positionField.value = employee.position || employee.jobTitle || '';
-                                    if (departmentField) departmentField.value = employee.department || employee.section || '';
-                                }
-                            });
-                        }
-                    } catch (error) {
-                        Utils.safeError('خطأ في إعداد البحث بالكود الوظيفي:', error);
-                        // محاولة بدون replaceChild
-                        if (employeeCodeInput) {
-                            EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
-                                if (employee) {
-                                    const nameField = document.getElementById('violation-person-name');
-                                    const positionField = document.getElementById('violation-employee-position');
-                                    const departmentField = document.getElementById('violation-employee-department');
-                                    if (nameField) nameField.value = employee.name || '';
-                                    if (positionField) positionField.value = employee.position || employee.jobTitle || '';
-                                    if (departmentField) departmentField.value = employee.department || employee.section || '';
-                                }
-                            });
-                        }
-                    }
-                }
-            } else {
-                applyFineAmountFromType({ force: true });
-                // إخاء حقل الكود الوظيي
-                employeeCodeContainer.style.display = 'none';
-                employeeCodeInput.required = false;
-                employeeCodeInput.value = '';
-
-                // إظهار قائمة المقاولين وإخفاء حقل الاسم
-                personNameInput.style.display = 'none';
-                personNameInput.required = false;
-                personNameInput.value = '';
-                if (contractorSelect) {
-                    contractorSelect.style.display = 'block';
-                    contractorSelect.required = true;
-
-                    // إعادة تحميل قائمة المقاولين عند التبديل إلى نوع مقاول
-                    this.loadContractorsIntoSelect(contractorSelect);
-                }
-
-                // إخفاء حقول الموظف
-                if (employeePositionContainer) employeePositionContainer.style.display = 'none';
-                if (employeeDepartmentContainer) employeeDepartmentContainer.style.display = 'none';
-
-                // إظهار حقول المقاول
-                if (contractorFieldsContainer) contractorFieldsContainer.style.display = 'block';
-
-                // تحميل خيارات الموقع للمقاول
-                this.loadLocationOptions('contractor').then(() => {
-                    const contractorLocationSelect = document.getElementById('violation-contractor-location');
-                    if (contractorLocationSelect) {
-                        // إزالة المعالجات القديمة إن وجدت
-                        const newSelect = contractorLocationSelect.cloneNode(true);
-                        contractorLocationSelect.parentNode.replaceChild(newSelect, contractorLocationSelect);
-                        const updatedSelect = document.getElementById('violation-contractor-location');
-                        if (updatedSelect) {
-                            updatedSelect.addEventListener('change', (e) => {
-                                const selectedSiteId = e.target.value;
-                                this.loadPlaceOptions(selectedSiteId, '', 'contractor');
-                            });
-                        }
-                    }
-                });
-
-                // إخفاء حقول الموقع للموظف (لأن المقاول له حقول موقع خاصة به)
-                if (locationFieldsContainer) locationFieldsContainer.style.display = 'none';
-
-                // تحديث التسمية
-                if (personNameLabel) personNameLabel.textContent = 'اسم المقاول *';
-            }
-            scheduleViolationSeqBadge();
-        });
-
-        const scheduleViolationSeqBadge = () => {
-            clearTimeout(this._violationSeqBadgeTimer);
-            this._violationSeqBadgeTimer = setTimeout(() => {
-                this.refreshViolationSequenceBadgeInModal(modal, isEdit ? violationData?.id : null);
-            }, 200);
-        };
-        modal.addEventListener('input', scheduleViolationSeqBadge);
-        modal.addEventListener('change', scheduleViolationSeqBadge);
-        setTimeout(scheduleViolationSeqBadge, 350);
-
-        // تفعيل البحث عند تحديث النموذج إذا كان موظف
-        if (typeof EmployeeHelper !== 'undefined' && violationData?.employeeName && employeeCodeInput && employeeCodeInput.parentNode) {
-            try {
-                // إزالة المعالجات القديمة
-                const newCodeInput = employeeCodeInput.cloneNode(true);
-                employeeCodeInput.parentNode.replaceChild(newCodeInput, employeeCodeInput);
-
-                // الحصول على العنصر الجديد
-                const updatedCodeInput = document.getElementById('violation-employee-code');
-                if (updatedCodeInput) {
-                    EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
-                        if (employee) {
-                            const nameField = document.getElementById('violation-person-name');
-                            const positionField = document.getElementById('violation-employee-position');
-                            const departmentField = document.getElementById('violation-employee-department');
-                            if (nameField) nameField.value = employee.name || '';
-                            if (positionField) positionField.value = employee.position || employee.jobTitle || '';
-                            if (departmentField) departmentField.value = employee.department || employee.section || '';
-                        }
-                    });
-                }
-            } catch (error) {
-                Utils.safeError('خطأ في إعداد البحث بالكود الوظيفي:', error);
-                // محاولة بدون replaceChild
-                if (employeeCodeInput) {
-                    EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
-                        if (employee) {
-                            const nameField = document.getElementById('violation-person-name');
-                            const positionField = document.getElementById('violation-employee-position');
-                            const departmentField = document.getElementById('violation-employee-department');
-                            if (nameField) nameField.value = employee.name || '';
-                            if (positionField) positionField.value = employee.position || employee.jobTitle || '';
-                            if (departmentField) departmentField.value = employee.department || employee.section || '';
-                        }
-                    });
-                }
-            }
-        }
-
-        // تحميل قائمة المواقع حسب نوع الشخص (افتراضي: موظف)
-        const initialPersonType = isContractorRecord ? 'contractor' : 'employee';
-        // تحميل خيارات الموقع للموظف (الافتراضي) والمقاول
-        setTimeout(async () => {
-            await this.loadLocationOptions('employee');
-            await this.loadLocationOptions('contractor');
-
-            // إعداد event listeners للموقع والأماكن للموظف
-            const employeeLocationSelect = document.getElementById('violation-employee-location');
-            const employeePlaceSelect = document.getElementById('violation-employee-place');
-            if (employeeLocationSelect && employeePlaceSelect) {
-                // إزالة المعالجات القديمة إن وجدت
-                const newLocationSelect = employeeLocationSelect.cloneNode(true);
-                employeeLocationSelect.parentNode.replaceChild(newLocationSelect, employeeLocationSelect);
-                const newPlaceSelect = employeePlaceSelect.cloneNode(true);
-                employeePlaceSelect.parentNode.replaceChild(newPlaceSelect, employeePlaceSelect);
-
-                // إعادة الحصول على العناصر
-                const updatedLocationSelect = document.getElementById('violation-employee-location');
-                const updatedPlaceSelect = document.getElementById('violation-employee-place');
-                if (updatedLocationSelect) {
-                    updatedLocationSelect.addEventListener('change', (e) => {
-                        const selectedSiteId = e.target.value;
-                        this.loadPlaceOptions(selectedSiteId, '', 'employee');
-                    });
-                }
-            }
-
-            // إعداد event listeners للموقع والأماكن للمقاول
-            const contractorLocationSelect = document.getElementById('violation-contractor-location');
-            const contractorPlaceSelect = document.getElementById('violation-contractor-place');
-            if (contractorLocationSelect && contractorPlaceSelect) {
-                // إزالة المعالجات القديمة إن وجدت
-                const newLocationSelect = contractorLocationSelect.cloneNode(true);
-                contractorLocationSelect.parentNode.replaceChild(newLocationSelect, contractorLocationSelect);
-                const newPlaceSelect = contractorPlaceSelect.cloneNode(true);
-                contractorPlaceSelect.parentNode.replaceChild(newPlaceSelect, contractorPlaceSelect);
-
-                // إعادة الحصول على العناصر
-                const updatedLocationSelect = document.getElementById('violation-contractor-location');
-                const updatedPlaceSelect = document.getElementById('violation-contractor-place');
-                if (updatedLocationSelect) {
-                    updatedLocationSelect.addEventListener('change', (e) => {
-                        const selectedSiteId = e.target.value;
-                        this.loadPlaceOptions(selectedSiteId, '', 'contractor');
-                    });
-                }
-            }
-
-            // إذا كان النوع الافتراضي هو موظف، تأكد من إعداد حقول الموظف
-            if (initialPersonType === 'employee' && personTypeSelect.value === 'employee') {
-                // إعداد البحث بالكود الوظيفي للموظف
-                if (typeof EmployeeHelper !== 'undefined') {
-                    const codeInput = document.getElementById('violation-employee-code');
-                    if (codeInput) {
-                        try {
-                            EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
-                                if (employee) {
-                                    const nameField = document.getElementById('violation-person-name');
-                                    const positionField = document.getElementById('violation-employee-position');
-                                    const departmentField = document.getElementById('violation-employee-department');
-                                    if (nameField) nameField.value = employee.name || '';
-                                    if (positionField) positionField.value = employee.position || employee.jobTitle || '';
-                                    if (departmentField) departmentField.value = employee.department || employee.section || '';
-                                }
-                            });
-                        } catch (error) {
-                            Utils.safeError('خطأ في إعداد البحث بالكود الوظيفي:', error);
-                        }
-                    }
-                }
-            }
-        }, 100);
-
-        // تعيين القيم إذا كان التعديل (سيتم إعداد event listeners في setTimeout)
-        if (selectedLocationValue) {
-            setTimeout(() => {
-                if (initialPersonType === 'employee') {
-                    const employeeLocationSelect = document.getElementById('violation-employee-location');
-                    if (employeeLocationSelect) {
-                        employeeLocationSelect.value = selectedLocationValue;
-                        if (selectedLocationValue) {
-                            this.loadPlaceOptions(selectedLocationValue, selectedPlaceValue, 'employee');
-                        }
-                    }
-                } else if (initialPersonType === 'contractor') {
-                    const contractorLocationSelect = document.getElementById('violation-contractor-location');
-                    if (contractorLocationSelect) {
-                        contractorLocationSelect.value = selectedLocationValue;
-                        if (selectedLocationValue) {
-                            this.loadPlaceOptions(selectedLocationValue, selectedPlaceValue, 'contractor');
-                        }
-                    }
-                }
-            }, 200);
-        }
-
-        // Setup photo preview
-        const photoInput = document.getElementById('violation-photo-input');
-        const photoPreview = document.getElementById('violation-photo-preview');
-        const photoImg = document.getElementById('violation-photo-img');
-        if (photoInput && photoPreview && photoImg) {
-            photoInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    if (file.size > 2 * 1024 * 1024) {
-                        Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2MB');
-                        photoInput.value = '';
-                        return;
-                    }
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        photoImg.src = e.target.result;
-                        photoPreview.classList.remove('hidden');
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-        }
-
-        // الحصول على النموذج وزر الإرسال
-        const form = modal.querySelector('#violation-form');
-        const submitBtn = modal.querySelector('#violation-submit-btn') || form?.querySelector('button[type="submit"]');
-
-        if (!form || !submitBtn) {
-            if (AppState.debugMode) Utils.safeError('❌ النموذج أو زر الإرسال غير موجود');
-            Notification.error('خطأ في تحميل النموذج. يرجى إعادة المحاولة.');
-            return;
-        }
-
-        // ✅ Helper: التحكم بشريط التنبيه أعلى النموذج (يبقي النموذج مفتوحاً)
-        const showFormBanner = (type, title, text) => {
-            const banner = modal.querySelector('#violation-form-banner');
-            const icon   = modal.querySelector('#violation-form-banner-icon');
-            const titleEl= modal.querySelector('#violation-form-banner-title');
-            const textEl = modal.querySelector('#violation-form-banner-text');
-            if (!banner || !icon || !titleEl || !textEl) return;
-
-            // ألوان حسب النوع
-            const themes = {
-                error:   { bg:'#fef2f2', border:'#fecaca', text:'#991b1b', icon:'fa-circle-xmark text-red-600' },
-                warning: { bg:'#fffbeb', border:'#fde68a', text:'#92400e', icon:'fa-triangle-exclamation text-amber-600' },
-                success: { bg:'#ecfdf5', border:'#a7f3d0', text:'#065f46', icon:'fa-circle-check text-emerald-600' },
-                info:    { bg:'#eff6ff', border:'#bfdbfe', text:'#1e40af', icon:'fa-circle-info text-blue-600' }
-            };
-            const theme = themes[type] || themes.info;
-            banner.style.background  = theme.bg;
-            banner.style.borderColor = theme.border;
-            banner.style.color       = theme.text;
-            icon.className = 'fas ' + theme.icon + ' text-lg mt-0.5';
-            titleEl.textContent = title || '';
-            textEl.textContent  = text  || '';
-            banner.classList.remove('hidden');
-            // التمرير لأعلى داخل المودال حتى يرى المستخدم التنبيه
-            try {
-                const modalBody = modal.querySelector('.modal-body');
-                if (modalBody) modalBody.scrollTo({ top: 0, behavior: 'smooth' });
-            } catch (e) { /* ignore */ }
-        };
-        const hideFormBanner = () => {
-            const banner = modal.querySelector('#violation-form-banner');
-            if (banner) banner.classList.add('hidden');
-        };
-
-        // ربط زر إغلاق التنبيه
-        const bannerCloseBtn = modal.querySelector('#violation-form-banner-close');
-        if (bannerCloseBtn) bannerCloseBtn.addEventListener('click', hideFormBanner);
-
-        // ========== كود جديد بسيط ونظيف ==========
-
-        // معالج النقر على زر التسجيل
-        const handleSubmit = async (e) => {
-            // منع السلوك الافتراضي للنموذج
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-            }
-
-            // منع النقر المزدوج
-            if (submitBtn.disabled) {
-                if (AppState.debugMode) Utils.safeLog('⚠️ النموذج قيد المعالجة...');
-                return;
-            }
-
-            // تعطيل الزر لمنع النقر المزدوج
-            const btn = submitBtn;
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
-
-            try {
-                // جمع البيانات من النموذج
-                const personType = document.getElementById('violation-person-type')?.value;
-                const violationDate = document.getElementById('violation-date')?.value;
-                const violationTime = document.getElementById('violation-time')?.value;
-                const violationType = document.getElementById('violation-type')?.value;
-                const severity = document.getElementById('violation-severity')?.value;
-                const status = document.getElementById('violation-status')?.value;
-                const violationDetails = document.getElementById('violation-details')?.value.trim() || '';
-                const actionTaken = document.getElementById('violation-action')?.value.trim() || '';
-                const fineAmountRaw = document.getElementById('violation-fine-amount')?.value;
-                let fineAmount = '';
-                if (fineAmountRaw !== '' && fineAmountRaw !== null && fineAmountRaw !== undefined) {
-                    const fineAmountParsed = this.parseFineAmount(fineAmountRaw);
-                    if (Number.isFinite(fineAmountParsed) && fineAmountParsed >= 0) {
-                        fineAmount = fineAmountParsed;
-                    }
-                } else {
-                    fineAmount = this.parseFineAmount(getDefaultFineAmountForSelectedType());
-                }
-
-                // التحقق من البيانات الإلزامية
-                const missing = [];
-                if (!personType) missing.push('نوع المخالفة (موظف/مقاول)');
-                if (!violationDate) missing.push('تاريخ المخالفة');
-                if (!violationTime) missing.push('وقت المخالفة');
-                if (!violationType) missing.push('نوع المخالفة');
-                if (!severity) missing.push('شدة المخالفة');
-                if (!status) missing.push('حالة المخالفة');
-
-                // التحقق من بيانات الشخص
-                let personName = '';
-                let contractorId = '';
-                if (personType === 'employee') {
-                    const code = document.getElementById('violation-employee-code')?.value.trim();
-                    personName = document.getElementById('violation-person-name')?.value.trim();
-                    if (!code) missing.push('الكود الوظيفي');
-                    if (!personName) missing.push('اسم الموظف');
-                } else if (personType === 'contractor') {
-                    const contractorSelect = document.getElementById('violation-contractor-select');
-                    if (!contractorSelect || !contractorSelect.value) {
-                        missing.push('اسم المقاول');
-                    } else {
-                        personName = contractorSelect.value;
-                        const selectedOption = contractorSelect.options[contractorSelect.selectedIndex];
-                        contractorId = selectedOption?.dataset.contractorCode || selectedOption?.dataset.contractorId || '';
-                    }
-                }
-
-                // التحقق من الموقع ومكان المخالفة
-                let location = '';
-                let locationName = '';
-                let place = '';
-                let placeName = '';
-                if (personType === 'employee') {
-                    const locationSelect = document.getElementById('violation-employee-location');
-                    const placeSelect = document.getElementById('violation-employee-place');
-                    location = locationSelect?.value || '';
-                    locationName = locationSelect?.options[locationSelect?.selectedIndex]?.text || '';
-                    place = placeSelect?.value || '';
-                    placeName = placeSelect?.options[placeSelect?.selectedIndex]?.text || '';
-                } else if (personType === 'contractor') {
-                    const locationSelect = document.getElementById('violation-contractor-location');
-                    const placeSelect = document.getElementById('violation-contractor-place');
-                    location = locationSelect?.value || '';
-                    locationName = locationSelect?.options[locationSelect?.selectedIndex]?.text || '';
-                    place = placeSelect?.value || '';
-                    placeName = placeSelect?.options[placeSelect?.selectedIndex]?.text || '';
-                }
-                if (!location) missing.push('الموقع');
-                if (!place) missing.push('مكان المخالفة');
-
-                // إذا كانت هناك حقول ناقصة
-                if (missing.length > 0) {
-                    // ✅ تنبيه أعلى النموذج (وليس toast سفلي) — يبقى مرئياً حتى يُكمل المستخدم
-                    showFormBanner(
-                        'error',
-                        'بيانات إلزامية ناقصة',
-                        'يرجى استكمال: ' + missing.join('، ')
-                    );
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
-
-                    // إبراز الحقول الناقصة
-                    missing.forEach(field => {
-                        let inputId = '';
-                        if (field.includes('الكود الوظيفي')) inputId = 'violation-employee-code';
-                        else if (field.includes('اسم الموظف')) inputId = 'violation-person-name';
-                        else if (field.includes('اسم المقاول')) inputId = 'violation-contractor-select';
-                        else if (field.includes('تاريخ')) inputId = 'violation-date';
-                        else if (field.includes('وقت')) inputId = 'violation-time';
-                        else if (field.includes('نوع المخالفة')) inputId = 'violation-type';
-                        else if (field.includes('الشدة')) inputId = 'violation-severity';
-                        else if (field.includes('الحالة')) inputId = 'violation-status';
-                        else if (field.includes('الموقع')) inputId = personType === 'employee' ? 'violation-employee-location' : 'violation-contractor-location';
-                        else if (field.includes('مكان المخالفة')) inputId = personType === 'employee' ? 'violation-employee-place' : 'violation-contractor-place';
-
-                        if (inputId) {
-                            const input = document.getElementById(inputId);
-                            if (input) {
-                                input.classList.add('border-red-500', 'ring-2', 'ring-red-300');
-                                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                setTimeout(() => {
-                                    input.classList.remove('border-red-500', 'ring-2', 'ring-red-300');
-                                }, 3000);
-                            }
-                        }
-                    });
-                    return;
-                }
-
-                // معالجة الصورة
-                let photo = violationData?.photo || '';
-                const photoInput = document.getElementById('violation-photo-input');
-                if (photoInput?.files.length > 0) {
-                    const file = photoInput.files[0];
-                    if (file.size > 2 * 1024 * 1024) {
-                        showFormBanner('error', 'الصورة كبيرة جداً', 'الحد الأقصى للحجم 2MB. اختر صورة أصغر.');
-                        btn.disabled = false;
-                        btn.innerHTML = originalText;
-                        return;
-                    }
-                    try {
-                        photo = await Violations.convertImageToBase64(file);
-                    } catch (err) {
-                        if (AppState.debugMode) Utils.safeWarn('خطأ في تحويل الصورة:', err);
-                    }
-                }
-
-                // ✅ مسح أي تنبيه سابق قبل المتابعة
-                hideFormBanner();
-
-                // إنشاء كائن البيانات
-                const violationTypeOption = violationTypeSelect?.selectedOptions?.[0];
-                const violationTypeId = violationTypeOption?.getAttribute('data-type-id') || '';
-
-                const violationDateTime = violationDate && violationTime
-                    ? new Date(`${violationDate}T${violationTime}`).toISOString()
-                    : new Date().toISOString();
-
-                const formData = {
-                    id: violationData?.id || Utils.generateId('VIOLATION'),
-                    isoCode: violationData?.isoCode || generateISOCode('VIOL', AppState.appData.violations || []),
-                    personType: personType,
-                    employeeId: personType === 'employee' ? (violationData?.employeeId || Utils.generateId('EMP')) : '',
-                    employeeName: personType === 'employee' ? personName : '',
-                    employeeCode: personType === 'employee' ? document.getElementById('violation-employee-code')?.value.trim() || '' : '',
-                    employeeNumber: personType === 'employee' ? document.getElementById('violation-employee-code')?.value.trim() || '' : '',
-                    employeePosition: personType === 'employee' ? document.getElementById('violation-employee-position')?.value.trim() || '' : '',
-                    employeeDepartment: personType === 'employee' ? document.getElementById('violation-employee-department')?.value.trim() || '' : '',
-                    contractorId: personType === 'contractor' ? contractorId : '',
-                    contractorName: personType === 'contractor' ? personName : '',
-                    contractorWorker: personType === 'contractor' ? document.getElementById('violation-contractor-worker')?.value.trim() || '' : '',
-                    contractorPosition: personType === 'contractor' ? document.getElementById('violation-contractor-position')?.value.trim() || '' : '',
-                    contractorDepartment: personType === 'contractor' ? document.getElementById('violation-contractor-department')?.value.trim() || '' : '',
-                    violationTypeId: violationTypeId,
-                    violationType: violationType,
-                    fineAmount: this.parseFineAmount(fineAmount),
-                    violationDate: violationDateTime,
-                    violationTime: violationTime,
-                    // حفظ ID الموقع واسمه
-                    violationLocation: locationName && locationName !== '-- اختر الموقع --' ? locationName : location,
-                    violationLocationId: location ? String(location).trim() : null,
-                    // حفظ ID المكان واسمه
-                    violationPlace: placeName && placeName !== '-- اختر مكان المخالفة --' ? placeName : place,
-                    violationPlaceId: place ? String(place).trim() : null,
-                    violationDetails: violationDetails,
-                    severity: severity,
-                    actionTaken: actionTaken,
-                    status: status,
-                    photo: photo,
-                    createdAt: violationData?.createdAt || new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
-
-                const seqDraft = {
-                    personType,
-                    violationDate: violationDateTime,
-                    employeeCode: formData.employeeCode,
-                    employeeNumber: formData.employeeNumber,
-                    contractorName: formData.contractorName,
-                    contractorWorker: formData.contractorWorker
-                };
-                const priorSeq = this.countPriorViolationsSamePersonMonth(
-                    seqDraft,
-                    isEdit && violationData?.id ? violationData.id : null
-                );
-                formData.violationSequenceInMonth = priorSeq + 1;
-
-                // ✅ دائرة اعتماد المخالفات: إذا فُعِّلت ولم يكن المستخدم مديراً، أرسل طلب اعتماد بدل الحفظ المباشر
-                try {
-                    const approvalGate = await this.checkViolationApprovalGate(formData, { isEdit });
-                    if (approvalGate && approvalGate.requiresApproval) {
-                        // 🛡️ حماية حرجة: مسار الاعتماد يخزّن violationData كـ JSON.stringify في خلية واحدة
-                        // (Google Sheets يحدّ الخلية بـ 50000 حرف). صورة base64 بحجم 2MB ≈ 2.7M حرف!
-                        // نرفع الصورة لـ Drive أولاً ثم نضع الرابط فقط في الـ payload.
-                        let approvalPhoto = photo;
-                        if (approvalPhoto && typeof approvalPhoto === 'string' && approvalPhoto.startsWith('data:')) {
-                            try {
-                                btn.innerHTML = '<i class="fas fa-cloud-upload-alt fa-spin ml-2"></i> جاري رفع الصورة...';
-                                const uploadRes = await GoogleIntegration.uploadFileToDrive?.(
-                                    approvalPhoto,
-                                    `violation_${formData.id}_${Date.now()}.jpg`,
-                                    'image/jpeg',
-                                    'Violations'
-                                );
-                                if (uploadRes && uploadRes.success) {
-                                    approvalPhoto = uploadRes.directLink || uploadRes.shareableLink || '';
-                                } else {
-                                    // 🚨 لا نُمرر base64 للخلية أبداً — نُسقط الصورة مع تنبيه واضح
-                                    approvalPhoto = '';
-                                    showFormBanner(
-                                        'warning',
-                                        'تعذّر رفع الصورة',
-                                        'سيتم إرسال طلب الاعتماد بدون الصورة. تحقق من اتصال الإنترنت أو حاول مرة أخرى لاحقاً.'
-                                    );
-                                }
-                                btn.innerHTML = originalText;
-                                btn.disabled = true;
-                                btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
-                            } catch (upErr) {
-                                if (AppState.debugMode) Utils.safeWarn('Drive upload failed in approval path:', upErr);
-                                approvalPhoto = ''; // حماية: لا نُمرر base64 أبداً
-                            }
-                        }
-                        const safeFormData = { ...formData, photo: approvalPhoto };
-
-                        // إرسال طلب الاعتماد للـ backend وعدم الحفظ المحلي
-                        const approvalResult = await this.submitViolationForApproval(safeFormData, { isEdit, originalId: violationData?.id });
-                        // استعادة الزر
-                        btn.disabled = false;
-                        btn.innerHTML = originalText;
-                        if (approvalResult && approvalResult.success) {
-                            this._invalidateViolationApprovalRequestsCache();
-                            modal.remove();
-                            Notification.success(approvalResult.message || 'تم إرسال المخالفة لدائرة الاعتماد بنجاح. ستظهر بعد اعتمادها.');
-                            // إطلاق حدث لتحديث قائمة طلبات الاعتماد إن كانت مفتوحة
-                            try {
-                                document.dispatchEvent(new CustomEvent('violation-approval-request-created', { detail: approvalResult.data || {} }));
-                            } catch (e) { /* ignore */ }
-                            return; // ⚠️ نخرج هنا — لا نكمل مسار الحفظ المباشر
-                        } else {
-                            // ✅ تنبيه أعلى النموذج (يبقي النموذج مفتوحاً ليُعيد المستخدم المحاولة)
-                            const msg = (approvalResult && approvalResult.message) || 'فشل إرسال طلب الاعتماد. حاول مرة أخرى.';
-                            showFormBanner('error', 'تعذّر إرسال طلب الاعتماد', msg);
-                            return;
-                        }
-                    }
-                } catch (gateErr) {
-                    if (AppState.debugMode) Utils.safeWarn('approvalGate error (continuing with direct save):', gateErr);
-                    // في حال خطأ في فحص الاعتماد، نُكمل المسار العادي حفاظاً على عدم تعطيل العمل
-                }
-
-                // حفظ في AppState
-                if (!AppState.appData.violations) {
-                    AppState.appData.violations = [];
-                }
-
-                if (isEdit && violationData?.id) {
-                    const index = AppState.appData.violations.findIndex(v => v.id === violationData.id);
-                    if (index !== -1) {
-                        // نحافظ على البيانات المرتبطة القديمة (المرفقات/المرجعيات) أثناء التعديل
-                        AppState.appData.violations[index] = {
-                            ...AppState.appData.violations[index],
-                            ...formData,
-                            id: violationData.id,
-                            isoCode: violationData.isoCode || formData.isoCode,
-                            createdAt: violationData.createdAt || formData.createdAt,
-                            updatedAt: new Date().toISOString()
-                        };
-                    } else {
-                        throw new Error('تعذر العثور على سجل المخالفة الأصلي للتعديل. أعد تحميل الصفحة ثم حاول مرة أخرى.');
-                    }
-                } else {
-                    AppState.appData.violations.push(formData);
-                }
-
-                // حفظ محلياً
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    window.DataManager.save();
-                }
-
-                // 2. إغلاق النموذج بشكل مباشر وسريع جداً بدون أي تأخير
-                modal.remove();
-
-                // 3. عرض رسالة نجاح فورية (محلية أولاً مع إشارة جاري المزامنة)
-                Notification.success(`تم ${isEdit ? 'تحديث' : 'تسجيل'} المخالفة بنجاح وجاري المزامنة في الخلفية...`);
-
-                // 4. تحديث الكروت فوراً (مباشر بدون انتظار) ثم القائمة بالكامل
-                try { this.updateAllViolationsStats(); } catch (e) { /* ignore */ }
-                // ✅ تحديث كروت لوحة التحكم فوراً
-                try {
-                    if (typeof Dashboard !== 'undefined') {
-                        if (typeof Dashboard.updateStats === 'function') Dashboard.updateStats();
-                        if (typeof Dashboard.updateReportsStatistics === 'function') Dashboard.updateReportsStatistics();
-                    }
-                } catch (e) { /* ignore */ }
-                // ✅ إطلاق حدث data-saved ليستجيب له أي مستمع آخر
-                try {
-                    document.dispatchEvent(new CustomEvent('data-saved', {
-                        detail: { module: 'violations', action: isEdit ? 'تحديث' : 'إضافة', data: formData }
-                    }));
-                } catch (e) { /* ignore */ }
-                // ✅ تحديث القائمة في المكان (بدون إعادة بناء كامل للـ DOM)
-                // Violations.load() كانت تُعيد بناء كل شيء وتطلق جلب خلفي يُلغي المخالفة الجديدة
-                try {
-                    if (typeof Violations !== 'undefined' && typeof Violations.refreshViolationsView === 'function') {
-                        Violations.refreshViolationsView();
-                    } else if (typeof Violations !== 'undefined' && Violations.load) {
-                        Violations.load();
-                    }
-                } catch (e) { /* ignore */ }
-
-                // 5. المزامنة والرفع في الخلفية دون تعطيل واجهة المستخدم
-                const performBackgroundSync = async (localPhoto) => {
-                    let finalPhoto = localPhoto;
-                    let hasUpdatedPhoto = false;
-
-                    // رفع الصورة إلى Google Drive في الخلفية إذا كانت base64
-                    if (localPhoto && localPhoto.startsWith('data:')) {
-                        try {
-                            const uploadResult = await GoogleIntegration.uploadFileToDrive?.(
-                                localPhoto,
-                                `violation_${formData.id}_${Date.now()}.jpg`,
-                                'image/jpeg',
-                                'Violations'
-                            );
-                            if (uploadResult?.success) {
-                                finalPhoto = uploadResult.directLink || uploadResult.shareableLink || localPhoto;
-                                hasUpdatedPhoto = true;
-                            }
-                        } catch (err) {
-                            if (AppState.debugMode) Utils.safeWarn('خطأ في رفع الصورة في الخلفية:', err);
-                        }
-                    }
-
-                    // إذا تم تحديث الصورة البعيدة، نحدث السجل المحلي
-                    if (hasUpdatedPhoto) {
-                        const currentViolations = AppState.appData.violations || [];
-                        const index = currentViolations.findIndex(v => v.id === formData.id);
-                        if (index !== -1) {
-                            currentViolations[index].photo = finalPhoto;
-                            formData.photo = finalPhoto;
-                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                                window.DataManager.save();
-                            }
-                            // إعادة تحميل خفيفة لتحديث صورة الكارت إذا كانت معروضة
-                            if (typeof Violations !== 'undefined' && Violations.load) {
-                                Violations.load();
-                            }
-                        }
-                    }
-
-                    // المزامنة مع Google Sheets في الخلفية — استخدام addViolation/updateViolation
-                    // (بدل saveToSheet الذي يستبدل الجدول كاملاً ويسبب race conditions)
-                    try {
-                        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                            // تحضير نسخة من البيانات مع الصورة النهائية (إن رُفعت)
-                            const payload = Object.assign({}, formData, { photo: finalPhoto });
-                            let saveRes;
-                            if (isEdit) {
-                                saveRes = await GoogleIntegration.sendRequest({
-                                    action: 'updateViolation',
-                                    data: { violationId: formData.id, updateData: payload }
-                                });
-                            } else {
-                                saveRes = await GoogleIntegration.sendRequest({
-                                    action: 'addViolation',
-                                    data: payload
-                                });
-                            }
-                            if (saveRes && saveRes.success === true) {
-                                try { localStorage.setItem('violations_last_sync', String(Date.now())); } catch (eLs) { /* ignore */ }
-                                if (AppState.debugMode) Utils.safeLog('✅ حفظ المخالفة في الخادم بنجاح');
-                            } else {
-                                if (AppState.debugMode) Utils.safeWarn('⚠️ فشل حفظ المخالفة في الخادم:', saveRes && saveRes.message);
-                                // إضافة لقائمة الانتظار للمزامنة لاحقاً
-                                try {
-                                    if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
-                                        DataManager.addToPendingSync('Violations', AppState.appData.violations);
-                                    }
-                                } catch (eP) { /* ignore */ }
-                            }
-                        }
-                    } catch (err) {
-                        if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ المخالفة في الخلفية:', err);
-                        // محاولة إضافة لقائمة الانتظار لإعادة المحاولة لاحقاً
-                        try {
-                            if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
-                                DataManager.addToPendingSync('Violations', AppState.appData.violations);
-                            }
-                        } catch (eP) { /* ignore */ }
-                    }
-                };
-
-                // إطلاق المهمة في الخلفية دون await
-                performBackgroundSync(photo).catch(err => {
-                    Utils.safeError('خطأ غير متوقع في مزامنة الخلفية للمخالفة:', err);
-                });
-
-            } catch (error) {
-                Utils.safeError('❌ خطأ في حفظ المخالفة:', error);
-                // ✅ تنبيه أعلى النموذج بدلاً من toast سفلي
-                showFormBanner('error', 'حدث خطأ', (error && (error.message || error.toString())) || 'فشل حفظ المخالفة');
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
-        };
-
-        // ربط معالج الأحداث - نستخدم submit فقط لتجنب التنفيذ المزدوج
-        form.addEventListener('submit', handleSubmit, { once: false });
-
-        // إزالة أي معالجات قديمة للزر
-        const newSubmitBtn = submitBtn.cloneNode(true);
-        submitBtn.parentNode.replaceChild(newSubmitBtn, submitBtn);
-        const updatedSubmitBtn = modal.querySelector('#violation-submit-btn') || modal.querySelector('button[type="submit"]');
-
-        // ربط معالج click كنسخة احتياطية (مع منع السلوك الافتراضي)
-        if (updatedSubmitBtn) {
-            updatedSubmitBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (updatedSubmitBtn.disabled) return;
-                handleSubmit(e);
-            });
-        }
-
-        // إغلاق النموذج عند النقر خارجه
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-            }
-        });
-
-        // إغلاق النموذج عند الضغط على ESC
-        const handleEscape = (e) => {
-            if (e.key === 'Escape' && document.body.contains(modal)) {
-                modal.remove();
-                document.removeEventListener('keydown', handleEscape);
-            }
-        };
-        document.addEventListener('keydown', handleEscape);
-    },
-
-    getSiteOptions() {
-        try {
-            // محاولة الحصول من Permissions.formSettingsState
-            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Permissions.formSettingsState.sites) {
-                return Permissions.formSettingsState.sites.map(site => ({
-                    id: site.id,
-                    name: site.name
-                }));
-            }
-
-            // محاولة الحصول من AppState.appData.observationSites
-            if (Array.isArray(AppState.appData?.observationSites) && AppState.appData.observationSites.length > 0) {
-                return AppState.appData.observationSites.map(site => ({
-                    id: site.id || site.siteId || Utils.generateId('SITE'),
-                    name: site.name || site.title || site.label || 'موقع غير محدد'
-                }));
-            }
-
-            // محاولة الحصول من DailyObservations
-            if (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SITES)) {
-                return DailyObservations.DEFAULT_SITES.map((site, index) => ({
-                    id: site.id || site.siteId || Utils.generateId('SITE'),
-                    name: site.name || site.title || site.label || `موقع ${index + 1}`
-                }));
-            }
-
-            return [];
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في الحصول على قائمة المواقع:', error);
-            return [];
-        }
-    },
-
-    refreshSiteDropdowns() {
-        try {
-            var sites = this.getSiteOptions();
-            var esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : function(s) { return String(s == null ? '' : s); };
-            var opts = '<option value="">اختر المصنع</option>' + (sites || []).map(function(s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>'; }).join('');
-            var el = document.getElementById('blacklist-factory');
-            if (el && el.tagName === 'SELECT') { var v = el.value; el.innerHTML = opts; if (v) el.value = v; }
-        } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ Violations.refreshSiteDropdowns:', e); }
-    },
-
-    getPlaceOptions(siteId) {
-        try {
-            if (!siteId) return [];
-
-            const sites = this.getSiteOptions();
-            const selectedSite = sites.find(s => s.id === siteId);
-            if (!selectedSite) return [];
-
-            // محاولة الحصول من Permissions.formSettingsState
-            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Permissions.formSettingsState.sites) {
-                const site = Permissions.formSettingsState.sites.find(s => s.id === siteId);
-                if (site && Array.isArray(site.places)) {
-                    return site.places.map(place => ({
-                        id: place.id || place.placeId || Utils.generateId('PLACE'),
-                        name: place.name || place.placeName || 'مكان غير محدد'
-                    }));
-                }
-            }
-
-            // محاولة الحصول من AppState.appData.observationSites
-            if (Array.isArray(AppState.appData?.observationSites)) {
-                const site = AppState.appData.observationSites.find(s =>
-                    (s.id === siteId) || (s.siteId === siteId) || (s.name === siteId)
-                );
-                if (site) {
-                    const placesSource = Array.isArray(site.places)
-                        ? site.places
-                        : Array.isArray(site.locations)
-                            ? site.locations
-                            : Array.isArray(site.children)
-                                ? site.children
-                                : Array.isArray(site.areas)
-                                    ? site.areas
-                                    : [];
-                    return placesSource.map((place, idx) => ({
-                        id: place.id || place.placeId || place.value || Utils.generateId('PLACE'),
-                        name: place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${idx + 1}`
-                    }));
-                }
-            }
-
-            return [];
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في الحصول على قائمة الأماكن:', error);
-            return [];
-        }
-    },
-
-    async loadLocationOptions(personType = 'employee') {
-        try {
-            // التأكد من تحميل إعدادات النماذج
-            if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
-                await Permissions.ensureFormSettingsState();
-            }
-
-            const sites = this.getSiteOptions();
-            const locationSelectId = personType === 'employee' ? 'violation-employee-location' : 'violation-contractor-location';
-            const locationSelect = document.getElementById(locationSelectId);
-
-            if (!locationSelect) return;
-
-            locationSelect.innerHTML = '<option value="">-- اختر الموقع --</option>';
-
-            if (sites && sites.length > 0) {
-                sites.forEach(site => {
-                    const option = document.createElement('option');
-                    option.value = site.id;
-                    option.textContent = site.name;
-                    locationSelect.appendChild(option);
-                });
-            }
-        } catch (error) {
-            Utils.safeError('❌ خطأ في تحميل المواقع:', error);
-        }
-    },
-
-    loadPlaceOptions(siteId, selectedPlaceId = '', personType = 'employee') {
-        try {
-            const placeSelectId = personType === 'employee' ? 'violation-employee-place' : 'violation-contractor-place';
-            const placeSelect = document.getElementById(placeSelectId);
-            if (!placeSelect) return;
-
-            placeSelect.innerHTML = '<option value="">-- اختر مكان المخالفة --</option>';
-
-            if (!siteId) {
-                return;
-            }
-
-            const places = this.getPlaceOptions(siteId);
-            if (places && places.length > 0) {
-                places.forEach(place => {
-                    const option = document.createElement('option');
-                    option.value = place.id;
-                    option.textContent = place.name;
-                    if (selectedPlaceId && (place.id === selectedPlaceId || place.name === selectedPlaceId)) {
-                        option.selected = true;
-                    }
-                    placeSelect.appendChild(option);
-                });
-            }
-        } catch (error) {
-            Utils.safeError('❌ خطأ في تحميل الأماكن:', error);
-        }
-    },
-
-    async convertImageToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-    },
-
-    async viewViolation(id) {
-        const raw = AppState.appData?.violations?.find(v => v.id === id);
-        if (!raw) {
-            if (typeof Notification !== 'undefined') Notification.error('المخالفة غير موجودة');
-            return;
-        }
-        const violation = this.normalizeViolationRecord(raw) || raw;
-        if (!this.isViolationVisibleToCurrentUser(violation)) {
-            if (typeof Notification !== 'undefined') Notification.error('عذراً، ليس لديك صلاحية لعرض مخالفة تابعة لإدارة أخرى');
-            return;
-        }
-        const qSev = String(violation.severity || '').trim();
-        const qStat = String(violation.status || '').trim();
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        `,document.body.appendChild(g);const D=document.getElementById("violation-person-type"),B=document.getElementById("violation-employee-code-container"),L=document.getElementById("violation-employee-code"),C=document.getElementById("violation-person-name"),F=document.getElementById("violation-person-name-label"),$=document.getElementById("violation-contractor-select");if($){const y=t?.contractorName||"",k=t?.contractorId||"";this.loadContractorsIntoSelect($,y,k)}const S=document.getElementById("violation-employee-position-container"),_=document.getElementById("violation-employee-department-container"),O=document.getElementById("violation-employee-position"),P=document.getElementById("violation-employee-department"),R=document.getElementById("violation-contractor-fields-container"),v=document.getElementById("violation-contractor-worker-container"),U=document.getElementById("violation-contractor-position-container"),G=document.getElementById("violation-contractor-department-container"),it=document.getElementById("violation-contractor-worker"),ot=document.getElementById("violation-contractor-position"),W=document.getElementById("violation-contractor-department"),J=document.getElementById("violation-location-fields-container"),X=document.getElementById("violation-type"),Q=document.getElementById("violation-fine-amount"),Et=new Map((s||[]).map(y=>[String(y.id||"").trim(),y])),It=new Map((s||[]).map(y=>[String(y.name||"").trim().toLowerCase(),y])),bt=()=>{const y=X?.selectedOptions?.[0],k=y?.getAttribute("data-type-id")||"",A=(X?.value||"").trim().toLowerCase(),b=k&&Et.get(k)||A&&It.get(A)||null,I=Number(y?.getAttribute("data-fine-amount")||0),E=Number(b?.fineAmount??I??0);return Number.isFinite(E)&&E>=0?E:0},lt=({force:y=!1}={})=>{if(!Q)return;const k=bt();(y||!u||Q.value==="")&&(Q.value=String(k))};Q&&(Q.readOnly=!u),X&&(X.addEventListener("change",()=>lt({force:!0})),X.addEventListener("input",()=>lt({force:!0}))),Q&&u&&t&&t.fineAmount!==void 0&&t.fineAmount!==null?Q.value=String(Number(i)):lt({force:!0}),D.addEventListener("change",y=>{if(y.target.value==="employee"){if(B.style.display="block",L.required=!0,L.placeholder="\u0623\u062F\u062E\u0644 \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A (\u0633\u064A\u062A\u0645 \u062A\u0639\u0628\u0626\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B)",C.style.display="block",C.readOnly=!0,C.placeholder="\u0633\u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u0628\u0626\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B",C.value="",C.required=!0,$&&($.style.display="none",$.required=!1),S&&(S.style.display="block"),_&&(_.style.display="block"),R&&(R.style.display="none"),J&&(J.style.display="block"),this.loadLocationOptions("employee").then(()=>{const A=document.getElementById("violation-employee-location");if(A){const b=A.cloneNode(!0);A.parentNode.replaceChild(b,A);const I=document.getElementById("violation-employee-location");I&&I.addEventListener("change",E=>{const M=E.target.value;this.loadPlaceOptions(M,"","employee")})}}),F&&(F.textContent="\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641 *"),typeof EmployeeHelper<"u"&&L&&L.parentNode)try{const A=L.cloneNode(!0);L.parentNode.replaceChild(A,L),document.getElementById("violation-employee-code")&&EmployeeHelper.setupEmployeeCodeSearch("violation-employee-code","violation-person-name",I=>{if(I){const E=document.getElementById("violation-person-name"),M=document.getElementById("violation-employee-position"),j=document.getElementById("violation-employee-department");E&&(E.value=I.name||""),M&&(M.value=I.position||I.jobTitle||""),j&&(j.value=I.department||I.section||"")}})}catch(A){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u0628\u062D\u062B \u0628\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A:",A),L&&EmployeeHelper.setupEmployeeCodeSearch("violation-employee-code","violation-person-name",b=>{if(b){const I=document.getElementById("violation-person-name"),E=document.getElementById("violation-employee-position"),M=document.getElementById("violation-employee-department");I&&(I.value=b.name||""),E&&(E.value=b.position||b.jobTitle||""),M&&(M.value=b.department||b.section||"")}})}}else lt({force:!0}),B.style.display="none",L.required=!1,L.value="",C.style.display="none",C.required=!1,C.value="",$&&($.style.display="block",$.required=!0,this.loadContractorsIntoSelect($)),S&&(S.style.display="none"),_&&(_.style.display="none"),R&&(R.style.display="block"),this.loadLocationOptions("contractor").then(()=>{const A=document.getElementById("violation-contractor-location");if(A){const b=A.cloneNode(!0);A.parentNode.replaceChild(b,A);const I=document.getElementById("violation-contractor-location");I&&I.addEventListener("change",E=>{const M=E.target.value;this.loadPlaceOptions(M,"","contractor")})}}),J&&(J.style.display="none"),F&&(F.textContent="\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 *");ct()});const ct=()=>{clearTimeout(this._violationSeqBadgeTimer),this._violationSeqBadgeTimer=setTimeout(()=>{this.refreshViolationSequenceBadgeInModal(g,a?t?.id:null)},200)};if(g.addEventListener("input",ct),g.addEventListener("change",ct),setTimeout(ct,350),typeof EmployeeHelper<"u"&&t?.employeeName&&L&&L.parentNode)try{const y=L.cloneNode(!0);L.parentNode.replaceChild(y,L),document.getElementById("violation-employee-code")&&EmployeeHelper.setupEmployeeCodeSearch("violation-employee-code","violation-person-name",A=>{if(A){const b=document.getElementById("violation-person-name"),I=document.getElementById("violation-employee-position"),E=document.getElementById("violation-employee-department");b&&(b.value=A.name||""),I&&(I.value=A.position||A.jobTitle||""),E&&(E.value=A.department||A.section||"")}})}catch(y){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u0628\u062D\u062B \u0628\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A:",y),L&&EmployeeHelper.setupEmployeeCodeSearch("violation-employee-code","violation-person-name",k=>{if(k){const A=document.getElementById("violation-person-name"),b=document.getElementById("violation-employee-position"),I=document.getElementById("violation-employee-department");A&&(A.value=k.name||""),b&&(b.value=k.position||k.jobTitle||""),I&&(I.value=k.department||k.section||"")}})}const ft=o?"contractor":"employee";setTimeout(async()=>{await this.loadLocationOptions("employee"),await this.loadLocationOptions("contractor");const y=document.getElementById("violation-employee-location"),k=document.getElementById("violation-employee-place");if(y&&k){const I=y.cloneNode(!0);y.parentNode.replaceChild(I,y);const E=k.cloneNode(!0);k.parentNode.replaceChild(E,k);const M=document.getElementById("violation-employee-location"),j=document.getElementById("violation-employee-place");M&&M.addEventListener("change",z=>{const Y=z.target.value;this.loadPlaceOptions(Y,"","employee")})}const A=document.getElementById("violation-contractor-location"),b=document.getElementById("violation-contractor-place");if(A&&b){const I=A.cloneNode(!0);A.parentNode.replaceChild(I,A);const E=b.cloneNode(!0);b.parentNode.replaceChild(E,b);const M=document.getElementById("violation-contractor-location"),j=document.getElementById("violation-contractor-place");M&&M.addEventListener("change",z=>{const Y=z.target.value;this.loadPlaceOptions(Y,"","contractor")})}if(ft==="employee"&&D.value==="employee"&&typeof EmployeeHelper<"u"&&document.getElementById("violation-employee-code"))try{EmployeeHelper.setupEmployeeCodeSearch("violation-employee-code","violation-person-name",E=>{if(E){const M=document.getElementById("violation-person-name"),j=document.getElementById("violation-employee-position"),z=document.getElementById("violation-employee-department");M&&(M.value=E.name||""),j&&(j.value=E.position||E.jobTitle||""),z&&(z.value=E.department||E.section||"")}})}catch(E){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u0628\u062D\u062B \u0628\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A:",E)}},100),l&&setTimeout(()=>{if(ft==="employee"){const y=document.getElementById("violation-employee-location");y&&(y.value=l,l&&this.loadPlaceOptions(l,c,"employee"))}else if(ft==="contractor"){const y=document.getElementById("violation-contractor-location");y&&(y.value=l,l&&this.loadPlaceOptions(l,c,"contractor"))}},200);const mt=document.getElementById("violation-photo-input"),ht=document.getElementById("violation-photo-preview"),xt=document.getElementById("violation-photo-img");mt&&ht&&xt&&mt.addEventListener("change",async y=>{const k=y.target.files[0];if(k){if(k.size>2097152){Notification.error("\u062D\u062C\u0645 \u0627\u0644\u0635\u0648\u0631\u0629 \u0643\u0628\u064A\u0631 \u062C\u062F\u0627\u064B. \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 2MB"),mt.value="";return}const A=new FileReader;A.onload=b=>{xt.src=b.target.result,ht.classList.remove("hidden")},A.readAsDataURL(k)}});const ut=g.querySelector("#violation-form"),Z=g.querySelector("#violation-submit-btn")||ut?.querySelector('button[type="submit"]');if(!ut||!Z){AppState.debugMode&&Utils.safeError("\u274C \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0623\u0648 \u0632\u0631 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F"),Notification.error("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0646\u0645\u0648\u0630\u062C. \u064A\u0631\u062C\u0649 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629.");return}const at=(y,k,A)=>{const b=g.querySelector("#violation-form-banner"),I=g.querySelector("#violation-form-banner-icon"),E=g.querySelector("#violation-form-banner-title"),M=g.querySelector("#violation-form-banner-text");if(!b||!I||!E||!M)return;const j={error:{bg:"#fef2f2",border:"#fecaca",text:"#991b1b",icon:"fa-circle-xmark text-red-600"},warning:{bg:"#fffbeb",border:"#fde68a",text:"#92400e",icon:"fa-triangle-exclamation text-amber-600"},success:{bg:"#ecfdf5",border:"#a7f3d0",text:"#065f46",icon:"fa-circle-check text-emerald-600"},info:{bg:"#eff6ff",border:"#bfdbfe",text:"#1e40af",icon:"fa-circle-info text-blue-600"}},z=j[y]||j.info;b.style.background=z.bg,b.style.borderColor=z.border,b.style.color=z.text,I.className="fas "+z.icon+" text-lg mt-0.5",E.textContent=k||"",M.textContent=A||"",b.classList.remove("hidden");try{const Y=g.querySelector(".modal-body");Y&&Y.scrollTo({top:0,behavior:"smooth"})}catch{}},wt=()=>{const y=g.querySelector("#violation-form-banner");y&&y.classList.add("hidden")},St=g.querySelector("#violation-form-banner-close");St&&St.addEventListener("click",wt);const kt=async y=>{if(y&&(y.preventDefault(),y.stopPropagation(),y.stopImmediatePropagation()),Z.disabled){AppState.debugMode&&Utils.safeLog("\u26A0\uFE0F \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629...");return}const k=Z,A=k.innerHTML;k.disabled=!0,k.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...';try{const b=document.getElementById("violation-person-type")?.value,I=document.getElementById("violation-date")?.value,E=document.getElementById("violation-time")?.value,M=document.getElementById("violation-type")?.value,j=document.getElementById("violation-severity")?.value,z=document.getElementById("violation-status")?.value,Y=document.getElementById("violation-details")?.value.trim()||"",Ct=document.getElementById("violation-action")?.value.trim()||"",dt=document.getElementById("violation-fine-amount")?.value;let yt="";if(dt!==""&&dt!==null&&dt!==void 0){const x=this.parseFineAmount(dt);Number.isFinite(x)&&x>=0&&(yt=x)}else yt=this.parseFineAmount(bt());const q=[];b||q.push("\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 (\u0645\u0648\u0638\u0641/\u0645\u0642\u0627\u0648\u0644)"),I||q.push("\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"),E||q.push("\u0648\u0642\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"),M||q.push("\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"),j||q.push("\u0634\u062F\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"),z||q.push("\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629");let nt="",$t="";if(b==="employee"){const x=document.getElementById("violation-employee-code")?.value.trim();nt=document.getElementById("violation-person-name")?.value.trim(),x||q.push("\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A"),nt||q.push("\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641")}else if(b==="contractor"){const x=document.getElementById("violation-contractor-select");if(!x||!x.value)q.push("\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644");else{nt=x.value;const T=x.options[x.selectedIndex];$t=T?.dataset.contractorCode||T?.dataset.contractorId||""}}let tt="",st="",et="",rt="";if(b==="employee"){const x=document.getElementById("violation-employee-location"),T=document.getElementById("violation-employee-place");tt=x?.value||"",st=x?.options[x?.selectedIndex]?.text||"",et=T?.value||"",rt=T?.options[T?.selectedIndex]?.text||""}else if(b==="contractor"){const x=document.getElementById("violation-contractor-location"),T=document.getElementById("violation-contractor-place");tt=x?.value||"",st=x?.options[x?.selectedIndex]?.text||"",et=T?.value||"",rt=T?.options[T?.selectedIndex]?.text||""}if(tt||q.push("\u0627\u0644\u0645\u0648\u0642\u0639"),et||q.push("\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"),q.length>0){at("error","\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0632\u0627\u0645\u064A\u0629 \u0646\u0627\u0642\u0635\u0629","\u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u0643\u0645\u0627\u0644: "+q.join("\u060C ")),k.disabled=!1,k.innerHTML=A,q.forEach(x=>{let T="";if(x.includes("\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A")?T="violation-employee-code":x.includes("\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641")?T="violation-person-name":x.includes("\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644")?T="violation-contractor-select":x.includes("\u062A\u0627\u0631\u064A\u062E")?T="violation-date":x.includes("\u0648\u0642\u062A")?T="violation-time":x.includes("\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629")?T="violation-type":x.includes("\u0627\u0644\u0634\u062F\u0629")?T="violation-severity":x.includes("\u0627\u0644\u062D\u0627\u0644\u0629")?T="violation-status":x.includes("\u0627\u0644\u0645\u0648\u0642\u0639")?T=b==="employee"?"violation-employee-location":"violation-contractor-location":x.includes("\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629")&&(T=b==="employee"?"violation-employee-place":"violation-contractor-place"),T){const K=document.getElementById(T);K&&(K.classList.add("border-red-500","ring-2","ring-red-300"),K.scrollIntoView({behavior:"smooth",block:"center"}),setTimeout(()=>{K.classList.remove("border-red-500","ring-2","ring-red-300")},3e3))}});return}let pt=t?.photo||"";const Tt=document.getElementById("violation-photo-input");if(Tt?.files.length>0){const x=Tt.files[0];if(x.size>2*1024*1024){at("error","\u0627\u0644\u0635\u0648\u0631\u0629 \u0643\u0628\u064A\u0631\u0629 \u062C\u062F\u0627\u064B","\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 \u0644\u0644\u062D\u062C\u0645 2MB. \u0627\u062E\u062A\u0631 \u0635\u0648\u0631\u0629 \u0623\u0635\u063A\u0631."),k.disabled=!1,k.innerHTML=A;return}try{pt=await Violations.convertImageToBase64(x)}catch(T){AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629:",T)}}wt();const Ut=X?.selectedOptions?.[0]?.getAttribute("data-type-id")||"",Lt=I&&E?new Date(`${I}T${E}`).toISOString():new Date().toISOString(),H={id:t?.id||Utils.generateId("VIOLATION"),isoCode:t?.isoCode||generateISOCode("VIOL",AppState.appData.violations||[]),personType:b,employeeId:b==="employee"?t?.employeeId||Utils.generateId("EMP"):"",employeeName:b==="employee"?nt:"",employeeCode:b==="employee"&&document.getElementById("violation-employee-code")?.value.trim()||"",employeeNumber:b==="employee"&&document.getElementById("violation-employee-code")?.value.trim()||"",employeePosition:b==="employee"&&document.getElementById("violation-employee-position")?.value.trim()||"",employeeDepartment:b==="employee"&&document.getElementById("violation-employee-department")?.value.trim()||"",contractorId:b==="contractor"?$t:"",contractorName:b==="contractor"?nt:"",contractorWorker:b==="contractor"&&document.getElementById("violation-contractor-worker")?.value.trim()||"",contractorPosition:b==="contractor"&&document.getElementById("violation-contractor-position")?.value.trim()||"",contractorDepartment:b==="contractor"&&document.getElementById("violation-contractor-department")?.value.trim()||"",violationTypeId:Ut,violationType:M,fineAmount:this.parseFineAmount(yt),violationDate:Lt,violationTime:E,violationLocation:st&&st!=="-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 --"?st:tt,violationLocationId:tt?String(tt).trim():null,violationPlace:rt&&rt!=="-- \u0627\u062E\u062A\u0631 \u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 --"?rt:et,violationPlaceId:et?String(et).trim():null,violationDetails:Y,severity:j,actionTaken:Ct,status:z,photo:pt,createdAt:t?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()},_t={personType:b,violationDate:Lt,employeeCode:H.employeeCode,employeeNumber:H.employeeNumber,contractorName:H.contractorName,contractorWorker:H.contractorWorker},Mt=this.countPriorViolationsSamePersonMonth(_t,a&&t?.id?t.id:null);H.violationSequenceInMonth=Mt+1;try{const x=await this.checkViolationApprovalGate(H,{isEdit:a});if(x&&x.requiresApproval){let T=pt;if(T&&typeof T=="string"&&T.startsWith("data:"))try{k.innerHTML='<i class="fas fa-cloud-upload-alt fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629...';const N=await GoogleIntegration.uploadFileToDrive?.(T,`violation_${H.id}_${Date.now()}.jpg`,"image/jpeg","Violations");N&&N.success?T=N.directLink||N.shareableLink||"":(T="",at("warning","\u062A\u0639\u0630\u0651\u0631 \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629","\u0633\u064A\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0628\u062F\u0648\u0646 \u0627\u0644\u0635\u0648\u0631\u0629. \u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u062A\u0635\u0627\u0644 \u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A \u0623\u0648 \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649 \u0644\u0627\u062D\u0642\u0627\u064B.")),k.innerHTML=A,k.disabled=!0,k.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...'}catch(N){AppState.debugMode&&Utils.safeWarn("Drive upload failed in approval path:",N),T=""}const K={...H,photo:T},V=await this.submitViolationForApproval(K,{isEdit:a,originalId:t?.id});if(k.disabled=!1,k.innerHTML=A,V&&V.success){this._invalidateViolationApprovalRequestsCache(),g.remove(),Notification.success(V.message||"\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0644\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0628\u0646\u062C\u0627\u062D. \u0633\u062A\u0638\u0647\u0631 \u0628\u0639\u062F \u0627\u0639\u062A\u0645\u0627\u062F\u0647\u0627.");try{document.dispatchEvent(new CustomEvent("violation-approval-request-created",{detail:V.data||{}}))}catch{}return}else{const N=V&&V.message||"\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F. \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.";at("error","\u062A\u0639\u0630\u0651\u0631 \u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F",N);return}}}catch(x){AppState.debugMode&&Utils.safeWarn("approvalGate error (continuing with direct save):",x)}if(AppState.appData.violations||(AppState.appData.violations=[]),a&&t?.id){const x=AppState.appData.violations.findIndex(T=>T.id===t.id);if(x!==-1)AppState.appData.violations[x]={...AppState.appData.violations[x],...H,id:t.id,isoCode:t.isoCode||H.isoCode,createdAt:t.createdAt||H.createdAt,updatedAt:new Date().toISOString()};else throw new Error("\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0633\u062C\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0627\u0644\u0623\u0635\u0644\u064A \u0644\u0644\u062A\u0639\u062F\u064A\u0644. \u0623\u0639\u062F \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0641\u062D\u0629 \u062B\u0645 \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.")}else AppState.appData.violations.push(H);typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),g.remove(),Notification.success(`\u062A\u0645 ${a?"\u062A\u062D\u062F\u064A\u062B":"\u062A\u0633\u062C\u064A\u0644"} \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0628\u0646\u062C\u0627\u062D \u0648\u062C\u0627\u0631\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629...`);try{this.updateAllViolationsStats()}catch{}try{typeof Dashboard<"u"&&(typeof Dashboard.updateStats=="function"&&Dashboard.updateStats(),typeof Dashboard.updateReportsStatistics=="function"&&Dashboard.updateReportsStatistics())}catch{}try{document.dispatchEvent(new CustomEvent("data-saved",{detail:{module:"violations",action:a?"\u062A\u062D\u062F\u064A\u062B":"\u0625\u0636\u0627\u0641\u0629",data:H}}))}catch{}try{typeof Violations<"u"&&typeof Violations.refreshViolationsView=="function"?Violations.refreshViolationsView():typeof Violations<"u"&&Violations.load&&Violations.load()}catch{}(async x=>{let T=x,K=!1;if(x&&x.startsWith("data:"))try{const V=await GoogleIntegration.uploadFileToDrive?.(x,`violation_${H.id}_${Date.now()}.jpg`,"image/jpeg","Violations");V?.success&&(T=V.directLink||V.shareableLink||x,K=!0)}catch(V){AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",V)}if(K){const V=AppState.appData.violations||[],N=V.findIndex(vt=>vt.id===H.id);N!==-1&&(V[N].photo=T,H.photo=T,typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),typeof Violations<"u"&&Violations.load&&Violations.load())}try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendRequest){const V=Object.assign({},H,{photo:T});let N;if(a?N=await GoogleIntegration.sendRequest({action:"updateViolation",data:{violationId:H.id,updateData:V}}):N=await GoogleIntegration.sendRequest({action:"addViolation",data:V}),N&&N.success===!0){try{localStorage.setItem("violations_last_sync",String(Date.now()))}catch{}AppState.debugMode&&Utils.safeLog("\u2705 \u062D\u0641\u0638 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645 \u0628\u0646\u062C\u0627\u062D")}else{AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645:",N&&N.message);try{typeof DataManager<"u"&&DataManager.addToPendingSync&&DataManager.addToPendingSync("Violations",AppState.appData.violations)}catch{}}}}catch(V){AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",V);try{typeof DataManager<"u"&&DataManager.addToPendingSync&&DataManager.addToPendingSync("Violations",AppState.appData.violations)}catch{}}})(pt).catch(x=>{Utils.safeError("\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u062A\u0648\u0642\u0639 \u0641\u064A \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062E\u0644\u0641\u064A\u0629 \u0644\u0644\u0645\u062E\u0627\u0644\u0641\u0629:",x)})}catch(b){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629:",b),at("error","\u062D\u062F\u062B \u062E\u0637\u0623",b&&(b.message||b.toString())||"\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"),k.disabled=!1,k.innerHTML=A}};ut.addEventListener("submit",kt,{once:!1});const Dt=Z.cloneNode(!0);Z.parentNode.replaceChild(Dt,Z);const gt=g.querySelector("#violation-submit-btn")||g.querySelector('button[type="submit"]');gt&&gt.addEventListener("click",y=>{y.preventDefault(),y.stopPropagation(),!gt.disabled&&kt(y)}),g.addEventListener("click",y=>{y.target===g&&g.remove()});const At=y=>{y.key==="Escape"&&document.body.contains(g)&&(g.remove(),document.removeEventListener("keydown",At))};document.addEventListener("keydown",At)},getSiteOptions(){try{return typeof Permissions<"u"&&Permissions.formSettingsState&&Permissions.formSettingsState.sites?Permissions.formSettingsState.sites.map(e=>({id:e.id,name:e.name})):Array.isArray(AppState.appData?.observationSites)&&AppState.appData.observationSites.length>0?AppState.appData.observationSites.map(e=>({id:e.id||e.siteId||Utils.generateId("SITE"),name:e.name||e.title||e.label||"\u0645\u0648\u0642\u0639 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F"})):typeof DailyObservations<"u"&&Array.isArray(DailyObservations.DEFAULT_SITES)?DailyObservations.DEFAULT_SITES.map((e,t)=>({id:e.id||e.siteId||Utils.generateId("SITE"),name:e.name||e.title||e.label||`\u0645\u0648\u0642\u0639 ${t+1}`})):[]}catch(e){return Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0648\u0627\u0642\u0639:",e),[]}},refreshSiteDropdowns(){try{var e=this.getSiteOptions(),t=typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML:function(o){return String(o??"")},i='<option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0635\u0646\u0639</option>'+(e||[]).map(function(o){return'<option value="'+t(o.id)+'">'+t(o.name)+"</option>"}).join(""),a=document.getElementById("blacklist-factory");if(a&&a.tagName==="SELECT"){var n=a.value;a.innerHTML=i,n&&(a.value=n)}}catch(o){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F Violations.refreshSiteDropdowns:",o)}},getPlaceOptions(e){try{if(!e)return[];if(!this.getSiteOptions().find(a=>a.id===e))return[];if(typeof Permissions<"u"&&Permissions.formSettingsState&&Permissions.formSettingsState.sites){const a=Permissions.formSettingsState.sites.find(n=>n.id===e);if(a&&Array.isArray(a.places))return a.places.map(n=>({id:n.id||n.placeId||Utils.generateId("PLACE"),name:n.name||n.placeName||"\u0645\u0643\u0627\u0646 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}))}if(Array.isArray(AppState.appData?.observationSites)){const a=AppState.appData.observationSites.find(n=>n.id===e||n.siteId===e||n.name===e);if(a)return(Array.isArray(a.places)?a.places:Array.isArray(a.locations)?a.locations:Array.isArray(a.children)?a.children:Array.isArray(a.areas)?a.areas:[]).map((o,r)=>({id:o.id||o.placeId||o.value||Utils.generateId("PLACE"),name:o.name||o.placeName||o.title||o.label||o.locationName||`\u0645\u0643\u0627\u0646 ${r+1}`}))}return[]}catch(t){return Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0623\u0645\u0627\u0643\u0646:",t),[]}},async loadLocationOptions(e="employee"){try{typeof Permissions<"u"&&typeof Permissions.ensureFormSettingsState=="function"&&await Permissions.ensureFormSettingsState();const t=this.getSiteOptions(),i=e==="employee"?"violation-employee-location":"violation-contractor-location",a=document.getElementById(i);if(!a)return;a.innerHTML='<option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 --</option>',t&&t.length>0&&t.forEach(n=>{const o=document.createElement("option");o.value=n.id,o.textContent=n.name,a.appendChild(o)})}catch(t){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u0627\u0642\u0639:",t)}},loadPlaceOptions(e,t="",i="employee"){try{const a=i==="employee"?"violation-employee-place":"violation-contractor-place",n=document.getElementById(a);if(!n||(n.innerHTML='<option value="">-- \u0627\u062E\u062A\u0631 \u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 --</option>',!e))return;const o=this.getPlaceOptions(e);o&&o.length>0&&o.forEach(r=>{const l=document.createElement("option");l.value=r.id,l.textContent=r.name,t&&(r.id===t||r.name===t)&&(l.selected=!0),n.appendChild(l)})}catch(a){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0645\u0627\u0643\u0646:",a)}},async convertImageToBase64(e){return new Promise((t,i)=>{const a=new FileReader;a.onload=()=>t(a.result),a.onerror=i,a.readAsDataURL(e)})},async viewViolation(e){const t=AppState.appData?.violations?.find(r=>r.id===e);if(!t){typeof Notification<"u"&&Notification.error("\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const i=this.normalizeViolationRecord(t)||t;if(!this.isViolationVisibleToCurrentUser(i)){typeof Notification<"u"&&Notification.error("\u0639\u0630\u0631\u0627\u064B\u060C \u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0639\u0631\u0636 \u0645\u062E\u0627\u0644\u0641\u0629 \u062A\u0627\u0628\u0639\u0629 \u0644\u0625\u062F\u0627\u0631\u0629 \u0623\u062E\u0631\u0649");return}const a=String(i.severity||"").trim(),n=String(i.status||"").trim(),o=document.createElement("div");o.className="modal-overlay",o.innerHTML=`
             <div class="modal-content" style="max-width: 750px; border-radius: 16px; overflow: hidden;">
                 <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 20px 24px;">
                     <h2 class="modal-title" style="color: white; display: flex; align-items: center; gap: 12px; font-size: 1.3rem;">
                         <i class="fas fa-exclamation-triangle"></i>
-                        تفاصيل المخالفة
+                        \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="color: white; background: rgba(255,255,255,0.2); border-radius: 8px; width: 36px; height: 36px;">
                         <i class="fas fa-times"></i>
@@ -5954,309 +1343,186 @@ const Violations = {
                 </div>
                 <div class="modal-body" style="padding: 24px;">
                     <div class="space-y-4">
-                        <!-- معلومات المخالف (نفس التصميم للموظفين والمقاولين) -->
+                        <!-- \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641 (\u0646\u0641\u0633 \u0627\u0644\u062A\u0635\u0645\u064A\u0645 \u0644\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646) -->
                         <div style="background: #fef2f2; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
                             <h3 style="font-weight: 600; color: #991b1b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-user"></i> معلومات المخالف
+                                <i class="fas fa-user"></i> \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641
                             </h3>
                             <div class="grid grid-cols-2 gap-4">
-                                ${(violation.contractorName || violation.personType === 'contractor') ? `
-                                <!-- مقاول: اسم المخالف (العامل) + الوظيفة + اسم المقاول + الإدارة -->
+                                ${i.contractorName||i.personType==="contractor"?`
+                                <!-- \u0645\u0642\u0627\u0648\u0644: \u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0627\u0644\u0641 (\u0627\u0644\u0639\u0627\u0645\u0644) + \u0627\u0644\u0648\u0638\u064A\u0641\u0629 + \u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 + \u0627\u0644\u0625\u062F\u0627\u0631\u0629 -->
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">اسم المخالف:</label>
-                                    <p class="text-gray-800 font-medium">${Utils.escapeHTML(violation.contractorWorker || violation.employeeName || violation.contractorName || '-')}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0627\u0644\u0641:</label>
+                                    <p class="text-gray-800 font-medium">${Utils.escapeHTML(i.contractorWorker||i.employeeName||i.contractorName||"-")}</p>
                                 </div>
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">الوظيفة:</label>
-                                    <p class="text-gray-800">${Utils.escapeHTML(violation.contractorPosition || '-')}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0648\u0638\u064A\u0641\u0629:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.contractorPosition||"-")}</p>
                                 </div>
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">اسم المقاول:</label>
-                                    <p class="text-gray-800 font-medium">${Utils.escapeHTML(violation.contractorName || '-')}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644:</label>
+                                    <p class="text-gray-800 font-medium">${Utils.escapeHTML(i.contractorName||"-")}</p>
                                 </div>
-                                ${violation.contractorDepartment ? `
+                                ${i.contractorDepartment?`
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">الإدارة:</label>
-                                    <p class="text-gray-800">${Utils.escapeHTML(violation.contractorDepartment || '-')}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0625\u062F\u0627\u0631\u0629:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.contractorDepartment||"-")}</p>
                                 </div>
-                                ` : ''}
-                                ` : `
-                                <!-- موظف: اسم المخالف + الكود الوظيفي + الوظيفة + الإدارة -->
+                                `:""}
+                                `:`
+                                <!-- \u0645\u0648\u0638\u0641: \u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0627\u0644\u0641 + \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A + \u0627\u0644\u0648\u0638\u064A\u0641\u0629 + \u0627\u0644\u0625\u062F\u0627\u0631\u0629 -->
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">اسم المخالف:</label>
-                                    <p class="text-gray-800 font-medium">${Utils.escapeHTML(violation.employeeName || '-')}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0627\u0644\u0641:</label>
+                                    <p class="text-gray-800 font-medium">${Utils.escapeHTML(i.employeeName||"-")}</p>
                                 </div>
-                                ${violation.employeeCode ? `
+                                ${i.employeeCode?`
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">الكود الوظيفي:</label>
-                                    <p class="text-gray-800">${Utils.escapeHTML(violation.employeeCode || violation.employeeNumber || '-')}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.employeeCode||i.employeeNumber||"-")}</p>
                                 </div>
-                                ` : ''}
-                                ${violation.employeePosition ? `
+                                `:""}
+                                ${i.employeePosition?`
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">الوظيفة:</label>
-                                    <p class="text-gray-800">${Utils.escapeHTML(violation.employeePosition || '-')}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0648\u0638\u064A\u0641\u0629:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.employeePosition||"-")}</p>
                                 </div>
-                                ` : ''}
-                                ${violation.employeeDepartment ? `
+                                `:""}
+                                ${i.employeeDepartment?`
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">الإدارة:</label>
-                                    <p class="text-gray-800">${Utils.escapeHTML(violation.employeeDepartment || '-')}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0625\u062F\u0627\u0631\u0629:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.employeeDepartment||"-")}</p>
                                 </div>
-                                ` : ''}
+                                `:""}
                                 `}
                             </div>
                         </div>
 
-                        <!-- تفاصيل المخالفة -->
+                        <!-- \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 -->
                         <div style="background: #fff7ed; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
                             <h3 style="font-weight: 600; color: #c2410c; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-info-circle"></i> تفاصيل المخالفة
+                                <i class="fas fa-info-circle"></i> \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629
                             </h3>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">نوع المخالفة:</label>
-                                    <p class="text-gray-800">${Utils.escapeHTML(violation.violationType || '-')}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.violationType||"-")}</p>
                                 </div>
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">تاريخ المخالفة:</label>
-                                    <p class="text-gray-800">${violation.violationDate ? Utils.formatDate(violation.violationDate) : '-'}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629:</label>
+                                    <p class="text-gray-800">${i.violationDate?Utils.formatDate(i.violationDate):"-"}</p>
                                 </div>
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">الموقع:</label>
-                                    <p class="text-gray-800">${Utils.escapeHTML(violation.violationLocation || '-')}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0645\u0648\u0642\u0639:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.violationLocation||"-")}</p>
                                 </div>
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">المكان:</label>
-                                    <p class="text-gray-800">${Utils.escapeHTML(violation.violationPlace || '-')}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0645\u0643\u0627\u0646:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.violationPlace||"-")}</p>
                                 </div>
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">الشدة:</label>
-                                    <span style="display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 0.85rem; font-weight: 600; background: ${violation.severity === 'عالية' ? '#fef2f2' : violation.severity === 'متوسطة' ? '#fffbeb' : '#eff6ff'}; color: ${violation.severity === 'عالية' ? '#dc2626' : violation.severity === 'متوسطة' ? '#d97706' : '#2563eb'}; border: 1px solid ${violation.severity === 'عالية' ? '#fecaca' : violation.severity === 'متوسطة' ? '#fde68a' : '#bfdbfe'};">
-                                        ${violation.severity || '-'}
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0634\u062F\u0629:</label>
+                                    <span style="display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 0.85rem; font-weight: 600; background: ${i.severity==="\u0639\u0627\u0644\u064A\u0629"?"#fef2f2":i.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"#fffbeb":"#eff6ff"}; color: ${i.severity==="\u0639\u0627\u0644\u064A\u0629"?"#dc2626":i.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"#d97706":"#2563eb"}; border: 1px solid ${i.severity==="\u0639\u0627\u0644\u064A\u0629"?"#fecaca":i.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"#fde68a":"#bfdbfe"};">
+                                        ${i.severity||"-"}
                                     </span>
                                 </div>
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">الحالة:</label>
-                                    <span style="display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 0.85rem; font-weight: 600; background: ${violation.status === 'محلول' ? '#ecfdf5' : '#fef3c7'}; color: ${violation.status === 'محلول' ? '#059669' : '#d97706'}; border: 1px solid ${violation.status === 'محلول' ? '#a7f3d0' : '#fde68a'};">
-                                        ${violation.status || '-'}
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u062D\u0627\u0644\u0629:</label>
+                                    <span style="display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 0.85rem; font-weight: 600; background: ${i.status==="\u0645\u062D\u0644\u0648\u0644"?"#ecfdf5":"#fef3c7"}; color: ${i.status==="\u0645\u062D\u0644\u0648\u0644"?"#059669":"#d97706"}; border: 1px solid ${i.status==="\u0645\u062D\u0644\u0648\u0644"?"#a7f3d0":"#fde68a"};">
+                                        ${i.status||"-"}
                                     </span>
                                 </div>
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">القيمة المالية:</label>
-                                    <p class="text-gray-800 font-semibold">${this.formatFineAmount(Number(this.getEffectiveFineAmount(violation)))}</p>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629:</label>
+                                    <p class="text-gray-800 font-semibold">${this.formatFineAmount(Number(this.getEffectiveFineAmount(i)))}</p>
                                 </div>
                             </div>
-                            ${violation.violationDetails ? `
+                            ${i.violationDetails?`
                             <div class="mt-4">
-                                <label class="text-sm font-semibold text-gray-600">تفاصيل المخالفة:</label>
-                                <p class="text-gray-800 mt-1 p-3 bg-white rounded-lg border">${Utils.escapeHTML(violation.violationDetails)}</p>
+                                <label class="text-sm font-semibold text-gray-600">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629:</label>
+                                <p class="text-gray-800 mt-1 p-3 bg-white rounded-lg border">${Utils.escapeHTML(i.violationDetails)}</p>
                             </div>
-                            ` : ''}
+                            `:""}
                         </div>
 
-                        <!-- الإجراء المتخذ -->
-                        ${violation.actionTaken ? `
+                        <!-- \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630 -->
+                        ${i.actionTaken?`
                         <div style="background: #f0fdf4; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
                             <h3 style="font-weight: 600; color: #166534; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-tasks"></i> الإجراء المتخذ
+                                <i class="fas fa-tasks"></i> \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630
                             </h3>
-                            <p class="text-gray-800 p-3 bg-white rounded-lg border">${Utils.escapeHTML(violation.actionTaken)}</p>
+                            <p class="text-gray-800 p-3 bg-white rounded-lg border">${Utils.escapeHTML(i.actionTaken)}</p>
                         </div>
-                        ` : ''}
+                        `:""}
 
-                        <!-- صورة المخالفة -->
-                        ${(() => {
-                            const photoUrl = this.processPhoto(violation.photo);
-                            if (!photoUrl) return '';
-                            const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
-                                ? Utils.resolveDriveAwareImgDisplay(photoUrl)
-                                : { canonical: photoUrl, displaySrc: photoUrl, needsProxy: false, proxyFileId: '' };
-                            const proxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
-                            return `
+                        <!-- \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 -->
+                        ${(()=>{const r=this.processPhoto(i.photo);if(!r)return"";const l=typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(r):{canonical:r,displaySrc:r,needsProxy:!1,proxyFileId:""},c=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(l):"";return`
                         <div style="background: #f8fafc; border-radius: 12px; padding: 16px;">
                             <h3 style="font-weight: 600; color: #475569; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-image"></i> صورة المخالفة
+                                <i class="fas fa-image"></i> \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629
                             </h3>
-                            <img src="${Utils.escapeHTML(disp.displaySrc)}" alt="صورة المخالفة"${proxyAttr} class="violation-detail-photo w-full max-w-md h-64 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
-                                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';">
+                            <img src="${Utils.escapeHTML(l.displaySrc)}" alt="\u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"${c} class="violation-detail-photo w-full max-w-md h-64 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
+                                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631\u0629%3C/text%3E%3C/svg%3E';">
                         </div>
-                        `;})()}
+                        `})()}
 
                         <div class="violation-view-quick-edit" style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 16px; margin-top: 8px; background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);">
                             <h4 style="font-weight: 700; color: #334155; margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; font-size: 1rem;">
                                 <i class="fas fa-pen-to-square text-indigo-600"></i>
-                                تعديل من هذه الشاشة
+                                \u062A\u0639\u062F\u064A\u0644 \u0645\u0646 \u0647\u0630\u0647 \u0627\u0644\u0634\u0627\u0634\u0629
                             </h4>
-                            <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 12px 0;">يمكنك تحديث الشدة والحالة والنصوص أدناه ثم الحفظ دون فتح النموذج الكامل.</p>
+                            <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 12px 0;">\u064A\u0645\u0643\u0646\u0643 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0634\u062F\u0629 \u0648\u0627\u0644\u062D\u0627\u0644\u0629 \u0648\u0627\u0644\u0646\u0635\u0648\u0635 \u0623\u062F\u0646\u0627\u0647 \u062B\u0645 \u0627\u0644\u062D\u0641\u0638 \u062F\u0648\u0646 \u0641\u062A\u062D \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0643\u0627\u0645\u0644.</p>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                 <div>
-                                    <label for="violation-view-q-severity" class="block text-sm font-semibold text-gray-700 mb-1">الشدة</label>
+                                    <label for="violation-view-q-severity" class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u0634\u062F\u0629</label>
                                     <select id="violation-view-q-severity" class="form-input" style="width:100%;">
-                                        <option value="عالية" ${qSev === 'عالية' ? 'selected' : ''}>عالية</option>
-                                        <option value="متوسطة" ${qSev === 'متوسطة' ? 'selected' : ''}>متوسطة</option>
-                                        <option value="منخضة" ${qSev === 'منخضة' || qSev === 'منخفضة' ? 'selected' : ''}>منخضة</option>
+                                        <option value="\u0639\u0627\u0644\u064A\u0629" ${a==="\u0639\u0627\u0644\u064A\u0629"?"selected":""}>\u0639\u0627\u0644\u064A\u0629</option>
+                                        <option value="\u0645\u062A\u0648\u0633\u0637\u0629" ${a==="\u0645\u062A\u0648\u0633\u0637\u0629"?"selected":""}>\u0645\u062A\u0648\u0633\u0637\u0629</option>
+                                        <option value="\u0645\u0646\u062E\u0636\u0629" ${a==="\u0645\u0646\u062E\u0636\u0629"||a==="\u0645\u0646\u062E\u0641\u0636\u0629"?"selected":""}>\u0645\u0646\u062E\u0636\u0629</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="violation-view-q-status" class="block text-sm font-semibold text-gray-700 mb-1">الحالة</label>
+                                    <label for="violation-view-q-status" class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u062D\u0627\u0644\u0629</label>
                                     <select id="violation-view-q-status" class="form-input" style="width:100%;">
-                                        <option value="قيد المراجعة" ${qStat === 'قيد المراجعة' ? 'selected' : ''}>قيد المراجعة</option>
-                                        <option value="محلول" ${qStat === 'محلول' ? 'selected' : ''}>محلول</option>
-                                        <option value="غير محلول" ${qStat === 'غير محلول' ? 'selected' : ''}>غير محلول</option>
+                                        <option value="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629" ${n==="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"?"selected":""}>\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629</option>
+                                        <option value="\u0645\u062D\u0644\u0648\u0644" ${n==="\u0645\u062D\u0644\u0648\u0644"?"selected":""}>\u0645\u062D\u0644\u0648\u0644</option>
+                                        <option value="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644" ${n==="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644"?"selected":""}>\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label for="violation-view-q-details" class="block text-sm font-semibold text-gray-700 mb-1">تفاصيل المخالفة</label>
-                                <textarea id="violation-view-q-details" class="form-input" rows="3" style="width:100%; resize: vertical;">${Utils.escapeHTML(violation.violationDetails || '')}</textarea>
+                                <label for="violation-view-q-details" class="block text-sm font-semibold text-gray-700 mb-1">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</label>
+                                <textarea id="violation-view-q-details" class="form-input" rows="3" style="width:100%; resize: vertical;">${Utils.escapeHTML(i.violationDetails||"")}</textarea>
                             </div>
                             <div class="mb-3">
-                                <label for="violation-view-q-action" class="block text-sm font-semibold text-gray-700 mb-1">الإجراء المتخذ</label>
-                                <textarea id="violation-view-q-action" class="form-input" rows="3" style="width:100%; resize: vertical;">${Utils.escapeHTML(violation.actionTaken || '')}</textarea>
+                                <label for="violation-view-q-action" class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630</label>
+                                <textarea id="violation-view-q-action" class="form-input" rows="3" style="width:100%; resize: vertical;">${Utils.escapeHTML(i.actionTaken||"")}</textarea>
                             </div>
                             <button type="button" id="violation-view-quick-save" class="btn-primary" style="width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 8px;">
                                 <i class="fas fa-save"></i>
-                                حفظ التعديلات السريعة
+                                \u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A \u0627\u0644\u0633\u0631\u064A\u0639\u0629
                             </button>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer violation-view-actions-footer" style="background: #f8fafc; padding: 16px 24px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 18px; border-radius: 10px;">إغلاق</button>
-                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('violations') : ''}
-                    <button type="button" class="btn-primary" onclick='Violations.printViolationProfessional(${this._escapeIdForHandler(violation.id)})' style="background: linear-gradient(135deg, #0f766e, #0d9488); padding: 10px 18px; border-radius: 10px;">
-                        <i class="fas fa-print ml-2"></i>طباعة منسّقة
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 18px; border-radius: 10px;">\u0625\u063A\u0644\u0627\u0642</button>
+                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("violations"):""}
+                    <button type="button" class="btn-primary" onclick='Violations.printViolationProfessional(${this._escapeIdForHandler(i.id)})' style="background: linear-gradient(135deg, #0f766e, #0d9488); padding: 10px 18px; border-radius: 10px;">
+                        <i class="fas fa-print ml-2"></i>\u0637\u0628\u0627\u0639\u0629 \u0645\u0646\u0633\u0651\u0642\u0629
                     </button>
-                    <button type="button" class="btn-primary" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(violation.id)}, this)' style="background: linear-gradient(135deg, #10b981, #059669); padding: 10px 18px; border-radius: 10px;">
-                        <i class="fas fa-file-download ml-2"></i>تحميل PDF مباشر
+                    <button type="button" class="btn-primary" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(i.id)}, this)' style="background: linear-gradient(135deg, #10b981, #059669); padding: 10px 18px; border-radius: 10px;">
+                        <i class="fas fa-file-download ml-2"></i>\u062A\u062D\u0645\u064A\u0644 PDF \u0645\u0628\u0627\u0634\u0631
                     </button>
-                    <button type="button" class="btn-primary" onclick='Violations.showViolationForm(${this._escapeIdForHandler(violation.id)}); this.closest(".modal-overlay").remove();' style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); padding: 10px 18px; border-radius: 10px;">
-                        <i class="fas fa-sliders-h ml-2"></i>تعديل كامل (جميع الحقول)
+                    <button type="button" class="btn-primary" onclick='Violations.showViolationForm(${this._escapeIdForHandler(i.id)}); this.closest(".modal-overlay").remove();' style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); padding: 10px 18px; border-radius: 10px;">
+                        <i class="fas fa-sliders-h ml-2"></i>\u062A\u0639\u062F\u064A\u0644 \u0643\u0627\u0645\u0644 (\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0644)
                     </button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        if (typeof EmailDispatch !== 'undefined') {
-            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'violations', record: violation, recordId: violation.id });
-        }
-        modal.querySelector('#violation-view-quick-save')?.addEventListener('click', async () => {
-            await this.saveViolationQuickEditsFromView(violation.id, modal);
-        });
-        if (typeof Utils.hydrateDriveProxyImages === 'function') {
-            Utils.hydrateDriveProxyImages(modal, {
-                onFetchFail: (img) => {
-                    try {
-                        img.onerror = null;
-                        img.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';
-                    } catch (e) { /* ignore */ }
-                }
-            });
-        }
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async saveViolationQuickEditsFromView(id, viewModal) {
-        const severity = viewModal.querySelector('#violation-view-q-severity')?.value?.trim() || '';
-        const status = viewModal.querySelector('#violation-view-q-status')?.value?.trim() || '';
-        const violationDetails = viewModal.querySelector('#violation-view-q-details')?.value?.trim() || '';
-        const actionTaken = viewModal.querySelector('#violation-view-q-action')?.value?.trim() || '';
-        const saveBtn = viewModal.querySelector('#violation-view-quick-save');
-        if (!AppState.appData?.violations) {
-            Notification.error('لا توجد بيانات مخالفات.');
-            return;
-        }
-        const idx = AppState.appData.violations.findIndex(v => v.id === id);
-        if (idx === -1) {
-            Notification.error('تعذّر العثور على المخالفة.');
-            return;
-        }
-        const prevHtml = saveBtn?.innerHTML;
-        if (saveBtn) {
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
-        }
-        try {
-            AppState.appData.violations[idx] = {
-                ...AppState.appData.violations[idx],
-                severity,
-                status,
-                violationDetails,
-                actionTaken,
-                updatedAt: new Date().toISOString()
-            };
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            }
-            let remoteOk = true;
-            try {
-                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-                    const saveRes = await GoogleIntegration.autoSave('Violations', AppState.appData.violations);
-                    if (saveRes && saveRes.success === false) remoteOk = false;
-                }
-            } catch (err) {
-                remoteOk = false;
-                if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ Google Sheets:', err);
-            }
-            if (!remoteOk) {
-                Notification.warning('تم الحفظ محلياً لكن فشل الحفظ في Google Sheets');
-            } else {
-                try { localStorage.setItem('violations_last_sync', String(Date.now())); } catch (eLs) { /* ignore */ }
-            }
-            Notification.success('تم حفظ التعديلات السريعة بنجاح');
-            viewModal.remove();
-            await this.viewViolation(id);
-            try {
-                const activeTab = document.querySelector('#violations-section .tabs-container .tab-btn.active')?.dataset?.tab || 'all';
-                const listEl = document.getElementById('violations-list');
-                if (listEl) {
-                    if (activeTab === 'all') listEl.innerHTML = this.renderViolationsList();
-                    else if (activeTab === 'employees') listEl.innerHTML = this.renderEmployeeViolationsList();
-                    else if (activeTab === 'contractors') listEl.innerHTML = this.renderContractorViolationsList();
-                }
-                if (activeTab === 'all') {
-                    const statsEl = document.getElementById('violations-stats-cards');
-                    if (statsEl) statsEl.outerHTML = this.renderAllViolationsStats();
-                }
-            } catch (re) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('تحديث قائمة المخالفات بعد الحفظ السريع:', re);
-            }
-        } catch (error) {
-            Utils.safeError('خطأ في الحفظ السريع للمخالفة:', error);
-            Notification.error('فشل الحفظ: ' + (error.message || String(error)));
-            if (saveBtn) {
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = prevHtml || '<i class="fas fa-save ml-2"></i> حفظ التعديلات السريعة';
-            }
-        }
-    },
-
-    _buildViolationReportTableHtml(violation) {
-        const v = this.normalizeViolationRecord(violation) || violation;
-        const esc = (value, fallback = '—') => Utils.escapeHTML(String(value == null || value === '' ? fallback : value));
-        const formatDateTime = (value) => {
-            if (!value) return '—';
-            if (typeof Utils.formatDateTime === 'function') {
-                const formatted = Utils.formatDateTime(value);
-                return formatted && formatted !== '-' ? formatted : '—';
-            }
-            const date = new Date(value);
-            if (Number.isNaN(date.getTime())) return String(value);
-            return date.toLocaleString('ar-EG-u-nu-latn', {
-                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-            });
-        };
-        const isContractor = v.personType === 'contractor' || !!v.contractorName;
-        const infoItem = (label, value, options = {}) => `
-            <div class="vr-info ${options.wide ? 'vr-info-wide' : ''}">
-                <span class="vr-label">${esc(label, '')}</span>
-                <strong class="vr-value ${options.accent || ''}">${esc(value)}</strong>
-            </div>`;
-        const photoUrl = this.processPhoto(v.photo);
-        return `
+        `,document.body.appendChild(o),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(o,{moduleKey:"violations",record:i,recordId:i.id}),o.querySelector("#violation-view-quick-save")?.addEventListener("click",async()=>{await this.saveViolationQuickEditsFromView(i.id,o)}),typeof Utils.hydrateDriveProxyImages=="function"&&Utils.hydrateDriveProxyImages(o,{onFetchFail:r=>{try{r.onerror=null,r.src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631\u0629%3C/text%3E%3C/svg%3E"}catch{}}}),o.addEventListener("click",r=>{r.target===o&&o.remove()})},async saveViolationQuickEditsFromView(e,t){const i=t.querySelector("#violation-view-q-severity")?.value?.trim()||"",a=t.querySelector("#violation-view-q-status")?.value?.trim()||"",n=t.querySelector("#violation-view-q-details")?.value?.trim()||"",o=t.querySelector("#violation-view-q-action")?.value?.trim()||"",r=t.querySelector("#violation-view-quick-save");if(!AppState.appData?.violations){Notification.error("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062E\u0627\u0644\u0641\u0627\u062A.");return}const l=AppState.appData.violations.findIndex(s=>s.id===e);if(l===-1){Notification.error("\u062A\u0639\u0630\u0651\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629.");return}const c=r?.innerHTML;r&&(r.disabled=!0,r.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');try{AppState.appData.violations[l]={...AppState.appData.violations[l],severity:i,status:a,violationDetails:n,actionTaken:o,updatedAt:new Date().toISOString()},typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save();let s=!0;try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.autoSave){const d=await GoogleIntegration.autoSave("Violations",AppState.appData.violations);d&&d.success===!1&&(s=!1)}}catch(d){s=!1,AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 Google Sheets:",d)}if(!s)Notification.warning("\u062A\u0645 \u0627\u0644\u062D\u0641\u0638 \u0645\u062D\u0644\u064A\u0627\u064B \u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0641\u064A Google Sheets");else try{localStorage.setItem("violations_last_sync",String(Date.now()))}catch{}Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A \u0627\u0644\u0633\u0631\u064A\u0639\u0629 \u0628\u0646\u062C\u0627\u062D"),t.remove(),await this.viewViolation(e);try{const d=document.querySelector("#violations-section .tabs-container .tab-btn.active")?.dataset?.tab||"all",p=document.getElementById("violations-list");if(p&&(d==="all"?p.innerHTML=this.renderViolationsList():d==="employees"?p.innerHTML=this.renderEmployeeViolationsList():d==="contractors"&&(p.innerHTML=this.renderContractorViolationsList())),d==="all"){const f=document.getElementById("violations-stats-cards");f&&(f.outerHTML=this.renderAllViolationsStats())}}catch(d){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u062A\u062D\u062F\u064A\u062B \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0628\u0639\u062F \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0633\u0631\u064A\u0639:",d)}}catch(s){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0633\u0631\u064A\u0639 \u0644\u0644\u0645\u062E\u0627\u0644\u0641\u0629:",s),Notification.error("\u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638: "+(s.message||String(s))),r&&(r.disabled=!1,r.innerHTML=c||'<i class="fas fa-save ml-2"></i> \u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A \u0627\u0644\u0633\u0631\u064A\u0639\u0629')}},_buildViolationReportTableHtml(e){const t=this.normalizeViolationRecord(e)||e,i=(l,c="\u2014")=>Utils.escapeHTML(String(l==null||l===""?c:l)),a=l=>{if(!l)return"\u2014";if(typeof Utils.formatDateTime=="function"){const s=Utils.formatDateTime(l);return s&&s!=="-"?s:"\u2014"}const c=new Date(l);return Number.isNaN(c.getTime())?String(l):c.toLocaleString("ar-EG-u-nu-latn",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"})},n=t.personType==="contractor"||!!t.contractorName,o=(l,c,s={})=>`
+            <div class="vr-info ${s.wide?"vr-info-wide":""}">
+                <span class="vr-label">${i(l,"")}</span>
+                <strong class="vr-value ${s.accent||""}">${i(c)}</strong>
+            </div>`,r=this.processPhoto(t.photo);return`
             <style>
                 .violation-report{--vr-navy:#102a43;--vr-red:#b91c1c;--vr-gold:#d97706;--vr-ink:#172033;direction:rtl;color:var(--vr-ink);font-family:'Cairo','Tahoma','Segoe UI',sans-serif;letter-spacing:0}
                 .violation-report *{box-sizing:border-box;letter-spacing:0}
@@ -6286,459 +1552,103 @@ const Violations = {
             </style>
             <div class="violation-report">
                 <div class="vr-banner">
-                    <div><div class="vr-banner-title">${isContractor ? 'تقرير مخالفة مقاول' : 'تقرير مخالفة موظف'}</div><div class="vr-banner-sub">سجل رسمي موثق بكامل بيانات المخالفة والإجراء المتخذ</div></div>
-                    <div class="vr-code"><small>رقم التقرير</small><strong>${esc(v.isoCode || v.id || '—')}</strong></div>
+                    <div><div class="vr-banner-title">${n?"\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0642\u0627\u0648\u0644":"\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0648\u0638\u0641"}</div><div class="vr-banner-sub">\u0633\u062C\u0644 \u0631\u0633\u0645\u064A \u0645\u0648\u062B\u0642 \u0628\u0643\u0627\u0645\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630</div></div>
+                    <div class="vr-code"><small>\u0631\u0642\u0645 \u0627\u0644\u062A\u0642\u0631\u064A\u0631</small><strong>${i(t.isoCode||t.id||"\u2014")}</strong></div>
                 </div>
 
                 <section class="vr-section">
-                    <div class="vr-section-title">${isContractor ? 'بيانات المقاول والمخالف' : 'بيانات الموظف المخالف'}</div>
+                    <div class="vr-section-title">${n?"\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0648\u0627\u0644\u0645\u062E\u0627\u0644\u0641":"\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641"}</div>
                     <div class="vr-grid">
-                        ${isContractor ? `
-                            ${infoItem('اسم المقاول', v.contractorName)}
-                            ${infoItem('معرف المقاول', v.contractorId)}
-                            ${infoItem('اسم العامل المخالف', v.contractorWorker || v.employeeName || v.contractorName)}
-                            ${infoItem('الوظيفة', v.contractorPosition)}
-                            ${infoItem('الإدارة / القسم', v.contractorDepartment)}
-                            ${infoItem('نوع السجل', 'مخالفة مقاول')}
-                        ` : `
-                            ${infoItem('اسم الموظف', v.employeeName)}
-                            ${infoItem('الكود الوظيفي', v.employeeCode || v.employeeNumber)}
-                            ${infoItem('الوظيفة', v.employeePosition)}
-                            ${infoItem('الإدارة / القسم', v.employeeDepartment)}
+                        ${n?`
+                            ${o("\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644",t.contractorName)}
+                            ${o("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0642\u0627\u0648\u0644",t.contractorId)}
+                            ${o("\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0645\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641",t.contractorWorker||t.employeeName||t.contractorName)}
+                            ${o("\u0627\u0644\u0648\u0638\u064A\u0641\u0629",t.contractorPosition)}
+                            ${o("\u0627\u0644\u0625\u062F\u0627\u0631\u0629 / \u0627\u0644\u0642\u0633\u0645",t.contractorDepartment)}
+                            ${o("\u0646\u0648\u0639 \u0627\u0644\u0633\u062C\u0644","\u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0642\u0627\u0648\u0644")}
+                        `:`
+                            ${o("\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641",t.employeeName)}
+                            ${o("\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A",t.employeeCode||t.employeeNumber)}
+                            ${o("\u0627\u0644\u0648\u0638\u064A\u0641\u0629",t.employeePosition)}
+                            ${o("\u0627\u0644\u0625\u062F\u0627\u0631\u0629 / \u0627\u0644\u0642\u0633\u0645",t.employeeDepartment)}
                         `}
                     </div>
                 </section>
 
                 <section class="vr-section">
-                    <div class="vr-section-title">بيانات المخالفة</div>
+                    <div class="vr-section-title">\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</div>
                     <div class="vr-grid">
-                        ${infoItem('نوع المخالفة', v.violationType)}
-                        ${infoItem('معرف نوع المخالفة', v.violationTypeId)}
-                        ${infoItem('تاريخ المخالفة', v.violationDate ? Utils.formatDate(v.violationDate) : '—')}
-                        ${infoItem('وقت المخالفة', v.violationTime)}
-                        ${infoItem('الموقع', v.violationLocation)}
-                        ${infoItem('معرف الموقع', v.violationLocationId)}
-                        ${infoItem('مكان المخالفة', v.violationPlace)}
-                        ${infoItem('معرف المكان', v.violationPlaceId)}
-                        ${infoItem('درجة الشدة', v.severity, { accent: 'vr-danger' })}
-                        ${infoItem('حالة المخالفة', v.status, { accent: v.status === 'محلول' ? 'vr-success' : 'vr-danger' })}
-                        ${infoItem('تسلسل المخالفة خلال الشهر', v.violationSequenceInMonth)}
-                        ${infoItem('القيمة المالية', this.formatFineAmount(Number(this.getEffectiveFineAmount(v))), { accent: 'vr-money' })}
-                        ${v.violationDetails ? infoItem('تفاصيل المخالفة', v.violationDetails, { wide: true }) : ''}
-                        ${v.actionTaken ? infoItem('الإجراء المتخذ', v.actionTaken, { wide: true }) : ''}
+                        ${o("\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.violationType)}
+                        ${o("\u0645\u0639\u0631\u0641 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.violationTypeId)}
+                        ${o("\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.violationDate?Utils.formatDate(t.violationDate):"\u2014")}
+                        ${o("\u0648\u0642\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.violationTime)}
+                        ${o("\u0627\u0644\u0645\u0648\u0642\u0639",t.violationLocation)}
+                        ${o("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0648\u0642\u0639",t.violationLocationId)}
+                        ${o("\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.violationPlace)}
+                        ${o("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u0627\u0646",t.violationPlaceId)}
+                        ${o("\u062F\u0631\u062C\u0629 \u0627\u0644\u0634\u062F\u0629",t.severity,{accent:"vr-danger"})}
+                        ${o("\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.status,{accent:t.status==="\u0645\u062D\u0644\u0648\u0644"?"vr-success":"vr-danger"})}
+                        ${o("\u062A\u0633\u0644\u0633\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u062E\u0644\u0627\u0644 \u0627\u0644\u0634\u0647\u0631",t.violationSequenceInMonth)}
+                        ${o("\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629",this.formatFineAmount(Number(this.getEffectiveFineAmount(t))),{accent:"vr-money"})}
+                        ${t.violationDetails?o("\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.violationDetails,{wide:!0}):""}
+                        ${t.actionTaken?o("\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630",t.actionTaken,{wide:!0}):""}
                     </div>
                 </section>
 
-                ${photoUrl ? `<section class="vr-section"><div class="vr-section-title">صورة المخالفة</div><div class="vr-photo"><img src="${esc(photoUrl, '')}" alt="صورة المخالفة" onerror="this.closest('.vr-section').style.display='none'"></div></section>` : ''}
+                ${r?`<section class="vr-section"><div class="vr-section-title">\u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</div><div class="vr-photo"><img src="${i(r,"")}" alt="\u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629" onerror="this.closest('.vr-section').style.display='none'"></div></section>`:""}
 
                 <div class="vr-signatures">
-                    <div class="vr-sign"><strong>ممثل المقاول / المخالف</strong>الاسم والتوقيع</div>
-                    <div class="vr-sign"><strong>مسؤول السلامة</strong>الاسم والتوقيع</div>
-                    <div class="vr-sign"><strong>اعتماد الإدارة</strong>الاسم والتوقيع</div>
+                    <div class="vr-sign"><strong>\u0645\u0645\u062B\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 / \u0627\u0644\u0645\u062E\u0627\u0644\u0641</strong>\u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u062A\u0648\u0642\u064A\u0639</div>
+                    <div class="vr-sign"><strong>\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629</strong>\u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u062A\u0648\u0642\u064A\u0639</div>
+                    <div class="vr-sign"><strong>\u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0625\u062F\u0627\u0631\u0629</strong>\u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u062A\u0648\u0642\u064A\u0639</div>
                 </div>
-                <div class="vr-footnote">تم إنشاء هذا التقرير إلكترونياً من مديول المخالفات - تاريخ الإصدار: ${esc(formatDateTime(new Date().toISOString()))}</div>
-            </div>`;
-    },
-
-    _generateViolationPrintDocumentHtml(violation, documentTitle) {
-        const v = this.normalizeViolationRecord(violation) || violation;
-        const inner = this._buildViolationReportTableHtml(v);
-        const formCode = v.isoCode || `VIOL-${v.id?.substring(0, 8) || 'UNKNOWN'}`;
-        if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function') {
-            return FormHeader.generatePDFHTML(
-                formCode,
-                documentTitle,
-                inner,
-                false,
-                false,
-                { version: '1.0', includeQRCode: false, compactPdfFooter: true },
-                v.createdAt,
-                v.updatedAt
-            );
-        }
-        const companyName = (typeof AppState !== 'undefined' && AppState.companySettings?.name)
-            ? Utils.escapeHTML(AppState.companySettings.name)
-            : '';
-        return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${Utils.escapeHTML(documentTitle)}</title>
+                <div class="vr-footnote">\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0647\u0630\u0627 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A\u0627\u064B \u0645\u0646 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A - \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631: ${i(a(new Date().toISOString()))}</div>
+            </div>`},_generateViolationPrintDocumentHtml(e,t){const i=this.normalizeViolationRecord(e)||e,a=this._buildViolationReportTableHtml(i),n=i.isoCode||`VIOL-${i.id?.substring(0,8)||"UNKNOWN"}`;if(typeof FormHeader<"u"&&typeof FormHeader.generatePDFHTML=="function")return FormHeader.generatePDFHTML(n,t,a,!1,!1,{version:"1.0",includeQRCode:!1,compactPdfFooter:!0},i.createdAt,i.updatedAt);const o=typeof AppState<"u"&&AppState.companySettings?.name?Utils.escapeHTML(AppState.companySettings.name):"";return`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${Utils.escapeHTML(t)}</title>
 <style>
 body{font-family:'Segoe UI',Tahoma,sans-serif;padding:24px;color:#111;} h1{font-size:1.25rem;margin:0 0 8px;} .co{color:#475569;font-size:0.9rem;margin-bottom:20px;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;}
 table{border-collapse:collapse;width:100%;} th,td{border:1px solid #e2e8f0;padding:10px 12px;text-align:right;font-size:0.95rem;} th{background:#f1f5f9;width:30%;color:#334155;}
 </style></head><body>
-<h1>${Utils.escapeHTML(documentTitle)}</h1>
-${companyName ? `<div class="co">${companyName}</div>` : ''}
-${inner}
-</body></html>`;
-    },
-
-    async _completeViolationReportPrint(htmlContent) {
-        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const printWindow = window.open(url, '_blank');
-        if (!printWindow) {
-            URL.revokeObjectURL(url);
-            throw new Error('popup_blocked');
-        }
-        await new Promise((resolve, reject) => {
-            printWindow.onload = () => {
-                try {
-                    const images = printWindow.document.querySelectorAll('img');
-                    let imagesLoaded = 0;
-                    const totalImages = images.length;
-                    let done = false;
-                    const finish = () => {
-                        if (done) return;
-                        done = true;
-                        setTimeout(() => {
-                            printWindow.print();
-                            setTimeout(() => URL.revokeObjectURL(url), 1000);
-                            resolve();
-                        }, 300);
-                    };
-                    if (totalImages === 0) {
-                        finish();
-                        return;
-                    }
-                    const checkAllImagesLoaded = () => {
-                        if (imagesLoaded >= totalImages) finish();
-                    };
-                    images.forEach(img => {
-                        if (img.complete) {
-                            imagesLoaded++;
-                            checkAllImagesLoaded();
-                        } else {
-                            img.onload = () => { imagesLoaded++; checkAllImagesLoaded(); };
-                            img.onerror = () => { imagesLoaded++; checkAllImagesLoaded(); };
-                        }
-                    });
-                    setTimeout(() => finish(), 3500);
-                } catch (e) {
-                    reject(e);
-                }
-            };
-        });
-    },
-
-    async printViolationProfessional(id) {
-        const violation = AppState.appData?.violations?.find(v => v.id === id);
-        if (!violation) {
-            Notification.error('المخالفة غير موجودة');
-            return;
-        }
-        try {
-            Loading.show();
-            const htmlContent = this._generateViolationPrintDocumentHtml(violation, 'بطاقة مخالفة — نسخة طباعة');
-            await this._completeViolationReportPrint(htmlContent);
-        } catch (error) {
-            if (error && error.message === 'popup_blocked') {
-                Notification.error('يرجى السماح بنوافذ منبثقة للطباعة');
-            } else {
-                Utils.safeError('خطأ في الطباعة:', error);
-                Notification.error('فشل فتح نافذة الطباعة: ' + (error.message || ''));
-            }
-        } finally {
-            Loading.hide();
-        }
-    },
-
-    _safeViolationReportFilePart(value, fallback = 'سجل') {
-        const cleaned = String(value || fallback)
-            .trim()
-            .replace(/[\u0000-\u001f<>:"/\\|?*]+/g, '_')
-            .replace(/\s+/g, '_')
-            .replace(/_+/g, '_')
-            .replace(/^_+|_+$/g, '');
-        return cleaned || fallback;
-    },
-
-    _readViolationReportImageBlob_(blob) {
-        return new Promise((resolve) => {
-            if (!blob || !String(blob.type || '').toLowerCase().startsWith('image/')) {
-                resolve('');
-                return;
-            }
-            try {
-                const reader = new FileReader();
-                reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
-                reader.onerror = () => resolve('');
-                reader.readAsDataURL(blob);
-            } catch (_error) {
-                resolve('');
-            }
-        });
-    },
-
-    async _resolveViolationReportPhoto_(photo) {
-        const source = this.processPhoto(photo);
-        if (!source) return '';
-        if (/^data:image\//i.test(source)) return source;
-
-        const display = typeof Utils.resolveDriveAwareImgDisplay === 'function'
-            ? Utils.resolveDriveAwareImgDisplay(source)
-            : { canonical: source, displaySrc: source, needsProxy: false, proxyFileId: '' };
-
-        if (display.needsProxy && display.proxyFileId && typeof Utils.fetchDriveImageDataUri === 'function') {
-            try {
-                const dataUri = await Utils.fetchDriveImageDataUri(display.proxyFileId);
-                if (dataUri && /^data:image\//i.test(dataUri)) return dataUri;
-            } catch (_error) { /* fallback to direct fetch below */ }
-        }
-
-        const fetchSource = display.canonical || source;
-        if (/^(https?:|blob:)/i.test(fetchSource) && typeof fetch === 'function') {
-            try {
-                const response = await fetch(fetchSource, { method: 'GET', credentials: 'omit', mode: 'cors' });
-                if (response.ok) {
-                    const dataUri = await this._readViolationReportImageBlob_(await response.blob());
-                    if (dataUri) return dataUri;
-                }
-            } catch (_error) { /* retain canonical source for html2canvas fallback */ }
-        }
-
-        return fetchSource;
-    },
-
-    async downloadViolationReport(id, triggerButton = null) {
-        const violation = AppState.appData?.violations?.find(v => v.id === id);
-        if (!violation) {
-            Notification.error('المخالفة غير موجودة');
-            return false;
-        }
-
-        const normalized = this.normalizeViolationRecord(violation) || violation;
-        const isContractor = normalized.personType === 'contractor' || !!normalized.contractorName;
-        const originalButtonHtml = triggerButton?.innerHTML || '';
-        try {
-            if (triggerButton) {
-                triggerButton.disabled = true;
-                triggerButton.setAttribute('aria-busy', 'true');
-                triggerButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            }
-            Loading.show();
-            const documentTitle = isContractor ? 'تقرير مخالفة مقاول' : 'تقرير مخالفة موظف';
-            const reportPhoto = await this._resolveViolationReportPhoto_(normalized.photo);
-            const reportViolation = { ...normalized, photo: reportPhoto };
-            const htmlContent = this._generateViolationPrintDocumentHtml(reportViolation, documentTitle);
-            const subject = isContractor
-                ? (normalized.contractorName || normalized.contractorWorker)
-                : normalized.employeeName;
-            const reportCode = normalized.isoCode || normalized.id || 'سجل';
-            const reportDate = normalized.violationDate
-                ? String(normalized.violationDate).slice(0, 10)
-                : new Date().toISOString().slice(0, 10);
-            const fileName = [
-                'تقرير_مخالفة',
-                this._safeViolationReportFilePart(subject, isContractor ? 'مقاول' : 'موظف'),
-                this._safeViolationReportFilePart(reportCode),
-                this._safeViolationReportFilePart(reportDate)
-            ].join('_') + '.pdf';
-            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, fileName);
-            if (!downloaded) throw new Error('تعذر إنشاء ملف PDF');
-            Notification.success('تم تحميل تقرير المخالفة PDF بجميع البيانات بنجاح');
-            return true;
-        } catch (error) {
-            Utils.safeError('خطأ في تحميل تقرير المخالفة PDF:', error);
-            Notification.error('فشل تحميل تقرير المخالفة: ' + (error.message || ''));
-            return false;
-        } finally {
-            Loading.hide();
-            if (triggerButton) {
-                triggerButton.disabled = false;
-                triggerButton.removeAttribute('aria-busy');
-                triggerButton.innerHTML = originalButtonHtml || '<i class="fas fa-file-download"></i>';
-            }
-        }
-    },
-
-    async exportPDF(id, triggerButton = null) {
-        return this.downloadViolationReport(id, triggerButton);
-    },
-
-    // ===== Blacklist Register Functions =====
-    /**
-     * تحميل بيانات Blacklist من Google Sheets
-     */
-    async loadBlacklistDataAsync() {
-        try {
-            // التأكد من وجود AppState و GoogleIntegration
-            if (typeof AppState === 'undefined' || !AppState.appData) {
-                AppState.appData = {};
-            }
-            if (!AppState.appData.blacklistRegister) {
-                AppState.appData.blacklistRegister = [];
-            }
-
-            // التحقق من تفعيل Google Integration
-            const isGoogleEnabled = AppState.googleConfig?.appsScript?.enabled && AppState.googleConfig?.appsScript?.scriptUrl;
-            const isGoogleIntegrationAvailable = typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function';
-
-            if (!isGoogleEnabled || !isGoogleIntegrationAvailable) {
-                // إذا لم يكن Google Integration متاحاً، استخدام البيانات المحلية
-                if (AppState.debugMode) {
-                    Utils.safeLog('⚠️ Google Integration غير متاح - استخدام البيانات المحلية فقط');
-                }
-                return;
-            }
-
-            // تحميل البيانات من Google Sheets (بدون عرض مؤشر تحميل - الواجهة تُعرض أولاً)
-            const result = await GoogleIntegration.sendRequest({
-                action: 'readFromSheet',
-                data: {
-                    sheetName: 'Blacklist_Register',
-                    spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
-                }
-            }).catch(error => {
-                Utils.safeWarn('⚠️ تعذر تحميل بيانات Blacklist من Google Sheets:', error);
-                return { success: false, data: [] };
-            });
-
-            let dataUpdated = false;
-            if (result && result.success && Array.isArray(result.data)) {
-                AppState.appData.blacklistRegister = result.data;
-                dataUpdated = true;
-                if (AppState.debugMode) {
-                    Utils.safeLog(`✅ تم تحميل ${result.data.length} سجل Blacklist من Google Sheets`);
-                }
-            } else {
-                // التأكد من وجود مصفوفة فارغة إذا لم يتم تحميل البيانات
-                if (!AppState.appData.blacklistRegister) {
-                    AppState.appData.blacklistRegister = [];
-                }
-            }
-
-            // حفظ البيانات محلياً بعد التحميل
-            if (dataUpdated && typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                try {
-                    window.DataManager.save();
-                } catch (saveError) {
-                    if (AppState.debugMode) {
-                        Utils.safeWarn('⚠️ خطأ في حفظ البيانات محلياً:', saveError);
-                    }
-                }
-            }
-        } catch (error) {
-            Utils.safeError('❌ خطأ في تحميل بيانات Blacklist:', error);
-            // التأكد من وجود مصفوفة فارغة في حالة الخطأ
-            if (!AppState.appData.blacklistRegister) {
-                AppState.appData.blacklistRegister = [];
-            }
-        }
-    },
-
-    /**
-     * تحديث عرض Blacklist بعد تحميل البيانات
-     */
-    refreshBlacklistDisplay() {
-        const contentContainer = document.getElementById('violations-tab-content');
-        if (!contentContainer) return;
-
-        // التحقق من أن التبويب النشط هو blacklist
-        const activeTab = document.querySelector('.tab-btn.active[data-tab="blacklist"]');
-        if (!activeTab) return;
-
-        try {
-            // تحديث الإحصائيات - البحث عن container الإحصائيات
-            const cardBody = contentContainer.querySelector('.card-body');
-            if (cardBody) {
-                // البحث عن grid container للإحصائيات (قد يكون بأي من الصيغ)
-                const statsContainer = cardBody.querySelector('.grid.grid-cols-1') || 
-                                      cardBody.querySelector('.grid') ||
-                                      cardBody.querySelector('[class*="grid-cols"]');
-                if (statsContainer && statsContainer.parentElement) {
-                    statsContainer.outerHTML = this.renderBlacklistStats();
-                } else {
-                    // إذا لم نجد container، نبحث عن أول div في card-body ونستبدله
-                    const firstGrid = cardBody.querySelector('div > div.grid');
-                    if (firstGrid) {
-                        firstGrid.outerHTML = this.renderBlacklistStats();
-                    }
-                }
-            }
-
-            // تحديث الكروت
-            const cardsContainer = document.getElementById('blacklist-cards-container');
-            if (cardsContainer) {
-                cardsContainer.innerHTML = this.renderBlacklistCards();
-            }
-
-            // تحديث الجدول
-            const tableContainer = document.getElementById('blacklist-table-container');
-            if (tableContainer) {
-                tableContainer.innerHTML = this.renderBlacklistTable();
-            }
-
-            // إعادة إعداد Event Listeners
-            this.setupBlacklistEventListeners();
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في تحديث عرض Blacklist:', error);
-        }
-    },
-
-    renderBlacklistTab() {
-        return `
+<h1>${Utils.escapeHTML(t)}</h1>
+${o?`<div class="co">${o}</div>`:""}
+${a}
+</body></html>`},async _completeViolationReportPrint(e){const t=new Blob([e],{type:"text/html;charset=utf-8"}),i=URL.createObjectURL(t),a=window.open(i,"_blank");if(!a)throw URL.revokeObjectURL(i),new Error("popup_blocked");await new Promise((n,o)=>{a.onload=()=>{try{const r=a.document.querySelectorAll("img");let l=0;const c=r.length;let s=!1;const d=()=>{s||(s=!0,setTimeout(()=>{a.print(),setTimeout(()=>URL.revokeObjectURL(i),1e3),n()},300))};if(c===0){d();return}const p=()=>{l>=c&&d()};r.forEach(f=>{f.complete?(l++,p()):(f.onload=()=>{l++,p()},f.onerror=()=>{l++,p()})}),setTimeout(()=>d(),3500)}catch(r){o(r)}}})},async printViolationProfessional(e){const t=AppState.appData?.violations?.find(i=>i.id===e);if(!t){Notification.error("\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}try{Loading.show();const i=this._generateViolationPrintDocumentHtml(t,"\u0628\u0637\u0627\u0642\u0629 \u0645\u062E\u0627\u0644\u0641\u0629 \u2014 \u0646\u0633\u062E\u0629 \u0637\u0628\u0627\u0639\u0629");await this._completeViolationReportPrint(i)}catch(i){i&&i.message==="popup_blocked"?Notification.error("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0646\u0648\u0627\u0641\u0630 \u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0644\u0637\u0628\u0627\u0639\u0629"):(Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0637\u0628\u0627\u0639\u0629:",i),Notification.error("\u0641\u0634\u0644 \u0641\u062A\u062D \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u0637\u0628\u0627\u0639\u0629: "+(i.message||"")))}finally{Loading.hide()}},_safeViolationReportFilePart(e,t="\u0633\u062C\u0644"){return String(e||t).trim().replace(/[\u0000-\u001f<>:"/\\|?*]+/g,"_").replace(/\s+/g,"_").replace(/_+/g,"_").replace(/^_+|_+$/g,"")||t},_readViolationReportImageBlob_(e){return new Promise(t=>{if(!e||!String(e.type||"").toLowerCase().startsWith("image/")){t("");return}try{const i=new FileReader;i.onload=()=>t(typeof i.result=="string"?i.result:""),i.onerror=()=>t(""),i.readAsDataURL(e)}catch{t("")}})},async _resolveViolationReportPhoto_(e){const t=this.processPhoto(e);if(!t)return"";if(/^data:image\//i.test(t))return t;const i=typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(t):{canonical:t,displaySrc:t,needsProxy:!1,proxyFileId:""};if(i.needsProxy&&i.proxyFileId&&typeof Utils.fetchDriveImageDataUri=="function")try{const n=await Utils.fetchDriveImageDataUri(i.proxyFileId);if(n&&/^data:image\//i.test(n))return n}catch{}const a=i.canonical||t;if(/^(https?:|blob:)/i.test(a)&&typeof fetch=="function")try{const n=await fetch(a,{method:"GET",credentials:"omit",mode:"cors"});if(n.ok){const o=await this._readViolationReportImageBlob_(await n.blob());if(o)return o}}catch{}return a},async downloadViolationReport(e,t=null){const i=AppState.appData?.violations?.find(r=>r.id===e);if(!i)return Notification.error("\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629"),!1;const a=this.normalizeViolationRecord(i)||i,n=a.personType==="contractor"||!!a.contractorName,o=t?.innerHTML||"";try{t&&(t.disabled=!0,t.setAttribute("aria-busy","true"),t.innerHTML='<i class="fas fa-spinner fa-spin"></i>'),Loading.show();const r=n?"\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0642\u0627\u0648\u0644":"\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0648\u0638\u0641",l=await this._resolveViolationReportPhoto_(a.photo),c={...a,photo:l},s=this._generateViolationPrintDocumentHtml(c,r),d=n?a.contractorName||a.contractorWorker:a.employeeName,p=a.isoCode||a.id||"\u0633\u062C\u0644",f=a.violationDate?String(a.violationDate).slice(0,10):new Date().toISOString().slice(0,10),u=["\u062A\u0642\u0631\u064A\u0631_\u0645\u062E\u0627\u0644\u0641\u0629",this._safeViolationReportFilePart(d,n?"\u0645\u0642\u0627\u0648\u0644":"\u0645\u0648\u0638\u0641"),this._safeViolationReportFilePart(p),this._safeViolationReportFilePart(f)].join("_")+".pdf";if(!await this._downloadHtmlReportAsPdf(s,u))throw new Error("\u062A\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u0645\u0644\u0641 PDF");return Notification.success("\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 PDF \u0628\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0646\u062C\u0627\u062D"),!0}catch(r){return Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 PDF:",r),Notification.error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629: "+(r.message||"")),!1}finally{Loading.hide(),t&&(t.disabled=!1,t.removeAttribute("aria-busy"),t.innerHTML=o||'<i class="fas fa-file-download"></i>')}},async exportPDF(e,t=null){return this.downloadViolationReport(e,t)},async loadBlacklistDataAsync(){try{(typeof AppState>"u"||!AppState.appData)&&(AppState.appData={}),AppState.appData.blacklistRegister||(AppState.appData.blacklistRegister=[]);const e=AppState.googleConfig?.appsScript?.enabled&&AppState.googleConfig?.appsScript?.scriptUrl,t=typeof GoogleIntegration<"u"&&typeof GoogleIntegration.sendRequest=="function";if(!e||!t){AppState.debugMode&&Utils.safeLog("\u26A0\uFE0F Google Integration \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0641\u0642\u0637");return}const i=await GoogleIntegration.sendRequest({action:"readFromSheet",data:{sheetName:"Blacklist_Register",spreadsheetId:AppState.googleConfig?.sheets?.spreadsheetId}}).catch(n=>(Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A Blacklist \u0645\u0646 Google Sheets:",n),{success:!1,data:[]}));let a=!1;if(i&&i.success&&Array.isArray(i.data)?(AppState.appData.blacklistRegister=i.data,a=!0,AppState.debugMode&&Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 ${i.data.length} \u0633\u062C\u0644 Blacklist \u0645\u0646 Google Sheets`)):AppState.appData.blacklistRegister||(AppState.appData.blacklistRegister=[]),a&&typeof window.DataManager<"u"&&window.DataManager.save)try{window.DataManager.save()}catch(n){AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0627\u064B:",n)}}catch(e){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A Blacklist:",e),AppState.appData.blacklistRegister||(AppState.appData.blacklistRegister=[])}},refreshBlacklistDisplay(){const e=document.getElementById("violations-tab-content");if(!(!e||!document.querySelector('.tab-btn.active[data-tab="blacklist"]')))try{const i=e.querySelector(".card-body");if(i){const o=i.querySelector(".grid.grid-cols-1")||i.querySelector(".grid")||i.querySelector('[class*="grid-cols"]');if(o&&o.parentElement)o.outerHTML=this.renderBlacklistStats();else{const r=i.querySelector("div > div.grid");r&&(r.outerHTML=this.renderBlacklistStats())}}const a=document.getElementById("blacklist-cards-container");a&&(a.innerHTML=this.renderBlacklistCards());const n=document.getElementById("blacklist-table-container");n&&(n.innerHTML=this.renderBlacklistTable()),this.setupBlacklistEventListeners()}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0639\u0631\u0636 Blacklist:",i)}},renderBlacklistTab(){return`
             <div class="content-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between flex-wrap gap-4">
                         <h2 class="card-title">
                             <i class="fas fa-user-slash ml-2"></i>
-                            سجل الممنوعين من الدخول – Blacklist
+                            \u0633\u062C\u0644 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u2013 Blacklist
                         </h2>
                         <button id="blacklist-add-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
-                            تسجيل ممنوع من الدخول جديد
+                            \u062A\u0633\u062C\u064A\u0644 \u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u062C\u062F\u064A\u062F
                         </button>
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- إحصائيات سريعة -->
+                    <!-- \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0633\u0631\u064A\u0639\u0629 -->
                     ${this.renderBlacklistStats()}
                     
-                    <!-- كروت عرض البيانات -->
+                    <!-- \u0643\u0631\u0648\u062A \u0639\u0631\u0636 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A -->
                     <div id="blacklist-cards-container" class="mb-6">
                         ${this.renderBlacklistCards()}
                     </div>
                     
-                    <!-- جدول عرض البيانات -->
+                    <!-- \u062C\u062F\u0648\u0644 \u0639\u0631\u0636 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A -->
                     <div id="blacklist-table-container">
                         ${this.renderBlacklistTable()}
                     </div>
                 </div>
             </div>
-        `;
-    },
-
-    renderBlacklistStats() {
-        const blacklistRecords = AppState.appData?.blacklistRegister || [];
-        const totalCount = blacklistRecords.length;
-        const thisMonth = new Date().getMonth();
-        const thisYear = new Date().getFullYear();
-        const thisMonthCount = blacklistRecords.filter(r => {
-            if (!r.banDate) return false;
-            const date = new Date(r.banDate);
-            return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
-        }).length;
-
-        // حساب عدد المصانع/المواقع الفريدة
-        const uniqueFactoryLocation = new Set();
-        blacklistRecords.forEach(r => {
-            if (r.factory && r.location) {
-                uniqueFactoryLocation.add(`${r.factory} - ${r.location}`);
-            } else if (r.factory) {
-                uniqueFactoryLocation.add(r.factory);
-            } else if (r.location) {
-                uniqueFactoryLocation.add(r.location);
-            }
-        });
-        const factoryLocationCount = uniqueFactoryLocation.size;
-
-        return `
+        `},renderBlacklistStats(){const e=AppState.appData?.blacklistRegister||[],t=e.length,i=new Date().getMonth(),a=new Date().getFullYear(),n=e.filter(l=>{if(!l.banDate)return!1;const c=new Date(l.banDate);return c.getMonth()===i&&c.getFullYear()===a}).length,o=new Set;e.forEach(l=>{l.factory&&l.location?o.add(`${l.factory} - ${l.location}`):l.factory?o.add(l.factory):l.location&&o.add(l.location)});const r=o.size;return`
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <div class="stat-card blacklist-stat-card blacklist-stat-total" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border: none; box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.3), 0 2px 4px -1px rgba(220, 38, 38, 0.2); transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(220, 38, 38, 0.4), 0 4px 6px -2px rgba(220, 38, 38, 0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(220, 38, 38, 0.3), 0 2px 4px -1px rgba(220, 38, 38, 0.2)';">
                     <div class="stat-icon" style="background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px); width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                         <i class="fas fa-user-slash"></i>
                     </div>
                     <div class="stat-content" style="flex: 1;">
-                        <h3 class="stat-value" style="font-size: 2.5rem; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2; letter-spacing: -0.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${typeof totalCount === 'number' ? totalCount.toLocaleString('en-US') : totalCount}</h3>
-                        <p class="stat-label" style="font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0; letter-spacing: 0.3px;">إجمالي الممنوعين</p>
+                        <h3 class="stat-value" style="font-size: 2.5rem; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2; letter-spacing: -0.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${typeof t=="number"?t.toLocaleString("en-US"):t}</h3>
+                        <p class="stat-label" style="font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0; letter-spacing: 0.3px;">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646</p>
                     </div>
                 </div>
                 <div class="stat-card blacklist-stat-card blacklist-stat-month" style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); border: none; box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.3), 0 2px 4px -1px rgba(234, 88, 12, 0.2); transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(234, 88, 12, 0.4), 0 4px 6px -2px rgba(234, 88, 12, 0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(234, 88, 12, 0.3), 0 2px 4px -1px rgba(234, 88, 12, 0.2)';">
@@ -6746,8 +1656,8 @@ ${inner}
                         <i class="fas fa-calendar-alt"></i>
                     </div>
                     <div class="stat-content" style="flex: 1;">
-                        <h3 class="stat-value" style="font-size: 2.5rem; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2; letter-spacing: -0.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${typeof thisMonthCount === 'number' ? thisMonthCount.toLocaleString('en-US') : thisMonthCount}</h3>
-                        <p class="stat-label" style="font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0; letter-spacing: 0.3px;">هذا الشهر</p>
+                        <h3 class="stat-value" style="font-size: 2.5rem; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2; letter-spacing: -0.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${typeof n=="number"?n.toLocaleString("en-US"):n}</h3>
+                        <p class="stat-label" style="font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0; letter-spacing: 0.3px;">\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631</p>
                     </div>
                 </div>
                 <div class="stat-card blacklist-stat-card blacklist-stat-details" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); border: none; box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.3), 0 2px 4px -1px rgba(217, 119, 6, 0.2); transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(217, 119, 6, 0.4), 0 4px 6px -2px rgba(217, 119, 6, 0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(217, 119, 6, 0.3), 0 2px 4px -1px rgba(217, 119, 6, 0.2)';">
@@ -6755,8 +1665,8 @@ ${inner}
                         <i class="fas fa-exclamation-triangle"></i>
                     </div>
                     <div class="stat-content" style="flex: 1;">
-                        <h3 class="stat-value" style="font-size: 2.5rem; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2; letter-spacing: -0.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${blacklistRecords.filter(r => r.banReason && r.banReason.length > 50).length.toLocaleString('en-US')}</h3>
-                        <p class="stat-label" style="font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0; letter-spacing: 0.3px;">ممنوعين مع تفاصيل</p>
+                        <h3 class="stat-value" style="font-size: 2.5rem; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2; letter-spacing: -0.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${e.filter(l=>l.banReason&&l.banReason.length>50).length.toLocaleString("en-US")}</h3>
+                        <p class="stat-label" style="font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0; letter-spacing: 0.3px;">\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0639 \u062A\u0641\u0627\u0635\u064A\u0644</p>
                     </div>
                 </div>
                 <div class="stat-card blacklist-stat-card blacklist-stat-factory-location" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); border: none; box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3), 0 2px 4px -1px rgba(124, 58, 237, 0.2); transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(124, 58, 237, 0.4), 0 4px 6px -2px rgba(124, 58, 237, 0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(124, 58, 237, 0.3), 0 2px 4px -1px rgba(124, 58, 237, 0.2)';">
@@ -6764,184 +1674,50 @@ ${inner}
                         <i class="fas fa-industry"></i>
                     </div>
                     <div class="stat-content" style="flex: 1;">
-                        <h3 class="stat-value" style="font-size: 2.5rem; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2; letter-spacing: -0.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${typeof factoryLocationCount === 'number' ? factoryLocationCount.toLocaleString('en-US') : factoryLocationCount}</h3>
-                        <p class="stat-label" style="font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0; letter-spacing: 0.3px;">المصنع - الموقع</p>
+                        <h3 class="stat-value" style="font-size: 2.5rem; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2; letter-spacing: -0.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${typeof r=="number"?r.toLocaleString("en-US"):r}</h3>
+                        <p class="stat-label" style="font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0; letter-spacing: 0.3px;">\u0627\u0644\u0645\u0635\u0646\u0639 - \u0627\u0644\u0645\u0648\u0642\u0639</p>
                     </div>
                 </div>
             </div>
-        `;
-    },
-
-    /**
-     * معالجة وعرض الصور بشكل صحيح (Base64 أو URL)
-     * @param {string} photoData - بيانات الصورة (Base64 أو URL)
-     * @returns {string|null} - رابط صالح للاستخدام في img src
-     */
-    getPhotoSource(photoData) {
-        if (typeof Utils !== 'undefined' && typeof Utils.extractImageSourceCandidate === 'function') {
-            return Utils.extractImageSourceCandidate(photoData);
-        }
-        if (!photoData) {
-            return '';
-        }
-        return typeof photoData === 'string' ? photoData : '';
-    },
-
-    normalizeGoogleDrivePhotoUrl(url) {
-        if (typeof Utils !== 'undefined' && typeof Utils.normalizeGoogleDriveImageUrl === 'function') {
-            return Utils.normalizeGoogleDriveImageUrl(url);
-        }
-        return String(url || '').trim();
-    },
-
-    processPhoto(photoData) {
-        if (typeof Utils !== 'undefined' && typeof Utils.normalizeImageSource === 'function') {
-            const normalized = Utils.normalizeImageSource(photoData);
-            if (normalized) {
-                return normalized;
-            }
-        }
-
-        const rawPhoto = this.getPhotoSource(photoData);
-        if (!rawPhoto) {
-            return null;
-        }
-
-        let trimmed = String(rawPhoto).trim().replace(/^['"`]+|['"`]+$/g, '');
-        if (!trimmed) {
-            return null;
-        }
-
-        if (trimmed.startsWith('blob:')) {
-            return trimmed;
-        }
-
-        if (/^data:image\//i.test(trimmed)) {
-            const commaIndex = trimmed.indexOf(',');
-            if (commaIndex === -1) {
-                return trimmed.replace(/\s+/g, '');
-            }
-
-            const header = trimmed.slice(0, commaIndex).replace(/\s+/g, '');
-            const payload = trimmed.slice(commaIndex + 1).replace(/\s+/g, '');
-            return payload ? `${header},${payload}` : null;
-        }
-
-        if (/^https?:\/\//i.test(trimmed)) {
-            return this.normalizeGoogleDrivePhotoUrl(trimmed);
-        }
-
-        const compactBase64 = trimmed.replace(/\s+/g, '');
-        if (compactBase64.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compactBase64.substring(0, Math.min(120, compactBase64.length)))) {
-            return 'data:image/jpeg;base64,' + compactBase64;
-        }
-
-        if (AppState.debugMode) {
-            console.warn('⚠️ صورة غير صالحة:', trimmed.substring(0, 100));
-        }
-        return null;
-    },
-
-    _onBlacklistCardPhotoError(img) {
-        try {
-            if (!img) return;
-            img.onerror = null;
-            const d = document.createElement('div');
-            d.className = 'w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center border-2 border-red-200 dark:border-red-800';
-            d.innerHTML = '<i class="fas fa-user text-red-500 dark:text-red-400 text-2xl"></i>';
-            img.replaceWith(d);
-        } catch (e) { /* ignore */ }
-    },
-
-    _onBlacklistTablePhotoError(img) {
-        try {
-            if (!img) return;
-            img.onerror = null;
-            img.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2212%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';
-        } catch (e) { /* ignore */ }
-    },
-
-    _hydrateBlacklistDrivePhotos() {
-        try {
-            if (typeof Utils.hydrateDriveProxyImages !== 'function') return;
-            const fail = (img) => {
-                if (!img) return;
-                const cls = img.className || '';
-                if (cls.indexOf('blacklist-table-photo') !== -1) {
-                    this._onBlacklistTablePhotoError(img);
-                } else if (cls.indexOf('blacklist-detail-photo') !== -1) {
-                    this._onBlacklistTablePhotoError(img);
-                } else if (cls.indexOf('blacklist-form-photo') !== -1) {
-                    this._onBlacklistTablePhotoError(img);
-                } else {
-                    this._onBlacklistCardPhotoError(img);
-                }
-            };
-            const cards = document.getElementById('blacklist-cards-container');
-            const table = document.getElementById('blacklist-table');
-            if (cards) Utils.hydrateDriveProxyImages(cards, { onFetchFail: fail });
-            if (table) Utils.hydrateDriveProxyImages(table, { onFetchFail: fail });
-        } catch (e) { /* ignore */ }
-    },
-
-    renderBlacklistCards() {
-        const blacklistRecords = AppState.appData?.blacklistRegister || [];
-        if (blacklistRecords.length === 0) {
-            return `
+        `},getPhotoSource(e){return typeof Utils<"u"&&typeof Utils.extractImageSourceCandidate=="function"?Utils.extractImageSourceCandidate(e):e&&typeof e=="string"?e:""},normalizeGoogleDrivePhotoUrl(e){return typeof Utils<"u"&&typeof Utils.normalizeGoogleDriveImageUrl=="function"?Utils.normalizeGoogleDriveImageUrl(e):String(e||"").trim()},processPhoto(e){if(typeof Utils<"u"&&typeof Utils.normalizeImageSource=="function"){const n=Utils.normalizeImageSource(e);if(n)return n}const t=this.getPhotoSource(e);if(!t)return null;let i=String(t).trim().replace(/^['"`]+|['"`]+$/g,"");if(!i)return null;if(i.startsWith("blob:"))return i;if(/^data:image\//i.test(i)){const n=i.indexOf(",");if(n===-1)return i.replace(/\s+/g,"");const o=i.slice(0,n).replace(/\s+/g,""),r=i.slice(n+1).replace(/\s+/g,"");return r?`${o},${r}`:null}if(/^https?:\/\//i.test(i))return this.normalizeGoogleDrivePhotoUrl(i);const a=i.replace(/\s+/g,"");return a.length>100&&/^[A-Za-z0-9+/=]+$/.test(a.substring(0,Math.min(120,a.length)))?"data:image/jpeg;base64,"+a:(AppState.debugMode,null)},_onBlacklistCardPhotoError(e){try{if(!e)return;e.onerror=null;const t=document.createElement("div");t.className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center border-2 border-red-200 dark:border-red-800",t.innerHTML='<i class="fas fa-user text-red-500 dark:text-red-400 text-2xl"></i>',e.replaceWith(t)}catch{}},_onBlacklistTablePhotoError(e){try{if(!e)return;e.onerror=null,e.src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2212%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631\u0629%3C/text%3E%3C/svg%3E"}catch{}},_hydrateBlacklistDrivePhotos(){try{if(typeof Utils.hydrateDriveProxyImages!="function")return;const e=a=>{if(!a)return;const n=a.className||"";n.indexOf("blacklist-table-photo")!==-1?this._onBlacklistTablePhotoError(a):n.indexOf("blacklist-detail-photo")!==-1?this._onBlacklistTablePhotoError(a):n.indexOf("blacklist-form-photo")!==-1?this._onBlacklistTablePhotoError(a):this._onBlacklistCardPhotoError(a)},t=document.getElementById("blacklist-cards-container"),i=document.getElementById("blacklist-table");t&&Utils.hydrateDriveProxyImages(t,{onFetchFail:e}),i&&Utils.hydrateDriveProxyImages(i,{onFetchFail:e})}catch{}},renderBlacklistCards(){const e=AppState.appData?.blacklistRegister||[];return e.length===0?`
                 <div class="empty-state py-8">
                     <i class="fas fa-user-slash text-gray-400 text-5xl mb-4"></i>
-                    <p class="text-gray-500 text-lg">لا توجد سجلات ممنوعين من الدخول</p>
-                    <p class="text-gray-400 text-sm mt-2">انقر على "تسجيل ممنوع من الدخول جديد" لإضافة سجل جديد</p>
+                    <p class="text-gray-500 text-lg">\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644</p>
+                    <p class="text-gray-400 text-sm mt-2">\u0627\u0646\u0642\u0631 \u0639\u0644\u0649 "\u062A\u0633\u062C\u064A\u0644 \u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u062C\u062F\u064A\u062F" \u0644\u0625\u0636\u0627\u0641\u0629 \u0633\u062C\u0644 \u062C\u062F\u064A\u062F</p>
                 </div>
-            `;
-        }
-
-        const sortedRecords = [...blacklistRecords].sort((a, b) => {
-            const dateA = new Date(a.banDate || a.createdAt || 0);
-            const dateB = new Date(b.banDate || b.createdAt || 0);
-            return dateB - dateA;
-        });
-
-        return `
+            `:`
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                ${sortedRecords.map(record => {
-                    const photoUrl = this.processPhoto(record);
-                    const disp = photoUrl && typeof Utils.resolveDriveAwareImgDisplay === 'function'
-                        ? Utils.resolveDriveAwareImgDisplay(photoUrl)
-                        : { canonical: photoUrl || '', displaySrc: photoUrl || '', needsProxy: false, proxyFileId: '' };
-                    const imgSrc = disp.canonical ? disp.displaySrc : '';
-                    const proxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
-                    return `
+                ${[...e].sort((i,a)=>{const n=new Date(i.banDate||i.createdAt||0);return new Date(a.banDate||a.createdAt||0)-n}).map(i=>{const a=this.processPhoto(i),n=a&&typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(a):{canonical:a||"",displaySrc:a||"",needsProxy:!1,proxyFileId:""},o=n.canonical?n.displaySrc:"",r=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(n):"";return`
                     <div class="content-card blacklist-card" style="position: relative; overflow: hidden;">
                         <div class="absolute top-0 right-0 w-20 h-20 bg-red-100 dark:bg-red-900/20 opacity-10 rounded-bl-full"></div>
                         <div class="relative z-10">
                             <div class="p-4">
                                 <div class="flex items-start justify-between mb-3">
                                     <div class="flex items-center gap-3">
-                                        ${photoUrl ? `
-                                            <img src="${Utils.escapeHTML(imgSrc)}" alt="صورة"${proxyAttr}
-                                                data-photo-url="${Utils.escapeHTML(photoUrl)}"
+                                        ${a?`
+                                            <img src="${Utils.escapeHTML(o)}" alt="\u0635\u0648\u0631\u0629"${r}
+                                                data-photo-url="${Utils.escapeHTML(a)}"
                                                 class="blacklist-card-photo w-16 h-16 rounded-full object-cover border-2 border-red-200 dark:border-red-800 cursor-pointer shadow-sm"
                                                 onclick="Violations.viewBlacklistPhoto(this.dataset.photoUrl)"
-                                                title="انقر لعرض الصورة"
+                                                title="\u0627\u0646\u0642\u0631 \u0644\u0639\u0631\u0636 \u0627\u0644\u0635\u0648\u0631\u0629"
                                                 onerror="Violations._onBlacklistCardPhotoError(this)">
-                                        ` : `
+                                        `:`
                                             <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center border-2 border-red-200 dark:border-red-800">
                                                 <i class="fas fa-user text-red-500 dark:text-red-400 text-2xl"></i>
                                             </div>
                                         `}
                                         <div>
-                                            <h3 class="font-bold text-gray-800 dark:text-gray-100 text-lg">${Utils.escapeHTML(record.fullName || 'غير محدد')}</h3>
-                                            <p class="text-sm text-gray-600 dark:text-gray-400">#${record.serialNumber || '-'}</p>
+                                            <h3 class="font-bold text-gray-800 dark:text-gray-100 text-lg">${Utils.escapeHTML(i.fullName||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F")}</h3>
+                                            <p class="text-sm text-gray-600 dark:text-gray-400">#${i.serialNumber||"-"}</p>
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1">
-                                        <button onclick="Violations.editBlacklistRecord('${record.id}')" 
-                                            class="btn-icon btn-icon-warning text-xs" title="تعديل">
+                                        <button onclick="Violations.editBlacklistRecord('${i.id}')" 
+                                            class="btn-icon btn-icon-warning text-xs" title="\u062A\u0639\u062F\u064A\u0644">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button onclick="Violations.deleteBlacklistRecord('${record.id}')" 
-                                            class="btn-icon btn-icon-danger text-xs" title="حذف">
+                                        <button onclick="Violations.deleteBlacklistRecord('${i.id}')" 
+                                            class="btn-icon btn-icon-danger text-xs" title="\u062D\u0630\u0641">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -6950,483 +1726,275 @@ ${inner}
                                 <div class="space-y-2 text-sm">
                                     <div class="flex items-center gap-2">
                                         <i class="fas fa-id-card text-red-500 dark:text-red-400 w-4"></i>
-                                        <span class="text-gray-600 dark:text-gray-400">رقم البطاقة:</span>
-                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(record.idNumber || '-')}</span>
+                                        <span class="text-gray-600 dark:text-gray-400">\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629:</span>
+                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(i.idNumber||"-")}</span>
                                     </div>
-                                    ${record.job ? `
+                                    ${i.job?`
                                     <div class="flex items-center gap-2">
                                         <i class="fas fa-briefcase text-red-500 dark:text-red-400 w-4"></i>
-                                        <span class="text-gray-600 dark:text-gray-400">الوظيفة:</span>
-                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(record.job)}</span>
+                                        <span class="text-gray-600 dark:text-gray-400">\u0627\u0644\u0648\u0638\u064A\u0641\u0629:</span>
+                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(i.job)}</span>
                                     </div>
-                                    ` : ''}
-                                    ${record.contractor ? `
+                                    `:""}
+                                    ${i.contractor?`
                                     <div class="flex items-center gap-2">
                                         <i class="fas fa-building text-cyan-500 dark:text-cyan-400 w-4"></i>
-                                        <span class="text-gray-600 dark:text-gray-400">الشركة - المقاول:</span>
-                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(record.contractor)}</span>
+                                        <span class="text-gray-600 dark:text-gray-400">\u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644:</span>
+                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(i.contractor)}</span>
                                     </div>
-                                    ` : ''}
+                                    `:""}
                                     <div class="flex items-center gap-2">
                                         <i class="fas fa-industry text-red-500 dark:text-red-400 w-4"></i>
-                                        <span class="text-gray-600 dark:text-gray-400">المصنع:</span>
-                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(record.factory || '-')}</span>
+                                        <span class="text-gray-600 dark:text-gray-400">\u0627\u0644\u0645\u0635\u0646\u0639:</span>
+                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(i.factory||"-")}</span>
                                     </div>
-                                    ${record.location ? `
+                                    ${i.location?`
                                     <div class="flex items-center gap-2">
                                         <i class="fas fa-map-marker-alt text-red-500 dark:text-red-400 w-4"></i>
-                                        <span class="text-gray-600 dark:text-gray-400">الموقع:</span>
-                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(record.location)}</span>
+                                        <span class="text-gray-600 dark:text-gray-400">\u0627\u0644\u0645\u0648\u0642\u0639:</span>
+                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(i.location)}</span>
                                     </div>
-                                    ` : ''}
+                                    `:""}
                                     <div class="flex items-center gap-2">
                                         <i class="fas fa-calendar text-red-500 dark:text-red-400 w-4"></i>
-                                        <span class="text-gray-600 dark:text-gray-400">تاريخ المنع:</span>
-                                        <span class="font-semibold text-red-600 dark:text-red-400">${record.banDate ? Utils.formatDate(record.banDate) : '-'}</span>
+                                        <span class="text-gray-600 dark:text-gray-400">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639:</span>
+                                        <span class="font-semibold text-red-600 dark:text-red-400">${i.banDate?Utils.formatDate(i.banDate):"-"}</span>
                                     </div>
-                                    ${record.banReason ? `
+                                    ${i.banReason?`
                                     <div class="pt-2 border-t border-red-100 dark:border-red-900/50">
-                                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">سبب المنع:</p>
-                                        <p class="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">${Utils.escapeHTML(record.banReason)}</p>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639:</p>
+                                        <p class="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">${Utils.escapeHTML(i.banReason)}</p>
                                     </div>
-                                    ` : ''}
+                                    `:""}
                                 </div>
                             </div>
                             <div class="bg-red-50 dark:bg-red-900/20 px-4 py-2 border-t border-red-100 dark:border-red-900/30 flex items-center justify-between text-xs">
                                 <span class="text-gray-600 dark:text-gray-400">
                                     <i class="fas fa-user-edit ml-1 text-red-500 dark:text-red-400"></i>
-                                    ${Utils.escapeHTML(record.editor || 'غير محدد')}
+                                    ${Utils.escapeHTML(i.editor||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F")}
                                 </span>
-                                ${record.bannedBy ? `
+                                ${i.bannedBy?`
                                 <span class="text-gray-600 dark:text-gray-400">
                                     <i class="fas fa-user-shield ml-1 text-red-500 dark:text-red-400"></i>
-                                    ${Utils.escapeHTML(record.bannedBy)}
+                                    ${Utils.escapeHTML(i.bannedBy)}
                                 </span>
-                                ` : ''}
+                                `:""}
                             </div>
                         </div>
                     </div>
-                `;}).join('')}
+                `}).join("")}
             </div>
-        `;
-    },
-
-    async showBlacklistForm(blacklistData = null) {
-        const isEdit = !!blacklistData;
-
-        // التأكد من تحميل إعدادات النماذج
-        if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
-            try {
-                await Permissions.ensureFormSettingsState();
-            } catch (error) {
-                Utils.safeWarn('⚠️ خطأ في تحميل إعدادات النماذج:', error);
-            }
-        }
-
-        const blacklistRecords = AppState.appData?.blacklistRegister || [];
-        const nextSerial = blacklistRecords.length > 0
-            ? Math.max(...blacklistRecords.map(r => parseInt(r.serialNumber) || 0)) + 1
-            : 1;
-
-        // استخدام نفس نظام تحميل المواقع والأماكن المستخدم في violations
-        const sites = this.getSiteOptions();
-        const siteOptions = sites.map(site =>
-            `<option value="${Utils.escapeHTML(site.name)}" data-site-id="${site.id}" ${blacklistData?.factory === site.name || blacklistData?.factoryId === site.id ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>`
-        ).join('');
-
-        // تحميل الإدارات
-        const settings = AppState.appData?.formSettings || {};
-        const departments = settings.departments || [];
-        // تحويل الإدارات إلى قائمة للـ datalist (اسم فقط)
-        const departmentList = departments.map(dept => {
-            // إذا كان dept كائن، نأخذ name، وإذا كان نصًا، نستخدمه مباشرة
-            return typeof dept === 'object' ? dept.name : dept;
-        }).filter(Boolean);
-        const departmentOptions = departmentList.map(dept =>
-            `<option value="${Utils.escapeHTML(dept)}"></option>`
-        ).join('');
-
-        // الحصول على الأماكن حسب المصنع المحدد
-        const selectedSiteId = blacklistData?.factoryId || sites.find(s => s.name === blacklistData?.factory)?.id || '';
-        const placeOptions = selectedSiteId ? this.getPlaceOptions(selectedSiteId).map(place =>
-            `<option value="${Utils.escapeHTML(place.name)}" data-place-id="${place.id}" ${blacklistData?.location === place.name || blacklistData?.locationId === place.id ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>`
-        ).join('') : '<option value="">-- اختر الموقع أولاً --</option>';
-
-        // الحصول على المستخدم الحالي
-        const currentUser = AppState.currentUser || { name: 'غير محدد', email: '' };
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        `},async showBlacklistForm(e=null){const t=!!e;if(typeof Permissions<"u"&&typeof Permissions.ensureFormSettingsState=="function")try{await Permissions.ensureFormSettingsState()}catch(m){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0645\u0627\u0630\u062C:",m)}const i=AppState.appData?.blacklistRegister||[],a=i.length>0?Math.max(...i.map(m=>parseInt(m.serialNumber)||0))+1:1,n=this.getSiteOptions(),o=n.map(m=>`<option value="${Utils.escapeHTML(m.name)}" data-site-id="${m.id}" ${e?.factory===m.name||e?.factoryId===m.id?"selected":""}>${Utils.escapeHTML(m.name)}</option>`).join(""),s=((AppState.appData?.formSettings||{}).departments||[]).map(m=>typeof m=="object"?m.name:m).filter(Boolean).map(m=>`<option value="${Utils.escapeHTML(m)}"></option>`).join(""),d=e?.factoryId||n.find(m=>m.name===e?.factory)?.id||"",p=d?this.getPlaceOptions(d).map(m=>`<option value="${Utils.escapeHTML(m.name)}" data-place-id="${m.id}" ${e?.location===m.name||e?.locationId===m.id?"selected":""}>${Utils.escapeHTML(m.name)}</option>`).join(""):'<option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 \u0623\u0648\u0644\u0627\u064B --</option>',f=AppState.currentUser||{name:"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",email:""},u=document.createElement("div");u.className="modal-overlay",u.innerHTML=`
             <div class="modal-content" style="max-width: 900px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-user-slash ml-2 text-red-600"></i>
-                        ${isEdit ? 'تعديل بيانات الممنوع من الدخول' : 'تسجيل ممنوع من الدخول جديد'}
+                        ${t?"\u062A\u0639\u062F\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644":"\u062A\u0633\u062C\u064A\u0644 \u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u062C\u062F\u064A\u062F"}
                     </h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" title="إغلاق">
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" title="\u0625\u063A\u0644\u0627\u0642">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
-                    ${this.renderBlacklistFormContent(blacklistData, nextSerial, siteOptions, placeOptions, departmentOptions, currentUser)}
+                    ${this.renderBlacklistFormContent(e,a,o,p,s,f)}
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        // Setup form event listeners (async)
-        this.setupBlacklistFormInModal(modal, blacklistData).catch(error => {
-            Utils.safeWarn('⚠️ خطأ في إعداد نموذج Blacklist:', error);
-        });
-
-        if (typeof Utils.hydrateDriveProxyImages === 'function') {
-            Utils.hydrateDriveProxyImages(modal, {
-                onFetchFail: (img) => this._onBlacklistTablePhotoError(img)
-            });
-        }
-
-        // إغلاق النموذج عند النقر خارجه
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-            }
-        });
-
-        // إغلاق النموذج عند الضغط على ESC
-        const handleEscape = (e) => {
-            if (e.key === 'Escape' && document.body.contains(modal)) {
-                modal.remove();
-                document.removeEventListener('keydown', handleEscape);
-            }
-        };
-        document.addEventListener('keydown', handleEscape);
-    },
-
-    renderBlacklistFormContent(blacklistData, nextSerial, siteOptions, placeOptions, departmentOptions, currentUser) {
-        const isEdit = !!blacklistData;
-        const previewPhotoUrl = this.processPhoto(blacklistData);
-        const previewDisp = previewPhotoUrl && typeof Utils.resolveDriveAwareImgDisplay === 'function'
-            ? Utils.resolveDriveAwareImgDisplay(previewPhotoUrl)
-            : { canonical: previewPhotoUrl || '', displaySrc: previewPhotoUrl || '', needsProxy: false, proxyFileId: '' };
-        const previewImgSrc = previewDisp.canonical ? previewDisp.displaySrc : '';
-        const previewProxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(previewDisp) : '';
-        return `
+        `,document.body.appendChild(u),this.setupBlacklistFormInModal(u,e).catch(m=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u0639\u062F\u0627\u062F \u0646\u0645\u0648\u0630\u062C Blacklist:",m)}),typeof Utils.hydrateDriveProxyImages=="function"&&Utils.hydrateDriveProxyImages(u,{onFetchFail:m=>this._onBlacklistTablePhotoError(m)}),u.addEventListener("click",m=>{m.target===u&&u.remove()});const w=m=>{m.key==="Escape"&&document.body.contains(u)&&(u.remove(),document.removeEventListener("keydown",w))};document.addEventListener("keydown",w)},renderBlacklistFormContent(e,t,i,a,n,o){const r=!!e,l=this.processPhoto(e),c=l&&typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(l):{canonical:l||"",displaySrc:l||"",needsProxy:!1,proxyFileId:""},s=c.canonical?c.displaySrc:"",d=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(c):"";return`
             <form id="blacklist-form" class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- م (رقم مسلسل) -->
+                    <!-- \u0645 (\u0631\u0642\u0645 \u0645\u0633\u0644\u0633\u0644) -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-hashtag ml-2 text-blue-600"></i>
-                            م (رقم مسلسل)
+                            \u0645 (\u0631\u0642\u0645 \u0645\u0633\u0644\u0633\u0644)
                         </label>
                         <input type="text" id="blacklist-serial" class="form-input" 
-                            value="${isEdit ? (blacklistData.serialNumber || nextSerial) : nextSerial}" 
+                            value="${r&&e.serialNumber||t}" 
                             readonly>
                     </div>
 
-                    <!-- تاريخ المنع * -->
+                    <!-- \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639 * -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-calendar ml-2 text-red-600"></i>
-                            تاريخ المنع *
+                            \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639 *
                         </label>
                         <input type="date" id="blacklist-ban-date" required class="form-input" 
-                            value="${blacklistData?.banDate ? new Date(blacklistData.banDate).toISOString().slice(0, 10) : ''}">
+                            value="${e?.banDate?new Date(e.banDate).toISOString().slice(0,10):""}">
                     </div>
 
-                    <!-- المصنع * -->
+                    <!-- \u0627\u0644\u0645\u0635\u0646\u0639 * -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-industry ml-2 text-gray-600"></i>
-                            المصنع *
+                            \u0627\u0644\u0645\u0635\u0646\u0639 *
                         </label>
                         <select id="blacklist-factory" required class="form-input">
-                            <option value="">-- اختر المصنع --</option>
-                            ${siteOptions}
+                            <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0635\u0646\u0639 --</option>
+                            ${i}
                         </select>
                     </div>
 
-                    <!-- الموقع * -->
+                    <!-- \u0627\u0644\u0645\u0648\u0642\u0639 * -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-map-marker-alt ml-2 text-green-600"></i>
-                            الموقع *
+                            \u0627\u0644\u0645\u0648\u0642\u0639 *
                         </label>
                         <select id="blacklist-location" required class="form-input">
-                            <option value="">-- اختر الموقع --</option>
-                            ${placeOptions}
+                            <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 --</option>
+                            ${a}
                         </select>
                     </div>
 
-                    <!-- الاسم رباعي * -->
+                    <!-- \u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A * -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-user ml-2 text-purple-600"></i>
-                            الاسم رباعي *
+                            \u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A *
                         </label>
                         <input type="text" id="blacklist-name" required class="form-input" 
-                            value="${Utils.escapeHTML(blacklistData?.fullName || '')}" 
-                            placeholder="الاسم الكامل">
+                            value="${Utils.escapeHTML(e?.fullName||"")}" 
+                            placeholder="\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644">
                     </div>
 
-                    <!-- رقم البطاقة الشخصية * -->
+                    <!-- \u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629 * -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-id-card ml-2 text-orange-600"></i>
-                            رقم البطاقة الشخصية *
+                            \u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629 *
                         </label>
                         <input type="text" id="blacklist-id-number" required class="form-input" 
-                            value="${Utils.escapeHTML(blacklistData?.idNumber || '')}" 
-                            placeholder="رقم البطاقة">
+                            value="${Utils.escapeHTML(e?.idNumber||"")}" 
+                            placeholder="\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629">
                     </div>
 
-                    <!-- الوظيفة -->
+                    <!-- \u0627\u0644\u0648\u0638\u064A\u0641\u0629 -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-briefcase ml-2 text-indigo-600"></i>
-                            الوظيفة
+                            \u0627\u0644\u0648\u0638\u064A\u0641\u0629
                         </label>
                         <input type="text" id="blacklist-job" class="form-input" 
-                            value="${Utils.escapeHTML(blacklistData?.job || '')}" 
-                            placeholder="الوظيفة">
+                            value="${Utils.escapeHTML(e?.job||"")}" 
+                            placeholder="\u0627\u0644\u0648\u0638\u064A\u0641\u0629">
                     </div>
 
-                    <!-- الشركة - المقاول -->
+                    <!-- \u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644 -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-building ml-2 text-cyan-600"></i>
-                            الشركة - المقاول
+                            \u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644
                         </label>
                         <input type="text" id="blacklist-contractor" class="form-input" 
                             list="blacklist-contractors-list" 
-                            value="${Utils.escapeHTML(blacklistData?.contractor || '')}" 
-                            placeholder="اختر أو اكتب اسم الشركة/المقاول">
+                            value="${Utils.escapeHTML(e?.contractor||"")}" 
+                            placeholder="\u0627\u062E\u062A\u0631 \u0623\u0648 \u0627\u0643\u062A\u0628 \u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629/\u0627\u0644\u0645\u0642\u0627\u0648\u0644">
                         <datalist id="blacklist-contractors-list">
-                            <!-- سيتم تحميل المقاولين ديناميكياً -->
+                            <!-- \u0633\u064A\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0627\u064B -->
                         </datalist>
                     </div>
 
-                    <!-- الإدارة التابع لها -->
+                    <!-- \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u0627\u0628\u0639 \u0644\u0647\u0627 -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-building ml-2 text-teal-600"></i>
-                            الإدارة التابع لها
+                            \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u0627\u0628\u0639 \u0644\u0647\u0627
                         </label>
                         <input type="text" id="blacklist-department" class="form-input" 
                             list="blacklist-departments-list" 
-                            value="${Utils.escapeHTML(blacklistData?.department || '')}" 
-                            placeholder="اختر أو اكتب الإدارة">
+                            value="${Utils.escapeHTML(e?.department||"")}" 
+                            placeholder="\u0627\u062E\u062A\u0631 \u0623\u0648 \u0627\u0643\u062A\u0628 \u0627\u0644\u0625\u062F\u0627\u0631\u0629">
                         <datalist id="blacklist-departments-list">
-                            ${departmentOptions}
+                            ${n}
                         </datalist>
                     </div>
 
-                    <!-- القائم بالمنع -->
+                    <!-- \u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639 -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-user-shield ml-2 text-yellow-600"></i>
-                            القائم بالمنع
+                            \u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639
                         </label>
                         <input type="text" id="blacklist-banned-by" class="form-input" 
-                            value="${Utils.escapeHTML(blacklistData?.bannedBy || '')}" 
-                            placeholder="اسم القائم بالمنع">
+                            value="${Utils.escapeHTML(e?.bannedBy||"")}" 
+                            placeholder="\u0627\u0633\u0645 \u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639">
                     </div>
 
-                    <!-- محرر البيانات -->
+                    <!-- \u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-user-edit ml-2 text-gray-600"></i>
-                            محرر البيانات
+                            \u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A
                         </label>
                         <input type="text" id="blacklist-editor" class="form-input" 
-                            value="${Utils.escapeHTML(blacklistData?.editor || currentUser.name)}" 
+                            value="${Utils.escapeHTML(e?.editor||o.name)}" 
                             readonly>
                     </div>
 
-                    <!-- الصورة الشخصية -->
+                    <!-- \u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629 -->
                     <div class="md:col-span-2 lg:col-span-3">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-image ml-2"></i>
-                            الصورة الشخصية
+                            \u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629
                         </label>
                         <input type="file" id="blacklist-photo-input" accept="image/*" class="form-input">
-                        <div id="blacklist-photo-preview" class="mt-2 ${previewPhotoUrl ? '' : 'hidden'}">
-                            <img src="${previewImgSrc ? Utils.escapeHTML(previewImgSrc) : ''}" alt="صورة شخصية"${previewProxyAttr}
+                        <div id="blacklist-photo-preview" class="mt-2 ${l?"":"hidden"}">
+                            <img src="${s?Utils.escapeHTML(s):""}" alt="\u0635\u0648\u0631\u0629 \u0634\u062E\u0635\u064A\u0629"${d}
                                 class="blacklist-form-photo w-32 h-32 object-cover rounded border" id="blacklist-photo-img">
                             <button type="button" onclick="const blPhotoInput = document.getElementById('blacklist-photo-input'); if (blPhotoInput) blPhotoInput.value=''; const blPhotoPreview = document.getElementById('blacklist-photo-preview'); if (blPhotoPreview) blPhotoPreview.classList.add('hidden');" 
                                 class="mt-2 text-sm text-red-600 hover:text-red-800">
-                                <i class="fas fa-trash ml-1"></i>حذف الصورة
+                                <i class="fas fa-trash ml-1"></i>\u062D\u0630\u0641 \u0627\u0644\u0635\u0648\u0631\u0629
                             </button>
                         </div>
                     </div>
 
-                    <!-- سبب المنع * -->
+                    <!-- \u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639 * -->
                     <div class="md:col-span-2 lg:col-span-3">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-exclamation-triangle ml-2 text-red-600"></i>
-                            سبب المنع *
+                            \u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639 *
                         </label>
                         <textarea id="blacklist-ban-reason" required class="form-input" rows="3" 
-                            placeholder="سبب منع الدخول">${Utils.escapeHTML(blacklistData?.banReason || '')}</textarea>
+                            placeholder="\u0633\u0628\u0628 \u0645\u0646\u0639 \u0627\u0644\u062F\u062E\u0648\u0644">${Utils.escapeHTML(e?.banReason||"")}</textarea>
                     </div>
 
-                    <!-- ملاحظات عامة -->
+                    <!-- \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0639\u0627\u0645\u0629 -->
                     <div class="md:col-span-2 lg:col-span-3">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-sticky-note ml-2 text-gray-600"></i>
-                            ملاحظات عامة
+                            \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0639\u0627\u0645\u0629
                         </label>
                         <textarea id="blacklist-notes" class="form-input" rows="3" 
-                            placeholder="ملاحظات إضافية">${Utils.escapeHTML(blacklistData?.notes || '')}</textarea>
+                            placeholder="\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629">${Utils.escapeHTML(e?.notes||"")}</textarea>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-4 pt-4 border-t">
                     <button type="button" id="blacklist-cancel-btn" class="btn-secondary">
-                        <i class="fas fa-times ml-2"></i>إلغاء
+                        <i class="fas fa-times ml-2"></i>\u0625\u0644\u063A\u0627\u0621
                     </button>
                     <button type="submit" id="blacklist-submit-btn" class="btn-primary">
-                        <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'تسجيل'}
+                        <i class="fas fa-save ml-2"></i>${r?"\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A":"\u062A\u0633\u062C\u064A\u0644"}
                     </button>
                 </div>
             </form>
-        `;
-    },
-
-    async setupBlacklistFormInModal(modal, blacklistData) {
-        const isEdit = !!blacklistData;
-        const form = modal.querySelector('#blacklist-form');
-        if (form) {
-            form.dataset.editId = isEdit ? blacklistData.id : '';
-        }
-
-        // معالج النموذج
-        if (form) {
-            form.addEventListener('submit', (e) => this.handleBlacklistSubmit(e));
-        }
-
-        // معالج إلغاء النموذج
-        const cancelBtn = modal.querySelector('#blacklist-cancel-btn');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => {
-                modal.remove();
-            });
-        }
-
-        // معالج رفع الصورة
-        const photoInput = modal.querySelector('#blacklist-photo-input');
-        if (photoInput) {
-            photoInput.addEventListener('change', (e) => this.handleBlacklistPhotoUpload(e));
-        }
-
-        // تحميل قائمة المقاولين في datalist
-        const contractorInput = modal.querySelector('#blacklist-contractor');
-        const contractorsDatalist = modal.querySelector('#blacklist-contractors-list');
-        if (contractorInput && contractorsDatalist) {
-            try {
-                // الحصول على قائمة المقاولين
-                let contractors = [];
-                
-                // محاولة استخدام getAllContractorsForModules
-                if (typeof Contractors !== 'undefined' && typeof Contractors.getAllContractorsForModules === 'function') {
-                    contractors = Contractors.getAllContractorsForModules() || [];
-                }
-                
-                // ✅ تحسين: بديل: استخدام AppState (بما في ذلك المعتمدين) - مباشرة بدون تأخير
-                if (contractors.length === 0) {
-                    // دمج المقاولين النشطين فقط من مصادر مختلفة
-                    const allContractors = [
-                        ...(AppState.appData?.approvedContractors || []),
-                        ...(AppState.appData?.contractors || [])
-                    ].filter(c => c && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE');
-                    // إزالة التكرار بناءً على ID
-                    const uniqueContractors = Array.from(
-                        new Map(allContractors.map(c => [c.id || c.contractorId, c])).values()
-                    );
-                    contractors = uniqueContractors
-                        .filter(c => c && (c.name || c.companyName || c.contractorName))
-                        .map(c => ({
-                            id: c.id || c.contractorId || '',
-                            name: (c.name || c.companyName || c.contractorName || '').trim()
-                        }))
-                        .filter(c => c.name && c.name !== 'غير معروف')
-                        .sort((a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' }));
-                }
-
-                // إضافة المقاولين إلى datalist (اسم المقاول فقط بدون الإدارة)
-                contractorsDatalist.innerHTML = contractors.map(c => 
-                    `<option value="${Utils.escapeHTML(c.name)}" data-contractor-id="${c.id || ''}"></option>`
-                ).join('');
-
-                // التأكد من أن قيمة المقاول في الحقل هي اسم المقاول فقط (بدون الإدارة)
-                if (blacklistData?.contractor) {
-                    // إذا كانت القيمة تحتوي على " - " (فاصل بين المقاول والإدارة)، نأخذ الجزء الأول فقط
-                    const contractorValue = blacklistData.contractor.split(' - ')[0].trim();
-                    contractorInput.value = contractorValue;
-                }
-            } catch (error) {
-                Utils.safeWarn('⚠️ خطأ في تحميل قائمة المقاولين:', error);
-            }
-        }
-
-        // معالج تغيير المصنع (لتحميل الأماكن)
-        const factorySelect = modal.querySelector('#blacklist-factory');
-        if (factorySelect) {
-            factorySelect.addEventListener('change', async (e) => {
-                const selectedOption = e.target.selectedOptions[0];
-                const siteId = selectedOption?.dataset.siteId || selectedOption?.value;
-                await this.loadBlacklistPlaces(siteId);
-            });
-
-            // تحميل الأماكن عند فتح النموذج للتعديل
-            if (isEdit && blacklistData?.factoryId) {
-                const siteId = blacklistData.factoryId;
-                try {
-                    await this.loadBlacklistPlaces(siteId);
-                    // تحديد الموقع بعد تحميله
-                    setTimeout(() => {
-                        const locationSelect = modal.querySelector('#blacklist-location');
-                        if (locationSelect && blacklistData?.location) {
-                            locationSelect.value = blacklistData.location;
-                        }
-                    }, 100);
-                } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في تحميل الأماكن:', error);
-                }
-            }
-        }
-    },
-
-
-    renderBlacklistTable() {
-        const blacklistRecords = AppState.appData?.blacklistRegister || [];
-        const sortedRecords = [...blacklistRecords].sort((a, b) => {
-            const dateA = new Date(a.banDate || a.createdAt || 0);
-            const dateB = new Date(b.banDate || b.createdAt || 0);
-            return dateB - dateA;
-        });
-
-        if (sortedRecords.length === 0) {
-            return `
+        `},async setupBlacklistFormInModal(e,t){const i=!!t,a=e.querySelector("#blacklist-form");a&&(a.dataset.editId=i?t.id:""),a&&a.addEventListener("submit",s=>this.handleBlacklistSubmit(s));const n=e.querySelector("#blacklist-cancel-btn");n&&n.addEventListener("click",()=>{e.remove()});const o=e.querySelector("#blacklist-photo-input");o&&o.addEventListener("change",s=>this.handleBlacklistPhotoUpload(s));const r=e.querySelector("#blacklist-contractor"),l=e.querySelector("#blacklist-contractors-list");if(r&&l)try{let s=[];if(typeof Contractors<"u"&&typeof Contractors.getAllContractorsForModules=="function"&&(s=Contractors.getAllContractorsForModules()||[]),s.length===0){const d=[...AppState.appData?.approvedContractors||[],...AppState.appData?.contractors||[]].filter(f=>f&&f.isActive!=="inactive"&&f.isActive!==!1&&f.isActive!=="false"&&f.isActive!=="FALSE");s=Array.from(new Map(d.map(f=>[f.id||f.contractorId,f])).values()).filter(f=>f&&(f.name||f.companyName||f.contractorName)).map(f=>({id:f.id||f.contractorId||"",name:(f.name||f.companyName||f.contractorName||"").trim()})).filter(f=>f.name&&f.name!=="\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641").sort((f,u)=>f.name.localeCompare(u.name,"ar",{sensitivity:"base"}))}if(l.innerHTML=s.map(d=>`<option value="${Utils.escapeHTML(d.name)}" data-contractor-id="${d.id||""}"></option>`).join(""),t?.contractor){const d=t.contractor.split(" - ")[0].trim();r.value=d}}catch(s){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646:",s)}const c=e.querySelector("#blacklist-factory");if(c&&(c.addEventListener("change",async s=>{const d=s.target.selectedOptions[0],p=d?.dataset.siteId||d?.value;await this.loadBlacklistPlaces(p)}),i&&t?.factoryId)){const s=t.factoryId;try{await this.loadBlacklistPlaces(s),setTimeout(()=>{const d=e.querySelector("#blacklist-location");d&&t?.location&&(d.value=t.location)},100)}catch(d){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0645\u0627\u0643\u0646:",d)}}},renderBlacklistTable(){const t=[...AppState.appData?.blacklistRegister||[]].sort((i,a)=>{const n=new Date(i.banDate||i.createdAt||0);return new Date(a.banDate||a.createdAt||0)-n});return t.length===0?`
                 <div class="mt-6">
                     <div class="empty-state">
                         <i class="fas fa-user-slash text-gray-400 text-4xl mb-4"></i>
-                        <p class="text-gray-500">لا توجد سجلات ممنوعين من الدخول</p>
+                        <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644</p>
                     </div>
                 </div>
-            `;
-        }
-
-        return `
+            `:`
             <div class="mt-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold text-gray-800">
-                        <i class="fas fa-list ml-2"></i>قائمة الممنوعين من الدخول
+                        <i class="fas fa-list ml-2"></i>\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644
                     </h3>
                     <div class="flex items-center gap-2">
                         <input type="text" id="blacklist-search" class="form-input" 
-                            placeholder="بحث..." style="width: 250px;">
+                            placeholder="\u0628\u062D\u062B..." style="width: 250px;">
                         <button id="blacklist-export-pdf" class="btn-secondary">
                             <i class="fas fa-file-pdf ml-2"></i>PDF
                         </button>
@@ -7439,517 +2007,90 @@ ${inner}
                     <table class="data-table" id="blacklist-table">
                         <thead>
                             <tr>
-                        <th>م</th>
-                        <th>تاريخ المنع</th>
-                        <th>المصنع</th>
-                        <th>الموقع</th>
-                        <th>الاسم رباعي</th>
-                        <th>رقم البطاقة</th>
-                        <th>الوظيفة</th>
-                        <th>الشركة - المقاول</th>
-                        <th>الإدارة</th>
-                        <th>القائم بالمنع</th>
-                        <th>محرر البيانات</th>
-                        <th>الصورة</th>
-                        <th>سبب المنع</th>
-                        <th>ملاحظات</th>
-                        <th>الإجراءات</th>
+                        <th>\u0645</th>
+                        <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639</th>
+                        <th>\u0627\u0644\u0645\u0635\u0646\u0639</th>
+                        <th>\u0627\u0644\u0645\u0648\u0642\u0639</th>
+                        <th>\u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A</th>
+                        <th>\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629</th>
+                        <th>\u0627\u0644\u0648\u0638\u064A\u0641\u0629</th>
+                        <th>\u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                        <th>\u0627\u0644\u0625\u062F\u0627\u0631\u0629</th>
+                        <th>\u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639</th>
+                        <th>\u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</th>
+                        <th>\u0627\u0644\u0635\u0648\u0631\u0629</th>
+                        <th>\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639</th>
+                        <th>\u0645\u0644\u0627\u062D\u0638\u0627\u062A</th>
+                        <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                             </tr>
                         </thead>
                         <tbody id="blacklist-table-body">
-                            ${sortedRecords.map(record => {
-                                const photoUrl = this.processPhoto(record);
-                                const disp = photoUrl && typeof Utils.resolveDriveAwareImgDisplay === 'function'
-                                    ? Utils.resolveDriveAwareImgDisplay(photoUrl)
-                                    : { canonical: photoUrl || '', displaySrc: photoUrl || '', needsProxy: false, proxyFileId: '' };
-                                const imgSrc = disp.canonical ? disp.displaySrc : '';
-                                const proxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
-                                return `
+                            ${t.map(i=>{const a=this.processPhoto(i),n=a&&typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(a):{canonical:a||"",displaySrc:a||"",needsProxy:!1,proxyFileId:""},o=n.canonical?n.displaySrc:"",r=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(n):"";return`
                                 <tr>
-                                    <td>${record.serialNumber || '-'}</td>
-                                    <td>${record.banDate ? Utils.formatDate(record.banDate) : '-'}</td>
-                                    <td>${Utils.escapeHTML(record.factory || '-')}</td>
-                                    <td>${Utils.escapeHTML(record.location || '-')}</td>
-                                    <td>${Utils.escapeHTML(record.fullName || '-')}</td>
-                                    <td>${Utils.escapeHTML(record.idNumber || '-')}</td>
-                                    <td>${Utils.escapeHTML(record.job || '-')}</td>
-                                    <td>${Utils.escapeHTML(record.contractor || '-')}</td>
-                                    <td>${Utils.escapeHTML(record.department || '-')}</td>
-                                    <td>${Utils.escapeHTML(record.bannedBy || '-')}</td>
-                                    <td>${Utils.escapeHTML(record.editor || '-')}</td>
+                                    <td>${i.serialNumber||"-"}</td>
+                                    <td>${i.banDate?Utils.formatDate(i.banDate):"-"}</td>
+                                    <td>${Utils.escapeHTML(i.factory||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.location||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.fullName||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.idNumber||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.job||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.contractor||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.department||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.bannedBy||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.editor||"-")}</td>
                                     <td>
-                                        ${photoUrl ? 
-                `<img src="${Utils.escapeHTML(imgSrc)}" alt="صورة"${proxyAttr} class="blacklist-table-photo w-12 h-12 object-cover rounded cursor-pointer"
-                                                data-photo-url="${Utils.escapeHTML(photoUrl)}"
-                                                onclick="Violations.viewBlacklistPhoto(this.dataset.photoUrl)" title="انقر لعرض الصورة"
-                                                onerror="Violations._onBlacklistTablePhotoError(this)">` 
-                : '-'}
+                                        ${a?`<img src="${Utils.escapeHTML(o)}" alt="\u0635\u0648\u0631\u0629"${r} class="blacklist-table-photo w-12 h-12 object-cover rounded cursor-pointer"
+                                                data-photo-url="${Utils.escapeHTML(a)}"
+                                                onclick="Violations.viewBlacklistPhoto(this.dataset.photoUrl)" title="\u0627\u0646\u0642\u0631 \u0644\u0639\u0631\u0636 \u0627\u0644\u0635\u0648\u0631\u0629"
+                                                onerror="Violations._onBlacklistTablePhotoError(this)">`:"-"}
                                     </td>
-                                    <td class="max-w-xs truncate" title="${Utils.escapeHTML(record.banReason || '')}">
-                                        ${Utils.escapeHTML((record.banReason || '-').substring(0, 50))}${(record.banReason || '').length > 50 ? '...' : ''}
+                                    <td class="max-w-xs truncate" title="${Utils.escapeHTML(i.banReason||"")}">
+                                        ${Utils.escapeHTML((i.banReason||"-").substring(0,50))}${(i.banReason||"").length>50?"...":""}
                                     </td>
-                                    <td class="max-w-xs truncate" title="${Utils.escapeHTML(record.notes || '')}">
-                                        ${Utils.escapeHTML((record.notes || '-').substring(0, 30))}${(record.notes || '').length > 30 ? '...' : ''}
+                                    <td class="max-w-xs truncate" title="${Utils.escapeHTML(i.notes||"")}">
+                                        ${Utils.escapeHTML((i.notes||"-").substring(0,30))}${(i.notes||"").length>30?"...":""}
                                     </td>
                                     <td>
                                         <div class="flex items-center gap-2">
-                                            <button onclick="Violations.viewBlacklistDetails('${record.id}')" 
-                                                class="btn-icon btn-icon-info" title="عرض التفاصيل">
+                                            <button onclick="Violations.viewBlacklistDetails('${i.id}')" 
+                                                class="btn-icon btn-icon-info" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button onclick="Violations.editBlacklistRecord('${record.id}')" 
-                                                class="btn-icon btn-icon-warning" title="تعديل">
+                                            <button onclick="Violations.editBlacklistRecord('${i.id}')" 
+                                                class="btn-icon btn-icon-warning" title="\u062A\u0639\u062F\u064A\u0644">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button onclick="Violations.deleteBlacklistRecord('${record.id}')" 
-                                                class="btn-icon btn-icon-danger" title="حذف">
+                                            <button onclick="Violations.deleteBlacklistRecord('${i.id}')" 
+                                                class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-                            `;}).join('')}
+                            `}).join("")}
                         </tbody>
                     </table>
                 </div>
             </div>
-        `;
-    },
-
-    async setupBlacklistEventListeners() {
-        setTimeout(async () => {
-            // التأكد من تحميل البيانات
-            if (!AppState.appData.blacklistRegister) {
-                AppState.appData.blacklistRegister = [];
-            }
-
-            // التأكد من تحميل إعدادات النماذج
-            if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
-                try {
-                    await Permissions.ensureFormSettingsState();
-                } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في تحميل إعدادات النماذج:', error);
-                }
-            }
-
-            // معالج نموذج التسجيل (فقط للنموذج الموجود في الصفحة الرئيسية، ليس modal)
-            const form = document.getElementById('blacklist-form');
-            if (form && !form.closest('.modal-overlay')) {
-                // إزالة event listener القديم إن وجد
-                const newForm = form.cloneNode(true);
-                form.parentNode.replaceChild(newForm, form);
-                newForm.addEventListener('submit', (e) => this.handleBlacklistSubmit(e));
-            }
-
-            // معالج رفع الصورة (فقط إذا كان موجوداً في الصفحة الرئيسية)
-            const photoInput = document.getElementById('blacklist-photo-input');
-            if (photoInput && !photoInput.closest('.modal-overlay')) {
-                photoInput.addEventListener('change', (e) => this.handleBlacklistPhotoUpload(e));
-            }
-
-            // معالج البحث
-            const searchInput = document.getElementById('blacklist-search');
-            if (searchInput) {
-                // إزالة event listeners القديمة
-                const newSearchInput = searchInput.cloneNode(true);
-                searchInput.parentNode.replaceChild(newSearchInput, searchInput);
-                newSearchInput.addEventListener('input', (e) => this.filterBlacklistTable(e.target.value));
-            }
-
-            // ✅ إضافة معالج زر التسجيل (مهم جداً)
-            const addBtn = document.getElementById('blacklist-add-btn');
-            if (addBtn) {
-                // التحقق من أن listener لم يتم إضافته مسبقاً
-                if (!addBtn.dataset.listenerAttached) {
-                    addBtn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        try {
-                            this.showBlacklistForm();
-                        } catch (error) {
-                            Utils.safeError('خطأ في فتح نموذج Blacklist:', error);
-                            Notification.error('حدث خطأ أثناء فتح النموذج. يرجى المحاولة مرة أخرى.');
-                        }
-                    });
-                    addBtn.dataset.listenerAttached = 'true';
-                    if (AppState.debugMode) {
-                        Utils.safeLog('✅ تم ربط زر "تسجيل ممنوع من الدخول جديد" بنجاح');
-                    }
-                } else {
-                    if (AppState.debugMode) {
-                        Utils.safeLog('ℹ️ زر "تسجيل ممنوع من الدخول جديد" مربوط مسبقاً');
-                    }
-                }
-            } else {
-                if (AppState.debugMode) {
-                    Utils.safeWarn('⚠️ زر "blacklist-add-btn" غير موجود في DOM');
-                }
-            }
-
-            // معالج تغيير المصنع (فقط إذا كان موجوداً في الصفحة الرئيسية)
-            const factorySelect = document.getElementById('blacklist-factory');
-            if (factorySelect && !factorySelect.closest('.modal-overlay')) {
-                factorySelect.addEventListener('change', async (e) => {
-                    const selectedOption = e.target.selectedOptions[0];
-                    const siteId = selectedOption?.dataset.siteId || selectedOption?.value;
-                    await this.loadBlacklistPlaces(siteId);
-                });
-            }
-
-            // معالجات التصدير
-            const exportPdfBtn = document.getElementById('blacklist-export-pdf');
-            if (exportPdfBtn) {
-                const newExportPdfBtn = exportPdfBtn.cloneNode(true);
-                exportPdfBtn.parentNode.replaceChild(newExportPdfBtn, exportPdfBtn);
-                newExportPdfBtn.addEventListener('click', () => this.exportBlacklistToPDF());
-            }
-
-            const exportExcelBtn = document.getElementById('blacklist-export-excel');
-            if (exportExcelBtn) {
-                const newExportExcelBtn = exportExcelBtn.cloneNode(true);
-                exportExcelBtn.parentNode.replaceChild(newExportExcelBtn, exportExcelBtn);
-                newExportExcelBtn.addEventListener('click', () => this.exportBlacklistToExcel());
-            }
-
-            this._hydrateBlacklistDrivePhotos();
-        }, 100);
-    },
-
-    async handleBlacklistSubmit(e) {
-        e.preventDefault();
-
-        const form = e.target;
-        const isEdit = !!form.dataset.editId;
-
-        // معالجة الصورة
-        let photo = isEdit ?
-            (AppState.appData?.blacklistRegister?.find(r => r.id === form.dataset.editId)?.photo || '') : '';
-
-        // البحث عن photoInput داخل modal
-        const modal = form.closest('.modal-overlay');
-        const photoInput = modal ? modal.querySelector('#blacklist-photo-input') : document.getElementById('blacklist-photo-input');
-        if (photoInput?.files?.[0]) {
-            const file = photoInput.files[0];
-            if (file.size > 2 * 1024 * 1024) {
-                Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2MB');
-                return;
-            }
-            try {
-                photo = await this.convertImageToBase64(file);
-            } catch (err) {
-                if (AppState.debugMode) Utils.safeWarn('خطأ في تحويل الصورة:', err);
-            }
-        }
-
-        // الحصول على IDs للمواقع (من داخل modal)
-        const factorySelect = modal ? modal.querySelector('#blacklist-factory') : document.getElementById('blacklist-factory');
-        const locationSelect = modal ? modal.querySelector('#blacklist-location') : document.getElementById('blacklist-location');
-
-        const factoryOption = factorySelect?.selectedOptions[0];
-        const locationOption = locationSelect?.selectedOptions[0];
-
-        // الحصول على باقي الحقول
-        const getFieldValue = (id) => {
-            const field = modal ? modal.querySelector(`#${id}`) : document.getElementById(id);
-            return field?.value || '';
-        };
-
-        const formData = {
-            id: form.dataset.editId || Utils.generateId('BLACKLIST'),
-            serialNumber: getFieldValue('blacklist-serial'),
-            factory: factorySelect?.value || '',
-            factoryId: factoryOption?.dataset.siteId || '',
-            location: locationSelect?.value || '',
-            locationId: locationOption?.dataset.placeId || '',
-            fullName: getFieldValue('blacklist-name'),
-            idNumber: getFieldValue('blacklist-id-number'),
-            photo: photo,
-            job: getFieldValue('blacklist-job'),
-            contractor: (getFieldValue('blacklist-contractor') || '').trim().split(' - ')[0], // اسم المقاول فقط (بدون الإدارة)
-            department: getFieldValue('blacklist-department'),
-            banReason: getFieldValue('blacklist-ban-reason'),
-            banDate: getFieldValue('blacklist-ban-date'),
-            bannedBy: getFieldValue('blacklist-banned-by'),
-            editor: getFieldValue('blacklist-editor'),
-            notes: getFieldValue('blacklist-notes'),
-            createdAt: isEdit ?
-                (AppState.appData?.blacklistRegister?.find(r => r.id === form.dataset.editId)?.createdAt || new Date().toISOString()) :
-                new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        // رفع الصورة إذا كانت Base64
-        if (photo && photo.startsWith('data:')) {
-            try {
-                const uploadResult = await GoogleIntegration.uploadFileToDrive?.(
-                    photo,
-                    `blacklist_${formData.id}_${Date.now()}.jpg`,
-                    'image/jpeg',
-                    'Blacklist_Register'
-                );
-                if (uploadResult?.success && (uploadResult.directLink || uploadResult.shareableLink)) {
-                    formData.photo = uploadResult.directLink || uploadResult.shareableLink;
-                    if (AppState.debugMode) console.log('✅ تم رفع الصورة بنجاح:', formData.photo);
-                } else {
-                    // إذا فشل الرفع، نحتفظ بـ Base64 كحل مؤقت
-                    if (AppState.debugMode) console.warn('⚠️ فشل في رفع الصورة، سيتم الاحتفاظ بـ Base64');
-                    Notification.warning('فشل في رفع الصورة إلى Drive. سيتم حفظ الصورة مؤقتاً.');
-                }
-            } catch (err) {
-                if (AppState.debugMode) Utils.safeWarn('❌ خطأ في رفع الصورة:', err);
-                Notification.error('خطأ في رفع الصورة: ' + err.message);
-                // نحتفظ بـ Base64 في حالة الفشل
-            }
-        }
-
-        await this.saveBlacklistRecord(formData, isEdit);
-    },
-
-    async saveBlacklistRecord(recordData, isEdit) {
-        Loading.show();
-        try {
-            if (!AppState.appData.blacklistRegister) {
-                AppState.appData.blacklistRegister = [];
-            }
-
-            if (isEdit) {
-                const index = AppState.appData.blacklistRegister.findIndex(r => r.id === recordData.id);
-                if (index !== -1) {
-                    AppState.appData.blacklistRegister[index] = recordData;
-                } else {
-                    AppState.appData.blacklistRegister.push(recordData);
-                }
-            } else {
-                AppState.appData.blacklistRegister.push(recordData);
-            }
-
-            // حفظ محلياً
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            }
-
-            // حفظ في Google Sheets
-            try {
-                await GoogleIntegration.autoSave('Blacklist_Register', AppState.appData.blacklistRegister);
-            } catch (err) {
-                if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ Google Sheets:', err);
-                Notification.warning('تم الحفظ محلياً لكن فشل الحفظ في Google Sheets');
-            }
-
-            Loading.hide();
-            Notification.success(`تم ${isEdit ? 'تحديث' : 'تسجيل'} السجل بنجاح`);
-
-            // إغلاق النموذج إذا كان مفتوحاً
-            const existingModal = document.querySelector('.modal-overlay');
-            if (existingModal && existingModal.querySelector('#blacklist-form')) {
-                existingModal.remove();
-            }
-
-            // تحديث الكروت والجدول
-            const cardsContainer = document.getElementById('blacklist-cards-container');
-            if (cardsContainer) {
-                cardsContainer.innerHTML = this.renderBlacklistCards();
-                this.setupBlacklistEventListeners();
-            }
-
-            const tableContainer = document.getElementById('blacklist-table-container');
-            if (tableContainer) {
-                tableContainer.innerHTML = this.renderBlacklistTable();
-                this.setupBlacklistEventListeners();
-            }
-
-            // تحديث الإحصائيات
-            const cardBody = document.querySelector('#violations-tab-content .card-body');
-            if (cardBody) {
-                const existingStats = cardBody.querySelector('.grid.grid-cols-1.md\\:grid-cols-3');
-                if (existingStats) {
-                    existingStats.outerHTML = this.renderBlacklistStats();
-                }
-            }
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في حفظ السجل:', error);
-            Notification.error('فشل في حفظ السجل: ' + error.message);
-        }
-    },
-
-    handleBlacklistPhotoUpload(e) {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            // البحث داخل modal أولاً
-            const modal = document.querySelector('.modal-overlay');
-            const preview = modal ? modal.querySelector('#blacklist-photo-preview') : document.getElementById('blacklist-photo-preview');
-            const img = modal ? modal.querySelector('#blacklist-photo-img') : document.getElementById('blacklist-photo-img');
-            if (preview && img) {
-                img.src = event.target.result;
-                preview.classList.remove('hidden');
-            }
-        };
-        reader.readAsDataURL(file);
-    },
-
-    async loadBlacklistPlaces(siteId) {
-        try {
-            // التأكد من تحميل إعدادات النماذج
-            if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
-                await Permissions.ensureFormSettingsState();
-            }
-
-            // البحث عن locationSelect داخل modal أولاً، ثم في document
-            const modal = document.querySelector('.modal-overlay');
-            const locationSelect = modal ? modal.querySelector('#blacklist-location') : document.getElementById('blacklist-location');
-            if (!locationSelect) return;
-
-            locationSelect.innerHTML = '<option value="">-- اختر الموقع --</option>';
-
-            const places = this.getPlaceOptions(siteId);
-
-            places.forEach(place => {
-                const option = document.createElement('option');
-                option.value = place.name;
-                option.dataset.placeId = place.id;
-                option.textContent = place.name;
-                locationSelect.appendChild(option);
-            });
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في تحميل الأماكن:', error);
-        }
-    },
-
-
-    filterBlacklistTable(searchTerm) {
-        const tbody = document.getElementById('blacklist-table-body');
-        if (!tbody) return;
-
-        const rows = tbody.querySelectorAll('tr');
-        const term = searchTerm.toLowerCase();
-
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(term) ? '' : 'none';
-        });
-    },
-
-    editBlacklistRecord(recordId) {
-        const record = AppState.appData?.blacklistRegister?.find(r => r.id === recordId);
-        if (!record) {
-            Notification.error('السجل غير موجود');
-            return;
-        }
-
-        this.showBlacklistForm(record);
-    },
-
-    async deleteBlacklistRecord(recordId) {
-        if (!confirm('هل أنت متأكد من حذف هذا السجل؟')) return;
-
-        Loading.show();
-        try {
-            if (AppState.appData?.blacklistRegister) {
-                AppState.appData.blacklistRegister = AppState.appData.blacklistRegister.filter(r => r.id !== recordId);
-            }
-
-            // حفظ محلياً
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            }
-
-            // حفظ في Google Sheets
-            try {
-                await GoogleIntegration.autoSave('Blacklist_Register', AppState.appData.blacklistRegister);
-            } catch (err) {
-                if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ Google Sheets:', err);
-                Notification.warning('تم الحذف محلياً لكن فشل الحفظ في Google Sheets');
-            }
-
-            Loading.hide();
-            Notification.success('تم حذف السجل بنجاح');
-
-            // إعادة تحميل التبويب
-            const activeTabBtn = document.querySelector('.tab-btn.active[data-tab="blacklist"]');
-            if (activeTabBtn) {
-                await this.switchTab('blacklist');
-            }
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في حذف السجل:', error);
-            Notification.error('فشل في حذف السجل: ' + error.message);
-        }
-    },
-
-    viewBlacklistPhoto(photoUrl) {
-        if (!photoUrl) {
-            Notification.error('لا توجد صورة');
-            return;
-        }
-
-        // ✅ معالجة الصورة بشكل صحيح (تحويل الروابط القديمة إذا لزم)
-        const processedUrl = this.processPhoto(photoUrl);
-        if (!processedUrl) {
-            Notification.error('رابط الصورة غير صالح');
-            return;
-        }
-
-        const openPhotoModal = (src) => {
-            const modal = document.createElement('div');
-            modal.className = 'modal-overlay';
-            modal.innerHTML = `
+        `},async setupBlacklistEventListeners(){setTimeout(async()=>{if(AppState.appData.blacklistRegister||(AppState.appData.blacklistRegister=[]),typeof Permissions<"u"&&typeof Permissions.ensureFormSettingsState=="function")try{await Permissions.ensureFormSettingsState()}catch(l){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0645\u0627\u0630\u062C:",l)}const e=document.getElementById("blacklist-form");if(e&&!e.closest(".modal-overlay")){const l=e.cloneNode(!0);e.parentNode.replaceChild(l,e),l.addEventListener("submit",c=>this.handleBlacklistSubmit(c))}const t=document.getElementById("blacklist-photo-input");t&&!t.closest(".modal-overlay")&&t.addEventListener("change",l=>this.handleBlacklistPhotoUpload(l));const i=document.getElementById("blacklist-search");if(i){const l=i.cloneNode(!0);i.parentNode.replaceChild(l,i),l.addEventListener("input",c=>this.filterBlacklistTable(c.target.value))}const a=document.getElementById("blacklist-add-btn");a?a.dataset.listenerAttached?AppState.debugMode&&Utils.safeLog('\u2139\uFE0F \u0632\u0631 "\u062A\u0633\u062C\u064A\u0644 \u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u062C\u062F\u064A\u062F" \u0645\u0631\u0628\u0648\u0637 \u0645\u0633\u0628\u0642\u0627\u064B'):(a.addEventListener("click",l=>{l.preventDefault(),l.stopPropagation();try{this.showBlacklistForm()}catch(c){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0641\u062A\u062D \u0646\u0645\u0648\u0630\u062C Blacklist:",c),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0641\u062A\u062D \u0627\u0644\u0646\u0645\u0648\u0630\u062C. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.")}}),a.dataset.listenerAttached="true",AppState.debugMode&&Utils.safeLog('\u2705 \u062A\u0645 \u0631\u0628\u0637 \u0632\u0631 "\u062A\u0633\u062C\u064A\u0644 \u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u062C\u062F\u064A\u062F" \u0628\u0646\u062C\u0627\u062D')):AppState.debugMode&&Utils.safeWarn('\u26A0\uFE0F \u0632\u0631 "blacklist-add-btn" \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A DOM');const n=document.getElementById("blacklist-factory");n&&!n.closest(".modal-overlay")&&n.addEventListener("change",async l=>{const c=l.target.selectedOptions[0],s=c?.dataset.siteId||c?.value;await this.loadBlacklistPlaces(s)});const o=document.getElementById("blacklist-export-pdf");if(o){const l=o.cloneNode(!0);o.parentNode.replaceChild(l,o),l.addEventListener("click",()=>this.exportBlacklistToPDF())}const r=document.getElementById("blacklist-export-excel");if(r){const l=r.cloneNode(!0);r.parentNode.replaceChild(l,r),l.addEventListener("click",()=>this.exportBlacklistToExcel())}this._hydrateBlacklistDrivePhotos()},100)},async handleBlacklistSubmit(e){e.preventDefault();const t=e.target,i=!!t.dataset.editId;let a=i&&AppState.appData?.blacklistRegister?.find(f=>f.id===t.dataset.editId)?.photo||"";const n=t.closest(".modal-overlay"),o=n?n.querySelector("#blacklist-photo-input"):document.getElementById("blacklist-photo-input");if(o?.files?.[0]){const f=o.files[0];if(f.size>2097152){Notification.error("\u062D\u062C\u0645 \u0627\u0644\u0635\u0648\u0631\u0629 \u0643\u0628\u064A\u0631 \u062C\u062F\u0627\u064B. \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 2MB");return}try{a=await this.convertImageToBase64(f)}catch(u){AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629:",u)}}const r=n?n.querySelector("#blacklist-factory"):document.getElementById("blacklist-factory"),l=n?n.querySelector("#blacklist-location"):document.getElementById("blacklist-location"),c=r?.selectedOptions[0],s=l?.selectedOptions[0],d=f=>(n?n.querySelector(`#${f}`):document.getElementById(f))?.value||"",p={id:t.dataset.editId||Utils.generateId("BLACKLIST"),serialNumber:d("blacklist-serial"),factory:r?.value||"",factoryId:c?.dataset.siteId||"",location:l?.value||"",locationId:s?.dataset.placeId||"",fullName:d("blacklist-name"),idNumber:d("blacklist-id-number"),photo:a,job:d("blacklist-job"),contractor:(d("blacklist-contractor")||"").trim().split(" - ")[0],department:d("blacklist-department"),banReason:d("blacklist-ban-reason"),banDate:d("blacklist-ban-date"),bannedBy:d("blacklist-banned-by"),editor:d("blacklist-editor"),notes:d("blacklist-notes"),createdAt:i?AppState.appData?.blacklistRegister?.find(f=>f.id===t.dataset.editId)?.createdAt||new Date().toISOString():new Date().toISOString(),updatedAt:new Date().toISOString()};if(a&&a.startsWith("data:"))try{const f=await GoogleIntegration.uploadFileToDrive?.(a,`blacklist_${p.id}_${Date.now()}.jpg`,"image/jpeg","Blacklist_Register");f?.success&&(f.directLink||f.shareableLink)?(p.photo=f.directLink||f.shareableLink,AppState.debugMode):(AppState.debugMode,Notification.warning("\u0641\u0634\u0644 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629 \u0625\u0644\u0649 Drive. \u0633\u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0635\u0648\u0631\u0629 \u0645\u0624\u0642\u062A\u0627\u064B."))}catch(f){AppState.debugMode&&Utils.safeWarn("\u274C \u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629:",f),Notification.error("\u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629: "+f.message)}await this.saveBlacklistRecord(p,i)},async saveBlacklistRecord(e,t){Loading.show();try{if(AppState.appData.blacklistRegister||(AppState.appData.blacklistRegister=[]),t){const r=AppState.appData.blacklistRegister.findIndex(l=>l.id===e.id);r!==-1?AppState.appData.blacklistRegister[r]=e:AppState.appData.blacklistRegister.push(e)}else AppState.appData.blacklistRegister.push(e);typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save();try{await GoogleIntegration.autoSave("Blacklist_Register",AppState.appData.blacklistRegister)}catch(r){AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 Google Sheets:",r),Notification.warning("\u062A\u0645 \u0627\u0644\u062D\u0641\u0638 \u0645\u062D\u0644\u064A\u0627\u064B \u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0641\u064A Google Sheets")}Loading.hide(),Notification.success(`\u062A\u0645 ${t?"\u062A\u062D\u062F\u064A\u062B":"\u062A\u0633\u062C\u064A\u0644"} \u0627\u0644\u0633\u062C\u0644 \u0628\u0646\u062C\u0627\u062D`);const i=document.querySelector(".modal-overlay");i&&i.querySelector("#blacklist-form")&&i.remove();const a=document.getElementById("blacklist-cards-container");a&&(a.innerHTML=this.renderBlacklistCards(),this.setupBlacklistEventListeners());const n=document.getElementById("blacklist-table-container");n&&(n.innerHTML=this.renderBlacklistTable(),this.setupBlacklistEventListeners());const o=document.querySelector("#violations-tab-content .card-body");if(o){const r=o.querySelector(".grid.grid-cols-1.md\\:grid-cols-3");r&&(r.outerHTML=this.renderBlacklistStats())}}catch(i){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0633\u062C\u0644:",i),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0633\u062C\u0644: "+i.message)}},handleBlacklistPhotoUpload(e){const t=e.target.files?.[0];if(!t)return;const i=new FileReader;i.onload=a=>{const n=document.querySelector(".modal-overlay"),o=n?n.querySelector("#blacklist-photo-preview"):document.getElementById("blacklist-photo-preview"),r=n?n.querySelector("#blacklist-photo-img"):document.getElementById("blacklist-photo-img");o&&r&&(r.src=a.target.result,o.classList.remove("hidden"))},i.readAsDataURL(t)},async loadBlacklistPlaces(e){try{typeof Permissions<"u"&&typeof Permissions.ensureFormSettingsState=="function"&&await Permissions.ensureFormSettingsState();const t=document.querySelector(".modal-overlay"),i=t?t.querySelector("#blacklist-location"):document.getElementById("blacklist-location");if(!i)return;i.innerHTML='<option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 --</option>',this.getPlaceOptions(e).forEach(n=>{const o=document.createElement("option");o.value=n.name,o.dataset.placeId=n.id,o.textContent=n.name,i.appendChild(o)})}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0645\u0627\u0643\u0646:",t)}},filterBlacklistTable(e){const t=document.getElementById("blacklist-table-body");if(!t)return;const i=t.querySelectorAll("tr"),a=e.toLowerCase();i.forEach(n=>{const o=n.textContent.toLowerCase();n.style.display=o.includes(a)?"":"none"})},editBlacklistRecord(e){const t=AppState.appData?.blacklistRegister?.find(i=>i.id===e);if(!t){Notification.error("\u0627\u0644\u0633\u062C\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}this.showBlacklistForm(t)},async deleteBlacklistRecord(e){if(confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0633\u062C\u0644\u061F")){Loading.show();try{AppState.appData?.blacklistRegister&&(AppState.appData.blacklistRegister=AppState.appData.blacklistRegister.filter(i=>i.id!==e)),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save();try{await GoogleIntegration.autoSave("Blacklist_Register",AppState.appData.blacklistRegister)}catch(i){AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 Google Sheets:",i),Notification.warning("\u062A\u0645 \u0627\u0644\u062D\u0630\u0641 \u0645\u062D\u0644\u064A\u0627\u064B \u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0641\u064A Google Sheets")}Loading.hide(),Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0633\u062C\u0644 \u0628\u0646\u062C\u0627\u062D"),document.querySelector('.tab-btn.active[data-tab="blacklist"]')&&await this.switchTab("blacklist")}catch(t){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0633\u062C\u0644:",t),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0633\u062C\u0644: "+t.message)}}},viewBlacklistPhoto(e){if(!e){Notification.error("\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631\u0629");return}const t=this.processPhoto(e);if(!t){Notification.error("\u0631\u0627\u0628\u0637 \u0627\u0644\u0635\u0648\u0631\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D");return}const i=n=>{const o=document.createElement("div");o.className="modal-overlay",o.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">الصورة الشخصية</h2>
+                    <h2 class="modal-title">\u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <img src="${Utils.escapeHTML(src)}" alt="صورة شخصية" style="width: 100%; max-height: 70vh; object-fit: contain;"
-                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23ddd%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23666%22 font-family=%22sans-serif%22 font-size=%2220%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eفشل تحميل الصورة%3C/text%3E%3C/svg%3E';">
+                    <img src="${Utils.escapeHTML(n)}" alt="\u0635\u0648\u0631\u0629 \u0634\u062E\u0635\u064A\u0629" style="width: 100%; max-height: 70vh; object-fit: contain;"
+                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23ddd%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23666%22 font-family=%22sans-serif%22 font-size=%2220%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629%3C/text%3E%3C/svg%3E';">
                 </div>
             </div>
-        `;
-            document.body.appendChild(modal);
-        };
-
-        const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
-            ? Utils.resolveDriveAwareImgDisplay(processedUrl)
-            : { needsProxy: false, proxyFileId: '' };
-        if (disp.needsProxy && typeof Utils.fetchDriveImageDataUri === 'function') {
-            Utils.fetchDriveImageDataUri(disp.proxyFileId).then((dataUri) => {
-                if (dataUri) openPhotoModal(dataUri);
-                else Notification.error('تعذر تحميل الصورة من Google Drive');
-            }).catch(() => Notification.error('تعذر تحميل الصورة'));
-            return;
-        }
-
-        openPhotoModal(processedUrl);
-    },
-
-    viewBlacklistDetails(recordId) {
-        const record = AppState.appData?.blacklistRegister?.find(r => r.id === recordId);
-        if (!record) {
-            Notification.error('السجل غير موجود');
-            return;
-        }
-
-        // ✅ معالجة الصورة بشكل صحيح
-        const photoUrl = this.processPhoto(record);
-        const photoDisp = photoUrl && typeof Utils.resolveDriveAwareImgDisplay === 'function'
-            ? Utils.resolveDriveAwareImgDisplay(photoUrl)
-            : { canonical: photoUrl || '', displaySrc: photoUrl || '', needsProxy: false, proxyFileId: '' };
-        const photoImgSrc = photoDisp.canonical ? photoDisp.displaySrc : '';
-        const photoProxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(photoDisp) : '';
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        `,document.body.appendChild(o)},a=typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(t):{needsProxy:!1,proxyFileId:""};if(a.needsProxy&&typeof Utils.fetchDriveImageDataUri=="function"){Utils.fetchDriveImageDataUri(a.proxyFileId).then(n=>{n?i(n):Notification.error("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629 \u0645\u0646 Google Drive")}).catch(()=>Notification.error("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629"));return}i(t)},viewBlacklistDetails(e){const t=AppState.appData?.blacklistRegister?.find(l=>l.id===e);if(!t){Notification.error("\u0627\u0644\u0633\u062C\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const i=this.processPhoto(t),a=i&&typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(i):{canonical:i||"",displaySrc:i||"",needsProxy:!1,proxyFileId:""},n=a.canonical?a.displaySrc:"",o=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(a):"",r=document.createElement("div");r.className="modal-overlay",r.innerHTML=`
             <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-user-slash ml-2"></i>
-                        تفاصيل سجل الممنوع من الدخول
+                        \u062A\u0641\u0627\u0635\u064A\u0644 \u0633\u062C\u0644 \u0627\u0644\u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -7958,358 +2099,191 @@ ${inner}
                 <div class="modal-body" id="blacklist-details-content">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">الرقم التسلسلي</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.serialNumber || '-')}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u062A\u0633\u0644\u0633\u0644\u064A</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.serialNumber||"-")}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">تاريخ المنع</label>
-                            <p class="text-gray-800">${record.banDate ? Utils.formatDate(record.banDate) : '-'}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639</label>
+                            <p class="text-gray-800">${t.banDate?Utils.formatDate(t.banDate):"-"}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">المصنع</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.factory || '-')}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0645\u0635\u0646\u0639</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.factory||"-")}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">الموقع</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.location || '-')}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0645\u0648\u0642\u0639</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.location||"-")}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">الاسم رباعي</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.fullName || '-')}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.fullName||"-")}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">رقم البطاقة</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.idNumber || '-')}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.idNumber||"-")}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">الوظيفة</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.job || '-')}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0648\u0638\u064A\u0641\u0629</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.job||"-")}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">الشركة - المقاول</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.contractor || '-')}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.contractor||"-")}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">الإدارة</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.department || '-')}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.department||"-")}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">القائم بالمنع</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.bannedBy || '-')}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.bannedBy||"-")}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">محرر البيانات</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(record.editor || '-')}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.editor||"-")}</p>
                         </div>
-                        ${record.createdAt ? `
+                        ${t.createdAt?`
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">تاريخ الإنشاء</label>
-                            <p class="text-gray-800">${Utils.formatDateTime(record.createdAt)}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621</label>
+                            <p class="text-gray-800">${Utils.formatDateTime(t.createdAt)}</p>
                         </div>
-                        ` : ''}
-                        ${record.updatedAt ? `
+                        `:""}
+                        ${t.updatedAt?`
                         <div>
-                            <label class="text-sm font-semibold text-gray-600">تاريخ آخر تحديث</label>
-                            <p class="text-gray-800">${Utils.formatDateTime(record.updatedAt)}</p>
+                            <label class="text-sm font-semibold text-gray-600">\u062A\u0627\u0631\u064A\u062E \u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B</label>
+                            <p class="text-gray-800">${Utils.formatDateTime(t.updatedAt)}</p>
                         </div>
-                        ` : ''}
+                        `:""}
                     </div>
-                    ${photoUrl ? `
+                    ${i?`
                     <div class="mt-4">
-                        <label class="text-sm font-semibold text-gray-600 mb-2 block">الصورة الشخصية</label>
+                        <label class="text-sm font-semibold text-gray-600 mb-2 block">\u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629</label>
                         <div class="flex justify-center">
-                            <img src="${Utils.escapeHTML(photoImgSrc)}" alt="صورة شخصية"${photoProxyAttr}
+                            <img src="${Utils.escapeHTML(n)}" alt="\u0635\u0648\u0631\u0629 \u0634\u062E\u0635\u064A\u0629"${o}
                                 class="blacklist-detail-photo max-w-xs max-h-64 object-cover rounded-lg cursor-pointer border-2 border-gray-200"
-                                data-photo-url="${Utils.escapeHTML(photoUrl)}"
+                                data-photo-url="${Utils.escapeHTML(i)}"
                                 onclick="Violations.viewBlacklistPhoto(this.dataset.photoUrl)"
-                                title="انقر لعرض الصورة بحجم كامل"
+                                title="\u0627\u0646\u0642\u0631 \u0644\u0639\u0631\u0636 \u0627\u0644\u0635\u0648\u0631\u0629 \u0628\u062D\u062C\u0645 \u0643\u0627\u0645\u0644"
                                 onerror="Violations._onBlacklistTablePhotoError(this)">
                         </div>
                     </div>
-                    ` : ''}
+                    `:""}
                     <div class="mt-4">
-                        <label class="text-sm font-semibold text-gray-600 mb-2 block">سبب المنع</label>
-                        <p class="text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200 whitespace-pre-wrap">${Utils.escapeHTML(record.banReason || '-')}</p>
+                        <label class="text-sm font-semibold text-gray-600 mb-2 block">\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639</label>
+                        <p class="text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200 whitespace-pre-wrap">${Utils.escapeHTML(t.banReason||"-")}</p>
                     </div>
-                    ${record.notes ? `
+                    ${t.notes?`
                     <div class="mt-4">
-                        <label class="text-sm font-semibold text-gray-600 mb-2 block">ملاحظات</label>
-                        <p class="text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200 whitespace-pre-wrap">${Utils.escapeHTML(record.notes)}</p>
+                        <label class="text-sm font-semibold text-gray-600 mb-2 block">\u0645\u0644\u0627\u062D\u0638\u0627\u062A</label>
+                        <p class="text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200 whitespace-pre-wrap">${Utils.escapeHTML(t.notes)}</p>
                     </div>
-                    ` : ''}
+                    `:""}
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="Violations.printBlacklistDetails('${recordId}')">
-                        <i class="fas fa-print ml-2"></i>طباعة
+                    <button type="button" class="btn-secondary" onclick="Violations.printBlacklistDetails('${e}')">
+                        <i class="fas fa-print ml-2"></i>\u0637\u0628\u0627\u0639\u0629
                     </button>
-                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('violations.blacklist') : ''}
-                    <button type="button" class="btn-warning" onclick="Violations.editBlacklistRecord('${recordId}'); this.closest('.modal-overlay').remove();">
-                        <i class="fas fa-edit ml-2"></i>تعديل
+                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("violations.blacklist"):""}
+                    <button type="button" class="btn-warning" onclick="Violations.editBlacklistRecord('${e}'); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-edit ml-2"></i>\u062A\u0639\u062F\u064A\u0644
                     </button>
-                    <button type="button" class="btn-danger" onclick="if(confirm('هل أنت متأكد من حذف هذا السجل؟')) { Violations.deleteBlacklistRecord('${recordId}'); this.closest('.modal-overlay').remove(); }">
-                        <i class="fas fa-trash ml-2"></i>حذف
+                    <button type="button" class="btn-danger" onclick="if(confirm('\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0633\u062C\u0644\u061F')) { Violations.deleteBlacklistRecord('${e}'); this.closest('.modal-overlay').remove(); }">
+                        <i class="fas fa-trash ml-2"></i>\u062D\u0630\u0641
                     </button>
-                    <button type="button" class="btn-primary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    <button type="button" class="btn-primary" onclick="this.closest('.modal-overlay').remove()">\u0625\u063A\u0644\u0627\u0642</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        if (typeof EmailDispatch !== 'undefined') {
-            EmailDispatch.bindFooterButtons(modal, {
-                moduleKey: 'violations.blacklist',
-                record: {
-                    ...record,
-                    name: record.fullName || '',
-                    nationalId: record.idNumber || '',
-                    reason: record.banReason || '',
-                    date: record.banDate || record.createdAt || ''
-                },
-                recordId: record.id || recordId || ''
-            });
-        }
-        if (typeof Utils.hydrateDriveProxyImages === 'function') {
-            Utils.hydrateDriveProxyImages(modal, {
-                onFetchFail: (img) => this._onBlacklistTablePhotoError(img)
-            });
-        }
-    },
-
-    printBlacklistDetails(recordId) {
-        const record = AppState.appData?.blacklistRegister?.find(r => r.id === recordId);
-        if (!record) {
-            Notification.error('السجل غير موجود');
-            return;
-        }
-
-        // ✅ معالجة الصورة بشكل صحيح
-        const photoUrl = this.processPhoto(record);
-
-        try {
-            Loading.show('جاري إعداد الطباعة...');
-
-            const formCode = `BLACKLIST-${(record.id || record.serialNumber || 'UNKNOWN').substring(0, 12)}`;
-            const title = 'تفاصيل الممنوع من الدخول - Blacklist Details';
-
-            // بناء محتوى التقرير
-            const content = `
+        `,document.body.appendChild(r),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(r,{moduleKey:"violations.blacklist",record:{...t,name:t.fullName||"",nationalId:t.idNumber||"",reason:t.banReason||"",date:t.banDate||t.createdAt||""},recordId:t.id||e||""}),typeof Utils.hydrateDriveProxyImages=="function"&&Utils.hydrateDriveProxyImages(r,{onFetchFail:l=>this._onBlacklistTablePhotoError(l)})},printBlacklistDetails(e){const t=AppState.appData?.blacklistRegister?.find(a=>a.id===e);if(!t){Notification.error("\u0627\u0644\u0633\u062C\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const i=this.processPhoto(t);try{Loading.show("\u062C\u0627\u0631\u064A \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u0637\u0628\u0627\u0639\u0629...");const a=`BLACKLIST-${(t.id||t.serialNumber||"UNKNOWN").substring(0,12)}`,n="\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 - Blacklist Details",o=`
                 <div class="summary-grid">
                     <div class="summary-card">
-                        <span class="summary-label">الرقم التسلسلي</span>
-                        <span class="summary-value">${Utils.escapeHTML(record.serialNumber || '-')}</span>
+                        <span class="summary-label">\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u062A\u0633\u0644\u0633\u0644\u064A</span>
+                        <span class="summary-value">${Utils.escapeHTML(t.serialNumber||"-")}</span>
                     </div>
                     <div class="summary-card">
-                        <span class="summary-label">تاريخ المنع</span>
-                        <span class="summary-value">${record.banDate ? Utils.formatDate(record.banDate) : '-'}</span>
+                        <span class="summary-label">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639</span>
+                        <span class="summary-value">${t.banDate?Utils.formatDate(t.banDate):"-"}</span>
                     </div>
                     <div class="summary-card">
-                        <span class="summary-label">المصنع</span>
-                        <span class="summary-value">${Utils.escapeHTML(record.factory || '-')}</span>
+                        <span class="summary-label">\u0627\u0644\u0645\u0635\u0646\u0639</span>
+                        <span class="summary-value">${Utils.escapeHTML(t.factory||"-")}</span>
                     </div>
                     <div class="summary-card">
-                        <span class="summary-label">الموقع</span>
-                        <span class="summary-value">${Utils.escapeHTML(record.location || '-')}</span>
+                        <span class="summary-label">\u0627\u0644\u0645\u0648\u0642\u0639</span>
+                        <span class="summary-value">${Utils.escapeHTML(t.location||"-")}</span>
                     </div>
                 </div>
 
-                <div class="section-title">معلومات الشخص الممنوع</div>
+                <div class="section-title">\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0634\u062E\u0635 \u0627\u0644\u0645\u0645\u0646\u0648\u0639</div>
                 <table class="report-table">
                     <tr>
-                        <th style="width: 30%;">الاسم رباعي</th>
-                        <td>${Utils.escapeHTML(record.fullName || '-')}</td>
+                        <th style="width: 30%;">\u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A</th>
+                        <td>${Utils.escapeHTML(t.fullName||"-")}</td>
                     </tr>
                     <tr>
-                        <th>رقم البطاقة</th>
-                        <td>${Utils.escapeHTML(record.idNumber || '-')}</td>
+                        <th>\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629</th>
+                        <td>${Utils.escapeHTML(t.idNumber||"-")}</td>
                     </tr>
                     <tr>
-                        <th>الوظيفة</th>
-                        <td>${Utils.escapeHTML(record.job || '-')}</td>
+                        <th>\u0627\u0644\u0648\u0638\u064A\u0641\u0629</th>
+                        <td>${Utils.escapeHTML(t.job||"-")}</td>
                     </tr>
                     <tr>
-                        <th>الشركة - المقاول</th>
-                        <td>${Utils.escapeHTML(record.contractor || '-')}</td>
+                        <th>\u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                        <td>${Utils.escapeHTML(t.contractor||"-")}</td>
                     </tr>
                     <tr>
-                        <th>الإدارة</th>
-                        <td>${Utils.escapeHTML(record.department || '-')}</td>
+                        <th>\u0627\u0644\u0625\u062F\u0627\u0631\u0629</th>
+                        <td>${Utils.escapeHTML(t.department||"-")}</td>
                     </tr>
                 </table>
 
-                ${photoUrl ? `
-                <div class="section-title">الصورة الشخصية</div>
+                ${i?`
+                <div class="section-title">\u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629</div>
                 <div style="text-align: center; margin: 20px 0;">
-                    <img src="${Utils.escapeHTML(photoUrl)}" alt="صورة شخصية" style="max-width: 300px; max-height: 400px; border: 2px solid #ddd; border-radius: 8px; object-fit: contain;" 
-                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22400%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22300%22 height=%22400%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eفشل تحميل الصورة%3C/text%3E%3C/svg%3E';">
+                    <img src="${Utils.escapeHTML(i)}" alt="\u0635\u0648\u0631\u0629 \u0634\u062E\u0635\u064A\u0629" style="max-width: 300px; max-height: 400px; border: 2px solid #ddd; border-radius: 8px; object-fit: contain;" 
+                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22400%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22300%22 height=%22400%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629%3C/text%3E%3C/svg%3E';">
                 </div>
-                ` : ''}
+                `:""}
 
-                <div class="section-title">تفاصيل المنع</div>
+                <div class="section-title">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0646\u0639</div>
                 <table class="report-table">
                     <tr>
-                        <th style="width: 30%;">سبب المنع</th>
-                        <td style="white-space: pre-wrap;">${Utils.escapeHTML(record.banReason || '-')}</td>
+                        <th style="width: 30%;">\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639</th>
+                        <td style="white-space: pre-wrap;">${Utils.escapeHTML(t.banReason||"-")}</td>
                     </tr>
-                    ${record.notes ? `
+                    ${t.notes?`
                     <tr>
-                        <th>ملاحظات</th>
-                        <td style="white-space: pre-wrap;">${Utils.escapeHTML(record.notes)}</td>
+                        <th>\u0645\u0644\u0627\u062D\u0638\u0627\u062A</th>
+                        <td style="white-space: pre-wrap;">${Utils.escapeHTML(t.notes)}</td>
                     </tr>
-                    ` : ''}
+                    `:""}
                     <tr>
-                        <th>القائم بالمنع</th>
-                        <td>${Utils.escapeHTML(record.bannedBy || '-')}</td>
+                        <th>\u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639</th>
+                        <td>${Utils.escapeHTML(t.bannedBy||"-")}</td>
                     </tr>
                     <tr>
-                        <th>محرر البيانات</th>
-                        <td>${Utils.escapeHTML(record.editor || '-')}</td>
+                        <th>\u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</th>
+                        <td>${Utils.escapeHTML(t.editor||"-")}</td>
                     </tr>
-                    ${record.createdAt ? `
+                    ${t.createdAt?`
                     <tr>
-                        <th>تاريخ الإنشاء</th>
-                        <td>${Utils.formatDateTime(record.createdAt)}</td>
+                        <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621</th>
+                        <td>${Utils.formatDateTime(t.createdAt)}</td>
                     </tr>
-                    ` : ''}
-                    ${record.updatedAt ? `
+                    `:""}
+                    ${t.updatedAt?`
                     <tr>
-                        <th>تاريخ آخر تحديث</th>
-                        <td>${Utils.formatDateTime(record.updatedAt)}</td>
+                        <th>\u062A\u0627\u0631\u064A\u062E \u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B</th>
+                        <td>${Utils.formatDateTime(t.updatedAt)}</td>
                     </tr>
-                    ` : ''}
+                    `:""}
                 </table>
-            `;
-
-            // استخدام FormHeader.generatePDFHTML لإضافة الهيدر
-            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(
-                    formCode,
-                    title,
-                    content,
-                    false,  // includeQrInHeader = false
-                    true,   // includeQrInFooter = true
-                    {
-                        version: '1.0',
-                        releaseDate: record.createdAt || new Date().toISOString(),
-                        revisionDate: record.updatedAt || record.createdAt || new Date().toISOString(),
-                        'الرقم التسلسلي': record.serialNumber || record.id || '',
-                        qrData: {
-                            type: 'Blacklist',
-                            id: record.id,
-                            serialNumber: record.serialNumber
-                        }
-                    },
-                    record.createdAt || new Date().toISOString(),
-                    record.updatedAt || record.createdAt || new Date().toISOString()
-                )
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${title}</title></head><body>${content}</body></html>`;
-
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                        }, 800);
-                    }, 500);
-                };
-            } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
-            }
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في طباعة التفاصيل:', error);
-            Notification.error('فشل في الطباعة: ' + error.message);
-        }
-    },
-
-    async exportBlacklistToPDF() {
-        try {
-            const blacklistRecords = AppState.appData?.blacklistRegister || [];
-            if (blacklistRecords.length === 0) {
-                Notification.warning('لا توجد بيانات للتصدير');
-                return;
-            }
-
-            Loading.show('جاري إنشاء PDF...');
-
-            // محاولة استخدام jsPDF أولاً
-            if (typeof window.jsPDF !== 'undefined') {
-                try {
-                    const { jsPDF } = window.jsPDF;
-                    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
-
-                    // العنوان
-                    doc.setFontSize(18);
-                    doc.text('قائمة الممنوعين من الدخول - Blacklist Register', 150, 15, { align: 'center' });
-
-                    // المعلومات
-                    doc.setFontSize(10);
-                    doc.text(`تاريخ التصدير: ${Utils.formatDateTime(new Date().toISOString())}`, 14, 22);
-                    doc.text(`عدد السجلات: ${blacklistRecords.length}`, 14, 27);
-
-                    // البيانات
-                    const tableData = blacklistRecords.map(record => [
-                        record.serialNumber || '-',
-                        record.banDate ? Utils.formatDate(record.banDate) : '-',
-                        Utils.escapeHTML(record.factory || '-'),
-                        Utils.escapeHTML(record.location || '-'),
-                        Utils.escapeHTML(record.fullName || '-'),
-                        Utils.escapeHTML(record.idNumber || '-'),
-                        Utils.escapeHTML(record.job || '-'),
-                        Utils.escapeHTML(record.contractor || '-'),
-                        Utils.escapeHTML(record.department || '-'),
-                        Utils.escapeHTML(record.bannedBy || '-'),
-                        Utils.escapeHTML(record.banReason || '-').substring(0, 50)
-                    ]);
-
-                    if (typeof doc.autoTable !== 'undefined') {
-                        doc.autoTable({
-                            head: [['م', 'تاريخ المنع', 'المصنع', 'الموقع', 'الاسم رباعي', 'رقم البطاقة', 'الوظيفة', 'الشركة', 'الإدارة', 'القائم بالمنع', 'سبب المنع']],
-                            body: tableData,
-                            startY: 35,
-                            styles: { fontSize: 7, font: 'Arial', cellPadding: 2 },
-                            headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 8 },
-                            alternateRowStyles: { fillColor: [245, 247, 250] },
-                            margin: { left: 14, right: 14 },
-                            overflow: 'linebreak'
-                        });
-                    } else {
-                        // Fallback if autoTable is not available
-                        let y = 35;
-                        tableData.forEach((row, index) => {
-                            if (y > 180) {
-                                doc.addPage();
-                                y = 20;
-                            }
-                            doc.setFontSize(8);
-                            doc.text(`${index + 1}. ${row[4]} - ${row[3]}`, 14, y);
-                            y += 7;
-                        });
-                    }
-
-                    // حفظ الملف
-                    const fileName = `قائمة_الممنوعين_من_الدخول_${new Date().toISOString().slice(0, 10)}.pdf`;
-                    doc.save(fileName);
-                    Loading.hide();
-                    Notification.success('تم تصدير البيانات إلى PDF بنجاح');
-                    return;
-                } catch (pdfError) {
-                    Utils.safeWarn('فشل استخدام jsPDF، سيتم استخدام طريقة HTML:', pdfError);
-                }
-            }
-
-            // Fallback: استخدام HTML للطباعة
-            const htmlContent = `
+            `,r=typeof FormHeader<"u"&&typeof FormHeader.generatePDFHTML=="function"?FormHeader.generatePDFHTML(a,n,o,!1,!0,{version:"1.0",releaseDate:t.createdAt||new Date().toISOString(),revisionDate:t.updatedAt||t.createdAt||new Date().toISOString(),"\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u062A\u0633\u0644\u0633\u0644\u064A":t.serialNumber||t.id||"",qrData:{type:"Blacklist",id:t.id,serialNumber:t.serialNumber}},t.createdAt||new Date().toISOString(),t.updatedAt||t.createdAt||new Date().toISOString()):`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${n}</title></head><body>${o}</body></html>`,l=new Blob([r],{type:"text/html;charset=utf-8"}),c=URL.createObjectURL(l),s=window.open(c,"_blank");s?s.onload=()=>{setTimeout(()=>{s.print(),setTimeout(()=>{URL.revokeObjectURL(c),Loading.hide()},800)},500)}:(Loading.hide(),Notification.error("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0631\u064A\u0631"))}catch(a){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644:",a),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u0627\u0644\u0637\u0628\u0627\u0639\u0629: "+a.message)}},async exportBlacklistToPDF(){try{const e=AppState.appData?.blacklistRegister||[];if(e.length===0){Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631");return}if(Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 PDF..."),typeof window.jsPDF<"u")try{const{jsPDF:o}=window.jsPDF,r=new o("l","mm","a4");r.setFontSize(18),r.text("\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 - Blacklist Register",150,15,{align:"center"}),r.setFontSize(10),r.text(`\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0635\u062F\u064A\u0631: ${Utils.formatDateTime(new Date().toISOString())}`,14,22),r.text(`\u0639\u062F\u062F \u0627\u0644\u0633\u062C\u0644\u0627\u062A: ${e.length}`,14,27);const l=e.map(s=>[s.serialNumber||"-",s.banDate?Utils.formatDate(s.banDate):"-",Utils.escapeHTML(s.factory||"-"),Utils.escapeHTML(s.location||"-"),Utils.escapeHTML(s.fullName||"-"),Utils.escapeHTML(s.idNumber||"-"),Utils.escapeHTML(s.job||"-"),Utils.escapeHTML(s.contractor||"-"),Utils.escapeHTML(s.department||"-"),Utils.escapeHTML(s.bannedBy||"-"),Utils.escapeHTML(s.banReason||"-").substring(0,50)]);if(typeof r.autoTable<"u")r.autoTable({head:[["\u0645","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639","\u0627\u0644\u0645\u0635\u0646\u0639","\u0627\u0644\u0645\u0648\u0642\u0639","\u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A","\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629","\u0627\u0644\u0648\u0638\u064A\u0641\u0629","\u0627\u0644\u0634\u0631\u0643\u0629","\u0627\u0644\u0625\u062F\u0627\u0631\u0629","\u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639","\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639"]],body:l,startY:35,styles:{fontSize:7,font:"Arial",cellPadding:2},headStyles:{fillColor:[59,130,246],textColor:255,fontSize:8},alternateRowStyles:{fillColor:[245,247,250]},margin:{left:14,right:14},overflow:"linebreak"});else{let s=35;l.forEach((d,p)=>{s>180&&(r.addPage(),s=20),r.setFontSize(8),r.text(`${p+1}. ${d[4]} - ${d[3]}`,14,s),s+=7})}const c=`\u0642\u0627\u0626\u0645\u0629_\u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646_\u0645\u0646_\u0627\u0644\u062F\u062E\u0648\u0644_${new Date().toISOString().slice(0,10)}.pdf`;r.save(c),Loading.hide(),Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 PDF \u0628\u0646\u062C\u0627\u062D");return}catch(o){Utils.safeWarn("\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 jsPDF\u060C \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0637\u0631\u064A\u0642\u0629 HTML:",o)}const t=`
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>قائمة الممنوعين من الدخول</title>
+    <title>\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644</title>
     <style>
         @media print {
             @page { margin: 1cm; size: A4 landscape; }
@@ -8366,182 +2340,49 @@ ${inner}
 </head>
 <body>
     <button class="print-btn no-print" onclick="window.print()">
-        <i class="fas fa-print"></i> طباعة
+        <i class="fas fa-print"></i> \u0637\u0628\u0627\u0639\u0629
     </button>
     <div class="header">
-        <h1>قائمة الممنوعين من الدخول - Blacklist Register</h1>
-        <p>تاريخ التصدير: ${Utils.formatDateTime(new Date().toISOString())} | عدد السجلات: ${blacklistRecords.length}</p>
+        <h1>\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 - Blacklist Register</h1>
+        <p>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0635\u062F\u064A\u0631: ${Utils.formatDateTime(new Date().toISOString())} | \u0639\u062F\u062F \u0627\u0644\u0633\u062C\u0644\u0627\u062A: ${e.length}</p>
     </div>
     <table>
         <thead>
             <tr>
-                <th>م</th>
-                <th>تاريخ المنع</th>
-                <th>المصنع</th>
-                <th>الموقع</th>
-                <th>الاسم رباعي</th>
-                <th>رقم البطاقة</th>
-                <th>الوظيفة</th>
-                <th>الشركة - المقاول</th>
-                <th>الإدارة</th>
-                <th>القائم بالمنع</th>
-                <th>محرر البيانات</th>
-                <th>سبب المنع</th>
-                <th>ملاحظات</th>
+                <th>\u0645</th>
+                <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639</th>
+                <th>\u0627\u0644\u0645\u0635\u0646\u0639</th>
+                <th>\u0627\u0644\u0645\u0648\u0642\u0639</th>
+                <th>\u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A</th>
+                <th>\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629</th>
+                <th>\u0627\u0644\u0648\u0638\u064A\u0641\u0629</th>
+                <th>\u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                <th>\u0627\u0644\u0625\u062F\u0627\u0631\u0629</th>
+                <th>\u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639</th>
+                <th>\u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</th>
+                <th>\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639</th>
+                <th>\u0645\u0644\u0627\u062D\u0638\u0627\u062A</th>
             </tr>
         </thead>
         <tbody>
-            ${blacklistRecords.map(record => `
+            ${e.map(o=>`
                 <tr>
-                    <td>${Utils.escapeHTML(record.serialNumber || '-')}</td>
-                    <td>${record.banDate ? Utils.formatDate(record.banDate) : '-'}</td>
-                    <td>${Utils.escapeHTML(record.factory || '-')}</td>
-                    <td>${Utils.escapeHTML(record.location || '-')}</td>
-                    <td>${Utils.escapeHTML(record.fullName || '-')}</td>
-                    <td>${Utils.escapeHTML(record.idNumber || '-')}</td>
-                    <td>${Utils.escapeHTML(record.job || '-')}</td>
-                    <td>${Utils.escapeHTML(record.contractor || '-')}</td>
-                    <td>${Utils.escapeHTML(record.department || '-')}</td>
-                    <td>${Utils.escapeHTML(record.bannedBy || '-')}</td>
-                    <td>${Utils.escapeHTML(record.editor || '-')}</td>
-                    <td>${Utils.escapeHTML((record.banReason || '-').substring(0, 100))}</td>
-                    <td>${Utils.escapeHTML((record.notes || '-').substring(0, 50))}</td>
+                    <td>${Utils.escapeHTML(o.serialNumber||"-")}</td>
+                    <td>${o.banDate?Utils.formatDate(o.banDate):"-"}</td>
+                    <td>${Utils.escapeHTML(o.factory||"-")}</td>
+                    <td>${Utils.escapeHTML(o.location||"-")}</td>
+                    <td>${Utils.escapeHTML(o.fullName||"-")}</td>
+                    <td>${Utils.escapeHTML(o.idNumber||"-")}</td>
+                    <td>${Utils.escapeHTML(o.job||"-")}</td>
+                    <td>${Utils.escapeHTML(o.contractor||"-")}</td>
+                    <td>${Utils.escapeHTML(o.department||"-")}</td>
+                    <td>${Utils.escapeHTML(o.bannedBy||"-")}</td>
+                    <td>${Utils.escapeHTML(o.editor||"-")}</td>
+                    <td>${Utils.escapeHTML((o.banReason||"-").substring(0,100))}</td>
+                    <td>${Utils.escapeHTML((o.notes||"-").substring(0,50))}</td>
                 </tr>
-            `).join('')}
+            `).join("")}
         </tbody>
     </table>
 </body>
-</html>`;
-
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                        }, 800);
-                    }, 500);
-                };
-            } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
-            }
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('فشل في تصدير PDF: ' + error.message);
-        }
-    },
-
-    exportBlacklistToExcel() {
-        try {
-            const blacklistRecords = AppState.appData?.blacklistRegister || [];
-            if (blacklistRecords.length === 0) {
-                Notification.warning('لا توجد بيانات للتصدير');
-                return;
-            }
-
-            Loading.show('جاري إنشاء ملف Excel...');
-
-            if (typeof XLSX === 'undefined') {
-                Loading.hide();
-                Notification.error('مكتبة Excel غير متاحة. يرجى التأكد من تحميل مكتبة SheetJS');
-                return;
-            }
-
-            // تحضير البيانات
-            const excelData = blacklistRecords.map(record => ({
-                'م': record.serialNumber || '',
-                'تاريخ المنع': record.banDate ? Utils.formatDate(record.banDate) : '',
-                'المصنع': record.factory || '',
-                'الموقع': record.location || '',
-                'الاسم رباعي': record.fullName || '',
-                'رقم البطاقة': record.idNumber || '',
-                'الوظيفة': record.job || '',
-                'الشركة - المقاول': record.contractor || '',
-                'الإدارة': record.department || '',
-                'القائم بالمنع': record.bannedBy || '',
-                'محرر البيانات': record.editor || '',
-                'سبب المنع': record.banReason || '',
-                'ملاحظات': record.notes || '',
-                'تاريخ الإنشاء': record.createdAt ? Utils.formatDateTime(record.createdAt) : '',
-                'تاريخ آخر تحديث': record.updatedAt ? Utils.formatDateTime(record.updatedAt) : ''
-            }));
-
-            // إنشاء workbook
-            const workbook = XLSX.utils.book_new();
-            const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-            // تحديد عرض الأعمدة
-            const columnWidths = [
-                { wch: 8 },   // م
-                { wch: 12 },  // تاريخ المنع
-                { wch: 15 },  // المصنع
-                { wch: 15 },  // الموقع
-                { wch: 25 },  // الاسم رباعي
-                { wch: 15 },  // رقم البطاقة
-                { wch: 20 },  // الوظيفة
-                { wch: 20 },  // الشركة - المقاول
-                { wch: 15 },  // الإدارة
-                { wch: 20 },  // القائم بالمنع
-                { wch: 20 },  // محرر البيانات
-                { wch: 40 },  // سبب المنع
-                { wch: 40 },  // ملاحظات
-                { wch: 18 },  // تاريخ الإنشاء
-                { wch: 18 }   // تاريخ آخر تحديث
-            ];
-            worksheet['!cols'] = columnWidths;
-
-            // إضافة ورقة العمل إلى الكتاب
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'قائمة الممنوعين');
-
-            // حفظ الملف
-            const date = new Date().toISOString().slice(0, 10);
-            const fileName = `قائمة_الممنوعين_من_الدخول_${date}.xlsx`;
-            XLSX.writeFile(workbook, fileName);
-
-            Loading.hide();
-            Notification.success('تم تصدير البيانات إلى Excel بنجاح');
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في تصدير Excel:', error);
-            Notification.error('فشل في تصدير Excel: ' + error.message);
-        }
-    }
-};
-
-// ===== Export module to global scope =====
-// تصدير الموديول إلى window فوراً لضمان توافره
-(function () {
-    'use strict';
-    try {
-        if (typeof window !== 'undefined' && typeof Violations !== 'undefined') {
-            window.Violations = Violations;
-
-            // إشعار عند تحميل الموديول بنجاح
-            if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
-                Utils.safeLog('✅ Violations module loaded and available on window.Violations');
-            }
-        }
-    } catch (error) {
-        console.error('❌ خطأ في تصدير Violations:', error);
-        // محاولة التصدير مرة أخرى حتى في حالة الخطأ
-        if (typeof window !== 'undefined' && typeof Violations !== 'undefined') {
-            try {
-                window.Violations = Violations;
-            } catch (e) {
-                console.error('❌ فشل تصدير Violations:', e);
-            }
-        }
-    }
-})();
-
-// استخدام الثوابت من contractors.js لتجنب التكرار
-// CONTRACTOR_EVALUATION_DEFAULT_ITEMS موجود في contractors.js
-// CONTRACTOR_APPROVAL_REQUIREMENTS_DEFAULT موجود في contractors.js
-// جميع الثوابت المتعلقة بالمقاولين موجودة في contractors.js
+</html>`,i=new Blob([t],{type:"text/html;charset=utf-8"}),a=URL.createObjectURL(i),n=window.open(a,"_blank");n?n.onload=()=>{setTimeout(()=>{n.print(),setTimeout(()=>{URL.revokeObjectURL(a),Loading.hide()},800)},500)}:(Loading.hide(),Notification.error("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0631\u064A\u0631"))}catch(e){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF:",e),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF: "+e.message)}},exportBlacklistToExcel(){try{const e=AppState.appData?.blacklistRegister||[];if(e.length===0){Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631");return}if(Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 \u0645\u0644\u0641 Excel..."),typeof XLSX>"u"){Loading.hide(),Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 SheetJS");return}const t=e.map(l=>({\u0645:l.serialNumber||"","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639":l.banDate?Utils.formatDate(l.banDate):"",\u0627\u0644\u0645\u0635\u0646\u0639:l.factory||"",\u0627\u0644\u0645\u0648\u0642\u0639:l.location||"","\u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A":l.fullName||"","\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629":l.idNumber||"",\u0627\u0644\u0648\u0638\u064A\u0641\u0629:l.job||"","\u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644":l.contractor||"",\u0627\u0644\u0625\u062F\u0627\u0631\u0629:l.department||"","\u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639":l.bannedBy||"","\u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A":l.editor||"","\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639":l.banReason||"",\u0645\u0644\u0627\u062D\u0638\u0627\u062A:l.notes||"","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621":l.createdAt?Utils.formatDateTime(l.createdAt):"","\u062A\u0627\u0631\u064A\u062E \u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B":l.updatedAt?Utils.formatDateTime(l.updatedAt):""})),i=XLSX.utils.book_new(),a=XLSX.utils.json_to_sheet(t),n=[{wch:8},{wch:12},{wch:15},{wch:15},{wch:25},{wch:15},{wch:20},{wch:20},{wch:15},{wch:20},{wch:20},{wch:40},{wch:40},{wch:18},{wch:18}];a["!cols"]=n,XLSX.utils.book_append_sheet(i,a,"\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646");const r=`\u0642\u0627\u0626\u0645\u0629_\u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646_\u0645\u0646_\u0627\u0644\u062F\u062E\u0648\u0644_${new Date().toISOString().slice(0,10)}.xlsx`;XLSX.writeFile(i,r),Loading.hide(),Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 Excel \u0628\u0646\u062C\u0627\u062D")}catch(e){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 Excel:",e),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 Excel: "+e.message)}}};(function(){"use strict";try{typeof window<"u"&&typeof Violations<"u"&&(window.Violations=Violations,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 Violations module loaded and available on window.Violations"))}catch{if(typeof window<"u"&&typeof Violations<"u")try{window.Violations=Violations}catch{}}})();

@@ -1,1487 +1,238 @@
-/**
- * Safety Calendar Module — تقويم السلامة
- */
-const SafetyCalendar = {
-    _calendar: null,
-    _dashCalendar: null,
-    _fcLoadPromise: null,
-    _activeCategories: null,
-    _assigneeMode: null,
-    _modalEl: null,
-    _PREFS_KEY: 'sc_calendar_prefs_v1',
-
-    t(key, fallback) {
-        const i18n = (window.AppI18n && window.AppI18n.t) ? window.AppI18n
-            : ((window.I18n && window.I18n.t) ? window.I18n : null);
-        return i18n ? i18n.t(key, null, fallback || key) : (fallback || key);
-    },
-
-    _getLang() {
-        return (typeof AppState !== 'undefined' && AppState.currentLanguage)
-            || (typeof localStorage !== 'undefined' && localStorage.getItem('language'))
-            || 'ar';
-    },
-
-    _getFcLocale() {
-        return this._getLang() === 'en' ? 'en' : 'ar';
-    },
-
-    _getFcDirection() {
-        return this._getLang() === 'en' ? 'ltr' : 'rtl';
-    },
-
-    _tParam(key, params, fallback) {
-        let text = this.t(key, fallback);
-        if (params && typeof params === 'object') {
-            Object.keys(params).forEach((k) => {
-                text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(params[k]));
-            });
-        }
-        return text;
-    },
-
-    _getCategoryLabel(key) {
-        if (window.SafetyCalendarEvents && typeof SafetyCalendarEvents.getCategoryLabel === 'function') {
-            return SafetyCalendarEvents.getCategoryLabel(key);
-        }
-        const c = SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES?.[key];
-        return c?.label || key;
-    },
-
-    _getCategoryIcon(category) {
-        const map = {
-            'periodic-schedule': 'fa-clipboard-check',
-            'periodic-record': 'fa-clipboard-list',
-            'daily-safety-check': 'fa-list-check',
-            training: 'fa-chalkboard-user',
-            'legal-training': 'fa-scale-balanced',
-            ptw: 'fa-helmet-safety',
-            incidents: 'fa-triangle-exclamation',
-            nearmiss: 'fa-bolt',
-            observations: 'fa-eye',
-            'user-tasks': 'fa-list-check',
-            'safety-team-task': 'fa-user-shield',
-            'hse-audit': 'fa-search',
-            'fire-inspection': 'fa-fire-extinguisher',
-            emergency: 'fa-bell',
-            'action-tracking': 'fa-clipboard-list',
-            violations: 'fa-gavel',
-            behavior: 'fa-users',
-            'clinic-visit': 'fa-briefcase-medical',
-            'clinic-injury': 'fa-user-injured',
-            'clinic-sick-leave': 'fa-notes-medical',
-            'egypt-holiday': 'fa-flag',
-            'intl-hse-env': 'fa-globe',
-            'custom-event': 'fa-star'
-        };
-        return map[category] || 'fa-calendar-day';
-    },
-
-    _formatEventDate(eventLike) {
-        try {
-            const raw = eventLike?.startStr
-                || (eventLike?.start instanceof Date ? eventLike.start : null)
-                || eventLike?.start
-                || eventLike?.extendedProps?.start
-                || '';
-            if (!raw) return '';
-            const d = raw instanceof Date ? raw : new Date(raw);
-            if (isNaN(d.getTime())) return String(raw).slice(0, 16);
-            const lang = this._getLang() === 'en' ? 'en-GB' : 'ar-EG';
-            return d.toLocaleDateString(lang, {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-        } catch (_e) {
-            return '';
-        }
-    },
-
-    _sortDetailFields(fields) {
-        const order = [
-            'الحالة', 'status', 'الأولوية', 'priority', 'الشدة', 'severity',
-            'التاريخ', 'date', 'تاريخ الاستحقاق', 'dueDate', 'تاريخ البداية', 'startDate',
-            'تاريخ النهاية', 'endDate', 'المكلف', 'assignedTo', 'المسؤول', 'responsible',
-            'العنوان', 'title', 'الاسم', 'name', 'الوصف', 'description', 'الموقع', 'location'
-        ];
-        const rank = (label) => {
-            const i = order.findIndex((k) => String(label || '').toLowerCase().includes(String(k).toLowerCase()));
-            return i === -1 ? 500 : i;
-        };
-        return (fields || []).slice().sort((a, b) => rank(a.label) - rank(b.label));
-    },
-
-    esc(str) {
-        if (window.SafetyCalendarEvents && SafetyCalendarEvents.esc) {
-            return SafetyCalendarEvents.esc(str);
-        }
-        return String(str == null ? '' : str);
-    },
-
-    _loadAsset(tag, attrs) {
-        return new Promise((resolve, reject) => {
-            const sel = attrs.id ? `#${attrs.id}` : `[href="${attrs.href}"]`;
-            if (tag === 'script' && document.querySelector(`script[src="${attrs.src}"]`)) {
-                resolve();
-                return;
-            }
-            if (tag === 'link' && document.querySelector(`link[href="${attrs.href}"]`)) {
-                resolve();
-                return;
-            }
-            const el = document.createElement(tag);
-            Object.keys(attrs).forEach((k) => { el[k] = attrs[k]; });
-            el.onload = () => resolve();
-            el.onerror = () => reject(new Error('load failed'));
-            document.head.appendChild(el);
-        });
-    },
-
-    /**
-     * إنشاء خيارات التقويم مع أزرار prev/next/today تعمل عبر مرجع calendar صريح
-     * (this داخل customButtons لا يشير دائماً إلى Calendar في FC v6)
-     */
-    _buildCalendarOptions(overrides, compactNav) {
-        const calRef = { api: null };
-        const self = this;
-        const isCompact = compactNav === true;
-        const overrideCustom = (overrides && overrides.customButtons) || {};
-        // أزرار التنقّل الأساسية — تبقى موحّدة في التقويم الكامل والمصغّر
-        const baseCustomButtons = {
-            scPrev: {
-                text: self.t('module.sc.fc.prev', 'السابق'),
-                hint: self.t('module.sc.fc.prevHint', 'الفترة السابقة'),
-                click() {
-                    if (calRef.api && typeof calRef.api.prev === 'function') {
-                        calRef.api.prev();
-                    }
-                }
-            },
-            scNext: {
-                text: self.t('module.sc.fc.next', 'التالي'),
-                hint: self.t('module.sc.fc.nextHint', 'الفترة التالية'),
-                click() {
-                    if (calRef.api && typeof calRef.api.next === 'function') {
-                        calRef.api.next();
-                    }
-                }
-            },
-            scToday: {
-                text: self.t('module.sc.fc.today', 'اليوم'),
-                hint: self.t('module.sc.fc.todayHint', 'العودة إلى اليوم'),
-                click() {
-                    if (calRef.api && typeof calRef.api.today === 'function') {
-                        calRef.api.today();
-                    }
-                }
-            }
-        };
-        const options = Object.assign({
-            locale: self._getFcLocale(),
-            direction: self._getFcDirection(),
-            buttonText: self._fcButtonText()
-        }, overrides || {});
-        // دمج الأزرار الأساسية مع المخصّصة (لا استبدال) حتى لا تُفقد scPrev/scNext/scToday
-        // عندما يمرّر المستدعي customButtons خاصة به (مثل addTask/manageEvents)
-        options.customButtons = Object.assign({}, baseCustomButtons, overrideCustom);
-        options._scCompactNav = isCompact;
-
-        return {
-            options,
-            render(root) {
-                calRef.api = new FullCalendar.Calendar(root, options);
-                calRef.api.render();
-                if (isCompact) {
-                    root.classList.add('sc-fc-compact-nav');
-                }
-                return calRef.api;
-            }
-        };
-    },
-
-    _fcButtonText() {
-        return {
-            today: this.t('module.sc.fc.today', 'اليوم'),
-            month: this.t('module.sc.fc.month', 'شهر'),
-            week: this.t('module.sc.fc.week', 'أسبوع'),
-            day: this.t('module.sc.fc.day', 'يوم'),
-            list: this.t('module.sc.fc.list', 'قائمة')
-        };
-    },
-
-    /** تمييز الجمعة والسبت + تحسين مظهر الخلايا */
-    _getCalendarAppearanceHooks() {
-        const markWeekend = (date, el) => {
-            if (!date || !el) return;
-            const dow = date.getDay();
-            if (dow === 5) el.classList.add('sc-weekend-fri');
-            if (dow === 6) el.classList.add('sc-weekend-sat');
-            if (dow === 5 || dow === 6) el.classList.add('sc-weekend-day');
-        };
-        return {
-            dayCellDidMount(info) {
-                markWeekend(info.date, info.el);
-            },
-            dayHeaderDidMount(info) {
-                markWeekend(info.date, info.el);
-            }
-        };
-    },
-
-    async ensureFullCalendarLoaded() {
-        if (typeof FullCalendar !== 'undefined') return true;
-        if (this._fcLoadPromise) {
-            try { await this._fcLoadPromise; return typeof FullCalendar !== 'undefined'; } catch (_e) { return false; }
-        }
-        this._fcLoadPromise = (async () => {
-            await this._loadAsset('script', {
-                src: 'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'
-            });
-        })();
-        try {
-            await this._fcLoadPromise;
-            return typeof FullCalendar !== 'undefined';
-        } catch (_e) {
-            return false;
-        }
-    },
-
-    getAllCategoryKeys() {
-        if (!window.SafetyCalendarEvents) return [];
-        return Object.keys(SafetyCalendarEvents.SAFETY_CALENDAR_CATEGORIES || {});
-    },
-
-    getEnabledCategories() {
-        // null = الوضع الافتراضي (كل الأنواع)؛ مصفوفة (حتى فارغة) = اختيار صريح
-        if (Array.isArray(this._activeCategories)) {
-            return this._activeCategories;
-        }
-        return this.getAllCategoryKeys();
-    },
-
-    isEffectiveAdmin() {
-        if (window.SafetyCalendarEvents && SafetyCalendarEvents.isEffectiveAdmin) {
-            return SafetyCalendarEvents.isEffectiveAdmin();
-        }
-        return false;
-    },
-
-    getAssigneeMode() {
-        if (this._assigneeMode === 'all' || this._assigneeMode === 'mine') {
-            return this._assigneeMode;
-        }
-        if (window.SafetyCalendarEvents && SafetyCalendarEvents.resolveDefaultAssigneeMode) {
-            return SafetyCalendarEvents.resolveDefaultAssigneeMode({});
-        }
-        return 'all';
-    },
-
-    _getPrefs() {
-        try {
-            const raw = localStorage.getItem(this._PREFS_KEY);
-            return raw ? JSON.parse(raw) : {};
-        } catch (_e) {
-            return {};
-        }
-    },
-
-    _savePrefs(prefs) {
-        try {
-            localStorage.setItem(this._PREFS_KEY, JSON.stringify(prefs || {}));
-        } catch (_e) { /* ignore */ }
-    },
-
-    getShowEgyptHolidays() {
-        return this._getPrefs().showEgyptHolidays !== false;
-    },
-
-    getShowIntlDays() {
-        return this._getPrefs().showIntlDays !== false;
-    },
-
-    getShowCustomEvents() {
-        return this._getPrefs().showCustomEvents !== false;
-    },
-
-    setReferencePref(key, value) {
-        const prefs = this._getPrefs();
-        prefs[key] = value === true;
-        this._savePrefs(prefs);
-        this.refreshCalendarEvents();
-    },
-
-    canManageCustomEvents() {
-        return this.isEffectiveAdmin();
-    },
-
-    async ensureDailySafetyCheckListLoaded(force, options) {
-        if (!AppState?.appData) return;
-        const existing = AppState.appData.dailySafetyCheckList;
-        if (!force && Array.isArray(existing) && existing.length) return;
-        if (typeof Permissions !== 'undefined' && Permissions.hasAccess && !Permissions.hasAccess('periodic-inspections')) {
-            if (!Array.isArray(existing)) AppState.appData.dailySafetyCheckList = [];
-            return;
-        }
-        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) {
-            if (!Array.isArray(existing)) AppState.appData.dailySafetyCheckList = [];
-            return;
-        }
-        const timeoutMs = (options && options.timeoutMs) || 20000;
-        try {
-            const data = await GoogleIntegration.readFromSheets('DailySafetyCheckList', timeoutMs);
-            if (Array.isArray(data)) {
-                AppState.appData.dailySafetyCheckList = data;
-            } else if (!Array.isArray(existing)) {
-                AppState.appData.dailySafetyCheckList = [];
-            }
-        } catch (_e) {
-            if (!Array.isArray(existing)) AppState.appData.dailySafetyCheckList = [];
-        }
-    },
-
-    async ensureClinicCalendarDataLoaded(force, options) {
-        if (!AppState?.appData) return;
-        if (typeof Permissions !== 'undefined' && Permissions.hasAccess && !Permissions.hasAccess('clinic')) {
-            return;
-        }
-        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) {
-            return;
-        }
-        const timeoutMs = (options && options.timeoutMs) || 20000;
-        const skipVisitSheets = !!(options && options.skipClinicVisitSheets);
-        const sheets = [
-            { sheet: 'ClinicVisits', key: 'clinicVisits', heavy: true },
-            { sheet: 'ClinicContractorVisits', key: 'clinicContractorVisits', heavy: true },
-            { sheet: 'Injuries', key: 'injuries', heavy: false },
-            { sheet: 'ClinicContractorInjuries', key: 'clinicContractorInjuries', heavy: false },
-            { sheet: 'SickLeave', key: 'sickLeave', heavy: false }
-        ];
-        await Promise.allSettled(sheets.map(async ({ sheet, key, heavy }) => {
-            if (skipVisitSheets && heavy) return;
-            const existing = AppState.appData[key];
-            if (!force && Array.isArray(existing) && existing.length) return;
-            try {
-                const data = await GoogleIntegration.readFromSheets(sheet, timeoutMs);
-                if (Array.isArray(data)) {
-                    AppState.appData[key] = data;
-                } else if (!Array.isArray(existing)) {
-                    AppState.appData[key] = [];
-                }
-            } catch (_e) {
-                if (!Array.isArray(existing)) AppState.appData[key] = [];
-            }
-        }));
-    },
-
-    async ensureCalendarSourceDataLoaded(force, options) {
-        await Promise.all([
-            this.ensureDailySafetyCheckListLoaded(force, options),
-            this.ensureClinicCalendarDataLoaded(force, options),
-            this.ensureCustomEventsLoaded(force)
-        ]);
-    },
-
-    async ensureCustomEventsLoaded(force) {
-        if (!AppState || !AppState.appData) return;
-        const existing = AppState.appData.safetyCalendarCustomEvents;
-        if (!force && Array.isArray(existing) && existing.length) return;
-        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendToAppsScript) {
-            if (!Array.isArray(existing)) AppState.appData.safetyCalendarCustomEvents = [];
-            return;
-        }
-        try {
-            const res = await GoogleIntegration.sendToAppsScript('getAllSafetyCalendarCustomEvents', {});
-            if (res && res.success && Array.isArray(res.data)) {
-                AppState.appData.safetyCalendarCustomEvents = res.data;
-            } else if (!Array.isArray(AppState.appData.safetyCalendarCustomEvents)) {
-                AppState.appData.safetyCalendarCustomEvents = [];
-            }
-        } catch (_e) {
-            if (!Array.isArray(AppState.appData.safetyCalendarCustomEvents)) {
-                AppState.appData.safetyCalendarCustomEvents = [];
-            }
-        }
-    },
-
-    _upsertLocalCustomEvent(record) {
-        if (!record || !AppState?.appData) return;
-        if (!Array.isArray(AppState.appData.safetyCalendarCustomEvents)) {
-            AppState.appData.safetyCalendarCustomEvents = [];
-        }
-        const list = AppState.appData.safetyCalendarCustomEvents;
-        const idx = list.findIndex((r) => String(r.id) === String(record.id));
-        if (idx >= 0) list[idx] = record;
-        else list.push(record);
-    },
-
-    _removeLocalCustomEvent(eventId) {
-        if (!eventId || !Array.isArray(AppState?.appData?.safetyCalendarCustomEvents)) return;
-        AppState.appData.safetyCalendarCustomEvents = AppState.appData.safetyCalendarCustomEvents
-            .filter((r) => String(r.id) !== String(eventId));
-    },
-
-    async saveCustomEvent(payload, existingId) {
-        if (!this.canManageCustomEvents()) {
-            Notification?.warning?.(this.t('module.sc.noManageEvents', 'ليس لديك صلاحية إدارة الأحداث'));
-            return { success: false };
-        }
-        if (typeof GoogleIntegration === 'undefined') {
-            Notification?.error?.(this.t('module.sc.serverUnavailable', 'الاتصال بالخادم غير متاح'));
-            return { success: false };
-        }
-        const user = AppState?.currentUser || {};
-        const body = Object.assign({}, payload);
-        if (!existingId) {
-            body.createdBy = user.email || user.name || user.id || '';
-        }
-        const action = existingId ? 'updateSafetyCalendarCustomEvent' : 'addSafetyCalendarCustomEvent';
-        const req = existingId
-            ? { eventId: existingId, updateData: body }
-            : body;
-        try {
-            Loading?.show?.();
-            const res = await GoogleIntegration.sendToAppsScript(action, req);
-            Loading?.hide?.();
-            if (!res || !res.success) {
-                Notification?.error?.(res?.message || this.t('module.sc.saveEventFailed', 'فشل حفظ الحدث'));
-                return res || { success: false };
-            }
-            const saved = res.data || Object.assign({ id: existingId || body.id }, body);
-            if (!saved.id && res.id) saved.id = res.id;
-            this._upsertLocalCustomEvent(saved);
-            Notification?.success?.(existingId
-                ? this.t('module.sc.eventUpdated', 'تم تحديث الحدث')
-                : this.t('module.sc.eventAdded', 'تمت إضافة الحدث'));
-            this.refreshCalendarEvents();
-            this.refreshDashboardWidgetIfVisible();
-            return res;
-        } catch (err) {
-            Loading?.hide?.();
-            Notification?.error?.(`${this.t('module.sc.errorPrefix', 'خطأ:')} ${err.message || err}`);
-            return { success: false };
-        }
-    },
-
-    async deleteCustomEvent(eventId) {
-        if (!eventId || !this.canManageCustomEvents()) return { success: false };
-        if (typeof GoogleIntegration === 'undefined') return { success: false };
-        try {
-            Loading?.show?.();
-            const res = await GoogleIntegration.sendToAppsScript('deleteSafetyCalendarCustomEvent', { eventId });
-            Loading?.hide?.();
-            if (!res || !res.success) {
-                Notification?.error?.(res?.message || this.t('module.sc.deleteEventFailed', 'فشل حذف الحدث'));
-                return res || { success: false };
-            }
-            this._removeLocalCustomEvent(eventId);
-            Notification?.success?.(this.t('module.sc.eventDeleted', 'تم حذف الحدث'));
-            this.refreshCalendarEvents();
-            this.refreshDashboardWidgetIfVisible();
-            return res;
-        } catch (err) {
-            Loading?.hide?.();
-            Notification?.error?.(`${this.t('module.sc.errorPrefix', 'خطأ:')} ${err.message || err}`);
-            return { success: false };
-        }
-    },
-
-    canAddTasksFromCalendar() {
-        return typeof Permissions !== 'undefined' && Permissions.hasAccess
-            && Permissions.hasAccess('user-tasks');
-    },
-
-    canAssignTasksToOthers() {
-        return this.isEffectiveAdmin();
-    },
-
-    canEditUserTask(record) {
-        if (!record) return false;
-        if (this.isEffectiveAdmin()) return true;
-        if (!window.SafetyCalendarEvents || !SafetyCalendarEvents.isRecordAssignedToUser) return false;
-        return SafetyCalendarEvents.isRecordAssignedToUser(record, 'user-tasks');
-    },
-
-    openAddTaskForm(dueDate) {
-        if (!this.canAddTasksFromCalendar()) {
-            if (typeof Notification !== 'undefined' && Notification.warning) {
-                Notification.warning(this.t('module.sc.noAddTasks', 'ليس لديك صلاحية إضافة مهام'));
-            }
-            return;
-        }
-        if (typeof UserTasks === 'undefined' || typeof UserTasks.showTaskForm !== 'function') {
-            if (typeof Notification !== 'undefined' && Notification.error) {
-                Notification.error(this.t('module.sc.tasksModuleUnavailable', 'موديول المهام غير متاح'));
-            }
-            return;
-        }
-        const lockUserId = !this.canAssignTasksToOthers();
-        UserTasks.showTaskForm(null, {
-            dueDate: dueDate || '',
-            lockUserId,
-            skipModuleReload: true,
-            onSaved: () => {
-                this.refreshCalendarEvents();
-                this.refreshDashboardWidgetIfVisible();
-            }
-        });
-    },
-
-    showDateClickMenu(dueDate) {
-        const dateLabel = dueDate || this.t('module.sc.dateFallback', 'التاريخ');
-        const html = `
+const SafetyCalendar={_calendar:null,_dashCalendar:null,_fcLoadPromise:null,_activeCategories:null,_assigneeMode:null,_modalEl:null,_PREFS_KEY:"sc_calendar_prefs_v1",t(e,s){const t=window.AppI18n&&window.AppI18n.t?window.AppI18n:window.I18n&&window.I18n.t?window.I18n:null;return t?t.t(e,null,s||e):s||e},_getLang(){return typeof AppState<"u"&&AppState.currentLanguage||typeof localStorage<"u"&&localStorage.getItem("language")||"ar"},_getFcLocale(){return this._getLang()==="en"?"en":"ar"},_getFcDirection(){return this._getLang()==="en"?"ltr":"rtl"},_tParam(e,s,t){let a=this.t(e,t);return s&&typeof s=="object"&&Object.keys(s).forEach(i=>{a=a.replace(new RegExp(`\\{${i}\\}`,"g"),String(s[i]))}),a},_getCategoryLabel(e){return window.SafetyCalendarEvents&&typeof SafetyCalendarEvents.getCategoryLabel=="function"?SafetyCalendarEvents.getCategoryLabel(e):SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES?.[e]?.label||e},_getCategoryIcon(e){return{"periodic-schedule":"fa-clipboard-check","periodic-record":"fa-clipboard-list","daily-safety-check":"fa-list-check",training:"fa-chalkboard-user","legal-training":"fa-scale-balanced",ptw:"fa-helmet-safety",incidents:"fa-triangle-exclamation",nearmiss:"fa-bolt",observations:"fa-eye","user-tasks":"fa-list-check","safety-team-task":"fa-user-shield","hse-audit":"fa-search","fire-inspection":"fa-fire-extinguisher",emergency:"fa-bell","action-tracking":"fa-clipboard-list",violations:"fa-gavel",behavior:"fa-users","clinic-visit":"fa-briefcase-medical","clinic-injury":"fa-user-injured","clinic-sick-leave":"fa-notes-medical","egypt-holiday":"fa-flag","intl-hse-env":"fa-globe","custom-event":"fa-star"}[e]||"fa-calendar-day"},_formatEventDate(e){try{const s=e?.startStr||(e?.start instanceof Date?e.start:null)||e?.start||e?.extendedProps?.start||"";if(!s)return"";const t=s instanceof Date?s:new Date(s);if(isNaN(t.getTime()))return String(s).slice(0,16);const a=this._getLang()==="en"?"en-GB":"ar-EG";return t.toLocaleDateString(a,{weekday:"long",year:"numeric",month:"long",day:"numeric"})}catch{return""}},_sortDetailFields(e){const s=["\u0627\u0644\u062D\u0627\u0644\u0629","status","\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629","priority","\u0627\u0644\u0634\u062F\u0629","severity","\u0627\u0644\u062A\u0627\u0631\u064A\u062E","date","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642","dueDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629","startDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0646\u0647\u0627\u064A\u0629","endDate","\u0627\u0644\u0645\u0643\u0644\u0641","assignedTo","\u0627\u0644\u0645\u0633\u0624\u0648\u0644","responsible","\u0627\u0644\u0639\u0646\u0648\u0627\u0646","title","\u0627\u0644\u0627\u0633\u0645","name","\u0627\u0644\u0648\u0635\u0641","description","\u0627\u0644\u0645\u0648\u0642\u0639","location"],t=a=>{const i=s.findIndex(c=>String(a||"").toLowerCase().includes(String(c).toLowerCase()));return i===-1?500:i};return(e||[]).slice().sort((a,i)=>t(a.label)-t(i.label))},esc(e){return window.SafetyCalendarEvents&&SafetyCalendarEvents.esc?SafetyCalendarEvents.esc(e):String(e??"")},_loadAsset(e,s){return new Promise((t,a)=>{const i=s.id?`#${s.id}`:`[href="${s.href}"]`;if(e==="script"&&document.querySelector(`script[src="${s.src}"]`)){t();return}if(e==="link"&&document.querySelector(`link[href="${s.href}"]`)){t();return}const c=document.createElement(e);Object.keys(s).forEach(n=>{c[n]=s[n]}),c.onload=()=>t(),c.onerror=()=>a(new Error("load failed")),document.head.appendChild(c)})},_buildCalendarOptions(e,s){const t={api:null},a=this,i=s===!0,c=e&&e.customButtons||{},n={scPrev:{text:a.t("module.sc.fc.prev","\u0627\u0644\u0633\u0627\u0628\u0642"),hint:a.t("module.sc.fc.prevHint","\u0627\u0644\u0641\u062A\u0631\u0629 \u0627\u0644\u0633\u0627\u0628\u0642\u0629"),click(){t.api&&typeof t.api.prev=="function"&&t.api.prev()}},scNext:{text:a.t("module.sc.fc.next","\u0627\u0644\u062A\u0627\u0644\u064A"),hint:a.t("module.sc.fc.nextHint","\u0627\u0644\u0641\u062A\u0631\u0629 \u0627\u0644\u062A\u0627\u0644\u064A\u0629"),click(){t.api&&typeof t.api.next=="function"&&t.api.next()}},scToday:{text:a.t("module.sc.fc.today","\u0627\u0644\u064A\u0648\u0645"),hint:a.t("module.sc.fc.todayHint","\u0627\u0644\u0639\u0648\u062F\u0629 \u0625\u0644\u0649 \u0627\u0644\u064A\u0648\u0645"),click(){t.api&&typeof t.api.today=="function"&&t.api.today()}}},r=Object.assign({locale:a._getFcLocale(),direction:a._getFcDirection(),buttonText:a._fcButtonText()},e||{});return r.customButtons=Object.assign({},n,c),r._scCompactNav=i,{options:r,render(o){return t.api=new FullCalendar.Calendar(o,r),t.api.render(),i&&o.classList.add("sc-fc-compact-nav"),t.api}}},_fcButtonText(){return{today:this.t("module.sc.fc.today","\u0627\u0644\u064A\u0648\u0645"),month:this.t("module.sc.fc.month","\u0634\u0647\u0631"),week:this.t("module.sc.fc.week","\u0623\u0633\u0628\u0648\u0639"),day:this.t("module.sc.fc.day","\u064A\u0648\u0645"),list:this.t("module.sc.fc.list","\u0642\u0627\u0626\u0645\u0629")}},_getCalendarAppearanceHooks(){const e=(s,t)=>{if(!s||!t)return;const a=s.getDay();a===5&&t.classList.add("sc-weekend-fri"),a===6&&t.classList.add("sc-weekend-sat"),(a===5||a===6)&&t.classList.add("sc-weekend-day")};return{dayCellDidMount(s){e(s.date,s.el)},dayHeaderDidMount(s){e(s.date,s.el)}}},async ensureFullCalendarLoaded(){if(typeof FullCalendar<"u")return!0;if(this._fcLoadPromise)try{return await this._fcLoadPromise,typeof FullCalendar<"u"}catch{return!1}this._fcLoadPromise=(async()=>{await this._loadAsset("script",{src:"https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"})})();try{return await this._fcLoadPromise,typeof FullCalendar<"u"}catch{return!1}},getAllCategoryKeys(){return window.SafetyCalendarEvents?Object.keys(SafetyCalendarEvents.SAFETY_CALENDAR_CATEGORIES||{}):[]},getEnabledCategories(){return Array.isArray(this._activeCategories)?this._activeCategories:this.getAllCategoryKeys()},isEffectiveAdmin(){return window.SafetyCalendarEvents&&SafetyCalendarEvents.isEffectiveAdmin?SafetyCalendarEvents.isEffectiveAdmin():!1},getAssigneeMode(){return this._assigneeMode==="all"||this._assigneeMode==="mine"?this._assigneeMode:window.SafetyCalendarEvents&&SafetyCalendarEvents.resolveDefaultAssigneeMode?SafetyCalendarEvents.resolveDefaultAssigneeMode({}):"all"},_getPrefs(){try{const e=localStorage.getItem(this._PREFS_KEY);return e?JSON.parse(e):{}}catch{return{}}},_savePrefs(e){try{localStorage.setItem(this._PREFS_KEY,JSON.stringify(e||{}))}catch{}},getShowEgyptHolidays(){return this._getPrefs().showEgyptHolidays!==!1},getShowIntlDays(){return this._getPrefs().showIntlDays!==!1},getShowCustomEvents(){return this._getPrefs().showCustomEvents!==!1},setReferencePref(e,s){const t=this._getPrefs();t[e]=s===!0,this._savePrefs(t),this.refreshCalendarEvents()},canManageCustomEvents(){return this.isEffectiveAdmin()},async ensureDailySafetyCheckListLoaded(e,s){if(!AppState?.appData)return;const t=AppState.appData.dailySafetyCheckList;if(!e&&Array.isArray(t)&&t.length)return;if(typeof Permissions<"u"&&Permissions.hasAccess&&!Permissions.hasAccess("periodic-inspections")){Array.isArray(t)||(AppState.appData.dailySafetyCheckList=[]);return}if(typeof GoogleIntegration>"u"||!GoogleIntegration.readFromSheets){Array.isArray(t)||(AppState.appData.dailySafetyCheckList=[]);return}const a=s&&s.timeoutMs||2e4;try{const i=await GoogleIntegration.readFromSheets("DailySafetyCheckList",a);Array.isArray(i)?AppState.appData.dailySafetyCheckList=i:Array.isArray(t)||(AppState.appData.dailySafetyCheckList=[])}catch{Array.isArray(t)||(AppState.appData.dailySafetyCheckList=[])}},async ensureClinicCalendarDataLoaded(e,s){if(!AppState?.appData||typeof Permissions<"u"&&Permissions.hasAccess&&!Permissions.hasAccess("clinic")||typeof GoogleIntegration>"u"||!GoogleIntegration.readFromSheets)return;const t=s&&s.timeoutMs||2e4,a=!!(s&&s.skipClinicVisitSheets),i=[{sheet:"ClinicVisits",key:"clinicVisits",heavy:!0},{sheet:"ClinicContractorVisits",key:"clinicContractorVisits",heavy:!0},{sheet:"Injuries",key:"injuries",heavy:!1},{sheet:"ClinicContractorInjuries",key:"clinicContractorInjuries",heavy:!1},{sheet:"SickLeave",key:"sickLeave",heavy:!1}];await Promise.allSettled(i.map(async({sheet:c,key:n,heavy:r})=>{if(a&&r)return;const o=AppState.appData[n];if(!(!e&&Array.isArray(o)&&o.length))try{const l=await GoogleIntegration.readFromSheets(c,t);Array.isArray(l)?AppState.appData[n]=l:Array.isArray(o)||(AppState.appData[n]=[])}catch{Array.isArray(o)||(AppState.appData[n]=[])}}))},async ensureCalendarSourceDataLoaded(e,s){await Promise.all([this.ensureDailySafetyCheckListLoaded(e,s),this.ensureClinicCalendarDataLoaded(e,s),this.ensureCustomEventsLoaded(e)])},async ensureCustomEventsLoaded(e){if(!AppState||!AppState.appData)return;const s=AppState.appData.safetyCalendarCustomEvents;if(!(!e&&Array.isArray(s)&&s.length)){if(typeof GoogleIntegration>"u"||!GoogleIntegration.sendToAppsScript){Array.isArray(s)||(AppState.appData.safetyCalendarCustomEvents=[]);return}try{const t=await GoogleIntegration.sendToAppsScript("getAllSafetyCalendarCustomEvents",{});t&&t.success&&Array.isArray(t.data)?AppState.appData.safetyCalendarCustomEvents=t.data:Array.isArray(AppState.appData.safetyCalendarCustomEvents)||(AppState.appData.safetyCalendarCustomEvents=[])}catch{Array.isArray(AppState.appData.safetyCalendarCustomEvents)||(AppState.appData.safetyCalendarCustomEvents=[])}}},_upsertLocalCustomEvent(e){if(!e||!AppState?.appData)return;Array.isArray(AppState.appData.safetyCalendarCustomEvents)||(AppState.appData.safetyCalendarCustomEvents=[]);const s=AppState.appData.safetyCalendarCustomEvents,t=s.findIndex(a=>String(a.id)===String(e.id));t>=0?s[t]=e:s.push(e)},_removeLocalCustomEvent(e){!e||!Array.isArray(AppState?.appData?.safetyCalendarCustomEvents)||(AppState.appData.safetyCalendarCustomEvents=AppState.appData.safetyCalendarCustomEvents.filter(s=>String(s.id)!==String(e)))},async saveCustomEvent(e,s){if(!this.canManageCustomEvents())return Notification?.warning?.(this.t("module.sc.noManageEvents","\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0623\u062D\u062F\u0627\u062B")),{success:!1};if(typeof GoogleIntegration>"u")return Notification?.error?.(this.t("module.sc.serverUnavailable","\u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u062E\u0627\u062F\u0645 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D")),{success:!1};const t=AppState?.currentUser||{},a=Object.assign({},e);s||(a.createdBy=t.email||t.name||t.id||"");const i=s?"updateSafetyCalendarCustomEvent":"addSafetyCalendarCustomEvent",c=s?{eventId:s,updateData:a}:a;try{Loading?.show?.();const n=await GoogleIntegration.sendToAppsScript(i,c);if(Loading?.hide?.(),!n||!n.success)return Notification?.error?.(n?.message||this.t("module.sc.saveEventFailed","\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u062D\u062F\u062B")),n||{success:!1};const r=n.data||Object.assign({id:s||a.id},a);return!r.id&&n.id&&(r.id=n.id),this._upsertLocalCustomEvent(r),Notification?.success?.(s?this.t("module.sc.eventUpdated","\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u062F\u062B"):this.t("module.sc.eventAdded","\u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062D\u062F\u062B")),this.refreshCalendarEvents(),this.refreshDashboardWidgetIfVisible(),n}catch(n){return Loading?.hide?.(),Notification?.error?.(`${this.t("module.sc.errorPrefix","\u062E\u0637\u0623:")} ${n.message||n}`),{success:!1}}},async deleteCustomEvent(e){if(!e||!this.canManageCustomEvents())return{success:!1};if(typeof GoogleIntegration>"u")return{success:!1};try{Loading?.show?.();const s=await GoogleIntegration.sendToAppsScript("deleteSafetyCalendarCustomEvent",{eventId:e});return Loading?.hide?.(),!s||!s.success?(Notification?.error?.(s?.message||this.t("module.sc.deleteEventFailed","\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u062D\u062F\u062B")),s||{success:!1}):(this._removeLocalCustomEvent(e),Notification?.success?.(this.t("module.sc.eventDeleted","\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u062D\u062F\u062B")),this.refreshCalendarEvents(),this.refreshDashboardWidgetIfVisible(),s)}catch(s){return Loading?.hide?.(),Notification?.error?.(`${this.t("module.sc.errorPrefix","\u062E\u0637\u0623:")} ${s.message||s}`),{success:!1}}},canAddTasksFromCalendar(){return typeof Permissions<"u"&&Permissions.hasAccess&&Permissions.hasAccess("user-tasks")},canAssignTasksToOthers(){return this.isEffectiveAdmin()},canEditUserTask(e){return e?this.isEffectiveAdmin()?!0:!window.SafetyCalendarEvents||!SafetyCalendarEvents.isRecordAssignedToUser?!1:SafetyCalendarEvents.isRecordAssignedToUser(e,"user-tasks"):!1},openAddTaskForm(e){if(!this.canAddTasksFromCalendar()){typeof Notification<"u"&&Notification.warning&&Notification.warning(this.t("module.sc.noAddTasks","\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0625\u0636\u0627\u0641\u0629 \u0645\u0647\u0627\u0645"));return}if(typeof UserTasks>"u"||typeof UserTasks.showTaskForm!="function"){typeof Notification<"u"&&Notification.error&&Notification.error(this.t("module.sc.tasksModuleUnavailable","\u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u0647\u0627\u0645 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D"));return}const s=!this.canAssignTasksToOthers();UserTasks.showTaskForm(null,{dueDate:e||"",lockUserId:s,skipModuleReload:!0,onSaved:()=>{this.refreshCalendarEvents(),this.refreshDashboardWidgetIfVisible()}})},showDateClickMenu(e){const s=e||this.t("module.sc.dateFallback","\u0627\u0644\u062A\u0627\u0631\u064A\u062E"),t=`
         <div class="modal-overlay sc-modal-overlay" id="sc-date-click-menu">
             <div class="modal-content sc-modal-content sc-date-menu" role="dialog" aria-modal="true">
                 <div class="sc-modal-header">
-                    <h3 class="sc-modal-title">${this.esc(this._tParam('module.sc.addOnDate', { date: dateLabel }, `إضافة في ${dateLabel}`))}</h3>
-                    <button type="button" class="sc-modal-close" id="sc-date-menu-close" aria-label="${this.esc(this.t('module.sc.close', 'إغلاق'))}">
+                    <h3 class="sc-modal-title">${this.esc(this._tParam("module.sc.addOnDate",{date:s},`\u0625\u0636\u0627\u0641\u0629 \u0641\u064A ${s}`))}</h3>
+                    <button type="button" class="sc-modal-close" id="sc-date-menu-close" aria-label="${this.esc(this.t("module.sc.close","\u0625\u063A\u0644\u0627\u0642"))}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="sc-modal-body sc-date-menu-actions">
-                    ${this.canAddTasksFromCalendar() ? `<button type="button" class="btn-primary btn-sm sc-date-action" data-action="task">
-                        <i class="fas fa-tasks ml-1"></i>${this.esc(this.t('module.sc.userTask', 'مهمة مستخدم'))}
-                    </button>` : ''}
-                    ${this.canManageCustomEvents() ? `<button type="button" class="btn-secondary btn-sm sc-date-action" data-action="event">
-                        <i class="fas fa-calendar-plus ml-1"></i>${this.esc(this.t('module.sc.customEvent', 'حدث مخصص'))}
-                    </button>` : ''}
+                    ${this.canAddTasksFromCalendar()?`<button type="button" class="btn-primary btn-sm sc-date-action" data-action="task">
+                        <i class="fas fa-tasks ml-1"></i>${this.esc(this.t("module.sc.userTask","\u0645\u0647\u0645\u0629 \u0645\u0633\u062A\u062E\u062F\u0645"))}
+                    </button>`:""}
+                    ${this.canManageCustomEvents()?`<button type="button" class="btn-secondary btn-sm sc-date-action" data-action="event">
+                        <i class="fas fa-calendar-plus ml-1"></i>${this.esc(this.t("module.sc.customEvent","\u062D\u062F\u062B \u0645\u062E\u0635\u0635"))}
+                    </button>`:""}
                 </div>
             </div>
-        </div>`;
-        const wrap = document.createElement('div');
-        wrap.innerHTML = html;
-        const modal = wrap.firstElementChild;
-        document.body.appendChild(modal);
-        const close = () => { try { modal.remove(); } catch (_e) { /* ignore */ } };
-        modal.querySelector('#sc-date-menu-close')?.addEventListener('click', close);
-        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-        modal.querySelectorAll('.sc-date-action').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const action = btn.getAttribute('data-action');
-                close();
-                if (action === 'task') this.openAddTaskForm(dueDate);
-                else if (action === 'event') this.openCustomEventForm(null, { startDate: dueDate });
-            });
-        });
-    },
-
-    openCustomEventForm(record, defaults) {
-        if (!this.canManageCustomEvents()) {
-            Notification?.warning?.(this.t('module.sc.noManageEvents', 'ليس لديك صلاحية إدارة الأحداث'));
-            return;
-        }
-        const rec = record || {};
-        const def = defaults || {};
-        const title = rec.title || '';
-        const description = rec.description || '';
-        const startDate = rec.startDate || rec.date || def.startDate || '';
-        const endDate = rec.endDate || '';
-        const recurring = rec.recurring || 'once';
-        const color = rec.color || '#7c3aed';
-        const enabled = rec.enabled !== false && rec.enabled !== 'false' && rec.enabled !== 0;
-        const isEdit = !!rec.id;
-        const html = `
+        </div>`,a=document.createElement("div");a.innerHTML=t;const i=a.firstElementChild;document.body.appendChild(i);const c=()=>{try{i.remove()}catch{}};i.querySelector("#sc-date-menu-close")?.addEventListener("click",c),i.addEventListener("click",n=>{n.target===i&&c()}),i.querySelectorAll(".sc-date-action").forEach(n=>{n.addEventListener("click",()=>{const r=n.getAttribute("data-action");c(),r==="task"?this.openAddTaskForm(e):r==="event"&&this.openCustomEventForm(null,{startDate:e})})})},openCustomEventForm(e,s){if(!this.canManageCustomEvents()){Notification?.warning?.(this.t("module.sc.noManageEvents","\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0623\u062D\u062F\u0627\u062B"));return}const t=e||{},a=s||{},i=t.title||"",c=t.description||"",n=t.startDate||t.date||a.startDate||"",r=t.endDate||"",o=t.recurring||"once",l=t.color||"#7c3aed",d=t.enabled!==!1&&t.enabled!=="false"&&t.enabled!==0,u=!!t.id,y=`
         <div class="modal-overlay sc-modal-overlay" id="sc-custom-event-form">
             <div class="modal-content sc-modal-content sc-form-modal" role="dialog" aria-modal="true">
                 <div class="sc-modal-header">
-                    <h3 class="sc-modal-title">${isEdit
-                        ? this.esc(this.t('module.sc.editEventTitle', 'تعديل حدث'))
-                        : this.esc(this.t('module.sc.addEventTitle', 'إضافة حدث'))}</h3>
-                    <button type="button" class="sc-modal-close" id="sc-custom-form-close" aria-label="${this.esc(this.t('module.sc.close', 'إغلاق'))}">
+                    <h3 class="sc-modal-title">${u?this.esc(this.t("module.sc.editEventTitle","\u062A\u0639\u062F\u064A\u0644 \u062D\u062F\u062B")):this.esc(this.t("module.sc.addEventTitle","\u0625\u0636\u0627\u0641\u0629 \u062D\u062F\u062B"))}</h3>
+                    <button type="button" class="sc-modal-close" id="sc-custom-form-close" aria-label="${this.esc(this.t("module.sc.close","\u0625\u063A\u0644\u0627\u0642"))}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <form class="sc-custom-form" id="sc-custom-event-form-el">
-                    <label class="sc-form-field"><span>${this.esc(this.t('module.sc.form.title', 'العنوان *'))}</span>
-                        <input type="text" name="title" required value="${this.esc(title)}" class="form-input"></label>
-                    <label class="sc-form-field"><span>${this.esc(this.t('module.sc.form.description', 'الوصف'))}</span>
-                        <textarea name="description" rows="2" class="form-input">${this.esc(description)}</textarea></label>
+                    <label class="sc-form-field"><span>${this.esc(this.t("module.sc.form.title","\u0627\u0644\u0639\u0646\u0648\u0627\u0646 *"))}</span>
+                        <input type="text" name="title" required value="${this.esc(i)}" class="form-input"></label>
+                    <label class="sc-form-field"><span>${this.esc(this.t("module.sc.form.description","\u0627\u0644\u0648\u0635\u0641"))}</span>
+                        <textarea name="description" rows="2" class="form-input">${this.esc(c)}</textarea></label>
                     <div class="sc-form-row">
-                        <label class="sc-form-field"><span>${this.esc(this.t('module.sc.form.startDate', 'تاريخ البداية *'))}</span>
-                            <input type="date" name="startDate" required value="${this.esc(startDate)}" class="form-input"></label>
-                        <label class="sc-form-field"><span>${this.esc(this.t('module.sc.form.endDate', 'تاريخ النهاية'))}</span>
-                            <input type="date" name="endDate" value="${this.esc(endDate)}" class="form-input"></label>
+                        <label class="sc-form-field"><span>${this.esc(this.t("module.sc.form.startDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629 *"))}</span>
+                            <input type="date" name="startDate" required value="${this.esc(n)}" class="form-input"></label>
+                        <label class="sc-form-field"><span>${this.esc(this.t("module.sc.form.endDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0646\u0647\u0627\u064A\u0629"))}</span>
+                            <input type="date" name="endDate" value="${this.esc(r)}" class="form-input"></label>
                     </div>
                     <div class="sc-form-row">
-                        <label class="sc-form-field"><span>${this.esc(this.t('module.sc.form.recurring', 'التكرار'))}</span>
+                        <label class="sc-form-field"><span>${this.esc(this.t("module.sc.form.recurring","\u0627\u0644\u062A\u0643\u0631\u0627\u0631"))}</span>
                             <select name="recurring" class="form-input">
-                                <option value="once" ${recurring === 'once' ? 'selected' : ''}>${this.esc(this.t('module.sc.recurring.onceFull', 'مرة واحدة'))}</option>
-                                <option value="yearly" ${recurring === 'yearly' || recurring === 'سنوي' ? 'selected' : ''}>${this.esc(this.t('module.sc.recurring.yearly', 'سنوي'))}</option>
+                                <option value="once" ${o==="once"?"selected":""}>${this.esc(this.t("module.sc.recurring.onceFull","\u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629"))}</option>
+                                <option value="yearly" ${o==="yearly"||o==="\u0633\u0646\u0648\u064A"?"selected":""}>${this.esc(this.t("module.sc.recurring.yearly","\u0633\u0646\u0648\u064A"))}</option>
                             </select></label>
-                        <label class="sc-form-field"><span>${this.esc(this.t('module.sc.form.color', 'اللون'))}</span>
-                            <input type="color" name="color" value="${this.esc(color)}" class="sc-color-input"></label>
+                        <label class="sc-form-field"><span>${this.esc(this.t("module.sc.form.color","\u0627\u0644\u0644\u0648\u0646"))}</span>
+                            <input type="color" name="color" value="${this.esc(l)}" class="sc-color-input"></label>
                     </div>
-                    <label class="sc-form-check"><input type="checkbox" name="enabled" ${enabled ? 'checked' : ''}>
-                        <span>${this.esc(this.t('module.sc.form.enabled', 'مفعّل'))}</span></label>
+                    <label class="sc-form-check"><input type="checkbox" name="enabled" ${d?"checked":""}>
+                        <span>${this.esc(this.t("module.sc.form.enabled","\u0645\u0641\u0639\u0651\u0644"))}</span></label>
                     <div class="sc-modal-footer sc-form-footer">
-                        ${isEdit ? `<button type="button" class="btn-danger btn-sm" id="sc-custom-delete">
-                            <i class="fas fa-trash ml-1"></i>${this.esc(this.t('module.sc.delete', 'حذف'))}</button>` : ''}
-                        <button type="button" class="btn-secondary btn-sm" id="sc-custom-cancel">${this.esc(this.t('module.sc.cancel', 'إلغاء'))}</button>
-                        <button type="submit" class="btn-primary btn-sm">${this.esc(this.t('module.sc.save', 'حفظ'))}</button>
+                        ${u?`<button type="button" class="btn-danger btn-sm" id="sc-custom-delete">
+                            <i class="fas fa-trash ml-1"></i>${this.esc(this.t("module.sc.delete","\u062D\u0630\u0641"))}</button>`:""}
+                        <button type="button" class="btn-secondary btn-sm" id="sc-custom-cancel">${this.esc(this.t("module.sc.cancel","\u0625\u0644\u063A\u0627\u0621"))}</button>
+                        <button type="submit" class="btn-primary btn-sm">${this.esc(this.t("module.sc.save","\u062D\u0641\u0638"))}</button>
                     </div>
                 </form>
             </div>
-        </div>`;
-        const wrap = document.createElement('div');
-        wrap.innerHTML = html;
-        const modal = wrap.firstElementChild;
-        document.body.appendChild(modal);
-        const close = () => { try { modal.remove(); } catch (_e) { /* ignore */ } };
-        modal.querySelector('#sc-custom-form-close')?.addEventListener('click', close);
-        modal.querySelector('#sc-custom-cancel')?.addEventListener('click', close);
-        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-        modal.querySelector('#sc-custom-delete')?.addEventListener('click', async () => {
-            if (!confirm(this.t('module.sc.confirmDelete', 'حذف هذا الحدث؟'))) return;
-            await this.deleteCustomEvent(rec.id);
-            close();
-            if (this._managerModalRefresh) this._managerModalRefresh();
-        });
-        modal.querySelector('#sc-custom-event-form-el')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            const payload = {
-                title: String(fd.get('title') || '').trim(),
-                description: String(fd.get('description') || '').trim(),
-                startDate: fd.get('startDate'),
-                endDate: fd.get('endDate') || '',
-                recurring: fd.get('recurring') || 'once',
-                color: fd.get('color') || '#7c3aed',
-                enabled: fd.get('enabled') === 'on'
-            };
-            if (!payload.title || !payload.startDate) {
-                Notification?.warning?.(this.t('module.sc.titleStartRequired', 'العنوان وتاريخ البداية مطلوبان'));
-                return;
-            }
-            const res = await this.saveCustomEvent(payload, isEdit ? rec.id : null);
-            if (res && res.success) {
-                close();
-                if (this._managerModalRefresh) this._managerModalRefresh();
-            }
-        });
-    },
-
-    showCustomEventManager() {
-        if (!this.canManageCustomEvents()) return;
-        const list = Array.isArray(AppState?.appData?.safetyCalendarCustomEvents)
-            ? AppState.appData.safetyCalendarCustomEvents.slice()
-            : [];
-        list.sort((a, b) => String(a.startDate || a.date || '').localeCompare(String(b.startDate || b.date || '')));
-        const rows = list.length
-            ? list.map((ev) => {
-                const off = ev.enabled === false || ev.enabled === 'false';
-                return `<tr class="${off ? 'sc-ev-disabled' : ''}">
-                    <td>${this.esc(ev.title || '')}</td>
-                    <td>${this.esc(ev.startDate || ev.date || '')}</td>
-                    <td>${this.esc(ev.endDate || '—')}</td>
-                    <td>${ev.recurring === 'yearly'
-                        ? this.esc(this.t('module.sc.recurring.yearly', 'سنوي'))
-                        : this.esc(this.t('module.sc.recurring.once', 'مرة'))}</td>
+        </div>`,C=document.createElement("div");C.innerHTML=y;const m=C.firstElementChild;document.body.appendChild(m);const p=()=>{try{m.remove()}catch{}};m.querySelector("#sc-custom-form-close")?.addEventListener("click",p),m.querySelector("#sc-custom-cancel")?.addEventListener("click",p),m.addEventListener("click",v=>{v.target===m&&p()}),m.querySelector("#sc-custom-delete")?.addEventListener("click",async()=>{confirm(this.t("module.sc.confirmDelete","\u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u062D\u062F\u062B\u061F"))&&(await this.deleteCustomEvent(t.id),p(),this._managerModalRefresh&&this._managerModalRefresh())}),m.querySelector("#sc-custom-event-form-el")?.addEventListener("submit",async v=>{v.preventDefault();const f=new FormData(v.target),b={title:String(f.get("title")||"").trim(),description:String(f.get("description")||"").trim(),startDate:f.get("startDate"),endDate:f.get("endDate")||"",recurring:f.get("recurring")||"once",color:f.get("color")||"#7c3aed",enabled:f.get("enabled")==="on"};if(!b.title||!b.startDate){Notification?.warning?.(this.t("module.sc.titleStartRequired","\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629 \u0645\u0637\u0644\u0648\u0628\u0627\u0646"));return}const E=await this.saveCustomEvent(b,u?t.id:null);E&&E.success&&(p(),this._managerModalRefresh&&this._managerModalRefresh())})},showCustomEventManager(){if(!this.canManageCustomEvents())return;const e=Array.isArray(AppState?.appData?.safetyCalendarCustomEvents)?AppState.appData.safetyCalendarCustomEvents.slice():[];e.sort((n,r)=>String(n.startDate||n.date||"").localeCompare(String(r.startDate||r.date||"")));const s=e.length?e.map(n=>`<tr class="${n.enabled===!1||n.enabled==="false"?"sc-ev-disabled":""}">
+                    <td>${this.esc(n.title||"")}</td>
+                    <td>${this.esc(n.startDate||n.date||"")}</td>
+                    <td>${this.esc(n.endDate||"\u2014")}</td>
+                    <td>${n.recurring==="yearly"?this.esc(this.t("module.sc.recurring.yearly","\u0633\u0646\u0648\u064A")):this.esc(this.t("module.sc.recurring.once","\u0645\u0631\u0629"))}</td>
                     <td class="sc-ev-actions">
-                        <button type="button" class="btn-secondary btn-sm sc-ev-edit" data-id="${this.esc(ev.id)}">${this.esc(this.t('module.sc.edit', 'تعديل'))}</button>
+                        <button type="button" class="btn-secondary btn-sm sc-ev-edit" data-id="${this.esc(n.id)}">${this.esc(this.t("module.sc.edit","\u062A\u0639\u062F\u064A\u0644"))}</button>
                     </td>
-                </tr>`;
-            }).join('')
-            : `<tr><td colspan="5" class="text-gray-500">${this.esc(this.t('module.sc.noCustomEvents', 'لا توجد أحداث مخصصة بعد.'))}</td></tr>`;
-        const html = `
+                </tr>`).join(""):`<tr><td colspan="5" class="text-gray-500">${this.esc(this.t("module.sc.noCustomEvents","\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u062D\u062F\u0627\u062B \u0645\u062E\u0635\u0635\u0629 \u0628\u0639\u062F."))}</td></tr>`,t=`
         <div class="modal-overlay sc-modal-overlay" id="sc-event-manager">
             <div class="modal-content sc-modal-content sc-manager-modal" role="dialog" aria-modal="true">
                 <div class="sc-modal-header">
                     <div>
-                        <h3 class="sc-modal-title">${this.esc(this.t('module.sc.managerTitle', 'إدارة أحداث التقويم'))}</h3>
-                        <p class="sc-manager-sub">${this.esc(this.t('module.sc.managerSub', 'أحداث مخصصة — أعياد مصر والأيام العالمية من المرجع الثابت'))}</p>
+                        <h3 class="sc-modal-title">${this.esc(this.t("module.sc.managerTitle","\u0625\u062F\u0627\u0631\u0629 \u0623\u062D\u062F\u0627\u062B \u0627\u0644\u062A\u0642\u0648\u064A\u0645"))}</h3>
+                        <p class="sc-manager-sub">${this.esc(this.t("module.sc.managerSub","\u0623\u062D\u062F\u0627\u062B \u0645\u062E\u0635\u0635\u0629 \u2014 \u0623\u0639\u064A\u0627\u062F \u0645\u0635\u0631 \u0648\u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A\u0629 \u0645\u0646 \u0627\u0644\u0645\u0631\u062C\u0639 \u0627\u0644\u062B\u0627\u0628\u062A"))}</p>
                     </div>
-                    <button type="button" class="sc-modal-close" id="sc-manager-close" aria-label="${this.esc(this.t('module.sc.close', 'إغلاق'))}">
+                    <button type="button" class="sc-modal-close" id="sc-manager-close" aria-label="${this.esc(this.t("module.sc.close","\u0625\u063A\u0644\u0627\u0642"))}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="sc-manager-toolbar">
                     <button type="button" class="btn-primary btn-sm" id="sc-manager-add">
-                        <i class="fas fa-plus ml-1"></i>${this.esc(this.t('module.sc.addEventTitle', 'إضافة حدث'))}
+                        <i class="fas fa-plus ml-1"></i>${this.esc(this.t("module.sc.addEventTitle","\u0625\u0636\u0627\u0641\u0629 \u062D\u062F\u062B"))}
                     </button>
                 </div>
                 <div class="sc-modal-body sc-manager-body">
                     <table class="sc-manager-table">
                         <thead><tr>
-                            <th>${this.esc(this.t('module.sc.managerColTitle', 'العنوان'))}</th>
-                            <th>${this.esc(this.t('module.sc.managerColStart', 'البداية'))}</th>
-                            <th>${this.esc(this.t('module.sc.managerColEnd', 'النهاية'))}</th>
-                            <th>${this.esc(this.t('module.sc.managerColRecurring', 'التكرار'))}</th>
+                            <th>${this.esc(this.t("module.sc.managerColTitle","\u0627\u0644\u0639\u0646\u0648\u0627\u0646"))}</th>
+                            <th>${this.esc(this.t("module.sc.managerColStart","\u0627\u0644\u0628\u062F\u0627\u064A\u0629"))}</th>
+                            <th>${this.esc(this.t("module.sc.managerColEnd","\u0627\u0644\u0646\u0647\u0627\u064A\u0629"))}</th>
+                            <th>${this.esc(this.t("module.sc.managerColRecurring","\u0627\u0644\u062A\u0643\u0631\u0627\u0631"))}</th>
                             <th></th>
                         </tr></thead>
-                        <tbody>${rows}</tbody>
+                        <tbody>${s}</tbody>
                     </table>
                 </div>
             </div>
-        </div>`;
-        const wrap = document.createElement('div');
-        wrap.innerHTML = html;
-        const modal = wrap.firstElementChild;
-        document.body.appendChild(modal);
-        const close = () => {
-            this._managerModalRefresh = null;
-            try { modal.remove(); } catch (_e) { /* ignore */ }
-        };
-        this._managerModalRefresh = () => {
-            close();
-            this.showCustomEventManager();
-        };
-        modal.querySelector('#sc-manager-close')?.addEventListener('click', close);
-        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-        modal.querySelector('#sc-manager-add')?.addEventListener('click', () => {
-            this.openCustomEventForm(null, {});
-        });
-        modal.querySelectorAll('.sc-ev-edit').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const id = btn.getAttribute('data-id');
-                const rec = list.find((r) => String(r.id) === String(id));
-                if (rec) this.openCustomEventForm(rec, {});
-            });
-        });
-    },
-
-    async refreshDashboardWidgetIfVisible() {
-        const wrap = document.getElementById('dash-safety-calendar-wrap');
-        if (wrap && wrap.querySelector('.sc-dash-body')) {
-            await this.loadDashboardWidget();
-        }
-    },
-
-    buildEvents() {
-        if (!window.SafetyCalendarEvents) return { events: [], truncated: false };
-        return SafetyCalendarEvents.buildSafetyCalendarEvents({
-            categories: this.getEnabledCategories(),
-            assigneeMode: this.getAssigneeMode(),
-            showEgyptHolidays: this.getShowEgyptHolidays(),
-            showIntlDays: this.getShowIntlDays(),
-            showCustomEvents: this.getShowCustomEvents()
-        });
-    },
-
-    renderReferenceToggles() {
-        const egChecked = this.getShowEgyptHolidays() ? 'checked' : '';
-        const intlChecked = this.getShowIntlDays() ? 'checked' : '';
-        const customChecked = this.getShowCustomEvents() ? 'checked' : '';
-        return `<div class="sc-ref-toggles" role="group" aria-label="${this.esc(this.t('module.sc.layersAria', 'طبقات التقويم'))}">
-            <span class="sc-ref-label"><i class="fas fa-layer-group ml-1"></i>${this.esc(this.t('module.sc.layers', 'طبقات:'))}</span>
-            <label class="sc-ref-toggle"><input type="checkbox" class="sc-ref-pref" data-pref="showEgyptHolidays" ${egChecked}>
-                <span>${this.esc(this.t('module.sc.egyptHolidays', 'أعياد مصر'))}</span></label>
-            <label class="sc-ref-toggle"><input type="checkbox" class="sc-ref-pref" data-pref="showIntlDays" ${intlChecked}>
-                <span>${this.esc(this.t('module.sc.intlDays', 'أيام عالمية'))}</span></label>
-            <label class="sc-ref-toggle"><input type="checkbox" class="sc-ref-pref" data-pref="showCustomEvents" ${customChecked}>
-                <span>${this.esc(this.t('module.sc.customEvents', 'أحداث مخصصة'))}</span></label>
-            ${this.canManageCustomEvents() ? `<button type="button" class="btn-secondary btn-sm sc-manage-events-btn" id="sc-manage-events-btn">
-                <i class="fas fa-calendar-plus ml-1"></i>${this.esc(this.t('module.sc.manageEvents', 'إدارة الأحداث'))}
-            </button>` : ''}
-        </div>`;
-    },
-
-    renderAssigneeFilter() {
-        const mode = this.getAssigneeMode();
-        if (this.isEffectiveAdmin()) {
-            const allActive = mode === 'all' ? 'is-active' : '';
-            const mineActive = mode === 'mine' ? 'is-active' : '';
-            return `<div class="sc-assignee-filter" role="group" aria-label="${this.esc(this.t('module.sc.assigneeAria', 'فلتر المكلف'))}">
-                <span class="sc-assignee-label"><i class="fas fa-user-check ml-1"></i>${this.esc(this.t('module.sc.viewLabel', 'العرض:'))}</span>
-                <button type="button" class="sc-assignee-btn ${allActive}" data-assignee-mode="all">${this.esc(this.t('module.sc.viewAll', 'عرض الكل'))}</button>
-                <button type="button" class="sc-assignee-btn ${mineActive}" data-assignee-mode="mine">${this.esc(this.t('module.sc.viewMine', 'مهامي فقط'))}</button>
-            </div>`;
-        }
-        return `<div class="sc-assignee-filter sc-assignee-filter-readonly">
-            <span class="sc-assignee-badge"><i class="fas fa-user ml-1"></i>${this.esc(this.t('module.sc.viewReadonlyBadge', 'مهامك + أحداث السلامة'))}</span>
-        </div>`;
-    },
-
-    renderFilterBar() {
-        const cats = window.SafetyCalendarEvents
-            ? SafetyCalendarEvents.SAFETY_CALENDAR_CATEGORIES
-            : {};
-        const enabled = new Set(this.getEnabledCategories());
-        const items = Object.keys(cats).map((key) => {
-            const c = cats[key];
-            const checked = enabled.has(key) ? 'checked' : '';
-            return `<label class="sc-filter-chip" style="--sc-color:${this.esc(c.color)}">
-                <input type="checkbox" class="sc-cat-filter" data-cat="${this.esc(key)}" ${checked}>
+        </div>`,a=document.createElement("div");a.innerHTML=t;const i=a.firstElementChild;document.body.appendChild(i);const c=()=>{this._managerModalRefresh=null;try{i.remove()}catch{}};this._managerModalRefresh=()=>{c(),this.showCustomEventManager()},i.querySelector("#sc-manager-close")?.addEventListener("click",c),i.addEventListener("click",n=>{n.target===i&&c()}),i.querySelector("#sc-manager-add")?.addEventListener("click",()=>{this.openCustomEventForm(null,{})}),i.querySelectorAll(".sc-ev-edit").forEach(n=>{n.addEventListener("click",()=>{const r=n.getAttribute("data-id"),o=e.find(l=>String(l.id)===String(r));o&&this.openCustomEventForm(o,{})})})},async refreshDashboardWidgetIfVisible(){const e=document.getElementById("dash-safety-calendar-wrap");e&&e.querySelector(".sc-dash-body")&&await this.loadDashboardWidget()},buildEvents(){return window.SafetyCalendarEvents?SafetyCalendarEvents.buildSafetyCalendarEvents({categories:this.getEnabledCategories(),assigneeMode:this.getAssigneeMode(),showEgyptHolidays:this.getShowEgyptHolidays(),showIntlDays:this.getShowIntlDays(),showCustomEvents:this.getShowCustomEvents()}):{events:[],truncated:!1}},renderReferenceToggles(){const e=this.getShowEgyptHolidays()?"checked":"",s=this.getShowIntlDays()?"checked":"",t=this.getShowCustomEvents()?"checked":"";return`<div class="sc-ref-toggles" role="group" aria-label="${this.esc(this.t("module.sc.layersAria","\u0637\u0628\u0642\u0627\u062A \u0627\u0644\u062A\u0642\u0648\u064A\u0645"))}">
+            <span class="sc-ref-label"><i class="fas fa-layer-group ml-1"></i>${this.esc(this.t("module.sc.layers","\u0637\u0628\u0642\u0627\u062A:"))}</span>
+            <label class="sc-ref-toggle"><input type="checkbox" class="sc-ref-pref" data-pref="showEgyptHolidays" ${e}>
+                <span>${this.esc(this.t("module.sc.egyptHolidays","\u0623\u0639\u064A\u0627\u062F \u0645\u0635\u0631"))}</span></label>
+            <label class="sc-ref-toggle"><input type="checkbox" class="sc-ref-pref" data-pref="showIntlDays" ${s}>
+                <span>${this.esc(this.t("module.sc.intlDays","\u0623\u064A\u0627\u0645 \u0639\u0627\u0644\u0645\u064A\u0629"))}</span></label>
+            <label class="sc-ref-toggle"><input type="checkbox" class="sc-ref-pref" data-pref="showCustomEvents" ${t}>
+                <span>${this.esc(this.t("module.sc.customEvents","\u0623\u062D\u062F\u0627\u062B \u0645\u062E\u0635\u0635\u0629"))}</span></label>
+            ${this.canManageCustomEvents()?`<button type="button" class="btn-secondary btn-sm sc-manage-events-btn" id="sc-manage-events-btn">
+                <i class="fas fa-calendar-plus ml-1"></i>${this.esc(this.t("module.sc.manageEvents","\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0623\u062D\u062F\u0627\u062B"))}
+            </button>`:""}
+        </div>`},renderAssigneeFilter(){const e=this.getAssigneeMode();if(this.isEffectiveAdmin()){const s=e==="all"?"is-active":"",t=e==="mine"?"is-active":"";return`<div class="sc-assignee-filter" role="group" aria-label="${this.esc(this.t("module.sc.assigneeAria","\u0641\u0644\u062A\u0631 \u0627\u0644\u0645\u0643\u0644\u0641"))}">
+                <span class="sc-assignee-label"><i class="fas fa-user-check ml-1"></i>${this.esc(this.t("module.sc.viewLabel","\u0627\u0644\u0639\u0631\u0636:"))}</span>
+                <button type="button" class="sc-assignee-btn ${s}" data-assignee-mode="all">${this.esc(this.t("module.sc.viewAll","\u0639\u0631\u0636 \u0627\u0644\u0643\u0644"))}</button>
+                <button type="button" class="sc-assignee-btn ${t}" data-assignee-mode="mine">${this.esc(this.t("module.sc.viewMine","\u0645\u0647\u0627\u0645\u064A \u0641\u0642\u0637"))}</button>
+            </div>`}return`<div class="sc-assignee-filter sc-assignee-filter-readonly">
+            <span class="sc-assignee-badge"><i class="fas fa-user ml-1"></i>${this.esc(this.t("module.sc.viewReadonlyBadge","\u0645\u0647\u0627\u0645\u0643 + \u0623\u062D\u062F\u0627\u062B \u0627\u0644\u0633\u0644\u0627\u0645\u0629"))}</span>
+        </div>`},renderFilterBar(){const e=window.SafetyCalendarEvents?SafetyCalendarEvents.SAFETY_CALENDAR_CATEGORIES:{},s=new Set(this.getEnabledCategories()),t=Object.keys(e).map(a=>{const i=e[a],c=s.has(a)?"checked":"";return`<label class="sc-filter-chip" style="--sc-color:${this.esc(i.color)}">
+                <input type="checkbox" class="sc-cat-filter" data-cat="${this.esc(a)}" ${c}>
                 <span class="sc-filter-dot"></span>
-                <span>${this.esc(this._getCategoryLabel(key))}</span>
-            </label>`;
-        }).join('');
-        return `<div class="sc-filter-bar">
+                <span>${this.esc(this._getCategoryLabel(a))}</span>
+            </label>`}).join("");return`<div class="sc-filter-bar">
             ${this.renderAssigneeFilter()}
             ${this.renderReferenceToggles()}
-            <span class="sc-filter-label"><i class="fas fa-filter ml-1"></i>${this.esc(this.t('module.sc.filterTypes', 'فلترة الأنواع:'))}</span>
-            <div class="sc-cat-bulk" role="group" aria-label="${this.esc(this.t('module.sc.typesAria', 'تحديد الأنواع'))}">
+            <span class="sc-filter-label"><i class="fas fa-filter ml-1"></i>${this.esc(this.t("module.sc.filterTypes","\u0641\u0644\u062A\u0631\u0629 \u0627\u0644\u0623\u0646\u0648\u0627\u0639:"))}</span>
+            <div class="sc-cat-bulk" role="group" aria-label="${this.esc(this.t("module.sc.typesAria","\u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0623\u0646\u0648\u0627\u0639"))}">
                 <button type="button" class="sc-cat-bulk-btn" id="sc-select-all">
-                    <i class="fas fa-check-double ml-1"></i>${this.esc(this.t('module.sc.selectAll', 'تحديد الكل'))}
+                    <i class="fas fa-check-double ml-1"></i>${this.esc(this.t("module.sc.selectAll","\u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0643\u0644"))}
                 </button>
                 <button type="button" class="sc-cat-bulk-btn" id="sc-clear-all">
-                    <i class="fas fa-eraser ml-1"></i>${this.esc(this.t('module.sc.clearAll', 'إلغاء الكل'))}
+                    <i class="fas fa-eraser ml-1"></i>${this.esc(this.t("module.sc.clearAll","\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0643\u0644"))}
                 </button>
             </div>
-            <div class="sc-filter-chips">${items}</div>
+            <div class="sc-filter-chips">${t}</div>
             <button type="button" class="btn-secondary btn-sm sc-refresh-btn" id="sc-refresh-btn">
-                <i class="fas fa-sync-alt ml-1"></i>${this.esc(this.t('module.sc.refresh', 'تحديث'))}
+                <i class="fas fa-sync-alt ml-1"></i>${this.esc(this.t("module.sc.refresh","\u062A\u062D\u062F\u064A\u062B"))}
             </button>
-        </div>`;
-    },
-
-    renderShell() {
-        return `
+        </div>`},renderShell(){return`
         <div class="sc-root">
             <div class="sc-header">
                 <div class="sc-header-text">
                     <h2 class="section-title sc-title">
                         <i class="fas fa-calendar-days ml-2"></i>
-                        ${this.t('nav.safetyCalendar', 'تقويم السلامة')}
+                        ${this.t("nav.safetyCalendar","\u062A\u0642\u0648\u064A\u0645 \u0627\u0644\u0633\u0644\u0627\u0645\u0629")}
                     </h2>
-                    <p class="section-subtitle sc-subtitle">${this.esc(this.t('module.sc.subtitle', 'عرض موحّد لأحداث السلامة من جميع الموديولات'))}</p>
+                    <p class="section-subtitle sc-subtitle">${this.esc(this.t("module.sc.subtitle","\u0639\u0631\u0636 \u0645\u0648\u062D\u0651\u062F \u0644\u0623\u062D\u062F\u0627\u062B \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0645\u0646 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644\u0627\u062A"))}</p>
                 </div>
             </div>
             ${this.renderFilterBar()}
             <div id="sc-truncated-warn" class="sc-truncated-warn" hidden></div>
             <div id="sc-fc-error" class="sc-error-card" hidden>
                 <i class="fas fa-exclamation-triangle"></i>
-                <p>${this.esc(this.t('module.sc.fcLoadError', 'تعذر تحميل مكتبة التقويم. تحقق من الاتصال ثم أعد المحاولة.'))}</p>
-                <button type="button" class="btn-primary btn-sm" id="sc-retry-fc">${this.esc(this.t('module.sc.retry', 'إعادة المحاولة'))}</button>
+                <p>${this.esc(this.t("module.sc.fcLoadError","\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u062A\u0642\u0648\u064A\u0645. \u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u062B\u0645 \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629."))}</p>
+                <button type="button" class="btn-primary btn-sm" id="sc-retry-fc">${this.esc(this.t("module.sc.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}</button>
             </div>
             <div id="safety-calendar-root" class="sc-calendar-root"></div>
-        </div>`;
-    },
-
-    showEventModal(eventLike) {
-        const props = eventLike.extendedProps || eventLike;
-        const category = props.category;
-        const sourceId = props.sourceId;
-        if (!window.SafetyCalendarEvents) return;
-
-        const record = SafetyCalendarEvents.getRecordForEvent(category, sourceId);
-        const fields = this._sortDetailFields(record ? SafetyCalendarEvents.buildDetailFields(record) : []);
-        const catInfo = SafetyCalendarEvents.SAFETY_CALENDAR_CATEGORIES[category] || {};
-        const catColor = catInfo.color || 'var(--primary-color, #2563eb)';
-        const catLabel = props.categoryLabel || this._getCategoryLabel(category);
-        const moduleKey = props.moduleKey || catInfo.moduleKey;
-        const catIcon = this._getCategoryIcon(category);
-        const eventDate = this._formatEventDate(eventLike);
-
-        const fieldCards = fields.map((f) => `
+        </div>`},showEventModal(e){const s=e.extendedProps||e,t=s.category,a=s.sourceId;if(!window.SafetyCalendarEvents)return;const i=SafetyCalendarEvents.getRecordForEvent(t,a),c=this._sortDetailFields(i?SafetyCalendarEvents.buildDetailFields(i):[]),n=SafetyCalendarEvents.SAFETY_CALENDAR_CATEGORIES[t]||{},r=n.color||"var(--primary-color, #2563eb)",o=s.categoryLabel||this._getCategoryLabel(t),l=s.moduleKey||n.moduleKey,d=this._getCategoryIcon(t),u=this._formatEventDate(e),y=c.map(h=>`
             <div class="sc-event-detail__field">
-                <span class="sc-event-detail__field-label">${this.esc(f.label)}</span>
-                <span class="sc-event-detail__field-value">${this.esc(f.value)}</span>
-            </div>`).join('');
-
-        const canEdit = category === 'user-tasks' && record && this.canEditUserTask(record);
-        const canEditCustom = category === 'custom-event' && record && this.canManageCustomEvents();
-        const isReference = props.isReference === true;
-        const emptyHint = isReference
-            ? this.t('module.sc.refEventHint', 'حدث مرجعي (عطلة أو يوم عالمي) — للعرض فقط.')
-            : this.t('module.sc.noDetails', 'لا تتوفر تفاصيل إضافية لهذا الحدث.');
-
-        const metaBits = [];
-        if (eventDate) {
-            metaBits.push(`<span class="sc-event-detail__meta-item"><i class="fas fa-calendar-day" aria-hidden="true"></i>${this.esc(eventDate)}</span>`);
-        }
-        if (props.assigneeHint) {
-            metaBits.push(`<span class="sc-event-detail__meta-item"><i class="fas fa-user" aria-hidden="true"></i>${this.esc(this.t('module.sc.assignee', 'المكلف:'))} ${this.esc(props.assigneeHint)}</span>`);
-        }
-        if (isReference) {
-            metaBits.push(`<span class="sc-event-detail__meta-item sc-event-detail__meta-item--ref"><i class="fas fa-bookmark" aria-hidden="true"></i>${this.esc(this.t('module.sc.refBadge', 'مرجعي'))}</span>`);
-        }
-
-        const html = `
+                <span class="sc-event-detail__field-label">${this.esc(h.label)}</span>
+                <span class="sc-event-detail__field-value">${this.esc(h.value)}</span>
+            </div>`).join(""),C=t==="user-tasks"&&i&&this.canEditUserTask(i),m=t==="custom-event"&&i&&this.canManageCustomEvents(),p=s.isReference===!0,v=p?this.t("module.sc.refEventHint","\u062D\u062F\u062B \u0645\u0631\u062C\u0639\u064A (\u0639\u0637\u0644\u0629 \u0623\u0648 \u064A\u0648\u0645 \u0639\u0627\u0644\u0645\u064A) \u2014 \u0644\u0644\u0639\u0631\u0636 \u0641\u0642\u0637."):this.t("module.sc.noDetails","\u0644\u0627 \u062A\u062A\u0648\u0641\u0631 \u062A\u0641\u0627\u0635\u064A\u0644 \u0625\u0636\u0627\u0641\u064A\u0629 \u0644\u0647\u0630\u0627 \u0627\u0644\u062D\u062F\u062B."),f=[];u&&f.push(`<span class="sc-event-detail__meta-item"><i class="fas fa-calendar-day" aria-hidden="true"></i>${this.esc(u)}</span>`),s.assigneeHint&&f.push(`<span class="sc-event-detail__meta-item"><i class="fas fa-user" aria-hidden="true"></i>${this.esc(this.t("module.sc.assignee","\u0627\u0644\u0645\u0643\u0644\u0641:"))} ${this.esc(s.assigneeHint)}</span>`),p&&f.push(`<span class="sc-event-detail__meta-item sc-event-detail__meta-item--ref"><i class="fas fa-bookmark" aria-hidden="true"></i>${this.esc(this.t("module.sc.refBadge","\u0645\u0631\u062C\u0639\u064A"))}</span>`);const b=`
         <div class="modal-overlay sc-modal-overlay sc-event-detail-overlay" id="sc-event-modal" role="presentation">
-            <div class="modal-content sc-modal-content sc-event-detail" role="dialog" aria-modal="true" aria-labelledby="sc-event-detail-title" style="--sc-cat-color:${this.esc(catColor)}">
+            <div class="modal-content sc-modal-content sc-event-detail" role="dialog" aria-modal="true" aria-labelledby="sc-event-detail-title" style="--sc-cat-color:${this.esc(r)}">
                 <div class="sc-event-detail__glow" aria-hidden="true"></div>
                 <div class="sc-event-detail__accent" aria-hidden="true"></div>
                 <header class="sc-event-detail__header">
                     <div class="sc-event-detail__header-row">
                         <div class="sc-event-detail__identity">
-                            <span class="sc-event-detail__icon" aria-hidden="true"><i class="fas ${catIcon}"></i></span>
+                            <span class="sc-event-detail__icon" aria-hidden="true"><i class="fas ${d}"></i></span>
                             <div class="sc-event-detail__identity-text">
-                                <span class="sc-event-detail__badge">${this.esc(catLabel)}</span>
-                                <h3 class="sc-event-detail__title" id="sc-event-detail-title">${this.esc(eventLike.title || '')}</h3>
+                                <span class="sc-event-detail__badge">${this.esc(o)}</span>
+                                <h3 class="sc-event-detail__title" id="sc-event-detail-title">${this.esc(e.title||"")}</h3>
                             </div>
                         </div>
-                        <button type="button" class="sc-event-detail__close" id="sc-modal-close" aria-label="${this.esc(this.t('module.sc.close', 'إغلاق'))}">
+                        <button type="button" class="sc-event-detail__close" id="sc-modal-close" aria-label="${this.esc(this.t("module.sc.close","\u0625\u063A\u0644\u0627\u0642"))}">
                             <i class="fas fa-times" aria-hidden="true"></i>
                         </button>
                     </div>
-                    ${metaBits.length ? `<div class="sc-event-detail__meta">${metaBits.join('')}</div>` : ''}
+                    ${f.length?`<div class="sc-event-detail__meta">${f.join("")}</div>`:""}
                 </header>
                 <div class="sc-event-detail__body sc-modal-body">
-                    ${fieldCards
-                        ? `<div class="sc-event-detail__section-label"><i class="fas fa-circle-info" aria-hidden="true"></i>${this.esc(this.t('module.sc.detailsHeading', 'تفاصيل الحدث'))}</div>
-                           <div class="sc-event-detail__fields">${fieldCards}</div>`
-                        : `<div class="sc-event-detail__empty">
-                                <span class="sc-event-detail__empty-icon" aria-hidden="true"><i class="fas ${isReference ? 'fa-flag' : 'fa-inbox'}"></i></span>
-                                <p>${this.esc(emptyHint)}</p>
+                    ${y?`<div class="sc-event-detail__section-label"><i class="fas fa-circle-info" aria-hidden="true"></i>${this.esc(this.t("module.sc.detailsHeading","\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u062D\u062F\u062B"))}</div>
+                           <div class="sc-event-detail__fields">${y}</div>`:`<div class="sc-event-detail__empty">
+                                <span class="sc-event-detail__empty-icon" aria-hidden="true"><i class="fas ${p?"fa-flag":"fa-inbox"}"></i></span>
+                                <p>${this.esc(v)}</p>
                            </div>`}
                 </div>
                 <footer class="sc-event-detail__footer sc-modal-footer">
-                    <button type="button" class="sc-event-detail__btn sc-event-detail__btn--ghost" id="sc-copy-id" data-id="${this.esc(sourceId)}">
-                        <i class="fas fa-copy" aria-hidden="true"></i>${this.esc(this.t('module.sc.copyId', 'نسخ المعرف'))}
+                    <button type="button" class="sc-event-detail__btn sc-event-detail__btn--ghost" id="sc-copy-id" data-id="${this.esc(a)}">
+                        <i class="fas fa-copy" aria-hidden="true"></i>${this.esc(this.t("module.sc.copyId","\u0646\u0633\u062E \u0627\u0644\u0645\u0639\u0631\u0641"))}
                     </button>
-                    ${canEditCustom ? `<button type="button" class="sc-event-detail__btn sc-event-detail__btn--soft" id="sc-edit-custom">
-                        <i class="fas fa-pen" aria-hidden="true"></i>${this.esc(this.t('module.sc.editEvent', 'تعديل الحدث'))}
-                    </button>` : ''}
-                    ${canEdit ? `<button type="button" class="sc-event-detail__btn sc-event-detail__btn--soft" id="sc-edit-task">
-                        <i class="fas fa-pen" aria-hidden="true"></i>${this.esc(this.t('module.sc.editTask', 'تعديل المهمة'))}
-                    </button>` : ''}
-                    ${moduleKey && !isReference ? `<button type="button" class="sc-event-detail__btn sc-event-detail__btn--primary" id="sc-open-module" data-module="${this.esc(moduleKey)}">
-                        <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>${this.esc(this.t('module.sc.openModule', 'فتح في الموديول'))}
-                    </button>` : ''}
-                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('safety-calendar') : ''}
+                    ${m?`<button type="button" class="sc-event-detail__btn sc-event-detail__btn--soft" id="sc-edit-custom">
+                        <i class="fas fa-pen" aria-hidden="true"></i>${this.esc(this.t("module.sc.editEvent","\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u062D\u062F\u062B"))}
+                    </button>`:""}
+                    ${C?`<button type="button" class="sc-event-detail__btn sc-event-detail__btn--soft" id="sc-edit-task">
+                        <i class="fas fa-pen" aria-hidden="true"></i>${this.esc(this.t("module.sc.editTask","\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0647\u0645\u0629"))}
+                    </button>`:""}
+                    ${l&&!p?`<button type="button" class="sc-event-detail__btn sc-event-detail__btn--primary" id="sc-open-module" data-module="${this.esc(l)}">
+                        <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>${this.esc(this.t("module.sc.openModule","\u0641\u062A\u062D \u0641\u064A \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644"))}
+                    </button>`:""}
+                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("safety-calendar"):""}
                 </footer>
             </div>
-        </div>`;
-
-        if (this._modalEl) {
-            try {
-                if (this._modalEscHandler) {
-                    document.removeEventListener('keydown', this._modalEscHandler);
-                    this._modalEscHandler = null;
-                }
-                this._modalEl.remove();
-            } catch (_e) { /* ignore */ }
-        }
-        const wrap = document.createElement('div');
-        wrap.innerHTML = html;
-        this._modalEl = wrap.firstElementChild;
-        document.body.appendChild(this._modalEl);
-        if (typeof EmailDispatch !== 'undefined') {
-            EmailDispatch.bindFooterButtons(this._modalEl, {
-                moduleKey: 'safety-calendar',
-                record: record || {
-                    id: sourceId || '',
-                    title: eventLike.title || '',
-                    start: eventDate || '',
-                    end: eventLike.end || eventLike.endStr || '',
-                    location: (record && record.location) || props.location || ''
-                },
-                recordId: sourceId || (record && record.id) || ''
-            });
-        }
-        requestAnimationFrame(() => {
-            try { this._modalEl?.classList.add('is-open'); } catch (_e) { /* ignore */ }
-        });
-
-        const close = () => {
-            if (this._modalEscHandler) {
-                document.removeEventListener('keydown', this._modalEscHandler);
-                this._modalEscHandler = null;
-            }
-            if (!this._modalEl) return;
-            const el = this._modalEl;
-            el.classList.remove('is-open');
-            el.classList.add('is-closing');
-            const done = () => {
-                try { el.remove(); } catch (_e) { /* ignore */ }
-                if (this._modalEl === el) this._modalEl = null;
-            };
-            window.setTimeout(done, 180);
-        };
-
-        this._modalEscHandler = (e) => {
-            if (e.key === 'Escape') close();
-        };
-        document.addEventListener('keydown', this._modalEscHandler);
-
-        this._modalEl.querySelector('#sc-modal-close')?.addEventListener('click', close);
-        this._modalEl.addEventListener('click', (e) => {
-            if (e.target === this._modalEl) close();
-        });
-        this._modalEl.querySelector('#sc-copy-id')?.addEventListener('click', () => {
-            const id = sourceId || '';
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(id).catch(() => {});
-            }
-            if (typeof Notification !== 'undefined' && Notification.success) {
-                Notification.success(this.t('module.sc.idCopied', 'تم نسخ المعرف'));
-            }
-        });
-        this._modalEl.querySelector('#sc-open-module')?.addEventListener('click', () => {
-            close();
-            if (typeof UI !== 'undefined' && UI.showSection && moduleKey) {
-                if (typeof Permissions !== 'undefined' && Permissions.hasAccess && !Permissions.hasAccess(moduleKey)) {
-                    if (typeof Notification !== 'undefined' && Notification.error) {
-                        Notification.error(this.t('module.sc.noModuleAccess', 'ليس لديك صلاحية لهذا الموديول'));
-                    }
-                    return;
-                }
-                UI.showSection(moduleKey);
-            }
-        });
-        this._modalEl.querySelector('#sc-edit-task')?.addEventListener('click', () => {
-            close();
-            if (typeof UserTasks !== 'undefined' && UserTasks.showTaskForm && record) {
-                UserTasks.showTaskForm(record, {
-                    skipModuleReload: true,
-                    onSaved: () => {
-                        this.refreshCalendarEvents();
-                        this.refreshDashboardWidgetIfVisible();
-                    }
-                });
-            }
-        });
-        this._modalEl.querySelector('#sc-edit-custom')?.addEventListener('click', () => {
-            close();
-            if (record) this.openCustomEventForm(record, {});
-        });
-        try { this._modalEl.querySelector('#sc-modal-close')?.focus(); } catch (_f) { /* ignore */ }
-    },
-
-    destroyCalendar() {
-        if (this._calendar) {
-            try { this._calendar.destroy(); } catch (_e) { /* ignore */ }
-            this._calendar = null;
-        }
-    },
-
-    refreshCalendarEvents() {
-        const result = this.buildEvents();
-        const warn = document.getElementById('sc-truncated-warn');
-        if (warn) {
-            if (result.truncated) {
-                warn.hidden = false;
-                warn.textContent = this._tParam('module.sc.truncatedWarn', { max: result.maxEvents },
-                    `تم عرض ${result.maxEvents} حدث كحد أقصى. قلّل النطاق بالفلاتر إن لزم.`);
-            } else {
-                warn.hidden = true;
-            }
-        }
-        if (this._calendar) {
-            try {
-                this._calendar.getEventSources().forEach((src) => {
-                    try { src.remove(); } catch (_e) { /* ignore */ }
-                });
-            } catch (_e) { /* ignore */ }
-            this._calendar.removeAllEvents();
-            if (Array.isArray(result.events) && result.events.length) {
-                this._calendar.addEventSource(result.events);
-            }
-        }
-        if (this._dashCalendar) {
-            try {
-                this._dashCalendar.getEventSources().forEach((src) => {
-                    try { src.remove(); } catch (_e) { /* ignore */ }
-                });
-            } catch (_e) { /* ignore */ }
-            this._dashCalendar.removeAllEvents();
-            if (Array.isArray(result.events) && result.events.length) {
-                this._dashCalendar.addEventSource(result.events);
-            }
-        }
-        return result;
-    },
-
-    bindFilterEvents(section) {
-        section.querySelectorAll('[data-assignee-mode]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const mode = btn.getAttribute('data-assignee-mode');
-                if (mode !== 'all' && mode !== 'mine') return;
-                this._assigneeMode = mode;
-                section.querySelectorAll('[data-assignee-mode]').forEach((b) => {
-                    b.classList.toggle('is-active', b.getAttribute('data-assignee-mode') === mode);
-                });
-                this.refreshCalendarEvents();
-            });
-        });
-        const applyCategorySelection = () => {
-            const selected = [];
-            section.querySelectorAll('.sc-cat-filter:checked').forEach((x) => {
-                selected.push(x.getAttribute('data-cat'));
-            });
-            this._activeCategories = selected;
-            this.refreshCalendarEvents();
-        };
-        section.querySelectorAll('.sc-cat-filter').forEach((cb) => {
-            cb.addEventListener('change', applyCategorySelection);
-        });
-        section.querySelector('#sc-select-all')?.addEventListener('click', () => {
-            section.querySelectorAll('.sc-cat-filter').forEach((x) => { x.checked = true; });
-            applyCategorySelection();
-        });
-        section.querySelector('#sc-clear-all')?.addEventListener('click', () => {
-            section.querySelectorAll('.sc-cat-filter').forEach((x) => { x.checked = false; });
-            applyCategorySelection();
-        });
-        section.querySelector('#sc-refresh-btn')?.addEventListener('click', () => {
-            this._activeCategories = null;
-            section.querySelectorAll('.sc-cat-filter').forEach((x) => { x.checked = true; });
-            this.refreshCalendarEvents();
-        });
-        section.querySelectorAll('.sc-ref-pref').forEach((cb) => {
-            cb.addEventListener('change', () => {
-                const key = cb.getAttribute('data-pref');
-                if (!key) return;
-                this.setReferencePref(key, cb.checked);
-            });
-        });
-        section.querySelector('#sc-manage-events-btn')?.addEventListener('click', () => {
-            this.showCustomEventManager();
-        });
-    },
-
-    async initFullCalendar(section) {
-        const root = section.querySelector('#safety-calendar-root');
-        const errCard = section.querySelector('#sc-fc-error');
-        if (!root) return;
-
-        const ok = await this.ensureFullCalendarLoaded();
-        if (!ok) {
-            if (errCard) errCard.hidden = false;
-            section.querySelector('#sc-retry-fc')?.addEventListener('click', () => {
-                this._fcLoadPromise = null;
-                if (errCard) errCard.hidden = true;
-                this.initFullCalendar(section);
-            });
-            return;
-        }
-        if (errCard) errCard.hidden = true;
-
-        this.destroyCalendar();
-        const result = this.buildEvents();
-        const self = this;
-        const headerLeft = [];
-        if (this.canAddTasksFromCalendar()) headerLeft.push('addTask');
-        if (this.canManageCustomEvents()) {
-            headerLeft.push('addCustomEvent', 'manageEvents');
-        }
-        headerLeft.push('dayGridMonth', 'timeGridWeek', 'timeGridDay', 'listWeek');
-        const fcOverrides = {
-            initialView: 'dayGridMonth',
-            height: 'auto',
-            headerToolbar: {
-                right: 'scPrev,scNext scToday',
-                center: 'title',
-                left: headerLeft.join(',')
-            },
-            events: result.events,
-            eventClick: (info) => {
-                info.jsEvent.preventDefault();
-                self.showEventModal(info.event);
-            },
-            dateClick: (info) => {
-                const dueDate = info.dateStr || (info.date
-                    ? info.date.toISOString().slice(0, 10)
-                    : '');
-                if (self.canManageCustomEvents() && self.canAddTasksFromCalendar()) {
-                    self.showDateClickMenu(dueDate);
-                } else if (self.canManageCustomEvents()) {
-                    self.openCustomEventForm(null, { startDate: dueDate });
-                } else if (self.canAddTasksFromCalendar()) {
-                    self.openAddTaskForm(dueDate);
-                }
-            },
-            eventDidMount: (info) => {
-                const cat = info.event.extendedProps.category;
-                const colors = SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES?.[cat];
-                if (colors && colors.color) {
-                    info.el.style.backgroundColor = colors.color;
-                    info.el.style.borderColor = colors.color;
-                }
-            },
-            ...this._getCalendarAppearanceHooks()
-        };
-        if (this.canAddTasksFromCalendar() || this.canManageCustomEvents()) {
-            fcOverrides.customButtons = Object.assign({}, fcOverrides.customButtons, {
-                addTask: this.canAddTasksFromCalendar() ? {
-                    text: self.t('module.sc.addTask', 'إضافة مهمة'),
-                    hint: self.t('module.sc.addTaskHint', 'إضافة مهمة في التقويم'),
-                    click() {
-                        self.openAddTaskForm('');
-                    }
-                } : undefined,
-                addCustomEvent: this.canManageCustomEvents() ? {
-                    text: self.t('module.sc.addEvent', 'إضافة حدث'),
-                    hint: self.t('module.sc.addEventHint', 'إضافة حدث مخصص'),
-                    click() {
-                        self.openCustomEventForm(null, {});
-                    }
-                } : undefined,
-                manageEvents: this.canManageCustomEvents() ? {
-                    text: self.t('module.sc.manage', 'إدارة'),
-                    hint: self.t('module.sc.manageHint', 'إدارة الأحداث المخصصة'),
-                    click() {
-                        self.showCustomEventManager();
-                    }
-                } : undefined
-            });
-            Object.keys(fcOverrides.customButtons).forEach((k) => {
-                if (fcOverrides.customButtons[k] === undefined) delete fcOverrides.customButtons[k];
-            });
-        }
-
-        const builder = this._buildCalendarOptions(fcOverrides);
-
-        this._calendar = builder.render(root);
-
-        const warn = section.querySelector('#sc-truncated-warn');
-        if (warn && result.truncated) {
-            warn.hidden = false;
-            warn.textContent = this._tParam('module.sc.truncatedWarnShort', { max: result.maxEvents },
-                `تم عرض ${result.maxEvents} حدث كحد أقصى.`);
-        }
-    },
-
-    async load() {
-        const section = document.getElementById('safety-calendar-section');
-        if (!section) return;
-
-        if (typeof Permissions !== 'undefined' && Permissions.hasAccess
-            && !Permissions.hasAccess('safety-calendar')) {
-            section.innerHTML = `<div class="empty-state"><p>${this.esc(this.t('module.sc.noAccess', 'ليس لديك صلاحية لعرض تقويم السلامة.'))}</p></div>`;
-            return;
-        }
-
-        section.innerHTML = this.renderShell();
-        this.bindFilterEvents(section);
-        await this.ensureCalendarSourceDataLoaded(false);
-        await this.initFullCalendar(section);
-    },
-
-    /** Dashboard widget — mini view */
-    _getDashEventCategoryIcon(category) {
-        const icons = {
-            'periodic-schedule': 'fa-calendar-check',
-            'periodic-record': 'fa-clipboard-list',
-            'daily-safety-check': 'fa-clipboard-check',
-            training: 'fa-graduation-cap',
-            'legal-training': 'fa-gavel',
-            ptw: 'fa-file-signature',
-            incidents: 'fa-exclamation-triangle',
-            nearmiss: 'fa-exclamation-circle',
-            observations: 'fa-eye',
-            'user-tasks': 'fa-tasks',
-            'safety-team-task': 'fa-user-shield',
-            'hse-audit': 'fa-search',
-            'fire-inspection': 'fa-fire-extinguisher',
-            emergency: 'fa-bell',
-            'action-tracking': 'fa-check-double',
-            violations: 'fa-ban',
-            behavior: 'fa-user-check',
-            'clinic-visit': 'fa-hospital',
-            'clinic-injury': 'fa-user-injured',
-            'clinic-sick-leave': 'fa-notes-medical',
-            'egypt-holiday': 'fa-flag',
-            'intl-hse-env': 'fa-globe-americas',
-            'custom-event': 'fa-star'
-        };
-        return icons[category] || 'fa-calendar-day';
-    },
-
-    _formatDashEventTitle(ev) {
-        const title = String(ev?.title || '').trim();
-        const catLabel = ev?.extendedProps?.categoryLabel;
-        const prefix = catLabel ? `${catLabel} — ` : '';
-        if (prefix && title.startsWith(prefix)) {
-            return title.slice(prefix.length).trim() || title;
-        }
-        return title;
-    },
-
-    _buildUpcomingEventsListHtml(events, today) {
-        const upcoming = (events || [])
-            .filter((e) => e.start >= today)
-            .sort((a, b) => a.start.localeCompare(b.start))
-            .slice(0, 12);
-        if (!upcoming.length) {
-            return `<p class="sc-dash-empty">${this.esc(this.t('module.sc.dash.noUpcoming', 'لا توجد أحداث قادمة في البيانات المتزامنة.'))}</p>`;
-        }
-        return upcoming.map((ev) => {
-            const cat = ev.extendedProps?.category;
-            const color = SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES?.[cat]?.color || '#64748b';
-            const icon = this._getDashEventCategoryIcon(cat);
-            const displayTitle = this._formatDashEventTitle(ev);
-            return `<button type="button" class="sc-dash-event" data-event-id="${this.esc(ev.id)}"
-                style="--sc-ev-color:${this.esc(color)}">
-                <span class="sc-dash-event-icon" aria-hidden="true"><i class="fas ${icon}"></i></span>
+        </div>`;if(this._modalEl)try{this._modalEscHandler&&(document.removeEventListener("keydown",this._modalEscHandler),this._modalEscHandler=null),this._modalEl.remove()}catch{}const E=document.createElement("div");E.innerHTML=b,this._modalEl=E.firstElementChild,document.body.appendChild(this._modalEl),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(this._modalEl,{moduleKey:"safety-calendar",record:i||{id:a||"",title:e.title||"",start:u||"",end:e.end||e.endStr||"",location:i&&i.location||s.location||""},recordId:a||i&&i.id||""}),requestAnimationFrame(()=>{try{this._modalEl?.classList.add("is-open")}catch{}});const g=()=>{if(this._modalEscHandler&&(document.removeEventListener("keydown",this._modalEscHandler),this._modalEscHandler=null),!this._modalEl)return;const h=this._modalEl;h.classList.remove("is-open"),h.classList.add("is-closing");const _=()=>{try{h.remove()}catch{}this._modalEl===h&&(this._modalEl=null)};window.setTimeout(_,180)};this._modalEscHandler=h=>{h.key==="Escape"&&g()},document.addEventListener("keydown",this._modalEscHandler),this._modalEl.querySelector("#sc-modal-close")?.addEventListener("click",g),this._modalEl.addEventListener("click",h=>{h.target===this._modalEl&&g()}),this._modalEl.querySelector("#sc-copy-id")?.addEventListener("click",()=>{const h=a||"";navigator.clipboard&&navigator.clipboard.writeText&&navigator.clipboard.writeText(h).catch(()=>{}),typeof Notification<"u"&&Notification.success&&Notification.success(this.t("module.sc.idCopied","\u062A\u0645 \u0646\u0633\u062E \u0627\u0644\u0645\u0639\u0631\u0641"))}),this._modalEl.querySelector("#sc-open-module")?.addEventListener("click",()=>{if(g(),typeof UI<"u"&&UI.showSection&&l){if(typeof Permissions<"u"&&Permissions.hasAccess&&!Permissions.hasAccess(l)){typeof Notification<"u"&&Notification.error&&Notification.error(this.t("module.sc.noModuleAccess","\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644"));return}UI.showSection(l)}}),this._modalEl.querySelector("#sc-edit-task")?.addEventListener("click",()=>{g(),typeof UserTasks<"u"&&UserTasks.showTaskForm&&i&&UserTasks.showTaskForm(i,{skipModuleReload:!0,onSaved:()=>{this.refreshCalendarEvents(),this.refreshDashboardWidgetIfVisible()}})}),this._modalEl.querySelector("#sc-edit-custom")?.addEventListener("click",()=>{g(),i&&this.openCustomEventForm(i,{})});try{this._modalEl.querySelector("#sc-modal-close")?.focus()}catch{}},destroyCalendar(){if(this._calendar){try{this._calendar.destroy()}catch{}this._calendar=null}},refreshCalendarEvents(){const e=this.buildEvents(),s=document.getElementById("sc-truncated-warn");if(s&&(e.truncated?(s.hidden=!1,s.textContent=this._tParam("module.sc.truncatedWarn",{max:e.maxEvents},`\u062A\u0645 \u0639\u0631\u0636 ${e.maxEvents} \u062D\u062F\u062B \u0643\u062D\u062F \u0623\u0642\u0635\u0649. \u0642\u0644\u0651\u0644 \u0627\u0644\u0646\u0637\u0627\u0642 \u0628\u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0625\u0646 \u0644\u0632\u0645.`)):s.hidden=!0),this._calendar){try{this._calendar.getEventSources().forEach(t=>{try{t.remove()}catch{}})}catch{}this._calendar.removeAllEvents(),Array.isArray(e.events)&&e.events.length&&this._calendar.addEventSource(e.events)}if(this._dashCalendar){try{this._dashCalendar.getEventSources().forEach(t=>{try{t.remove()}catch{}})}catch{}this._dashCalendar.removeAllEvents(),Array.isArray(e.events)&&e.events.length&&this._dashCalendar.addEventSource(e.events)}return e},bindFilterEvents(e){e.querySelectorAll("[data-assignee-mode]").forEach(t=>{t.addEventListener("click",()=>{const a=t.getAttribute("data-assignee-mode");a!=="all"&&a!=="mine"||(this._assigneeMode=a,e.querySelectorAll("[data-assignee-mode]").forEach(i=>{i.classList.toggle("is-active",i.getAttribute("data-assignee-mode")===a)}),this.refreshCalendarEvents())})});const s=()=>{const t=[];e.querySelectorAll(".sc-cat-filter:checked").forEach(a=>{t.push(a.getAttribute("data-cat"))}),this._activeCategories=t,this.refreshCalendarEvents()};e.querySelectorAll(".sc-cat-filter").forEach(t=>{t.addEventListener("change",s)}),e.querySelector("#sc-select-all")?.addEventListener("click",()=>{e.querySelectorAll(".sc-cat-filter").forEach(t=>{t.checked=!0}),s()}),e.querySelector("#sc-clear-all")?.addEventListener("click",()=>{e.querySelectorAll(".sc-cat-filter").forEach(t=>{t.checked=!1}),s()}),e.querySelector("#sc-refresh-btn")?.addEventListener("click",()=>{this._activeCategories=null,e.querySelectorAll(".sc-cat-filter").forEach(t=>{t.checked=!0}),this.refreshCalendarEvents()}),e.querySelectorAll(".sc-ref-pref").forEach(t=>{t.addEventListener("change",()=>{const a=t.getAttribute("data-pref");a&&this.setReferencePref(a,t.checked)})}),e.querySelector("#sc-manage-events-btn")?.addEventListener("click",()=>{this.showCustomEventManager()})},async initFullCalendar(e){const s=e.querySelector("#safety-calendar-root"),t=e.querySelector("#sc-fc-error");if(!s)return;if(!await this.ensureFullCalendarLoaded()){t&&(t.hidden=!1),e.querySelector("#sc-retry-fc")?.addEventListener("click",()=>{this._fcLoadPromise=null,t&&(t.hidden=!0),this.initFullCalendar(e)});return}t&&(t.hidden=!0),this.destroyCalendar();const i=this.buildEvents(),c=this,n=[];this.canAddTasksFromCalendar()&&n.push("addTask"),this.canManageCustomEvents()&&n.push("addCustomEvent","manageEvents"),n.push("dayGridMonth","timeGridWeek","timeGridDay","listWeek");const r={initialView:"dayGridMonth",height:"auto",headerToolbar:{right:"scPrev,scNext scToday",center:"title",left:n.join(",")},events:i.events,eventClick:d=>{d.jsEvent.preventDefault(),c.showEventModal(d.event)},dateClick:d=>{const u=d.dateStr||(d.date?d.date.toISOString().slice(0,10):"");c.canManageCustomEvents()&&c.canAddTasksFromCalendar()?c.showDateClickMenu(u):c.canManageCustomEvents()?c.openCustomEventForm(null,{startDate:u}):c.canAddTasksFromCalendar()&&c.openAddTaskForm(u)},eventDidMount:d=>{const u=d.event.extendedProps.category,y=SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES?.[u];y&&y.color&&(d.el.style.backgroundColor=y.color,d.el.style.borderColor=y.color)},...this._getCalendarAppearanceHooks()};(this.canAddTasksFromCalendar()||this.canManageCustomEvents())&&(r.customButtons=Object.assign({},r.customButtons,{addTask:this.canAddTasksFromCalendar()?{text:c.t("module.sc.addTask","\u0625\u0636\u0627\u0641\u0629 \u0645\u0647\u0645\u0629"),hint:c.t("module.sc.addTaskHint","\u0625\u0636\u0627\u0641\u0629 \u0645\u0647\u0645\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u0648\u064A\u0645"),click(){c.openAddTaskForm("")}}:void 0,addCustomEvent:this.canManageCustomEvents()?{text:c.t("module.sc.addEvent","\u0625\u0636\u0627\u0641\u0629 \u062D\u062F\u062B"),hint:c.t("module.sc.addEventHint","\u0625\u0636\u0627\u0641\u0629 \u062D\u062F\u062B \u0645\u062E\u0635\u0635"),click(){c.openCustomEventForm(null,{})}}:void 0,manageEvents:this.canManageCustomEvents()?{text:c.t("module.sc.manage","\u0625\u062F\u0627\u0631\u0629"),hint:c.t("module.sc.manageHint","\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0623\u062D\u062F\u0627\u062B \u0627\u0644\u0645\u062E\u0635\u0635\u0629"),click(){c.showCustomEventManager()}}:void 0}),Object.keys(r.customButtons).forEach(d=>{r.customButtons[d]===void 0&&delete r.customButtons[d]}));const o=this._buildCalendarOptions(r);this._calendar=o.render(s);const l=e.querySelector("#sc-truncated-warn");l&&i.truncated&&(l.hidden=!1,l.textContent=this._tParam("module.sc.truncatedWarnShort",{max:i.maxEvents},`\u062A\u0645 \u0639\u0631\u0636 ${i.maxEvents} \u062D\u062F\u062B \u0643\u062D\u062F \u0623\u0642\u0635\u0649.`))},async load(){const e=document.getElementById("safety-calendar-section");if(e){if(typeof Permissions<"u"&&Permissions.hasAccess&&!Permissions.hasAccess("safety-calendar")){e.innerHTML=`<div class="empty-state"><p>${this.esc(this.t("module.sc.noAccess","\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0639\u0631\u0636 \u062A\u0642\u0648\u064A\u0645 \u0627\u0644\u0633\u0644\u0627\u0645\u0629."))}</p></div>`;return}e.innerHTML=this.renderShell(),this.bindFilterEvents(e),await this.ensureCalendarSourceDataLoaded(!1),await this.initFullCalendar(e)}},_getDashEventCategoryIcon(e){return{"periodic-schedule":"fa-calendar-check","periodic-record":"fa-clipboard-list","daily-safety-check":"fa-clipboard-check",training:"fa-graduation-cap","legal-training":"fa-gavel",ptw:"fa-file-signature",incidents:"fa-exclamation-triangle",nearmiss:"fa-exclamation-circle",observations:"fa-eye","user-tasks":"fa-tasks","safety-team-task":"fa-user-shield","hse-audit":"fa-search","fire-inspection":"fa-fire-extinguisher",emergency:"fa-bell","action-tracking":"fa-check-double",violations:"fa-ban",behavior:"fa-user-check","clinic-visit":"fa-hospital","clinic-injury":"fa-user-injured","clinic-sick-leave":"fa-notes-medical","egypt-holiday":"fa-flag","intl-hse-env":"fa-globe-americas","custom-event":"fa-star"}[e]||"fa-calendar-day"},_formatDashEventTitle(e){const s=String(e?.title||"").trim(),t=e?.extendedProps?.categoryLabel,a=t?`${t} \u2014 `:"";return a&&s.startsWith(a)&&s.slice(a.length).trim()||s},_buildUpcomingEventsListHtml(e,s){const t=(e||[]).filter(a=>a.start>=s).sort((a,i)=>a.start.localeCompare(i.start)).slice(0,12);return t.length?t.map(a=>{const i=a.extendedProps?.category,c=SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES?.[i]?.color||"#64748b",n=this._getDashEventCategoryIcon(i),r=this._formatDashEventTitle(a);return`<button type="button" class="sc-dash-event" data-event-id="${this.esc(a.id)}"
+                style="--sc-ev-color:${this.esc(c)}">
+                <span class="sc-dash-event-icon" aria-hidden="true"><i class="fas ${n}"></i></span>
                 <span class="sc-dash-event-body">
-                    <span class="sc-dash-event-date">${this.esc(ev.start)}</span>
-                    <span class="sc-dash-event-title">${this.esc(displayTitle)}</span>
+                    <span class="sc-dash-event-date">${this.esc(a.start)}</span>
+                    <span class="sc-dash-event-title">${this.esc(r)}</span>
                 </span>
-            </button>`;
-        }).join('');
-    },
-
-    renderDashboardWidgetHtml(result, summary, meta) {
-        const events = result.events || [];
-        const today = summary.today;
-        const listHtml = this._buildUpcomingEventsListHtml(events, today);
-        const syncing = !!(meta && meta.syncing);
-
-        const cats = SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES || {};
-        const legend = Object.keys(cats).slice(0, 8).map((k) => {
-            const c = cats[k];
-            return `<span class="sc-dash-legend-item"><i style="background:${c.color}"></i>${this.esc(this._getCategoryLabel(k))}</span>`;
-        }).join('');
-        const dashArrow = this._getLang() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left';
-
-        return `
+            </button>`}).join(""):`<p class="sc-dash-empty">${this.esc(this.t("module.sc.dash.noUpcoming","\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u062D\u062F\u0627\u062B \u0642\u0627\u062F\u0645\u0629 \u0641\u064A \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062A\u0632\u0627\u0645\u0646\u0629."))}</p>`},renderDashboardWidgetHtml(e,s,t){const a=e.events||[],i=s.today,c=this._buildUpcomingEventsListHtml(a,i),n=!!(t&&t.syncing),r=SafetyCalendarEvents?.SAFETY_CALENDAR_CATEGORIES||{},o=Object.keys(r).slice(0,8).map(d=>`<span class="sc-dash-legend-item"><i style="background:${r[d].color}"></i>${this.esc(this._getCategoryLabel(d))}</span>`).join(""),l=this._getLang()==="en"?"fa-arrow-right":"fa-arrow-left";return`
         <div class="card-header sc-dash-header">
-            <h2 class="card-title"><i class="fas fa-calendar-days ml-2"></i>${this.esc(this.t('nav.safetyCalendar', 'تقويم السلامة'))}</h2>
+            <h2 class="card-title"><i class="fas fa-calendar-days ml-2"></i>${this.esc(this.t("nav.safetyCalendar","\u062A\u0642\u0648\u064A\u0645 \u0627\u0644\u0633\u0644\u0627\u0645\u0629"))}</h2>
             <div class="sc-dash-header-actions">
-                ${syncing ? `<span class="sc-dash-sync-hint" id="sc-dash-sync-hint"><i class="fas fa-sync-alt fa-spin ml-1"></i>${this.esc(this.t('module.sc.dash.syncing', 'تحديث بالخلفية'))}</span>` : ''}
+                ${n?`<span class="sc-dash-sync-hint" id="sc-dash-sync-hint"><i class="fas fa-sync-alt fa-spin ml-1"></i>${this.esc(this.t("module.sc.dash.syncing","\u062A\u062D\u062F\u064A\u062B \u0628\u0627\u0644\u062E\u0644\u0641\u064A\u0629"))}</span>`:""}
                 <button type="button" class="btn-secondary btn-sm sc-dash-full" id="sc-dash-open-full">
-                    ${this.esc(this.t('module.sc.dash.openFull', 'عرض التقويم الكامل'))} <i class="fas ${dashArrow} mr-1"></i>
+                    ${this.esc(this.t("module.sc.dash.openFull","\u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0648\u064A\u0645 \u0627\u0644\u0643\u0627\u0645\u0644"))} <i class="fas ${l} mr-1"></i>
                 </button>
             </div>
         </div>
         <div class="card-body sc-dash-body">
             <div class="sc-dash-kpi-row">
-                <div class="sc-dash-kpi"><span class="sc-dash-kpi-val" data-sc-kpi="today">${summary.todayCount}</span><span class="sc-dash-kpi-lbl">${this.esc(this.t('module.sc.dash.today', 'اليوم'))}</span></div>
-                <div class="sc-dash-kpi"><span class="sc-dash-kpi-val" data-sc-kpi="week">${summary.weekCount}</span><span class="sc-dash-kpi-lbl">${this.esc(this.t('module.sc.dash.week7', '7 أيام'))}</span></div>
-                <div class="sc-dash-kpi sc-dash-kpi-warn"><span class="sc-dash-kpi-val" data-sc-kpi="overdue">${summary.overdueCount}</span><span class="sc-dash-kpi-lbl">${this.esc(this.t('module.sc.dash.overdue', 'متأخرة'))}</span></div>
+                <div class="sc-dash-kpi"><span class="sc-dash-kpi-val" data-sc-kpi="today">${s.todayCount}</span><span class="sc-dash-kpi-lbl">${this.esc(this.t("module.sc.dash.today","\u0627\u0644\u064A\u0648\u0645"))}</span></div>
+                <div class="sc-dash-kpi"><span class="sc-dash-kpi-val" data-sc-kpi="week">${s.weekCount}</span><span class="sc-dash-kpi-lbl">${this.esc(this.t("module.sc.dash.week7","7 \u0623\u064A\u0627\u0645"))}</span></div>
+                <div class="sc-dash-kpi sc-dash-kpi-warn"><span class="sc-dash-kpi-val" data-sc-kpi="overdue">${s.overdueCount}</span><span class="sc-dash-kpi-lbl">${this.esc(this.t("module.sc.dash.overdue","\u0645\u062A\u0623\u062E\u0631\u0629"))}</span></div>
             </div>
             <div class="sc-dash-grid">
                 <div class="sc-dash-mini-wrap">
-                    <div id="sc-dash-calendar-root" class="sc-dash-calendar-root">${syncing ? `<p class="sc-dash-mini-loading">${this.esc(this.t('module.sc.dash.loading', 'جاري تحميل التقويم...'))}</p>` : ''}</div>
+                    <div id="sc-dash-calendar-root" class="sc-dash-calendar-root">${n?`<p class="sc-dash-mini-loading">${this.esc(this.t("module.sc.dash.loading","\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062A\u0642\u0648\u064A\u0645..."))}</p>`:""}</div>
                 </div>
                 <div class="sc-dash-list-wrap">
-                    <h4 class="sc-dash-list-title">${this.esc(this.t('module.sc.dash.upcoming', 'القادمة'))}</h4>
-                    <div class="sc-dash-list">${listHtml}</div>
+                    <h4 class="sc-dash-list-title">${this.esc(this.t("module.sc.dash.upcoming","\u0627\u0644\u0642\u0627\u062F\u0645\u0629"))}</h4>
+                    <div class="sc-dash-list">${c}</div>
                 </div>
             </div>
-            <div class="sc-dash-legend">${legend}</div>
-        </div>`;
-    },
-
-    _bindDashboardWidgetEvents(wrap, events) {
-        if (!wrap) return;
-        wrap.querySelector('#sc-dash-open-full')?.addEventListener('click', () => {
-            if (typeof UI !== 'undefined' && UI.showSection) {
-                UI.showSection('safety-calendar');
-            }
-        });
-        this._bindDashboardListEvents(wrap, events);
-    },
-
-    _bindDashboardListEvents(wrap, events) {
-        if (!wrap) return;
-        wrap.querySelectorAll('.sc-dash-event').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const id = btn.getAttribute('data-event-id');
-                const ev = (events || []).find((e) => e.id === id);
-                if (ev) this.showEventModal(ev);
-            });
-        });
-    },
-
-    _patchDashboardWidget(wrap, result, summary) {
-        if (!wrap) return;
-        const body = wrap.querySelector('.sc-dash-body');
-        if (!body) return;
-        const setKpi = (key, val) => {
-            const el = body.querySelector(`[data-sc-kpi="${key}"]`);
-            if (el) el.textContent = String(val);
-        };
-        setKpi('today', summary.todayCount);
-        setKpi('week', summary.weekCount);
-        setKpi('overdue', summary.overdueCount);
-        const list = body.querySelector('.sc-dash-list');
-        if (list) {
-            list.innerHTML = this._buildUpcomingEventsListHtml(result.events || [], summary.today);
-            this._bindDashboardListEvents(wrap, result.events || []);
-        }
-        wrap.querySelector('#sc-dash-sync-hint')?.remove();
-        this.refreshCalendarEvents();
-    },
-
-    async mountDashboardMiniCalendar(container, prefetchedResult) {
-        const miniRoot = container.querySelector('#sc-dash-calendar-root');
-        if (!miniRoot) return;
-        const ok = await this.ensureFullCalendarLoaded();
-        if (!ok) {
-            miniRoot.innerHTML = `<p class="sc-dash-empty">${this.esc(this.t('module.sc.dash.miniUnavailable', 'التقويم المصغّر غير متاح — استخدم «عرض التقويم الكامل».'))}</p>`;
-            return;
-        }
-        const result = prefetchedResult || this.buildEvents();
-        if (this._dashCalendar) {
-            try { this._dashCalendar.destroy(); } catch (_e) { /* ignore */ }
-            this._dashCalendar = null;
-        }
-        miniRoot.innerHTML = '';
-        const builder = this._buildCalendarOptions({
-            initialView: 'dayGridMonth',
-            height: 'auto',
-            contentHeight: 360,
-            dayMaxEvents: 2,
-            moreLinkText(n) {
-                return '+' + n;
-            },
-            headerToolbar: { right: 'scPrev,scNext', center: 'title', left: '' },
-            events: result.events,
-            eventClick: (info) => {
-                info.jsEvent.preventDefault();
-                this.showEventModal(info.event);
-            },
-            ...this._getCalendarAppearanceHooks()
-        }, true);
-        this._dashCalendar = builder.render(miniRoot);
-    },
-
-    _syncDashboardWidgetInBackground(token) {
-        this.ensureCalendarSourceDataLoaded(false, {
-            timeoutMs: 8000,
-            skipClinicVisitSheets: true
-        }).then(() => {
-            if (token !== this._dashWidgetLoadToken) return;
-            const wrap = document.getElementById('dash-safety-calendar-wrap');
-            if (!wrap || !wrap.querySelector('.sc-dash-body')) return;
-            const result = this.buildEvents();
-            const summary = SafetyCalendarEvents.summarizeEvents(result.events);
-            this._patchDashboardWidget(wrap, result, summary);
-        }).catch(() => {
-            const wrap = document.getElementById('dash-safety-calendar-wrap');
-            wrap?.querySelector('#sc-dash-sync-hint')?.remove();
-        });
-    },
-
-    async loadDashboardWidget() {
-        const wrap = document.getElementById('dash-safety-calendar-wrap');
-        if (!wrap) return;
-        if (typeof Dashboard !== 'undefined' && Dashboard.dashboardCan
-            && !Dashboard.dashboardCan('safety-calendar')) {
-            wrap.innerHTML = '';
-            return;
-        }
-        if (!window.SafetyCalendarEvents) {
-            wrap.innerHTML = '';
-            return;
-        }
-
-        const token = (this._dashWidgetLoadToken || 0) + 1;
-        this._dashWidgetLoadToken = token;
-        const fcPromise = this.ensureFullCalendarLoaded();
-
-        try {
-            const result = this.buildEvents();
-            const summary = SafetyCalendarEvents.summarizeEvents(result.events);
-            wrap.innerHTML = this.renderDashboardWidgetHtml(result, summary, { syncing: true });
-            this._bindDashboardWidgetEvents(wrap, result.events);
-
-            await fcPromise;
-            if (token !== this._dashWidgetLoadToken) return;
-            await this.mountDashboardMiniCalendar(wrap, result);
-
-            if (token === this._dashWidgetLoadToken) {
-                this._syncDashboardWidgetInBackground(token);
-            }
-        } catch (err) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                Utils.safeWarn('Safety calendar dashboard widget:', err);
-            }
-            wrap.innerHTML = `
+            <div class="sc-dash-legend">${o}</div>
+        </div>`},_bindDashboardWidgetEvents(e,s){e&&(e.querySelector("#sc-dash-open-full")?.addEventListener("click",()=>{typeof UI<"u"&&UI.showSection&&UI.showSection("safety-calendar")}),this._bindDashboardListEvents(e,s))},_bindDashboardListEvents(e,s){e&&e.querySelectorAll(".sc-dash-event").forEach(t=>{t.addEventListener("click",()=>{const a=t.getAttribute("data-event-id"),i=(s||[]).find(c=>c.id===a);i&&this.showEventModal(i)})})},_patchDashboardWidget(e,s,t){if(!e)return;const a=e.querySelector(".sc-dash-body");if(!a)return;const i=(n,r)=>{const o=a.querySelector(`[data-sc-kpi="${n}"]`);o&&(o.textContent=String(r))};i("today",t.todayCount),i("week",t.weekCount),i("overdue",t.overdueCount);const c=a.querySelector(".sc-dash-list");c&&(c.innerHTML=this._buildUpcomingEventsListHtml(s.events||[],t.today),this._bindDashboardListEvents(e,s.events||[])),e.querySelector("#sc-dash-sync-hint")?.remove(),this.refreshCalendarEvents()},async mountDashboardMiniCalendar(e,s){const t=e.querySelector("#sc-dash-calendar-root");if(!t)return;if(!await this.ensureFullCalendarLoaded()){t.innerHTML=`<p class="sc-dash-empty">${this.esc(this.t("module.sc.dash.miniUnavailable","\u0627\u0644\u062A\u0642\u0648\u064A\u0645 \u0627\u0644\u0645\u0635\u063A\u0651\u0631 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u2014 \u0627\u0633\u062A\u062E\u062F\u0645 \xAB\u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0648\u064A\u0645 \u0627\u0644\u0643\u0627\u0645\u0644\xBB."))}</p>`;return}const i=s||this.buildEvents();if(this._dashCalendar){try{this._dashCalendar.destroy()}catch{}this._dashCalendar=null}t.innerHTML="";const c=this._buildCalendarOptions({initialView:"dayGridMonth",height:"auto",contentHeight:360,dayMaxEvents:2,moreLinkText(n){return"+"+n},headerToolbar:{right:"scPrev,scNext",center:"title",left:""},events:i.events,eventClick:n=>{n.jsEvent.preventDefault(),this.showEventModal(n.event)},...this._getCalendarAppearanceHooks()},!0);this._dashCalendar=c.render(t)},_syncDashboardWidgetInBackground(e){this.ensureCalendarSourceDataLoaded(!1,{timeoutMs:8e3,skipClinicVisitSheets:!0}).then(()=>{if(e!==this._dashWidgetLoadToken)return;const s=document.getElementById("dash-safety-calendar-wrap");if(!s||!s.querySelector(".sc-dash-body"))return;const t=this.buildEvents(),a=SafetyCalendarEvents.summarizeEvents(t.events);this._patchDashboardWidget(s,t,a)}).catch(()=>{document.getElementById("dash-safety-calendar-wrap")?.querySelector("#sc-dash-sync-hint")?.remove()})},async loadDashboardWidget(){const e=document.getElementById("dash-safety-calendar-wrap");if(!e)return;if(typeof Dashboard<"u"&&Dashboard.dashboardCan&&!Dashboard.dashboardCan("safety-calendar")){e.innerHTML="";return}if(!window.SafetyCalendarEvents){e.innerHTML="";return}const s=(this._dashWidgetLoadToken||0)+1;this._dashWidgetLoadToken=s;const t=this.ensureFullCalendarLoaded();try{const a=this.buildEvents(),i=SafetyCalendarEvents.summarizeEvents(a.events);if(e.innerHTML=this.renderDashboardWidgetHtml(a,i,{syncing:!0}),this._bindDashboardWidgetEvents(e,a.events),await t,s!==this._dashWidgetLoadToken)return;await this.mountDashboardMiniCalendar(e,a),s===this._dashWidgetLoadToken&&this._syncDashboardWidgetInBackground(s)}catch(a){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("Safety calendar dashboard widget:",a),e.innerHTML=`
                 <div class="card-header sc-dash-header">
-                    <h2 class="card-title"><i class="fas fa-calendar-days ml-2"></i>${this.esc(this.t('nav.safetyCalendar', 'تقويم السلامة'))}</h2>
+                    <h2 class="card-title"><i class="fas fa-calendar-days ml-2"></i>${this.esc(this.t("nav.safetyCalendar","\u062A\u0642\u0648\u064A\u0645 \u0627\u0644\u0633\u0644\u0627\u0645\u0629"))}</h2>
                 </div>
                 <div class="card-body sc-dash-body">
-                    <p class="sc-dash-empty">${this.esc(this.t('module.sc.dash.loadFailed', 'تعذر تحميل التقويم.'))} <button type="button" class="btn-secondary btn-sm" id="sc-dash-retry">${this.esc(this.t('module.sc.retry', 'إعادة المحاولة'))}</button></p>
-                </div>`;
-            wrap.querySelector('#sc-dash-retry')?.addEventListener('click', () => this.loadDashboardWidget());
-        }
-    }
-};
-
-if (typeof window !== 'undefined') {
-    window.SafetyCalendar = SafetyCalendar;
-}
+                    <p class="sc-dash-empty">${this.esc(this.t("module.sc.dash.loadFailed","\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062A\u0642\u0648\u064A\u0645."))} <button type="button" class="btn-secondary btn-sm" id="sc-dash-retry">${this.esc(this.t("module.sc.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}</button></p>
+                </div>`,e.querySelector("#sc-dash-retry")?.addEventListener("click",()=>this.loadDashboardWidget())}}};typeof window<"u"&&(window.SafetyCalendar=SafetyCalendar);

@@ -1,50 +1,4 @@
-/**
- * UserTasks Module
- * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
- */
-// ===== User Tasks Module =====
-const UserTasks = {
-    // Cache للبيانات
-    cache: {
-        members: null,
-        tasks: new Map(),
-        lastLoad: null
-    },
-
-    // إعدادات الأداء
-    config: {
-        cacheTimeout: 5 * 60 * 1000, // 5 دقائق
-        debounceDelay: 300, // تأخير البحث
-        batchSize: 50, // حجم الدفعة للتحميل
-        syncInterval: 30 * 1000 // تحديث تلقائي كل 30 ثانية
-    },
-
-    // متغير لحفظ معرف التحديث التلقائي
-    autoSyncTimer: null,
-    _getI18nCore() {
-        return (window.AppI18n && typeof window.AppI18n.t === 'function')
-            ? window.AppI18n
-            : ((window.I18n && typeof window.I18n.t === 'function') ? window.I18n : null);
-    },
-    t(key, fallback) {
-        const i18nCore = this._getI18nCore();
-        if (i18nCore) return i18nCore.t(key, null, fallback || key);
-        return fallback || key;
-    },
-    applyModuleI18n(root) {
-        const i18nCore = this._getI18nCore();
-        if (!i18nCore) return;
-        const target = root || document.getElementById('user-tasks-section') || document;
-        if (typeof i18nCore.applyI18n === 'function') i18nCore.applyI18n(target);
-        if (typeof i18nCore.applyLiteralTranslations === 'function') i18nCore.applyLiteralTranslations(target);
-    },
-
-    /**
-     * أنماط لوحة الفلترة الاحترافية (مشتركة بين عرض المدير وعرض المستخدم)
-     * كل الأنماط scoped بـ .ut-filter-card لتفادي التأثير على أي مديول آخر.
-     */
-    _filterPanelStyles() {
-        return `
+const UserTasks={cache:{members:null,tasks:new Map,lastLoad:null},config:{cacheTimeout:3e5,debounceDelay:300,batchSize:50,syncInterval:3e4},autoSyncTimer:null,_getI18nCore(){return window.AppI18n&&typeof window.AppI18n.t=="function"?window.AppI18n:window.I18n&&typeof window.I18n.t=="function"?window.I18n:null},t(t,e){const s=this._getI18nCore();return s?s.t(t,null,e||t):e||t},applyModuleI18n(t){const e=this._getI18nCore();if(!e)return;const s=t||document.getElementById("user-tasks-section")||document;typeof e.applyI18n=="function"&&e.applyI18n(s),typeof e.applyLiteralTranslations=="function"&&e.applyLiteralTranslations(s)},_filterPanelStyles(){return`
         <style id="ut-filter-styles">
             .ut-filter-card {
                 padding: 0; overflow: hidden; border-radius: 16px;
@@ -148,77 +102,27 @@ const UserTasks = {
             @media (max-width: 500px) {
                 .ut-field { min-width: 100%; }
             }
-        </style>`;
-    },
-
-    /**
-     * تهيئة البيانات
-     */
-    ensureData() {
-        if (!AppState.appData.userTasks) {
-            AppState.appData.userTasks = [];
-        }
-    },
-
-    /**
-     * تحميل الموديول
-     */
-    async load() {
-        // Add language change listener
-        if (!this._languageChangeListenerAdded) {
-            document.addEventListener('language-changed', () => {
-                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
-                this.load();
-            });
-            this._languageChangeListenerAdded = true;
-        }
-
-        const section = document.getElementById('user-tasks-section');
-        if (!section) {
-            if (typeof Utils !== 'undefined' && Utils.safeError) {
-                Utils.safeError('قسم user-tasks-section غير موجود!');
-            } else {
-                console.error('قسم user-tasks-section غير موجود!');
-            }
-            return;
-        }
-
-        // التحقق من توفر AppState (لا تترك الواجهة فارغة)
-        if (typeof AppState === 'undefined') {
-            section.innerHTML = `
+        </style>`},ensureData(){AppState.appData.userTasks||(AppState.appData.userTasks=[])},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0);const t=document.getElementById("user-tasks-section");if(!t){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u0642\u0633\u0645 user-tasks-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F!");return}if(typeof AppState>"u"){t.innerHTML=`
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                            <p class="text-gray-500 mb-2">تعذر تحميل مهام المستخدمين</p>
-                            <p class="text-sm text-gray-400">AppState غير متوفر حالياً. جرّب تحديث الصفحة.</p>
+                            <p class="text-gray-500 mb-2">\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646</p>
+                            <p class="text-sm text-gray-400">AppState \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 \u062D\u0627\u0644\u064A\u0627\u064B. \u062C\u0631\u0651\u0628 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629.</p>
                             <button onclick="location.reload()" class="btn-primary mt-4">
                                 <i class="fas fa-redo ml-2"></i>
-                                تحديث الصفحة
+                                \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629
                             </button>
                         </div>
                     </div>
                 </div>
-            `;
-            this.applyModuleI18n(section);
-            return;
-        }
-
-        this.ensureData();
-
-        if (typeof Utils !== 'undefined' && Utils.safeLog) {
-            Utils.safeLog('✅ تحميل مديول مهام المستخدمين');
-        }
-
-        try {
-            // Skeleton فوري قبل أي render قد يكون بطيئاً
-            section.innerHTML = `
+            `,this.applyModuleI18n(t);return}this.ensureData(),typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646");try{t.innerHTML=`
                 <div class="section-header">
                     <h1 class="section-title">
                         <i class="fas fa-tasks ml-3"></i>
-                        ${this.t('module.userTasks.title', 'مهام المستخدمين')}
+                        ${this.t("module.userTasks.title","\u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646")}
                     </h1>
-                    <p class="section-subtitle">${this.t('module.userTasks.loading', 'جاري التحميل...')}</p>
+                    <p class="section-subtitle">${this.t("module.userTasks.loading","\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...")}</p>
                 </div>
                 <div class="content-card mt-6">
                     <div class="card-body">
@@ -228,315 +132,75 @@ const UserTasks = {
                                     <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p class="text-gray-500">${this.t('module.userTasks.preparingUi', 'جاري تجهيز الواجهة...')}</p>
+                            <p class="text-gray-500">${this.t("module.userTasks.preparingUi","\u062C\u0627\u0631\u064A \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0648\u0627\u062C\u0647\u0629...")}</p>
                         </div>
                     </div>
                 </div>
-            `;
-            this.applyModuleI18n(section);
-
-            // عرض واجهة مناسبة بناءً على دور المستخدم
-            const isAdmin = AppState.currentUser?.role === 'admin' || AppState.currentUser?.role === 'safety_officer';
-
-            let content = '';
-            try {
-                if (isAdmin) {
-                    // عرض لوحة المدير
-                    const contentPromise = this.render();
-                    content = await Utils.promiseWithTimeout(
-                        contentPromise,
-                        10000,
-                        () => new Error('Timeout: render took too long')
-                    );
-                } else {
-                    // عرض لوحة المستخدم الفرعية
-                    const contentPromise = this.renderUserDashboard();
-                    content = await Utils.promiseWithTimeout(
-                        contentPromise,
-                        10000,
-                        () => new Error('Timeout: renderUserDashboard took too long')
-                    );
-                }
-            } catch (error) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('⚠️ خطأ في تحميل محتوى الواجهة:', error);
-                } else {
-                    console.warn('⚠️ خطأ في تحميل محتوى الواجهة:', error);
-                }
-                // عرض محتوى افتراضي مع إمكانية إعادة المحاولة
-                content = `
+            `,this.applyModuleI18n(t);const e=AppState.currentUser?.role==="admin"||AppState.currentUser?.role==="safety_officer";let s="";try{if(e){const a=this.render();s=await Utils.promiseWithTimeout(a,1e4,()=>new Error("Timeout: render took too long"))}else{const a=this.renderUserDashboard();s=await Utils.promiseWithTimeout(a,1e4,()=>new Error("Timeout: renderUserDashboard took too long"))}}catch(a){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0648\u0627\u062C\u0647\u0629:",a),s=`
                     <div class="section-header">
                         <h1 class="section-title">
                             <i class="fas fa-tasks ml-3"></i>
-                            ${this.t('module.userTasks.title', 'مهام المستخدمين')}
+                            ${this.t("module.userTasks.title","\u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646")}
                         </h1>
                     </div>
                     <div class="content-card mt-6">
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                            <p class="text-gray-500 mb-4">${this.t('module.common.loadDataError', 'حدث خطأ في تحميل البيانات')}</p>
+                            <p class="text-gray-500 mb-4">${this.t("module.common.loadDataError","\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}</p>
                             <button onclick="UserTasks.load()" class="btn-primary">
                                 <i class="fas fa-redo ml-2"></i>
-                                ${this.t('module.common.retry', 'إعادة المحاولة')}
+                                ${this.t("module.common.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629")}
                             </button>
                         </div>
                     </div>
-                `;
-            }
-
-            section.innerHTML = content;
-            this.applyModuleI18n(section);
-
-            // تهيئة الأحداث بعد عرض الواجهة
-            try {
-                if (isAdmin) {
-                    this.setupEventListeners();
-                    this.loadMembers().catch(error => {
-                        Utils.safeWarn('⚠️ خطأ في تحميل الأعضاء:', error);
-                    });
-                } else {
-                    this.setupUserDashboardListeners();
-                    this.loadUserTasks().catch(error => {
-                        Utils.safeWarn('⚠️ خطأ في تحميل مهام المستخدم:', error);
-                    });
-                }
-            } catch (error) {
-                Utils.safeWarn('⚠️ خطأ في تهيئة الأحداث:', error);
-            }
-
-            // تفعيل المزامنة التلقائية
-            try {
-                this.startAutoSync();
-            } catch (error) {
-                Utils.safeWarn('⚠️ خطأ في تفعيل المزامنة التلقائية:', error);
-            }
-        } catch (error) {
-            Utils.safeError('خطأ في تحميل موديول مهام المستخدمين:', error);
-            section.innerHTML = `
+                `}t.innerHTML=s,this.applyModuleI18n(t);try{e?(this.setupEventListeners(),this.loadMembers().catch(a=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0639\u0636\u0627\u0621:",a)})):(this.setupUserDashboardListeners(),this.loadUserTasks().catch(a=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645:",a)}))}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0647\u064A\u0626\u0629 \u0627\u0644\u0623\u062D\u062F\u0627\u062B:",a)}try{this.startAutoSync()}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629:",a)}}catch(e){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646:",e),t.innerHTML=`
                 <div class="section-header">
                     <h1 class="section-title">
                         <i class="fas fa-tasks ml-3"></i>
-                        ${this.t('module.userTasks.title', 'مهام المستخدمين')}
+                        ${this.t("module.userTasks.title","\u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646")}
                     </h1>
                 </div>
                 <div class="content-card mt-6">
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                            <p class="text-gray-500 mb-2">${this.t('module.common.loadDataRuntimeError', 'حدث خطأ أثناء تحميل البيانات')}</p>
-                            <p class="text-sm text-gray-400 mb-4">${error && error.message ? Utils.escapeHTML(error.message) : 'خطأ غير معروف'}</p>
+                            <p class="text-gray-500 mb-2">${this.t("module.common.loadDataRuntimeError","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}</p>
+                            <p class="text-sm text-gray-400 mb-4">${e&&e.message?Utils.escapeHTML(e.message):"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"}</p>
                             <button onclick="UserTasks.load()" class="btn-primary">
                                 <i class="fas fa-redo ml-2"></i>
-                                ${this.t('module.common.retry', 'إعادة المحاولة')}
+                                ${this.t("module.common.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629")}
                             </button>
                         </div>
                     </div>
                 </div>
-            `;
-            this.applyModuleI18n(section);
-            if (typeof Notification !== 'undefined' && Notification.error) {
-                Notification.error('حدث خطأ أثناء تحميل مهام المستخدمين. يُرجى المحاولة مرة أخرى.', { duration: 5000 });
-            }
-        }
-    },
-
-    /**
-     * تفعيل المزامنة التلقائية
-     */
-    startAutoSync() {
-        // التحقق من تكوين Google Apps Script قبل بدء المزامنة
-        if (typeof AppState !== 'undefined') {
-            const isGoogleConfigured = AppState.googleConfig?.appsScript?.enabled &&
-                AppState.googleConfig?.appsScript?.scriptUrl &&
-                AppState.googleConfig.appsScript.scriptUrl.trim() !== '';
-
-            if (!isGoogleConfigured) {
-                Utils.safeLog('ℹ️ لن يتم تفعيل المزامنة التلقائية: Google Apps Script غير مفعل أو غير مُكوَّن');
-                return;
-            }
-        }
-
-        // إيقاف أي مزامنة سابقة
-        this.stopAutoSync();
-
-        Utils.safeLog('🔄 تفعيل المزامنة التلقائية للمهام...');
-
-        // تفعيل المزامنة التلقائية
-        this.autoSyncTimer = setInterval(async () => {
-            try {
-                await this.syncTasks();
-            } catch (error) {
-                Utils.safeWarn('⚠️ خطأ في المزامنة التلقائية:', error);
-            }
-        }, this.config.syncInterval);
-    },
-
-    /**
-     * إيقاف المزامنة التلقائية
-     */
-    stopAutoSync() {
-        if (this.autoSyncTimer) {
-            clearInterval(this.autoSyncTimer);
-            this.autoSyncTimer = null;
-            Utils.safeLog('🛑 إيقاف المزامنة التلقائية للمهام');
-        }
-    },
-
-    /**
-     * مزامنة المهام من Google Sheets
-     */
-    async syncTasks() {
-        try {
-            // التحقق الشامل من توفر Google Apps Script
-            if (typeof AppState === 'undefined') {
-                return;
-            }
-
-            // فحص شامل لإعدادات Google Apps Script
-            const isGoogleConfigured = AppState.googleConfig?.appsScript?.enabled &&
-                AppState.googleConfig?.appsScript?.scriptUrl &&
-                AppState.googleConfig.appsScript.scriptUrl.trim() !== '';
-
-            if (!isGoogleConfigured) {
-                // Google Apps Script غير مفعل أو غير مُكوَّن بشكل صحيح
-                // إيقاف المزامنة التلقائية لتجنب الأخطاء المتكررة
-                if (this.autoSyncTimer) {
-                    this.stopAutoSync();
-                    Utils.safeLog('⚠️ تم إيقاف المزامنة التلقائية: Google Apps Script غير مفعل أو غير مُكوَّن');
-                }
-                return;
-            }
-
-            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
-                Utils.safeWarn('⚠️ GoogleIntegration غير متاح');
-                // إيقاف المزامنة التلقائية
-                if (this.autoSyncTimer) {
-                    this.stopAutoSync();
-                }
-                return;
-            }
-
-            // تحديد دور المستخدم
-            const isAdmin = AppState.currentUser?.role === 'admin' || AppState.currentUser?.role === 'safety_officer';
-            const userId = AppState.currentUser?.id || AppState.currentUser?.email;
-
-            let response;
-
-            try {
-                if (isAdmin) {
-                    // المدير: جلب جميع المهام
-                    response = await GoogleIntegration.sendRequest({
-                        action: 'getAllUserTasks',
-                        data: {}
-                    });
-                } else {
-                    // المستخدم: جلب مهامه فقط
-                    response = await GoogleIntegration.sendRequest({
-                        action: 'getUserTasksByUserId',
-                        data: { userId: userId }
-                    });
-                }
-            } catch (requestError) {
-                // تجاهل أخطاء Circuit Breaker و Google Apps Script غير المفعل
-                const errorMsg = String(requestError?.message || '').toLowerCase();
-
-                // فحص أخطاء الاتصال والتكوين
-                if (errorMsg.includes('circuit breaker') ||
-                    errorMsg.includes('google apps script غير مفعل') ||
-                    errorMsg.includes('غير مفعل') ||
-                    errorMsg.includes('انتهت مهلة الاتصال') ||
-                    errorMsg.includes('timeout') ||
-                    errorMsg.includes('failed to fetch') ||
-                    errorMsg.includes('networkerror')) {
-
-                    // إيقاف المزامنة التلقائية لتجنب الأخطاء المتكررة
-                    if (this.autoSyncTimer) {
-                        this.stopAutoSync();
-                        Utils.safeLog('⚠️ تم إيقاف المزامنة التلقائية بسبب مشاكل في الاتصال');
-                    }
-                    // هذه أخطاء متوقعة - لا حاجة لتسجيلها
-                    return;
-                }
-                // إعادة رمي الأخطاء الأخرى
-                throw requestError;
-            }
-
-            if (response.success && Array.isArray(response.data)) {
-                const oldTasksCount = AppState.appData.userTasks?.length || 0;
-                AppState.appData.userTasks = response.data;
-                const newTasksCount = response.data.length;
-
-                // حساب عدد المهام الخاصة بالمستخدم الحالي فقط (للإشعارات)
-                let userTasksCount = newTasksCount;
-                let oldUserTasksCount = oldTasksCount;
-
-                if (!isAdmin && userId) {
-                    // للمستخدم العادي، عد المهام الخاصة به فقط
-                    const oldUserTasks = (AppState.appData.userTasks || []).filter(t =>
-                        (t.userId || t.assignedTo) === userId
-                    );
-                    oldUserTasksCount = oldUserTasks.length;
-                    userTasksCount = response.data.length;
-                }
-
-                // تحديث الواجهة إذا كانت هناك تغييرات
-                if (oldTasksCount !== newTasksCount) {
-                    Utils.safeLog(`✅ تمت المزامنة: ${newTasksCount} مهمة`);
-
-                    // تحديث الواجهة بناءً على دور المستخدم
-                    if (isAdmin) {
-                        await this.loadTasks();
-                    } else {
-                        await this.loadUserTasks();
-                    }
-
-                    // عرض إشعار إذا كانت هناك مهام جديدة للمستخدم
-                    if (userTasksCount > oldUserTasksCount && !isAdmin) {
-                        const diff = userTasksCount - oldUserTasksCount;
-                        Notification.info(`لديك ${diff} مهمة جديدة`);
-                    }
-                }
-            }
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في مزامنة المهام:', error);
-        }
-    },
-
-    /**
-     * عرض الواجهة
-     */
-    async render() {
-        const stats = this.getStats();
-        const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
-
-        return `
+            `,this.applyModuleI18n(t),typeof Notification<"u"&&Notification.error&&Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646. \u064A\u064F\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.",{duration:5e3})}},startAutoSync(){if(typeof AppState<"u"&&!(AppState.googleConfig?.appsScript?.enabled&&AppState.googleConfig?.appsScript?.scriptUrl&&AppState.googleConfig.appsScript.scriptUrl.trim()!=="")){Utils.safeLog("\u2139\uFE0F \u0644\u0646 \u064A\u062A\u0645 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629: Google Apps Script \u063A\u064A\u0631 \u0645\u0641\u0639\u0644 \u0623\u0648 \u063A\u064A\u0631 \u0645\u064F\u0643\u0648\u064E\u0651\u0646");return}this.stopAutoSync(),Utils.safeLog("\u{1F504} \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629 \u0644\u0644\u0645\u0647\u0627\u0645..."),this.autoSyncTimer=setInterval(async()=>{try{await this.syncTasks()}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629:",t)}},this.config.syncInterval)},stopAutoSync(){this.autoSyncTimer&&(clearInterval(this.autoSyncTimer),this.autoSyncTimer=null,Utils.safeLog("\u{1F6D1} \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629 \u0644\u0644\u0645\u0647\u0627\u0645"))},async syncTasks(){try{if(typeof AppState>"u")return;if(!(AppState.googleConfig?.appsScript?.enabled&&AppState.googleConfig?.appsScript?.scriptUrl&&AppState.googleConfig.appsScript.scriptUrl.trim()!=="")){this.autoSyncTimer&&(this.stopAutoSync(),Utils.safeLog("\u26A0\uFE0F \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629: Google Apps Script \u063A\u064A\u0631 \u0645\u0641\u0639\u0644 \u0623\u0648 \u063A\u064A\u0631 \u0645\u064F\u0643\u0648\u064E\u0651\u0646"));return}if(typeof GoogleIntegration>"u"||typeof GoogleIntegration.sendRequest!="function"){Utils.safeWarn("\u26A0\uFE0F GoogleIntegration \u063A\u064A\u0631 \u0645\u062A\u0627\u062D"),this.autoSyncTimer&&this.stopAutoSync();return}const e=AppState.currentUser?.role==="admin"||AppState.currentUser?.role==="safety_officer",s=AppState.currentUser?.id||AppState.currentUser?.email;let a;try{e?a=await GoogleIntegration.sendRequest({action:"getAllUserTasks",data:{}}):a=await GoogleIntegration.sendRequest({action:"getUserTasksByUserId",data:{userId:s}})}catch(r){const i=String(r?.message||"").toLowerCase();if(i.includes("circuit breaker")||i.includes("google apps script \u063A\u064A\u0631 \u0645\u0641\u0639\u0644")||i.includes("\u063A\u064A\u0631 \u0645\u0641\u0639\u0644")||i.includes("\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644")||i.includes("timeout")||i.includes("failed to fetch")||i.includes("networkerror")){this.autoSyncTimer&&(this.stopAutoSync(),Utils.safeLog("\u26A0\uFE0F \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629 \u0628\u0633\u0628\u0628 \u0645\u0634\u0627\u0643\u0644 \u0641\u064A \u0627\u0644\u0627\u062A\u0635\u0627\u0644"));return}throw r}if(a.success&&Array.isArray(a.data)){const r=AppState.appData.userTasks?.length||0;AppState.appData.userTasks=a.data;const i=a.data.length;let l=i,d=r;if(!e&&s&&(d=(AppState.appData.userTasks||[]).filter(o=>(o.userId||o.assignedTo)===s).length,l=a.data.length),r!==i&&(Utils.safeLog(`\u2705 \u062A\u0645\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629: ${i} \u0645\u0647\u0645\u0629`),e?await this.loadTasks():await this.loadUserTasks(),l>d&&!e)){const n=l-d;Notification.info(`\u0644\u062F\u064A\u0643 ${n} \u0645\u0647\u0645\u0629 \u062C\u062F\u064A\u062F\u0629`)}}}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0645\u0647\u0627\u0645:",t)}},async render(){const t=this.getStats(),e=t.total>0?Math.round(t.completed/t.total*100):0;return`
             <div class="section-header" style="background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); border-radius: 16px; padding: 24px 32px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25);">
                 <div class="flex items-center justify-between flex-wrap gap-3">
                     <div class="text-center w-full" style="flex-grow: 1; min-width: 200px;">
                         <h1 class="section-title" style="color: white; font-size: 2rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 8px; display: flex; align-items: center; justify-content: center;">
                             <i class="fas fa-tasks ml-3" style="font-size: 1.8rem;"></i>
-                            ${this.t('module.userTasks.title', 'مهام المستخدمين')}
+                            ${this.t("module.userTasks.title","\u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646")}
                         </h1>
-                        <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">${this.t('module.userTasks.adminSubtitle', 'إدارة ومتابعة مهام المستخدمين')}</p>
+                        <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">${this.t("module.userTasks.adminSubtitle","\u0625\u062F\u0627\u0631\u0629 \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646")}</p>
                     </div>
                     <div class="flex flex-shrink-0 flex-wrap gap-2 justify-center">
                         <button id="export-tasks-pdf-btn" style="background: rgba(255,255,255,0.18); color: #fff; border: 2px solid rgba(255,255,255,0.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
                             <i class="fas fa-file-pdf ml-2"></i>
-                            ${this.t('module.userTasks.exportPdf', 'تقرير PDF')}
+                            ${this.t("module.userTasks.exportPdf","\u062A\u0642\u0631\u064A\u0631 PDF")}
                         </button>
                         <button id="export-tasks-excel-btn" style="background: rgba(255,255,255,0.18); color: #fff; border: 2px solid rgba(255,255,255,0.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
                             <i class="fas fa-file-excel ml-2"></i>
-                            ${this.t('module.userTasks.exportExcel', 'تصدير Excel')}
+                            ${this.t("module.userTasks.exportExcel","\u062A\u0635\u062F\u064A\u0631 Excel")}
                         </button>
                         <button id="add-task-btn" style="background: white; color: #6366f1; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease; cursor: pointer;">
                             <i class="fas fa-plus ml-2"></i>
-                            ${this.t('module.userTasks.addTask', 'إضافة مهمة جديدة')}
+                            ${this.t("module.userTasks.addTask","\u0625\u0636\u0627\u0641\u0629 \u0645\u0647\u0645\u0629 \u062C\u062F\u064A\u062F\u0629")}
                         </button>
                     </div>
                 </div>
             </div>
             
-            <!-- إحصائيات -->
+            <!-- \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                 <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(59,130,246,0.1); border-right: 4px solid #3b82f6; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(59,130,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(59,130,246,0.1)'">
                     <div style="display:flex;align-items:center;gap:16px;">
@@ -544,8 +208,8 @@ const UserTasks = {
                             <i class="fas fa-tasks" style="color:#fff;font-size:1.2rem;"></i>
                         </div>
                         <div>
-                            <p style="font-size:0.82rem;color:#64748b;margin:0 0 4px;font-weight:600;">${this.t('module.userTasks.totalTasks', 'إجمالي المهام')}</p>
-                            <p style="font-size:1.75rem;font-weight:800;color:#1e40af;margin:0;line-height:1;" id="total-tasks-count">${stats.total}</p>
+                            <p style="font-size:0.82rem;color:#64748b;margin:0 0 4px;font-weight:600;">${this.t("module.userTasks.totalTasks","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0647\u0627\u0645")}</p>
+                            <p style="font-size:1.75rem;font-weight:800;color:#1e40af;margin:0;line-height:1;" id="total-tasks-count">${t.total}</p>
                         </div>
                     </div>
                 </div>
@@ -555,9 +219,9 @@ const UserTasks = {
                             <i class="fas fa-check-circle" style="color:#fff;font-size:1.2rem;"></i>
                         </div>
                         <div>
-                            <p style="font-size:0.82rem;color:#64748b;margin:0 0 4px;font-weight:600;">${this.t('module.userTasks.completedTasks', 'مهام مكتملة')}</p>
-                            <p style="font-size:1.75rem;font-weight:800;color:#065f46;margin:0;line-height:1;" id="completed-tasks-count">${stats.completed}</p>
-                            <p style="font-size:0.72rem;color:#10b981;margin:2px 0 0;font-weight:600;">${completionRate}% ${this.t('module.userTasks.completionRate', 'نسبة الإنجاز')}</p>
+                            <p style="font-size:0.82rem;color:#64748b;margin:0 0 4px;font-weight:600;">${this.t("module.userTasks.completedTasks","\u0645\u0647\u0627\u0645 \u0645\u0643\u062A\u0645\u0644\u0629")}</p>
+                            <p style="font-size:1.75rem;font-weight:800;color:#065f46;margin:0;line-height:1;" id="completed-tasks-count">${t.completed}</p>
+                            <p style="font-size:0.72rem;color:#10b981;margin:2px 0 0;font-weight:600;">${e}% ${this.t("module.userTasks.completionRate","\u0646\u0633\u0628\u0629 \u0627\u0644\u0625\u0646\u062C\u0627\u0632")}</p>
                         </div>
                     </div>
                 </div>
@@ -567,8 +231,8 @@ const UserTasks = {
                             <i class="fas fa-clock" style="color:#fff;font-size:1.2rem;"></i>
                         </div>
                         <div>
-                            <p style="font-size:0.82rem;color:#64748b;margin:0 0 4px;font-weight:600;">${this.t('module.userTasks.inProgress', 'قيد التنفيذ')}</p>
-                            <p style="font-size:1.75rem;font-weight:800;color:#92400e;margin:0;line-height:1;" id="in-progress-tasks-count">${stats.inProgress}</p>
+                            <p style="font-size:0.82rem;color:#64748b;margin:0 0 4px;font-weight:600;">${this.t("module.userTasks.inProgress","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630")}</p>
+                            <p style="font-size:1.75rem;font-weight:800;color:#92400e;margin:0;line-height:1;" id="in-progress-tasks-count">${t.inProgress}</p>
                         </div>
                     </div>
                 </div>
@@ -578,8 +242,8 @@ const UserTasks = {
                             <i class="fas fa-exclamation-triangle" style="color:#fff;font-size:1.2rem;"></i>
                         </div>
                         <div>
-                            <p style="font-size:0.82rem;color:#64748b;margin:0 0 4px;font-weight:600;">${this.t('module.userTasks.overdueTasks', 'مهام متأخرة')}</p>
-                            <p style="font-size:1.75rem;font-weight:800;color:#991b1b;margin:0;line-height:1;" id="overdue-tasks-count">${stats.overdue}</p>
+                            <p style="font-size:0.82rem;color:#64748b;margin:0 0 4px;font-weight:600;">${this.t("module.userTasks.overdueTasks","\u0645\u0647\u0627\u0645 \u0645\u062A\u0623\u062E\u0631\u0629")}</p>
+                            <p style="font-size:1.75rem;font-weight:800;color:#991b1b;margin:0;line-height:1;" id="overdue-tasks-count">${t.overdue}</p>
                         </div>
                     </div>
                 </div>
@@ -587,48 +251,48 @@ const UserTasks = {
             
             ${this._filterPanelStyles()}
 
-            <!-- الفلترة والبحث أعلى الجدول في سطر شريطي أفقياً -->
+            <!-- \u0627\u0644\u0641\u0644\u062A\u0631\u0629 \u0648\u0627\u0644\u0628\u062D\u062B \u0623\u0639\u0644\u0649 \u0627\u0644\u062C\u062F\u0648\u0644 \u0641\u064A \u0633\u0637\u0631 \u0634\u0631\u064A\u0637\u064A \u0623\u0641\u0642\u064A\u0627\u064B -->
             <div class="content-card mt-6 ut-filter-card">
                 <div class="ut-filter-bar">
                     <div class="ut-filter-toolbar">
                         <div class="ut-filter-title-box">
                             <span class="ut-filter-icon"><i class="fas fa-sliders-h"></i></span>
-                            <span class="ut-filter-title-text">${this.t('module.userTasks.filterTitle', 'فلترة المهام')}</span>
+                            <span class="ut-filter-title-text">${this.t("module.userTasks.filterTitle","\u0641\u0644\u062A\u0631\u0629 \u0627\u0644\u0645\u0647\u0627\u0645")}</span>
                         </div>
                         <div class="ut-filter-fields-row">
                             <div class="ut-field ut-field-search">
-                                <label><i class="fas fa-magnifying-glass"></i>${this.t('module.userTasks.search', 'بحث')}</label>
+                                <label><i class="fas fa-magnifying-glass"></i>${this.t("module.userTasks.search","\u0628\u062D\u062B")}</label>
                                 <div class="ut-search-wrap">
                                     <i class="fas fa-search ut-search-ico"></i>
-                                    <input type="text" id="task-search-input" placeholder="${this.t('module.userTasks.searchTasksPlaceholder', 'ابحث بعنوان المهمة أو الوصف...')}">
+                                    <input type="text" id="task-search-input" placeholder="${this.t("module.userTasks.searchTasksPlaceholder","\u0627\u0628\u062D\u062B \u0628\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 \u0623\u0648 \u0627\u0644\u0648\u0635\u0641...")}">
                                 </div>
                             </div>
                             <div class="ut-field">
-                                <label><i class="fas fa-user"></i>${this.t('module.userTasks.user', 'المستخدم')}</label>
+                                <label><i class="fas fa-user"></i>${this.t("module.userTasks.user","\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645")}</label>
                                 <select id="task-user-filter">
-                                    <option value="">${this.t('module.userTasks.allUsers', 'جميع المستخدمين')}</option>
+                                    <option value="">${this.t("module.userTasks.allUsers","\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646")}</option>
                                 </select>
                             </div>
                             <div class="ut-field">
-                                <label><i class="fas fa-circle-check"></i>${this.t('module.userTasks.status', 'الحالة')}</label>
+                                <label><i class="fas fa-circle-check"></i>${this.t("module.userTasks.status","\u0627\u0644\u062D\u0627\u0644\u0629")}</label>
                                 <select id="task-status-filter">
-                                    <option value="">${this.t('module.userTasks.allStatuses', 'جميع الحالات')}</option>
-                                    <option value="قيد التنفيذ">${this.t('module.userTasks.inProgress', 'قيد التنفيذ')}</option>
-                                    <option value="مكتمل">${this.t('module.userTasks.completed', 'مكتمل')}</option>
-                                    <option value="ملغي">${this.t('module.userTasks.cancelled', 'ملغي')}</option>
+                                    <option value="">${this.t("module.userTasks.allStatuses","\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0627\u0644\u0627\u062A")}</option>
+                                    <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630">${this.t("module.userTasks.inProgress","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630")}</option>
+                                    <option value="\u0645\u0643\u062A\u0645\u0644">${this.t("module.userTasks.completed","\u0645\u0643\u062A\u0645\u0644")}</option>
+                                    <option value="\u0645\u0644\u063A\u064A">${this.t("module.userTasks.cancelled","\u0645\u0644\u063A\u064A")}</option>
                                 </select>
                             </div>
                             <div class="ut-field">
-                                <label><i class="fas fa-flag"></i>${this.t('module.userTasks.priority', 'الأولوية')}</label>
+                                <label><i class="fas fa-flag"></i>${this.t("module.userTasks.priority","\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629")}</label>
                                 <select id="task-priority-filter">
-                                    <option value="">${this.t('module.userTasks.allPriorities', 'جميع الأولويات')}</option>
-                                    <option value="عالي">${this.t('module.userTasks.priorityHigh', 'عالي')}</option>
-                                    <option value="متوسط">${this.t('module.userTasks.priorityMedium', 'متوسط')}</option>
-                                    <option value="منخفض">${this.t('module.userTasks.priorityLow', 'منخفض')}</option>
+                                    <option value="">${this.t("module.userTasks.allPriorities","\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0627\u062A")}</option>
+                                    <option value="\u0639\u0627\u0644\u064A">${this.t("module.userTasks.priorityHigh","\u0639\u0627\u0644\u064A")}</option>
+                                    <option value="\u0645\u062A\u0648\u0633\u0637">${this.t("module.userTasks.priorityMedium","\u0645\u062A\u0648\u0633\u0637")}</option>
+                                    <option value="\u0645\u0646\u062E\u0641\u0636">${this.t("module.userTasks.priorityLow","\u0645\u0646\u062E\u0641\u0636")}</option>
                                 </select>
                             </div>
                             <button type="button" id="task-filter-reset" class="ut-filter-reset">
-                                <i class="fas fa-rotate-left"></i>${this.t('module.userTasks.resetFilters', 'إعادة تعيين')}
+                                <i class="fas fa-rotate-left"></i>${this.t("module.userTasks.resetFilters","\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646")}
                             </button>
                         </div>
                     </div>
@@ -641,63 +305,35 @@ const UserTasks = {
                                     <div style="height: 100%; background: linear-gradient(90deg, #6366f1, #4338ca, #6366f1); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p class="text-gray-500">${this.t('module.userTasks.loading', 'جاري التحميل...')}</p>
+                            <p class="text-gray-500">${this.t("module.userTasks.loading","\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...")}</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `;
-    },
-
-    /**
-     * عرض لوحة تحكم المستخدم الفرعية (User Sub-Dashboard)
-     */
-    async renderUserDashboard() {
-        const userId = AppState.currentUser?.id || AppState.currentUser?.email;
-        const userTasks = (AppState.appData.userTasks || []).filter(t =>
-            (t.userId || t.assignedTo) === userId
-        );
-        const now = new Date();
-
-        // إحصائيات المستخدم
-        const stats = {
-            total: userTasks.length,
-            new: userTasks.filter(t => t.status === 'جديدة' || !t.status).length,
-            inProgress: userTasks.filter(t => t.status === 'قيد التنفيذ' || t.status === 'in-progress').length,
-            completed: userTasks.filter(t => t.status === 'مكتمل' || t.status === 'completed').length,
-            overdue: userTasks.filter(t => {
-                if (t.status === 'مكتمل' || t.status === 'completed') return false;
-                if (!t.dueDate) return false;
-                const dueDate = new Date(t.dueDate);
-                return dueDate < now;
-            }).length
-        };
-        const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
-
-        return `
+        `},async renderUserDashboard(){const t=AppState.currentUser?.id||AppState.currentUser?.email,e=(AppState.appData.userTasks||[]).filter(i=>(i.userId||i.assignedTo)===t),s=new Date,a={total:e.length,new:e.filter(i=>i.status==="\u062C\u062F\u064A\u062F\u0629"||!i.status).length,inProgress:e.filter(i=>i.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||i.status==="in-progress").length,completed:e.filter(i=>i.status==="\u0645\u0643\u062A\u0645\u0644"||i.status==="completed").length,overdue:e.filter(i=>i.status==="\u0645\u0643\u062A\u0645\u0644"||i.status==="completed"||!i.dueDate?!1:new Date(i.dueDate)<s).length},r=a.total>0?Math.round(a.completed/a.total*100):0;return`
             <div class="section-header" style="background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); border-radius: 16px; padding: 24px 32px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25);">
                 <div class="flex items-center justify-between flex-wrap gap-3">
                     <div class="text-center w-full" style="flex-grow: 1; min-width: 200px;">
                         <h1 class="section-title" style="color: white; font-size: 2rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 8px; display: flex; align-items: center; justify-content: center;">
                             <i class="fas fa-tasks ml-3" style="font-size: 1.8rem;"></i>
-                            ${this.t('module.userTasks.myTasks', 'مهامي')}
+                            ${this.t("module.userTasks.myTasks","\u0645\u0647\u0627\u0645\u064A")}
                         </h1>
-                        <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">${this.t('module.userTasks.userSubtitle', 'عرض وإدارة مهامك الشخصية')}</p>
+                        <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">${this.t("module.userTasks.userSubtitle","\u0639\u0631\u0636 \u0648\u0625\u062F\u0627\u0631\u0629 \u0645\u0647\u0627\u0645\u0643 \u0627\u0644\u0634\u062E\u0635\u064A\u0629")}</p>
                     </div>
                     <div class="flex flex-shrink-0 flex-wrap gap-2 justify-center">
                         <button id="user-refresh-tasks-btn" style="background: rgba(255,255,255,0.18); color: #fff; border: 2px solid rgba(255,255,255,0.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
                             <i class="fas fa-sync-alt ml-2"></i>
-                            ${this.t('module.userTasks.refresh', 'تحديث')}
+                            ${this.t("module.userTasks.refresh","\u062A\u062D\u062F\u064A\u062B")}
                         </button>
                         <button id="user-export-tasks-pdf-btn" style="background: white; color: #6366f1; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease; cursor: pointer;">
                             <i class="fas fa-file-pdf ml-2"></i>
-                            ${this.t('module.userTasks.exportPdf', 'تصدير PDF')}
+                            ${this.t("module.userTasks.exportPdf","\u062A\u0635\u062F\u064A\u0631 PDF")}
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- إحصائيات المهام -->
+            <!-- \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0627\u0644\u0645\u0647\u0627\u0645 -->
             <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-top: 24px;">
                 <div style="background: white; border-radius: 16px; padding: 14px 12px; box-shadow: 0 4px 16px rgba(59,130,246,0.1); border-right: 4px solid #3b82f6; transition: transform 0.2s, box-shadow 0.2s; min-width: 0;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(59,130,246,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(59,130,246,0.1)'">
                     <div style="display:flex;align-items:center;gap:10px;">
@@ -705,8 +341,8 @@ const UserTasks = {
                             <i class="fas fa-tasks" style="color:#fff;font-size:1rem;"></i>
                         </div>
                         <div style="min-width:0;overflow:hidden;">
-                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t('module.userTasks.totalTasks', 'إجمالي المهام')}</p>
-                            <p style="font-size:1.4rem;font-weight:800;color:#1e40af;margin:0;line-height:1;" id="user-total-tasks">${stats.total}</p>
+                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t("module.userTasks.totalTasks","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0647\u0627\u0645")}</p>
+                            <p style="font-size:1.4rem;font-weight:800;color:#1e40af;margin:0;line-height:1;" id="user-total-tasks">${a.total}</p>
                         </div>
                     </div>
                 </div>
@@ -716,8 +352,8 @@ const UserTasks = {
                             <i class="fas fa-star" style="color:#fff;font-size:1rem;"></i>
                         </div>
                         <div style="min-width:0;overflow:hidden;">
-                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t('module.userTasks.newTasks', 'مهام جديدة')}</p>
-                            <p style="font-size:1.4rem;font-weight:800;color:#5b21b6;margin:0;line-height:1;" id="user-new-tasks">${stats.new}</p>
+                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t("module.userTasks.newTasks","\u0645\u0647\u0627\u0645 \u062C\u062F\u064A\u062F\u0629")}</p>
+                            <p style="font-size:1.4rem;font-weight:800;color:#5b21b6;margin:0;line-height:1;" id="user-new-tasks">${a.new}</p>
                         </div>
                     </div>
                 </div>
@@ -727,8 +363,8 @@ const UserTasks = {
                             <i class="fas fa-clock" style="color:#fff;font-size:1rem;"></i>
                         </div>
                         <div style="min-width:0;overflow:hidden;">
-                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t('module.userTasks.inProgress', 'قيد التنفيذ')}</p>
-                            <p style="font-size:1.4rem;font-weight:800;color:#92400e;margin:0;line-height:1;" id="user-in-progress-tasks">${stats.inProgress}</p>
+                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t("module.userTasks.inProgress","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630")}</p>
+                            <p style="font-size:1.4rem;font-weight:800;color:#92400e;margin:0;line-height:1;" id="user-in-progress-tasks">${a.inProgress}</p>
                         </div>
                     </div>
                 </div>
@@ -738,10 +374,10 @@ const UserTasks = {
                             <i class="fas fa-check-circle" style="color:#fff;font-size:1rem;"></i>
                         </div>
                         <div style="min-width:0;overflow:hidden;">
-                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t('module.userTasks.completed', 'مكتملة')}</p>
+                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t("module.userTasks.completed","\u0645\u0643\u062A\u0645\u0644\u0629")}</p>
                             <div style="display:flex;align-items:baseline;gap:6px;">
-                                <p style="font-size:1.4rem;font-weight:800;color:#065f46;margin:0;line-height:1;" id="user-completed-tasks">${stats.completed}</p>
-                                <p style="font-size:0.65rem;color:#10b981;margin:0;font-weight:700;">${completionRate}%</p>
+                                <p style="font-size:1.4rem;font-weight:800;color:#065f46;margin:0;line-height:1;" id="user-completed-tasks">${a.completed}</p>
+                                <p style="font-size:0.65rem;color:#10b981;margin:0;font-weight:700;">${r}%</p>
                             </div>
                         </div>
                     </div>
@@ -752,64 +388,64 @@ const UserTasks = {
                             <i class="fas fa-exclamation-triangle" style="color:#fff;font-size:1rem;"></i>
                         </div>
                         <div style="min-width:0;overflow:hidden;">
-                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t('module.userTasks.overdue', 'متأخرة')}</p>
-                            <p style="font-size:1.4rem;font-weight:800;color:#991b1b;margin:0;line-height:1;" id="user-overdue-tasks">${stats.overdue}</p>
+                            <p style="font-size:0.75rem;color:#64748b;margin:0 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.t("module.userTasks.overdue","\u0645\u062A\u0623\u062E\u0631\u0629")}</p>
+                            <p style="font-size:1.4rem;font-weight:800;color:#991b1b;margin:0;line-height:1;" id="user-overdue-tasks">${a.overdue}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- رسالة المزامنة التلقائية -->
+            <!-- \u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629 -->
             <div style="margin-top:20px;background:linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.06) 100%);border:1.5px solid rgba(99,102,241,0.2);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:14px;backdrop-filter:blur(8px);">
                 <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#4338ca);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(99,102,241,0.3);">
                     <i class="fas fa-sync-alt" style="color:#fff;font-size:0.85rem;animation:spin 3s linear infinite;"></i>
                 </div>
                 <div style="flex:1;">
-                    <p style="font-size:0.85rem;font-weight:700;color:#4338ca;margin:0;">${this.t('module.userTasks.autoUpdate', 'تحديث تلقائي')}</p>
-                    <p style="font-size:0.75rem;color:#6366f1;margin:2px 0 0;">${this.t('module.userTasks.autoUpdateDesc', 'سيتم تحديث قائمة المهام تلقائياً كل 30 ثانية')}</p>
+                    <p style="font-size:0.85rem;font-weight:700;color:#4338ca;margin:0;">${this.t("module.userTasks.autoUpdate","\u062A\u062D\u062F\u064A\u062B \u062A\u0644\u0642\u0627\u0626\u064A")}</p>
+                    <p style="font-size:0.75rem;color:#6366f1;margin:2px 0 0;">${this.t("module.userTasks.autoUpdateDesc","\u0633\u064A\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0647\u0627\u0645 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0643\u0644 30 \u062B\u0627\u0646\u064A\u0629")}</p>
                 </div>
-                <span style="font-size:0.75rem;color:#6366f1;font-weight:600;white-space:nowrap;" id="last-sync-time">${this.t('module.userTasks.lastUpdate', 'آخر تحديث')}: ${this.t('module.userTasks.now', 'الآن')}</span>
+                <span style="font-size:0.75rem;color:#6366f1;font-weight:600;white-space:nowrap;" id="last-sync-time">${this.t("module.userTasks.lastUpdate","\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B")}: ${this.t("module.userTasks.now","\u0627\u0644\u0622\u0646")}</span>
             </div>
             <style>#user-tasks-section .fa-sync-alt{animation:none}@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>
 
             ${this._filterPanelStyles()}
 
-            <!-- الفلترة والبحث أعلى الجدول في سطر شريطي أفقياً -->
+            <!-- \u0627\u0644\u0641\u0644\u062A\u0631\u0629 \u0648\u0627\u0644\u0628\u062D\u062B \u0623\u0639\u0644\u0649 \u0627\u0644\u062C\u062F\u0648\u0644 \u0641\u064A \u0633\u0637\u0631 \u0634\u0631\u064A\u0637\u064A \u0623\u0641\u0642\u064A\u0627\u064B -->
             <div class="content-card mt-6 ut-filter-card">
                 <div class="ut-filter-bar">
                     <div class="ut-filter-toolbar">
                         <div class="ut-filter-title-box">
                             <span class="ut-filter-icon"><i class="fas fa-sliders-h"></i></span>
-                            <span class="ut-filter-title-text">${this.t('module.userTasks.filterTitle', 'فلترة المهام')}</span>
+                            <span class="ut-filter-title-text">${this.t("module.userTasks.filterTitle","\u0641\u0644\u062A\u0631\u0629 \u0627\u0644\u0645\u0647\u0627\u0645")}</span>
                         </div>
                         <div class="ut-filter-fields-row">
                             <div class="ut-field ut-field-search">
-                                <label><i class="fas fa-magnifying-glass"></i>${this.t('module.userTasks.search', 'بحث')}</label>
+                                <label><i class="fas fa-magnifying-glass"></i>${this.t("module.userTasks.search","\u0628\u062D\u062B")}</label>
                                 <div class="ut-search-wrap">
                                     <i class="fas fa-search ut-search-ico"></i>
-                                    <input type="text" id="user-task-search-input" placeholder="${this.t('module.userTasks.searchTasksPlaceholder', 'ابحث بعنوان المهمة أو الوصف...')}">
+                                    <input type="text" id="user-task-search-input" placeholder="${this.t("module.userTasks.searchTasksPlaceholder","\u0627\u0628\u062D\u062B \u0628\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 \u0623\u0648 \u0627\u0644\u0648\u0635\u0641...")}">
                                 </div>
                             </div>
                             <div class="ut-field">
-                                <label><i class="fas fa-circle-check"></i>${this.t('module.userTasks.status', 'الحالة')}</label>
+                                <label><i class="fas fa-circle-check"></i>${this.t("module.userTasks.status","\u0627\u0644\u062D\u0627\u0644\u0629")}</label>
                                 <select id="user-task-status-filter">
-                                    <option value="">${this.t('module.userTasks.allStatuses', 'جميع الحالات')}</option>
-                                    <option value="جديدة">${this.t('module.userTasks.statusNew', 'جديدة')}</option>
-                                    <option value="قيد التنفيذ">${this.t('module.userTasks.inProgress', 'قيد التنفيذ')}</option>
-                                    <option value="مكتمل">${this.t('module.userTasks.completed', 'مكتملة')}</option>
+                                    <option value="">${this.t("module.userTasks.allStatuses","\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0627\u0644\u0627\u062A")}</option>
+                                    <option value="\u062C\u062F\u064A\u062F\u0629">${this.t("module.userTasks.statusNew","\u062C\u062F\u064A\u062F\u0629")}</option>
+                                    <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630">${this.t("module.userTasks.inProgress","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630")}</option>
+                                    <option value="\u0645\u0643\u062A\u0645\u0644">${this.t("module.userTasks.completed","\u0645\u0643\u062A\u0645\u0644\u0629")}</option>
                                 </select>
                             </div>
                             <div class="ut-field">
-                                <label><i class="fas fa-flag"></i>${this.t('module.userTasks.priority', 'الأولوية')}</label>
+                                <label><i class="fas fa-flag"></i>${this.t("module.userTasks.priority","\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629")}</label>
                                 <select id="user-task-priority-filter">
-                                    <option value="">${this.t('module.userTasks.allPriorities', 'جميع الأولويات')}</option>
-                                    <option value="عالي">${this.t('module.userTasks.priorityHigh', 'عالي')}</option>
-                                    <option value="متوسط">${this.t('module.userTasks.priorityMedium', 'متوسط')}</option>
-                                    <option value="منخفض">${this.t('module.userTasks.priorityLow', 'منخفض')}</option>
+                                    <option value="">${this.t("module.userTasks.allPriorities","\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0627\u062A")}</option>
+                                    <option value="\u0639\u0627\u0644\u064A">${this.t("module.userTasks.priorityHigh","\u0639\u0627\u0644\u064A")}</option>
+                                    <option value="\u0645\u062A\u0648\u0633\u0637">${this.t("module.userTasks.priorityMedium","\u0645\u062A\u0648\u0633\u0637")}</option>
+                                    <option value="\u0645\u0646\u062E\u0641\u0636">${this.t("module.userTasks.priorityLow","\u0645\u0646\u062E\u0641\u0636")}</option>
                                 </select>
                             </div>
                             <button type="button" id="user-task-filter-reset" class="ut-filter-reset">
-                                <i class="fas fa-rotate-left"></i>${this.t('module.userTasks.resetFilters', 'إعادة تعيين')}
+                                <i class="fas fa-rotate-left"></i>${this.t("module.userTasks.resetFilters","\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646")}
                             </button>
                         </div>
                     </div>
@@ -822,329 +458,96 @@ const UserTasks = {
                                     <div style="height: 100%; background: linear-gradient(90deg, #6366f1, #4338ca, #6366f1); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p class="text-gray-500">${this.t('module.userTasks.loading', 'جاري التحميل...')}</p>
+                            <p class="text-gray-500">${this.t("module.userTasks.loading","\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...")}</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `;
-    },
-
-    /**
-     * إعداد مستمعي أحداث لوحة المستخدم
-     */
-    setupUserDashboardListeners() {
-        setTimeout(() => {
-            // زر التحديث
-            const refreshBtn = document.getElementById('user-refresh-tasks-btn');
-            if (refreshBtn) {
-                refreshBtn.addEventListener('click', async () => {
-                    Notification.info('جاري التحديث...');
-                    await this.syncTasks();
-                });
-            }
-
-            // زر التصدير
-            const exportPdfBtn = document.getElementById('user-export-tasks-pdf-btn');
-            if (exportPdfBtn) {
-                exportPdfBtn.addEventListener('click', () => this.exportUserTasksToPDF());
-            }
-
-            // الفلاتر
-            const statusFilter = document.getElementById('user-task-status-filter');
-            const priorityFilter = document.getElementById('user-task-priority-filter');
-            const searchInput = document.getElementById('user-task-search-input');
-
-            if (statusFilter) {
-                statusFilter.addEventListener('change', () => this.loadUserTasks());
-            }
-            if (priorityFilter) {
-                priorityFilter.addEventListener('change', () => this.loadUserTasks());
-            }
-            if (searchInput) {
-                let searchTimeout;
-                searchInput.addEventListener('input', (e) => {
-                    clearTimeout(searchTimeout);
-                    searchTimeout = setTimeout(() => {
-                        this.filterUserTasks(e.target.value);
-                    }, this.config.debounceDelay);
-                });
-            }
-
-            // ✅ زر إعادة تعيين الفلاتر (عرض المستخدم)
-            const resetBtn = document.getElementById('user-task-filter-reset');
-            if (resetBtn) {
-                resetBtn.addEventListener('click', () => {
-                    if (statusFilter) statusFilter.value = '';
-                    if (priorityFilter) priorityFilter.value = '';
-                    if (searchInput) searchInput.value = '';
-                    this.loadUserTasks();
-                });
-            }
-        }, 100);
-    },
-
-    /**
-     * تحميل مهام المستخدم الحالي
-     * @param {number} page - رقم الصفحة (افتراضي: 1)
-     */
-    async loadUserTasks(page = 1) {
-        const container = document.getElementById('user-tasks-list-container');
-        if (!container) return;
-
-        try {
-            // التحقق من توفر AppState
-            if (typeof AppState === 'undefined' || !AppState.appData) {
-                container.innerHTML = `
+        `},setupUserDashboardListeners(){setTimeout(()=>{const t=document.getElementById("user-refresh-tasks-btn");t&&t.addEventListener("click",async()=>{Notification.info("\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u062F\u064A\u062B..."),await this.syncTasks()});const e=document.getElementById("user-export-tasks-pdf-btn");e&&e.addEventListener("click",()=>this.exportUserTasksToPDF());const s=document.getElementById("user-task-status-filter"),a=document.getElementById("user-task-priority-filter"),r=document.getElementById("user-task-search-input");if(s&&s.addEventListener("change",()=>this.loadUserTasks()),a&&a.addEventListener("change",()=>this.loadUserTasks()),r){let l;r.addEventListener("input",d=>{clearTimeout(l),l=setTimeout(()=>{this.filterUserTasks(d.target.value)},this.config.debounceDelay)})}const i=document.getElementById("user-task-filter-reset");i&&i.addEventListener("click",()=>{s&&(s.value=""),a&&(a.value=""),r&&(r.value=""),this.loadUserTasks()})},100)},async loadUserTasks(t=1){const e=document.getElementById("user-tasks-list-container");if(e)try{if(typeof AppState>"u"||!AppState.appData){e.innerHTML=`
                     <div class="empty-state">
                         <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
-                        <p class="text-yellow-600">جاري تحميل البيانات...</p>
+                        <p class="text-yellow-600">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A...</p>
                     </div>
-                `;
-                return;
-            }
-
-            const userId = AppState.currentUser?.id || AppState.currentUser?.email;
-            if (!userId) {
-                container.innerHTML = `
+                `;return}const s=AppState.currentUser?.id||AppState.currentUser?.email;if(!s){e.innerHTML=`
                     <div class="empty-state">
                         <i class="fas fa-user-slash text-4xl text-gray-300 mb-4"></i>
-                        <p class="text-gray-500">لم يتم تحديد المستخدم</p>
+                        <p class="text-gray-500">\u0644\u0645 \u064A\u062A\u0645 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645</p>
                     </div>
-                `;
-                return;
-            }
-
-            let tasks = (AppState.appData.userTasks || []).filter(t =>
-                (t.userId || t.assignedTo) === userId
-            );
-
-            // تطبيق الفلاتر
-            const status = document.getElementById('user-task-status-filter')?.value;
-            const priority = document.getElementById('user-task-priority-filter')?.value;
-
-            if (status) {
-                tasks = tasks.filter(t => (t.status || '') === status);
-            }
-            if (priority) {
-                tasks = tasks.filter(t => (t.priority || '') === priority);
-            }
-
-            // ترتيب حسب التاريخ
-            tasks.sort((a, b) => {
-                const dateA = new Date(a.createdAt || 0);
-                const dateB = new Date(b.createdAt || 0);
-                return dateB - dateA;
-            });
-
-            // عرض المهام مع pagination - تمرير رقم الصفحة
-            this.renderUserTasks(tasks, page);
-
-            // تحديث الإحصائيات - استخدام جميع المهام بدون فلترة
-            const allUserTasks = (AppState.appData.userTasks || []).filter(t =>
-                (t.userId || t.assignedTo) === userId
-            );
-            this.updateUserStats(allUserTasks);
-
-            // تحديث وقت آخر تحديث
-            const lastSyncEl = document.getElementById('last-sync-time');
-            if (lastSyncEl) {
-                const now = new Date();
-                lastSyncEl.textContent = `آخر تحديث: ${now.toLocaleTimeString('ar-EG')}`;
-            }
-        } catch (error) {
-            Utils.safeError('خطأ في تحميل المهام:', error);
-            container.innerHTML = `
+                `;return}let a=(AppState.appData.userTasks||[]).filter(n=>(n.userId||n.assignedTo)===s);const r=document.getElementById("user-task-status-filter")?.value,i=document.getElementById("user-task-priority-filter")?.value;r&&(a=a.filter(n=>(n.status||"")===r)),i&&(a=a.filter(n=>(n.priority||"")===i)),a.sort((n,o)=>{const c=new Date(n.createdAt||0);return new Date(o.createdAt||0)-c}),this.renderUserTasks(a,t);const l=(AppState.appData.userTasks||[]).filter(n=>(n.userId||n.assignedTo)===s);this.updateUserStats(l);const d=document.getElementById("last-sync-time");if(d){const n=new Date;d.textContent=`\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B: ${n.toLocaleTimeString("ar-EG")}`}}catch(s){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0647\u0627\u0645:",s),e.innerHTML=`
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
-                    <p class="text-red-500">حدث خطأ في تحميل المهام</p>
+                    <p class="text-red-500">\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0647\u0627\u0645</p>
                     <button onclick="UserTasks.loadUserTasks()" class="btn-primary mt-4">
                         <i class="fas fa-redo ml-2"></i>
-                        إعادة المحاولة
+                        \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
                     </button>
                 </div>
-            `;
-        }
-    },
-
-    /**
-     * عرض مهام المستخدم
-     * @param {Array} tasks - المهام المراد عرضها
-     * @param {number} page - رقم الصفحة (افتراضي: 1)
-     * @param {number} itemsPerPage - عدد العناصر في الصفحة (افتراضي: 50)
-     */
-    renderUserTasks(tasks, page = 1, itemsPerPage = 50) {
-        const container = document.getElementById('user-tasks-list-container');
-        if (!container) return;
-
-        if (tasks.length === 0) {
-            container.innerHTML = `
+            `}},renderUserTasks(t,e=1,s=50){const a=document.getElementById("user-tasks-list-container");if(!a)return;if(t.length===0){a.innerHTML=`
                 <div class="empty-state">
                     <i class="fas fa-tasks text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">لا توجد مهام</p>
+                    <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0647\u0627\u0645</p>
                 </div>
-            `;
-            this.applyModuleI18n(container);
-            return;
-        }
-
-        // Pagination - عرض جزء من المهام فقط لتحسين الأداء
-        const totalPages = Math.ceil(tasks.length / itemsPerPage);
-        const startIndex = (page - 1) * itemsPerPage;
-        const endIndex = Math.min(startIndex + itemsPerPage, tasks.length);
-        const paginatedTasks = tasks.slice(startIndex, endIndex);
-
-        const now = new Date();
-
-        container.innerHTML = `
-            ${tasks.length > itemsPerPage ? `
+            `,this.applyModuleI18n(a);return}const r=Math.ceil(t.length/s),i=(e-1)*s,l=Math.min(i+s,t.length),d=t.slice(i,l),n=new Date;a.innerHTML=`
+            ${t.length>s?`
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center justify-between">
                     <span class="text-sm text-blue-800">
                         <i class="fas fa-info-circle ml-2"></i>
-                        عرض ${startIndex + 1} - ${endIndex} من ${tasks.length} مهمة
+                        \u0639\u0631\u0636 ${i+1} - ${l} \u0645\u0646 ${t.length} \u0645\u0647\u0645\u0629
                     </span>
                     <div class="flex gap-2">
-                        ${page > 1 ? `
-                            <button onclick="UserTasks.loadUserTasks(${page - 1})" class="btn-icon btn-icon-secondary text-xs">
+                        ${e>1?`
+                            <button onclick="UserTasks.loadUserTasks(${e-1})" class="btn-icon btn-icon-secondary text-xs">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
-                        ` : ''}
-                        <span class="text-sm text-gray-600 px-2 py-1">صفحة ${page} من ${totalPages}</span>
-                        ${page < totalPages ? `
-                            <button onclick="UserTasks.loadUserTasks(${page + 1})" class="btn-icon btn-icon-secondary text-xs">
+                        `:""}
+                        <span class="text-sm text-gray-600 px-2 py-1">\u0635\u0641\u062D\u0629 ${e} \u0645\u0646 ${r}</span>
+                        ${e<r?`
+                            <button onclick="UserTasks.loadUserTasks(${e+1})" class="btn-icon btn-icon-secondary text-xs">
                                 <i class="fas fa-chevron-left"></i>
                             </button>
-                        ` : ''}
+                        `:""}
                     </div>
                 </div>
-            ` : ''}
+            `:""}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                ${paginatedTasks.map(task => {
-            const isOverdue = task.dueDate && new Date(task.dueDate) < now &&
-                task.status !== 'مكتمل' && task.status !== 'completed';
-            const priorityClass = task.priority === 'عالي' ? 'badge-danger' :
-                task.priority === 'منخفض' ? 'badge-success' : 'badge-warning';
-            const statusClass = task.status === 'مكتمل' || task.status === 'completed' ? 'badge-success' :
-                task.status === 'قيد التنفيذ' || task.status === 'in-progress' ? 'badge-info' :
-                    'badge-secondary';
-
-            return `
-                        <div class="content-card hover:shadow-lg transition-all flex flex-col justify-between p-4 ${isOverdue ? 'border-red-300 bg-red-50/70' : ''}" data-task-id="${task.id}" data-search="${(task.title || task.taskTitle || '').toLowerCase()} ${(task.description || task.taskDescription || '').toLowerCase()}">
+                ${d.map(o=>{const c=o.dueDate&&new Date(o.dueDate)<n&&o.status!=="\u0645\u0643\u062A\u0645\u0644"&&o.status!=="completed",p=o.priority==="\u0639\u0627\u0644\u064A"?"badge-danger":o.priority==="\u0645\u0646\u062E\u0641\u0636"?"badge-success":"badge-warning",u=o.status==="\u0645\u0643\u062A\u0645\u0644"||o.status==="completed"?"badge-success":o.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||o.status==="in-progress"?"badge-info":"badge-secondary";return`
+                        <div class="content-card hover:shadow-lg transition-all flex flex-col justify-between p-4 ${c?"border-red-300 bg-red-50/70":""}" data-task-id="${o.id}" data-search="${(o.title||o.taskTitle||"").toLowerCase()} ${(o.description||o.taskDescription||"").toLowerCase()}">
                             <div>
                                 <div class="flex items-start justify-between gap-2 mb-3">
-                                    <h3 class="font-bold text-gray-900 text-base leading-snug flex-1">${Utils.escapeHTML(task.title || task.taskTitle || '')}</h3>
+                                    <h3 class="font-bold text-gray-900 text-base leading-snug flex-1">${Utils.escapeHTML(o.title||o.taskTitle||"")}</h3>
                                     <div class="flex flex-wrap gap-1 justify-end flex-shrink-0">
-                                        <span class="badge ${priorityClass}">${Utils.escapeHTML(task.priority || 'متوسط')}</span>
-                                        <span class="badge ${statusClass}">${Utils.escapeHTML(task.status || 'جديدة')}</span>
-                                        ${isOverdue ? '<span class="badge badge-danger">متأخرة</span>' : ''}
+                                        <span class="badge ${p}">${Utils.escapeHTML(o.priority||"\u0645\u062A\u0648\u0633\u0637")}</span>
+                                        <span class="badge ${u}">${Utils.escapeHTML(o.status||"\u062C\u062F\u064A\u062F\u0629")}</span>
+                                        ${c?'<span class="badge badge-danger">\u0645\u062A\u0623\u062E\u0631\u0629</span>':""}
                                     </div>
                                 </div>
-                                ${task.description || task.taskDescription ? `
-                                    <p class="text-sm text-gray-600 mb-3 line-clamp-2">${Utils.escapeHTML((task.description || task.taskDescription).substring(0, 150))}${(task.description || task.taskDescription).length > 150 ? '...' : ''}</p>
-                                ` : ''}
+                                ${o.description||o.taskDescription?`
+                                    <p class="text-sm text-gray-600 mb-3 line-clamp-2">${Utils.escapeHTML((o.description||o.taskDescription).substring(0,150))}${(o.description||o.taskDescription).length>150?"...":""}</p>
+                                `:""}
                             </div>
                             <div class="pt-3 border-t border-gray-100 flex items-center justify-between gap-2 mt-2">
                                 <div class="space-y-1 text-xs text-gray-500">
-                                    ${task.dueDate ? `<div class="flex items-center"><i class="fas fa-calendar ml-1 text-blue-500"></i><span>${Utils.formatDate(task.dueDate)}</span></div>` : ''}
-                                    ${task.taskType ? `<div class="flex items-center"><i class="fas fa-tag ml-1 text-purple-500"></i><span>${Utils.escapeHTML(task.taskType)}</span></div>` : ''}
+                                    ${o.dueDate?`<div class="flex items-center"><i class="fas fa-calendar ml-1 text-blue-500"></i><span>${Utils.formatDate(o.dueDate)}</span></div>`:""}
+                                    ${o.taskType?`<div class="flex items-center"><i class="fas fa-tag ml-1 text-purple-500"></i><span>${Utils.escapeHTML(o.taskType)}</span></div>`:""}
                                 </div>
                                 <div class="flex gap-1.5 flex-shrink-0">
-                                    <button onclick="UserTasks.viewUserTask('${task.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
+                                    <button onclick="UserTasks.viewUserTask('${o.id}')" class="btn-icon btn-icon-info" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button onclick="UserTasks.updateTaskStatus('${task.id}')" class="btn-icon btn-icon-primary" title="تحديث الحالة">
+                                    <button onclick="UserTasks.updateTaskStatus('${o.id}')" class="btn-icon btn-icon-primary" title="\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0627\u0644\u0629">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
-                    `;
-        }).join('')}
+                    `}).join("")}
             </div>
-        `;
-        this.applyModuleI18n(container);
-
-        // تحديث الإحصائيات - لا حاجة لاستدعائها لأن loadUserTasks تستدعيها بالفعل
-        // this.updateUserStats();
-    },
-
-    /**
-     * تحديث إحصائيات المستخدم
-     * @param {Array} tasks - اختياري: المهام المراد حساب الإحصائيات لها (لتجنب الفلترة المتكررة)
-     */
-    updateUserStats(tasks = null) {
-        const userId = AppState.currentUser?.id || AppState.currentUser?.email;
-
-        // إذا لم يتم تمرير المهام، قم بفلترتها
-        if (!tasks) {
-            tasks = (AppState.appData.userTasks || []).filter(t =>
-                (t.userId || t.assignedTo) === userId
-            );
-        }
-
-        const now = new Date();
-
-        const stats = {
-            total: tasks.length,
-            new: tasks.filter(t => t.status === 'جديدة' || !t.status).length,
-            inProgress: tasks.filter(t => t.status === 'قيد التنفيذ' || t.status === 'in-progress').length,
-            completed: tasks.filter(t => t.status === 'مكتمل' || t.status === 'completed').length,
-            overdue: tasks.filter(t => {
-                if (t.status === 'مكتمل' || t.status === 'completed') return false;
-                if (!t.dueDate) return false;
-                const dueDate = new Date(t.dueDate);
-                return dueDate < now;
-            }).length
-        };
-
-        document.getElementById('user-total-tasks').textContent = stats.total;
-        document.getElementById('user-new-tasks').textContent = stats.new;
-        document.getElementById('user-in-progress-tasks').textContent = stats.inProgress;
-        document.getElementById('user-completed-tasks').textContent = stats.completed;
-        document.getElementById('user-overdue-tasks').textContent = stats.overdue;
-    },
-
-    /**
-     * فلترة مهام المستخدم
-     */
-    filterUserTasks(searchTerm) {
-        searchTerm = searchTerm.toLowerCase().trim();
-        const rows = document.querySelectorAll('#user-tasks-list-container [data-task-id]');
-
-        rows.forEach(row => {
-            const searchData = row.getAttribute('data-search');
-            if (!searchTerm || searchData.includes(searchTerm)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    },
-
-    /**
-     * عرض تفاصيل مهمة المستخدم
-     */
-    async viewUserTask(taskId) {
-        const task = AppState.appData.userTasks.find(t => t.id === taskId);
-        if (!task) {
-            Notification.error('المهمة غير موجودة');
-            return;
-        }
-
-        const priorityClass = task.priority === 'عالي' ? 'badge-danger' :
-            task.priority === 'منخفض' ? 'badge-success' : 'badge-warning';
-        const statusClass = task.status === 'مكتمل' || task.status === 'completed' ? 'badge-success' :
-            task.status === 'قيد التنفيذ' || task.status === 'in-progress' ? 'badge-info' :
-                'badge-secondary';
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        `,this.applyModuleI18n(a)},updateUserStats(t=null){const e=AppState.currentUser?.id||AppState.currentUser?.email;t||(t=(AppState.appData.userTasks||[]).filter(r=>(r.userId||r.assignedTo)===e));const s=new Date,a={total:t.length,new:t.filter(r=>r.status==="\u062C\u062F\u064A\u062F\u0629"||!r.status).length,inProgress:t.filter(r=>r.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||r.status==="in-progress").length,completed:t.filter(r=>r.status==="\u0645\u0643\u062A\u0645\u0644"||r.status==="completed").length,overdue:t.filter(r=>r.status==="\u0645\u0643\u062A\u0645\u0644"||r.status==="completed"||!r.dueDate?!1:new Date(r.dueDate)<s).length};document.getElementById("user-total-tasks").textContent=a.total,document.getElementById("user-new-tasks").textContent=a.new,document.getElementById("user-in-progress-tasks").textContent=a.inProgress,document.getElementById("user-completed-tasks").textContent=a.completed,document.getElementById("user-overdue-tasks").textContent=a.overdue},filterUserTasks(t){t=t.toLowerCase().trim(),document.querySelectorAll("#user-tasks-list-container [data-task-id]").forEach(s=>{const a=s.getAttribute("data-search");!t||a.includes(t)?s.style.display="":s.style.display="none"})},async viewUserTask(t){const e=AppState.appData.userTasks.find(i=>i.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const s=e.priority==="\u0639\u0627\u0644\u064A"?"badge-danger":e.priority==="\u0645\u0646\u062E\u0641\u0636"?"badge-success":"badge-warning",a=e.status==="\u0645\u0643\u062A\u0645\u0644"||e.status==="completed"?"badge-success":e.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||e.status==="in-progress"?"badge-info":"badge-secondary",r=document.createElement("div");r.className="modal-overlay",r.innerHTML=`
             <div class="modal-container" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-tasks ml-2"></i>
-                        تفاصيل المهمة
+                        \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0647\u0645\u0629
                     </h2>
                     <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -1153,91 +556,71 @@ const UserTasks = {
                 <div class="modal-body">
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">عنوان المهمة</label>
-                            <p class="text-gray-900 font-semibold">${Utils.escapeHTML(task.title || task.taskTitle || '')}</p>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629</label>
+                            <p class="text-gray-900 font-semibold">${Utils.escapeHTML(e.title||e.taskTitle||"")}</p>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">الأولوية</label>
-                                <p><span class="badge ${priorityClass}">${Utils.escapeHTML(task.priority || 'متوسط')}</span></p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629</label>
+                                <p><span class="badge ${s}">${Utils.escapeHTML(e.priority||"\u0645\u062A\u0648\u0633\u0637")}</span></p>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">الحالة</label>
-                                <p><span class="badge ${statusClass}">${Utils.escapeHTML(task.status || 'جديدة')}</span></p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u062D\u0627\u0644\u0629</label>
+                                <p><span class="badge ${a}">${Utils.escapeHTML(e.status||"\u062C\u062F\u064A\u062F\u0629")}</span></p>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">تاريخ الاستحقاق</label>
-                                <p class="text-gray-900">${task.dueDate ? Utils.formatDate(task.dueDate) : '—'}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642</label>
+                                <p class="text-gray-900">${e.dueDate?Utils.formatDate(e.dueDate):"\u2014"}</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">نوع المهمة</label>
-                                <p class="text-gray-900">${Utils.escapeHTML(task.taskType || task.type || '—')}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">\u0646\u0648\u0639 \u0627\u0644\u0645\u0647\u0645\u0629</label>
+                                <p class="text-gray-900">${Utils.escapeHTML(e.taskType||e.type||"\u2014")}</p>
                             </div>
                         </div>
-                        ${task.description || task.taskDescription ? `
+                        ${e.description||e.taskDescription?`
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">الوصف</label>
-                                <p class="text-gray-900 whitespace-pre-wrap">${Utils.escapeHTML(task.description || task.taskDescription)}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u0648\u0635\u0641</label>
+                                <p class="text-gray-900 whitespace-pre-wrap">${Utils.escapeHTML(e.description||e.taskDescription)}</p>
                             </div>
-                        ` : ''}
-                        ${task.notes ? `
+                        `:""}
+                        ${e.notes?`
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">ملاحظات</label>
-                                <p class="text-gray-900 whitespace-pre-wrap">${Utils.escapeHTML(task.notes)}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">\u0645\u0644\u0627\u062D\u0638\u0627\u062A</label>
+                                <p class="text-gray-900 whitespace-pre-wrap">${Utils.escapeHTML(e.notes)}</p>
                             </div>
-                        ` : ''}
+                        `:""}
                         <div class="grid grid-cols-2 gap-4 text-xs text-gray-500">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">تاريخ الإضافة</label>
-                                <p class="text-gray-900">${task.createdAt ? Utils.formatDate(task.createdAt) : '—'}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0636\u0627\u0641\u0629</label>
+                                <p class="text-gray-900">${e.createdAt?Utils.formatDate(e.createdAt):"\u2014"}</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">آخر تحديث</label>
-                                <p class="text-gray-900">${task.updatedAt ? Utils.formatDate(task.updatedAt) : '—'}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B</label>
+                                <p class="text-gray-900">${e.updatedAt?Utils.formatDate(e.updatedAt):"\u2014"}</p>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-primary" onclick="UserTasks.updateTaskStatus('${taskId}'); this.closest('.modal-overlay').remove();">
+                    <button type="button" class="btn-primary" onclick="UserTasks.updateTaskStatus('${t}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-edit ml-2"></i>
-                        تحديث الحالة
+                        \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0627\u0644\u0629
                     </button>
-                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('user-tasks') : ''}
+                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("user-tasks"):""}
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times ml-2"></i>
-                        إغلاق
+                        \u0625\u063A\u0644\u0627\u0642
                     </button>
                 </div>
             </div>
-        `;
-        this.applyModuleI18n(modal);
-        document.body.appendChild(modal);
-        if (typeof EmailDispatch !== 'undefined') {
-            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'user-tasks', record: task, recordId: task.id || '' });
-        }
-    },
-
-    /**
-     * تحديث حالة المهمة
-     */
-    async updateTaskStatus(taskId) {
-        const task = AppState.appData.userTasks.find(t => t.id === taskId);
-        if (!task) {
-            Notification.error('المهمة غير موجودة');
-            return;
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        `,this.applyModuleI18n(r),document.body.appendChild(r),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(r,{moduleKey:"user-tasks",record:e,recordId:e.id||""})},async updateTaskStatus(t){const e=AppState.appData.userTasks.find(r=>r.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
             <div class="modal-container" style="max-width: 500px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-edit ml-2"></i>
-                        تحديث حالة المهمة
+                        \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u0647\u0645\u0629
                     </h2>
                     <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -1247,1007 +630,354 @@ const UserTasks = {
                     <div class="modal-body">
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">عنوان المهمة</label>
-                                <p class="text-gray-900">${Utils.escapeHTML(task.title || task.taskTitle || '')}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629</label>
+                                <p class="text-gray-900">${Utils.escapeHTML(e.title||e.taskTitle||"")}</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة *</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u062D\u0627\u0644\u0629 *</label>
                                 <select id="update-task-status" class="form-input" required>
-                                    <option value="جديدة" ${(task.status === 'جديدة' || !task.status) ? 'selected' : ''}>جديدة</option>
-                                    <option value="قيد التنفيذ" ${task.status === 'قيد التنفيذ' || task.status === 'in-progress' ? 'selected' : ''}>قيد التنفيذ</option>
-                                    <option value="مكتمل" ${task.status === 'مكتمل' || task.status === 'completed' ? 'selected' : ''}>مكتملة</option>
+                                    <option value="\u062C\u062F\u064A\u062F\u0629" ${e.status==="\u062C\u062F\u064A\u062F\u0629"||!e.status?"selected":""}>\u062C\u062F\u064A\u062F\u0629</option>
+                                    <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630" ${e.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||e.status==="in-progress"?"selected":""}>\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630</option>
+                                    <option value="\u0645\u0643\u062A\u0645\u0644" ${e.status==="\u0645\u0643\u062A\u0645\u0644"||e.status==="completed"?"selected":""}>\u0645\u0643\u062A\u0645\u0644\u0629</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظات (اختياري)</label>
-                                <textarea id="update-task-notes" class="form-input" rows="3" placeholder="أضف ملاحظات حول التقدم...">${Utils.escapeHTML(task.notes || '')}</textarea>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0644\u0627\u062D\u0638\u0627\u062A (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</label>
+                                <textarea id="update-task-notes" class="form-input" rows="3" placeholder="\u0623\u0636\u0641 \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062D\u0648\u0644 \u0627\u0644\u062A\u0642\u062F\u0645...">${Utils.escapeHTML(e.notes||"")}</textarea>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="submit" class="btn-primary">
                             <i class="fas fa-save ml-2"></i>
-                            حفظ التحديث
+                            \u062D\u0641\u0638 \u0627\u0644\u062A\u062D\u062F\u064A\u062B
                         </button>
                         <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-times ml-2"></i>
-                            إلغاء
+                            \u0625\u0644\u063A\u0627\u0621
                         </button>
                     </div>
                 </form>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        const form = document.getElementById('update-task-status-form');
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const newStatus = document.getElementById('update-task-status').value;
-            const notes = document.getElementById('update-task-notes').value.trim();
-
-            try {
-                const index = AppState.appData.userTasks.findIndex(t => t.id === taskId);
-                if (index !== -1) {
-                    AppState.appData.userTasks[index] = {
-                        ...AppState.appData.userTasks[index],
-                        status: newStatus,
-                        notes: notes,
-                        updatedAt: new Date().toISOString()
-                    };
-
-                    // حفظ محلياً
-                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                        window.DataManager.save();
-                    } else {
-                        Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-                    }
-
-                    // ✅ FIX حرج (منع فقدان بيانات): استخدام updateUserTask الذرّي
-                    // بدل autoSave('UserTasks', الكامل). في عرض المستخدم العادي تكون
-                    // AppState.appData.userTasks مفلترة (مهامه فقط) → الحفظ الجماعي
-                    // كان سيعيد كتابة ورقة UserTasks بمهام هذا المستخدم فقط فيمحو
-                    // مهام جميع المستخدمين الآخرين. updateUserTask يحدّث صفّاً واحداً فقط.
-                    if (AppState.googleConfig?.appsScript?.enabled
-                        && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                        try {
-                            const vr = await GoogleIntegration.sendRequest({
-                                action: 'updateUserTask',
-                                data: { taskId: taskId, updateData: { status: newStatus, notes: notes } }
-                            });
-                            if (vr && vr.success === false) throw new Error(vr.message || 'فشل تحديث المهمة');
-                        } catch (error) {
-                            Utils.safeWarn('⚠️ خطأ في حفظ التحديث في Google Sheets:', error);
-                        }
-                    }
-
-                    Notification.success('تم تحديث حالة المهمة بنجاح');
-                    modal.remove();
-                    await this.loadUserTasks();
-                }
-            } catch (error) {
-                Utils.safeError('خطأ في تحديث المهمة:', error);
-                Notification.error('فشل تحديث المهمة');
-            }
-        });
-    },
-
-    /**
-     * تصدير مهام المستخدم إلى PDF
-     */
-    async exportUserTasksToPDF() {
-        try {
-            Loading.show();
-            const userId = AppState.currentUser?.id || AppState.currentUser?.email;
-            const tasks = (AppState.appData.userTasks || []).filter(t =>
-                (t.userId || t.assignedTo) === userId
-            );
-
-            if (tasks.length === 0) {
-                Loading.hide();
-                Notification.warning('لا توجد مهام للتصدير');
-                return;
-            }
-
-            const userName = AppState.currentUser?.name || AppState.currentUser?.displayName || 'المستخدم';
-
-            const rowsHtml = tasks.map((task, index) => {
-                return `
+        `,document.body.appendChild(s),document.getElementById("update-task-status-form").addEventListener("submit",async r=>{r.preventDefault();const i=document.getElementById("update-task-status").value,l=document.getElementById("update-task-notes").value.trim();try{const d=AppState.appData.userTasks.findIndex(n=>n.id===t);if(d!==-1){if(AppState.appData.userTasks[d]={...AppState.appData.userTasks[d],status:i,notes:l,updatedAt:new Date().toISOString()},typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig?.appsScript?.enabled&&typeof GoogleIntegration<"u"&&GoogleIntegration.sendRequest)try{const n=await GoogleIntegration.sendRequest({action:"updateUserTask",data:{taskId:t,updateData:{status:i,notes:l}}});if(n&&n.success===!1)throw new Error(n.message||"\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629")}catch(n){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u062A\u062D\u062F\u064A\u062B \u0641\u064A Google Sheets:",n)}Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u0647\u0645\u0629 \u0628\u0646\u062C\u0627\u062D"),s.remove(),await this.loadUserTasks()}}catch(d){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629:",d),Notification.error("\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629")}})},async exportUserTasksToPDF(){try{Loading.show();const t=AppState.currentUser?.id||AppState.currentUser?.email,e=(AppState.appData.userTasks||[]).filter(c=>(c.userId||c.assignedTo)===t);if(e.length===0){Loading.hide(),Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0647\u0627\u0645 \u0644\u0644\u062A\u0635\u062F\u064A\u0631");return}const s=AppState.currentUser?.name||AppState.currentUser?.displayName||"\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645",a=e.map((c,p)=>`
                     <tr>
-                        <td>${index + 1}</td>
-                        <td>${Utils.escapeHTML(task.title || task.taskTitle || '')}</td>
-                        <td>${Utils.escapeHTML(task.priority || 'متوسط')}</td>
-                        <td>${Utils.escapeHTML(task.status || 'جديدة')}</td>
-                        <td>${task.dueDate ? Utils.formatDate(task.dueDate) : '—'}</td>
+                        <td>${p+1}</td>
+                        <td>${Utils.escapeHTML(c.title||c.taskTitle||"")}</td>
+                        <td>${Utils.escapeHTML(c.priority||"\u0645\u062A\u0648\u0633\u0637")}</td>
+                        <td>${Utils.escapeHTML(c.status||"\u062C\u062F\u064A\u062F\u0629")}</td>
+                        <td>${c.dueDate?Utils.formatDate(c.dueDate):"\u2014"}</td>
                     </tr>
-                `;
-            }).join('');
-
-            const content = `
+                `).join(""),r=`
                 <div class="summary-grid">
                     <div class="summary-card">
-                        <span class="summary-label">المستخدم</span>
-                        <span class="summary-value">${Utils.escapeHTML(userName)}</span>
+                        <span class="summary-label">\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645</span>
+                        <span class="summary-value">${Utils.escapeHTML(s)}</span>
                     </div>
                     <div class="summary-card">
-                        <span class="summary-label">عدد المهام</span>
-                        <span class="summary-value">${tasks.length}</span>
+                        <span class="summary-label">\u0639\u062F\u062F \u0627\u0644\u0645\u0647\u0627\u0645</span>
+                        <span class="summary-value">${e.length}</span>
                     </div>
                     <div class="summary-card">
-                        <span class="summary-label">تاريخ التقرير</span>
-                        <span class="summary-value">${Utils.formatDate(new Date())}</span>
+                        <span class="summary-label">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0642\u0631\u064A\u0631</span>
+                        <span class="summary-value">${Utils.formatDate(new Date)}</span>
                     </div>
                 </div>
-                <div class="section-title">قائمة المهام</div>
+                <div class="section-title">\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0647\u0627\u0645</div>
                 <table class="report-table">
                     <thead>
                         <tr>
                             <th style="width: 50px;">#</th>
-                            <th>عنوان المهمة</th>
-                            <th style="width: 100px;">الأولوية</th>
-                            <th style="width: 100px;">الحالة</th>
-                            <th style="width: 120px;">تاريخ الاستحقاق</th>
+                            <th>\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629</th>
+                            <th style="width: 100px;">\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629</th>
+                            <th style="width: 100px;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                            <th style="width: 120px;">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${rowsHtml}
+                        ${a}
                     </tbody>
                 </table>
-            `;
-
-            const formCode = `USER-TASKS-${userId?.substring(0, 8) || 'UNKNOWN'}-${new Date().toISOString().slice(0, 10)}`;
-            const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(
-                    formCode,
-                    'تقرير مهامي الشخصية',
-                    content,
-                    false,
-                    true,
-                    {
-                        version: '1.0',
-                        source: 'UserTasks',
-                        user: userName,
-                        qrData: {
-                            type: 'UserTasks',
-                            userId: userId,
-                            userName: userName,
-                            count: tasks.length
-                        }
-                    },
-                    new Date().toISOString(),
-                    new Date().toISOString()
-                )
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>@page { size: A4 portrait; margin: 1cm; } @media print { @page { size: A4 portrait; margin: 1cm; } body { padding: 0; } }</style><title>مهامي الشخصية</title></head><body>${content}</body></html>`;
-
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                            Notification.success('تم تجهيز التقرير للطباعة');
-                        }, 1000);
-                    }, 500);
-                };
-            } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنافذة المنبثقة لعرض التقرير');
-            }
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('فشل تصدير التقرير');
-        }
-    },
-
-    /**
-     * الحصول على الإحصائيات
-     */
-    getStats() {
-        this.ensureData();
-        const tasks = AppState.appData.userTasks || [];
-        const now = new Date();
-
-        return {
-            total: tasks.length,
-            completed: tasks.filter(t => t.status === 'مكتمل' || t.status === 'completed').length,
-            inProgress: tasks.filter(t => t.status === 'قيد التنفيذ' || t.status === 'in-progress').length,
-            overdue: tasks.filter(t => {
-                if (t.status === 'مكتمل' || t.status === 'completed') return false;
-                if (!t.dueDate) return false;
-                const dueDate = new Date(t.dueDate);
-                return dueDate < now;
-            }).length
-        };
-    },
-
-    /**
-     * ربط الأحداث
-     */
-    setupEventListeners() {
-        setTimeout(() => {
-            // زر إضافة مهمة
-            const addBtn = document.getElementById('add-task-btn');
-            if (addBtn) {
-                addBtn.addEventListener('click', () => this.showTaskForm());
-            }
-
-            // الفلاتر
-            const userFilter = document.getElementById('task-user-filter');
-            const statusFilter = document.getElementById('task-status-filter');
-            const priorityFilter = document.getElementById('task-priority-filter');
-            const searchInput = document.getElementById('task-search-input');
-
-            if (userFilter) {
-                userFilter.addEventListener('change', () => this.loadTasks());
-            }
-            if (statusFilter) {
-                statusFilter.addEventListener('change', () => this.loadTasks());
-            }
-            if (priorityFilter) {
-                priorityFilter.addEventListener('change', () => this.loadTasks());
-            }
-            if (searchInput) {
-                // Debounce للبحث
-                let searchTimeout;
-                searchInput.addEventListener('input', (e) => {
-                    clearTimeout(searchTimeout);
-                    searchTimeout = setTimeout(() => {
-                        this.filterTasks(e.target.value);
-                    }, this.config.debounceDelay);
-                });
-            }
-
-            // ✅ زر إعادة تعيين الفلاتر (عرض المدير)
-            const resetBtn = document.getElementById('task-filter-reset');
-            if (resetBtn) {
-                resetBtn.addEventListener('click', () => {
-                    if (userFilter) userFilter.value = '';
-                    if (statusFilter) statusFilter.value = '';
-                    if (priorityFilter) priorityFilter.value = '';
-                    if (searchInput) searchInput.value = '';
-                    this.loadTasks();
-                });
-            }
-
-            // أزرار التصدير
-            const exportPdfBtn = document.getElementById('export-tasks-pdf-btn');
-            const exportExcelBtn = document.getElementById('export-tasks-excel-btn');
-
-            if (exportPdfBtn) {
-                exportPdfBtn.addEventListener('click', () => this.exportToPDF());
-            }
-            if (exportExcelBtn) {
-                exportExcelBtn.addEventListener('click', () => this.exportToExcel());
-            }
-        }, 100);
-    },
-
-    /**
-     * تحميل قائمة المستخدمين
-     */
-    async loadMembers() {
-        try {
-            // استخدام Cache إذا كان متاحاً
-            if (this.cache.members && this.cache.lastLoad &&
-                (Date.now() - this.cache.lastLoad) < this.config.cacheTimeout) {
-                this.populateMemberFilter(this.cache.members);
-                return;
-            }
-
-            // محاولة الحصول من Google Sheets
-            if (AppState.googleConfig.appsScript.enabled) {
-                try {
-                    // استخدام readFromSheets بدلاً من getUsers
-                    const users = await GoogleIntegration.readFromSheets('Users');
-
-                    if (users && Array.isArray(users)) {
-                        this.cache.members = users;
-                        this.cache.lastLoad = Date.now();
-                        this.populateMemberFilter(users);
-
-                        // تحميل المهام بعد تحميل المستخدمين
-                        await this.loadTasks();
-                        return;
-                    }
-                } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في تحميل المستخدمين من Google Sheets:', error);
-                }
-            }
-
-            // استخدام البيانات المحلية
-            const users = AppState.appData.users || [];
-            this.cache.members = users;
-            this.cache.lastLoad = Date.now();
-            this.populateMemberFilter(users);
-
-            // تحميل المهام
-            await this.loadTasks();
-        } catch (error) {
-            Utils.safeError('خطأ في تحميل المستخدمين:', error);
-            Notification.error('فشل تحميل قائمة المستخدمين');
-        }
-    },
-
-    /**
-     * ملء قائمة المستخدمين في الفلتر
-     */
-    populateMemberFilter(users) {
-        const userFilter = document.getElementById('task-user-filter');
-        if (!userFilter) return;
-
-        userFilter.innerHTML = '<option value="">جميع المستخدمين</option>';
-        users.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user.id || user.email;
-            option.textContent = user.name || user.email || user.fullName || 'مستخدم غير معروف';
-            userFilter.appendChild(option);
-        });
-    },
-
-    /**
-     * تحميل المهام
-     */
-    async loadTasks() {
-        const container = document.getElementById('tasks-list-container');
-        if (!container) return;
-
-        try {
-            this.ensureData();
-            let tasks = AppState.appData.userTasks || [];
-
-            // تطبيق الفلاتر
-            const userId = document.getElementById('task-user-filter')?.value;
-            const status = document.getElementById('task-status-filter')?.value;
-            const priority = document.getElementById('task-priority-filter')?.value;
-
-            if (userId) {
-                tasks = tasks.filter(t => (t.userId || t.assignedTo) === userId);
-            }
-            if (status) {
-                tasks = tasks.filter(t => (t.status || '') === status);
-            }
-            if (priority) {
-                tasks = tasks.filter(t => (t.priority || '') === priority);
-            }
-
-            // ترتيب حسب التاريخ
-            tasks.sort((a, b) => {
-                const dateA = new Date(a.createdAt || a.dueDate || 0);
-                const dateB = new Date(b.createdAt || b.dueDate || 0);
-                return dateB - dateA;
-            });
-
-            // عرض المهام
-            this.renderTasks(tasks);
-
-            // تحديث الإحصائيات
-            this.updateStats();
-        } catch (error) {
-            Utils.safeError('خطأ في تحميل المهام:', error);
-            container.innerHTML = `
+            `,i=`USER-TASKS-${t?.substring(0,8)||"UNKNOWN"}-${new Date().toISOString().slice(0,10)}`,l=typeof FormHeader<"u"&&FormHeader.generatePDFHTML?FormHeader.generatePDFHTML(i,"\u062A\u0642\u0631\u064A\u0631 \u0645\u0647\u0627\u0645\u064A \u0627\u0644\u0634\u062E\u0635\u064A\u0629",r,!1,!0,{version:"1.0",source:"UserTasks",user:s,qrData:{type:"UserTasks",userId:t,userName:s,count:e.length}},new Date().toISOString(),new Date().toISOString()):`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>@page { size: A4 portrait; margin: 1cm; } @media print { @page { size: A4 portrait; margin: 1cm; } body { padding: 0; } }</style><title>\u0645\u0647\u0627\u0645\u064A \u0627\u0644\u0634\u062E\u0635\u064A\u0629</title></head><body>${r}</body></html>`,d=new Blob([l],{type:"text/html;charset=utf-8"}),n=URL.createObjectURL(d),o=window.open(n,"_blank");o?o.onload=()=>{setTimeout(()=>{o.print(),setTimeout(()=>{URL.revokeObjectURL(n),Loading.hide(),Notification.success("\u062A\u0645 \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0644\u0644\u0637\u0628\u0627\u0639\u0629")},1e3)},500)}:(Loading.hide(),Notification.error("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0631\u064A\u0631"))}catch(t){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF:",t),Notification.error("\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u062A\u0642\u0631\u064A\u0631")}},getStats(){this.ensureData();const t=AppState.appData.userTasks||[],e=new Date;return{total:t.length,completed:t.filter(s=>s.status==="\u0645\u0643\u062A\u0645\u0644"||s.status==="completed").length,inProgress:t.filter(s=>s.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||s.status==="in-progress").length,overdue:t.filter(s=>s.status==="\u0645\u0643\u062A\u0645\u0644"||s.status==="completed"||!s.dueDate?!1:new Date(s.dueDate)<e).length}},setupEventListeners(){setTimeout(()=>{const t=document.getElementById("add-task-btn");t&&t.addEventListener("click",()=>this.showTaskForm());const e=document.getElementById("task-user-filter"),s=document.getElementById("task-status-filter"),a=document.getElementById("task-priority-filter"),r=document.getElementById("task-search-input");if(e&&e.addEventListener("change",()=>this.loadTasks()),s&&s.addEventListener("change",()=>this.loadTasks()),a&&a.addEventListener("change",()=>this.loadTasks()),r){let n;r.addEventListener("input",o=>{clearTimeout(n),n=setTimeout(()=>{this.filterTasks(o.target.value)},this.config.debounceDelay)})}const i=document.getElementById("task-filter-reset");i&&i.addEventListener("click",()=>{e&&(e.value=""),s&&(s.value=""),a&&(a.value=""),r&&(r.value=""),this.loadTasks()});const l=document.getElementById("export-tasks-pdf-btn"),d=document.getElementById("export-tasks-excel-btn");l&&l.addEventListener("click",()=>this.exportToPDF()),d&&d.addEventListener("click",()=>this.exportToExcel())},100)},async loadMembers(){try{if(this.cache.members&&this.cache.lastLoad&&Date.now()-this.cache.lastLoad<this.config.cacheTimeout){this.populateMemberFilter(this.cache.members);return}if(AppState.googleConfig.appsScript.enabled)try{const e=await GoogleIntegration.readFromSheets("Users");if(e&&Array.isArray(e)){this.cache.members=e,this.cache.lastLoad=Date.now(),this.populateMemberFilter(e),await this.loadTasks();return}}catch(e){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0645\u0646 Google Sheets:",e)}const t=AppState.appData.users||[];this.cache.members=t,this.cache.lastLoad=Date.now(),this.populateMemberFilter(t),await this.loadTasks()}catch(t){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646:",t),Notification.error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646")}},populateMemberFilter(t){const e=document.getElementById("task-user-filter");e&&(e.innerHTML='<option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646</option>',t.forEach(s=>{const a=document.createElement("option");a.value=s.id||s.email,a.textContent=s.name||s.email||s.fullName||"\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641",e.appendChild(a)}))},async loadTasks(){const t=document.getElementById("tasks-list-container");if(t)try{this.ensureData();let e=AppState.appData.userTasks||[];const s=document.getElementById("task-user-filter")?.value,a=document.getElementById("task-status-filter")?.value,r=document.getElementById("task-priority-filter")?.value;s&&(e=e.filter(i=>(i.userId||i.assignedTo)===s)),a&&(e=e.filter(i=>(i.status||"")===a)),r&&(e=e.filter(i=>(i.priority||"")===r)),e.sort((i,l)=>{const d=new Date(i.createdAt||i.dueDate||0);return new Date(l.createdAt||l.dueDate||0)-d}),this.renderTasks(e),this.updateStats()}catch(e){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0647\u0627\u0645:",e),t.innerHTML=`
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
-                    <p class="text-red-500">حدث خطأ في تحميل المهام</p>
+                    <p class="text-red-500">\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0647\u0627\u0645</p>
                     <button onclick="UserTasks.loadTasks()" class="btn-primary mt-4">
                         <i class="fas fa-redo ml-2"></i>
-                        إعادة المحاولة
+                        \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
                     </button>
                 </div>
-            `;
-        }
-    },
-
-    /**
-     * عرض المهام
-     */
-    renderTasks(tasks) {
-        const container = document.getElementById('tasks-list-container');
-        if (!container) return;
-
-        if (tasks.length === 0) {
-            container.innerHTML = `
+            `}},renderTasks(t){const e=document.getElementById("tasks-list-container");if(e){if(t.length===0){e.innerHTML=`
                 <div class="empty-state">
                     <i class="fas fa-tasks text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">لا توجد مهام</p>
+                    <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0647\u0627\u0645</p>
                     <button onclick="UserTasks.showTaskForm()" class="btn-primary mt-4">
                         <i class="fas fa-plus ml-2"></i>
-                        إضافة مهمة جديدة
+                        \u0625\u0636\u0627\u0641\u0629 \u0645\u0647\u0645\u0629 \u062C\u062F\u064A\u062F\u0629
                     </button>
                 </div>
-            `;
-            this.applyModuleI18n(container);
-            return;
-        }
-
-        container.innerHTML = `
+            `,this.applyModuleI18n(e);return}e.innerHTML=`
             <div class="table-wrapper" style="overflow-x: auto;">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>عنوان المهمة</th>
-                            <th>المستخدم</th>
-                            <th>نوع المهمة</th>
-                            <th>الأولوية</th>
-                            <th>الحالة</th>
-                            <th>تاريخ الاستحقاق</th>
-                            <th>تاريخ الإنشاء</th>
-                            <th>الإجراءات</th>
+                            <th>\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629</th>
+                            <th>\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645</th>
+                            <th>\u0646\u0648\u0639 \u0627\u0644\u0645\u0647\u0645\u0629</th>
+                            <th>\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629</th>
+                            <th>\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                            <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642</th>
+                            <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621</th>
+                            <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${tasks.map(task => {
-            const userName = this.getUserName(task.userId || task.assignedTo);
-            const priorityClass = task.priority === 'عالي' ? 'badge-danger' :
-                task.priority === 'منخفض' ? 'badge-success' : 'badge-warning';
-            const statusClass = task.status === 'مكتمل' ? 'badge-success' :
-                task.status === 'ملغي' ? 'badge-danger' : 'badge-info';
-            const dueDate = task.dueDate ? Utils.formatDate(task.dueDate) : '—';
-            const createdAt = task.createdAt ? Utils.formatDate(task.createdAt) : '—';
-            const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'مكتمل';
-
-            return `
-                                <tr class="${isOverdue ? 'bg-red-50' : ''}" data-task-id="${task.id}" data-search="${(task.title || task.taskTitle || '').toLowerCase()} ${(task.description || task.taskDescription || '').toLowerCase()}">
+                        ${t.map(s=>{const a=this.getUserName(s.userId||s.assignedTo),r=s.priority==="\u0639\u0627\u0644\u064A"?"badge-danger":s.priority==="\u0645\u0646\u062E\u0641\u0636"?"badge-success":"badge-warning",i=s.status==="\u0645\u0643\u062A\u0645\u0644"?"badge-success":s.status==="\u0645\u0644\u063A\u064A"?"badge-danger":"badge-info",l=s.dueDate?Utils.formatDate(s.dueDate):"\u2014",d=s.createdAt?Utils.formatDate(s.createdAt):"\u2014",n=s.dueDate&&new Date(s.dueDate)<new Date&&s.status!=="\u0645\u0643\u062A\u0645\u0644";return`
+                                <tr class="${n?"bg-red-50":""}" data-task-id="${s.id}" data-search="${(s.title||s.taskTitle||"").toLowerCase()} ${(s.description||s.taskDescription||"").toLowerCase()}">
                                     <td>
-                                        <div class="font-semibold text-gray-900">${Utils.escapeHTML(task.title || task.taskTitle || '')}</div>
-                                        ${task.description || task.taskDescription ? `<div class="text-xs text-gray-500 mt-1">${Utils.escapeHTML((task.description || task.taskDescription).substring(0, 50))}${(task.description || task.taskDescription).length > 50 ? '...' : ''}</div>` : ''}
+                                        <div class="font-semibold text-gray-900">${Utils.escapeHTML(s.title||s.taskTitle||"")}</div>
+                                        ${s.description||s.taskDescription?`<div class="text-xs text-gray-500 mt-1">${Utils.escapeHTML((s.description||s.taskDescription).substring(0,50))}${(s.description||s.taskDescription).length>50?"...":""}</div>`:""}
                                     </td>
-                                    <td>${Utils.escapeHTML(userName)}</td>
-                                    <td>${Utils.escapeHTML(task.taskType || task.type || '—')}</td>
-                                    <td><span class="badge ${priorityClass}">${Utils.escapeHTML(task.priority || 'متوسط')}</span></td>
-                                    <td><span class="badge ${statusClass}">${Utils.escapeHTML(task.status || 'قيد التنفيذ')}</span></td>
-                                    <td class="${isOverdue ? 'text-red-600 font-semibold' : ''}">${dueDate}</td>
-                                    <td>${createdAt}</td>
+                                    <td>${Utils.escapeHTML(a)}</td>
+                                    <td>${Utils.escapeHTML(s.taskType||s.type||"\u2014")}</td>
+                                    <td><span class="badge ${r}">${Utils.escapeHTML(s.priority||"\u0645\u062A\u0648\u0633\u0637")}</span></td>
+                                    <td><span class="badge ${i}">${Utils.escapeHTML(s.status||"\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630")}</span></td>
+                                    <td class="${n?"text-red-600 font-semibold":""}">${l}</td>
+                                    <td>${d}</td>
                                     <td>
                                         <div class="flex items-center gap-2">
-                                            <button onclick="UserTasks.viewTask('${task.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
+                                            <button onclick="UserTasks.viewTask('${s.id}')" class="btn-icon btn-icon-info" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button onclick="UserTasks.editTask('${task.id}')" class="btn-icon btn-icon-primary" title="تعديل">
+                                            <button onclick="UserTasks.editTask('${s.id}')" class="btn-icon btn-icon-primary" title="\u062A\u0639\u062F\u064A\u0644">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button onclick="UserTasks.deleteTask('${task.id}')" class="btn-icon btn-icon-danger" title="حذف">
+                                            <button onclick="UserTasks.deleteTask('${s.id}')" class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-                            `;
-        }).join('')}
+                            `}).join("")}
                     </tbody>
                 </table>
             </div>
-        `;
-        this.applyModuleI18n(container);
-    },
-
-    /**
-     * الحصول على اسم المستخدم
-     */
-    getUserName(userId) {
-        if (!userId) return 'غير محدد';
-
-        const users = this.cache.members || AppState.appData.users || [];
-        const user = users.find(u => (u.id || u.email) === userId);
-        return user ? (user.name || user.fullName || user.email || 'مستخدم') : 'غير محدد';
-    },
-
-    /**
-     * فلترة المهام
-     */
-    filterTasks(searchTerm) {
-        const normalized = searchTerm.trim().toLowerCase();
-        const rows = document.querySelectorAll('#tasks-list-container tbody tr[data-task-id]');
-
-        rows.forEach(row => {
-            if (!normalized) {
-                row.style.display = '';
-                return;
-            }
-            const searchData = row.getAttribute('data-search') || '';
-            row.style.display = searchData.includes(normalized) ? '' : 'none';
-        });
-    },
-
-    /**
-     * تحديث الإحصائيات
-     */
-    updateStats() {
-        const stats = this.getStats();
-        const totalEl = document.getElementById('total-tasks-count');
-        const completedEl = document.getElementById('completed-tasks-count');
-        const inProgressEl = document.getElementById('in-progress-tasks-count');
-        const overdueEl = document.getElementById('overdue-tasks-count');
-
-        if (totalEl) totalEl.textContent = stats.total;
-        if (completedEl) completedEl.textContent = stats.completed;
-        if (inProgressEl) inProgressEl.textContent = stats.inProgress;
-        if (overdueEl) overdueEl.textContent = stats.overdue;
-    },
-
-    /**
-     * عرض نموذج إضافة/تعديل مهمة
-     */
-    showTaskForm(task = null, options = {}) {
-        const formOptions = options || {};
-        const users = this.cache.members || AppState.appData.users || [];
-        const currentUserId = AppState.currentUser?.id || AppState.currentUser?.email || '';
-        const lockUserId = formOptions.lockUserId === true;
-        const defaultUserId = lockUserId
-            ? currentUserId
-            : (task ? (task.userId || task.assignedTo) : currentUserId);
-        const dueDateValue = task && task.dueDate
-            ? Utils.formatDateForInput(task.dueDate)
-            : (formOptions.dueDate
-                ? (typeof Utils.formatDateForInput === 'function'
-                    ? Utils.formatDateForInput(formOptions.dueDate)
-                    : String(formOptions.dueDate).slice(0, 10))
-                : '');
-
-        const userFieldHtml = lockUserId
-            ? `<input type="hidden" id="task-user-id" value="${Utils.escapeHTML(defaultUserId)}">
+        `,this.applyModuleI18n(e)}},getUserName(t){if(!t)return"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";const s=(this.cache.members||AppState.appData.users||[]).find(a=>(a.id||a.email)===t);return s?s.name||s.fullName||s.email||"\u0645\u0633\u062A\u062E\u062F\u0645":"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"},filterTasks(t){const e=t.trim().toLowerCase();document.querySelectorAll("#tasks-list-container tbody tr[data-task-id]").forEach(a=>{if(!e){a.style.display="";return}const r=a.getAttribute("data-search")||"";a.style.display=r.includes(e)?"":"none"})},updateStats(){const t=this.getStats(),e=document.getElementById("total-tasks-count"),s=document.getElementById("completed-tasks-count"),a=document.getElementById("in-progress-tasks-count"),r=document.getElementById("overdue-tasks-count");e&&(e.textContent=t.total),s&&(s.textContent=t.completed),a&&(a.textContent=t.inProgress),r&&(r.textContent=t.overdue)},showTaskForm(t=null,e={}){const s=e||{},a=this.cache.members||AppState.appData.users||[],r=AppState.currentUser?.id||AppState.currentUser?.email||"",i=s.lockUserId===!0,l=i?r:t?t.userId||t.assignedTo:r,d=t&&t.dueDate?Utils.formatDateForInput(t.dueDate):s.dueDate?typeof Utils.formatDateForInput=="function"?Utils.formatDateForInput(s.dueDate):String(s.dueDate).slice(0,10):"",n=i?`<input type="hidden" id="task-user-id" value="${Utils.escapeHTML(l)}">
                <p class="text-sm text-gray-600 sc-task-locked-user">
                    <i class="fas fa-user ml-1"></i>
-                   المستخدم: ${Utils.escapeHTML(AppState.currentUser?.name || AppState.currentUser?.fullName || AppState.currentUser?.email || 'أنت')}
-               </p>`
-            : `<div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">المستخدم *</label>
+                   \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${Utils.escapeHTML(AppState.currentUser?.name||AppState.currentUser?.fullName||AppState.currentUser?.email||"\u0623\u0646\u062A")}
+               </p>`:`<div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 *</label>
                             <select id="task-user-id" class="form-input" required>
-                                <option value="">اختر المستخدم</option>
-                                ${users.map(user => `
-                                    <option value="${user.id || user.email}" ${(user.id || user.email) === defaultUserId ? 'selected' : ''}>
-                                        ${Utils.escapeHTML(user.name || user.fullName || user.email || 'مستخدم')}
+                                <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645</option>
+                                ${a.map(p=>`
+                                    <option value="${p.id||p.email}" ${(p.id||p.email)===l?"selected":""}>
+                                        ${Utils.escapeHTML(p.name||p.fullName||p.email||"\u0645\u0633\u062A\u062E\u062F\u0645")}
                                     </option>
-                                `).join('')}
+                                `).join("")}
                             </select>
-                        </div>`;
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+                        </div>`,o=document.createElement("div");o.className="modal-overlay",o.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-tasks ml-2"></i>
-                        ${task ? 'تعديل مهمة' : 'إضافة مهمة جديدة'}
+                        ${t?"\u062A\u0639\u062F\u064A\u0644 \u0645\u0647\u0645\u0629":"\u0625\u0636\u0627\u0641\u0629 \u0645\u0647\u0645\u0629 \u062C\u062F\u064A\u062F\u0629"}
                     </h2>
-                    <button class="modal-close" title="إغلاق">
+                    <button class="modal-close" title="\u0625\u063A\u0644\u0627\u0642">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <form id="task-form">
                     <div class="modal-body space-y-4">
-                        ${userFieldHtml}
+                        ${n}
                         <div>
-                            <label for="task-title" class="block text-sm font-semibold text-gray-700 mb-2">عنوان المهمة *</label>
+                            <label for="task-title" class="block text-sm font-semibold text-gray-700 mb-2">\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629 *</label>
                             <input type="text" id="task-title" class="form-input" required 
-                                placeholder="أدخل عنوان المهمة" 
-                                value="${task ? Utils.escapeHTML(task.title || task.taskTitle || '') : ''}">
+                                placeholder="\u0623\u062F\u062E\u0644 \u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629" 
+                                value="${t?Utils.escapeHTML(t.title||t.taskTitle||""):""}">
                         </div>
                         <div>
-                            <label for="task-description" class="block text-sm font-semibold text-gray-700 mb-2">وصف المهمة</label>
+                            <label for="task-description" class="block text-sm font-semibold text-gray-700 mb-2">\u0648\u0635\u0641 \u0627\u0644\u0645\u0647\u0645\u0629</label>
                             <textarea id="task-description" class="form-input" rows="4" 
-                                placeholder="أدخل وصف المهمة">${task ? Utils.escapeHTML(task.description || task.taskDescription || '') : ''}</textarea>
+                                placeholder="\u0623\u062F\u062E\u0644 \u0648\u0635\u0641 \u0627\u0644\u0645\u0647\u0645\u0629">${t?Utils.escapeHTML(t.description||t.taskDescription||""):""}</textarea>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="task-type" class="block text-sm font-semibold text-gray-700 mb-2">نوع المهمة</label>
+                                <label for="task-type" class="block text-sm font-semibold text-gray-700 mb-2">\u0646\u0648\u0639 \u0627\u0644\u0645\u0647\u0645\u0629</label>
                                 <select id="task-type" class="form-input">
-                                    <option value="تفتيش" ${task && (task.taskType || task.type) === 'تفتيش' ? 'selected' : ''}>تفتيش</option>
-                                    <option value="تدريب" ${task && (task.taskType || task.type) === 'تدريب' ? 'selected' : ''}>تدريب</option>
-                                    <option value="إجراء تصحيحي" ${task && (task.taskType || task.type) === 'إجراء تصحيحي' ? 'selected' : ''}>إجراء تصحيحي</option>
-                                    <option value="مراجعة" ${task && (task.taskType || task.type) === 'مراجعة' ? 'selected' : ''}>مراجعة</option>
-                                    <option value="أخرى" ${task && (task.taskType || task.type) === 'أخرى' ? 'selected' : ''}>أخرى</option>
+                                    <option value="\u062A\u0641\u062A\u064A\u0634" ${t&&(t.taskType||t.type)==="\u062A\u0641\u062A\u064A\u0634"?"selected":""}>\u062A\u0641\u062A\u064A\u0634</option>
+                                    <option value="\u062A\u062F\u0631\u064A\u0628" ${t&&(t.taskType||t.type)==="\u062A\u062F\u0631\u064A\u0628"?"selected":""}>\u062A\u062F\u0631\u064A\u0628</option>
+                                    <option value="\u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A" ${t&&(t.taskType||t.type)==="\u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A"?"selected":""}>\u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A</option>
+                                    <option value="\u0645\u0631\u0627\u062C\u0639\u0629" ${t&&(t.taskType||t.type)==="\u0645\u0631\u0627\u062C\u0639\u0629"?"selected":""}>\u0645\u0631\u0627\u062C\u0639\u0629</option>
+                                    <option value="\u0623\u062E\u0631\u0649" ${t&&(t.taskType||t.type)==="\u0623\u062E\u0631\u0649"?"selected":""}>\u0623\u062E\u0631\u0649</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="task-priority" class="block text-sm font-semibold text-gray-700 mb-2">الأولوية</label>
+                                <label for="task-priority" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629</label>
                                 <select id="task-priority" class="form-input">
-                                    <option value="منخفض" ${task && task.priority === 'منخفض' ? 'selected' : ''}>منخفض</option>
-                                    <option value="متوسط" ${!task || task.priority === 'متوسط' ? 'selected' : ''}>متوسط</option>
-                                    <option value="عالي" ${task && task.priority === 'عالي' ? 'selected' : ''}>عالي</option>
+                                    <option value="\u0645\u0646\u062E\u0641\u0636" ${t&&t.priority==="\u0645\u0646\u062E\u0641\u0636"?"selected":""}>\u0645\u0646\u062E\u0641\u0636</option>
+                                    <option value="\u0645\u062A\u0648\u0633\u0637" ${!t||t.priority==="\u0645\u062A\u0648\u0633\u0637"?"selected":""}>\u0645\u062A\u0648\u0633\u0637</option>
+                                    <option value="\u0639\u0627\u0644\u064A" ${t&&t.priority==="\u0639\u0627\u0644\u064A"?"selected":""}>\u0639\u0627\u0644\u064A</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الاستحقاق</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642</label>
                                 <input type="date" id="task-due-date" class="form-input" 
-                                    value="${dueDateValue}">
+                                    value="${d}">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u062D\u0627\u0644\u0629</label>
                                 <select id="task-status" class="form-input">
-                                    <option value="قيد التنفيذ" ${!task || task.status === 'قيد التنفيذ' ? 'selected' : ''}>قيد التنفيذ</option>
-                                    <option value="مكتمل" ${task && task.status === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
-                                    <option value="ملغي" ${task && task.status === 'ملغي' ? 'selected' : ''}>ملغي</option>
+                                    <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630" ${!t||t.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"?"selected":""}>\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630</option>
+                                    <option value="\u0645\u0643\u062A\u0645\u0644" ${t&&t.status==="\u0645\u0643\u062A\u0645\u0644"?"selected":""}>\u0645\u0643\u062A\u0645\u0644</option>
+                                    <option value="\u0645\u0644\u063A\u064A" ${t&&t.status==="\u0645\u0644\u063A\u064A"?"selected":""}>\u0645\u0644\u063A\u064A</option>
                                 </select>
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظات</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0644\u0627\u062D\u0638\u0627\u062A</label>
                             <textarea id="task-notes" class="form-input" rows="3" 
-                                placeholder="ملاحظات إضافية">${task ? Utils.escapeHTML(task.notes || '') : ''}</textarea>
+                                placeholder="\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629">${t?Utils.escapeHTML(t.notes||""):""}</textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn-secondary" data-action="close">إلغاء</button>
+                        <button type="button" class="btn-secondary" data-action="close">\u0625\u0644\u063A\u0627\u0621</button>
                         <button type="submit" class="btn-primary">
                             <i class="fas fa-save ml-2"></i>
-                            ${task ? 'تحديث المهمة' : 'حفظ المهمة'}
+                            ${t?"\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629":"\u062D\u0641\u0638 \u0627\u0644\u0645\u0647\u0645\u0629"}
                         </button>
                     </div>
                 </form>
             </div>
-        `;
-        this.applyModuleI18n(modal);
-
-        document.body.appendChild(modal);
-        const close = () => modal.remove();
-        modal.querySelector('.modal-close')?.addEventListener('click', close);
-        modal.querySelector('[data-action="close"]')?.addEventListener('click', close);
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) close();
-        });
-
-        // معالج الحفظ
-        modal.querySelector('#task-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await this.saveTask(task, modal, formOptions);
-        });
-    },
-
-    /**
-     * حفظ المهمة
-     */
-    async saveTask(existingTask, modal, formOptions = {}) {
-        try {
-            const taskData = {
-                userId: document.getElementById('task-user-id').value,
-                title: document.getElementById('task-title').value.trim(),
-                description: document.getElementById('task-description').value.trim(),
-                taskType: document.getElementById('task-type').value,
-                priority: document.getElementById('task-priority').value,
-                dueDate: document.getElementById('task-due-date').value || null,
-                status: document.getElementById('task-status').value,
-                notes: document.getElementById('task-notes').value.trim(),
-                assignedBy: AppState.currentUser?.id || AppState.currentUser?.email || AppState.currentUser?.name || '',
-                createdAt: existingTask?.createdAt || new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            };
-
-            if (!taskData.userId || !taskData.title) {
-                Notification.warning('يرجى استكمال الحقول الإلزامية');
-                return;
-            }
-
-            Loading.show();
-            this.ensureData();
-
-            let savedTaskId = existingTask ? existingTask.id : Utils.generateId('TASK');
-
-            if (existingTask) {
-                // تحديث محلي (optimistic)
-                const index = AppState.appData.userTasks.findIndex(t => t.id === existingTask.id);
-                if (index !== -1) {
-                    AppState.appData.userTasks[index] = {
-                        ...existingTask,
-                        ...taskData,
-                        id: existingTask.id
-                    };
-                }
-            } else {
-                // إضافة جديدة محلياً (optimistic)
-                AppState.appData.userTasks.push({ id: savedTaskId, ...taskData });
-            }
-
-            // حفظ البيانات محلياً
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            } else {
-                Utils.safeError('❌ DataManager غير متاح - فشل حفظ المهمة');
-                throw new Error('نظام إدارة البيانات غير جاهز');
-            }
-
-            // ✅ FIX جذري: استخدام الدوال الذرّية المخصّصة (addUserTask/updateUserTask)
-            // بدلاً من autoSave('UserTasks', الكامل) الذي يعيد كتابة الورقة بالكامل.
-            // إعادة الكتابة الكاملة خطِرة: في عرض غير المدير تكون مصفوفة المهام
-            // مفلترة (مهام المستخدم فقط) → الحفظ الجماعي كان سيمسح مهام بقية
-            // المستخدمين. الدوال الذرّية تكتب صفّاً واحداً فقط (appendToSheet/
-            // updateSingleRowInSheet) — آمنة ولا تمسّ صفوف الآخرين.
-            if (AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.enabled
-                && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                try {
-                    if (existingTask) {
-                        const vr = await GoogleIntegration.sendRequest({
-                            action: 'updateUserTask',
-                            data: { taskId: savedTaskId, updateData: { ...taskData } }
-                        });
-                        if (vr && vr.success === false) throw new Error(vr.message || 'فشل تحديث المهمة في الخادم');
-                    } else {
-                        const vr = await GoogleIntegration.sendRequest({
-                            action: 'addUserTask',
-                            data: { id: savedTaskId, ...taskData }
-                        });
-                        if (vr && vr.success === false) throw new Error(vr.message || 'فشل إضافة المهمة في الخادم');
-                    }
-                } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في حفظ المهمة في Google Sheets:', error);
-                }
-            }
-
-            Notification.success(existingTask ? 'تم تحديث المهمة بنجاح' : 'تم إضافة المهمة بنجاح');
-            modal.remove();
-
-            const savedTask = existingTask
-                ? AppState.appData.userTasks.find((t) => t.id === savedTaskId)
-                : { id: savedTaskId, ...taskData };
-
-            if (typeof formOptions.onSaved === 'function') {
-                formOptions.onSaved(savedTask);
-            }
-
-            if (!formOptions.skipModuleReload) {
-                await this.loadTasks();
-                this.updateStats();
-            }
-
-        } catch (error) {
-            Utils.safeError('خطأ في حفظ المهمة:', error);
-            Notification.error('فشل حفظ المهمة: ' + error.message);
-        } finally {
-            Loading.hide();
-        }
-    },
-
-    /**
-     * عرض تفاصيل المهمة
-     */
-    viewTask(taskId) {
-        this.ensureData();
-        const task = AppState.appData.userTasks.find(t => t.id === taskId);
-        if (!task) {
-            Notification.error('المهمة غير موجودة');
-            return;
-        }
-
-        const userName = this.getUserName(task.userId || task.assignedTo);
-        const priorityClass = task.priority === 'عالي' ? 'badge-danger' :
-            task.priority === 'منخفض' ? 'badge-success' : 'badge-warning';
-        const statusClass = task.status === 'مكتمل' ? 'badge-success' :
-            task.status === 'ملغي' ? 'badge-danger' : 'badge-info';
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        `,this.applyModuleI18n(o),document.body.appendChild(o);const c=()=>o.remove();o.querySelector(".modal-close")?.addEventListener("click",c),o.querySelector('[data-action="close"]')?.addEventListener("click",c),o.addEventListener("click",p=>{p.target===o&&c()}),o.querySelector("#task-form")?.addEventListener("submit",async p=>{p.preventDefault(),await this.saveTask(t,o,s)})},async saveTask(t,e,s={}){try{const a={userId:document.getElementById("task-user-id").value,title:document.getElementById("task-title").value.trim(),description:document.getElementById("task-description").value.trim(),taskType:document.getElementById("task-type").value,priority:document.getElementById("task-priority").value,dueDate:document.getElementById("task-due-date").value||null,status:document.getElementById("task-status").value,notes:document.getElementById("task-notes").value.trim(),assignedBy:AppState.currentUser?.id||AppState.currentUser?.email||AppState.currentUser?.name||"",createdAt:t?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};if(!a.userId||!a.title){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u0643\u0645\u0627\u0644 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0625\u0644\u0632\u0627\u0645\u064A\u0629");return}Loading.show(),this.ensureData();let r=t?t.id:Utils.generateId("TASK");if(t){const l=AppState.appData.userTasks.findIndex(d=>d.id===t.id);l!==-1&&(AppState.appData.userTasks[l]={...t,...a,id:t.id})}else AppState.appData.userTasks.push({id:r,...a});if(typeof window.DataManager<"u"&&window.DataManager.save)window.DataManager.save();else throw Utils.safeError("\u274C DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u0647\u0645\u0629"),new Error("\u0646\u0638\u0627\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u062C\u0627\u0647\u0632");if(AppState.googleConfig&&AppState.googleConfig.appsScript&&AppState.googleConfig.appsScript.enabled&&typeof GoogleIntegration<"u"&&GoogleIntegration.sendRequest)try{if(t){const l=await GoogleIntegration.sendRequest({action:"updateUserTask",data:{taskId:r,updateData:{...a}}});if(l&&l.success===!1)throw new Error(l.message||"\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645")}else{const l=await GoogleIntegration.sendRequest({action:"addUserTask",data:{id:r,...a}});if(l&&l.success===!1)throw new Error(l.message||"\u0641\u0634\u0644 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0647\u0645\u0629 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645")}}catch(l){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0645\u0647\u0645\u0629 \u0641\u064A Google Sheets:",l)}Notification.success(t?"\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0647\u0645\u0629 \u0628\u0646\u062C\u0627\u062D":"\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0647\u0645\u0629 \u0628\u0646\u062C\u0627\u062D"),e.remove();const i=t?AppState.appData.userTasks.find(l=>l.id===r):{id:r,...a};typeof s.onSaved=="function"&&s.onSaved(i),s.skipModuleReload||(await this.loadTasks(),this.updateStats())}catch(a){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0645\u0647\u0645\u0629:",a),Notification.error("\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u0647\u0645\u0629: "+a.message)}finally{Loading.hide()}},viewTask(t){this.ensureData();const e=AppState.appData.userTasks.find(d=>d.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const s=this.getUserName(e.userId||e.assignedTo),a=e.priority==="\u0639\u0627\u0644\u064A"?"badge-danger":e.priority==="\u0645\u0646\u062E\u0641\u0636"?"badge-success":"badge-warning",r=e.status==="\u0645\u0643\u062A\u0645\u0644"?"badge-success":e.status==="\u0645\u0644\u063A\u064A"?"badge-danger":"badge-info",i=document.createElement("div");i.className="modal-overlay",i.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-eye ml-2"></i>
-                        تفاصيل المهمة
+                        \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0647\u0645\u0629
                     </h2>
-                    <button class="modal-close" title="إغلاق">
+                    <button class="modal-close" title="\u0625\u063A\u0644\u0627\u0642">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body" style="padding: 1.5rem;">
-                    <!-- معلومات أساسية -->
+                    <!-- \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0623\u0633\u0627\u0633\u064A\u0629 -->
                     <div style="margin-bottom: 1.5rem;">
                         <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
                             <i class="fas fa-info-circle ml-2"></i>
-                            المعلومات الأساسية
+                            \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629
                         </h3>
                         <div class="grid grid-cols-2 gap-4">
                             <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">المستخدم</label>
-                                <p class="text-gray-900" style="color: var(--text-primary); font-size: 0.9375rem; margin: 0;">${Utils.escapeHTML(userName)}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645</label>
+                                <p class="text-gray-900" style="color: var(--text-primary); font-size: 0.9375rem; margin: 0;">${Utils.escapeHTML(s)}</p>
                             </div>
                             <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">عنوان المهمة</label>
-                                <p class="text-gray-900 font-semibold" style="color: var(--text-primary); font-size: 0.9375rem; margin: 0;">${Utils.escapeHTML(task.title || task.taskTitle || '—')}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629</label>
+                                <p class="text-gray-900 font-semibold" style="color: var(--text-primary); font-size: 0.9375rem; margin: 0;">${Utils.escapeHTML(e.title||e.taskTitle||"\u2014")}</p>
                             </div>
                             <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">نوع المهمة</label>
-                                <p class="text-gray-900" style="color: var(--text-primary); font-size: 0.9375rem; margin: 0;">${Utils.escapeHTML(task.taskType || task.type || '—')}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">\u0646\u0648\u0639 \u0627\u0644\u0645\u0647\u0645\u0629</label>
+                                <p class="text-gray-900" style="color: var(--text-primary); font-size: 0.9375rem; margin: 0;">${Utils.escapeHTML(e.taskType||e.type||"\u2014")}</p>
                             </div>
                             <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">الأولوية</label>
-                                <p style="margin: 0;"><span class="badge ${priorityClass}">${Utils.escapeHTML(task.priority || 'متوسط')}</span></p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629</label>
+                                <p style="margin: 0;"><span class="badge ${a}">${Utils.escapeHTML(e.priority||"\u0645\u062A\u0648\u0633\u0637")}</span></p>
                             </div>
                             <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">الحالة</label>
-                                <p style="margin: 0;"><span class="badge ${statusClass}">${Utils.escapeHTML(task.status || 'قيد التنفيذ')}</span></p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">\u0627\u0644\u062D\u0627\u0644\u0629</label>
+                                <p style="margin: 0;"><span class="badge ${r}">${Utils.escapeHTML(e.status||"\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630")}</span></p>
                             </div>
                             <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">تاريخ الاستحقاق</label>
-                                <p class="text-gray-900" style="color: var(--text-primary); font-size: 0.9375rem; margin: 0;">${task.dueDate ? Utils.formatDate(task.dueDate) : '—'}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642</label>
+                                <p class="text-gray-900" style="color: var(--text-primary); font-size: 0.9375rem; margin: 0;">${e.dueDate?Utils.formatDate(e.dueDate):"\u2014"}</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- معلومات التاريخ -->
+                    <!-- \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u062A\u0627\u0631\u064A\u062E -->
                     <div style="margin-bottom: 1.5rem;">
                         <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
                             <i class="fas fa-calendar-alt ml-2"></i>
-                            معلومات التاريخ
+                            \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u062A\u0627\u0631\u064A\u062E
                         </h3>
                         <div class="grid grid-cols-2 gap-4">
                             <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">تاريخ الإنشاء</label>
-                                <p class="text-gray-900" style="color: var(--text-primary); font-size: 0.9375rem; margin: 0;">${task.createdAt ? Utils.formatDate(task.createdAt) : '—'}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621</label>
+                                <p class="text-gray-900" style="color: var(--text-primary); font-size: 0.9375rem; margin: 0;">${e.createdAt?Utils.formatDate(e.createdAt):"\u2014"}</p>
                             </div>
                             <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">آخر تحديث</label>
-                                <p class="text-gray-900" style="color: var(--text-primary); font-size: 0.9375rem; margin: 0;">${task.updatedAt ? Utils.formatDate(task.updatedAt) : '—'}</p>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2" style="color: var(--text-secondary);">\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B</label>
+                                <p class="text-gray-900" style="color: var(--text-primary); font-size: 0.9375rem; margin: 0;">${e.updatedAt?Utils.formatDate(e.updatedAt):"\u2014"}</p>
                             </div>
                         </div>
                     </div>
 
-                    ${task.description || task.taskDescription ? `
-                        <!-- وصف المهمة -->
+                    ${e.description||e.taskDescription?`
+                        <!-- \u0648\u0635\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 -->
                         <div style="margin-bottom: 1.5rem;">
                             <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
                                 <i class="fas fa-align-right ml-2"></i>
-                                وصف المهمة
+                                \u0648\u0635\u0641 \u0627\u0644\u0645\u0647\u0645\u0629
                             </h3>
                             <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); min-height: 60px;">
-                                <p class="text-gray-900 whitespace-pre-wrap" style="color: var(--text-primary); font-size: 0.9375rem; line-height: 1.6; margin: 0;">${Utils.escapeHTML(task.description || task.taskDescription)}</p>
+                                <p class="text-gray-900 whitespace-pre-wrap" style="color: var(--text-primary); font-size: 0.9375rem; line-height: 1.6; margin: 0;">${Utils.escapeHTML(e.description||e.taskDescription)}</p>
                             </div>
                         </div>
-                    ` : ''}
-                    ${task.notes ? `
-                        <!-- ملاحظات -->
+                    `:""}
+                    ${e.notes?`
+                        <!-- \u0645\u0644\u0627\u062D\u0638\u0627\u062A -->
                         <div style="margin-bottom: 1.5rem;">
                             <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
                                 <i class="fas fa-sticky-note ml-2"></i>
-                                ملاحظات
+                                \u0645\u0644\u0627\u062D\u0638\u0627\u062A
                             </h3>
                             <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); min-height: 60px;">
-                                <p class="text-gray-900 whitespace-pre-wrap" style="color: var(--text-primary); font-size: 0.9375rem; line-height: 1.6; margin: 0;">${Utils.escapeHTML(task.notes)}</p>
+                                <p class="text-gray-900 whitespace-pre-wrap" style="color: var(--text-primary); font-size: 0.9375rem; line-height: 1.6; margin: 0;">${Utils.escapeHTML(e.notes)}</p>
                             </div>
                         </div>
-                    ` : ''}
+                    `:""}
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" data-action="close">إغلاق</button>
-                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('user-tasks') : ''}
-                    <button type="button" class="btn-primary" onclick="UserTasks.editTask('${taskId}'); this.closest('.modal-overlay').remove();">
+                    <button type="button" class="btn-secondary" data-action="close">\u0625\u063A\u0644\u0627\u0642</button>
+                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("user-tasks"):""}
+                    <button type="button" class="btn-primary" onclick="UserTasks.editTask('${t}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-edit ml-2"></i>
-                        تعديل
+                        \u062A\u0639\u062F\u064A\u0644
                     </button>
                 </div>
             </div>
-        `;
+        `,document.body.appendChild(i),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(i,{moduleKey:"user-tasks",record:e,recordId:e.id||""});const l=()=>i.remove();i.querySelector(".modal-close")?.addEventListener("click",l),i.querySelector('[data-action="close"]')?.addEventListener("click",l),i.addEventListener("click",d=>{d.target===i&&l()})},editTask(t){this.ensureData();const e=AppState.appData.userTasks.find(s=>s.id===t);if(!e){Notification.error("\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}this.showTaskForm(e)},async deleteTask(t){if(confirm(`\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0645\u0647\u0645\u0629\u061F
 
-        document.body.appendChild(modal);
-        if (typeof EmailDispatch !== 'undefined') {
-            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'user-tasks', record: task, recordId: task.id || '' });
-        }
-        const close = () => modal.remove();
-        modal.querySelector('.modal-close')?.addEventListener('click', close);
-        modal.querySelector('[data-action="close"]')?.addEventListener('click', close);
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) close();
-        });
-    },
-
-    /**
-     * تعديل المهمة
-     */
-    editTask(taskId) {
-        this.ensureData();
-        const task = AppState.appData.userTasks.find(t => t.id === taskId);
-        if (!task) {
-            Notification.error('المهمة غير موجودة');
-            return;
-        }
-        this.showTaskForm(task);
-    },
-
-    /**
-     * حذف المهمة
-     */
-    async deleteTask(taskId) {
-        if (!confirm('هل أنت متأكد من حذف هذه المهمة؟\n\nهذه العملية لا يمكن التراجع عنها.')) {
-            return;
-        }
-
-        try {
-            Loading.show();
-            this.ensureData();
-
-            const index = AppState.appData.userTasks.findIndex(t => t.id === taskId);
-            if (index !== -1) {
-                AppState.appData.userTasks.splice(index, 1);
-                // حفظ محلياً
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    window.DataManager.save();
-                } else {
-                    Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-                }
-
-                // ✅ FIX جذري: استخدام deleteUserTask الذرّي (حذف صفّ واحد بالـ id)
-                // بدل autoSave('UserTasks', الكامل) الذي يعيد كتابة الورقة كاملةً.
-                if (AppState.googleConfig?.appsScript?.enabled
-                    && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                    try {
-                        const vr = await GoogleIntegration.sendRequest({
-                            action: 'deleteUserTask',
-                            data: { taskId: taskId }
-                        });
-                        if (vr && vr.success === false) throw new Error(vr.message || 'فشل حذف المهمة');
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في حذف المهمة من Google Sheets:', error);
-                    }
-                }
-
-                Notification.success('تم حذف المهمة بنجاح');
-                await this.loadTasks();
-                this.updateStats();
-            } else {
-                Notification.error('المهمة غير موجودة');
-            }
-        } catch (error) {
-            Utils.safeError('خطأ في حذف المهمة:', error);
-            Notification.error('فشل حذف المهمة: ' + error.message);
-        } finally {
-            Loading.hide();
-        }
-    },
-
-    /**
-     * تصدير إلى PDF
-     */
-    async exportToPDF() {
-        try {
-            Loading.show();
-            this.ensureData();
-            const tasks = AppState.appData.userTasks || [];
-
-            if (tasks.length === 0) {
-                Notification.warning('لا توجد مهام للتصدير');
-                Loading.hide();
-                return;
-            }
-
-            const stats = this.getStats();
-            const rowsHtml = tasks.map((task, index) => {
-                const userName = this.getUserName(task.userId || task.assignedTo);
-                return `
+\u0647\u0630\u0647 \u0627\u0644\u0639\u0645\u0644\u064A\u0629 \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647\u0627.`))try{Loading.show(),this.ensureData();const e=AppState.appData.userTasks.findIndex(s=>s.id===t);if(e!==-1){if(AppState.appData.userTasks.splice(e,1),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig?.appsScript?.enabled&&typeof GoogleIntegration<"u"&&GoogleIntegration.sendRequest)try{const s=await GoogleIntegration.sendRequest({action:"deleteUserTask",data:{taskId:t}});if(s&&s.success===!1)throw new Error(s.message||"\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629")}catch(s){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u0645\u0646 Google Sheets:",s)}Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629 \u0628\u0646\u062C\u0627\u062D"),await this.loadTasks(),this.updateStats()}else Notification.error("\u0627\u0644\u0645\u0647\u0645\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629")}catch(e){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629:",e),Notification.error("\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u0647\u0645\u0629: "+e.message)}finally{Loading.hide()}},async exportToPDF(){try{Loading.show(),this.ensureData();const t=AppState.appData.userTasks||[];if(t.length===0){Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0647\u0627\u0645 \u0644\u0644\u062A\u0635\u062F\u064A\u0631"),Loading.hide();return}const e=this.getStats(),s=t.map((o,c)=>{const p=this.getUserName(o.userId||o.assignedTo);return`
                     <tr>
-                        <td>${index + 1}</td>
-                        <td>${Utils.escapeHTML(task.title || task.taskTitle || '')}</td>
-                        <td>${Utils.escapeHTML(userName)}</td>
-                        <td>${Utils.escapeHTML(task.taskType || task.type || '—')}</td>
-                        <td>${Utils.escapeHTML(task.priority || 'متوسط')}</td>
-                        <td>${Utils.escapeHTML(task.status || 'قيد التنفيذ')}</td>
-                        <td>${task.dueDate ? Utils.formatDate(task.dueDate) : '—'}</td>
-                        <td>${task.createdAt ? Utils.formatDate(task.createdAt) : '—'}</td>
+                        <td>${c+1}</td>
+                        <td>${Utils.escapeHTML(o.title||o.taskTitle||"")}</td>
+                        <td>${Utils.escapeHTML(p)}</td>
+                        <td>${Utils.escapeHTML(o.taskType||o.type||"\u2014")}</td>
+                        <td>${Utils.escapeHTML(o.priority||"\u0645\u062A\u0648\u0633\u0637")}</td>
+                        <td>${Utils.escapeHTML(o.status||"\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630")}</td>
+                        <td>${o.dueDate?Utils.formatDate(o.dueDate):"\u2014"}</td>
+                        <td>${o.createdAt?Utils.formatDate(o.createdAt):"\u2014"}</td>
                     </tr>
-                `;
-            }).join('');
-
-            const content = `
+                `}).join(""),a=`
                 <div style="margin-bottom: 24px;">
-                    <h2 style="font-size: 20px; margin-bottom: 12px;">تقرير مهام المستخدمين</h2>
+                    <h2 style="font-size: 20px; margin-bottom: 12px;">\u062A\u0642\u0631\u064A\u0631 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646</h2>
                     <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
                         <div style="flex: 1 1 200px; padding: 14px; border-radius: 10px; background: #EFF6FF; border: 1px solid #BFDBFE;">
-                            <div style="font-size: 12px; color: #1D4ED8;">إجمالي المهام</div>
-                            <div style="font-size: 26px; font-weight: 700;">${stats.total}</div>
+                            <div style="font-size: 12px; color: #1D4ED8;">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0647\u0627\u0645</div>
+                            <div style="font-size: 26px; font-weight: 700;">${e.total}</div>
                         </div>
                         <div style="flex: 1 1 200px; padding: 14px; border-radius: 10px; background: #ECFDF5; border: 1px solid #BBF7D0;">
-                            <div style="font-size: 12px; color: #047857;">مهام مكتملة</div>
-                            <div style="font-size: 26px; font-weight: 700;">${stats.completed}</div>
+                            <div style="font-size: 12px; color: #047857;">\u0645\u0647\u0627\u0645 \u0645\u0643\u062A\u0645\u0644\u0629</div>
+                            <div style="font-size: 26px; font-weight: 700;">${e.completed}</div>
                         </div>
                         <div style="flex: 1 1 200px; padding: 14px; border-radius: 10px; background: #FEF3C7; border: 1px solid #FDE68A;">
-                            <div style="font-size: 12px; color: #92400E;">قيد التنفيذ</div>
-                            <div style="font-size: 26px; font-weight: 700;">${stats.inProgress}</div>
+                            <div style="font-size: 12px; color: #92400E;">\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630</div>
+                            <div style="font-size: 26px; font-weight: 700;">${e.inProgress}</div>
                         </div>
                         <div style="flex: 1 1 200px; padding: 14px; border-radius: 10px; background: #FEE2E2; border: 1px solid #FECACA;">
-                            <div style="font-size: 12px; color: #991B1B;">مهام متأخرة</div>
-                            <div style="font-size: 26px; font-weight: 700;">${stats.overdue}</div>
+                            <div style="font-size: 12px; color: #991B1B;">\u0645\u0647\u0627\u0645 \u0645\u062A\u0623\u062E\u0631\u0629</div>
+                            <div style="font-size: 26px; font-weight: 700;">${e.overdue}</div>
                         </div>
                     </div>
                 </div>
@@ -2255,136 +985,17 @@ const UserTasks = {
                     <thead>
                         <tr style="background: #1E3A8A; color: #fff;">
                             <th style="padding: 10px; border: 1px solid #E5E7EB;">#</th>
-                            <th style="padding: 10px; border: 1px solid #E5E7EB;">عنوان المهمة</th>
-                            <th style="padding: 10px; border: 1px solid #E5E7EB;">المستخدم</th>
-                            <th style="padding: 10px; border: 1px solid #E5E7EB;">النوع</th>
-                            <th style="padding: 10px; border: 1px solid #E5E7EB;">الأولوية</th>
-                            <th style="padding: 10px; border: 1px solid #E5E7EB;">الحالة</th>
-                            <th style="padding: 10px; border: 1px solid #E5E7EB;">تاريخ الاستحقاق</th>
-                            <th style="padding: 10px; border: 1px solid #E5E7EB;">تاريخ الإنشاء</th>
+                            <th style="padding: 10px; border: 1px solid #E5E7EB;">\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629</th>
+                            <th style="padding: 10px; border: 1px solid #E5E7EB;">\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645</th>
+                            <th style="padding: 10px; border: 1px solid #E5E7EB;">\u0627\u0644\u0646\u0648\u0639</th>
+                            <th style="padding: 10px; border: 1px solid #E5E7EB;">\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629</th>
+                            <th style="padding: 10px; border: 1px solid #E5E7EB;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                            <th style="padding: 10px; border: 1px solid #E5E7EB;">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642</th>
+                            <th style="padding: 10px; border: 1px solid #E5E7EB;">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${rowsHtml}
+                        ${s}
                     </tbody>
                 </table>
-            `;
-
-            const formCode = `USER-TASKS-${new Date().toISOString().slice(0, 10)}`;
-            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(formCode, 'تقرير مهام المستخدمين', content, false, true, { source: 'UserTasks' }, new Date().toISOString(), new Date().toISOString())
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>@page { size: A4 portrait; margin: 1cm; } @media print { @page { size: A4 portrait; margin: 1cm; } body { padding: 0; } }</style><title>تقرير مهام المستخدمين</title></head><body>${content}</body></html>`;
-
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const reportWindow = window.open(url, '_blank');
-            if (reportWindow) {
-                reportWindow.onload = () => {
-                    try {
-                        reportWindow.print();
-                        setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في طباعة التقرير:', error);
-                    }
-                };
-            }
-            Loading.hide();
-            Notification.success('تم إنشاء تقرير PDF بنجاح');
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('فشل تصدير PDF: ' + error.message);
-        }
-    },
-
-    /**
-     * تصدير إلى Excel
-     */
-    exportToExcel() {
-        try {
-            Loading.show();
-            if (typeof XLSX === 'undefined') {
-                Loading.hide();
-                Notification.error('مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة.');
-                return;
-            }
-
-            this.ensureData();
-            const tasks = AppState.appData.userTasks || [];
-
-            if (tasks.length === 0) {
-                Notification.warning('لا توجد مهام للتصدير');
-                Loading.hide();
-                return;
-            }
-
-            const data = tasks.map((task, index) => {
-                const userName = this.getUserName(task.userId || task.assignedTo);
-                return {
-                    '#': index + 1,
-                    'عنوان المهمة': task.title || task.taskTitle || '',
-                    'المستخدم': userName,
-                    'نوع المهمة': task.taskType || task.type || '',
-                    'الأولوية': task.priority || 'متوسط',
-                    'الحالة': task.status || 'قيد التنفيذ',
-                    'تاريخ الاستحقاق': task.dueDate ? Utils.formatDate(task.dueDate) : '',
-                    'تاريخ الإنشاء': task.createdAt ? Utils.formatDate(task.createdAt) : '',
-                    'آخر تحديث': task.updatedAt ? Utils.formatDate(task.updatedAt) : '',
-                    'الوصف': task.description || task.taskDescription || '',
-                    'ملاحظات': task.notes || ''
-                };
-            });
-
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(data);
-            ws['!cols'] = [
-                { wch: 5 },
-                { wch: 30 },
-                { wch: 20 },
-                { wch: 15 },
-                { wch: 12 },
-                { wch: 15 },
-                { wch: 15 },
-                { wch: 15 },
-                { wch: 15 },
-                { wch: 40 },
-                { wch: 40 }
-            ];
-            XLSX.utils.book_append_sheet(wb, ws, 'مهام المستخدمين');
-            const fileName = `مهام_المستخدمين_${new Date().toISOString().slice(0, 10)}.xlsx`;
-            XLSX.writeFile(wb, fileName);
-            Loading.hide();
-            Notification.success('تم تصدير المهام بنجاح');
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في تصدير Excel:', error);
-            Notification.error('فشل تصدير Excel: ' + error.message);
-        }
-    }
-};
-
-// ===== Export module to global scope =====
-// تصدير الموديول إلى window فوراً لضمان توافره
-(function () {
-    'use strict';
-    try {
-        if (typeof window !== 'undefined' && typeof UserTasks !== 'undefined') {
-            window.UserTasks = UserTasks;
-            
-            // إشعار عند تحميل الموديول بنجاح
-            if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
-                Utils.safeLog('✅ UserTasks module loaded and available on window.UserTasks');
-            }
-        }
-    } catch (error) {
-        console.error('❌ خطأ في تصدير UserTasks:', error);
-        // محاولة التصدير مرة أخرى حتى في حالة الخطأ
-        if (typeof window !== 'undefined' && typeof UserTasks !== 'undefined') {
-            try {
-                window.UserTasks = UserTasks;
-            } catch (e) {
-                console.error('❌ فشل تصدير UserTasks:', e);
-            }
-        }
-    }
-})();
+            `,r=`USER-TASKS-${new Date().toISOString().slice(0,10)}`,i=typeof FormHeader<"u"&&typeof FormHeader.generatePDFHTML=="function"?FormHeader.generatePDFHTML(r,"\u062A\u0642\u0631\u064A\u0631 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646",a,!1,!0,{source:"UserTasks"},new Date().toISOString(),new Date().toISOString()):`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>@page { size: A4 portrait; margin: 1cm; } @media print { @page { size: A4 portrait; margin: 1cm; } body { padding: 0; } }</style><title>\u062A\u0642\u0631\u064A\u0631 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646</title></head><body>${a}</body></html>`,l=new Blob([i],{type:"text/html;charset=utf-8"}),d=URL.createObjectURL(l),n=window.open(d,"_blank");n&&(n.onload=()=>{try{n.print(),setTimeout(()=>URL.revokeObjectURL(d),1e3)}catch(o){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u062A\u0642\u0631\u064A\u0631:",o)}}),Loading.hide(),Notification.success("\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u062A\u0642\u0631\u064A\u0631 PDF \u0628\u0646\u062C\u0627\u062D")}catch(t){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF:",t),Notification.error("\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 PDF: "+t.message)}},exportToExcel(){try{if(Loading.show(),typeof XLSX>"u"){Loading.hide(),Notification.error("\u0645\u0643\u062A\u0628\u0629 SheetJS \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629.");return}this.ensureData();const t=AppState.appData.userTasks||[];if(t.length===0){Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0647\u0627\u0645 \u0644\u0644\u062A\u0635\u062F\u064A\u0631"),Loading.hide();return}const e=t.map((i,l)=>{const d=this.getUserName(i.userId||i.assignedTo);return{"#":l+1,"\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0645\u0647\u0645\u0629":i.title||i.taskTitle||"",\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645:d,"\u0646\u0648\u0639 \u0627\u0644\u0645\u0647\u0645\u0629":i.taskType||i.type||"",\u0627\u0644\u0623\u0648\u0644\u0648\u064A\u0629:i.priority||"\u0645\u062A\u0648\u0633\u0637",\u0627\u0644\u062D\u0627\u0644\u0629:i.status||"\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642":i.dueDate?Utils.formatDate(i.dueDate):"","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621":i.createdAt?Utils.formatDate(i.createdAt):"","\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B":i.updatedAt?Utils.formatDate(i.updatedAt):"",\u0627\u0644\u0648\u0635\u0641:i.description||i.taskDescription||"",\u0645\u0644\u0627\u062D\u0638\u0627\u062A:i.notes||""}}),s=XLSX.utils.book_new(),a=XLSX.utils.json_to_sheet(e);a["!cols"]=[{wch:5},{wch:30},{wch:20},{wch:15},{wch:12},{wch:15},{wch:15},{wch:15},{wch:15},{wch:40},{wch:40}],XLSX.utils.book_append_sheet(s,a,"\u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646");const r=`\u0645\u0647\u0627\u0645_\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646_${new Date().toISOString().slice(0,10)}.xlsx`;XLSX.writeFile(s,r),Loading.hide(),Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0645\u0647\u0627\u0645 \u0628\u0646\u062C\u0627\u062D")}catch(t){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 Excel:",t),Notification.error("\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 Excel: "+t.message)}}};(function(){"use strict";try{typeof window<"u"&&typeof UserTasks<"u"&&(window.UserTasks=UserTasks,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 UserTasks module loaded and available on window.UserTasks"))}catch{if(typeof window<"u"&&typeof UserTasks<"u")try{window.UserTasks=UserTasks}catch{}}})();

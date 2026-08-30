@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ==============================================================================
  * Gate Security & Visitors Management Module (Admin & HSE Portal)
  * الشركة العالمية للانتاج والتصنيع الزراعي (ICAPP)
@@ -243,11 +243,11 @@ class GateSecurityModule {
         const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
         const path = window.location.pathname;
         if (path.includes('/Frontend/')) {
-            return `${origin}/Frontend/gate-visitor-entry.html`;
+            return `${origin}/Frontend/gate-visitor-entry`;
         } else if (path.includes('/dist/')) {
-            return `${origin}/dist/gate-visitor-entry.html`;
+            return `${origin}/dist/gate-visitor-entry`;
         } else {
-            return `${origin}/gate-visitor-entry.html`;
+            return `${origin}/gate-visitor-entry`;
         }
     }
 

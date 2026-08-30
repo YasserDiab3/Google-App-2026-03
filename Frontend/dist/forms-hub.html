@@ -2525,7 +2525,7 @@
         <div class="forms-grid" id="formsGrid">
             
             <!-- 1. نموذج المرور اليومي لمسؤولي السلامة -->
-            <div class="form-card card-daily-safety" data-form-key="daily-safety" onclick="navigateToForm('public-daily-safety.html')" data-keywords="مرور يومي جولة تفتيش قائمة تحقق سلامة وردية daily safety checklist patrol">
+            <div class="form-card card-daily-safety" data-form-key="daily-safety" onclick="navigateToForm('daily-safety')" data-keywords="مرور يومي جولة تفتيش قائمة تحقق سلامة وردية daily safety checklist patrol">
                 <button type="button" class="card-pin-btn" onclick="togglePinForm('daily-safety', event)" title="تثبيت في المفضلة"><i class="fas fa-star"></i></button>
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
@@ -2546,7 +2546,7 @@
             </div>
 
             <!-- 2. نموذج الملاحظات اليومية -->
-            <div class="form-card card-obs" data-form-key="observation" onclick="navigateToForm('public-observation.html')" data-keywords="ملاحظة ملاحظات يومية سلوك خطر تدقيق unsafe act condition">
+            <div class="form-card card-obs" data-form-key="observation" onclick="navigateToForm('observation')" data-keywords="ملاحظة ملاحظات يومية سلوك خطر تدقيق unsafe act condition">
                 <button type="button" class="card-pin-btn" onclick="togglePinForm('observation', event)" title="تثبيت في المفضلة"><i class="fas fa-star"></i></button>
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
@@ -2567,7 +2567,7 @@
             </div>
 
             <!-- 3. نموذج الحوادث الوشيكة -->
-            <div class="form-card card-near-miss" data-form-key="near-miss" onclick="navigateToForm('public-near-miss.html')" data-keywords="حادث وشيك حوادث وشيكة كاد يقع خطر داهم near miss incident">
+            <div class="form-card card-near-miss" data-form-key="near-miss" onclick="navigateToForm('near-miss')" data-keywords="حادث وشيك حوادث وشيكة كاد يقع خطر داهم near miss incident">
                 <button type="button" class="card-pin-btn" onclick="togglePinForm('near-miss', event)" title="تثبيت في المفضلة"><i class="fas fa-star"></i></button>
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
@@ -2588,7 +2588,7 @@
             </div>
 
             <!-- 4. نموذج فحص الحريق -->
-            <div class="form-card card-fire" data-form-key="fire-inspection" onclick="navigateToForm('public-fire-inspection.html')" data-keywords="حريق اطفاء طفاية طفايات مضخات فحص شهري معدات fire extinguisher">
+            <div class="form-card card-fire" data-form-key="fire-inspection" onclick="navigateToForm('fire-inspection')" data-keywords="حريق اطفاء طفاية طفايات مضخات فحص شهري معدات fire extinguisher">
                 <button type="button" class="card-pin-btn" onclick="togglePinForm('fire-inspection', event)" title="تثبيت في المفضلة"><i class="fas fa-star"></i></button>
                 <div class="form-card-left">
                     <div class="form-icon-wrap">
@@ -2630,7 +2630,7 @@
             </div>
 
             <!-- 6. نظام تسجيل وتصاريح الزائرين والمقاولين بالبوابة -->
-            <div class="form-card card-gate" data-form-key="gate-visitor" onclick="navigateToForm('gate-visitor-entry.html')" data-keywords="بوابة زائرين مقاولين تصريح امن زيارة دخول خروج كشف طوارئ visitor gate pass security" style="border-right-color: #0284c7;">
+            <div class="form-card card-gate" data-form-key="gate-visitor" onclick="navigateToForm('gate-visitor-entry')" data-keywords="بوابة زائرين مقاولين تصريح امن زيارة دخول خروج كشف طوارئ visitor gate pass security" style="border-right-color: #0284c7;">
                 <button type="button" class="card-pin-btn" onclick="togglePinForm('gate-visitor', event)" title="تثبيت في المفضلة"><i class="fas fa-star"></i></button>
                 <div class="form-card-left">
                     <div class="form-icon-wrap" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff;">
@@ -5004,9 +5004,7 @@
 
         function printGateQrPoster() {
             const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
-            let path = window.location.pathname;
-            let dir = path.substring(0, path.lastIndexOf('/') + 1);
-            let targetUrl = origin + dir + 'gate-visitor-entry.html';
+            let targetUrl = origin + (path.includes('/Frontend/') ? '/Frontend/gate-visitor-entry' : (path.includes('/dist/') ? '/dist/gate-visitor-entry' : '/gate-visitor-entry'));
             const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=480x480&format=png&margin=0&data=${encodeURIComponent(targetUrl)}`;
             const win = window.open('', '_blank');
             if (!win) {

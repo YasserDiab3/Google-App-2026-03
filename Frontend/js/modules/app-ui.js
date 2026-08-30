@@ -1,4 +1,4 @@
-﻿// تطبيق الوضع الليلي فوراً عند تحميل الصفحة (قبل تعريف UI)
+// تطبيق الوضع الليلي فوراً عند تحميل الصفحة (قبل تعريف UI)
 (function applyThemeImmediately() {
     try {
         const savedTheme = (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) || 'light';
@@ -6627,7 +6627,7 @@ window.UI = {
         if (!container) return;
         const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
         let basePath = window.location.pathname.replace(/\/index\.html$/i, '').replace(/\/$/, '');
-        const hubUrl = `${origin}${basePath}/forms-hub.html`;
+        const hubUrl = `${origin}${basePath}/forms-hub`;
 
         container.innerHTML = `
             <div class="content-header" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); color: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);">
@@ -6642,7 +6642,7 @@ window.UI = {
                         </div>
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('forms-hub.html', '_blank')" style="background: #2563eb; padding: 10px 20px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px;">
+                        <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('forms-hub', '_blank')" style="background: #2563eb; padding: 10px 20px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px;">
                             <i class="fas fa-arrow-up-right-from-square"></i> فتح البوابة في نافذة كاملة
                         </button>
                     </div>
@@ -6666,7 +6666,7 @@ window.UI = {
                             جولة التفتيش الميدانية الشاملة لمسؤولي ومشرفي السلامة ومطابقة معايير السلامة في كافة العنابر والمخازن.
                         </p>
                     </div>
-                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('public-daily-safety.html', '_blank')" style="width: 100%; justify-content: center; background: #059669;">
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('daily-safety', '_blank')" style="width: 100%; justify-content: center; background: #059669;">
                         <i class="fas fa-external-link-alt ml-2"></i> فتح نموذج المرور اليومي
                     </button>
                 </div>
@@ -6687,7 +6687,7 @@ window.UI = {
                             رصد وتوثيق السلوكيات والظروف غير الآمنة والإجراءات الفورية بالصور والتصنيفات الدقيقة.
                         </p>
                     </div>
-                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('public-observation.html', '_blank')" style="width: 100%; justify-content: center; background: #2563eb;">
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('observation', '_blank')" style="width: 100%; justify-content: center; background: #2563eb;">
                         <i class="fas fa-external-link-alt ml-2"></i> فتح النموذج المباشر
                     </button>
                 </div>
@@ -6708,7 +6708,7 @@ window.UI = {
                             الإبلاغ الفوري عن الوقائع التي كادت تؤدي إلى حوادث أو إصابات لمنع تكرارها.
                         </p>
                     </div>
-                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('public-near-miss.html', '_blank')" style="width: 100%; justify-content: center; background: #d97706;">
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('near-miss', '_blank')" style="width: 100%; justify-content: center; background: #d97706;">
                         <i class="fas fa-external-link-alt ml-2"></i> فتح نموذج الحادث الوشيك
                     </button>
                 </div>
@@ -6729,7 +6729,7 @@ window.UI = {
                             الفحص الميداني الشهري لجاهزية معدات وأجهزة مكافحة الحريق والإنذار.
                         </p>
                     </div>
-                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('public-fire-inspection.html', '_blank')" style="width: 100%; justify-content: center; background: #dc2626;">
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('fire-inspection', '_blank')" style="width: 100%; justify-content: center; background: #dc2626;">
                         <i class="fas fa-external-link-alt ml-2"></i> فتح نموذج فحص الحريق
                     </button>
                 </div>

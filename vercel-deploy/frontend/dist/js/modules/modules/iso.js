@@ -1,85 +1,4 @@
-/**
- * ISO Module
- * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
- */
-// ===== SafetyHub | ICAPP Module =====
-const ISO = {
-    currentTab: 'overview',
-
-    SystemFormsManifest: [
-        // PTW
-        { id: 'ptw', name: 'تصريح العمل العام', i18nKey: 'module.iso.manifest.ptw.general', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-GEN-01', department: 'HSE' },
-        { id: 'ptw-hot', name: 'تصريح العمل الساخن', i18nKey: 'module.iso.manifest.ptw.hot', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-HOT-01', department: 'HSE' },
-        { id: 'ptw-cold', name: 'تصريح العمل البارد', i18nKey: 'module.iso.manifest.ptw.cold', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-COLD-01', department: 'HSE' },
-        { id: 'ptw-confined', name: 'تصريح دخول الأماكن المغلقة', i18nKey: 'module.iso.manifest.ptw.confined', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-CONF-01', department: 'HSE' },
-        { id: 'ptw-excavation', name: 'تصريح الحفريات', i18nKey: 'module.iso.manifest.ptw.excavation', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-EXC-01', department: 'HSE' },
-        { id: 'ptw-electrical', name: 'تصريح عزل طاقة (LOTO)', i18nKey: 'module.iso.manifest.ptw.loto', module: 'PTW', type: 'نموذج', defaultCode: 'PTW-LOTO-01', department: 'HSE' },
-
-        // Incidents
-        { id: 'incident', name: 'تقرير الحوادث', i18nKey: 'module.iso.manifest.incident.report', module: 'Incidents', type: 'تقرير', defaultCode: 'INC-REP-01', department: 'HSE' },
-        { id: 'incident-reg', name: 'سجل الحوادث والإصابات', i18nKey: 'module.iso.manifest.incident.register', module: 'Incidents', type: 'سجل', defaultCode: 'INC-REG-01', department: 'HSE' },
-
-        // NearMiss
-        { id: 'nearmiss', name: 'تقرير الحوادث الوشيكة', i18nKey: 'module.iso.manifest.nearmiss.report', module: 'NearMiss', type: 'تقرير', defaultCode: 'NM-REP-01', department: 'HSE' },
-        { id: 'nearmiss-reg', name: 'سجل الحوادث الوشيكة', i18nKey: 'module.iso.manifest.nearmiss.register', module: 'NearMiss', type: 'سجل', defaultCode: 'NM-REG-01', department: 'HSE' },
-
-        // Clinic
-        { id: 'clinic', name: 'سجل الزيارات الطبية', i18nKey: 'module.iso.manifest.clinic.register', module: 'Clinic', type: 'سجل', defaultCode: 'CLN-REG-01', department: 'Medical' },
-        { id: 'clinic-exam', name: 'نموذج الفحص الطبي', i18nKey: 'module.iso.manifest.clinic.exam', module: 'Clinic', type: 'نموذج', defaultCode: 'CLN-FRM-01', department: 'Medical' },
-
-        // Observations
-        { id: 'observation', name: 'الملاحظات اليومية', i18nKey: 'module.iso.manifest.obs.report', module: 'Observations', type: 'نموذج', defaultCode: 'OBS-FRM-01', department: 'HSE' },
-        { id: 'observation-bbs', name: 'بطاقة ملاحظة السلوك (BBS)', i18nKey: 'module.iso.manifest.obs.bbs', module: 'Observations', type: 'بطاقة', defaultCode: 'OBS-BBS-01', department: 'HSE' },
-
-        // Risk Assessment
-        { id: 'risk-jha', name: 'تحليل مخاطر العمل (JHA)', i18nKey: 'module.iso.manifest.risk.jha', module: 'RiskAssessment', type: 'نموذج', defaultCode: 'JHA-FRM-01', department: 'HSE' },
-        { id: 'risk-reg', name: 'سجل تقييم المخاطر', i18nKey: 'module.iso.manifest.risk.register', module: 'RiskAssessment', type: 'سجل', defaultCode: 'RISK-REG-01', department: 'HSE' },
-
-        // Violations
-        { id: 'violation', name: 'إشعار مخالفة', i18nKey: 'module.iso.manifest.viol.notice', module: 'Violations', type: 'نموذج', defaultCode: 'VIO-FRM-01', department: 'HSE' },
-        { id: 'violation-reg', name: 'سجل المخالفات والإنذارات', i18nKey: 'module.iso.manifest.viol.register', module: 'Violations', type: 'سجل', defaultCode: 'VIO-REG-01', department: 'HSE' },
-
-        // Inspections & Checklists
-        { id: 'inspection', name: 'التفتيش الدوري الشامل', i18nKey: 'module.iso.manifest.insp.periodic', module: 'Inspections', type: 'نموذج', defaultCode: 'INSP-FRM-01', department: 'HSE' },
-        { id: 'inspection-reg', name: 'سجل التفتيش', i18nKey: 'module.iso.manifest.insp.register', module: 'Inspections', type: 'سجل', defaultCode: 'INSP-REG-01', department: 'HSE' },
-        { id: 'dscl', name: 'فحص السلامة اليومي', i18nKey: 'module.iso.manifest.insp.daily', module: 'Inspections', type: 'نموذج', defaultCode: 'DSCL-FRM-01', department: 'HSE' },
-        { id: 'scaffold-insp', name: 'نموذج فحص السقالات', i18nKey: 'module.iso.manifest.insp.scaffold', module: 'Inspections', type: 'نموذج', defaultCode: 'SCAFF-INSP-01', department: 'HSE' },
-        { id: 'equip-insp', name: 'نموذج فحص المعدات', i18nKey: 'module.iso.manifest.insp.equip', module: 'Inspections', type: 'نموذج', defaultCode: 'EQP-INSP-01', department: 'HSE' },
-
-        // TBT
-        { id: 'tbt', name: 'نموذج اجتماع السلامة (TBT)', i18nKey: 'module.iso.manifest.tbt.form', module: 'ToolBox Talk', type: 'نموذج', defaultCode: 'TBT-FRM-01', department: 'HSE' },
-        { id: 'tbt-reg', name: 'سجل اجتماعات TBT', i18nKey: 'module.iso.manifest.tbt.register', module: 'ToolBox Talk', type: 'سجل', defaultCode: 'TBT-REG-01', department: 'HSE' },
-
-        // PPE
-        { id: 'ppe-receive', name: 'سجل استلام مهمات الوقاية', i18nKey: 'module.iso.manifest.ppe.receive', module: 'PPE', type: 'سجل', defaultCode: 'PPE-REG-01', department: 'HSE' },
-        { id: 'ppe-insp', name: 'نموذج فحص مهمات الوقاية', i18nKey: 'module.iso.manifest.ppe.insp', module: 'PPE', type: 'نموذج', defaultCode: 'PPE-INSP-01', department: 'HSE' },
-
-        // Fire & Emergency
-        { id: 'fire-insp', name: 'تفتيش معدات الإطفاء', i18nKey: 'module.iso.manifest.fire.insp', module: 'Fire Equipment', type: 'نموذج', defaultCode: 'FIRE-INSP-01', department: 'HSE' },
-        { id: 'drill-report', name: 'تقرير تجربة إخلاء', i18nKey: 'module.iso.manifest.fire.drill', module: 'Fire Equipment', type: 'تقرير', defaultCode: 'DRILL-REP-01', department: 'HSE' },
-
-        // Chemicals & MOC
-        { id: 'sds', name: 'سجل المواد الكيميائية (SDS)', i18nKey: 'module.iso.manifest.chem.sds', module: 'Chemical Safety', type: 'وثيقة', defaultCode: 'SDS-REG-01', department: 'HSE' },
-        { id: 'moc', name: 'إدارة التغيير (MOC)', i18nKey: 'module.iso.manifest.moc.form', module: 'Change Management', type: 'نموذج', defaultCode: 'MOC-FRM-01', department: 'HSE' },
-
-        // ISO & Quality
-        { id: 'legal', name: 'سجل المتطلبات القانونية', i18nKey: 'module.iso.manifest.iso.legal', module: 'ISO / Quality', type: 'سجل', defaultCode: 'LEG-REG-01', department: 'HSE' },
-        { id: 'kpi', name: 'مؤشرات الأداء (KPIs)', i18nKey: 'module.iso.manifest.iso.kpi', module: 'ISO / Quality', type: 'تقرير', defaultCode: 'KPI-REP-01', department: 'HSE' },
-        { id: 'audit-plan', name: 'خطة التدقيق الداخلي', i18nKey: 'module.iso.manifest.iso.auditPlan', module: 'ISO / Quality', type: 'وثيقة', defaultCode: 'AUD-PLN-01', department: 'HSE' },
-        { id: 'audit-report', name: 'تقرير التدقيق الداخلي', i18nKey: 'module.iso.manifest.iso.auditRep', module: 'ISO / Quality', type: 'تقرير', defaultCode: 'AUD-REP-01', department: 'HSE' },
-        
-        // CAPA
-        { id: 'nc', name: 'تقرير حالة عدم المطابقة (NC)', i18nKey: 'module.iso.manifest.capa.nc', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'NC-FRM-01', department: 'HSE' },
-        { id: 'ca', name: 'الإجراءات التصحيحية (CAR)', i18nKey: 'module.iso.manifest.capa.car', module: 'ISO / CAPA', type: 'نموذج', defaultCode: 'CAR-FRM-01', department: 'HSE' },
-
-        // Trainings
-        { id: 'training-plan', name: 'خطة التدريب السنوية', i18nKey: 'module.iso.manifest.train.plan', module: 'Trainings', type: 'وثيقة', defaultCode: 'TRN-PLN-01', department: 'HSE' },
-        { id: 'training-att', name: 'سجل حضور تدريب', i18nKey: 'module.iso.manifest.train.att', module: 'Trainings', type: 'سجل', defaultCode: 'TRN-ATT-01', department: 'HSE' },
-        { id: 'training-eval', name: 'نموذج تقييم تدريب', i18nKey: 'module.iso.manifest.train.eval', module: 'Trainings', type: 'نموذج', defaultCode: 'TRN-EVAL-01', department: 'HSE' }
-    ],
-
-    renderIdentityStyles_() {
-        return `
+const ISO={currentTab:"overview",SystemFormsManifest:[{id:"ptw",name:"\u062A\u0635\u0631\u064A\u062D \u0627\u0644\u0639\u0645\u0644 \u0627\u0644\u0639\u0627\u0645",i18nKey:"module.iso.manifest.ptw.general",module:"PTW",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"PTW-GEN-01",department:"HSE"},{id:"ptw-hot",name:"\u062A\u0635\u0631\u064A\u062D \u0627\u0644\u0639\u0645\u0644 \u0627\u0644\u0633\u0627\u062E\u0646",i18nKey:"module.iso.manifest.ptw.hot",module:"PTW",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"PTW-HOT-01",department:"HSE"},{id:"ptw-cold",name:"\u062A\u0635\u0631\u064A\u062D \u0627\u0644\u0639\u0645\u0644 \u0627\u0644\u0628\u0627\u0631\u062F",i18nKey:"module.iso.manifest.ptw.cold",module:"PTW",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"PTW-COLD-01",department:"HSE"},{id:"ptw-confined",name:"\u062A\u0635\u0631\u064A\u062D \u062F\u062E\u0648\u0644 \u0627\u0644\u0623\u0645\u0627\u0643\u0646 \u0627\u0644\u0645\u063A\u0644\u0642\u0629",i18nKey:"module.iso.manifest.ptw.confined",module:"PTW",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"PTW-CONF-01",department:"HSE"},{id:"ptw-excavation",name:"\u062A\u0635\u0631\u064A\u062D \u0627\u0644\u062D\u0641\u0631\u064A\u0627\u062A",i18nKey:"module.iso.manifest.ptw.excavation",module:"PTW",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"PTW-EXC-01",department:"HSE"},{id:"ptw-electrical",name:"\u062A\u0635\u0631\u064A\u062D \u0639\u0632\u0644 \u0637\u0627\u0642\u0629 (LOTO)",i18nKey:"module.iso.manifest.ptw.loto",module:"PTW",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"PTW-LOTO-01",department:"HSE"},{id:"incident",name:"\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062D\u0648\u0627\u062F\u062B",i18nKey:"module.iso.manifest.incident.report",module:"Incidents",type:"\u062A\u0642\u0631\u064A\u0631",defaultCode:"INC-REP-01",department:"HSE"},{id:"incident-reg",name:"\u0633\u062C\u0644 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0648\u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A",i18nKey:"module.iso.manifest.incident.register",module:"Incidents",type:"\u0633\u062C\u0644",defaultCode:"INC-REG-01",department:"HSE"},{id:"nearmiss",name:"\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629",i18nKey:"module.iso.manifest.nearmiss.report",module:"NearMiss",type:"\u062A\u0642\u0631\u064A\u0631",defaultCode:"NM-REP-01",department:"HSE"},{id:"nearmiss-reg",name:"\u0633\u062C\u0644 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629",i18nKey:"module.iso.manifest.nearmiss.register",module:"NearMiss",type:"\u0633\u062C\u0644",defaultCode:"NM-REG-01",department:"HSE"},{id:"clinic",name:"\u0633\u062C\u0644 \u0627\u0644\u0632\u064A\u0627\u0631\u0627\u062A \u0627\u0644\u0637\u0628\u064A\u0629",i18nKey:"module.iso.manifest.clinic.register",module:"Clinic",type:"\u0633\u062C\u0644",defaultCode:"CLN-REG-01",department:"Medical"},{id:"clinic-exam",name:"\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0641\u062D\u0635 \u0627\u0644\u0637\u0628\u064A",i18nKey:"module.iso.manifest.clinic.exam",module:"Clinic",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"CLN-FRM-01",department:"Medical"},{id:"observation",name:"\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629",i18nKey:"module.iso.manifest.obs.report",module:"Observations",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"OBS-FRM-01",department:"HSE"},{id:"observation-bbs",name:"\u0628\u0637\u0627\u0642\u0629 \u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u0633\u0644\u0648\u0643 (BBS)",i18nKey:"module.iso.manifest.obs.bbs",module:"Observations",type:"\u0628\u0637\u0627\u0642\u0629",defaultCode:"OBS-BBS-01",department:"HSE"},{id:"risk-jha",name:"\u062A\u062D\u0644\u064A\u0644 \u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u0639\u0645\u0644 (JHA)",i18nKey:"module.iso.manifest.risk.jha",module:"RiskAssessment",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"JHA-FRM-01",department:"HSE"},{id:"risk-reg",name:"\u0633\u062C\u0644 \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631",i18nKey:"module.iso.manifest.risk.register",module:"RiskAssessment",type:"\u0633\u062C\u0644",defaultCode:"RISK-REG-01",department:"HSE"},{id:"violation",name:"\u0625\u0634\u0639\u0627\u0631 \u0645\u062E\u0627\u0644\u0641\u0629",i18nKey:"module.iso.manifest.viol.notice",module:"Violations",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"VIO-FRM-01",department:"HSE"},{id:"violation-reg",name:"\u0633\u062C\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0648\u0627\u0644\u0625\u0646\u0630\u0627\u0631\u0627\u062A",i18nKey:"module.iso.manifest.viol.register",module:"Violations",type:"\u0633\u062C\u0644",defaultCode:"VIO-REG-01",department:"HSE"},{id:"inspection",name:"\u0627\u0644\u062A\u0641\u062A\u064A\u0634 \u0627\u0644\u062F\u0648\u0631\u064A \u0627\u0644\u0634\u0627\u0645\u0644",i18nKey:"module.iso.manifest.insp.periodic",module:"Inspections",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"INSP-FRM-01",department:"HSE"},{id:"inspection-reg",name:"\u0633\u062C\u0644 \u0627\u0644\u062A\u0641\u062A\u064A\u0634",i18nKey:"module.iso.manifest.insp.register",module:"Inspections",type:"\u0633\u062C\u0644",defaultCode:"INSP-REG-01",department:"HSE"},{id:"dscl",name:"\u0641\u062D\u0635 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u064A\u0648\u0645\u064A",i18nKey:"module.iso.manifest.insp.daily",module:"Inspections",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"DSCL-FRM-01",department:"HSE"},{id:"scaffold-insp",name:"\u0646\u0645\u0648\u0630\u062C \u0641\u062D\u0635 \u0627\u0644\u0633\u0642\u0627\u0644\u0627\u062A",i18nKey:"module.iso.manifest.insp.scaffold",module:"Inspections",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"SCAFF-INSP-01",department:"HSE"},{id:"equip-insp",name:"\u0646\u0645\u0648\u0630\u062C \u0641\u062D\u0635 \u0627\u0644\u0645\u0639\u062F\u0627\u062A",i18nKey:"module.iso.manifest.insp.equip",module:"Inspections",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"EQP-INSP-01",department:"HSE"},{id:"tbt",name:"\u0646\u0645\u0648\u0630\u062C \u0627\u062C\u062A\u0645\u0627\u0639 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 (TBT)",i18nKey:"module.iso.manifest.tbt.form",module:"ToolBox Talk",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"TBT-FRM-01",department:"HSE"},{id:"tbt-reg",name:"\u0633\u062C\u0644 \u0627\u062C\u062A\u0645\u0627\u0639\u0627\u062A TBT",i18nKey:"module.iso.manifest.tbt.register",module:"ToolBox Talk",type:"\u0633\u062C\u0644",defaultCode:"TBT-REG-01",department:"HSE"},{id:"ppe-receive",name:"\u0633\u062C\u0644 \u0627\u0633\u062A\u0644\u0627\u0645 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629",i18nKey:"module.iso.manifest.ppe.receive",module:"PPE",type:"\u0633\u062C\u0644",defaultCode:"PPE-REG-01",department:"HSE"},{id:"ppe-insp",name:"\u0646\u0645\u0648\u0630\u062C \u0641\u062D\u0635 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629",i18nKey:"module.iso.manifest.ppe.insp",module:"PPE",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"PPE-INSP-01",department:"HSE"},{id:"fire-insp",name:"\u062A\u0641\u062A\u064A\u0634 \u0645\u0639\u062F\u0627\u062A \u0627\u0644\u0625\u0637\u0641\u0627\u0621",i18nKey:"module.iso.manifest.fire.insp",module:"Fire Equipment",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"FIRE-INSP-01",department:"HSE"},{id:"drill-report",name:"\u062A\u0642\u0631\u064A\u0631 \u062A\u062C\u0631\u0628\u0629 \u0625\u062E\u0644\u0627\u0621",i18nKey:"module.iso.manifest.fire.drill",module:"Fire Equipment",type:"\u062A\u0642\u0631\u064A\u0631",defaultCode:"DRILL-REP-01",department:"HSE"},{id:"sds",name:"\u0633\u062C\u0644 \u0627\u0644\u0645\u0648\u0627\u062F \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629 (SDS)",i18nKey:"module.iso.manifest.chem.sds",module:"Chemical Safety",type:"\u0648\u062B\u064A\u0642\u0629",defaultCode:"SDS-REG-01",department:"HSE"},{id:"moc",name:"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u063A\u064A\u064A\u0631 (MOC)",i18nKey:"module.iso.manifest.moc.form",module:"Change Management",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"MOC-FRM-01",department:"HSE"},{id:"legal",name:"\u0633\u062C\u0644 \u0627\u0644\u0645\u062A\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0642\u0627\u0646\u0648\u0646\u064A\u0629",i18nKey:"module.iso.manifest.iso.legal",module:"ISO / Quality",type:"\u0633\u062C\u0644",defaultCode:"LEG-REG-01",department:"HSE"},{id:"kpi",name:"\u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u0623\u062F\u0627\u0621 (KPIs)",i18nKey:"module.iso.manifest.iso.kpi",module:"ISO / Quality",type:"\u062A\u0642\u0631\u064A\u0631",defaultCode:"KPI-REP-01",department:"HSE"},{id:"audit-plan",name:"\u062E\u0637\u0629 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0627\u0644\u062F\u0627\u062E\u0644\u064A",i18nKey:"module.iso.manifest.iso.auditPlan",module:"ISO / Quality",type:"\u0648\u062B\u064A\u0642\u0629",defaultCode:"AUD-PLN-01",department:"HSE"},{id:"audit-report",name:"\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0627\u0644\u062F\u0627\u062E\u0644\u064A",i18nKey:"module.iso.manifest.iso.auditRep",module:"ISO / Quality",type:"\u062A\u0642\u0631\u064A\u0631",defaultCode:"AUD-REP-01",department:"HSE"},{id:"nc",name:"\u062A\u0642\u0631\u064A\u0631 \u062D\u0627\u0644\u0629 \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 (NC)",i18nKey:"module.iso.manifest.capa.nc",module:"ISO / CAPA",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"NC-FRM-01",department:"HSE"},{id:"ca",name:"\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629 (CAR)",i18nKey:"module.iso.manifest.capa.car",module:"ISO / CAPA",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"CAR-FRM-01",department:"HSE"},{id:"training-plan",name:"\u062E\u0637\u0629 \u0627\u0644\u062A\u062F\u0631\u064A\u0628 \u0627\u0644\u0633\u0646\u0648\u064A\u0629",i18nKey:"module.iso.manifest.train.plan",module:"Trainings",type:"\u0648\u062B\u064A\u0642\u0629",defaultCode:"TRN-PLN-01",department:"HSE"},{id:"training-att",name:"\u0633\u062C\u0644 \u062D\u0636\u0648\u0631 \u062A\u062F\u0631\u064A\u0628",i18nKey:"module.iso.manifest.train.att",module:"Trainings",type:"\u0633\u062C\u0644",defaultCode:"TRN-ATT-01",department:"HSE"},{id:"training-eval",name:"\u0646\u0645\u0648\u0630\u062C \u062A\u0642\u064A\u064A\u0645 \u062A\u062F\u0631\u064A\u0628",i18nKey:"module.iso.manifest.train.eval",module:"Trainings",type:"\u0646\u0645\u0648\u0630\u062C",defaultCode:"TRN-EVAL-01",department:"HSE"}],renderIdentityStyles_(){return`
             <style id="iso-professional-identity-styles">
                 .iso-workspace {
                     --iso-petrol: #073b3a;
@@ -763,24 +682,7 @@ const ISO = {
                     .iso-workspace *, .iso-workspace *::before, .iso-workspace *::after { transition: none !important; animation: none !important; }
                 }
             </style>
-        `;
-    },
-
-    async load() {
-        // Add language change listener
-        if (!this._languageChangeListenerAdded) {
-            document.addEventListener('language-changed', () => {
-                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
-                this.load();
-            });
-            this._languageChangeListenerAdded = true;
-        }
-
-        const section = document.getElementById('iso-section');
-        if (!section) return;
-
-        try {
-        section.innerHTML = `
+        `},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0);const e=document.getElementById("iso-section");if(e)try{e.innerHTML=`
             ${this.renderIdentityStyles_()}
             <div class="iso-workspace">
             <div class="section-header iso-hero-header">
@@ -788,60 +690,60 @@ const ISO = {
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-shield-alt ml-3"></i>
-                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.title', 'SafetyHub | ICAPP') : 'SafetyHub | ICAPP'}
+                            ${typeof I18n<"u"?I18n.t("module.iso.title","SafetyHub | ICAPP"):"SafetyHub | ICAPP"}
                         </h1>
-                        <p class="section-subtitle">${typeof I18n !== 'undefined' ? I18n.t('module.iso.subtitle', 'SafetyHub | ICAPP - متوافق مع ISO 45001 & ISO 14001') : 'SafetyHub | ICAPP - متوافق مع ISO 45001 & ISO 14001'}</p>
+                        <p class="section-subtitle">${typeof I18n<"u"?I18n.t("module.iso.subtitle","SafetyHub | ICAPP - \u0645\u062A\u0648\u0627\u0641\u0642 \u0645\u0639 ISO 45001 & ISO 14001"):"SafetyHub | ICAPP - \u0645\u062A\u0648\u0627\u0641\u0642 \u0645\u0639 ISO 45001 & ISO 14001"}</p>
                     </div>
                     <button id="export-compliance-report-btn" class="btn-success">
-                        <i class="fas fa-file-pdf ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.btn.exportCompliance', 'تقرير الامتثال PDF') : 'تقرير الامتثال PDF'}
+                        <i class="fas fa-file-pdf ml-2"></i>${typeof I18n<"u"?I18n.t("module.iso.btn.exportCompliance","\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644 PDF"):"\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644 PDF"}
                     </button>
                 </div>
             </div>
             
             <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 iso-quick-stats">
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center iso-stat-card iso-stat-docs">
-                    <div class="text-3xl font-bold text-blue-600 mb-2">${(AppState.appData.isoDocuments || []).length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.docs', 'الوثائق') : 'الوثائق'}</div>
+                    <div class="text-3xl font-bold text-blue-600 mb-2">${(AppState.appData.isoDocuments||[]).length}</div>
+                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n<"u"?I18n.t("module.iso.stats.docs","\u0627\u0644\u0648\u062B\u0627\u0626\u0642"):"\u0627\u0644\u0648\u062B\u0627\u0626\u0642"}</div>
                 </div>
                 <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center iso-stat-card iso-stat-procedures">
-                    <div class="text-3xl font-bold text-green-600 mb-2">${(AppState.appData.isoProcedures || []).length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.procedures', 'الإجراءات') : 'الإجراءات'}</div>
+                    <div class="text-3xl font-bold text-green-600 mb-2">${(AppState.appData.isoProcedures||[]).length}</div>
+                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n<"u"?I18n.t("module.iso.stats.procedures","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"):"\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"}</div>
                 </div>
                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center iso-stat-card iso-stat-forms">
-                    <div class="text-3xl font-bold text-yellow-600 mb-2">${(AppState.appData.isoForms || []).length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.forms', 'النماذج') : 'النماذج'}</div>
+                    <div class="text-3xl font-bold text-yellow-600 mb-2">${(AppState.appData.isoForms||[]).length}</div>
+                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n<"u"?I18n.t("module.iso.stats.forms","\u0627\u0644\u0646\u0645\u0627\u0630\u062C"):"\u0627\u0644\u0646\u0645\u0627\u0630\u062C"}</div>
                 </div>
                 <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center iso-stat-card iso-stat-compliance">
                     <div class="text-3xl font-bold text-purple-600 mb-2">${this.calculateComplianceRate()}%</div>
-                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.compliance', 'معدل الامتثال') : 'معدل الامتثال'}</div>
+                    <div class="text-sm text-gray-700 font-semibold">${typeof I18n<"u"?I18n.t("module.iso.stats.compliance","\u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644"):"\u0645\u0639\u062F\u0644 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644"}</div>
                 </div>
             </div>
             
             <div class="mt-6 iso-tabs-shell">
-                <div class="flex flex-wrap gap-2 mb-6 border-b pb-2 iso-tabs-nav" role="tablist" aria-label="تبويبات نظام ISO">
-                    <button class="tab-btn ${this.currentTab === 'overview' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'overview' ? 'true' : 'false'}" data-tab="overview">
-                        <i class="fas fa-chart-pie mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.overview', 'نظرة عامة') : 'نظرة عامة'}
+                <div class="flex flex-wrap gap-2 mb-6 border-b pb-2 iso-tabs-nav" role="tablist" aria-label="\u062A\u0628\u0648\u064A\u0628\u0627\u062A \u0646\u0638\u0627\u0645 ISO">
+                    <button class="tab-btn ${this.currentTab==="overview"?"active":""}" role="tab" aria-selected="${this.currentTab==="overview"?"true":"false"}" data-tab="overview">
+                        <i class="fas fa-chart-pie mx-2"></i>${typeof I18n<"u"?I18n.t("module.iso.tab.overview","\u0646\u0638\u0631\u0629 \u0639\u0627\u0645\u0629"):"\u0646\u0638\u0631\u0629 \u0639\u0627\u0645\u0629"}
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'documents' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'documents' ? 'true' : 'false'}" data-tab="documents">
-                        <i class="fas fa-file-alt mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.docs', 'الوثائق') : 'الوثائق'}
+                    <button class="tab-btn ${this.currentTab==="documents"?"active":""}" role="tab" aria-selected="${this.currentTab==="documents"?"true":"false"}" data-tab="documents">
+                        <i class="fas fa-file-alt mx-2"></i>${typeof I18n<"u"?I18n.t("module.iso.tab.docs","\u0627\u0644\u0648\u062B\u0627\u0626\u0642"):"\u0627\u0644\u0648\u062B\u0627\u0626\u0642"}
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'procedures' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'procedures' ? 'true' : 'false'}" data-tab="procedures">
-                        <i class="fas fa-tasks mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.procedures', 'الإجراءات') : 'الإجراءات'}
+                    <button class="tab-btn ${this.currentTab==="procedures"?"active":""}" role="tab" aria-selected="${this.currentTab==="procedures"?"true":"false"}" data-tab="procedures">
+                        <i class="fas fa-tasks mx-2"></i>${typeof I18n<"u"?I18n.t("module.iso.tab.procedures","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"):"\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"}
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'forms' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'forms' ? 'true' : 'false'}" data-tab="forms">
-                        <i class="fas fa-file-signature mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.forms', 'النماذج') : 'النماذج'}
+                    <button class="tab-btn ${this.currentTab==="forms"?"active":""}" role="tab" aria-selected="${this.currentTab==="forms"?"true":"false"}" data-tab="forms">
+                        <i class="fas fa-file-signature mx-2"></i>${typeof I18n<"u"?I18n.t("module.iso.tab.forms","\u0627\u0644\u0646\u0645\u0627\u0630\u062C"):"\u0627\u0644\u0646\u0645\u0627\u0630\u062C"}
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'iso45001' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'iso45001' ? 'true' : 'false'}" data-tab="iso45001">
-                        <i class="fas fa-hard-hat mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.iso45001', 'ISO 45001') : 'ISO 45001'}
+                    <button class="tab-btn ${this.currentTab==="iso45001"?"active":""}" role="tab" aria-selected="${this.currentTab==="iso45001"?"true":"false"}" data-tab="iso45001">
+                        <i class="fas fa-hard-hat mx-2"></i>${typeof I18n<"u"?I18n.t("module.iso.tab.iso45001","ISO 45001"):"ISO 45001"}
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'iso14001' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'iso14001' ? 'true' : 'false'}" data-tab="iso14001">
-                        <i class="fas fa-leaf mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.iso14001', 'ISO 14001') : 'ISO 14001'}
+                    <button class="tab-btn ${this.currentTab==="iso14001"?"active":""}" role="tab" aria-selected="${this.currentTab==="iso14001"?"true":"false"}" data-tab="iso14001">
+                        <i class="fas fa-leaf mx-2"></i>${typeof I18n<"u"?I18n.t("module.iso.tab.iso14001","ISO 14001"):"ISO 14001"}
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'audit' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'audit' ? 'true' : 'false'}" data-tab="audit">
-                        <i class="fas fa-clipboard-check mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.audit', 'التدقيق والمراجعة') : 'التدقيق والمراجعة'}
+                    <button class="tab-btn ${this.currentTab==="audit"?"active":""}" role="tab" aria-selected="${this.currentTab==="audit"?"true":"false"}" data-tab="audit">
+                        <i class="fas fa-clipboard-check mx-2"></i>${typeof I18n<"u"?I18n.t("module.iso.tab.audit","\u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0648\u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"):"\u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0648\u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"}
                     </button>
-                    <button class="tab-btn ${this.currentTab === 'coding-center' ? 'active' : ''}" role="tab" aria-selected="${this.currentTab === 'coding-center' ? 'true' : 'false'}" data-tab="coding-center">
-                        <i class="fas fa-code mx-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.tab.coding', 'مركز التكويد والإصدار') : 'مركز التكويد والإصدار'}
+                    <button class="tab-btn ${this.currentTab==="coding-center"?"active":""}" role="tab" aria-selected="${this.currentTab==="coding-center"?"true":"false"}" data-tab="coding-center">
+                        <i class="fas fa-code mx-2"></i>${typeof I18n<"u"?I18n.t("module.iso.tab.coding","\u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"}
                     </button>
                 </div>
                 <div id="iso-content" class="iso-tab-content" data-tab="${this.currentTab}">
@@ -853,132 +755,40 @@ const ISO = {
                                         <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                     </div>
                                 </div>
-                                <p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.loading', 'جاري تحميل المحتوى...') : 'جاري تحميل المحتوى...'}</p>
+                                <p class="text-gray-500">${typeof I18n<"u"?I18n.t("module.iso.loading","\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062A\u0648\u0649..."):"\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062A\u0648\u0649..."}</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             </div>
-        `;
-            this.setupEventListeners();
-            
-            // ✅ تحميل المحتوى فوراً بعد عرض الواجهة
-            setTimeout(async () => {
-                try {
-                    const contentArea = document.getElementById('iso-content');
-                    if (!contentArea) return;
-
-                    // تبويب مركز التكويد: عرض الهيكل فوراً ثم جلب البيانات في الخلفية (بدون إظهار رسالة مهلة مزعجة)
-                    if (this.currentTab === 'coding-center') {
-                        contentArea.innerHTML = await this.renderCodingCenter({ skipFetch: true });
-                        this.renderCodingCenter({ silentTimeout: true }).then(html => {
-                            const area = document.getElementById('iso-content');
-                            if (area && this.currentTab === 'coding-center') area.innerHTML = html;
-                        }).catch(() => {});
-                        return;
-                    }
-
-                    const content = await this.renderContent().catch(error => {
-                        Utils.safeWarn('⚠️ خطأ في تحميل المحتوى:', error);
-                        return `
+        `,this.setupEventListeners(),setTimeout(async()=>{try{const t=document.getElementById("iso-content");if(!t)return;if(this.currentTab==="coding-center"){t.innerHTML=await this.renderCodingCenter({skipFetch:!0}),this.renderCodingCenter({silentTimeout:!0}).then(s=>{const a=document.getElementById("iso-content");a&&this.currentTab==="coding-center"&&(a.innerHTML=s)}).catch(()=>{});return}const o=await this.renderContent().catch(s=>(Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062A\u0648\u0649:",s),`
                             <div class="content-card">
                                 <div class="card-body">
                                     <div class="empty-state">
                                         <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                        <p class="text-gray-500 mb-4">حدث خطأ في تحميل البيانات</p>
+                                        <p class="text-gray-500 mb-4">\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
                                         <button onclick="ISO.load()" class="btn-primary">
                                             <i class="fas fa-redo ml-2"></i>
-                                            إعادة المحاولة
+                                            \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
                                         </button>
                                     </div>
                                 </div>
                             </div>
-                        `;
-                    });
-
-                    contentArea.innerHTML = content;
-                } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في تحميل المحتوى:', error);
-                }
-            }, 0);
-        } catch (error) {
-            if (typeof Utils !== 'undefined' && Utils.safeError) {
-                Utils.safeError('❌ خطأ في تحميل مديول ISO:', error);
-            } else {
-                console.error('❌ خطأ في تحميل مديول ISO:', error);
-            }
-            if (section) {
-                section.innerHTML = `
+                        `));t.innerHTML=o}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062A\u0648\u0649:",t)}},0)}catch(t){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 ISO:",t),e&&(e.innerHTML=`
                     <div class="content-card">
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل البيانات</p>
+                                <p class="text-gray-500 mb-4">\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
                                 <button onclick="ISO.load()" class="btn-primary">
                                     <i class="fas fa-redo ml-2"></i>
-                                    إعادة المحاولة
+                                    \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
                                 </button>
                             </div>
                         </div>
                     </div>
-                `;
-            }
-        }
-    },
-
-    calculateComplianceRate() {
-        const documents = AppState.appData.isoDocuments || [];
-        const procedures = AppState.appData.isoProcedures || [];
-        const forms = AppState.appData.isoForms || [];
-        const total = documents.length + procedures.length + forms.length;
-        // حساب نسبة الامتثال بناءً على وجود وثائق وإجراءات ونماذج
-        const complianceScore = documents.length > 0 ? 30 : 0;
-        const proceduresScore = procedures.length > 0 ? 30 : 0;
-        const formsScore = forms.length > 0 ? 40 : 0;
-        return Math.min(100, complianceScore + proceduresScore + formsScore);
-    },
-
-    async renderContent() {
-        switch (this.currentTab) {
-            case 'overview':
-                return await this.renderOverview();
-            case 'documents':
-                return await this.renderDocuments();
-            case 'procedures':
-                return await this.renderProcedures();
-            case 'forms':
-                return await this.renderForms();
-            case 'iso45001':
-                return await this.renderISO45001();
-            case 'iso14001':
-                return await this.renderISO14001();
-            case 'audit':
-                return await this.renderAudit();
-            case 'coding-center':
-                return await this.renderCodingCenter();
-            default:
-                return await this.renderOverview();
-        }
-    },
-
-    async renderOverview() {
-        const documents = AppState.appData.isoDocuments || [];
-        const procedures = AppState.appData.isoProcedures || [];
-        const forms = AppState.appData.isoForms || [];
-        const audits = AppState.appData.hseAudits || [];
-        const nonConformities = AppState.appData.hseNonConformities || [];
-        const actions = AppState.appData.hseCorrectiveActions || [];
-
-        const totalDocs = documents.length + procedures.length + forms.length;
-        const openNCs = nonConformities.filter(nc => nc.status !== 'مغلق' && nc.status !== 'Closed').length;
-        const pendingAudits = audits.filter(a => a.status === 'مجدول' || a.status === 'قيد التنفيذ' || a.status === 'Scheduled').length;
-        const openActions = actions.filter(a => a.status !== 'مكتمل' && a.status !== 'Completed').length;
-        
-        // Calculate a mock compliance score based on closed NCs and completed Audits
-        const complianceScore = this.calculateComplianceRate();
-
-        return `
+                `)}},calculateComplianceRate(){const e=AppState.appData.isoDocuments||[],t=AppState.appData.isoProcedures||[],o=AppState.appData.isoForms||[],s=e.length+t.length+o.length,a=e.length>0?30:0,i=t.length>0?30:0,d=o.length>0?40:0;return Math.min(100,a+i+d)},async renderContent(){switch(this.currentTab){case"overview":return await this.renderOverview();case"documents":return await this.renderDocuments();case"procedures":return await this.renderProcedures();case"forms":return await this.renderForms();case"iso45001":return await this.renderISO45001();case"iso14001":return await this.renderISO14001();case"audit":return await this.renderAudit();case"coding-center":return await this.renderCodingCenter();default:return await this.renderOverview()}},async renderOverview(){const e=AppState.appData.isoDocuments||[],t=AppState.appData.isoProcedures||[],o=AppState.appData.isoForms||[],s=AppState.appData.hseAudits||[],a=AppState.appData.hseNonConformities||[],i=AppState.appData.hseCorrectiveActions||[],d=e.length+t.length+o.length,n=a.filter(m=>m.status!=="\u0645\u063A\u0644\u0642"&&m.status!=="Closed").length,r=s.filter(m=>m.status==="\u0645\u062C\u062F\u0648\u0644"||m.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"||m.status==="Scheduled").length,c=i.filter(m=>m.status!=="\u0645\u0643\u062A\u0645\u0644"&&m.status!=="Completed").length,l=this.calculateComplianceRate();return`
             <!-- Top KPIs Row -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <!-- KPI 1 -->
@@ -986,16 +796,16 @@ const ISO = {
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.docs', 'إجمالي الوثائق') : 'إجمالي الوثائق'}</p>
-                            <h3 class="text-3xl font-bold text-gray-800">${totalDocs}</h3>
+                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n<"u"?I18n.t("module.iso.stats.docs","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0648\u062B\u0627\u0626\u0642"):"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0648\u062B\u0627\u0626\u0642"}</p>
+                            <h3 class="text-3xl font-bold text-gray-800">${d}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
                             <i class="fas fa-file-alt text-xl"></i>
                         </div>
                     </div>
                     <div class="mt-4 text-xs text-gray-500 flex items-center">
-                        <span class="text-blue-600 font-semibold ml-1">${procedures.length}</span> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.procedures', 'إجراءات') : 'إجراءات'} | 
-                        <span class="text-indigo-600 font-semibold mx-1">${forms.length}</span> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.stats.forms', 'نماذج') : 'نماذج'}
+                        <span class="text-blue-600 font-semibold ml-1">${t.length}</span> ${typeof I18n<"u"?I18n.t("module.iso.stats.procedures","\u0625\u062C\u0631\u0627\u0621\u0627\u062A"):"\u0625\u062C\u0631\u0627\u0621\u0627\u062A"} | 
+                        <span class="text-indigo-600 font-semibold mx-1">${o.length}</span> ${typeof I18n<"u"?I18n.t("module.iso.stats.forms","\u0646\u0645\u0627\u0630\u062C"):"\u0646\u0645\u0627\u0630\u062C"}
                     </div>
                 </div>
 
@@ -1004,15 +814,15 @@ const ISO = {
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-red-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.openNc', 'حالات عدم المطابقة المفتوحة') : 'حالات عدم المطابقة المفتوحة'}</p>
-                            <h3 class="text-3xl font-bold text-gray-800">${openNCs}</h3>
+                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n<"u"?I18n.t("module.iso.overview.openNc","\u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629"):"\u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629"}</p>
+                            <h3 class="text-3xl font-bold text-gray-800">${n}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-red-200">
                             <i class="fas fa-exclamation-triangle text-xl"></i>
                         </div>
                     </div>
                     <div class="mt-4 text-xs text-gray-500">
-                        من إجمالي <span class="font-bold">${nonConformities.length}</span> حالة مسجلة
+                        \u0645\u0646 \u0625\u062C\u0645\u0627\u0644\u064A <span class="font-bold">${a.length}</span> \u062D\u0627\u0644\u0629 \u0645\u0633\u062C\u0644\u0629
                     </div>
                 </div>
 
@@ -1021,15 +831,15 @@ const ISO = {
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditLogTitle', 'عمليات تدقيق قادمة') : 'عمليات تدقيق قادمة'}</p>
-                            <h3 class="text-3xl font-bold text-gray-800">${pendingAudits}</h3>
+                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n<"u"?I18n.t("module.iso.audit.auditLogTitle","\u0639\u0645\u0644\u064A\u0627\u062A \u062A\u062F\u0642\u064A\u0642 \u0642\u0627\u062F\u0645\u0629"):"\u0639\u0645\u0644\u064A\u0627\u062A \u062A\u062F\u0642\u064A\u0642 \u0642\u0627\u062F\u0645\u0629"}</p>
+                            <h3 class="text-3xl font-bold text-gray-800">${r}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-200">
                             <i class="fas fa-search text-xl"></i>
                         </div>
                     </div>
                     <div class="mt-4 text-xs text-gray-500">
-                        من إجمالي <span class="font-bold">${audits.length}</span> عملية تدقيق
+                        \u0645\u0646 \u0625\u062C\u0645\u0627\u0644\u064A <span class="font-bold">${s.length}</span> \u0639\u0645\u0644\u064A\u0629 \u062A\u062F\u0642\u064A\u0642
                     </div>
                 </div>
 
@@ -1038,15 +848,15 @@ const ISO = {
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.lateCa', 'إجراءات تصحيحية مفتوحة') : 'إجراءات تصحيحية مفتوحة'}</p>
-                            <h3 class="text-3xl font-bold text-gray-800">${openActions}</h3>
+                            <p class="text-sm font-medium text-gray-500 mb-1">${typeof I18n<"u"?I18n.t("module.iso.overview.lateCa","\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629 \u0645\u0641\u062A\u0648\u062D\u0629"):"\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629 \u0645\u0641\u062A\u0648\u062D\u0629"}</p>
+                            <h3 class="text-3xl font-bold text-gray-800">${c}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-amber-200">
                             <i class="fas fa-tools text-xl"></i>
                         </div>
                     </div>
                     <div class="mt-4 text-xs text-gray-500">
-                        من إجمالي <span class="font-bold">${actions.length}</span> إجراء تصحيحي
+                        \u0645\u0646 \u0625\u062C\u0645\u0627\u0644\u064A <span class="font-bold">${i.length}</span> \u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A
                     </div>
                 </div>
             </div>
@@ -1057,12 +867,12 @@ const ISO = {
                 <div class="lg:col-span-2 space-y-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                         <div class="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-                            <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-shield-check text-blue-600 ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.healthTitle', 'مستوى الامتثال للنظام (QMS Health)') : 'مستوى الامتثال للنظام (QMS Health)'}</h2>
-                            <span class="text-2xl font-bold ${complianceScore >= 80 ? 'text-green-500' : (complianceScore >= 50 ? 'text-amber-500' : 'text-red-500')}">${complianceScore}%</span>
+                            <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-shield-check text-blue-600 ml-2"></i>${typeof I18n<"u"?I18n.t("module.iso.overview.healthTitle","\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644 \u0644\u0644\u0646\u0638\u0627\u0645 (QMS Health)"):"\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644 \u0644\u0644\u0646\u0638\u0627\u0645 (QMS Health)"}</h2>
+                            <span class="text-2xl font-bold ${l>=80?"text-green-500":l>=50?"text-amber-500":"text-red-500"}">${l}%</span>
                         </div>
                         <div class="p-6">
                             <div class="w-full bg-gray-100 rounded-full h-4 mb-6 overflow-hidden relative">
-                                <div class="h-4 rounded-full ${complianceScore >= 80 ? 'bg-gradient-to-r from-green-400 to-green-500' : (complianceScore >= 50 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-red-400 to-red-500')} transition-all duration-1000 relative" style="width: ${complianceScore}%">
+                                <div class="h-4 rounded-full ${l>=80?"bg-gradient-to-r from-green-400 to-green-500":l>=50?"bg-gradient-to-r from-amber-400 to-amber-500":"bg-gradient-to-r from-red-400 to-red-500"} transition-all duration-1000 relative" style="width: ${l}%">
                                     <div class="absolute top-0 left-0 w-full h-full bg-white opacity-20" style="background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent); background-size: 1rem 1rem; animation: progress-bar-stripes 1s linear infinite;"></div>
                                 </div>
                             </div>
@@ -1072,20 +882,20 @@ const ISO = {
                                     <h3 class="font-bold text-blue-800 mb-2 flex items-center">
                                         <i class="fas fa-hard-hat text-blue-500 ml-2"></i> ISO 45001
                                     </h3>
-                                    <p class="text-xs text-gray-600 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.healthDesc', 'SafetyHub | ICAPP') : 'SafetyHub | ICAPP'}</p>
+                                    <p class="text-xs text-gray-600 mb-3">${typeof I18n<"u"?I18n.t("module.iso.overview.healthDesc","SafetyHub | ICAPP"):"SafetyHub | ICAPP"}</p>
                                     <div class="flex justify-between items-center text-sm">
-                                        <span class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.excellent', 'المتطلبات') : 'المتطلبات'}</span>
-                                        <span class="font-semibold text-blue-700">مغطاة</span>
+                                        <span class="text-gray-500">${typeof I18n<"u"?I18n.t("module.iso.overview.excellent","\u0627\u0644\u0645\u062A\u0637\u0644\u0628\u0627\u062A"):"\u0627\u0644\u0645\u062A\u0637\u0644\u0628\u0627\u062A"}</span>
+                                        <span class="font-semibold text-blue-700">\u0645\u063A\u0637\u0627\u0629</span>
                                     </div>
                                 </div>
                                 <div class="border border-green-100 bg-green-50/30 rounded-xl p-4 hover:shadow-sm transition-all">
                                     <h3 class="font-bold text-green-800 mb-2 flex items-center">
                                         <i class="fas fa-leaf text-green-500 ml-2"></i> ISO 14001
                                     </h3>
-                                    <p class="text-xs text-gray-600 mb-3">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.healthDesc', 'نظام الإدارة البيئية') : 'نظام الإدارة البيئية'}</p>
+                                    <p class="text-xs text-gray-600 mb-3">${typeof I18n<"u"?I18n.t("module.iso.overview.healthDesc","\u0646\u0638\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0628\u064A\u0626\u064A\u0629"):"\u0646\u0638\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0628\u064A\u0626\u064A\u0629"}</p>
                                     <div class="flex justify-between items-center text-sm">
-                                        <span class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.excellent', 'المتطلبات') : 'المتطلبات'}</span>
-                                        <span class="font-semibold text-green-700">مغطاة</span>
+                                        <span class="text-gray-500">${typeof I18n<"u"?I18n.t("module.iso.overview.excellent","\u0627\u0644\u0645\u062A\u0637\u0644\u0628\u0627\u062A"):"\u0627\u0644\u0645\u062A\u0637\u0644\u0628\u0627\u062A"}</span>
+                                        <span class="font-semibold text-green-700">\u0645\u063A\u0637\u0627\u0629</span>
                                     </div>
                                 </div>
                             </div>
@@ -1097,48 +907,48 @@ const ISO = {
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
                     <div class="p-5 border-b border-gray-50 bg-gradient-to-r from-rose-50 to-orange-50">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center">
-                            <i class="fas fa-bell text-rose-500 ml-2 animate-pulse"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.actionItems', 'مهام تتطلب الانتباه') : 'مهام تتطلب الانتباه'}
+                            <i class="fas fa-bell text-rose-500 ml-2 animate-pulse"></i>${typeof I18n<"u"?I18n.t("module.iso.overview.actionItems","\u0645\u0647\u0627\u0645 \u062A\u062A\u0637\u0644\u0628 \u0627\u0644\u0627\u0646\u062A\u0628\u0627\u0647"):"\u0645\u0647\u0627\u0645 \u062A\u062A\u0637\u0644\u0628 \u0627\u0644\u0627\u0646\u062A\u0628\u0627\u0647"}
                         </h2>
                     </div>
                     <div class="p-0 flex-1 overflow-y-auto" style="max-height: 400px;">
                         <ul class="divide-y divide-gray-100">
-                            ${openNCs > 0 ? `
+                            ${n>0?`
                             <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
                                 <div class="mt-0.5 bg-red-100 text-red-600 p-2 rounded-lg"><i class="fas fa-exclamation-circle"></i></div>
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-800">يوجد ${openNCs} ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.openNc', 'حالة عدم مطابقة مفتوحة') : 'حالة عدم مطابقة مفتوحة'}</p>
-                                    <p class="text-xs text-gray-500 mt-1">يجب مراجعتها وإغلاقها لتجنب التأثير على مستوى الامتثال.</p>
+                                    <p class="text-sm font-semibold text-gray-800">\u064A\u0648\u062C\u062F ${n} ${typeof I18n<"u"?I18n.t("module.iso.overview.openNc","\u062D\u0627\u0644\u0629 \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0641\u062A\u0648\u062D\u0629"):"\u062D\u0627\u0644\u0629 \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0641\u062A\u0648\u062D\u0629"}</p>
+                                    <p class="text-xs text-gray-500 mt-1">\u064A\u062C\u0628 \u0645\u0631\u0627\u062C\u0639\u062A\u0647\u0627 \u0648\u0625\u063A\u0644\u0627\u0642\u0647\u0627 \u0644\u062A\u062C\u0646\u0628 \u0627\u0644\u062A\u0623\u062B\u064A\u0631 \u0639\u0644\u0649 \u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0627\u0645\u062A\u062B\u0627\u0644.</p>
                                 </div>
                             </li>
-                            ` : ''}
+                            `:""}
                             
-                            ${pendingAudits > 0 ? `
+                            ${r>0?`
                             <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
                                 <div class="mt-0.5 bg-purple-100 text-purple-600 p-2 rounded-lg"><i class="fas fa-calendar-alt"></i></div>
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-800">يوجد ${pendingAudits} ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditLogTitle', 'عملية تدقيق قادمة') : 'عملية تدقيق قادمة'}</p>
-                                    <p class="text-xs text-gray-500 mt-1">يرجى مراجعة الجدول الزمني وتجهيز الوثائق المطلوبة.</p>
+                                    <p class="text-sm font-semibold text-gray-800">\u064A\u0648\u062C\u062F ${r} ${typeof I18n<"u"?I18n.t("module.iso.audit.auditLogTitle","\u0639\u0645\u0644\u064A\u0629 \u062A\u062F\u0642\u064A\u0642 \u0642\u0627\u062F\u0645\u0629"):"\u0639\u0645\u0644\u064A\u0629 \u062A\u062F\u0642\u064A\u0642 \u0642\u0627\u062F\u0645\u0629"}</p>
+                                    <p class="text-xs text-gray-500 mt-1">\u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0632\u0645\u0646\u064A \u0648\u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0648\u062B\u0627\u0626\u0642 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629.</p>
                                 </div>
                             </li>
-                            ` : ''}
+                            `:""}
                             
-                            ${openActions > 0 ? `
+                            ${c>0?`
                             <li class="p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer" onclick="ISO.currentTab = 'audit'; ISO.load();">
                                 <div class="mt-0.5 bg-amber-100 text-amber-600 p-2 rounded-lg"><i class="fas fa-tools"></i></div>
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-800">يوجد ${openActions} ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.lateCa', 'إجراء تصحيحي معلق') : 'إجراء تصحيحي معلق'}</p>
-                                    <p class="text-xs text-gray-500 mt-1">تابع مع المسؤولين لإغلاق الإجراءات التصحيحية المفتوحة.</p>
+                                    <p class="text-sm font-semibold text-gray-800">\u064A\u0648\u062C\u062F ${c} ${typeof I18n<"u"?I18n.t("module.iso.overview.lateCa","\u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A \u0645\u0639\u0644\u0642"):"\u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A \u0645\u0639\u0644\u0642"}</p>
+                                    <p class="text-xs text-gray-500 mt-1">\u062A\u0627\u0628\u0639 \u0645\u0639 \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u064A\u0646 \u0644\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629 \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629.</p>
                                 </div>
                             </li>
-                            ` : ''}
+                            `:""}
                             
-                            ${(openNCs === 0 && pendingAudits === 0 && openActions === 0) ? `
+                            ${n===0&&r===0&&c===0?`
                             <li class="p-8 text-center flex flex-col items-center justify-center">
                                 <div class="bg-green-50 text-green-500 p-4 rounded-full mb-3"><i class="fas fa-check-double text-2xl"></i></div>
-                                <p class="text-gray-600 font-semibold text-sm">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.excellent', 'النظام في حالة ممتازة') : 'النظام في حالة ممتازة'}</p>
-                                <p class="text-gray-400 text-xs mt-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.noActionItems', 'لا توجد أي مهام متأخرة أو معلقة تتطلب الانتباه حالياً.') : 'لا توجد أي مهام متأخرة أو معلقة تتطلب الانتباه حالياً.'}</p>
+                                <p class="text-gray-600 font-semibold text-sm">${typeof I18n<"u"?I18n.t("module.iso.overview.excellent","\u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u064A \u062D\u0627\u0644\u0629 \u0645\u0645\u062A\u0627\u0632\u0629"):"\u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u064A \u062D\u0627\u0644\u0629 \u0645\u0645\u062A\u0627\u0632\u0629"}</p>
+                                <p class="text-gray-400 text-xs mt-1">${typeof I18n<"u"?I18n.t("module.iso.overview.noActionItems","\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u064A \u0645\u0647\u0627\u0645 \u0645\u062A\u0623\u062E\u0631\u0629 \u0623\u0648 \u0645\u0639\u0644\u0642\u0629 \u062A\u062A\u0637\u0644\u0628 \u0627\u0644\u0627\u0646\u062A\u0628\u0627\u0647 \u062D\u0627\u0644\u064A\u0627\u064B."):"\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u064A \u0645\u0647\u0627\u0645 \u0645\u062A\u0623\u062E\u0631\u0629 \u0623\u0648 \u0645\u0639\u0644\u0642\u0629 \u062A\u062A\u0637\u0644\u0628 \u0627\u0644\u0627\u0646\u062A\u0628\u0627\u0647 \u062D\u0627\u0644\u064A\u0627\u064B."}</p>
                             </li>
-                            ` : ''}
+                            `:""}
                         </ul>
                     </div>
                 </div>
@@ -1150,12 +960,7 @@ const ISO = {
                     to { background-position: 0 0; }
                 }
             </style>
-        `;
-    },
-
-    async renderDocuments() {
-        const documents = AppState.appData.isoDocuments || [];
-        return `
+        `},async renderDocuments(){const e=AppState.appData.isoDocuments||[];return`
             <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white">
                 <div class="card-header bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-5 flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -1163,67 +968,56 @@ const ISO = {
                             <i class="fas fa-file-alt text-xl text-white"></i>
                         </div>
                         <div>
-                            <h2 class="card-title text-white m-0 text-xl font-bold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.title', 'إدارة الوثائق (Document Control)') : 'إدارة الوثائق (Document Control)'}</h2>
-                            <p class="text-blue-100 text-sm m-0 opacity-80">سجل الوثائق المعتمدة في النظام</p>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">${typeof I18n<"u"?I18n.t("module.iso.docs.title","\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0648\u062B\u0627\u0626\u0642 (Document Control)"):"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0648\u062B\u0627\u0626\u0642 (Document Control)"}</h2>
+                            <p class="text-blue-100 text-sm m-0 opacity-80">\u0633\u062C\u0644 \u0627\u0644\u0648\u062B\u0627\u0626\u0642 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645</p>
                         </div>
                     </div>
                     <button id="add-document-btn" class="btn bg-white text-blue-700 hover:bg-blue-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
-                        <i class="fas fa-plus"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.addBtn', 'إضافة وثيقة') : 'إضافة وثيقة'}
+                        <i class="fas fa-plus"></i>${typeof I18n<"u"?I18n.t("module.iso.docs.addBtn","\u0625\u0636\u0627\u0641\u0629 \u0648\u062B\u064A\u0642\u0629"):"\u0625\u0636\u0627\u0641\u0629 \u0648\u062B\u064A\u0642\u0629"}
                     </button>
                 </div>
                 <div class="card-body p-0">
-                    ${documents.length === 0 ? `
+                    ${e.length===0?`
                         <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
                             <div class="w-20 h-20 bg-blue-50 text-blue-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-folder-open text-3xl"></i></div>
-                            <h3 class="text-gray-700 font-bold text-lg mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.noData', 'لا توجد وثائق مسجلة') : 'لا توجد وثائق مسجلة'}</h3>
-                            <p class="text-gray-500 text-sm">قم بإضافة أول وثيقة لبدء بناء مكتبة النظام</p>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">${typeof I18n<"u"?I18n.t("module.iso.docs.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0648\u062B\u0627\u0626\u0642 \u0645\u0633\u062C\u0644\u0629"):"\u0644\u0627 \u062A\u0648\u062C\u062F \u0648\u062B\u0627\u0626\u0642 \u0645\u0633\u062C\u0644\u0629"}</h3>
+                            <p class="text-gray-500 text-sm">\u0642\u0645 \u0628\u0625\u0636\u0627\u0641\u0629 \u0623\u0648\u0644 \u0648\u062B\u064A\u0642\u0629 \u0644\u0628\u062F\u0621 \u0628\u0646\u0627\u0621 \u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u0646\u0638\u0627\u0645</p>
                         </div>
-                    ` : `
+                    `:`
                         <div class="overflow-x-auto p-4">
                             <table class="w-full text-right border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-                                        <th class="p-3 font-semibold text-right rounded-tr-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.code', 'كود ISO') : 'كود ISO'}</th>
-                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.name', 'اسم الوثيقة') : 'اسم الوثيقة'}</th>
-                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.type', 'النوع') : 'النوع'}</th>
-                                        <th class="p-3 font-semibold text-center">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.version', 'الإصدار') : 'الإصدار'}</th>
-                                        <th class="p-3 font-semibold text-center">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.status', 'الحالة') : 'الحالة'}</th>
-                                        <th class="p-3 font-semibold text-center rounded-tl-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">${typeof I18n<"u"?I18n.t("module.iso.docs.table.code","\u0643\u0648\u062F ISO"):"\u0643\u0648\u062F ISO"}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n<"u"?I18n.t("module.iso.docs.table.name","\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629"):"\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629"}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n<"u"?I18n.t("module.iso.docs.table.type","\u0627\u0644\u0646\u0648\u0639"):"\u0627\u0644\u0646\u0648\u0639"}</th>
+                                        <th class="p-3 font-semibold text-center">${typeof I18n<"u"?I18n.t("module.iso.docs.table.version","\u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</th>
+                                        <th class="p-3 font-semibold text-center">${typeof I18n<"u"?I18n.t("module.iso.docs.table.status","\u0627\u0644\u062D\u0627\u0644\u0629"):"\u0627\u0644\u062D\u0627\u0644\u0629"}</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">${typeof I18n<"u"?I18n.t("module.iso.docs.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"):"\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${documents.map(d => {
-                                        const status = d.status || 'معتمد';
-                                        let statusBadge = 'bg-green-100 text-green-800 border-green-200';
-                                        if (status === 'مسودة' || status === 'Draft') statusBadge = 'bg-gray-100 text-gray-800 border-gray-200';
-                                        else if (status === 'قيد المراجعة' || status === 'Under Review') statusBadge = 'bg-amber-100 text-amber-800 border-amber-200';
-                                        
-                                        return `
+                                    ${e.map(t=>{const o=t.status||"\u0645\u0639\u062A\u0645\u062F";let s="bg-green-100 text-green-800 border-green-200";return o==="\u0645\u0633\u0648\u062F\u0629"||o==="Draft"?s="bg-gray-100 text-gray-800 border-gray-200":(o==="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"||o==="Under Review")&&(s="bg-amber-100 text-amber-800 border-amber-200"),`
                                         <tr class="border-b border-gray-100 hover:bg-blue-50/30 transition-colors group">
-                                            <td class="p-3"><span class="font-mono text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100 text-sm font-bold">${Utils.escapeHTML(d.isoCode || '---')}</span></td>
-                                            <td class="p-3 font-medium text-gray-800">${Utils.escapeHTML(d.name || '')}</td>
-                                            <td class="p-3 text-sm text-gray-600">${Utils.escapeHTML(d.type || '')}</td>
-                                            <td class="p-3 text-center"><span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-bold text-xs border border-gray-200">v${d.version || '1.0'}</span></td>
-                                            <td class="p-3 text-center"><span class="px-2.5 py-1 text-xs rounded-full border ${statusBadge} font-semibold">${status}</span></td>
+                                            <td class="p-3"><span class="font-mono text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100 text-sm font-bold">${Utils.escapeHTML(t.isoCode||"---")}</span></td>
+                                            <td class="p-3 font-medium text-gray-800">${Utils.escapeHTML(t.name||"")}</td>
+                                            <td class="p-3 text-sm text-gray-600">${Utils.escapeHTML(t.type||"")}</td>
+                                            <td class="p-3 text-center"><span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-bold text-xs border border-gray-200">v${t.version||"1.0"}</span></td>
+                                            <td class="p-3 text-center"><span class="px-2.5 py-1 text-xs rounded-full border ${s} font-semibold">${o}</span></td>
                                             <td class="p-3 text-center">
-                                                <button onclick="ISO.viewDocument('${d.id}')" class="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="عرض التفاصيل">
+                                                <button onclick="ISO.viewDocument('${t.id}')" class="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
                                             </td>
                                         </tr>
-                                    `}).join('')}
+                                    `}).join("")}
                                 </tbody>
                             </table>
                         </div>
                     `}
                 </div>
             </div>
-        `;
-    },
-
-    async renderProcedures() {
-        const procedures = AppState.appData.isoProcedures || [];
-        return `
+        `},async renderProcedures(){const e=AppState.appData.isoProcedures||[];return`
             <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white">
                 <div class="card-header bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-5 flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -1231,71 +1025,59 @@ const ISO = {
                             <i class="fas fa-project-diagram text-xl text-white"></i>
                         </div>
                         <div>
-                            <h2 class="card-title text-white m-0 text-xl font-bold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.title', 'إدارة الإجراءات (Procedures)') : 'إدارة الإجراءات (Procedures)'}</h2>
-                            <p class="text-emerald-100 text-sm m-0 opacity-80">إجراءات العمل القياسية (SOPs)</p>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">${typeof I18n<"u"?I18n.t("module.iso.procedures.title","\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A (Procedures)"):"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A (Procedures)"}</h2>
+                            <p class="text-emerald-100 text-sm m-0 opacity-80">\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0639\u0645\u0644 \u0627\u0644\u0642\u064A\u0627\u0633\u064A\u0629 (SOPs)</p>
                         </div>
                     </div>
                     <button id="add-procedure-btn" class="btn bg-white text-emerald-700 hover:bg-emerald-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
-                        <i class="fas fa-plus"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.addBtn', 'إضافة إجراء') : 'إضافة إجراء'}
+                        <i class="fas fa-plus"></i>${typeof I18n<"u"?I18n.t("module.iso.procedures.addBtn","\u0625\u0636\u0627\u0641\u0629 \u0625\u062C\u0631\u0627\u0621"):"\u0625\u0636\u0627\u0641\u0629 \u0625\u062C\u0631\u0627\u0621"}
                     </button>
                 </div>
                 <div class="card-body p-0">
-                    ${procedures.length === 0 ? `
+                    ${e.length===0?`
                         <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
                             <div class="w-20 h-20 bg-emerald-50 text-emerald-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-network-wired text-3xl"></i></div>
-                            <h3 class="text-gray-700 font-bold text-lg mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.noData', 'لا توجد إجراءات مسجلة') : 'لا توجد إجراءات مسجلة'}</h3>
-                            <p class="text-gray-500 text-sm">قم بإضافة أول إجراء (SOP) لتنظيم العمل</p>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">${typeof I18n<"u"?I18n.t("module.iso.procedures.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0645\u0633\u062C\u0644\u0629"):"\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0645\u0633\u062C\u0644\u0629"}</h3>
+                            <p class="text-gray-500 text-sm">\u0642\u0645 \u0628\u0625\u0636\u0627\u0641\u0629 \u0623\u0648\u0644 \u0625\u062C\u0631\u0627\u0621 (SOP) \u0644\u062A\u0646\u0638\u064A\u0645 \u0627\u0644\u0639\u0645\u0644</p>
                         </div>
-                    ` : `
+                    `:`
                         <div class="overflow-x-auto p-4">
                             <table class="w-full text-right border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-                                        <th class="p-3 font-semibold text-right rounded-tr-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.code', 'كود الإجراء') : 'كود الإجراء'}</th>
-                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.name', 'اسم الإجراء') : 'اسم الإجراء'}</th>
-                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.dept', 'القسم المالك') : 'القسم المالك'}</th>
-                                        <th class="p-3 font-semibold text-center">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.nextReview', 'المراجعة القادمة') : 'المراجعة القادمة'}</th>
-                                        <th class="p-3 font-semibold text-center rounded-tl-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">${typeof I18n<"u"?I18n.t("module.iso.procedures.table.code","\u0643\u0648\u062F \u0627\u0644\u0625\u062C\u0631\u0627\u0621"):"\u0643\u0648\u062F \u0627\u0644\u0625\u062C\u0631\u0627\u0621"}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n<"u"?I18n.t("module.iso.procedures.table.name","\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621"):"\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621"}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n<"u"?I18n.t("module.iso.procedures.table.dept","\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0645\u0627\u0644\u0643"):"\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0645\u0627\u0644\u0643"}</th>
+                                        <th class="p-3 font-semibold text-center">${typeof I18n<"u"?I18n.t("module.iso.procedures.table.nextReview","\u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u0642\u0627\u062F\u0645\u0629"):"\u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u0642\u0627\u062F\u0645\u0629"}</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">${typeof I18n<"u"?I18n.t("module.iso.docs.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"):"\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${procedures.map(p => {
-                                        // Fake Next Review calculation for UI
-                                        const issueDate = p.issueDate || new Date().toISOString();
-                                        const nextReview = new Date(issueDate);
-                                        nextReview.setFullYear(nextReview.getFullYear() + 1);
-                                        const isOverdue = nextReview < new Date();
-                                        
-                                        return `
+                                    ${e.map(t=>{const o=t.issueDate||new Date().toISOString(),s=new Date(o);s.setFullYear(s.getFullYear()+1);const a=s<new Date;return`
                                         <tr class="border-b border-gray-100 hover:bg-emerald-50/30 transition-colors group">
-                                            <td class="p-3"><span class="font-mono text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 text-sm font-bold">${Utils.escapeHTML(p.isoCode || '---')}</span></td>
-                                            <td class="p-3 font-medium text-gray-800">${Utils.escapeHTML(p.name || '')}</td>
-                                            <td class="p-3"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200"><i class="fas fa-building text-gray-400"></i> ${Utils.escapeHTML(p.department || 'عام')}</span></td>
+                                            <td class="p-3"><span class="font-mono text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 text-sm font-bold">${Utils.escapeHTML(t.isoCode||"---")}</span></td>
+                                            <td class="p-3 font-medium text-gray-800">${Utils.escapeHTML(t.name||"")}</td>
+                                            <td class="p-3"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200"><i class="fas fa-building text-gray-400"></i> ${Utils.escapeHTML(t.department||"\u0639\u0627\u0645")}</span></td>
                                             <td class="p-3 text-center">
-                                                <div class="flex items-center justify-center gap-1.5 ${isOverdue ? 'text-red-600 font-bold' : 'text-gray-600'}">
-                                                    <i class="fas ${isOverdue ? 'fa-exclamation-circle' : 'fa-calendar-alt'}"></i>
-                                                    <span class="text-sm">${nextReview.toLocaleDateString('ar-EG')}</span>
+                                                <div class="flex items-center justify-center gap-1.5 ${a?"text-red-600 font-bold":"text-gray-600"}">
+                                                    <i class="fas ${a?"fa-exclamation-circle":"fa-calendar-alt"}"></i>
+                                                    <span class="text-sm">${s.toLocaleDateString("ar-EG")}</span>
                                                 </div>
                                             </td>
                                             <td class="p-3 text-center">
-                                                <button onclick="ISO.viewProcedure('${p.id}')" class="text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 p-2 rounded-lg transition-colors" title="عرض التفاصيل">
+                                                <button onclick="ISO.viewProcedure('${t.id}')" class="text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 p-2 rounded-lg transition-colors" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
                                             </td>
                                         </tr>
-                                    `}).join('')}
+                                    `}).join("")}
                                 </tbody>
                             </table>
                         </div>
                     `}
                 </div>
             </div>
-        `;
-    },
-
-    async renderForms() {
-        const forms = AppState.appData.isoForms || [];
-        return `
+        `},async renderForms(){const e=AppState.appData.isoForms||[];return`
             <div class="content-card shadow-lg border-0 rounded-2xl overflow-hidden bg-white">
                 <div class="card-header bg-gradient-to-r from-amber-500 to-orange-600 text-white p-5 flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -1303,97 +1085,60 @@ const ISO = {
                             <i class="fas fa-file-signature text-xl text-white"></i>
                         </div>
                         <div>
-                            <h2 class="card-title text-white m-0 text-xl font-bold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.title', 'النماذج القياسية (Forms)') : 'النماذج القياسية (Forms)'}</h2>
-                            <p class="text-amber-100 text-sm m-0 opacity-80">سجل النماذج المعتمدة لجمع البيانات</p>
+                            <h2 class="card-title text-white m-0 text-xl font-bold">${typeof I18n<"u"?I18n.t("module.iso.forms.title","\u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0642\u064A\u0627\u0633\u064A\u0629 (Forms)"):"\u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0642\u064A\u0627\u0633\u064A\u0629 (Forms)"}</h2>
+                            <p class="text-amber-100 text-sm m-0 opacity-80">\u0633\u062C\u0644 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 \u0644\u062C\u0645\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
                         </div>
                     </div>
                     <button id="add-form-btn" class="btn bg-white text-orange-700 hover:bg-orange-50 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all hover:shadow-md">
-                        <i class="fas fa-plus"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.addBtn', 'إضافة نموذج') : 'إضافة نموذج'}
+                        <i class="fas fa-plus"></i>${typeof I18n<"u"?I18n.t("module.iso.forms.addBtn","\u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C"):"\u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C"}
                     </button>
                 </div>
                 <div class="card-body p-0">
-                    ${forms.length === 0 ? `
+                    ${e.length===0?`
                         <div class="p-12 text-center flex flex-col items-center justify-center bg-gray-50/50">
                             <div class="w-20 h-20 bg-orange-50 text-orange-300 rounded-full flex items-center justify-center mb-4"><i class="fas fa-clipboard-list text-3xl"></i></div>
-                            <h3 class="text-gray-700 font-bold text-lg mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.noData', 'لا توجد نماذج مسجلة') : 'لا توجد نماذج مسجلة'}</h3>
-                            <p class="text-gray-500 text-sm">قم بإضافة أول نموذج ليكون متاحاً للطباعة والاستخدام</p>
+                            <h3 class="text-gray-700 font-bold text-lg mb-1">${typeof I18n<"u"?I18n.t("module.iso.forms.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u0645\u0627\u0630\u062C \u0645\u0633\u062C\u0644\u0629"):"\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u0645\u0627\u0630\u062C \u0645\u0633\u062C\u0644\u0629"}</h3>
+                            <p class="text-gray-500 text-sm">\u0642\u0645 \u0628\u0625\u0636\u0627\u0641\u0629 \u0623\u0648\u0644 \u0646\u0645\u0648\u0630\u062C \u0644\u064A\u0643\u0648\u0646 \u0645\u062A\u0627\u062D\u0627\u064B \u0644\u0644\u0637\u0628\u0627\u0639\u0629 \u0648\u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645</p>
                         </div>
-                    ` : `
+                    `:`
                         <div class="overflow-x-auto p-4">
                             <table class="w-full text-right border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-                                        <th class="p-3 font-semibold text-right rounded-tr-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.table.code', 'الكود المرجعي') : 'الكود المرجعي'}</th>
-                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.table.name', 'اسم النموذج') : 'اسم النموذج'}</th>
-                                        <th class="p-3 font-semibold text-right">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.type', 'نوع النموذج') : 'نوع النموذج'}</th>
-                                        <th class="p-3 font-semibold text-center rounded-tl-lg">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
+                                        <th class="p-3 font-semibold text-right rounded-tr-lg">${typeof I18n<"u"?I18n.t("module.iso.forms.table.code","\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0645\u0631\u062C\u0639\u064A"):"\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0645\u0631\u062C\u0639\u064A"}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n<"u"?I18n.t("module.iso.forms.table.name","\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C"):"\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C"}</th>
+                                        <th class="p-3 font-semibold text-right">${typeof I18n<"u"?I18n.t("module.iso.docs.table.type","\u0646\u0648\u0639 \u0627\u0644\u0646\u0645\u0648\u0630\u062C"):"\u0646\u0648\u0639 \u0627\u0644\u0646\u0645\u0648\u0630\u062C"}</th>
+                                        <th class="p-3 font-semibold text-center rounded-tl-lg">${typeof I18n<"u"?I18n.t("module.iso.docs.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"):"\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${forms.map(f => `
+                                    ${e.map(t=>`
                                         <tr class="border-b border-gray-100 hover:bg-orange-50/30 transition-colors group">
-                                            <td class="p-3"><span class="font-mono text-orange-700 bg-orange-50 px-2 py-1 rounded border border-orange-100 text-sm font-bold">${Utils.escapeHTML(f.isoCode || '---')}</span></td>
-                                            <td class="p-3 font-medium text-gray-800">${Utils.escapeHTML(f.name || '')}</td>
+                                            <td class="p-3"><span class="font-mono text-orange-700 bg-orange-50 px-2 py-1 rounded border border-orange-100 text-sm font-bold">${Utils.escapeHTML(t.isoCode||"---")}</span></td>
+                                            <td class="p-3 font-medium text-gray-800">${Utils.escapeHTML(t.name||"")}</td>
                                             <td class="p-3 text-sm text-gray-600">
                                                 <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                                                    <i class="fas ${f.type?.includes('سجل') ? 'fa-book' : 'fa-clipboard'}"></i>
-                                                    ${Utils.escapeHTML(f.type || 'نموذج إدخال')}
+                                                    <i class="fas ${t.type?.includes("\u0633\u062C\u0644")?"fa-book":"fa-clipboard"}"></i>
+                                                    ${Utils.escapeHTML(t.type||"\u0646\u0645\u0648\u0630\u062C \u0625\u062F\u062E\u0627\u0644")}
                                                 </span>
                                             </td>
                                             <td class="p-3 text-center">
-                                                <button onclick="ISO.viewForm('${f.id}')" class="text-gray-400 hover:text-orange-600 hover:bg-orange-50 p-2 rounded-lg transition-colors" title="عرض التفاصيل">
+                                                <button onclick="ISO.viewForm('${t.id}')" class="text-gray-400 hover:text-orange-600 hover:bg-orange-50 p-2 rounded-lg transition-colors" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
                                             </td>
                                         </tr>
-                                    `).join('')}
+                                    `).join("")}
                                 </tbody>
                             </table>
                         </div>
                     `}
                 </div>
             </div>
-        `;
-    },
-
-    setupEventListeners() {
-        setTimeout(() => {
-            const tabs = document.querySelectorAll('.iso-tabs-nav .tab-btn');
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    this.currentTab = tab.getAttribute('data-tab');
-                    this.load();
-                });
-            });
-
-            const addDocumentBtn = document.getElementById('add-document-btn');
-            const addProcedureBtn = document.getElementById('add-procedure-btn');
-            const addFormBtn = document.getElementById('add-form-btn');
-
-            if (addDocumentBtn) addDocumentBtn.addEventListener('click', () => this.showDocumentForm());
-            if (addProcedureBtn) addProcedureBtn.addEventListener('click', () => this.showProcedureForm());
-            if (addFormBtn) addFormBtn.addEventListener('click', () => this.showFormForm());
-        }, 100);
-    },
-
-    async showDocumentForm(data = null) {
-        // جلب قائمة الأكواد من المركز
-        let documentCodes = [];
-        try {
-            const result = await GoogleIntegration.fetchData('getDocumentCodes', {});
-            if (result.success && result.data) {
-                documentCodes = result.data.filter(c => c.documentType === 'وثيقة' && c.status === 'نشط');
-            }
-        } catch (error) {
-            Utils.safeError('Error loading document codes:', error);
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `},setupEventListeners(){setTimeout(()=>{document.querySelectorAll(".iso-tabs-nav .tab-btn").forEach(a=>{a.addEventListener("click",()=>{this.currentTab=a.getAttribute("data-tab"),this.load()})});const t=document.getElementById("add-document-btn"),o=document.getElementById("add-procedure-btn"),s=document.getElementById("add-form-btn");t&&t.addEventListener("click",()=>this.showDocumentForm()),o&&o.addEventListener("click",()=>this.showProcedureForm()),s&&s.addEventListener("click",()=>this.showFormForm())},100)},async showDocumentForm(e=null){let t=[];try{const a=await GoogleIntegration.fetchData("getDocumentCodes",{});a.success&&a.data&&(t=a.data.filter(i=>i.documentType==="\u0648\u062B\u064A\u0642\u0629"&&i.status==="\u0646\u0634\u0637"))}catch(a){Utils.safeError("Error loading document codes:",a)}const o=document.createElement("div");o.className="modal-overlay iso-professional-modal",o.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.documents.editTitle', 'تعديل وثيقة') : 'تعديل وثيقة') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.documents.addTitle', 'إضافة وثيقة جديدة') : 'إضافة وثيقة جديدة')}</h2>
+                    <h2 class="modal-title">${e?typeof I18n<"u"?I18n.t("module.iso.documents.editTitle","\u062A\u0639\u062F\u064A\u0644 \u0648\u062B\u064A\u0642\u0629"):"\u062A\u0639\u062F\u064A\u0644 \u0648\u062B\u064A\u0642\u0629":typeof I18n<"u"?I18n.t("module.iso.documents.addTitle","\u0625\u0636\u0627\u0641\u0629 \u0648\u062B\u064A\u0642\u0629 \u062C\u062F\u064A\u062F\u0629"):"\u0625\u0636\u0627\u0641\u0629 \u0648\u062B\u064A\u0642\u0629 \u062C\u062F\u064A\u062F\u0629"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1401,173 +1146,70 @@ const ISO = {
                 <div class="modal-body">
                     <form id="iso-document-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.docCodeLabel', 'كود المستند من المركز *') : 'كود المستند من المركز *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.docCodeLabel","\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632 *"):"\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632 *"}</label>
                             <select id="document-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('document')">
-                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectCodeOption', 'اختر الكود من مركز التكويد والإصدار') : 'اختر الكود من مركز التكويد والإصدار'}</option>
-                                ${documentCodes.map(code => `
-                                    <option value="${code.code}" 
-                                        data-code-id="${code.id}"
-                                        ${data?.isoCode === code.code ? 'selected' : ''}>
-                                        ${Utils.escapeHTML(code.code || '')} - ${Utils.escapeHTML(code.documentName || '')}
+                                <option value="">${typeof I18n<"u"?I18n.t("module.iso.form.selectCodeOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</option>
+                                ${t.map(a=>`
+                                    <option value="${a.code}" 
+                                        data-code-id="${a.id}"
+                                        ${e?.isoCode===a.code?"selected":""}>
+                                        ${Utils.escapeHTML(a.code||"")} - ${Utils.escapeHTML(a.documentName||"")}
                                     </option>
-                                `).join('')}
+                                `).join("")}
                             </select>
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.codeHint', 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.') : 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.'}
+                                ${typeof I18n<"u"?I18n.t("module.iso.form.codeHint","\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631. \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0633\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B."):"\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631. \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0633\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B."}
                             </p>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.docNameLabel', 'اسم الوثيقة *') : 'اسم الوثيقة *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.docNameLabel","\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629 *"):"\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629 *"}</label>
                             <input type="text" id="document-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.docNamePlaceholder', 'اسم الوثيقة') : 'اسم الوثيقة'}">
+                                value="${Utils.escapeHTML(e?.name||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.docNamePlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629"):"\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeLabel', 'النوع *') : 'النوع *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.typeLabel","\u0627\u0644\u0646\u0648\u0639 *"):"\u0627\u0644\u0646\u0648\u0639 *"}</label>
                             <select id="document-type" required class="form-input">
-                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectTypeOption', 'اختر النوع') : 'اختر النوع'}</option>
-                                <option value="سياسة" ${data?.type === 'سياسة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typePolicy', 'سياسة') : 'سياسة'}</option>
-                                <option value="إجراء" ${data?.type === 'إجراء' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeProcedure', 'إجراء') : 'إجراء'}</option>
-                                <option value="تعليمات" ${data?.type === 'تعليمات' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeInstructions', 'تعليمات') : 'تعليمات'}</option>
-                                <option value="دليل" ${data?.type === 'دليل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeManual', 'دليل') : 'دليل'}</option>
-                                <option value="أخرى" ${data?.type === 'أخرى' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeOther', 'أخرى') : 'أخرى'}</option>
+                                <option value="">${typeof I18n<"u"?I18n.t("module.iso.form.selectTypeOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639"}</option>
+                                <option value="\u0633\u064A\u0627\u0633\u0629" ${e?.type==="\u0633\u064A\u0627\u0633\u0629"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.form.typePolicy","\u0633\u064A\u0627\u0633\u0629"):"\u0633\u064A\u0627\u0633\u0629"}</option>
+                                <option value="\u0625\u062C\u0631\u0627\u0621" ${e?.type==="\u0625\u062C\u0631\u0627\u0621"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.form.typeProcedure","\u0625\u062C\u0631\u0627\u0621"):"\u0625\u062C\u0631\u0627\u0621"}</option>
+                                <option value="\u062A\u0639\u0644\u064A\u0645\u0627\u062A" ${e?.type==="\u062A\u0639\u0644\u064A\u0645\u0627\u062A"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.form.typeInstructions","\u062A\u0639\u0644\u064A\u0645\u0627\u062A"):"\u062A\u0639\u0644\u064A\u0645\u0627\u062A"}</option>
+                                <option value="\u062F\u0644\u064A\u0644" ${e?.type==="\u062F\u0644\u064A\u0644"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.form.typeManual","\u062F\u0644\u064A\u0644"):"\u062F\u0644\u064A\u0644"}</option>
+                                <option value="\u0623\u062E\u0631\u0649" ${e?.type==="\u0623\u062E\u0631\u0649"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.form.typeOther","\u0623\u062E\u0631\u0649"):"\u0623\u062E\u0631\u0649"}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionLabel', 'رقم الإصدار (يُسحب تلقائياً من المركز)') : 'رقم الإصدار (يُسحب تلقائياً من المركز)'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.versionLabel","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632)"):"\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632)"}</label>
                             <input type="text" id="document-version" readonly class="form-input bg-gray-100" 
-                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionPlaceholder', 'سيتم جلب الإصدار تلقائياً') : 'سيتم جلب الإصدار تلقائياً'}">
+                                value="${Utils.escapeHTML(e?.version||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.versionPlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDateLabel', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.issueDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</label>
                             <input type="text" id="document-issue-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDatePlaceholder', 'سيتم جلب تاريخ الإصدار تلقائياً') : 'سيتم جلب تاريخ الإصدار تلقائياً'}">
+                                value="${e?.issueDate?Utils.formatDate(e.issueDate):""}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.issueDatePlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.revisionDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"}</label>
                             <input type="text" id="document-revision-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDatePlaceholder', 'سيتم جلب تاريخ التعديل تلقائياً') : 'سيتم جلب تاريخ التعديل تلقائياً'}">
+                                value="${e?.revisionDate?Utils.formatDate(e.revisionDate):""}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.revisionDatePlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.departmentLabel', 'القسم *') : 'القسم *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.departmentLabel","\u0627\u0644\u0642\u0633\u0645 *"):"\u0627\u0644\u0642\u0633\u0645 *"}</label>
                             <input type="text" id="document-department" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.department || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.departmentPlaceholder', 'القسم') : 'القسم'}">
+                                value="${Utils.escapeHTML(e?.department||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.departmentPlaceholder","\u0627\u0644\u0642\u0633\u0645"):"\u0627\u0644\u0642\u0633\u0645"}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
-                    <button type="button" id="save-document-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.cancel","\u0625\u0644\u063A\u0627\u0621"):"\u0625\u0644\u063A\u0627\u0621"}</button>
+                    <button type="button" id="save-document-btn" class="btn-primary">${typeof I18n<"u"?I18n.t("core.buttons.save","\u062D\u0641\u0638"):"\u062D\u0641\u0638"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        // إذا كان هناك بيانات موجودة، جلب الإصدار تلقائياً
-        if (data?.isoCode) {
-            await this.loadDocumentCodeVersion('document', data.isoCode);
-        }
-
-        const saveBtn = modal.querySelector('#save-document-btn');
-        saveBtn.addEventListener('click', () => this.handleDocumentSubmit(data?.id, modal));
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async handleDocumentSubmit(editId = null, modal) {
-        const codeSelect = document.getElementById('document-code-select');
-        const selectedCode = codeSelect?.value || '';
-
-        if (!selectedCode) {
-            Notification.error('يجب اختيار كود المستند من مركز التكويد والإصدار');
-            return;
-        }
-
-        // فحص العناصر قبل الاستخدام
-        const nameEl = document.getElementById('document-name');
-        const typeEl = document.getElementById('document-type');
-        const versionEl = document.getElementById('document-version');
-        const issueDateEl = document.getElementById('document-issue-date');
-        const revisionDateEl = document.getElementById('document-revision-date');
-        const departmentEl = document.getElementById('document-department');
-        
-        if (!nameEl || !typeEl || !versionEl || !departmentEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            return;
-        }
-
-        const formData = {
-            id: editId || Utils.generateId('ISO_DOC'),
-            isoCode: selectedCode,
-            name: nameEl.value.trim(),
-            type: typeEl.value,
-            version: versionEl.value.trim() || 'غير محدد',
-            issueDate: issueDateEl?.value || null,
-            revisionDate: revisionDateEl?.value || null,
-            department: departmentEl.value.trim(),
-            createdAt: editId ? AppState.appData.isoDocuments.find(d => d.id === editId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        Loading.show();
-        try {
-            if (editId) {
-                const index = AppState.appData.isoDocuments.findIndex(d => d.id === editId);
-                if (index !== -1) AppState.appData.isoDocuments[index] = formData;
-                Notification.success('تم تحديث الوثيقة بنجاح');
-            } else {
-                AppState.appData.isoDocuments.push(formData);
-                Notification.success('تم إضافة الوثيقة بنجاح');
-            }
-
-            // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-
-            Loading.hide();
-            try {
-                if (modal && modal.parentNode) modal.remove();
-            } catch (removeErr) {
-                Utils.safeWarn('⚠️ خطأ في إغلاق نموذج الوثيقة:', removeErr);
-            }
-            this.load();
-
-            GoogleIntegration.autoSave('ISODocuments', AppState.appData.isoDocuments).catch(error => {
-                Utils.safeError('خطأ في حفظ Google Sheets (وثائق ISO):', error);
-                if (typeof Notification !== 'undefined' && Notification.warning) {
-                    Notification.warning('تم الحفظ محلياً. تعذّرت المزامنة الفورية مع الشيت.');
-                }
-            });
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
-        }
-    },
-
-    async showProcedureForm(data = null) {
-        // جلب قائمة الأكواد من المركز
-        let documentCodes = [];
-        try {
-            const result = await GoogleIntegration.fetchData('getDocumentCodes', {});
-            if (result.success && result.data) {
-                documentCodes = result.data.filter(c => c.documentType === 'إجراء' && c.status === 'نشط');
-            }
-        } catch (error) {
-            Utils.safeError('Error loading document codes:', error);
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(o),e?.isoCode&&await this.loadDocumentCodeVersion("document",e.isoCode),o.querySelector("#save-document-btn").addEventListener("click",()=>this.handleDocumentSubmit(e?.id,o)),o.addEventListener("click",a=>{a.target===o&&o.remove()})},async handleDocumentSubmit(e=null,t){const s=document.getElementById("document-code-select")?.value||"";if(!s){Notification.error("\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631");return}const a=document.getElementById("document-name"),i=document.getElementById("document-type"),d=document.getElementById("document-version"),n=document.getElementById("document-issue-date"),r=document.getElementById("document-revision-date"),c=document.getElementById("document-department");if(!a||!i||!d||!c){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const l={id:e||Utils.generateId("ISO_DOC"),isoCode:s,name:a.value.trim(),type:i.value,version:d.value.trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",issueDate:n?.value||null,revisionDate:r?.value||null,department:c.value.trim(),createdAt:e?AppState.appData.isoDocuments.find(m=>m.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};Loading.show();try{if(e){const m=AppState.appData.isoDocuments.findIndex(u=>u.id===e);m!==-1&&(AppState.appData.isoDocuments[m]=l),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0648\u062B\u064A\u0642\u0629 \u0628\u0646\u062C\u0627\u062D")}else AppState.appData.isoDocuments.push(l),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0648\u062B\u064A\u0642\u0629 \u0628\u0646\u062C\u0627\u062D");typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),Loading.hide();try{t&&t.parentNode&&t.remove()}catch(m){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u063A\u0644\u0627\u0642 \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0648\u062B\u064A\u0642\u0629:",m)}this.load(),GoogleIntegration.autoSave("ISODocuments",AppState.appData.isoDocuments).catch(m=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 Google Sheets (\u0648\u062B\u0627\u0626\u0642 ISO):",m),typeof Notification<"u"&&Notification.warning&&Notification.warning("\u062A\u0645 \u0627\u0644\u062D\u0641\u0638 \u0645\u062D\u0644\u064A\u0627\u064B. \u062A\u0639\u0630\u0651\u0631\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0641\u0648\u0631\u064A\u0629 \u0645\u0639 \u0627\u0644\u0634\u064A\u062A.")})}catch(m){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+m.message)}},async showProcedureForm(e=null){let t=[];try{const a=await GoogleIntegration.fetchData("getDocumentCodes",{});a.success&&a.data&&(t=a.data.filter(i=>i.documentType==="\u0625\u062C\u0631\u0627\u0621"&&i.status==="\u0646\u0634\u0637"))}catch(a){Utils.safeError("Error loading document codes:",a)}const o=document.createElement("div");o.className="modal-overlay iso-professional-modal",o.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.editTitle', 'تعديل إجراء') : 'تعديل إجراء') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.addTitle', 'إضافة إجراء جديد') : 'إضافة إجراء جديد')}</h2>
+                    <h2 class="modal-title">${e?typeof I18n<"u"?I18n.t("module.iso.procedures.editTitle","\u062A\u0639\u062F\u064A\u0644 \u0625\u062C\u0631\u0627\u0621"):"\u062A\u0639\u062F\u064A\u0644 \u0625\u062C\u0631\u0627\u0621":typeof I18n<"u"?I18n.t("module.iso.procedures.addTitle","\u0625\u0636\u0627\u0641\u0629 \u0625\u062C\u0631\u0627\u0621 \u062C\u062F\u064A\u062F"):"\u0625\u0636\u0627\u0641\u0629 \u0625\u062C\u0631\u0627\u0621 \u062C\u062F\u064A\u062F"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1575,148 +1217,59 @@ const ISO = {
                 <div class="modal-body">
                     <form id="iso-procedure-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.procCodeLabel', 'كود الإجراء من المركز *') : 'كود الإجراء من المركز *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.procCodeLabel","\u0643\u0648\u062F \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632 *"):"\u0643\u0648\u062F \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632 *"}</label>
                             <select id="procedure-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('procedure')">
-                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectCodeOption', 'اختر الكود من مركز التكويد والإصدار') : 'اختر الكود من مركز التكويد والإصدار'}</option>
-                                ${documentCodes.map(code => `
-                                    <option value="${code.code}" 
-                                        data-code-id="${code.id}"
-                                        ${data?.isoCode === code.code ? 'selected' : ''}>
-                                        ${Utils.escapeHTML(code.code || '')} - ${Utils.escapeHTML(code.documentName || '')}
+                                <option value="">${typeof I18n<"u"?I18n.t("module.iso.form.selectCodeOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</option>
+                                ${t.map(a=>`
+                                    <option value="${a.code}" 
+                                        data-code-id="${a.id}"
+                                        ${e?.isoCode===a.code?"selected":""}>
+                                        ${Utils.escapeHTML(a.code||"")} - ${Utils.escapeHTML(a.documentName||"")}
                                     </option>
-                                `).join('')}
+                                `).join("")}
                             </select>
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.codeHint', 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.') : 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.'}
+                                ${typeof I18n<"u"?I18n.t("module.iso.form.codeHint","\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631. \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0633\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B."):"\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631. \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0633\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B."}
                             </p>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.procNameLabel', 'اسم الإجراء *') : 'اسم الإجراء *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.procNameLabel","\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 *"):"\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 *"}</label>
                             <input type="text" id="procedure-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.procNamePlaceholder', 'اسم الإجراء') : 'اسم الإجراء'}">
+                                value="${Utils.escapeHTML(e?.name||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.procNamePlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621"):"\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.departmentLabel', 'القسم *') : 'القسم *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.departmentLabel","\u0627\u0644\u0642\u0633\u0645 *"):"\u0627\u0644\u0642\u0633\u0645 *"}</label>
                             <input type="text" id="procedure-department" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.department || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.departmentPlaceholder', 'القسم') : 'القسم'}">
+                                value="${Utils.escapeHTML(e?.department||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.departmentPlaceholder","\u0627\u0644\u0642\u0633\u0645"):"\u0627\u0644\u0642\u0633\u0645"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionLabel', 'رقم الإصدار (يُسحب تلقائياً من المركز)') : 'رقم الإصدار (يُسحب تلقائياً من المركز)'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.versionLabel","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632)"):"\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632)"}</label>
                             <input type="text" id="procedure-version" readonly class="form-input bg-gray-100" 
-                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionPlaceholder', 'سيتم جلب الإصدار تلقائياً') : 'سيتم جلب الإصدار تلقائياً'}">
+                                value="${Utils.escapeHTML(e?.version||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.versionPlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDateLabel', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.issueDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</label>
                             <input type="text" id="procedure-issue-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDatePlaceholder', 'سيتم جلب تاريخ الإصدار تلقائياً') : 'سيتم جلب تاريخ الإصدار تلقائياً'}">
+                                value="${e?.issueDate?Utils.formatDate(e.issueDate):""}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.issueDatePlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.revisionDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"}</label>
                             <input type="text" id="procedure-revision-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDatePlaceholder', 'سيتم جلب تاريخ التعديل تلقائياً') : 'سيتم جلب تاريخ التعديل تلقائياً'}">
+                                value="${e?.revisionDate?Utils.formatDate(e.revisionDate):""}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.revisionDatePlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
-                    <button type="button" id="save-procedure-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.cancel","\u0625\u0644\u063A\u0627\u0621"):"\u0625\u0644\u063A\u0627\u0621"}</button>
+                    <button type="button" id="save-procedure-btn" class="btn-primary">${typeof I18n<"u"?I18n.t("core.buttons.save","\u062D\u0641\u0638"):"\u062D\u0641\u0638"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        // إذا كان هناك بيانات موجودة، جلب الإصدار تلقائياً
-        if (data?.isoCode) {
-            await this.loadDocumentCodeVersion('procedure', data.isoCode);
-        }
-
-        const saveBtn = modal.querySelector('#save-procedure-btn');
-        saveBtn.addEventListener('click', () => this.handleProcedureSubmit(data?.id, modal));
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async handleProcedureSubmit(editId = null, modal) {
-        const codeSelect = document.getElementById('procedure-code-select');
-        const selectedCode = codeSelect?.value || '';
-
-        if (!selectedCode) {
-            Notification.error('يجب اختيار كود الإجراء من مركز التكويد والإصدار');
-            return;
-        }
-
-        const formData = {
-            id: editId || Utils.generateId('ISO_PROC'),
-            isoCode: selectedCode,
-            name: document.getElementById('procedure-name').value.trim(),
-            department: document.getElementById('procedure-department').value.trim(),
-            version: document.getElementById('procedure-version').value.trim() || 'غير محدد',
-            issueDate: document.getElementById('procedure-issue-date').value || null,
-            revisionDate: document.getElementById('procedure-revision-date').value || null,
-            createdAt: editId ? AppState.appData.isoProcedures.find(p => p.id === editId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        Loading.show();
-        try {
-            if (editId) {
-                const index = AppState.appData.isoProcedures.findIndex(p => p.id === editId);
-                if (index !== -1) AppState.appData.isoProcedures[index] = formData;
-                Notification.success('تم تحديث الإجراء بنجاح');
-            } else {
-                AppState.appData.isoProcedures.push(formData);
-                Notification.success('تم إضافة الإجراء بنجاح');
-            }
-
-            // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-
-            Loading.hide();
-            try {
-                if (modal && modal.parentNode) modal.remove();
-            } catch (removeErr) {
-                Utils.safeWarn('⚠️ خطأ في إغلاق نموذج الإجراء:', removeErr);
-            }
-            this.load();
-
-            GoogleIntegration.autoSave('ISOProcedures', AppState.appData.isoProcedures).catch(error => {
-                Utils.safeError('خطأ في حفظ Google Sheets (إجراءات ISO):', error);
-                if (typeof Notification !== 'undefined' && Notification.warning) {
-                    Notification.warning('تم الحفظ محلياً. تعذّرت المزامنة الفورية مع الشيت.');
-                }
-            });
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
-        }
-    },
-
-    async showFormForm(data = null) {
-        // جلب قائمة الأكواد من المركز
-        let documentCodes = [];
-        try {
-            const result = await GoogleIntegration.fetchData('getDocumentCodes', {});
-            if (result.success && result.data) {
-                documentCodes = result.data.filter(c => c.documentType === 'نموذج' && c.status === 'نشط');
-            }
-        } catch (error) {
-            Utils.safeError('Error loading document codes:', error);
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(o),e?.isoCode&&await this.loadDocumentCodeVersion("procedure",e.isoCode),o.querySelector("#save-procedure-btn").addEventListener("click",()=>this.handleProcedureSubmit(e?.id,o)),o.addEventListener("click",a=>{a.target===o&&o.remove()})},async handleProcedureSubmit(e=null,t){const s=document.getElementById("procedure-code-select")?.value||"";if(!s){Notification.error("\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0643\u0648\u062F \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631");return}const a={id:e||Utils.generateId("ISO_PROC"),isoCode:s,name:document.getElementById("procedure-name").value.trim(),department:document.getElementById("procedure-department").value.trim(),version:document.getElementById("procedure-version").value.trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",issueDate:document.getElementById("procedure-issue-date").value||null,revisionDate:document.getElementById("procedure-revision-date").value||null,createdAt:e?AppState.appData.isoProcedures.find(i=>i.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};Loading.show();try{if(e){const i=AppState.appData.isoProcedures.findIndex(d=>d.id===e);i!==-1&&(AppState.appData.isoProcedures[i]=a),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0628\u0646\u062C\u0627\u062D")}else AppState.appData.isoProcedures.push(a),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0628\u0646\u062C\u0627\u062D");typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),Loading.hide();try{t&&t.parentNode&&t.remove()}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u063A\u0644\u0627\u0642 \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0625\u062C\u0631\u0627\u0621:",i)}this.load(),GoogleIntegration.autoSave("ISOProcedures",AppState.appData.isoProcedures).catch(i=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 Google Sheets (\u0625\u062C\u0631\u0627\u0621\u0627\u062A ISO):",i),typeof Notification<"u"&&Notification.warning&&Notification.warning("\u062A\u0645 \u0627\u0644\u062D\u0641\u0638 \u0645\u062D\u0644\u064A\u0627\u064B. \u062A\u0639\u0630\u0651\u0631\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0641\u0648\u0631\u064A\u0629 \u0645\u0639 \u0627\u0644\u0634\u064A\u062A.")})}catch(i){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+i.message)}},async showFormForm(e=null){let t=[];try{const a=await GoogleIntegration.fetchData("getDocumentCodes",{});a.success&&a.data&&(t=a.data.filter(i=>i.documentType==="\u0646\u0645\u0648\u0630\u062C"&&i.status==="\u0646\u0634\u0637"))}catch(a){Utils.safeError("Error loading document codes:",a)}const o=document.createElement("div");o.className="modal-overlay iso-professional-modal",o.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.editTitle', 'تعديل نموذج') : 'تعديل نموذج') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.addTitle', 'إضافة نموذج جديد') : 'إضافة نموذج جديد')}</h2>
+                    <h2 class="modal-title">${e?typeof I18n<"u"?I18n.t("module.iso.forms.editTitle","\u062A\u0639\u062F\u064A\u0644 \u0646\u0645\u0648\u0630\u062C"):"\u062A\u0639\u062F\u064A\u0644 \u0646\u0645\u0648\u0630\u062C":typeof I18n<"u"?I18n.t("module.iso.forms.addTitle","\u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C \u062C\u062F\u064A\u062F"):"\u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C \u062C\u062F\u064A\u062F"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1724,370 +1277,179 @@ const ISO = {
                 <div class="modal-body">
                     <form id="iso-form-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.frmCodeLabel', 'كود النموذج من المركز *') : 'كود النموذج من المركز *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.frmCodeLabel","\u0643\u0648\u062F \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632 *"):"\u0643\u0648\u062F \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632 *"}</label>
                             <select id="form-code-select" required class="form-input" 
                                 onchange="ISO.loadDocumentCodeVersion('form')">
-                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectCodeOption', 'اختر الكود من مركز التكويد والإصدار') : 'اختر الكود من مركز التكويد والإصدار'}</option>
-                                ${documentCodes.map(code => `
-                                    <option value="${code.code}" 
-                                        data-code-id="${code.id}"
-                                        ${data?.isoCode === code.code ? 'selected' : ''}>
-                                        ${Utils.escapeHTML(code.code || '')} - ${Utils.escapeHTML(code.documentName || '')}
+                                <option value="">${typeof I18n<"u"?I18n.t("module.iso.form.selectCodeOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</option>
+                                ${t.map(a=>`
+                                    <option value="${a.code}" 
+                                        data-code-id="${a.id}"
+                                        ${e?.isoCode===a.code?"selected":""}>
+                                        ${Utils.escapeHTML(a.code||"")} - ${Utils.escapeHTML(a.documentName||"")}
                                     </option>
-                                `).join('')}
+                                `).join("")}
                             </select>
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.codeHint', 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.') : 'يجب اختيار الكود من مركز التكويد والإصدار. الإصدار سيُسحب تلقائياً.'}
+                                ${typeof I18n<"u"?I18n.t("module.iso.form.codeHint","\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631. \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0633\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B."):"\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0643\u0648\u062F \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631. \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0633\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B."}
                             </p>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.frmNameLabel', 'اسم النموذج *') : 'اسم النموذج *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.frmNameLabel","\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C *"):"\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C *"}</label>
                             <input type="text" id="form-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.frmNamePlaceholder', 'اسم النموذج') : 'اسم النموذج'}">
+                                value="${Utils.escapeHTML(e?.name||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.frmNamePlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C"):"\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeLabel', 'النوع *') : 'النوع *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.typeLabel","\u0627\u0644\u0646\u0648\u0639 *"):"\u0627\u0644\u0646\u0648\u0639 *"}</label>
                             <select id="form-type" required class="form-input">
-                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.selectTypeOption', 'اختر النوع') : 'اختر النوع'}</option>
-                                <option value="تسجيل" ${data?.type === 'تسجيل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeRecord', 'تسجيل') : 'تسجيل'}</option>
-                                <option value="تقرير" ${data?.type === 'تقرير' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeReport', 'تقرير') : 'تقرير'}</option>
-                                <option value="حص" ${data?.type === 'حص' || data?.type === 'فحص' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeInspection', 'فحص') : 'فحص'}</option>
-                                <option value="تدريب" ${data?.type === 'تدريب' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeTraining', 'تدريب') : 'تدريب'}</option>
-                                <option value="أخرى" ${data?.type === 'أخرى' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.typeOther', 'أخرى') : 'أخرى'}</option>
+                                <option value="">${typeof I18n<"u"?I18n.t("module.iso.form.selectTypeOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639"}</option>
+                                <option value="\u062A\u0633\u062C\u064A\u0644" ${e?.type==="\u062A\u0633\u062C\u064A\u0644"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.form.typeRecord","\u062A\u0633\u062C\u064A\u0644"):"\u062A\u0633\u062C\u064A\u0644"}</option>
+                                <option value="\u062A\u0642\u0631\u064A\u0631" ${e?.type==="\u062A\u0642\u0631\u064A\u0631"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.form.typeReport","\u062A\u0642\u0631\u064A\u0631"):"\u062A\u0642\u0631\u064A\u0631"}</option>
+                                <option value="\u062D\u0635" ${e?.type==="\u062D\u0635"||e?.type==="\u0641\u062D\u0635"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.form.typeInspection","\u0641\u062D\u0635"):"\u0641\u062D\u0635"}</option>
+                                <option value="\u062A\u062F\u0631\u064A\u0628" ${e?.type==="\u062A\u062F\u0631\u064A\u0628"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.form.typeTraining","\u062A\u062F\u0631\u064A\u0628"):"\u062A\u062F\u0631\u064A\u0628"}</option>
+                                <option value="\u0623\u062E\u0631\u0649" ${e?.type==="\u0623\u062E\u0631\u0649"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.form.typeOther","\u0623\u062E\u0631\u0649"):"\u0623\u062E\u0631\u0649"}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionLabel', 'رقم الإصدار (يُسحب تلقائياً من المركز)') : 'رقم الإصدار (يُسحب تلقائياً من المركز)'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.versionLabel","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632)"):"\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u064F\u0633\u062D\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632)"}</label>
                             <input type="text" id="form-version" readonly class="form-input bg-gray-100" 
-                                value="${Utils.escapeHTML(data?.version || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.versionPlaceholder', 'سيتم جلب الإصدار تلقائياً') : 'سيتم جلب الإصدار تلقائياً'}">
+                                value="${Utils.escapeHTML(e?.version||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.versionPlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDateLabel', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.issueDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</label>
                             <input type="text" id="form-issue-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.issueDate ? Utils.formatDate(data.issueDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.issueDatePlaceholder', 'سيتم جلب تاريخ الإصدار تلقائياً') : 'سيتم جلب تاريخ الإصدار تلقائياً'}">
+                                value="${e?.issueDate?Utils.formatDate(e.issueDate):""}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.issueDatePlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.form.revisionDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"}</label>
                             <input type="text" id="form-revision-date" readonly class="form-input bg-gray-100" 
-                                value="${data?.revisionDate ? Utils.formatDate(data.revisionDate) : ''}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.form.revisionDatePlaceholder', 'سيتم جلب تاريخ التعديل تلقائياً') : 'سيتم جلب تاريخ التعديل تلقائياً'}">
+                                value="${e?.revisionDate?Utils.formatDate(e.revisionDate):""}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.form.revisionDatePlaceholder","\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u062C\u0644\u0628 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B"}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
-                    <button type="button" id="save-form-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.cancel","\u0625\u0644\u063A\u0627\u0621"):"\u0625\u0644\u063A\u0627\u0621"}</button>
+                    <button type="button" id="save-form-btn" class="btn-primary">${typeof I18n<"u"?I18n.t("core.buttons.save","\u062D\u0641\u0638"):"\u062D\u0641\u0638"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        // إذا كان هناك بيانات موجودة، جلب الإصدار تلقائياً
-        if (data?.isoCode) {
-            await this.loadDocumentCodeVersion('form', data.isoCode);
-        }
-
-        const saveBtn = modal.querySelector('#save-form-btn');
-        saveBtn.addEventListener('click', () => this.handleFormSubmit(data?.id, modal));
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async handleFormSubmit(editId = null, modal) {
-        // منع النقر المتكرر
-        const submitBtn = modal?.querySelector('button[type="submit"]') || 
-                         document.querySelector('.modal-overlay button[type="submit"]');
-        
-        if (submitBtn && submitBtn.disabled) {
-            return; // النموذج قيد المعالجة
-        }
-
-        // تعطيل الزر لمنع النقر المتكرر
-        let originalText = '';
-        if (submitBtn) {
-            originalText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
-        }
-
-        const codeSelect = document.getElementById('form-code-select');
-        const selectedCode = codeSelect?.value || '';
-
-        if (!selectedCode) {
-            Notification.error('يجب اختيار كود النموذج من مركز التكويد والإصدار');
-            // استعادة الزر عند الخطأ
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-            return;
-        }
-
-        // فحص العناصر قبل الاستخدام
-        const nameEl = document.getElementById('form-name');
-        const typeEl = document.getElementById('form-type');
-        const versionEl = document.getElementById('form-version');
-        const issueDateEl = document.getElementById('form-issue-date');
-        const revisionDateEl = document.getElementById('form-revision-date');
-        
-        if (!nameEl || !typeEl || !versionEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-            return;
-        }
-
-        const formData = {
-            id: editId || Utils.generateId('ISO_FORM'),
-            isoCode: selectedCode,
-            name: nameEl.value.trim(),
-            type: typeEl.value,
-            version: versionEl.value.trim() || 'غير محدد',
-            issueDate: issueDateEl?.value || null,
-            revisionDate: revisionDateEl?.value || null,
-            createdAt: editId ? AppState.appData.isoForms.find(f => f.id === editId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        try {
-            // 1. حفظ البيانات فوراً في الذاكرة
-            if (editId) {
-                const index = AppState.appData.isoForms.findIndex(f => f.id === editId);
-                if (index !== -1) AppState.appData.isoForms[index] = formData;
-                Notification.success('تم تحديث النموذج بنجاح');
-            } else {
-                AppState.appData.isoForms.push(formData);
-                Notification.success('تم إضافة النموذج بنجاح');
-            }
-
-            // حفظ البيانات باستخدام window.DataManager
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            } else {
-                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-            }
-
-            // 2. إغلاق النموذج فوراً بعد الحفظ في الذاكرة
-            modal.remove();
-            
-            // 3. استعادة الزر بعد النجاح
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-            
-            // 4. تحديث القائمة فوراً
-            this.load();
-            
-            // 5. معالجة المهام الخلفية (Google Sheets) في الخلفية
-            GoogleIntegration.autoSave('ISOForms', AppState.appData.isoForms).catch(error => {
-                Utils.safeError('خطأ في حفظ Google Sheets:', error);
-            });
-        } catch (error) {
-            Notification.error('حدث خطأ: ' + error.message);
-            
-            // استعادة الزر في حالة الخطأ
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-        }
-    },
-
-    async viewDocument(id) {
-        const doc = AppState.appData.isoDocuments.find(d => d.id === id);
-        if (!doc) {
-            Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.notFound', 'الوثيقة غير موجودة') : 'الوثيقة غير موجودة');
-            return;
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(o),e?.isoCode&&await this.loadDocumentCodeVersion("form",e.isoCode),o.querySelector("#save-form-btn").addEventListener("click",()=>this.handleFormSubmit(e?.id,o)),o.addEventListener("click",a=>{a.target===o&&o.remove()})},async handleFormSubmit(e=null,t){const o=t?.querySelector('button[type="submit"]')||document.querySelector('.modal-overlay button[type="submit"]');if(o&&o.disabled)return;let s="";o&&(s=o.innerHTML,o.disabled=!0,o.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');const i=document.getElementById("form-code-select")?.value||"";if(!i){Notification.error("\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0643\u0648\u062F \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0645\u0646 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"),o&&(o.disabled=!1,o.innerHTML=s);return}const d=document.getElementById("form-name"),n=document.getElementById("form-type"),r=document.getElementById("form-version"),c=document.getElementById("form-issue-date"),l=document.getElementById("form-revision-date");if(!d||!n||!r){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."),o&&(o.disabled=!1,o.innerHTML=s);return}const m={id:e||Utils.generateId("ISO_FORM"),isoCode:i,name:d.value.trim(),type:n.value,version:r.value.trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",issueDate:c?.value||null,revisionDate:l?.value||null,createdAt:e?AppState.appData.isoForms.find(u=>u.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};try{if(e){const u=AppState.appData.isoForms.findIndex(p=>p.id===e);u!==-1&&(AppState.appData.isoForms[u]=m),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0628\u0646\u062C\u0627\u062D")}else AppState.appData.isoForms.push(m),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0628\u0646\u062C\u0627\u062D");typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),t.remove(),o&&(o.disabled=!1,o.innerHTML=s),this.load(),GoogleIntegration.autoSave("ISOForms",AppState.appData.isoForms).catch(u=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 Google Sheets:",u)})}catch(u){Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+u.message),o&&(o.disabled=!1,o.innerHTML=s)}},async viewDocument(e){const t=AppState.appData.isoDocuments.find(s=>s.id===e);if(!t){Notification.error(typeof I18n<"u"?I18n.t("module.iso.docs.notFound","\u0627\u0644\u0648\u062B\u064A\u0642\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629"):"\u0627\u0644\u0648\u062B\u064A\u0642\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const o=document.createElement("div");o.className="modal-overlay iso-professional-modal",o.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.detailsTitle', 'تفاصيل الوثيقة') : 'تفاصيل الوثيقة'}</h2>
+                    <h2 class="modal-title">${typeof I18n<"u"?I18n.t("module.iso.docs.detailsTitle","\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0648\u062B\u064A\u0642\u0629"):"\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0648\u062B\u064A\u0642\u0629"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.code', 'كود ISO:') : 'كود ISO:'}</strong> ${Utils.escapeHTML(doc.isoCode || '')}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.name', 'اسم الوثيقة:') : 'اسم الوثيقة:'}</strong> ${Utils.escapeHTML(doc.name || '')}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.type', 'النوع:') : 'النوع:'}</strong> ${Utils.escapeHTML(doc.type || '')}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.version', 'الإصدار:') : 'الإصدار:'}</strong> ${Utils.escapeHTML(doc.version || '')}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.dept', 'القسم:') : 'القسم:'}</strong> ${Utils.escapeHTML(doc.department || '')}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.createdAt', 'تاريخ الإنشاء:') : 'تاريخ الإنشاء:'}</strong> ${Utils.formatDate(doc.createdAt)}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.docs.table.code","\u0643\u0648\u062F ISO:"):"\u0643\u0648\u062F ISO:"}</strong> ${Utils.escapeHTML(t.isoCode||"")}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.docs.table.name","\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629:"):"\u0627\u0633\u0645 \u0627\u0644\u0648\u062B\u064A\u0642\u0629:"}</strong> ${Utils.escapeHTML(t.name||"")}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.docs.table.type","\u0627\u0644\u0646\u0648\u0639:"):"\u0627\u0644\u0646\u0648\u0639:"}</strong> ${Utils.escapeHTML(t.type||"")}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.docs.table.version","\u0627\u0644\u0625\u0635\u062F\u0627\u0631:"):"\u0627\u0644\u0625\u0635\u062F\u0627\u0631:"}</strong> ${Utils.escapeHTML(t.version||"")}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.procedures.table.dept","\u0627\u0644\u0642\u0633\u0645:"):"\u0627\u0644\u0642\u0633\u0645:"}</strong> ${Utils.escapeHTML(t.department||"")}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.createdAt","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621:"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621:"}</strong> ${Utils.formatDate(t.createdAt)}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
-                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('iso') : ''}
-                    <button type="button" onclick="ISO.showDocumentForm(${JSON.stringify(doc).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.close","\u0625\u063A\u0644\u0627\u0642"):"\u0625\u063A\u0644\u0627\u0642"}</button>
+                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("iso"):""}
+                    <button type="button" onclick="ISO.showDocumentForm(${JSON.stringify(t).replace(/"/g,"&quot;")}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.actions.edit","\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0639\u062F\u064A\u0644"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        if (typeof EmailDispatch !== 'undefined') {
-            EmailDispatch.bindFooterButtons(modal, {
-                moduleKey: 'iso',
-                record: { ...doc, title: doc.name || '', code: doc.isoCode || '' },
-                recordId: doc.id || doc.isoCode || ''
-            });
-        }
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async viewProcedure(id) {
-        const procedure = AppState.appData.isoProcedures.find(p => p.id === id);
-        if (!procedure) {
-            Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.notFound', 'الإجراء غير موجود') : 'الإجراء غير موجود');
-            return;
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(o),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(o,{moduleKey:"iso",record:{...t,title:t.name||"",code:t.isoCode||""},recordId:t.id||t.isoCode||""}),o.addEventListener("click",s=>{s.target===o&&o.remove()})},async viewProcedure(e){const t=AppState.appData.isoProcedures.find(s=>s.id===e);if(!t){Notification.error(typeof I18n<"u"?I18n.t("module.iso.procedures.notFound","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F"):"\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const o=document.createElement("div");o.className="modal-overlay iso-professional-modal",o.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.detailsTitle', 'تفاصيل الإجراء') : 'تفاصيل الإجراء'}</h2>
+                    <h2 class="modal-title">${typeof I18n<"u"?I18n.t("module.iso.procedures.detailsTitle","\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0625\u062C\u0631\u0627\u0621"):"\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0625\u062C\u0631\u0627\u0621"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.code', 'كود ISO:') : 'كود ISO:'}</strong> ${Utils.escapeHTML(procedure.isoCode || '')}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.name', 'اسم الإجراء:') : 'اسم الإجراء:'}</strong> ${Utils.escapeHTML(procedure.name || '')}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.procedures.table.dept', 'القسم:') : 'القسم:'}</strong> ${Utils.escapeHTML(procedure.department || '')}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.version', 'الإصدار:') : 'الإصدار:'}</strong> ${Utils.escapeHTML(procedure.version || '')}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.createdAt', 'تاريخ الإنشاء:') : 'تاريخ الإنشاء:'}</strong> ${Utils.formatDate(procedure.createdAt)}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.procedures.table.code","\u0643\u0648\u062F ISO:"):"\u0643\u0648\u062F ISO:"}</strong> ${Utils.escapeHTML(t.isoCode||"")}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.procedures.table.name","\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621:"):"\u0627\u0633\u0645 \u0627\u0644\u0625\u062C\u0631\u0627\u0621:"}</strong> ${Utils.escapeHTML(t.name||"")}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.procedures.table.dept","\u0627\u0644\u0642\u0633\u0645:"):"\u0627\u0644\u0642\u0633\u0645:"}</strong> ${Utils.escapeHTML(t.department||"")}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.docs.table.version","\u0627\u0644\u0625\u0635\u062F\u0627\u0631:"):"\u0627\u0644\u0625\u0635\u062F\u0627\u0631:"}</strong> ${Utils.escapeHTML(t.version||"")}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.createdAt","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621:"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621:"}</strong> ${Utils.formatDate(t.createdAt)}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
-                    <button type="button" onclick="ISO.showProcedureForm(${JSON.stringify(procedure).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.close","\u0625\u063A\u0644\u0627\u0642"):"\u0625\u063A\u0644\u0627\u0642"}</button>
+                    <button type="button" onclick="ISO.showProcedureForm(${JSON.stringify(t).replace(/"/g,"&quot;")}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.actions.edit","\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0639\u062F\u064A\u0644"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async viewForm(id) {
-        const form = AppState.appData.isoForms.find(f => f.id === id);
-        if (!form) {
-            Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.notFound', 'النموذج غير موجود') : 'النموذج غير موجود');
-            return;
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(o),o.addEventListener("click",s=>{s.target===o&&o.remove()})},async viewForm(e){const t=AppState.appData.isoForms.find(s=>s.id===e);if(!t){Notification.error(typeof I18n<"u"?I18n.t("module.iso.forms.notFound","\u0627\u0644\u0646\u0645\u0648\u0630\u062C \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F"):"\u0627\u0644\u0646\u0645\u0648\u0630\u062C \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const o=document.createElement("div");o.className="modal-overlay iso-professional-modal",o.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.detailsTitle', 'تفاصيل النموذج') : 'تفاصيل النموذج'}</h2>
+                    <h2 class="modal-title">${typeof I18n<"u"?I18n.t("module.iso.forms.detailsTitle","\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0646\u0645\u0648\u0630\u062C"):"\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0646\u0645\u0648\u0630\u062C"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.table.code', 'كود ISO:') : 'كود ISO:'}</strong> ${Utils.escapeHTML(form.isoCode || '')}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.forms.table.name', 'اسم النموذج:') : 'اسم النموذج:'}</strong> ${Utils.escapeHTML(form.name || '')}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.docs.table.type', 'النوع:') : 'النوع:'}</strong> ${Utils.escapeHTML(form.type || '')}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.createdAt', 'تاريخ الإنشاء:') : 'تاريخ الإنشاء:'}</strong> ${Utils.formatDate(form.createdAt)}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.forms.table.code","\u0643\u0648\u062F ISO:"):"\u0643\u0648\u062F ISO:"}</strong> ${Utils.escapeHTML(t.isoCode||"")}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.forms.table.name","\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C:"):"\u0627\u0633\u0645 \u0627\u0644\u0646\u0645\u0648\u0630\u062C:"}</strong> ${Utils.escapeHTML(t.name||"")}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.docs.table.type","\u0627\u0644\u0646\u0648\u0639:"):"\u0627\u0644\u0646\u0648\u0639:"}</strong> ${Utils.escapeHTML(t.type||"")}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.createdAt","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621:"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621:"}</strong> ${Utils.formatDate(t.createdAt)}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
-                    <button type="button" onclick="ISO.showFormForm(${JSON.stringify(form).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.close","\u0625\u063A\u0644\u0627\u0642"):"\u0625\u063A\u0644\u0627\u0642"}</button>
+                    <button type="button" onclick="ISO.showFormForm(${JSON.stringify(t).replace(/"/g,"&quot;")}); this.closest('.modal-overlay').remove();" class="btn-primary">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.actions.edit","\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0639\u062F\u064A\u0644"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async renderISO45001() {
-        const objectives = AppState.appData.hseObjectives || [];
-        const riskAssessments = AppState.appData.hseRiskAssessments || [];
-        
-        // Calculate statistics
-        const highRisks = riskAssessments.filter(r => r.riskLevel === 'عالي' || r.riskLevel === 'High').length;
-        const mediumRisks = riskAssessments.filter(r => r.riskLevel === 'متوسط' || r.riskLevel === 'Medium').length;
-        const lowRisks = riskAssessments.filter(r => r.riskLevel === 'منخفض' || r.riskLevel === 'Low').length;
-        
-        const completedObjectives = objectives.filter(o => o.progress >= 100).length;
-
-        // Generate Risk Table Rows
-        const riskRows = riskAssessments.length > 0 ? riskAssessments.map(r => `
+        `,document.body.appendChild(o),o.addEventListener("click",s=>{s.target===o&&o.remove()})},async renderISO45001(){const e=AppState.appData.hseObjectives||[],t=AppState.appData.hseRiskAssessments||[],o=t.filter(r=>r.riskLevel==="\u0639\u0627\u0644\u064A"||r.riskLevel==="High").length,s=t.filter(r=>r.riskLevel==="\u0645\u062A\u0648\u0633\u0637"||r.riskLevel==="Medium").length,a=t.filter(r=>r.riskLevel==="\u0645\u0646\u062E\u0641\u0636"||r.riskLevel==="Low").length,i=e.filter(r=>r.progress>=100).length,d=t.length>0?t.map(r=>`
             <tr>
                 <td class="align-middle fw-bold text-dark">${Utils.escapeHTML(r.activity)}</td>
                 <td class="align-middle">${Utils.escapeHTML(r.hazards)}</td>
                 <td class="align-middle">
-                    <span class="badge ${r.riskLevel === 'عالي' || r.riskLevel === 'High' ? 'bg-danger' : (r.riskLevel === 'متوسط' || r.riskLevel === 'Medium' ? 'bg-warning text-dark' : 'bg-success')} rounded-pill px-3">
+                    <span class="badge ${r.riskLevel==="\u0639\u0627\u0644\u064A"||r.riskLevel==="High"?"bg-danger":r.riskLevel==="\u0645\u062A\u0648\u0633\u0637"||r.riskLevel==="Medium"?"bg-warning text-dark":"bg-success"} rounded-pill px-3">
                         ${Utils.escapeHTML(r.riskLevel)}
                     </span>
                 </td>
                 <td class="align-middle text-muted small">${Utils.escapeHTML(r.controlMeasures)}</td>
                 <td class="align-middle text-center">
-                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showHSERiskAssessmentForm(${JSON.stringify(r).replace(/"/g, '&quot;')})" title="تعديل">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showHSERiskAssessmentForm(${JSON.stringify(r).replace(/"/g,"&quot;")})" title="\u062A\u0639\u062F\u064A\u0644">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteHSERiskAssessment('${r.id}')" title="حذف">
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteHSERiskAssessment('${r.id}')" title="\u062D\u0630\u0641">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
             </tr>
-        `).join('') : `<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-info-circle fs-4 mb-2 d-block"></i>لا توجد تقييمات مخاطر مسجلة حتى الآن</td></tr>`;
-
-        // Generate Objectives Table Rows
-        const objectiveRows = objectives.length > 0 ? objectives.map(o => `
+        `).join(""):'<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-info-circle fs-4 mb-2 d-block"></i>\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0642\u064A\u064A\u0645\u0627\u062A \u0645\u062E\u0627\u0637\u0631 \u0645\u0633\u062C\u0644\u0629 \u062D\u062A\u0649 \u0627\u0644\u0622\u0646</td></tr>',n=e.length>0?e.map(r=>`
             <tr>
-                <td class="align-middle fw-bold text-dark">${Utils.escapeHTML(o.title)}</td>
-                <td class="align-middle">${Utils.escapeHTML(o.target)}</td>
+                <td class="align-middle fw-bold text-dark">${Utils.escapeHTML(r.title)}</td>
+                <td class="align-middle">${Utils.escapeHTML(r.target)}</td>
                 <td class="align-middle">
                     <div class="d-flex align-items-center">
                         <div class="progress flex-grow-1 me-2" style="height: 8px;">
-                            <div class="progress-bar ${o.progress >= 100 ? 'bg-success' : 'bg-primary'}" role="progressbar" style="width: ${o.progress}%;" aria-valuenow="${o.progress}" aria-valuemin="0" aria-valuemax="100"></div>
+                            <div class="progress-bar ${r.progress>=100?"bg-success":"bg-primary"}" role="progressbar" style="width: ${r.progress}%;" aria-valuenow="${r.progress}" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
-                        <span class="small fw-bold ${o.progress >= 100 ? 'text-success' : 'text-primary'}">${o.progress}%</span>
+                        <span class="small fw-bold ${r.progress>=100?"text-success":"text-primary"}">${r.progress}%</span>
                     </div>
                 </td>
                 <td class="align-middle text-center">
-                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showHSEObjectiveForm(${JSON.stringify(o).replace(/"/g, '&quot;')})" title="تعديل">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showHSEObjectiveForm(${JSON.stringify(r).replace(/"/g,"&quot;")})" title="\u062A\u0639\u062F\u064A\u0644">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteHSEObjective('${o.id}')" title="حذف">
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteHSEObjective('${r.id}')" title="\u062D\u0630\u0641">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
             </tr>
-        `).join('') : `<tr><td colspan="4" class="text-center text-muted py-4"><i class="fas fa-bullseye fs-4 mb-2 d-block"></i>لا توجد أهداف مسجلة حتى الآن</td></tr>`;
-
-        return `
+        `).join(""):'<tr><td colspan="4" class="text-center text-muted py-4"><i class="fas fa-bullseye fs-4 mb-2 d-block"></i>\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0647\u062F\u0627\u0641 \u0645\u0633\u062C\u0644\u0629 \u062D\u062A\u0649 \u0627\u0644\u0622\u0646</td></tr>';return`
             <div class="iso-dashboard iso-standard-dashboard iso-45001-dashboard">
                 <!-- Header -->
                 <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
                     <div class="card-header bg-primary text-white p-4 border-0" style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%) !important;">
                         <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.5rem;">
                             <i class="fas fa-hard-hat mx-3 text-warning fs-3"></i>
-                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.compliance.iso45001Title', 'SafetyHub | ICAPP (ISO 45001)') : 'SafetyHub | ICAPP (ISO 45001)'}
+                            ${typeof I18n<"u"?I18n.t("module.iso.overview.compliance.iso45001Title","SafetyHub | ICAPP (ISO 45001)"):"SafetyHub | ICAPP (ISO 45001)"}
                         </h3>
                         <p class="text-white-50 small mt-2 mb-0 px-2" style="max-width: 800px;">
-                            يهدف هذا النظام إلى توفير أماكن عمل آمنة وصحية، ومنع الإصابات والأمراض المرتبطة بالعمل، والتحسين المستمر لأداء السلامة والصحة المهنية.
+                            \u064A\u0647\u062F\u0641 \u0647\u0630\u0627 \u0627\u0644\u0646\u0638\u0627\u0645 \u0625\u0644\u0649 \u062A\u0648\u0641\u064A\u0631 \u0623\u0645\u0627\u0643\u0646 \u0639\u0645\u0644 \u0622\u0645\u0646\u0629 \u0648\u0635\u062D\u064A\u0629\u060C \u0648\u0645\u0646\u0639 \u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A \u0648\u0627\u0644\u0623\u0645\u0631\u0627\u0636 \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0627\u0644\u0639\u0645\u0644\u060C \u0648\u0627\u0644\u062A\u062D\u0633\u064A\u0646 \u0627\u0644\u0645\u0633\u062A\u0645\u0631 \u0644\u0623\u062F\u0627\u0621 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629.
                         </p>
                     </div>
                 </div>
@@ -2101,8 +1463,8 @@ const ISO = {
                                     <i class="fas fa-exclamation-triangle fs-6"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">مخاطر عالية</div>
-                                    <div class="fw-bold text-dark fs-5 mb-0">${highRisks}</div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0645\u062E\u0627\u0637\u0631 \u0639\u0627\u0644\u064A\u0629</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${o}</div>
                                 </div>
                             </div>
                         </div>
@@ -2114,8 +1476,8 @@ const ISO = {
                                     <i class="fas fa-exclamation-circle fs-6"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">مخاطر متوسطة</div>
-                                    <div class="fw-bold text-dark fs-5 mb-0">${mediumRisks}</div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0645\u062E\u0627\u0637\u0631 \u0645\u062A\u0648\u0633\u0637\u0629</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${s}</div>
                                 </div>
                             </div>
                         </div>
@@ -2127,8 +1489,8 @@ const ISO = {
                                     <i class="fas fa-shield-alt fs-6"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">مخاطر منخفضة</div>
-                                    <div class="fw-bold text-dark fs-5 mb-0">${lowRisks}</div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0645\u062E\u0627\u0637\u0631 \u0645\u0646\u062E\u0641\u0636\u0629</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${a}</div>
                                 </div>
                             </div>
                         </div>
@@ -2140,8 +1502,8 @@ const ISO = {
                                     <i class="fas fa-bullseye fs-6"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">أهداف مكتملة</div>
-                                    <div class="fw-bold text-dark fs-5 mb-0">${completedObjectives} <span style="font-size: 0.75rem; font-weight: normal; color: #6c757d;">من ${objectives.length}</span></div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0623\u0647\u062F\u0627\u0641 \u0645\u0643\u062A\u0645\u0644\u0629</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${i} <span style="font-size: 0.75rem; font-weight: normal; color: #6c757d;">\u0645\u0646 ${e.length}</span></div>
                                 </div>
                             </div>
                         </div>
@@ -2151,9 +1513,9 @@ const ISO = {
                 <!-- Risk Register Section -->
                 <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
                     <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
-                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-list-alt text-danger me-2"></i>سجل تقييم المخاطر (Risk Register)</h5>
+                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-list-alt text-danger me-2"></i>\u0633\u062C\u0644 \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 (Risk Register)</h5>
                         <button class="btn btn-primary shadow-sm rounded-pill px-4" onclick="ISO.showHSERiskAssessmentForm()">
-                            <i class="fas fa-plus me-2"></i>إضافة تقييم خطر
+                            <i class="fas fa-plus me-2"></i>\u0625\u0636\u0627\u0641\u0629 \u062A\u0642\u064A\u064A\u0645 \u062E\u0637\u0631
                         </button>
                     </div>
                     <div class="card-body p-4">
@@ -2161,15 +1523,15 @@ const ISO = {
                             <table class="table table-hover align-middle border">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>النشاط / المهمة</th>
-                                        <th>المخاطر المحتملة (Hazards)</th>
-                                        <th>مستوى الخطر</th>
-                                        <th>إجراءات التحكم (Control Measures)</th>
-                                        <th class="text-center">إجراءات</th>
+                                        <th>\u0627\u0644\u0646\u0634\u0627\u0637 / \u0627\u0644\u0645\u0647\u0645\u0629</th>
+                                        <th>\u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u0645\u062D\u062A\u0645\u0644\u0629 (Hazards)</th>
+                                        <th>\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0631</th>
+                                        <th>\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u062D\u0643\u0645 (Control Measures)</th>
+                                        <th class="text-center">\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${riskRows}
+                                    ${d}
                                 </tbody>
                             </table>
                         </div>
@@ -2179,9 +1541,9 @@ const ISO = {
                 <!-- Objectives Section -->
                 <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
                     <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
-                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-crosshairs text-primary me-2"></i>أهداف السلامة والصحة المهنية (HSE Objectives)</h5>
+                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-crosshairs text-primary me-2"></i>\u0623\u0647\u062F\u0627\u0641 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 (HSE Objectives)</h5>
                         <button class="btn btn-primary shadow-sm rounded-pill px-4" onclick="ISO.showHSEObjectiveForm()">
-                            <i class="fas fa-plus me-2"></i>إضافة هدف جديد
+                            <i class="fas fa-plus me-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0647\u062F\u0641 \u062C\u062F\u064A\u062F
                         </button>
                     </div>
                     <div class="card-body p-4">
@@ -2189,87 +1551,69 @@ const ISO = {
                             <table class="table table-hover align-middle border">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>الهدف الرئيسي</th>
-                                        <th>المستهدف (Target)</th>
-                                        <th style="min-width: 200px;">نسبة الإنجاز (Progress)</th>
-                                        <th class="text-center">إجراءات</th>
+                                        <th>\u0627\u0644\u0647\u062F\u0641 \u0627\u0644\u0631\u0626\u064A\u0633\u064A</th>
+                                        <th>\u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641 (Target)</th>
+                                        <th style="min-width: 200px;">\u0646\u0633\u0628\u0629 \u0627\u0644\u0625\u0646\u062C\u0627\u0632 (Progress)</th>
+                                        <th class="text-center">\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${objectiveRows}
+                                    ${n}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             </div>
-        `;
-    },
-
-    async renderISO14001() {
-        const aspects = AppState.appData.environmentalAspects || [];
-        const monitoring = AppState.appData.environmentalMonitoring || [];
-        
-        // Calculate statistics
-        const significantAspects = aspects.filter(a => a.isSignificant).length;
-        const totalEmissions = monitoring.filter(m => m.type === 'انبعاثات' || m.type === 'Emissions').length;
-        const totalWaste = monitoring.filter(m => m.type === 'مخلفات' || m.type === 'Waste').length;
-
-        // Generate Aspects Table Rows
-        const aspectRows = aspects.length > 0 ? aspects.map(a => `
+        `},async renderISO14001(){const e=AppState.appData.environmentalAspects||[],t=AppState.appData.environmentalMonitoring||[],o=e.filter(n=>n.isSignificant).length,s=t.filter(n=>n.type==="\u0627\u0646\u0628\u0639\u0627\u062B\u0627\u062A"||n.type==="Emissions").length,a=t.filter(n=>n.type==="\u0645\u062E\u0644\u0641\u0627\u062A"||n.type==="Waste").length,i=e.length>0?e.map(n=>`
             <tr>
-                <td class="align-middle fw-bold text-dark">${Utils.escapeHTML(a.activity)}</td>
-                <td class="align-middle">${Utils.escapeHTML(a.aspect)}</td>
-                <td class="align-middle">${Utils.escapeHTML(a.impact)}</td>
+                <td class="align-middle fw-bold text-dark">${Utils.escapeHTML(n.activity)}</td>
+                <td class="align-middle">${Utils.escapeHTML(n.aspect)}</td>
+                <td class="align-middle">${Utils.escapeHTML(n.impact)}</td>
                 <td class="align-middle">
-                    <span class="badge ${a.isSignificant ? 'bg-danger' : 'bg-success'} rounded-pill px-3">
-                        ${a.isSignificant ? 'هام جداً (Significant)' : 'عادي (Non-Significant)'}
+                    <span class="badge ${n.isSignificant?"bg-danger":"bg-success"} rounded-pill px-3">
+                        ${n.isSignificant?"\u0647\u0627\u0645 \u062C\u062F\u0627\u064B (Significant)":"\u0639\u0627\u062F\u064A (Non-Significant)"}
                     </span>
                 </td>
                 <td class="align-middle text-center">
-                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showEnvironmentalAspectsForm(${JSON.stringify(a).replace(/"/g, '&quot;')})" title="تعديل">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showEnvironmentalAspectsForm(${JSON.stringify(n).replace(/"/g,"&quot;")})" title="\u062A\u0639\u062F\u064A\u0644">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteEnvironmentalAspect('${a.id}')" title="حذف">
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteEnvironmentalAspect('${n.id}')" title="\u062D\u0630\u0641">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
             </tr>
-        `).join('') : `<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-leaf fs-4 mb-2 d-block"></i>لا توجد جوانب بيئية مسجلة حتى الآن</td></tr>`;
-
-        // Generate Monitoring Table Rows
-        const monitoringRows = monitoring.length > 0 ? monitoring.map(m => `
+        `).join(""):'<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-leaf fs-4 mb-2 d-block"></i>\u0644\u0627 \u062A\u0648\u062C\u062F \u062C\u0648\u0627\u0646\u0628 \u0628\u064A\u0626\u064A\u0629 \u0645\u0633\u062C\u0644\u0629 \u062D\u062A\u0649 \u0627\u0644\u0622\u0646</td></tr>',d=t.length>0?t.map(n=>`
             <tr>
-                <td class="align-middle fw-bold text-dark">${Utils.formatDate(m.date)}</td>
+                <td class="align-middle fw-bold text-dark">${Utils.formatDate(n.date)}</td>
                 <td class="align-middle">
-                    <span class="badge ${m.type === 'مخلفات' || m.type === 'Waste' ? 'bg-warning text-dark' : (m.type === 'انبعاثات' || m.type === 'Emissions' ? 'bg-secondary' : 'bg-info text-dark')} px-2 py-1">
-                        ${Utils.escapeHTML(m.type)}
+                    <span class="badge ${n.type==="\u0645\u062E\u0644\u0641\u0627\u062A"||n.type==="Waste"?"bg-warning text-dark":n.type==="\u0627\u0646\u0628\u0639\u0627\u062B\u0627\u062A"||n.type==="Emissions"?"bg-secondary":"bg-info text-dark"} px-2 py-1">
+                        ${Utils.escapeHTML(n.type)}
                     </span>
                 </td>
-                <td class="align-middle">${Utils.escapeHTML(m.parameter)}</td>
-                <td class="align-middle fw-bold font-monospace text-primary">${Utils.escapeHTML(m.value)} ${Utils.escapeHTML(m.unit)}</td>
+                <td class="align-middle">${Utils.escapeHTML(n.parameter)}</td>
+                <td class="align-middle fw-bold font-monospace text-primary">${Utils.escapeHTML(n.value)} ${Utils.escapeHTML(n.unit)}</td>
                 <td class="align-middle text-center">
-                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showEnvironmentalMonitoringForm(${JSON.stringify(m).replace(/"/g, '&quot;')})" title="تعديل">
+                    <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="ISO.showEnvironmentalMonitoringForm(${JSON.stringify(n).replace(/"/g,"&quot;")})" title="\u062A\u0639\u062F\u064A\u0644">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteEnvironmentalMonitoring('${m.id}')" title="حذف">
+                    <button class="btn btn-sm btn-outline-danger rounded-circle ms-1" onclick="ISO.deleteEnvironmentalMonitoring('${n.id}')" title="\u062D\u0630\u0641">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
             </tr>
-        `).join('') : `<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-chart-line fs-4 mb-2 d-block"></i>لا توجد سجلات مراقبة مسجلة حتى الآن</td></tr>`;
-
-        return `
+        `).join(""):'<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-chart-line fs-4 mb-2 d-block"></i>\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0645\u0631\u0627\u0642\u0628\u0629 \u0645\u0633\u062C\u0644\u0629 \u062D\u062A\u0649 \u0627\u0644\u0622\u0646</td></tr>';return`
             <div class="iso-dashboard iso-standard-dashboard iso-14001-dashboard">
                 <!-- Header -->
                 <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
                     <div class="card-header bg-success text-white p-4 border-0" style="background: linear-gradient(135deg, #166534 0%, #15803d 100%) !important;">
                         <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.5rem;">
                             <i class="fas fa-leaf mx-3 text-white-50 fs-3"></i>
-                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.overview.compliance.iso14001Title', 'نظام الإدارة البيئية (ISO 14001)') : 'نظام الإدارة البيئية (ISO 14001)'}
+                            ${typeof I18n<"u"?I18n.t("module.iso.overview.compliance.iso14001Title","\u0646\u0638\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0628\u064A\u0626\u064A\u0629 (ISO 14001)"):"\u0646\u0638\u0627\u0645 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0628\u064A\u0626\u064A\u0629 (ISO 14001)"}
                         </h3>
                         <p class="text-white-50 small mt-2 mb-0 px-2" style="max-width: 800px;">
-                            يهدف هذا النظام إلى مساعدة المنظمة على تحسين أدائها البيئي من خلال إدارة مسؤولياتها البيئية بطريقة منهجية تساهم في الاستدامة وتقليل الآثار السلبية.
+                            \u064A\u0647\u062F\u0641 \u0647\u0630\u0627 \u0627\u0644\u0646\u0638\u0627\u0645 \u0625\u0644\u0649 \u0645\u0633\u0627\u0639\u062F\u0629 \u0627\u0644\u0645\u0646\u0638\u0645\u0629 \u0639\u0644\u0649 \u062A\u062D\u0633\u064A\u0646 \u0623\u062F\u0627\u0626\u0647\u0627 \u0627\u0644\u0628\u064A\u0626\u064A \u0645\u0646 \u062E\u0644\u0627\u0644 \u0625\u062F\u0627\u0631\u0629 \u0645\u0633\u0624\u0648\u0644\u064A\u0627\u062A\u0647\u0627 \u0627\u0644\u0628\u064A\u0626\u064A\u0629 \u0628\u0637\u0631\u064A\u0642\u0629 \u0645\u0646\u0647\u062C\u064A\u0629 \u062A\u0633\u0627\u0647\u0645 \u0641\u064A \u0627\u0644\u0627\u0633\u062A\u062F\u0627\u0645\u0629 \u0648\u062A\u0642\u0644\u064A\u0644 \u0627\u0644\u0622\u062B\u0627\u0631 \u0627\u0644\u0633\u0644\u0628\u064A\u0629.
                         </p>
                     </div>
                 </div>
@@ -2283,8 +1627,8 @@ const ISO = {
                                     <i class="fas fa-globe fs-6"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">إجمالي الجوانب البيئية</div>
-                                    <div class="fw-bold text-dark fs-5 mb-0">${aspects.length}</div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062C\u0648\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A\u0629</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${e.length}</div>
                                 </div>
                             </div>
                         </div>
@@ -2296,8 +1640,8 @@ const ISO = {
                                     <i class="fas fa-exclamation-triangle fs-6"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">جوانب تأثير هام</div>
-                                    <div class="fw-bold text-dark fs-5 mb-0">${significantAspects}</div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u062C\u0648\u0627\u0646\u0628 \u062A\u0623\u062B\u064A\u0631 \u0647\u0627\u0645</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${o}</div>
                                 </div>
                             </div>
                         </div>
@@ -2309,8 +1653,8 @@ const ISO = {
                                     <i class="fas fa-smog fs-6"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">سجلات الانبعاثات</div>
-                                    <div class="fw-bold text-dark fs-5 mb-0">${totalEmissions}</div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0627\u0646\u0628\u0639\u0627\u062B\u0627\u062A</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${s}</div>
                                 </div>
                             </div>
                         </div>
@@ -2322,8 +1666,8 @@ const ISO = {
                                     <i class="fas fa-trash-alt fs-6"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">سجلات المخلفات</div>
-                                    <div class="fw-bold text-dark fs-5 mb-0">${totalWaste}</div>
+                                    <div class="text-muted mb-0" style="font-size: 0.75rem; font-weight: 700;">\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u062E\u0644\u0641\u0627\u062A</div>
+                                    <div class="fw-bold text-dark fs-5 mb-0">${a}</div>
                                 </div>
                             </div>
                         </div>
@@ -2333,9 +1677,9 @@ const ISO = {
                 <!-- Aspects Register Section -->
                 <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
                     <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
-                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-list text-success me-2"></i>سجل الجوانب البيئية (Environmental Aspects Register)</h5>
+                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-list text-success me-2"></i>\u0633\u062C\u0644 \u0627\u0644\u062C\u0648\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A\u0629 (Environmental Aspects Register)</h5>
                         <button class="btn btn-success shadow-sm rounded-pill px-4" onclick="ISO.showEnvironmentalAspectsForm()">
-                            <i class="fas fa-plus me-2"></i>إضافة جانب بيئي
+                            <i class="fas fa-plus me-2"></i>\u0625\u0636\u0627\u0641\u0629 \u062C\u0627\u0646\u0628 \u0628\u064A\u0626\u064A
                         </button>
                     </div>
                     <div class="card-body p-4">
@@ -2343,15 +1687,15 @@ const ISO = {
                             <table class="table table-hover align-middle border">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>النشاط / العملية</th>
-                                        <th>الجانب البيئي (Aspect)</th>
-                                        <th>التأثير البيئي (Impact)</th>
-                                        <th>مستوى الأهمية (Significance)</th>
-                                        <th class="text-center">إجراءات</th>
+                                        <th>\u0627\u0644\u0646\u0634\u0627\u0637 / \u0627\u0644\u0639\u0645\u0644\u064A\u0629</th>
+                                        <th>\u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A (Aspect)</th>
+                                        <th>\u0627\u0644\u062A\u0623\u062B\u064A\u0631 \u0627\u0644\u0628\u064A\u0626\u064A (Impact)</th>
+                                        <th>\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0623\u0647\u0645\u064A\u0629 (Significance)</th>
+                                        <th class="text-center">\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${aspectRows}
+                                    ${i}
                                 </tbody>
                             </table>
                         </div>
@@ -2361,9 +1705,9 @@ const ISO = {
                 <!-- Monitoring Section -->
                 <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
                     <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
-                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-chart-line text-info me-2"></i>سجل المراقبة البيئية (Environmental Monitoring)</h5>
+                        <h5 class="fw-bold text-dark m-0"><i class="fas fa-chart-line text-info me-2"></i>\u0633\u062C\u0644 \u0627\u0644\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0628\u064A\u0626\u064A\u0629 (Environmental Monitoring)</h5>
                         <button class="btn btn-success shadow-sm rounded-pill px-4" onclick="ISO.showEnvironmentalMonitoringForm()">
-                            <i class="fas fa-plus me-2"></i>إضافة سجل مراقبة
+                            <i class="fas fa-plus me-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0633\u062C\u0644 \u0645\u0631\u0627\u0642\u0628\u0629
                         </button>
                     </div>
                     <div class="card-body p-4">
@@ -2371,43 +1715,35 @@ const ISO = {
                             <table class="table table-hover align-middle border">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>تاريخ القياس</th>
-                                        <th>نوع القياس</th>
-                                        <th>المعامل (Parameter)</th>
-                                        <th>القيمة المُقاسة (Value)</th>
-                                        <th class="text-center">إجراءات</th>
+                                        <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0642\u064A\u0627\u0633</th>
+                                        <th>\u0646\u0648\u0639 \u0627\u0644\u0642\u064A\u0627\u0633</th>
+                                        <th>\u0627\u0644\u0645\u0639\u0627\u0645\u0644 (Parameter)</th>
+                                        <th>\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u064F\u0642\u0627\u0633\u0629 (Value)</th>
+                                        <th class="text-center">\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${monitoringRows}
+                                    ${d}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             </div>
-        `;
-    },
-
-    async renderAudit() {
-        const audits = AppState.appData.hseAudits || [];
-        const nonConformities = AppState.appData.hseNonConformities || [];
-        const actions = AppState.appData.hseCorrectiveActions || [];
-
-        return `
+        `},async renderAudit(){const e=AppState.appData.hseAudits||[],t=AppState.appData.hseNonConformities||[],o=AppState.appData.hseCorrectiveActions||[];return`
             <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800 flex items-center">
-                        <i class="fas fa-search-plus text-blue-600 ml-3"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.headerTitle', 'مركز التدقيق والمراجعة (Audits & CAPA)') : 'مركز التدقيق والمراجعة (Audits & CAPA)'}
+                        <i class="fas fa-search-plus text-blue-600 ml-3"></i>${typeof I18n<"u"?I18n.t("module.iso.audit.headerTitle","\u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0648\u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629 (Audits & CAPA)"):"\u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0648\u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629 (Audits & CAPA)"}
                     </h2>
-                    <p class="text-sm text-gray-500 mt-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.headerDesc', 'إدارة عمليات التدقيق الداخلي والخارجي ومتابعة حالات عدم المطابقة والإجراءات التصحيحية') : 'إدارة عمليات التدقيق الداخلي والخارجي ومتابعة حالات عدم المطابقة والإجراءات التصحيحية'}</p>
+                    <p class="text-sm text-gray-500 mt-1">${typeof I18n<"u"?I18n.t("module.iso.audit.headerDesc","\u0625\u062F\u0627\u0631\u0629 \u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0627\u0644\u062F\u0627\u062E\u0644\u064A \u0648\u0627\u0644\u062E\u0627\u0631\u062C\u064A \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0648\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629"):"\u0625\u062F\u0627\u0631\u0629 \u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0627\u0644\u062F\u0627\u062E\u0644\u064A \u0648\u0627\u0644\u062E\u0627\u0631\u062C\u064A \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0648\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629"}</p>
                 </div>
                 <div class="flex gap-2">
                     <button class="btn bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all" onclick="ISO.showAuditForm()">
-                        <i class="fas fa-plus text-blue-600"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.addAuditBtn', 'جدولة تدقيق') : 'جدولة تدقيق'}
+                        <i class="fas fa-plus text-blue-600"></i>${typeof I18n<"u"?I18n.t("module.iso.audit.addAuditBtn","\u062C\u062F\u0648\u0644\u0629 \u062A\u062F\u0642\u064A\u0642"):"\u062C\u062F\u0648\u0644\u0629 \u062A\u062F\u0642\u064A\u0642"}
                     </button>
                     <button class="btn bg-blue-600 text-white hover:bg-blue-700 border-0 shadow-sm font-semibold rounded-lg px-4 py-2 flex items-center gap-2 transition-all" onclick="ISO.showNonConformityForm()">
-                        <i class="fas fa-exclamation-triangle"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.addNcBtn', 'تسجيل حالة عدم مطابقة') : 'تسجيل حالة عدم مطابقة'}
+                        <i class="fas fa-exclamation-triangle"></i>${typeof I18n<"u"?I18n.t("module.iso.audit.addNcBtn","\u062A\u0633\u062C\u064A\u0644 \u062D\u0627\u0644\u0629 \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629"):"\u062A\u0633\u062C\u064A\u0644 \u062D\u0627\u0644\u0629 \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629"}
                     </button>
                 </div>
             </div>
@@ -2420,49 +1756,41 @@ const ISO = {
                             <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center ml-2">
                                 <i class="fas fa-clipboard-check"></i>
                             </div>
-                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditLogTitle', 'سجل عمليات التدقيق') : 'سجل عمليات التدقيق'}
+                            ${typeof I18n<"u"?I18n.t("module.iso.audit.auditLogTitle","\u0633\u062C\u0644 \u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u062A\u062F\u0642\u064A\u0642"):"\u0633\u062C\u0644 \u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u062A\u062F\u0642\u064A\u0642"}
                         </h3>
-                        <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200">${audits.length}</span>
+                        <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200">${e.length}</span>
                     </div>
                     <div class="card-body p-0 flex-1 overflow-y-auto" style="max-height: 500px;">
-                        ${audits.length === 0 ? `
+                        ${e.length===0?`
                             <div class="p-12 text-center flex flex-col items-center justify-center h-full">
                                 <div class="w-16 h-16 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mb-3"><i class="fas fa-clipboard text-2xl"></i></div>
-                                <h4 class="text-gray-600 font-bold mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.noAudits', 'لا توجد سجلات تدقيق') : 'لا توجد سجلات تدقيق'}</h4>
-                                <p class="text-gray-400 text-xs">قم بجدولة أول عملية تدقيق لتقييم النظام</p>
+                                <h4 class="text-gray-600 font-bold mb-1">${typeof I18n<"u"?I18n.t("module.iso.audit.noAudits","\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u062A\u062F\u0642\u064A\u0642"):"\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u062A\u062F\u0642\u064A\u0642"}</h4>
+                                <p class="text-gray-400 text-xs">\u0642\u0645 \u0628\u062C\u062F\u0648\u0644\u0629 \u0623\u0648\u0644 \u0639\u0645\u0644\u064A\u0629 \u062A\u062F\u0642\u064A\u0642 \u0644\u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0646\u0638\u0627\u0645</p>
                             </div>
-                        ` : `
+                        `:`
                             <div class="divide-y divide-gray-100">
-                                ${audits.map(audit => {
-                                    const isCompleted = audit.status === 'مكتمل' || audit.status === 'Completed';
-                                    const isScheduled = audit.status === 'مجدول' || audit.status === 'Scheduled';
-                                    
-                                    let statusColor = isCompleted ? 'green' : (isScheduled ? 'blue' : 'amber');
-                                    let typeIcon = audit.type?.includes('خارجي') || audit.type?.includes('External') ? 'fa-building' : 'fa-users-cog';
-                                    
-                                    return `
+                                ${e.map(s=>{const a=s.status==="\u0645\u0643\u062A\u0645\u0644"||s.status==="Completed",i=s.status==="\u0645\u062C\u062F\u0648\u0644"||s.status==="Scheduled";let d=a?"green":i?"blue":"amber",n=s.type?.includes("\u062E\u0627\u0631\u062C\u064A")||s.type?.includes("External")?"fa-building":"fa-users-cog";return`
                                     <div class="p-4 hover:bg-gray-50 transition-colors flex items-start justify-between group">
                                         <div class="flex items-start gap-4">
-                                            <div class="mt-1 w-10 h-10 rounded-xl bg-${statusColor}-50 text-${statusColor}-600 flex items-center justify-center border border-${statusColor}-100">
-                                                <i class="fas ${isCompleted ? 'fa-check' : 'fa-calendar-alt'}"></i>
+                                            <div class="mt-1 w-10 h-10 rounded-xl bg-${d}-50 text-${d}-600 flex items-center justify-center border border-${d}-100">
+                                                <i class="fas ${a?"fa-check":"fa-calendar-alt"}"></i>
                                             </div>
                                             <div>
                                                 <div class="flex items-center gap-2 mb-1">
-                                                    <h4 class="font-bold text-gray-800 text-sm m-0">${Utils.escapeHTML(audit.type)}</h4>
-                                                    <span class="bg-${statusColor}-100 text-${statusColor}-800 text-[10px] font-bold px-2 py-0.5 rounded border border-${statusColor}-200">${audit.status}</span>
+                                                    <h4 class="font-bold text-gray-800 text-sm m-0">${Utils.escapeHTML(s.type)}</h4>
+                                                    <span class="bg-${d}-100 text-${d}-800 text-[10px] font-bold px-2 py-0.5 rounded border border-${d}-200">${s.status}</span>
                                                 </div>
                                                 <div class="text-xs text-gray-500 flex items-center gap-3">
-                                                    <span title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditCard.date', 'تاريخ التدقيق') : 'تاريخ التدقيق'}"><i class="far fa-calendar ml-1"></i>${Utils.formatDate(audit.date)}</span>
-                                                    <span title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.auditCard.auditor', 'المدقق') : 'المدقق'}"><i class="fas fa-user-tie ml-1"></i>${Utils.escapeHTML(audit.auditor)}</span>
+                                                    <span title="${typeof I18n<"u"?I18n.t("module.iso.audit.auditCard.date","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062F\u0642\u064A\u0642"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062F\u0642\u064A\u0642"}"><i class="far fa-calendar ml-1"></i>${Utils.formatDate(s.date)}</span>
+                                                    <span title="${typeof I18n<"u"?I18n.t("module.iso.audit.auditCard.auditor","\u0627\u0644\u0645\u062F\u0642\u0642"):"\u0627\u0644\u0645\u062F\u0642\u0642"}"><i class="fas fa-user-tie ml-1"></i>${Utils.escapeHTML(s.auditor)}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <button onclick="ISO.viewAudit('${audit.id}')" class="text-gray-400 hover:text-blue-600 bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-200 w-8 h-8 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 focus:opacity-100" title="التفاصيل">
+                                        <button onclick="ISO.viewAudit('${s.id}')" class="text-gray-400 hover:text-blue-600 bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-200 w-8 h-8 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 focus:opacity-100" title="\u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
                                             <i class="fas fa-chevron-left text-xs"></i>
                                         </button>
                                     </div>
-                                    `;
-                                }).join('')}
+                                    `}).join("")}
                             </div>
                         `}
                     </div>
@@ -2475,89 +1803,74 @@ const ISO = {
                             <div class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center ml-2">
                                 <i class="fas fa-exclamation-triangle"></i>
                             </div>
-                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaTitle', 'سجل CAPA') : 'سجل CAPA'}
+                            ${typeof I18n<"u"?I18n.t("module.iso.audit.capaTitle","\u0633\u062C\u0644 CAPA"):"\u0633\u062C\u0644 CAPA"}
                         </h3>
                         <div class="flex gap-1">
-                            <span class="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-1 rounded-md border border-red-200" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaCard.ncType', 'حالات عدم مطابقة') : 'حالات عدم مطابقة'}">${nonConformities.length} NC</span>
-                            <span class="bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-1 rounded-md border border-orange-200" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaCard.caType', 'إجراءات تصحيحية') : 'إجراءات تصحيحية'}">${actions.length} CA</span>
+                            <span class="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-1 rounded-md border border-red-200" title="${typeof I18n<"u"?I18n.t("module.iso.audit.capaCard.ncType","\u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629"):"\u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629"}">${t.length} NC</span>
+                            <span class="bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-1 rounded-md border border-orange-200" title="${typeof I18n<"u"?I18n.t("module.iso.audit.capaCard.caType","\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629"):"\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629"}">${o.length} CA</span>
                         </div>
                     </div>
                     <div class="card-body p-0 flex-1 overflow-y-auto bg-gray-50/30" style="max-height: 500px;">
-                        ${nonConformities.length === 0 && actions.length === 0 ? `
+                        ${t.length===0&&o.length===0?`
                             <div class="p-12 text-center flex flex-col items-center justify-center h-full">
                                 <div class="w-16 h-16 bg-green-50 text-green-400 rounded-full flex items-center justify-center mb-3"><i class="fas fa-shield-alt text-2xl"></i></div>
-                                <h4 class="text-gray-600 font-bold mb-1">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.noCapa', 'لا توجد سجلات عدم مطابقة أو إجراءات تصحيحية') : 'لا توجد سجلات عدم مطابقة أو إجراءات تصحيحية'}</h4>
-                                <p class="text-gray-400 text-xs">نظام الجودة يعمل بشكل مثالي دون ملاحظات.</p>
+                                <h4 class="text-gray-600 font-bold mb-1">${typeof I18n<"u"?I18n.t("module.iso.audit.noCapa","\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 \u0623\u0648 \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629"):"\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 \u0623\u0648 \u0625\u062C\u0631\u0627\u0621\u0627\u062A \u062A\u0635\u062D\u064A\u062D\u064A\u0629"}</h4>
+                                <p class="text-gray-400 text-xs">\u0646\u0638\u0627\u0645 \u0627\u0644\u062C\u0648\u062F\u0629 \u064A\u0639\u0645\u0644 \u0628\u0634\u0643\u0644 \u0645\u062B\u0627\u0644\u064A \u062F\u0648\u0646 \u0645\u0644\u0627\u062D\u0638\u0627\u062A.</p>
                             </div>
-                        ` : `
+                        `:`
                             <div class="p-4">
                                 <!-- Non-Conformities Section -->
-                                ${nonConformities.length > 0 ? `
+                                ${t.length>0?`
                                     <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
-                                        <i class="fas fa-bug text-red-400"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaCard.ncType', 'حالات عدم مطابقة (NC)') : 'حالات عدم مطابقة (NC)'}
+                                        <i class="fas fa-bug text-red-400"></i> ${typeof I18n<"u"?I18n.t("module.iso.audit.capaCard.ncType","\u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 (NC)"):"\u062D\u0627\u0644\u0627\u062A \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 (NC)"}
                                     </h4>
                                     <div class="space-y-3 mb-6">
-                                        ${nonConformities.map(nc => {
-                                            const isClosed = nc.status === 'مغلق' || nc.status === 'Closed';
-                                            return `
-                                                <div class="bg-white border ${isClosed ? 'border-gray-200' : 'border-red-200 shadow-sm'} rounded-xl p-3 hover:border-red-300 transition-colors cursor-pointer group" onclick="ISO.viewNonConformity('${nc.id}')">
+                                        ${t.map(s=>{const a=s.status==="\u0645\u063A\u0644\u0642"||s.status==="Closed";return`
+                                                <div class="bg-white border ${a?"border-gray-200":"border-red-200 shadow-sm"} rounded-xl p-3 hover:border-red-300 transition-colors cursor-pointer group" onclick="ISO.viewNonConformity('${s.id}')">
                                                     <div class="flex justify-between items-start mb-2">
-                                                        <span class="text-xs font-bold ${isClosed ? 'text-gray-500 bg-gray-100' : 'text-red-700 bg-red-100'} px-2 py-0.5 rounded border ${isClosed ? 'border-gray-200' : 'border-red-200'}">${nc.status}</span>
-                                                        <span class="text-[10px] text-gray-400"><i class="far fa-clock ml-1"></i>${Utils.formatDate(nc.date)}</span>
+                                                        <span class="text-xs font-bold ${a?"text-gray-500 bg-gray-100":"text-red-700 bg-red-100"} px-2 py-0.5 rounded border ${a?"border-gray-200":"border-red-200"}">${s.status}</span>
+                                                        <span class="text-[10px] text-gray-400"><i class="far fa-clock ml-1"></i>${Utils.formatDate(s.date)}</span>
                                                     </div>
-                                                    <p class="text-sm text-gray-800 font-medium line-clamp-2 leading-snug">${Utils.escapeHTML(nc.description)}</p>
+                                                    <p class="text-sm text-gray-800 font-medium line-clamp-2 leading-snug">${Utils.escapeHTML(s.description)}</p>
                                                     <div class="mt-2 text-[10px] text-gray-500 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <span class="text-blue-600">عرض التفاصيل &larr;</span>
+                                                        <span class="text-blue-600">\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644 &larr;</span>
                                                     </div>
                                                 </div>
-                                            `;
-                                        }).join('')}
+                                            `}).join("")}
                                     </div>
-                                ` : ''}
+                                `:""}
 
                                 <!-- Corrective Actions Section -->
-                                ${actions.length > 0 ? `
+                                ${o.length>0?`
                                     <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b border-gray-200 flex items-center gap-2">
-                                        <i class="fas fa-tools text-orange-400"></i> ${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.capaCard.caType', 'الإجراءات التصحيحية (CA)') : 'الإجراءات التصحيحية (CA)'}
+                                        <i class="fas fa-tools text-orange-400"></i> ${typeof I18n<"u"?I18n.t("module.iso.audit.capaCard.caType","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629 (CA)"):"\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A\u0629 (CA)"}
                                     </h4>
                                     <div class="space-y-3">
-                                        ${actions.map(action => {
-                                            const isCompleted = action.status === 'مكتمل' || action.status === 'Completed';
-                                            const dueDateObj = new Date(action.dueDate);
-                                            const isOverdue = !isCompleted && dueDateObj < new Date();
-                                            
-                                            return `
-                                                <div class="bg-white border ${isCompleted ? 'border-gray-200' : (isOverdue ? 'border-red-300 shadow-sm' : 'border-orange-200 shadow-sm')} rounded-xl p-3 hover:shadow-md transition-shadow cursor-pointer group relative overflow-hidden" onclick="ISO.viewCorrectiveAction('${action.id}')">
-                                                    ${isOverdue ? '<div class="absolute top-0 right-0 w-1 h-full bg-red-500"></div>' : ''}
+                                        ${o.map(s=>{const a=s.status==="\u0645\u0643\u062A\u0645\u0644"||s.status==="Completed",i=new Date(s.dueDate),d=!a&&i<new Date;return`
+                                                <div class="bg-white border ${a?"border-gray-200":d?"border-red-300 shadow-sm":"border-orange-200 shadow-sm"} rounded-xl p-3 hover:shadow-md transition-shadow cursor-pointer group relative overflow-hidden" onclick="ISO.viewCorrectiveAction('${s.id}')">
+                                                    ${d?'<div class="absolute top-0 right-0 w-1 h-full bg-red-500"></div>':""}
                                                     <div class="flex justify-between items-start mb-2">
-                                                        <span class="text-xs font-bold ${isCompleted ? 'text-green-700 bg-green-100 border-green-200' : 'text-orange-700 bg-orange-100 border-orange-200'} px-2 py-0.5 rounded border">${action.status}</span>
-                                                        <span class="text-[10px] ${isOverdue ? 'text-red-600 font-bold' : 'text-gray-500'}"><i class="far fa-calendar-times ml-1"></i>تاريخ الاستحقاق: ${Utils.formatDate(action.dueDate)}</span>
+                                                        <span class="text-xs font-bold ${a?"text-green-700 bg-green-100 border-green-200":"text-orange-700 bg-orange-100 border-orange-200"} px-2 py-0.5 rounded border">${s.status}</span>
+                                                        <span class="text-[10px] ${d?"text-red-600 font-bold":"text-gray-500"}"><i class="far fa-calendar-times ml-1"></i>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642: ${Utils.formatDate(s.dueDate)}</span>
                                                     </div>
-                                                    <p class="text-sm text-gray-800 line-clamp-2 leading-snug mb-2">${Utils.escapeHTML(action.description)}</p>
+                                                    <p class="text-sm text-gray-800 line-clamp-2 leading-snug mb-2">${Utils.escapeHTML(s.description)}</p>
                                                     <div class="flex items-center gap-1.5 text-xs bg-gray-50 w-fit px-2 py-1 rounded text-gray-600 border border-gray-100">
                                                         <i class="fas fa-user-hard-hat text-gray-400"></i>
-                                                        <span class="font-medium">${Utils.escapeHTML(action.responsible)}</span>
+                                                        <span class="font-medium">${Utils.escapeHTML(s.responsible)}</span>
                                                     </div>
                                                 </div>
-                                            `;
-                                        }).join('')}
+                                            `}).join("")}
                                     </div>
-                                ` : ''}
+                                `:""}
                             </div>
                         `}
                     </div>
                 </div>
             </div>
-        `;
-    },
-
-    async showHSEObjectiveForm(data = null) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `},async showHSEObjectiveForm(e=null){const t=document.createElement("div");t.className="modal-overlay iso-professional-modal",t.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.editTitle', 'تعديل هدف') : 'تعديل هدف') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.addTitle', 'إضافة هدف HSE جديد') : 'إضافة هدف HSE جديد')}</h2>
+                    <h2 class="modal-title">${e?typeof I18n<"u"?I18n.t("module.iso.objectives.editTitle","\u062A\u0639\u062F\u064A\u0644 \u0647\u062F\u0641"):"\u062A\u0639\u062F\u064A\u0644 \u0647\u062F\u0641":typeof I18n<"u"?I18n.t("module.iso.objectives.addTitle","\u0625\u0636\u0627\u0641\u0629 \u0647\u062F\u0641 HSE \u062C\u062F\u064A\u062F"):"\u0625\u0636\u0627\u0641\u0629 \u0647\u062F\u0641 HSE \u062C\u062F\u064A\u062F"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -2565,131 +1878,36 @@ const ISO = {
                 <div class="modal-body">
                     <form id="hse-objective-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.nameLabel', 'الهدف *') : 'الهدف *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.objectives.form.nameLabel","\u0627\u0644\u0647\u062F\u0641 *"):"\u0627\u0644\u0647\u062F\u0641 *"}</label>
                             <input type="text" id="objective-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.namePlaceholder', 'مثال: تقليل الإصابات بنسبة 20%') : 'مثال: تقليل الإصابات بنسبة 20%'}">
+                                value="${Utils.escapeHTML(e?.name||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.objectives.form.namePlaceholder","\u0645\u062B\u0627\u0644: \u062A\u0642\u0644\u064A\u0644 \u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A \u0628\u0646\u0633\u0628\u0629 20%"):"\u0645\u062B\u0627\u0644: \u062A\u0642\u0644\u064A\u0644 \u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A \u0628\u0646\u0633\u0628\u0629 20%"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.descLabel', 'الوصف *') : 'الوصف *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.objectives.form.descLabel","\u0627\u0644\u0648\u0635\u0641 *"):"\u0627\u0644\u0648\u0635\u0641 *"}</label>
                             <textarea id="objective-description" required class="form-input" rows="4" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.descPlaceholder', 'وصف تفصيلي للهدف') : 'وصف تفصيلي للهدف'}">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.objectives.form.descPlaceholder","\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u0647\u062F\u0641"):"\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u0647\u062F\u0641"}">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.dueDateLabel', 'تاريخ الانتهاء *') : 'تاريخ الانتهاء *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.objectives.form.dueDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 *"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 *"}</label>
                             <input type="date" id="objective-due-date" required class="form-input" 
-                                value="${data?.dueDate ? new Date(data.dueDate).toISOString().slice(0, 10) : ''}">
+                                value="${e?.dueDate?new Date(e.dueDate).toISOString().slice(0,10):""}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.respLabel', 'المسؤول *') : 'المسؤول *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.objectives.form.respLabel","\u0627\u0644\u0645\u0633\u0624\u0648\u0644 *"):"\u0627\u0644\u0645\u0633\u0624\u0648\u0644 *"}</label>
                             <input type="text" id="objective-responsible" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.responsible || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.objectives.form.respPlaceholder', 'اسم المسؤول') : 'اسم المسؤول'}">
+                                value="${Utils.escapeHTML(e?.responsible||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.objectives.form.respPlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0624\u0648\u0644"):"\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0624\u0648\u0644"}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
-                    <button type="button" id="save-objective-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.cancel","\u0625\u0644\u063A\u0627\u0621"):"\u0625\u0644\u063A\u0627\u0621"}</button>
+                    <button type="button" id="save-objective-btn" class="btn-primary">${typeof I18n<"u"?I18n.t("core.buttons.save","\u062D\u0641\u0638"):"\u062D\u0641\u0638"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        const saveBtn = modal.querySelector('#save-objective-btn');
-        saveBtn.addEventListener('click', () => this.handleHSEObjectiveSubmit(data?.id, modal));
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async handleHSEObjectiveSubmit(editId = null, modal) {
-        // فحص العناصر قبل الاستخدام
-        const nameEl = document.getElementById('objective-name');
-        const descriptionEl = document.getElementById('objective-description');
-        const dueDateEl = document.getElementById('objective-due-date');
-        const responsibleEl = document.getElementById('objective-responsible');
-        
-        if (!nameEl || !descriptionEl || !dueDateEl || !responsibleEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            return;
-        }
-
-        const formData = {
-            id: editId || Utils.generateId('HSE_OBJ'),
-            name: nameEl.value.trim(),
-            description: descriptionEl.value.trim(),
-            dueDate: new Date(dueDateEl.value).toISOString(),
-            responsible: responsibleEl.value.trim(),
-            status: editId ? AppState.appData.hseObjectives.find(o => o.id === editId)?.status || 'قيد التنيذ' : 'قيد التنيذ',
-            createdAt: editId ? AppState.appData.hseObjectives.find(o => o.id === editId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        if (!AppState.appData.hseObjectives) {
-            AppState.appData.hseObjectives = [];
-        }
-
-        Loading.show();
-        try {
-            if (editId) {
-                const index = AppState.appData.hseObjectives.findIndex(o => o.id === editId);
-                if (index !== -1) AppState.appData.hseObjectives[index] = formData;
-                Notification.success('تم تحديث الهد بنجاح');
-                // للتحديث: حفظ كامل البيانات
-                // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-                await GoogleIntegration.autoSave('HSEObjectives', AppState.appData.hseObjectives);
-            } else {
-                AppState.appData.hseObjectives.push(formData);
-                Notification.success('تم إضافة الهد بنجاح');
-                // للإضافة: حفظ محلي ثم إرسال مباشر إلى الخلفية
-                // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-
-                // إرسال مباشر إلى الخلفية للسجل الجديد
-                if (AppState.googleConfig.appsScript.enabled && AppState.googleConfig.appsScript.scriptUrl) {
-                    try {
-                        await GoogleIntegration.sendToAppsScript('addHSEObjective', formData);
-                        Utils.safeLog('✅ تم حفظ الهدف مباشرة في الخلفية');
-                    } catch (error) {
-                        Utils.safeWarn('⚠ فشل الحفظ المباشر، سيتم المزامنة لاحقاً:', error);
-                        // في حالة الفشل، نستخدم autoSave كبديل
-                        await GoogleIntegration.autoSave('HSEObjectives', AppState.appData.hseObjectives);
-                    }
-                } else {
-                    // إذا لم يكن Google Apps Script مفعّل، نستخدم autoSave فقط
-                    await GoogleIntegration.autoSave('HSEObjectives', AppState.appData.hseObjectives);
-                }
-            }
-
-            Loading.hide();
-            modal.remove();
-            this.load();
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
-        }
-    },
-
-    async showHSERiskAssessmentForm(data = null) {
-        Notification.info(typeof I18n !== 'undefined' ? I18n.t('module.iso.risks.comingSoon', 'سيتم إضافة نموذج تقييم المخاطر HSE قريباً') : 'سيتم إضافة نموذج تقييم المخاطر HSE قريباً');
-    },
-
-    async showEnvironmentalAspectsForm(data = null) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(t),t.querySelector("#save-objective-btn").addEventListener("click",()=>this.handleHSEObjectiveSubmit(e?.id,t)),t.addEventListener("click",s=>{s.target===t&&t.remove()})},async handleHSEObjectiveSubmit(e=null,t){const o=document.getElementById("objective-name"),s=document.getElementById("objective-description"),a=document.getElementById("objective-due-date"),i=document.getElementById("objective-responsible");if(!o||!s||!a||!i){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const d={id:e||Utils.generateId("HSE_OBJ"),name:o.value.trim(),description:s.value.trim(),dueDate:new Date(a.value).toISOString(),responsible:i.value.trim(),status:e&&AppState.appData.hseObjectives.find(n=>n.id===e)?.status||"\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u064A\u0630",createdAt:e?AppState.appData.hseObjectives.find(n=>n.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.hseObjectives||(AppState.appData.hseObjectives=[]),Loading.show();try{if(e){const n=AppState.appData.hseObjectives.findIndex(r=>r.id===e);n!==-1&&(AppState.appData.hseObjectives[n]=d),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0647\u062F \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("HSEObjectives",AppState.appData.hseObjectives)}else if(AppState.appData.hseObjectives.push(d),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0647\u062F \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addHSEObjective",d),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0647\u062F\u0641 \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(n){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",n),await GoogleIntegration.autoSave("HSEObjectives",AppState.appData.hseObjectives)}else await GoogleIntegration.autoSave("HSEObjectives",AppState.appData.hseObjectives);Loading.hide(),t.remove(),this.load()}catch(n){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+n.message)}},async showHSERiskAssessmentForm(e=null){Notification.info(typeof I18n<"u"?I18n.t("module.iso.risks.comingSoon","\u0633\u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 HSE \u0642\u0631\u064A\u0628\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 HSE \u0642\u0631\u064A\u0628\u0627\u064B")},async showEnvironmentalAspectsForm(e=null){const t=document.createElement("div");t.className="modal-overlay iso-professional-modal",t.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.editTitle', 'تعديل جانب بيئي') : 'تعديل جانب بيئي') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.addTitle', 'إضافة جانب بيئي جديد') : 'إضافة جانب بيئي جديد')}</h2>
+                    <h2 class="modal-title">${e?typeof I18n<"u"?I18n.t("module.iso.aspects.editTitle","\u062A\u0639\u062F\u064A\u0644 \u062C\u0627\u0646\u0628 \u0628\u064A\u0626\u064A"):"\u062A\u0639\u062F\u064A\u0644 \u062C\u0627\u0646\u0628 \u0628\u064A\u0626\u064A":typeof I18n<"u"?I18n.t("module.iso.aspects.addTitle","\u0625\u0636\u0627\u0641\u0629 \u062C\u0627\u0646\u0628 \u0628\u064A\u0626\u064A \u062C\u062F\u064A\u062F"):"\u0625\u0636\u0627\u0641\u0629 \u062C\u0627\u0646\u0628 \u0628\u064A\u0626\u064A \u062C\u062F\u064A\u062F"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -2697,127 +1915,35 @@ const ISO = {
                 <div class="modal-body">
                     <form id="environmental-aspect-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.nameLabel', 'اسم الجانب البيئي *') : 'اسم الجانب البيئي *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.aspects.form.nameLabel","\u0627\u0633\u0645 \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A *"):"\u0627\u0633\u0645 \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A *"}</label>
                             <input type="text" id="aspect-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.name || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.namePlaceholder', 'مثال: استهلاك المياه') : 'مثال: استهلاك المياه'}">
+                                value="${Utils.escapeHTML(e?.name||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.aspects.form.namePlaceholder","\u0645\u062B\u0627\u0644: \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0627\u0644\u0645\u064A\u0627\u0647"):"\u0645\u062B\u0627\u0644: \u0627\u0633\u062A\u0647\u0644\u0627\u0643 \u0627\u0644\u0645\u064A\u0627\u0647"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.descLabel', 'الوصف *') : 'الوصف *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.aspects.form.descLabel","\u0627\u0644\u0648\u0635\u0641 *"):"\u0627\u0644\u0648\u0635\u0641 *"}</label>
                             <textarea id="aspect-description" required class="form-input" rows="4" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.descPlaceholder', 'وصف تفصيلي للجانب البيئي') : 'وصف تفصيلي للجانب البيئي'}">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.aspects.form.descPlaceholder","\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A"):"\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A"}">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.impactLabel', 'التأثير *') : 'التأثير *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.aspects.form.impactLabel","\u0627\u0644\u062A\u0623\u062B\u064A\u0631 *"):"\u0627\u0644\u062A\u0623\u062B\u064A\u0631 *"}</label>
                             <select id="aspect-impact" required class="form-input">
-                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.selectImpactOption', 'اختر التأثير') : 'اختر التأثير'}</option>
-                                <option value="منخض" ${data?.impact === 'منخض' || data?.impact === 'منخفض' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.impactLow', 'منخفض') : 'منخفض'}</option>
-                                <option value="متوسط" ${data?.impact === 'متوسط' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.impactMedium', 'متوسط') : 'متوسط'}</option>
-                                <option value="عالي" ${data?.impact === 'عالي' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.aspects.form.impactHigh', 'عالي') : 'عالي'}</option>
+                                <option value="">${typeof I18n<"u"?I18n.t("module.iso.aspects.form.selectImpactOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u062A\u0623\u062B\u064A\u0631"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u062A\u0623\u062B\u064A\u0631"}</option>
+                                <option value="\u0645\u0646\u062E\u0636" ${e?.impact==="\u0645\u0646\u062E\u0636"||e?.impact==="\u0645\u0646\u062E\u0641\u0636"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.aspects.form.impactLow","\u0645\u0646\u062E\u0641\u0636"):"\u0645\u0646\u062E\u0641\u0636"}</option>
+                                <option value="\u0645\u062A\u0648\u0633\u0637" ${e?.impact==="\u0645\u062A\u0648\u0633\u0637"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.aspects.form.impactMedium","\u0645\u062A\u0648\u0633\u0637"):"\u0645\u062A\u0648\u0633\u0637"}</option>
+                                <option value="\u0639\u0627\u0644\u064A" ${e?.impact==="\u0639\u0627\u0644\u064A"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.aspects.form.impactHigh","\u0639\u0627\u0644\u064A"):"\u0639\u0627\u0644\u064A"}</option>
                             </select>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
-                    <button type="button" id="save-aspect-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.cancel","\u0625\u0644\u063A\u0627\u0621"):"\u0625\u0644\u063A\u0627\u0621"}</button>
+                    <button type="button" id="save-aspect-btn" class="btn-primary">${typeof I18n<"u"?I18n.t("core.buttons.save","\u062D\u0641\u0638"):"\u062D\u0641\u0638"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        const saveBtn = modal.querySelector('#save-aspect-btn');
-        saveBtn.addEventListener('click', () => this.handleEnvironmentalAspectsSubmit(data?.id, modal));
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async handleEnvironmentalAspectsSubmit(editId = null, modal) {
-        // فحص العناصر قبل الاستخدام
-        const nameEl = document.getElementById('aspect-name');
-        const descriptionEl = document.getElementById('aspect-description');
-        const impactEl = document.getElementById('aspect-impact');
-        
-        if (!nameEl || !descriptionEl || !impactEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            return;
-        }
-
-        const formData = {
-            id: editId || Utils.generateId('ENV_ASP'),
-            name: nameEl.value.trim(),
-            description: descriptionEl.value.trim(),
-            impact: impactEl.value,
-            createdAt: editId ? AppState.appData.environmentalAspects.find(a => a.id === editId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        if (!AppState.appData.environmentalAspects) {
-            AppState.appData.environmentalAspects = [];
-        }
-
-        Loading.show();
-        try {
-            if (editId) {
-                const index = AppState.appData.environmentalAspects.findIndex(a => a.id === editId);
-                if (index !== -1) AppState.appData.environmentalAspects[index] = formData;
-                Notification.success('تم تحديث الجانب البيئي بنجاح');
-                // للتحديث: حفظ كامل البيانات
-                // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-                await GoogleIntegration.autoSave('EnvironmentalAspects', AppState.appData.environmentalAspects);
-            } else {
-                AppState.appData.environmentalAspects.push(formData);
-                Notification.success('تم إضافة الجانب البيئي بنجاح');
-                // للإضافة: حفظ محلي ثم إرسال مباشر إلى الخلفية
-                // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-
-                // إرسال مباشر إلى الخلفية للسجل الجديد
-                if (AppState.googleConfig.appsScript.enabled && AppState.googleConfig.appsScript.scriptUrl) {
-                    try {
-                        await GoogleIntegration.sendToAppsScript('addEnvironmentalAspect', formData);
-                        Utils.safeLog('✅ تم حفظ الجانب البيئي مباشرة في الخلفية');
-                    } catch (error) {
-                        Utils.safeWarn('⚠ فشل الحفظ المباشر، سيتم المزامنة لاحقاً:', error);
-                        // في حالة الفشل، نستخدم autoSave كبديل
-                        await GoogleIntegration.autoSave('EnvironmentalAspects', AppState.appData.environmentalAspects);
-                    }
-                } else {
-                    // إذا لم يكن Google Apps Script مفعّل، نستخدم autoSave فقط
-                    await GoogleIntegration.autoSave('EnvironmentalAspects', AppState.appData.environmentalAspects);
-                }
-            }
-
-            Loading.hide();
-            modal.remove();
-            this.load();
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
-        }
-    },
-
-    async showEnvironmentalMonitoringForm(data = null) {
-        Notification.info(typeof I18n !== 'undefined' ? I18n.t('module.iso.monitoring.comingSoon', 'سيتم إضافة نموذج المراقبة البيئية قريباً') : 'سيتم إضافة نموذج المراقبة البيئية قريباً');
-    },
-
-    async showAuditForm(data = null) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(t),t.querySelector("#save-aspect-btn").addEventListener("click",()=>this.handleEnvironmentalAspectsSubmit(e?.id,t)),t.addEventListener("click",s=>{s.target===t&&t.remove()})},async handleEnvironmentalAspectsSubmit(e=null,t){const o=document.getElementById("aspect-name"),s=document.getElementById("aspect-description"),a=document.getElementById("aspect-impact");if(!o||!s||!a){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const i={id:e||Utils.generateId("ENV_ASP"),name:o.value.trim(),description:s.value.trim(),impact:a.value,createdAt:e?AppState.appData.environmentalAspects.find(d=>d.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.environmentalAspects||(AppState.appData.environmentalAspects=[]),Loading.show();try{if(e){const d=AppState.appData.environmentalAspects.findIndex(n=>n.id===e);d!==-1&&(AppState.appData.environmentalAspects[d]=i),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("EnvironmentalAspects",AppState.appData.environmentalAspects)}else if(AppState.appData.environmentalAspects.push(i),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addEnvironmentalAspect",i),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u062C\u0627\u0646\u0628 \u0627\u0644\u0628\u064A\u0626\u064A \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(d){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",d),await GoogleIntegration.autoSave("EnvironmentalAspects",AppState.appData.environmentalAspects)}else await GoogleIntegration.autoSave("EnvironmentalAspects",AppState.appData.environmentalAspects);Loading.hide(),t.remove(),this.load()}catch(d){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+d.message)}},async showEnvironmentalMonitoringForm(e=null){Notification.info(typeof I18n<"u"?I18n.t("module.iso.monitoring.comingSoon","\u0633\u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0628\u064A\u0626\u064A\u0629 \u0642\u0631\u064A\u0628\u0627\u064B"):"\u0633\u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0628\u064A\u0626\u064A\u0629 \u0642\u0631\u064A\u0628\u0627\u064B")},async showAuditForm(e=null){const t=document.createElement("div");t.className="modal-overlay iso-professional-modal",t.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.editTitle', 'تعديل تدقيق') : 'تعديل تدقيق') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.addTitle', 'إضافة تدقيق جديد') : 'إضافة تدقيق جديد')}</h2>
+                    <h2 class="modal-title">${e?typeof I18n<"u"?I18n.t("module.iso.audit.editTitle","\u062A\u0639\u062F\u064A\u0644 \u062A\u062F\u0642\u064A\u0642"):"\u062A\u0639\u062F\u064A\u0644 \u062A\u062F\u0642\u064A\u0642":typeof I18n<"u"?I18n.t("module.iso.audit.addTitle","\u0625\u0636\u0627\u0641\u0629 \u062A\u062F\u0642\u064A\u0642 \u062C\u062F\u064A\u062F"):"\u0625\u0636\u0627\u0641\u0629 \u062A\u062F\u0642\u064A\u0642 \u062C\u062F\u064A\u062F"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -2825,177 +1951,69 @@ const ISO = {
                 <div class="modal-body">
                     <form id="audit-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.typeLabel', 'نوع التدقيق *') : 'نوع التدقيق *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.audit.form.typeLabel","\u0646\u0648\u0639 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 *"):"\u0646\u0648\u0639 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 *"}</label>
                             <select id="audit-type" required class="form-input">
-                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.selectTypeOption', 'اختر النوع') : 'اختر النوع'}</option>
-                                <option value="تدقيق داخلي" ${data?.type === 'تدقيق داخلي' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.typeInternal', 'تدقيق داخلي') : 'تدقيق داخلي'}</option>
-                                <option value="تدقيق خارجي" ${data?.type === 'تدقيق خارجي' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.typeExternal', 'تدقيق خارجي') : 'تدقيق خارجي'}</option>
-                                <option value="مراجعة إدارة" ${data?.type === 'مراجعة إدارة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.typeManagementReview', 'مراجعة إدارة') : 'مراجعة إدارة'}</option>
+                                <option value="">${typeof I18n<"u"?I18n.t("module.iso.audit.form.selectTypeOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639"}</option>
+                                <option value="\u062A\u062F\u0642\u064A\u0642 \u062F\u0627\u062E\u0644\u064A" ${e?.type==="\u062A\u062F\u0642\u064A\u0642 \u062F\u0627\u062E\u0644\u064A"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.audit.form.typeInternal","\u062A\u062F\u0642\u064A\u0642 \u062F\u0627\u062E\u0644\u064A"):"\u062A\u062F\u0642\u064A\u0642 \u062F\u0627\u062E\u0644\u064A"}</option>
+                                <option value="\u062A\u062F\u0642\u064A\u0642 \u062E\u0627\u0631\u062C\u064A" ${e?.type==="\u062A\u062F\u0642\u064A\u0642 \u062E\u0627\u0631\u062C\u064A"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.audit.form.typeExternal","\u062A\u062F\u0642\u064A\u0642 \u062E\u0627\u0631\u062C\u064A"):"\u062A\u062F\u0642\u064A\u0642 \u062E\u0627\u0631\u062C\u064A"}</option>
+                                <option value="\u0645\u0631\u0627\u062C\u0639\u0629 \u0625\u062F\u0627\u0631\u0629" ${e?.type==="\u0645\u0631\u0627\u062C\u0639\u0629 \u0625\u062F\u0627\u0631\u0629"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.audit.form.typeManagementReview","\u0645\u0631\u0627\u062C\u0639\u0629 \u0625\u062F\u0627\u0631\u0629"):"\u0645\u0631\u0627\u062C\u0639\u0629 \u0625\u062F\u0627\u0631\u0629"}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.dateLabel', 'تاريخ التدقيق *') : 'تاريخ التدقيق *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.audit.form.dateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062F\u0642\u064A\u0642 *"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062F\u0642\u064A\u0642 *"}</label>
                             <input type="date" id="audit-date" required class="form-input" 
-                                value="${data?.date ? new Date(data.date).toISOString().slice(0, 10) : ''}">
+                                value="${e?.date?new Date(e.date).toISOString().slice(0,10):""}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.auditorLabel', 'المدقق *') : 'المدقق *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.audit.form.auditorLabel","\u0627\u0644\u0645\u062F\u0642\u0642 *"):"\u0627\u0644\u0645\u062F\u0642\u0642 *"}</label>
                             <input type="text" id="audit-auditor" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.auditor || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.auditorPlaceholder', 'اسم المدقق') : 'اسم المدقق'}">
+                                value="${Utils.escapeHTML(e?.auditor||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.audit.form.auditorPlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0645\u062F\u0642\u0642"):"\u0627\u0633\u0645 \u0627\u0644\u0645\u062F\u0642\u0642"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.statusLabel', 'الحالة *') : 'الحالة *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.audit.form.statusLabel","\u0627\u0644\u062D\u0627\u0644\u0629 *"):"\u0627\u0644\u062D\u0627\u0644\u0629 *"}</label>
                             <select id="audit-status" required class="form-input">
-                                <option value="مخطط" ${data?.status === 'مخطط' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.statusPlanned', 'مخطط') : 'مخطط'}</option>
-                                <option value="قيد التنيذ" ${data?.status === 'قيد التنيذ' || data?.status === 'قيد التنفيذ' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.statusInProgress', 'قيد التنفيذ') : 'قيد التنفيذ'}</option>
-                                <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.statusCompleted', 'مكتمل') : 'مكتمل'}</option>
+                                <option value="\u0645\u062E\u0637\u0637" ${e?.status==="\u0645\u062E\u0637\u0637"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.audit.form.statusPlanned","\u0645\u062E\u0637\u0637"):"\u0645\u062E\u0637\u0637"}</option>
+                                <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u064A\u0630" ${e?.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u064A\u0630"||e?.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.audit.form.statusInProgress","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"):"\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"}</option>
+                                <option value="\u0645\u0643\u062A\u0645\u0644" ${e?.status==="\u0645\u0643\u062A\u0645\u0644"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.audit.form.statusCompleted","\u0645\u0643\u062A\u0645\u0644"):"\u0645\u0643\u062A\u0645\u0644"}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.descLabel', 'الوصف') : 'الوصف'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.audit.form.descLabel","\u0627\u0644\u0648\u0635\u0641"):"\u0627\u0644\u0648\u0635\u0641"}</label>
                             <textarea id="audit-description" class="form-input" rows="4" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.form.descPlaceholder', 'وصف تفصيلي للتدقيق') : 'وصف تفصيلي للتدقيق'}">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.audit.form.descPlaceholder","\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u062A\u062F\u0642\u064A\u0642"):"\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u062A\u062F\u0642\u064A\u0642"}">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
-                    <button type="button" id="save-audit-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.cancel","\u0625\u0644\u063A\u0627\u0621"):"\u0625\u0644\u063A\u0627\u0621"}</button>
+                    <button type="button" id="save-audit-btn" class="btn-primary">${typeof I18n<"u"?I18n.t("core.buttons.save","\u062D\u0641\u0638"):"\u062D\u0641\u0638"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        const saveBtn = modal.querySelector('#save-audit-btn');
-        saveBtn.addEventListener('click', () => this.handleAuditSubmit(data?.id, modal));
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async handleAuditSubmit(editId = null, modal) {
-        // فحص العناصر قبل الاستخدام
-        const typeEl = document.getElementById('audit-type');
-        const dateEl = document.getElementById('audit-date');
-        const auditorEl = document.getElementById('audit-auditor');
-        const statusEl = document.getElementById('audit-status');
-        const descriptionEl = document.getElementById('audit-description');
-        
-        if (!typeEl || !dateEl || !auditorEl || !statusEl || !descriptionEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            return;
-        }
-
-        const formData = {
-            id: editId || Utils.generateId('HSE_AUDIT'),
-            type: typeEl.value,
-            date: new Date(dateEl.value).toISOString(),
-            auditor: auditorEl.value.trim(),
-            status: statusEl.value,
-            description: descriptionEl.value.trim(),
-            createdAt: editId ? AppState.appData.hseAudits.find(a => a.id === editId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        if (!AppState.appData.hseAudits) {
-            AppState.appData.hseAudits = [];
-        }
-
-        Loading.show();
-        try {
-            if (editId) {
-                const index = AppState.appData.hseAudits.findIndex(a => a.id === editId);
-                if (index !== -1) AppState.appData.hseAudits[index] = formData;
-                Notification.success('تم تحديث التدقيق بنجاح');
-                // للتحديث: حفظ كامل البيانات
-                // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-                await GoogleIntegration.autoSave('HSEAudits', AppState.appData.hseAudits);
-            } else {
-                AppState.appData.hseAudits.push(formData);
-                Notification.success('تم إضافة التدقيق بنجاح');
-                // للإضافة: حفظ محلي ثم إرسال مباشر إلى الخلفية
-                // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-
-                // إرسال مباشر إلى الخلفية للسجل الجديد
-                if (AppState.googleConfig.appsScript.enabled && AppState.googleConfig.appsScript.scriptUrl) {
-                    try {
-                        await GoogleIntegration.sendToAppsScript('addHSEAudit', formData);
-                        Utils.safeLog('✅ تم حفظ التدقيق مباشرة في الخلفية');
-                    } catch (error) {
-                        Utils.safeWarn('⚠ فشل الحفظ المباشر، سيتم المزامنة لاحقاً:', error);
-                        // في حالة الفشل، نستخدم autoSave كبديل
-                        await GoogleIntegration.autoSave('HSEAudits', AppState.appData.hseAudits);
-                    }
-                } else {
-                    // إذا لم يكن Google Apps Script مفعّل، نستخدم autoSave فقط
-                    await GoogleIntegration.autoSave('HSEAudits', AppState.appData.hseAudits);
-                }
-            }
-
-            Loading.hide();
-            modal.remove();
-            this.load();
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
-        }
-    },
-
-    async viewAudit(id) {
-        const audit = AppState.appData.hseAudits.find(a => a.id === id);
-        if (!audit) {
-            Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.notFound', 'التدقيق غير موجود') : 'التدقيق غير موجود');
-            return;
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(t),t.querySelector("#save-audit-btn").addEventListener("click",()=>this.handleAuditSubmit(e?.id,t)),t.addEventListener("click",s=>{s.target===t&&t.remove()})},async handleAuditSubmit(e=null,t){const o=document.getElementById("audit-type"),s=document.getElementById("audit-date"),a=document.getElementById("audit-auditor"),i=document.getElementById("audit-status"),d=document.getElementById("audit-description");if(!o||!s||!a||!i||!d){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const n={id:e||Utils.generateId("HSE_AUDIT"),type:o.value,date:new Date(s.value).toISOString(),auditor:a.value.trim(),status:i.value,description:d.value.trim(),createdAt:e?AppState.appData.hseAudits.find(r=>r.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.hseAudits||(AppState.appData.hseAudits=[]),Loading.show();try{if(e){const r=AppState.appData.hseAudits.findIndex(c=>c.id===e);r!==-1&&(AppState.appData.hseAudits[r]=n),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("HSEAudits",AppState.appData.hseAudits)}else if(AppState.appData.hseAudits.push(n),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addHSEAudit",n),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(r){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",r),await GoogleIntegration.autoSave("HSEAudits",AppState.appData.hseAudits)}else await GoogleIntegration.autoSave("HSEAudits",AppState.appData.hseAudits);Loading.hide(),t.remove(),this.load()}catch(r){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+r.message)}},async viewAudit(e){const t=AppState.appData.hseAudits.find(s=>s.id===e);if(!t){Notification.error(typeof I18n<"u"?I18n.t("module.iso.audit.notFound","\u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F"):"\u0627\u0644\u062A\u062F\u0642\u064A\u0642 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const o=document.createElement("div");o.className="modal-overlay iso-professional-modal",o.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.detailsTitle', 'تفاصيل التدقيق') : 'تفاصيل التدقيق'}</h2>
+                    <h2 class="modal-title">${typeof I18n<"u"?I18n.t("module.iso.audit.detailsTitle","\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u062A\u062F\u0642\u064A\u0642"):"\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u062A\u062F\u0642\u064A\u0642"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.type', 'النوع:') : 'النوع:'}</strong> ${Utils.escapeHTML(audit.type)}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.date', 'التاريخ:') : 'التاريخ:'}</strong> ${Utils.formatDate(audit.date)}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.auditor', 'المدقق:') : 'المدقق:'}</strong> ${Utils.escapeHTML(audit.auditor)}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.status', 'الحالة:') : 'الحالة:'}</strong> <span class="badge badge-${audit.status === 'مكتمل' ? 'success' : 'warning'}">${audit.status}</span></div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.audit.table.desc', 'الوصف:') : 'الوصف:'}</strong> ${Utils.escapeHTML(audit.description || '-')}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.audit.table.type","\u0627\u0644\u0646\u0648\u0639:"):"\u0627\u0644\u0646\u0648\u0639:"}</strong> ${Utils.escapeHTML(t.type)}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.audit.table.date","\u0627\u0644\u062A\u0627\u0631\u064A\u062E:"):"\u0627\u0644\u062A\u0627\u0631\u064A\u062E:"}</strong> ${Utils.formatDate(t.date)}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.audit.table.auditor","\u0627\u0644\u0645\u062F\u0642\u0642:"):"\u0627\u0644\u0645\u062F\u0642\u0642:"}</strong> ${Utils.escapeHTML(t.auditor)}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.audit.table.status","\u0627\u0644\u062D\u0627\u0644\u0629:"):"\u0627\u0644\u062D\u0627\u0644\u0629:"}</strong> <span class="badge badge-${t.status==="\u0645\u0643\u062A\u0645\u0644"?"success":"warning"}">${t.status}</span></div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.audit.table.desc","\u0627\u0644\u0648\u0635\u0641:"):"\u0627\u0644\u0648\u0635\u0641:"}</strong> ${Utils.escapeHTML(t.description||"-")}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.close","\u0625\u063A\u0644\u0627\u0642"):"\u0625\u063A\u0644\u0627\u0642"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async showNonConformityForm(data = null) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(o),o.addEventListener("click",s=>{s.target===o&&o.remove()})},async showNonConformityForm(e=null){const t=document.createElement("div");t.className="modal-overlay iso-professional-modal",t.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.editTitle', 'تعديل عدم مطابقة') : 'تعديل عدم مطابقة') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.addTitle', 'إضافة عدم مطابقة جديدة') : 'إضافة عدم مطابقة جديدة')}</h2>
+                    <h2 class="modal-title">${e?typeof I18n<"u"?I18n.t("module.iso.nc.editTitle","\u062A\u0639\u062F\u064A\u0644 \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629"):"\u062A\u0639\u062F\u064A\u0644 \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629":typeof I18n<"u"?I18n.t("module.iso.nc.addTitle","\u0625\u0636\u0627\u0641\u0629 \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 \u062C\u062F\u064A\u062F\u0629"):"\u0625\u0636\u0627\u0641\u0629 \u0639\u062F\u0645 \u0645\u0637\u0627\u0628\u0642\u0629 \u062C\u062F\u064A\u062F\u0629"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -3003,157 +2021,53 @@ const ISO = {
                 <div class="modal-body">
                     <form id="non-conformity-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.date', 'تاريخ عدم المطابقة *') : 'تاريخ عدم المطابقة *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.nc.form.date","\u062A\u0627\u0631\u064A\u062E \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 *"):"\u062A\u0627\u0631\u064A\u062E \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 *"}</label>
                             <input type="date" id="nc-date" required class="form-input" 
-                                value="${data?.date ? new Date(data.date).toISOString().slice(0, 10) : ''}">
+                                value="${e?.date?new Date(e.date).toISOString().slice(0,10):""}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.desc', 'الوصف *') : 'الوصف *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.nc.form.desc","\u0627\u0644\u0648\u0635\u0641 *"):"\u0627\u0644\u0648\u0635\u0641 *"}</label>
                             <textarea id="nc-description" required class="form-input" rows="4" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.descPlaceholder', 'وصف تفصيلي لعدم المطابقة') : 'وصف تفصيلي لعدم المطابقة'}">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.nc.form.descPlaceholder","\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629"):"\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629"}">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.status', 'الحالة *') : 'الحالة *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.nc.form.status","\u0627\u0644\u062D\u0627\u0644\u0629 *"):"\u0627\u0644\u062D\u0627\u0644\u0629 *"}</label>
                             <select id="nc-status" required class="form-input">
-                                <option value="متوحة" ${data?.status === 'متوحة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.statusOpen', 'متوحة') : 'متوحة'}</option>
-                                <option value="قيد المعالجة" ${data?.status === 'قيد المعالجة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.statusInProgress', 'قيد المعالجة') : 'قيد المعالجة'}</option>
-                                <option value="مغلق" ${data?.status === 'مغلق' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.form.statusClosed', 'مغلق') : 'مغلق'}</option>
+                                <option value="\u0645\u062A\u0648\u062D\u0629" ${e?.status==="\u0645\u062A\u0648\u062D\u0629"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.nc.form.statusOpen","\u0645\u062A\u0648\u062D\u0629"):"\u0645\u062A\u0648\u062D\u0629"}</option>
+                                <option value="\u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629" ${e?.status==="\u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.nc.form.statusInProgress","\u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629"):"\u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629"}</option>
+                                <option value="\u0645\u063A\u0644\u0642" ${e?.status==="\u0645\u063A\u0644\u0642"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.nc.form.statusClosed","\u0645\u063A\u0644\u0642"):"\u0645\u063A\u0644\u0642"}</option>
                             </select>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
-                    <button type="button" id="save-nc-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.cancel","\u0625\u0644\u063A\u0627\u0621"):"\u0625\u0644\u063A\u0627\u0621"}</button>
+                    <button type="button" id="save-nc-btn" class="btn-primary">${typeof I18n<"u"?I18n.t("core.buttons.save","\u062D\u0641\u0638"):"\u062D\u0641\u0638"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        const saveBtn = modal.querySelector('#save-nc-btn');
-        saveBtn.addEventListener('click', () => this.handleNonConformitySubmit(data?.id, modal));
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async handleNonConformitySubmit(editId = null, modal) {
-        // فحص العناصر قبل الاستخدام
-        const dateEl = document.getElementById('nc-date');
-        const descriptionEl = document.getElementById('nc-description');
-        const statusEl = document.getElementById('nc-status');
-        
-        if (!dateEl || !descriptionEl || !statusEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            return;
-        }
-
-        const formData = {
-            id: editId || Utils.generateId('HSE_NC'),
-            date: new Date(dateEl.value).toISOString(),
-            description: descriptionEl.value.trim(),
-            status: statusEl.value,
-            createdAt: editId ? AppState.appData.hseNonConformities.find(nc => nc.id === editId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        if (!AppState.appData.hseNonConformities) {
-            AppState.appData.hseNonConformities = [];
-        }
-
-        Loading.show();
-        try {
-            if (editId) {
-                const index = AppState.appData.hseNonConformities.findIndex(nc => nc.id === editId);
-                if (index !== -1) AppState.appData.hseNonConformities[index] = formData;
-                Notification.success('تم تحديث عدم المطابقة بنجاح');
-                // للتحديث: حفظ كامل البيانات
-                // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-                await GoogleIntegration.autoSave('HSENonConformities', AppState.appData.hseNonConformities);
-            } else {
-                AppState.appData.hseNonConformities.push(formData);
-                Notification.success('تم إضافة عدم المطابقة بنجاح');
-                // للإضافة: حفظ محلي ثم إرسال مباشر إلى الخلفية
-                // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-
-                // إرسال مباشر إلى الخلفية للسجل الجديد
-                if (AppState.googleConfig.appsScript.enabled && AppState.googleConfig.appsScript.scriptUrl) {
-                    try {
-                        await GoogleIntegration.sendToAppsScript('addHSENonConformity', formData);
-                        Utils.safeLog('✅ تم حفظ عدم المطابقة مباشرة في الخلفية');
-                    } catch (error) {
-                        Utils.safeWarn('⚠ فشل الحفظ المباشر، سيتم المزامنة لاحقاً:', error);
-                        // في حالة الفشل، نستخدم autoSave كبديل
-                        await GoogleIntegration.autoSave('HSENonConformities', AppState.appData.hseNonConformities);
-                    }
-                } else {
-                    // إذا لم يكن Google Apps Script مفعّل، نستخدم autoSave فقط
-                    await GoogleIntegration.autoSave('HSENonConformities', AppState.appData.hseNonConformities);
-                }
-            }
-
-            Loading.hide();
-            modal.remove();
-            this.load();
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
-        }
-    },
-
-    async viewNonConformity(id) {
-        const nc = AppState.appData.hseNonConformities.find(n => n.id === id);
-        if (!nc) {
-            Notification.error('عدم المطابقة غير موجودة');
-            return;
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(t),t.querySelector("#save-nc-btn").addEventListener("click",()=>this.handleNonConformitySubmit(e?.id,t)),t.addEventListener("click",s=>{s.target===t&&t.remove()})},async handleNonConformitySubmit(e=null,t){const o=document.getElementById("nc-date"),s=document.getElementById("nc-description"),a=document.getElementById("nc-status");if(!o||!s||!a){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const i={id:e||Utils.generateId("HSE_NC"),date:new Date(o.value).toISOString(),description:s.value.trim(),status:a.value,createdAt:e?AppState.appData.hseNonConformities.find(d=>d.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.hseNonConformities||(AppState.appData.hseNonConformities=[]),Loading.show();try{if(e){const d=AppState.appData.hseNonConformities.findIndex(n=>n.id===e);d!==-1&&(AppState.appData.hseNonConformities[d]=i),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("HSENonConformities",AppState.appData.hseNonConformities)}else if(AppState.appData.hseNonConformities.push(i),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addHSENonConformity",i),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(d){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",d),await GoogleIntegration.autoSave("HSENonConformities",AppState.appData.hseNonConformities)}else await GoogleIntegration.autoSave("HSENonConformities",AppState.appData.hseNonConformities);Loading.hide(),t.remove(),this.load()}catch(d){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+d.message)}},async viewNonConformity(e){const t=AppState.appData.hseNonConformities.find(s=>s.id===e);if(!t){Notification.error("\u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const o=document.createElement("div");o.className="modal-overlay iso-professional-modal",o.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.detailsTitle', 'تفاصيل عدم المطابقة') : 'تفاصيل عدم المطابقة'}</h2>
+                    <h2 class="modal-title">${typeof I18n<"u"?I18n.t("module.iso.nc.detailsTitle","\u062A\u0641\u0627\u0635\u064A\u0644 \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629"):"\u062A\u0641\u0627\u0635\u064A\u0644 \u0639\u062F\u0645 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.table.date', 'التاريخ:') : 'التاريخ:'}</strong> ${Utils.formatDate(nc.date)}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.table.desc', 'الوصف:') : 'الوصف:'}</strong> ${Utils.escapeHTML(nc.description)}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.nc.table.status', 'الحالة:') : 'الحالة:'}</strong> <span class="badge badge-${nc.status === 'مغلق' ? 'success' : 'danger'}">${nc.status}</span></div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.nc.table.date","\u0627\u0644\u062A\u0627\u0631\u064A\u062E:"):"\u0627\u0644\u062A\u0627\u0631\u064A\u062E:"}</strong> ${Utils.formatDate(t.date)}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.nc.table.desc","\u0627\u0644\u0648\u0635\u0641:"):"\u0627\u0644\u0648\u0635\u0641:"}</strong> ${Utils.escapeHTML(t.description)}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.nc.table.status","\u0627\u0644\u062D\u0627\u0644\u0629:"):"\u0627\u0644\u062D\u0627\u0644\u0629:"}</strong> <span class="badge badge-${t.status==="\u0645\u063A\u0644\u0642"?"success":"danger"}">${t.status}</span></div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.close","\u0625\u063A\u0644\u0627\u0642"):"\u0625\u063A\u0644\u0627\u0642"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async showCorrectiveActionForm(data = null) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(o),o.addEventListener("click",s=>{s.target===o&&o.remove()})},async showCorrectiveActionForm(e=null){const t=document.createElement("div");t.className="modal-overlay iso-professional-modal",t.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.editTitle', 'تعديل إجراء تصحيحي') : 'تعديل إجراء تصحيحي') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.addTitle', 'إضافة إجراء تصحيحي جديد') : 'إضافة إجراء تصحيحي جديد')}</h2>
+                    <h2 class="modal-title">${e?typeof I18n<"u"?I18n.t("module.iso.ca.editTitle","\u062A\u0639\u062F\u064A\u0644 \u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A"):"\u062A\u0639\u062F\u064A\u0644 \u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A":typeof I18n<"u"?I18n.t("module.iso.ca.addTitle","\u0625\u0636\u0627\u0641\u0629 \u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A \u062C\u062F\u064A\u062F"):"\u0625\u0636\u0627\u0641\u0629 \u0625\u062C\u0631\u0627\u0621 \u062A\u0635\u062D\u064A\u062D\u064A \u062C\u062F\u064A\u062F"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -3161,344 +2075,154 @@ const ISO = {
                 <div class="modal-body">
                     <form id="corrective-action-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.desc', 'الوصف *') : 'الوصف *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.ca.form.desc","\u0627\u0644\u0648\u0635\u0641 *"):"\u0627\u0644\u0648\u0635\u0641 *"}</label>
                             <textarea id="ca-description" required class="form-input" rows="4" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.descPlaceholder', 'وصف تفصيلي للإجراء التصحيحي') : 'وصف تفصيلي للإجراء التصحيحي'}">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.ca.form.descPlaceholder","\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A"):"\u0648\u0635\u0641 \u062A\u0641\u0635\u064A\u0644\u064A \u0644\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A"}">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.responsible', 'المسؤول *') : 'المسؤول *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.ca.form.responsible","\u0627\u0644\u0645\u0633\u0624\u0648\u0644 *"):"\u0627\u0644\u0645\u0633\u0624\u0648\u0644 *"}</label>
                             <input type="text" id="ca-responsible" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.responsible || '')}" placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.respPlaceholder', 'اسم المسؤول') : 'اسم المسؤول'}">
+                                value="${Utils.escapeHTML(e?.responsible||"")}" placeholder="${typeof I18n<"u"?I18n.t("module.iso.ca.form.respPlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0624\u0648\u0644"):"\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0624\u0648\u0644"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.dueDate', 'تاريخ الانتهاء *') : 'تاريخ الانتهاء *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.ca.form.dueDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 *"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 *"}</label>
                             <input type="date" id="ca-due-date" required class="form-input" 
-                                value="${data?.dueDate ? new Date(data.dueDate).toISOString().slice(0, 10) : ''}">
+                                value="${e?.dueDate?new Date(e.dueDate).toISOString().slice(0,10):""}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.status', 'الحالة *') : 'الحالة *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.ca.form.status","\u0627\u0644\u062D\u0627\u0644\u0629 *"):"\u0627\u0644\u062D\u0627\u0644\u0629 *"}</label>
                             <select id="ca-status" required class="form-input">
-                                <option value="قيد التنفيذ" ${data?.status === 'قيد التنيذ' || data?.status === 'قيد التنفيذ' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.statusInProgress', 'قيد التنفيذ') : 'قيد التنفيذ'}</option>
-                                <option value="مكتمل" ${data?.status === 'مكتمل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.form.statusCompleted', 'مكتمل') : 'مكتمل'}</option>
+                                <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630" ${e?.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u064A\u0630"||e?.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.ca.form.statusInProgress","\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"):"\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630"}</option>
+                                <option value="\u0645\u0643\u062A\u0645\u0644" ${e?.status==="\u0645\u0643\u062A\u0645\u0644"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.ca.form.statusCompleted","\u0645\u0643\u062A\u0645\u0644"):"\u0645\u0643\u062A\u0645\u0644"}</option>
                             </select>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
-                    <button type="button" id="save-ca-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.cancel","\u0625\u0644\u063A\u0627\u0621"):"\u0625\u0644\u063A\u0627\u0621"}</button>
+                    <button type="button" id="save-ca-btn" class="btn-primary">${typeof I18n<"u"?I18n.t("core.buttons.save","\u062D\u0641\u0638"):"\u062D\u0641\u0638"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        const saveBtn = modal.querySelector('#save-ca-btn');
-        saveBtn.addEventListener('click', () => this.handleCorrectiveActionSubmit(data?.id, modal));
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async handleCorrectiveActionSubmit(editId = null, modal) {
-        // فحص العناصر قبل الاستخدام
-        const descriptionEl = document.getElementById('ca-description');
-        const responsibleEl = document.getElementById('ca-responsible');
-        const dueDateEl = document.getElementById('ca-due-date');
-        const statusEl = document.getElementById('ca-status');
-        
-        if (!descriptionEl || !responsibleEl || !dueDateEl || !statusEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            return;
-        }
-
-        const formData = {
-            id: editId || Utils.generateId('HSE_CA'),
-            description: descriptionEl.value.trim(),
-            responsible: responsibleEl.value.trim(),
-            dueDate: new Date(dueDateEl.value).toISOString(),
-            status: statusEl.value,
-            createdAt: editId ? AppState.appData.hseCorrectiveActions.find(ca => ca.id === editId)?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        if (!AppState.appData.hseCorrectiveActions) {
-            AppState.appData.hseCorrectiveActions = [];
-        }
-
-        Loading.show();
-        try {
-            if (editId) {
-                const index = AppState.appData.hseCorrectiveActions.findIndex(ca => ca.id === editId);
-                if (index !== -1) AppState.appData.hseCorrectiveActions[index] = formData;
-                Notification.success('تم تحديث الإجراء التصحيحي بنجاح');
-                // للتحديث: حفظ كامل البيانات
-                // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-                await GoogleIntegration.autoSave('HSECorrectiveActions', AppState.appData.hseCorrectiveActions);
-            } else {
-                AppState.appData.hseCorrectiveActions.push(formData);
-                Notification.success('تم إضافة الإجراء التصحيحي بنجاح');
-                // للإضافة: حفظ محلي ثم إرسال مباشر إلى الخلفية
-                // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-
-                // إرسال مباشر إلى الخلفية للسجل الجديد
-                if (AppState.googleConfig.appsScript.enabled && AppState.googleConfig.appsScript.scriptUrl) {
-                    try {
-                        await GoogleIntegration.sendToAppsScript('addHSECorrectiveAction', formData);
-                        Utils.safeLog('✅ تم حفظ الإجراء التصحيحي مباشرة في الخلفية');
-                    } catch (error) {
-                        Utils.safeWarn('⚠ فشل الحفظ المباشر، سيتم المزامنة لاحقاً:', error);
-                        // في حالة الفشل، نستخدم autoSave كبديل
-                        await GoogleIntegration.autoSave('HSECorrectiveActions', AppState.appData.hseCorrectiveActions);
-                    }
-                } else {
-                    // إذا لم يكن Google Apps Script مفعّل، نستخدم autoSave فقط
-                    await GoogleIntegration.autoSave('HSECorrectiveActions', AppState.appData.hseCorrectiveActions);
-                }
-            }
-
-            Loading.hide();
-            modal.remove();
-            this.load();
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
-        }
-    },
-
-    async viewCorrectiveAction(id) {
-        const ca = AppState.appData.hseCorrectiveActions.find(c => c.id === id);
-        if (!ca) {
-            Notification.error('الإجراء التصحيحي غير موجود');
-            return;
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(t),t.querySelector("#save-ca-btn").addEventListener("click",()=>this.handleCorrectiveActionSubmit(e?.id,t)),t.addEventListener("click",s=>{s.target===t&&t.remove()})},async handleCorrectiveActionSubmit(e=null,t){const o=document.getElementById("ca-description"),s=document.getElementById("ca-responsible"),a=document.getElementById("ca-due-date"),i=document.getElementById("ca-status");if(!o||!s||!a||!i){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const d={id:e||Utils.generateId("HSE_CA"),description:o.value.trim(),responsible:s.value.trim(),dueDate:new Date(a.value).toISOString(),status:i.value,createdAt:e?AppState.appData.hseCorrectiveActions.find(n=>n.id===e)?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.hseCorrectiveActions||(AppState.appData.hseCorrectiveActions=[]),Loading.show();try{if(e){const n=AppState.appData.hseCorrectiveActions.findIndex(r=>r.id===e);n!==-1&&(AppState.appData.hseCorrectiveActions[n]=d),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),await GoogleIntegration.autoSave("HSECorrectiveActions",AppState.appData.hseCorrectiveActions)}else if(AppState.appData.hseCorrectiveActions.push(d),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0628\u0646\u062C\u0627\u062D"),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{await GoogleIntegration.sendToAppsScript("addHSECorrectiveAction",d),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629")}catch(n){Utils.safeWarn("\u26A0 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0644\u0627\u062D\u0642\u0627\u064B:",n),await GoogleIntegration.autoSave("HSECorrectiveActions",AppState.appData.hseCorrectiveActions)}else await GoogleIntegration.autoSave("HSECorrectiveActions",AppState.appData.hseCorrectiveActions);Loading.hide(),t.remove(),this.load()}catch(n){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+n.message)}},async viewCorrectiveAction(e){const t=AppState.appData.hseCorrectiveActions.find(s=>s.id===e);if(!t){Notification.error("\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const o=document.createElement("div");o.className="modal-overlay iso-professional-modal",o.innerHTML=`
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.detailsTitle', 'تفاصيل الإجراء التصحيحي') : 'تفاصيل الإجراء التصحيحي'}</h2>
+                    <h2 class="modal-title">${typeof I18n<"u"?I18n.t("module.iso.ca.detailsTitle","\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A"):"\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u0635\u062D\u064A\u062D\u064A"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="space-y-3">
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.table.desc', 'الوصف:') : 'الوصف:'}</strong> ${Utils.escapeHTML(ca.description)}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.table.responsible', 'المسؤول:') : 'المسؤول:'}</strong> ${Utils.escapeHTML(ca.responsible)}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.table.dueDate', 'تاريخ الانتهاء:') : 'تاريخ الانتهاء:'}</strong> ${Utils.formatDate(ca.dueDate)}</div>
-                        <div><strong>${typeof I18n !== 'undefined' ? I18n.t('module.iso.ca.table.status', 'الحالة:') : 'الحالة:'}</strong> <span class="badge badge-${ca.status === 'مكتمل' ? 'success' : 'warning'}">${ca.status}</span></div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.ca.table.desc","\u0627\u0644\u0648\u0635\u0641:"):"\u0627\u0644\u0648\u0635\u0641:"}</strong> ${Utils.escapeHTML(t.description)}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.ca.table.responsible","\u0627\u0644\u0645\u0633\u0624\u0648\u0644:"):"\u0627\u0644\u0645\u0633\u0624\u0648\u0644:"}</strong> ${Utils.escapeHTML(t.responsible)}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.ca.table.dueDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621:"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621:"}</strong> ${Utils.formatDate(t.dueDate)}</div>
+                        <div><strong>${typeof I18n<"u"?I18n.t("module.iso.ca.table.status","\u0627\u0644\u062D\u0627\u0644\u0629:"):"\u0627\u0644\u062D\u0627\u0644\u0629:"}</strong> <span class="badge badge-${t.status==="\u0645\u0643\u062A\u0645\u0644"?"success":"warning"}">${t.status}</span></div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.close","\u0625\u063A\u0644\u0627\u0642"):"\u0625\u063A\u0644\u0627\u0642"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    // ===== مركز التكويد والإصدار (Document Coding & Issuing Center) =====
-    renderSystemFormsDirectory(documentCodes, documentVersions) {
-        if (!this.SystemFormsManifest || this.SystemFormsManifest.length === 0) return '';
-        
-        // Group forms by module
-        const groupedForms = this.SystemFormsManifest.reduce((acc, form) => {
-            if (!acc[form.module]) {
-                acc[form.module] = [];
-            }
-            acc[form.module].push(form);
-            return acc;
-        }, {});
-
-        const modulesHtml = Object.keys(groupedForms).map(moduleName => {
-            const forms = groupedForms[moduleName];
-            
-            return `
+        `,document.body.appendChild(o),o.addEventListener("click",s=>{s.target===o&&o.remove()})},renderSystemFormsDirectory(e,t){if(!this.SystemFormsManifest||this.SystemFormsManifest.length===0)return"";const o=this.SystemFormsManifest.reduce((a,i)=>(a[i.module]||(a[i.module]=[]),a[i.module].push(i),a),{}),s=Object.keys(o).map(a=>{const i=o[a];return`
             <div class="mb-5 coding-system-module">
                 <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-4 coding-system-module-header">
                     <div class="d-flex align-items-center gap-2">
                         <i class="fas fa-folder-open text-primary fs-5"></i>
                         <h4 class="font-bold text-gray-800 m-0">
-                            ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.moduleName.' + moduleName.replace(/[^a-zA-Z0-9]/g, ''), moduleName) : moduleName}
+                            ${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.moduleName."+a.replace(/[^a-zA-Z0-9]/g,""),a):a}
                         </h4>
                     </div>
-                    <span class="badge bg-secondary rounded-pill shadow-sm">${forms.length}</span>
+                    <span class="badge bg-secondary rounded-pill shadow-sm">${i.length}</span>
                 </div>
                 
                 <div class="row g-4 mb-4 coding-system-grid">
-                    ${forms.map(form => {
-                        const matchedCode = documentCodes.find(c => c.code === form.defaultCode || c.documentName === form.name);
-                        let activeVersion = null;
-                        if (matchedCode) {
-                            const versions = documentVersions.filter(v => v.documentCodeId === matchedCode.id && (v.isActive === true || v.isActive === 'true'));
-                            if (versions.length > 0) {
-                                versions.sort((a, b) => new Date(b.issueDate || 0) - new Date(a.issueDate || 0));
-                                activeVersion = versions[0];
-                            }
-                        }
-                        
-                        return `
+                    ${i.map(d=>{const n=e.find(c=>c.code===d.defaultCode||c.documentName===d.name);let r=null;if(n){const c=t.filter(l=>l.documentCodeId===n.id&&(l.isActive===!0||l.isActive==="true"));c.length>0&&(c.sort((l,m)=>new Date(m.issueDate||0)-new Date(l.issueDate||0)),r=c[0])}return`
                         <div class="col-12 col-md-6 col-lg-4 col-xl-3 coding-system-col">
-                            <div class="card h-100 border-0 shadow-sm hover-shadow transition-all relative overflow-hidden coding-system-form-card ${matchedCode ? 'is-coded' : 'is-uncoded'}">
+                            <div class="card h-100 border-0 shadow-sm hover-shadow transition-all relative overflow-hidden coding-system-form-card ${n?"is-coded":"is-uncoded"}">
                                 <!-- Indicator -->
-                                <div class="position-absolute top-0 bottom-0 ${matchedCode ? 'bg-success' : 'bg-danger'} coding-system-status-rail" style="width: 4px; ${document.dir === 'rtl' ? 'right: 0;' : 'left: 0;'}"></div>
+                                <div class="position-absolute top-0 bottom-0 ${n?"bg-success":"bg-danger"} coding-system-status-rail" style="width: 4px; ${document.dir==="rtl"?"right: 0;":"left: 0;"}"></div>
                                 
-                                <div class="card-body d-flex flex-column coding-system-form-body" style="${document.dir === 'rtl' ? 'padding-right: 1.25rem;' : 'padding-left: 1.25rem;'}">
+                                <div class="card-body d-flex flex-column coding-system-form-body" style="${document.dir==="rtl"?"padding-right: 1.25rem;":"padding-left: 1.25rem;"}">
                                     <!-- Title -->
-                                    <h5 class="card-title font-bold text-gray-800 mb-3" style="line-height: 1.4;">${typeof I18n !== 'undefined' ? I18n.t(form.i18nKey, form.name) : form.name}</h5>
+                                    <h5 class="card-title font-bold text-gray-800 mb-3" style="line-height: 1.4;">${typeof I18n<"u"?I18n.t(d.i18nKey,d.name):d.name}</h5>
                                     
                                     <!-- Badges -->
                                     <div class="d-flex flex-wrap gap-2 mb-4">
-                                        <span class="badge ${matchedCode ? 'bg-success' : 'bg-danger'} d-flex align-items-center">
-                                            <i class="fas ${matchedCode ? 'fa-check-circle' : 'fa-times-circle'} mx-1"></i>
-                                            ${matchedCode ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.coded', 'مكود') : 'مكود') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.notCoded', 'غير معرّف') : 'غير معرّف')}
+                                        <span class="badge ${n?"bg-success":"bg-danger"} d-flex align-items-center">
+                                            <i class="fas ${n?"fa-check-circle":"fa-times-circle"} mx-1"></i>
+                                            ${n?typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.coded","\u0645\u0643\u0648\u062F"):"\u0645\u0643\u0648\u062F":typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.notCoded","\u063A\u064A\u0631 \u0645\u0639\u0631\u0651\u0641"):"\u063A\u064A\u0631 \u0645\u0639\u0631\u0651\u0641"}
                                         </span>
                                         <span class="badge bg-light text-dark border d-flex align-items-center">
-                                            <i class="fas fa-tag text-secondary mx-1"></i> ${form.type}
+                                            <i class="fas fa-tag text-secondary mx-1"></i> ${d.type}
                                         </span>
                                         <span class="badge bg-light text-dark border d-flex align-items-center">
-                                            <i class="fas fa-puzzle-piece text-secondary mx-1"></i> ${form.department}
+                                            <i class="fas fa-puzzle-piece text-secondary mx-1"></i> ${d.department}
                                         </span>
                                     </div>
                                     
                                     <!-- Middle Content (Code/Warning) -->
                                     <div class="flex-grow-1 d-flex flex-column justify-content-center mb-4">
-                                        ${matchedCode ? `
+                                        ${n?`
                                             <div class="d-flex justify-content-between align-items-center bg-light rounded p-2 mb-2 border coding-system-meta-row">
-                                                <span class="text-muted small fw-bold"><i class="fas fa-hashtag mx-1 text-primary"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.code', 'الكود') : 'الكود'}</span>
-                                                <span class="badge bg-primary font-monospace">${Utils.escapeHTML(matchedCode.code || '')}</span>
+                                                <span class="text-muted small fw-bold"><i class="fas fa-hashtag mx-1 text-primary"></i>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.code","\u0627\u0644\u0643\u0648\u062F"):"\u0627\u0644\u0643\u0648\u062F"}</span>
+                                                <span class="badge bg-primary font-monospace">${Utils.escapeHTML(n.code||"")}</span>
                                             </div>
                                             <div class="d-flex justify-content-between align-items-center bg-light rounded p-2 border coding-system-meta-row">
-                                                <span class="text-muted small fw-bold"><i class="fas fa-code-branch mx-1 text-primary"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.version', 'الإصدار') : 'الإصدار'}</span>
-                                                ${activeVersion ? `<span class="badge bg-success font-monospace">v${activeVersion.versionNumber}</span>` : `<span class="badge bg-danger small">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.noVersion', 'لا يوجد') : 'لا يوجد'}</span>`}
+                                                <span class="text-muted small fw-bold"><i class="fas fa-code-branch mx-1 text-primary"></i>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.version","\u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</span>
+                                                ${r?`<span class="badge bg-success font-monospace">v${r.versionNumber}</span>`:`<span class="badge bg-danger small">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.noVersion","\u0644\u0627 \u064A\u0648\u062C\u062F"):"\u0644\u0627 \u064A\u0648\u062C\u062F"}</span>`}
                                             </div>
-                                        ` : `
+                                        `:`
                                             <div class="alert alert-danger py-2 px-3 m-0 d-flex align-items-start shadow-sm" style="font-size: 0.8rem; border-left: 3px solid #dc3545;">
                                                 <i class="fas fa-exclamation-triangle mx-1 mt-1"></i>
-                                                <span class="fw-bold">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.warning', 'يرجى تعيين كود لهذا النموذج لكي يتم اعتماده واستخدامه في النظام.') : 'يرجى تعيين كود لهذا النموذج لكي يتم اعتماده واستخدامه في النظام.'}</span>
+                                                <span class="fw-bold">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.warning","\u064A\u0631\u062C\u0649 \u062A\u0639\u064A\u064A\u0646 \u0643\u0648\u062F \u0644\u0647\u0630\u0627 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0644\u0643\u064A \u064A\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F\u0647 \u0648\u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0647 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645."):"\u064A\u0631\u062C\u0649 \u062A\u0639\u064A\u064A\u0646 \u0643\u0648\u062F \u0644\u0647\u0630\u0627 \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0644\u0643\u064A \u064A\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F\u0647 \u0648\u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0647 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645."}</span>
                                             </div>
                                         `}
                                     </div>
                                     
                                     <!-- Action Button -->
                                     <div class="mt-auto border-top pt-3 coding-system-card-footer">
-                                        ${matchedCode ? `
-                                            <button class="btn btn-outline-secondary btn-sm w-100 d-flex justify-content-center align-items-center fw-bold" onclick="ISO.viewDocumentVersions('${matchedCode.id}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}">
+                                        ${n?`
+                                            <button class="btn btn-outline-secondary btn-sm w-100 d-flex justify-content-center align-items-center fw-bold" onclick="ISO.viewDocumentVersions('${n.id}')" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.history","\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"):"\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"}">
                                                 <i class="fas fa-history mx-2"></i>
-                                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.history', 'سجل التغييرات') : 'سجل التغييرات'}
+                                                ${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.history","\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"):"\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A"}
                                             </button>
-                                        ` : `
-                                            <button class="btn btn-primary btn-sm w-100 d-flex justify-content-center align-items-center fw-bold shadow-sm" onclick="ISO.quickAssignFormCode('${form.name}', '${form.defaultCode}', '${form.type}', '${form.department}')" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignCode', 'إنشاء كود سريع') : 'إنشاء كود سريع'}">
+                                        `:`
+                                            <button class="btn btn-primary btn-sm w-100 d-flex justify-content-center align-items-center fw-bold shadow-sm" onclick="ISO.quickAssignFormCode('${d.name}', '${d.defaultCode}', '${d.type}', '${d.department}')" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.assignCode","\u0625\u0646\u0634\u0627\u0621 \u0643\u0648\u062F \u0633\u0631\u064A\u0639"):"\u0625\u0646\u0634\u0627\u0621 \u0643\u0648\u062F \u0633\u0631\u064A\u0639"}">
                                                 <i class="fas fa-plus-circle mx-2"></i>
-                                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.assignNow', 'تعيين كود الآن') : 'تعيين كود الآن'}
+                                                ${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.assignNow","\u062A\u0639\u064A\u064A\u0646 \u0643\u0648\u062F \u0627\u0644\u0622\u0646"):"\u062A\u0639\u064A\u064A\u0646 \u0643\u0648\u062F \u0627\u0644\u0622\u0646"}
                                             </button>
                                         `}
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        `;
-                    }).join('')}
+                        `}).join("")}
                 </div>
             </div>
-            `;
-        }).join('');
-
-        return `
+            `}).join("");return`
         <div class="card mb-4 border-0 shadow-sm coding-system-directory">
             <div class="card-header bg-primary text-white p-4 border-0 coding-system-directory-header">
                 <h3 class="card-title text-white d-flex align-items-center fw-bold m-0" style="font-size: 1.25rem;">
                     <i class="fas fa-layer-group mx-3 opacity-75 fs-4"></i>
-                    ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.title', 'دليل نماذج النظام المدمجة') : 'دليل نماذج النظام المدمجة'}
+                    ${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.title","\u062F\u0644\u064A\u0644 \u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0646\u0638\u0627\u0645 \u0627\u0644\u0645\u062F\u0645\u062C\u0629"):"\u062F\u0644\u064A\u0644 \u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0646\u0638\u0627\u0645 \u0627\u0644\u0645\u062F\u0645\u062C\u0629"}
                 </h3>
-                <p class="text-white-50 small mt-2 mb-0" style="padding-right: 3.5rem;">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.systemForms.desc', 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد') : 'يتم عرض النماذج الرئيسية بالنظام وحالتها في مركز التكويد'}</p>
+                <p class="text-white-50 small mt-2 mb-0" style="padding-right: 3.5rem;">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.systemForms.desc","\u064A\u062A\u0645 \u0639\u0631\u0636 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 \u0628\u0627\u0644\u0646\u0638\u0627\u0645 \u0648\u062D\u0627\u0644\u062A\u0647\u0627 \u0641\u064A \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F"):"\u064A\u062A\u0645 \u0639\u0631\u0636 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 \u0628\u0627\u0644\u0646\u0638\u0627\u0645 \u0648\u062D\u0627\u0644\u062A\u0647\u0627 \u0641\u064A \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F"}</p>
             </div>
             <div class="card-body bg-light p-4 p-md-5 coding-system-directory-body">
-                ${modulesHtml}
+                ${s}
             </div>
         </div>
-        `;
-    },
-
-    async renderCodingCenter(opts = {}) {
-        const skipFetch = opts && opts.skipFetch === true;
-        const showLoadingIndicator = skipFetch;
-
-        // التحقق من الصلاحيات - فقط المدير يمكنه الوصول
-        const currentUser = AppState.currentUser;
-        if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'مدير')) {
-            return `
+        `},async renderCodingCenter(e={}){const t=e&&e.skipFetch===!0,o=t,s=AppState.currentUser;if(!s||s.role!=="admin"&&s.role!=="\u0645\u062F\u064A\u0631")return`
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-lock text-4xl text-gray-400 mb-4"></i>
-                            <p class="text-gray-600">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.accessDeniedTitle', 'ليس لديك صلاحية للوصول إلى مركز التكويد والإصدار') : 'ليس لديك صلاحية للوصول إلى مركز التكويد والإصدار'}</p>
-                            <p class="text-sm text-gray-500 mt-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.accessDeniedDesc', 'هذا القسم متاح فقط لمدير النظام') : 'هذا القسم متاح فقط لمدير النظام'}</p>
+                            <p class="text-gray-600">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.accessDeniedTitle","\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</p>
+                            <p class="text-sm text-gray-500 mt-2">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.accessDeniedDesc","\u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645 \u0645\u062A\u0627\u062D \u0641\u0642\u0637 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"):"\u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645 \u0645\u062A\u0627\u062D \u0641\u0642\u0637 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"}</p>
                         </div>
                     </div>
                 </div>
-            `;
-        }
-
-        let documentCodes = [];
-        let documentVersions = [];
-        let timedOut = false;
-        const silentTimeout = opts && opts.silentTimeout === true;
-
-        if (!skipFetch) {
-            const LOAD_TIMEOUT_MS = 60000;
-            try {
-                Loading.show();
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('TIMEOUT')), LOAD_TIMEOUT_MS)
-                );
-                const fetchPromise = Promise.all([
-                    GoogleIntegration.fetchData('getDocumentCodes', {}).catch(() => ({ success: false, data: [] })),
-                    GoogleIntegration.fetchData('getDocumentVersions', { documentCodeId: null }).catch(() => ({ success: false, data: [] }))
-                ]);
-                const [codesResult, versionsResult] = await Promise.race([fetchPromise, timeoutPromise]);
-                if (codesResult && codesResult.success && codesResult.data) {
-                    documentCodes = codesResult.data;
-                }
-                if (versionsResult && versionsResult.success && versionsResult.data) {
-                    documentVersions = versionsResult.data;
-                }
-            } catch (error) {
-                if (error && error.message === 'TIMEOUT') {
-                    timedOut = true;
-                    Utils.safeError('مركز التكويد والإصدار: انتهت مهلة التحميل. جرب تحديث الصفحة.');
-                    if (!silentTimeout && typeof Notification !== 'undefined') {
-                        Notification.warning('انتهت مهلة تحميل البيانات. يمكنك تحديث الصفحة أو المحاولة لاحقاً.');
-                    }
-                } else {
-                    Utils.safeError('Error loading coding center data:', error);
-                }
-            } finally {
-                Loading.hide();
-            }
-        }
-
-        const activeVersionsCount = documentVersions.filter(v => v.isActive === true || v.isActive === 'true').length;
-        const systemForms = Array.isArray(this.SystemFormsManifest) ? this.SystemFormsManifest : [];
-        const codedSystemForms = systemForms.filter(form => documentCodes.some(code => code.code === form.defaultCode || code.documentName === form.name)).length;
-        const codingCoverage = systemForms.length ? Math.round((codedSystemForms / systemForms.length) * 100) : 0;
-
-        const html = `
+            `;let a=[],i=[],d=!1;const n=e&&e.silentTimeout===!0;if(!t)try{Loading.show();const g=new Promise((f,v)=>setTimeout(()=>v(new Error("TIMEOUT")),6e4)),y=Promise.all([GoogleIntegration.fetchData("getDocumentCodes",{}).catch(()=>({success:!1,data:[]})),GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null}).catch(()=>({success:!1,data:[]}))]),[h,b]=await Promise.race([y,g]);h&&h.success&&h.data&&(a=h.data),b&&b.success&&b.data&&(i=b.data)}catch(g){g&&g.message==="TIMEOUT"?(d=!0,Utils.safeError("\u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631: \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u062A\u062D\u0645\u064A\u0644. \u062C\u0631\u0628 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629."),!n&&typeof Notification<"u"&&Notification.warning("\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. \u064A\u0645\u0643\u0646\u0643 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0623\u0648 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.")):Utils.safeError("Error loading coding center data:",g)}finally{Loading.hide()}const r=i.filter(p=>p.isActive===!0||p.isActive==="true").length,c=Array.isArray(this.SystemFormsManifest)?this.SystemFormsManifest:[],l=c.filter(p=>a.some(g=>g.code===p.defaultCode||g.documentName===p.name)).length,m=c.length?Math.round(l/c.length*100):0,u=`
             <style id="iso-coding-center-contrast-fix">
                 .iso-workspace .iso-coding-center {
                     --coding-bg:#ffffff;
@@ -3636,111 +2360,111 @@ const ISO = {
                 <section class="coding-governance-hero">
                     <div class="coding-governance-hero-copy">
                         <span class="coding-governance-hero-icon"><i class="fas fa-fingerprint"></i></span>
-                        <div><span class="coding-governance-eyebrow">DOCUMENT GOVERNANCE · CONTROLLED RECORDS</span><h2>مركز التكويد والإصدار</h2><p>حوكمة الأكواد، متابعة الإصدارات، وضمان استخدام النسخة المعتمدة من كل وثيقة ونموذج.</p></div>
+                        <div><span class="coding-governance-eyebrow">DOCUMENT GOVERNANCE \xB7 CONTROLLED RECORDS</span><h2>\u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631</h2><p>\u062D\u0648\u0643\u0645\u0629 \u0627\u0644\u0623\u0643\u0648\u0627\u062F\u060C \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A\u060C \u0648\u0636\u0645\u0627\u0646 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0646\u0633\u062E\u0629 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 \u0645\u0646 \u0643\u0644 \u0648\u062B\u064A\u0642\u0629 \u0648\u0646\u0645\u0648\u0630\u062C.</p></div>
                     </div>
-                    <div class="coding-governance-hero-actions"><button type="button" onclick="ISO.reloadCodingCenter()"><i class="fas fa-sync-alt ml-2"></i>تحديث بيانات المركز</button></div>
+                    <div class="coding-governance-hero-actions"><button type="button" onclick="ISO.reloadCodingCenter()"><i class="fas fa-sync-alt ml-2"></i>\u062A\u062D\u062F\u064A\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0631\u0643\u0632</button></div>
                 </section>
-                ${timedOut ? `
+                ${d?`
                 <div class="coding-governance-notice is-warning">
                     <i class="fas fa-clock text-amber-600"></i>
-                    <span class="text-sm text-amber-800">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.timeoutWarning', 'لم يتم تحميل البيانات في الوقت المحدد. اضغط <strong>إعادة تحميل</strong> للمحاولة مرة أخرى.') : 'لم يتم تحميل البيانات في الوقت المحدد. اضغط <strong>إعادة تحميل</strong> للمحاولة مرة أخرى.'}</span>
+                    <span class="text-sm text-amber-800">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.timeoutWarning","\u0644\u0645 \u064A\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0641\u064A \u0627\u0644\u0648\u0642\u062A \u0627\u0644\u0645\u062D\u062F\u062F. \u0627\u0636\u063A\u0637 <strong>\u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644</strong> \u0644\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."):"\u0644\u0645 \u064A\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0641\u064A \u0627\u0644\u0648\u0642\u062A \u0627\u0644\u0645\u062D\u062F\u062F. \u0627\u0636\u063A\u0637 <strong>\u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644</strong> \u0644\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."}</span>
                 </div>
-                ` : ''}
-                ${showLoadingIndicator ? `
+                `:""}
+                ${o?`
                 <div class="coding-governance-notice is-loading">
                     <i class="fas fa-spinner fa-spin text-blue-600"></i>
-                    <span class="text-sm text-blue-800">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.loadingData', 'جاري تحميل البيانات...') : 'جاري تحميل البيانات...'}</span>
+                    <span class="text-sm text-blue-800">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.loadingData","\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A..."):"\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A..."}</span>
                 </div>
-                ` : ''}
-                <!-- إحصائيات سريعة + زر إعادة التحميل -->
+                `:""}
+                <!-- \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0633\u0631\u064A\u0639\u0629 + \u0632\u0631 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 -->
                 <div class="coding-governance-stats">
-                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-hashtag"></i></span><div class="coding-governance-stat-value">${documentCodes.length}</div><div class="coding-governance-stat-label">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.codes', 'أكواد المستندات') : 'أكواد المستندات'}</div></div>
-                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-code-branch"></i></span><div class="coding-governance-stat-value">${documentVersions.length}</div><div class="coding-governance-stat-label">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.versions', 'إصدارات المستندات') : 'إصدارات المستندات'}</div></div>
-                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-certificate"></i></span><div class="coding-governance-stat-value">${activeVersionsCount}</div><div class="coding-governance-stat-label">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.stats.activeVersions', 'إصدارات نشطة') : 'إصدارات نشطة'}</div></div>
-                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-shield-alt"></i></span><div class="coding-governance-stat-value">${codingCoverage}%</div><div class="coding-governance-stat-label">تغطية نماذج النظام بالتكويد</div></div>
+                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-hashtag"></i></span><div class="coding-governance-stat-value">${a.length}</div><div class="coding-governance-stat-label">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.stats.codes","\u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A"):"\u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A"}</div></div>
+                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-code-branch"></i></span><div class="coding-governance-stat-value">${i.length}</div><div class="coding-governance-stat-label">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.stats.versions","\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A"):"\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A"}</div></div>
+                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-certificate"></i></span><div class="coding-governance-stat-value">${r}</div><div class="coding-governance-stat-label">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.stats.activeVersions","\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0646\u0634\u0637\u0629"):"\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0646\u0634\u0637\u0629"}</div></div>
+                    <div class="coding-governance-stat"><span class="coding-governance-stat-icon"><i class="fas fa-shield-alt"></i></span><div class="coding-governance-stat-value">${m}%</div><div class="coding-governance-stat-label">\u062A\u063A\u0637\u064A\u0629 \u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0646\u0638\u0627\u0645 \u0628\u0627\u0644\u062A\u0643\u0648\u064A\u062F</div></div>
                 </div>
 
-                ${this.renderSystemFormsDirectory(documentCodes, documentVersions)}
+                ${this.renderSystemFormsDirectory(a,i)}
 
-                <!-- قسم إدارة التكويد -->
+                <!-- \u0642\u0633\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u0643\u0648\u064A\u062F -->
                 <div class="content-card coding-management-card coding-codes-card">
                     <div class="card-header coding-management-header">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <h2 class="card-title">
                                 <i class="fas fa-code ml-2"></i>
-                                مركز التكويد (Document Coding Center)
+                                \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F (Document Coding Center)
                             </h2>
                             <div class="flex flex-wrap items-center gap-2 coding-management-toolbar">
-                                <button type="button" class="btn-secondary flex items-center gap-1" onclick="ISO.importCodingCenterFromExcel()" title="استيراد أكواد المستندات من ملف Excel أو CSV">
+                                <button type="button" class="btn-secondary flex items-center gap-1" onclick="ISO.importCodingCenterFromExcel()" title="\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A \u0645\u0646 \u0645\u0644\u0641 Excel \u0623\u0648 CSV">
                                     <i class="fas fa-file-excel"></i>
-                                    <span>استيراد Excel</span>
+                                    <span>\u0627\u0633\u062A\u064A\u0631\u0627\u062F Excel</span>
                                 </button>
-                                <button type="button" class="btn-secondary flex items-center gap-1" onclick="ISO.importCodingCenterFromPDF()" title="استيراد من PDF (غير مدعوم للجداول - استخدم Excel)">
+                                <button type="button" class="btn-secondary flex items-center gap-1" onclick="ISO.importCodingCenterFromPDF()" title="\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u0646 PDF (\u063A\u064A\u0631 \u0645\u062F\u0639\u0648\u0645 \u0644\u0644\u062C\u062F\u0627\u0648\u0644 - \u0627\u0633\u062A\u062E\u062F\u0645 Excel)">
                                     <i class="fas fa-file-pdf"></i>
-                                    <span>استيراد PDF</span>
+                                    <span>\u0627\u0633\u062A\u064A\u0631\u0627\u062F PDF</span>
                                 </button>
-                                <button type="button" class="btn-secondary flex items-center gap-1" onclick="ISO.exportCodingCenterToExcel()" title="تصدير البيانات إلى Excel">
+                                <button type="button" class="btn-secondary flex items-center gap-1" onclick="ISO.exportCodingCenterToExcel()" title="\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 Excel">
                                     <i class="fas fa-file-export"></i>
-                                    <span>تصدير Excel</span>
+                                    <span>\u062A\u0635\u062F\u064A\u0631 Excel</span>
                                 </button>
-                                <button type="button" class="btn-secondary flex items-center gap-1" onclick="ISO.exportCodingCenterToPDF()" title="تصدير البيانات إلى PDF">
+                                <button type="button" class="btn-secondary flex items-center gap-1" onclick="ISO.exportCodingCenterToPDF()" title="\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 PDF">
                                     <i class="fas fa-file-pdf"></i>
-                                    <span>تصدير PDF</span>
+                                    <span>\u062A\u0635\u062F\u064A\u0631 PDF</span>
                                 </button>
                                 <button class="btn-primary" onclick="ISO.showDocumentCodeForm()">
-                                    <i class="fas fa-plus ml-2"></i>إضافة كود جديد
+                                    <i class="fas fa-plus ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0643\u0648\u062F \u062C\u062F\u064A\u062F
                                 </button>
                             </div>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="mb-4 coding-filter-bar">
-                            <div class="coding-filter-label"><i class="fas fa-search"></i><span>البحث في سجل الأكواد</span></div>
+                            <div class="coding-filter-label"><i class="fas fa-search"></i><span>\u0627\u0644\u0628\u062D\u062B \u0641\u064A \u0633\u062C\u0644 \u0627\u0644\u0623\u0643\u0648\u0627\u062F</span></div>
                             <input type="text" id="document-code-search" class="form-input" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.searchPlaceholder', 'بحث في أكواد المستندات...') : 'بحث في أكواد المستندات...'}" 
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.searchPlaceholder","\u0628\u062D\u062B \u0641\u064A \u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A..."):"\u0628\u062D\u062B \u0641\u064A \u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A..."}" 
                                 onkeyup="ISO.filterDocumentCodes()">
                         </div>
-                        ${documentCodes.length === 0 ? `
+                        ${a.length===0?`
                             <div class="empty-state coding-empty-state">
-                                <i class="fas fa-barcode"></i><p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.noCodes', 'لا توجد أكواد مستندات مسجلة') : 'لا توجد أكواد مستندات مسجلة'}</p>
+                                <i class="fas fa-barcode"></i><p class="text-gray-500">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.noCodes","\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0643\u0648\u0627\u062F \u0645\u0633\u062A\u0646\u062F\u0627\u062A \u0645\u0633\u062C\u0644\u0629"):"\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0643\u0648\u0627\u062F \u0645\u0633\u062A\u0646\u062F\u0627\u062A \u0645\u0633\u062C\u0644\u0629"}</p>
                             </div>
-                        ` : `
+                        `:`
                             <div class="overflow-x-auto coding-table-wrap">
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.code', 'الكود') : 'الكود'}</th>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.name', 'اسم المستند') : 'اسم المستند'}</th>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.type', 'نوع المستند') : 'نوع المستند'}</th>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.dept', 'القسم') : 'القسم'}</th>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.status', 'الحالة') : 'الحالة'}</th>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.createdAt', 'تاريخ الإنشاء') : 'تاريخ الإنشاء'}</th>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.code","\u0627\u0644\u0643\u0648\u062F"):"\u0627\u0644\u0643\u0648\u062F"}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.name","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F"):"\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F"}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.type","\u0646\u0648\u0639 \u0627\u0644\u0645\u0633\u062A\u0646\u062F"):"\u0646\u0648\u0639 \u0627\u0644\u0645\u0633\u062A\u0646\u062F"}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.dept","\u0627\u0644\u0642\u0633\u0645"):"\u0627\u0644\u0642\u0633\u0645"}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.status","\u0627\u0644\u062D\u0627\u0644\u0629"):"\u0627\u0644\u062D\u0627\u0644\u0629"}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.createdAt","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621"}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"):"\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="document-codes-table-body">
-                                        ${documentCodes.map(code => `
+                                        ${a.map(p=>`
                                             <tr>
-                                                <td><strong class="coding-code-pill">${Utils.escapeHTML(code.code || '')}</strong></td>
-                                                <td>${Utils.escapeHTML(code.documentName || '')}</td>
-                                                <td>${Utils.escapeHTML(code.documentType || '')}</td>
-                                                <td>${Utils.escapeHTML(code.department || '')}</td>
-                                                <td><span class="badge badge-${code.status === 'نشط' || code.status === 'Active' ? 'success' : 'warning'}">${Utils.escapeHTML(code.status || '')}</span></td>
-                                                <td>${code.createdAt ? Utils.formatDate(code.createdAt) : '-'}</td>
+                                                <td><strong class="coding-code-pill">${Utils.escapeHTML(p.code||"")}</strong></td>
+                                                <td>${Utils.escapeHTML(p.documentName||"")}</td>
+                                                <td>${Utils.escapeHTML(p.documentType||"")}</td>
+                                                <td>${Utils.escapeHTML(p.department||"")}</td>
+                                                <td><span class="badge badge-${p.status==="\u0646\u0634\u0637"||p.status==="Active"?"success":"warning"}">${Utils.escapeHTML(p.status||"")}</span></td>
+                                                <td>${p.createdAt?Utils.formatDate(p.createdAt):"-"}</td>
                                                 <td><div class="coding-row-actions">
-                                                    <button onclick="ISO.editDocumentCode('${code.id}')" class="btn-icon btn-icon-info" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}">
+                                                    <button onclick="ISO.editDocumentCode('${p.id}')" class="btn-icon btn-icon-info" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.actions.edit","\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0639\u062F\u064A\u0644"}">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <button onclick="ISO.viewDocumentVersions('${code.id}')" class="btn-icon btn-icon-success" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.viewVersions', 'عرض الإصدارات') : 'عرض الإصدارات'}">
+                                                    <button onclick="ISO.viewDocumentVersions('${p.id}')" class="btn-icon btn-icon-success" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.actions.viewVersions","\u0639\u0631\u0636 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A"):"\u0639\u0631\u0636 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A"}">
                                                         <i class="fas fa-list"></i>
                                                     </button>
-                                                    <button onclick="ISO.deleteDocumentCode('${code.id}')" class="btn-icon btn-icon-danger" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.delete', 'حذف') : 'حذف'}">
+                                                    <button onclick="ISO.deleteDocumentCode('${p.id}')" class="btn-icon btn-icon-danger" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.actions.delete","\u062D\u0630\u0641"):"\u062D\u0630\u0641"}">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                     </div>
                                                 </td>
                                             </tr>
-                                        `).join('')}
+                                        `).join("")}
                                     </tbody>
                                 </table>
                             </div>
@@ -3748,72 +2472,69 @@ const ISO = {
                     </div>
                 </div>
 
-                <!-- قسم إدارة الإصدارات -->
+                <!-- \u0642\u0633\u0645 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A -->
                 <div class="content-card coding-management-card coding-versions-card">
                     <div class="card-header coding-management-header">
                         <div class="flex items-center justify-between">
                             <h2 class="card-title">
                                 <i class="fas fa-file-alt ml-2"></i>
-                                ${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.issuingCenterTitle', 'مركز الإصدار (Issuing Center)') : 'مركز الإصدار (Issuing Center)'}
+                                ${typeof I18n<"u"?I18n.t("module.iso.codingCenter.issuingCenterTitle","\u0645\u0631\u0643\u0632 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (Issuing Center)"):"\u0645\u0631\u0643\u0632 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (Issuing Center)"}
                             </h2>
                             <button class="btn-primary" onclick="ISO.showDocumentVersionForm()">
-                                <i class="fas fa-plus ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.addVersion', 'إضافة إصدار جديد') : 'إضافة إصدار جديد'}
+                                <i class="fas fa-plus ml-2"></i>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.actions.addVersion","\u0625\u0636\u0627\u0641\u0629 \u0625\u0635\u062F\u0627\u0631 \u062C\u062F\u064A\u062F"):"\u0625\u0636\u0627\u0641\u0629 \u0625\u0635\u062F\u0627\u0631 \u062C\u062F\u064A\u062F"}
                             </button>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="mb-4 coding-filter-bar">
-                            <div class="coding-filter-label"><i class="fas fa-filter"></i><span>تصفية سجل الإصدارات</span></div>
+                            <div class="coding-filter-label"><i class="fas fa-filter"></i><span>\u062A\u0635\u0641\u064A\u0629 \u0633\u062C\u0644 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A</span></div>
                             <select id="version-filter-code" class="form-input" onchange="ISO.filterDocumentVersions()">
-                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.allCodes', 'جميع الأكواد') : 'جميع الأكواد'}</option>
-                                ${documentCodes.map(code => `
-                                    <option value="${code.id}">${Utils.escapeHTML(code.code || '')} - ${Utils.escapeHTML(code.documentName || '')}</option>
-                                `).join('')}
+                                <option value="">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.allCodes","\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0643\u0648\u0627\u062F"):"\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0643\u0648\u0627\u062F"}</option>
+                                ${a.map(p=>`
+                                    <option value="${p.id}">${Utils.escapeHTML(p.code||"")} - ${Utils.escapeHTML(p.documentName||"")}</option>
+                                `).join("")}
                             </select>
                         </div>
-                        ${documentVersions.length === 0 ? `
+                        ${i.length===0?`
                             <div class="empty-state coding-empty-state">
-                                <i class="fas fa-code-branch"></i><p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.noVersions', 'لا توجد إصدارات مسجلة') : 'لا توجد إصدارات مسجلة'}</p>
+                                <i class="fas fa-code-branch"></i><p class="text-gray-500">${typeof I18n<"u"?I18n.t("module.iso.codingCenter.noVersions","\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0645\u0633\u062C\u0644\u0629"):"\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0645\u0633\u062C\u0644\u0629"}</p>
                             </div>
-                        ` : `
+                        `:`
                             <div class="overflow-x-auto coding-table-wrap">
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.code', 'الكود') : 'الكود'}</th>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.versionNum', 'رقم الإصدار') : 'رقم الإصدار'}</th>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.issueDate', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</th>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.revisionDate', 'تاريخ التعديل') : 'تاريخ التعديل'}</th>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.status', 'الحالة') : 'الحالة'}</th>
-                                            <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.code","\u0627\u0644\u0643\u0648\u062F"):"\u0627\u0644\u0643\u0648\u062F"}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.versionNum","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.issueDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.revisionDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.status","\u0627\u0644\u062D\u0627\u0644\u0629"):"\u0627\u0644\u062D\u0627\u0644\u0629"}</th>
+                                            <th>${typeof I18n<"u"?I18n.t("module.iso.codingCenter.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"):"\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="document-versions-table-body">
-                                        ${documentVersions.map(version => {
-            const code = documentCodes.find(c => c.id === version.documentCodeId);
-            return `
-                                                <tr data-code-id="${version.documentCodeId}">
-                                                    <td><strong class="coding-code-pill">${Utils.escapeHTML(version.documentCode || code?.code || '')}</strong></td>
-                                                    <td>${Utils.escapeHTML(version.versionNumber || '')}</td>
-                                                    <td>${version.issueDate ? Utils.formatDate(version.issueDate) : '-'}</td>
-                                                    <td>${version.revisionDate ? Utils.formatDate(version.revisionDate) : '-'}</td>
+                                        ${i.map(p=>{const g=a.find(y=>y.id===p.documentCodeId);return`
+                                                <tr data-code-id="${p.documentCodeId}">
+                                                    <td><strong class="coding-code-pill">${Utils.escapeHTML(p.documentCode||g?.code||"")}</strong></td>
+                                                    <td>${Utils.escapeHTML(p.versionNumber||"")}</td>
+                                                    <td>${p.issueDate?Utils.formatDate(p.issueDate):"-"}</td>
+                                                    <td>${p.revisionDate?Utils.formatDate(p.revisionDate):"-"}</td>
                                                     <td><div class="coding-row-actions">
-                                                        <span class="badge badge-${version.isActive === true || version.isActive === 'true' ? 'success' : 'secondary'}">
-                                                            ${version.isActive === true || version.isActive === 'true' ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.active', 'نشط') : 'نشط') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.inactive', 'غير نشط') : 'غير نشط')}
+                                                        <span class="badge badge-${p.isActive===!0||p.isActive==="true"?"success":"secondary"}">
+                                                            ${p.isActive===!0||p.isActive==="true"?typeof I18n<"u"?I18n.t("module.iso.codingCenter.active","\u0646\u0634\u0637"):"\u0646\u0634\u0637":typeof I18n<"u"?I18n.t("module.iso.codingCenter.inactive","\u063A\u064A\u0631 \u0646\u0634\u0637"):"\u063A\u064A\u0631 \u0646\u0634\u0637"}
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        <button onclick="ISO.editDocumentVersion('${version.id}')" class="btn-icon btn-icon-info" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}">
+                                                        <button onclick="ISO.editDocumentVersion('${p.id}')" class="btn-icon btn-icon-info" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.actions.edit","\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0639\u062F\u064A\u0644"}">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
-                                                        <button onclick="ISO.reissueDocument('${version.id}')" class="btn-icon btn-icon-warning" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.reissue', 'إعادة إصدار') : 'إعادة إصدار'}">
+                                                        <button onclick="ISO.reissueDocument('${p.id}')" class="btn-icon btn-icon-warning" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.actions.reissue","\u0625\u0639\u0627\u062F\u0629 \u0625\u0635\u062F\u0627\u0631"):"\u0625\u0639\u0627\u062F\u0629 \u0625\u0635\u062F\u0627\u0631"}">
                                                             <i class="fas fa-redo"></i>
                                                         </button>
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            `;
-        }).join('')}
+                                            `}).join("")}
                                     </tbody>
                                 </table>
                             </div>
@@ -3821,354 +2542,10 @@ const ISO = {
                     </div>
                 </div>
             </div>
-        `;
-        if (opts && opts.returnStatus) return { html, timedOut };
-        return html;
-    },
-
-    /**
-     * إعادة تحميل محتوى مركز التكويد والإصدار فقط (بدون إعادة تحميل كامل الموديول)
-     */
-    async reloadCodingCenter() {
-        const contentArea = document.getElementById('iso-content');
-        if (!contentArea) return;
-        try {
-            Loading.show();
-            this.currentTab = 'coding-center';
-            const result = await this.renderCodingCenter({ returnStatus: true });
-            const content = result && typeof result === 'object' && result.html !== undefined ? result.html : result;
-            contentArea.innerHTML = content;
-            const timedOut = result && typeof result === 'object' && result.timedOut === true;
-            if (!timedOut && typeof Notification !== 'undefined') Notification.success('تم تحديث البيانات');
-        } catch (error) {
-            Utils.safeError('Error reloading coding center:', error);
-            if (typeof Notification !== 'undefined') Notification.error('فشل إعادة التحميل: ' + (error && error.message ? error.message : ''));
-        } finally {
-            Loading.hide();
-        }
-    },
-
-    /**
-     * تصدير بيانات مركز التكويد إلى Excel
-     */
-    async exportCodingCenterToExcel() {
-        try {
-            if (typeof XLSX === 'undefined') {
-                if (typeof Notification !== 'undefined') Notification.error('مكتبة Excel غير متاحة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-                return;
-            }
-            Loading.show();
-            const [codesRes, versionsRes] = await Promise.all([
-                GoogleIntegration.fetchData('getDocumentCodes', {}).catch(() => ({ success: false, data: [] })),
-                GoogleIntegration.fetchData('getDocumentVersions', { documentCodeId: null }).catch(() => ({ success: false, data: [] }))
-            ]);
-            const documentCodes = (codesRes && codesRes.success && codesRes.data) ? codesRes.data : [];
-            const documentVersions = (versionsRes && versionsRes.success && versionsRes.data) ? versionsRes.data : [];
-            if (documentCodes.length === 0 && documentVersions.length === 0) {
-                if (typeof Notification !== 'undefined') Notification.warning('لا توجد بيانات للتصدير');
-                Loading.hide();
-                return;
-            }
-            const wb = XLSX.utils.book_new();
-            if (documentCodes.length > 0) {
-                const codesHeaders = ['الكود', 'اسم المستند', 'نوع المستند', 'القسم', 'الحالة', 'الوصف', 'تاريخ الإنشاء', 'تاريخ التحديث', 'أنشئ بواسطة'];
-                const codesRows = documentCodes.map(c => [
-                    c.code || '',
-                    c.documentName || '',
-                    c.documentType || '',
-                    c.department || '',
-                    c.status || '',
-                    c.description || '',
-                    c.createdAt ? (typeof c.createdAt === 'string' ? c.createdAt : new Date(c.createdAt).toISOString()) : '',
-                    c.updatedAt ? (typeof c.updatedAt === 'string' ? c.updatedAt : new Date(c.updatedAt).toISOString()) : '',
-                    c.createdBy || ''
-                ]);
-                const wsCodes = XLSX.utils.aoa_to_sheet([codesHeaders, ...codesRows]);
-                XLSX.utils.book_append_sheet(wb, wsCodes, 'أكواد المستندات');
-            }
-            if (documentVersions.length > 0) {
-                const verHeaders = ['كود المستند', 'رقم الإصدار', 'تاريخ الإصدار', 'نشط', 'الحالة', 'ملاحظات'];
-                const codeIdToCode = {};
-                documentCodes.forEach(c => { codeIdToCode[c.id] = c.code; });
-                const verRows = documentVersions.map(v => [
-                    codeIdToCode[v.documentCodeId] || v.documentCodeId || '',
-                    v.versionNumber || '',
-                    v.issueDate ? (typeof v.issueDate === 'string' ? v.issueDate : new Date(v.issueDate).toISOString().slice(0, 10)) : '',
-                    v.isActive === true || v.isActive === 'true' ? 'نعم' : 'لا',
-                    v.status || '',
-                    v.notes || ''
-                ]);
-                const wsVer = XLSX.utils.aoa_to_sheet([verHeaders, ...verRows]);
-                XLSX.utils.book_append_sheet(wb, wsVer, 'إصدارات المستندات');
-            }
-            const fileName = 'مركز_التكويد_والإصدار_' + new Date().toISOString().slice(0, 10) + '.xlsx';
-            XLSX.writeFile(wb, fileName);
-            if (typeof Notification !== 'undefined') Notification.success('تم تصدير البيانات إلى Excel بنجاح');
-        } catch (err) {
-            Utils.safeError('تصدير مركز التكويد إلى Excel:', err);
-            if (typeof Notification !== 'undefined') Notification.error('فشل التصدير: ' + (err.message || err));
-        } finally {
-            Loading.hide();
-        }
-    },
-
-    /**
-     * تصدير بيانات مركز التكويد إلى PDF
-     */
-    async exportCodingCenterToPDF() {
-        try {
-            Loading.show();
-            
-            // Load jsPDF and autoTable libraries dynamically if not present
-            const loadLib = (src, check) => new Promise((res, rej) => {
-                if (check()) return res();
-                const s = document.createElement('script');
-                s.src = src; s.onload = () => res(); s.onerror = () => rej(new Error('Failed: ' + src));
-                document.head.appendChild(s);
-            });
-            
-            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
-            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js', () => typeof window.jspdf?.jsPDF?.prototype?.autoTable !== 'undefined');
-
-            const [codesRes, versionsRes] = await Promise.all([
-                GoogleIntegration.fetchData('getDocumentCodes', {}).catch(() => ({ success: false, data: [] })),
-                GoogleIntegration.fetchData('getDocumentVersions', { documentCodeId: null }).catch(() => ({ success: false, data: [] }))
-            ]);
-            const documentCodes = (codesRes && codesRes.success && codesRes.data) ? codesRes.data : [];
-            const documentVersions = (versionsRes && versionsRes.success && versionsRes.data) ? versionsRes.data : [];
-            if (documentCodes.length === 0 && documentVersions.length === 0) {
-                if (typeof Notification !== 'undefined') Notification.warning('لا توجد بيانات للتصدير');
-                Loading.hide();
-                return;
-            }
-            
-            if (typeof window.jspdf === 'undefined') {
-                if (typeof Notification !== 'undefined') Notification.error('فشل تحميل مكتبة PDF. يرجى المحاولة مرة أخرى.');
-                Loading.hide();
-                return;
-            }
-            
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('l', 'mm', 'a4');
-            const pageW = doc.internal.pageSize.getWidth();
-            const pageH = doc.internal.pageSize.getHeight();
-            const exportDate = new Date().toLocaleDateString('ar-EG', { dateStyle: 'medium' });
-            
-            // Note: jsPDF without custom fonts doesn't support Arabic well natively, 
-            // but we will keep the original export logic here as requested.
-            doc.setFontSize(14);
-            doc.text('Document Coding and Issuing Center', pageW / 2, 14, { align: 'center' });
-            doc.setFontSize(9);
-            doc.text('Export Date: ' + exportDate, pageW / 2, 21, { align: 'center' });
-            let startY = 28;
-            if (documentCodes.length > 0) {
-                doc.setFontSize(10);
-                doc.text('Document Codes', 14, startY);
-                startY += 6;
-                const codeHeaders = ['Code', 'Document Name', 'Type', 'Department', 'Status'];
-                const codeRows = documentCodes.map(c => [
-                    String(c.code || ''),
-                    String(c.documentName || '').substring(0, 25),
-                    String(c.documentType || ''),
-                    String(c.department || ''),
-                    String(c.status || '')
-                ]);
-                
-                doc.autoTable({
-                    head: [codeHeaders],
-                    body: codeRows,
-                    startY: startY,
-                    styles: { fontSize: 7, cellPadding: 2, font: 'helvetica' },
-                    headStyles: { fillColor: [37, 99, 235], textColor: 255 },
-                    margin: { left: 8, right: 8 }
-                });
-                startY = doc.lastAutoTable.finalY + 10;
-            }
-            
-            if (documentVersions.length > 0 && startY < pageH - 40) {
-                doc.setFontSize(10);
-                doc.text('Document Versions', 14, startY);
-                startY += 6;
-                const codeIdToCode = {};
-                documentCodes.forEach(c => { codeIdToCode[c.id] = c.code; });
-                const verHeaders = ['Document Code', 'Version', 'Issue Date', 'Active', 'Status'];
-                const verRows = documentVersions.slice(0, 50).map(v => [
-                    String(codeIdToCode[v.documentCodeId] || ''),
-                    String(v.versionNumber || ''),
-                    String(v.issueDate || '').slice(0, 10),
-                    v.isActive === true || v.isActive === 'true' ? 'Yes' : 'No',
-                    String(v.status || '')
-                ]);
-                
-                doc.autoTable({
-                    head: [verHeaders],
-                    body: verRows,
-                    startY: startY,
-                    styles: { fontSize: 7, cellPadding: 2, font: 'helvetica' },
-                    headStyles: { fillColor: [34, 197, 94], textColor: 255 },
-                    margin: { left: 8, right: 8 }
-                });
-            }
-            
-            doc.setFontSize(8);
-            doc.setTextColor(128, 128, 128);
-            doc.text('— Document Coding and Issuing Center — ' + exportDate, pageW / 2, pageH - 10, { align: 'center' });
-            doc.save('Coding_Center_' + new Date().toISOString().slice(0, 10) + '.pdf');
-            if (typeof Notification !== 'undefined') Notification.success('تم تصدير البيانات إلى PDF بنجاح');
-        } catch (err) {
-            Utils.safeError('تصدير مركز التكويد إلى PDF:', err);
-            if (typeof Notification !== 'undefined') Notification.error('فشل التصدير: ' + (err.message || err));
-        } finally {
-            Loading.hide();
-        }
-    },
-
-    /**
-     * استيراد أكواد المستندات من ملف Excel أو CSV
-     */
-    importCodingCenterFromExcel() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.xlsx,.xls,.csv';
-        input.style.display = 'none';
-        input.onchange = async (e) => {
-            const file = e.target && e.target.files && e.target.files[0];
-            if (!file) return;
-            const fileName = (file.name || '').toLowerCase();
-            try {
-                Loading.show();
-                let rows = [];
-                if (fileName.endsWith('.csv')) {
-                    const text = await new Promise((res, rej) => {
-                        const r = new FileReader();
-                        r.onload = () => res(r.result);
-                        r.onerror = rej;
-                        r.readAsText(file, 'UTF-8');
-                    });
-                    const lines = text.split(/\r?\n/).filter(l => l.trim());
-                    const delimiter = text.indexOf('\t') >= 0 ? '\t' : (text.indexOf(';') >= 0 ? ';' : ',');
-                    const headers = lines[0] ? lines[0].split(delimiter).map(h => h.trim()) : [];
-                    const codeIdx = headers.findIndex(h => /كود|code/i.test(h));
-                    const nameIdx = headers.findIndex(h => /اسم|name|document/i.test(h));
-                    const typeIdx = headers.findIndex(h => /نوع|type/i.test(h));
-                    const deptIdx = headers.findIndex(h => /قسم|department/i.test(h));
-                    const statusIdx = headers.findIndex(h => /حالة|status/i.test(h));
-                    const descIdx = headers.findIndex(h => /وصف|description/i.test(h));
-                    for (let i = 1; i < lines.length; i++) {
-                        const cells = lines[i].split(delimiter);
-                        const code = (codeIdx >= 0 ? cells[codeIdx] : cells[0]) || '';
-                        const documentName = (nameIdx >= 0 ? cells[nameIdx] : cells[1]) || '';
-                        if (!String(code).trim()) continue;
-                        rows.push({
-                            code: String(code).trim(),
-                            documentName: String(documentName).trim() || String(code).trim(),
-                            documentType: typeIdx >= 0 ? (cells[typeIdx] || '').trim() : 'وثيقة',
-                            department: deptIdx >= 0 ? (cells[deptIdx] || '').trim() : '',
-                            status: statusIdx >= 0 ? (cells[statusIdx] || '').trim() : 'نشط',
-                            description: descIdx >= 0 ? (cells[descIdx] || '').trim() : ''
-                        });
-                    }
-                } else {
-                    if (typeof XLSX === 'undefined') {
-                        if (typeof Notification !== 'undefined') Notification.error('مكتبة Excel غير متاحة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-                        Loading.hide();
-                        return;
-                    }
-                    const ab = await new Promise((res, rej) => {
-                        const r = new FileReader();
-                        r.onload = () => res(r.result);
-                        r.onerror = rej;
-                        r.readAsArrayBuffer(file);
-                    });
-                    const wb = XLSX.read(ab, { type: 'array' });
-                    const firstSheet = wb.SheetNames[0] ? wb.Sheets[wb.SheetNames[0]] : null;
-                    if (!firstSheet) { Loading.hide(); return; }
-                    const aoa = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-                    if (!aoa || aoa.length < 2) { Loading.hide(); if (Notification) Notification.warning('الملف لا يحتوي على صفوف بيانات.'); return; }
-                    const headers = (aoa[0] || []).map(h => String(h).trim());
-                    const codeIdx = headers.findIndex(h => /كود|code/i.test(h));
-                    const nameIdx = headers.findIndex(h => /اسم|name|document/i.test(h));
-                    const typeIdx = headers.findIndex(h => /نوع|type/i.test(h));
-                    const deptIdx = headers.findIndex(h => /قسم|department/i.test(h));
-                    const statusIdx = headers.findIndex(h => /حالة|status/i.test(h));
-                    const descIdx = headers.findIndex(h => /وصف|description/i.test(h));
-                    for (let i = 1; i < aoa.length; i++) {
-                        const cells = aoa[i] || [];
-                        const code = (codeIdx >= 0 ? cells[codeIdx] : cells[0]);
-                        const documentName = (nameIdx >= 0 ? cells[nameIdx] : cells[1]);
-                        const codeStr = (code != null && code !== undefined) ? String(code).trim() : '';
-                        if (!codeStr) continue;
-                        rows.push({
-                            code: codeStr,
-                            documentName: (documentName != null && documentName !== undefined) ? String(documentName).trim() : codeStr,
-                            documentType: typeIdx >= 0 ? String(cells[typeIdx] || '').trim() : 'وثيقة',
-                            department: deptIdx >= 0 ? String(cells[deptIdx] || '').trim() : '',
-                            status: statusIdx >= 0 ? String(cells[statusIdx] || '').trim() : 'نشط',
-                            description: descIdx >= 0 ? String(cells[descIdx] || '').trim() : ''
-                        });
-                    }
-                }
-                if (rows.length === 0) {
-                    if (typeof Notification !== 'undefined') Notification.warning('لم يتم العثور على صفوف صالحة (يجب وجود عمود الكود).');
-                    Loading.hide();
-                    return;
-                }
-                let added = 0, failed = 0;
-                for (const row of rows) {
-                    try {
-                        const result = await GoogleIntegration.fetchData('addDocumentCode', {
-                            code: row.code,
-                            documentName: row.documentName,
-                            documentType: row.documentType,
-                            department: row.department,
-                            status: row.status,
-                            description: row.description
-                        });
-                        if (result && result.success) added++;
-                        else failed++;
-                    } catch (_) { failed++; }
-                }
-                if (typeof Notification !== 'undefined') Notification.success('تم استيراد ' + added + ' كوداً. فشل: ' + failed + ' (قد يكون بسبب تكرار الكود).');
-                this.reloadCodingCenter();
-            } catch (err) {
-                Utils.safeError('استيراد مركز التكويد من Excel:', err);
-                if (typeof Notification !== 'undefined') Notification.error('فشل الاستيراد: ' + (err.message || err));
-            } finally {
-                Loading.hide();
-            }
-            input.value = '';
-        };
-        document.body.appendChild(input);
-        input.click();
-        setTimeout(() => input.remove(), 500);
-    },
-
-    /**
-     * استيراد من PDF (الجداول غير مدعومة - يظهر رسالة توجيهية)
-     */
-    importCodingCenterFromPDF() {
-        if (typeof Notification !== 'undefined') {
-            Notification.warning('استيراد البيانات المنظمة من ملف PDF غير متاح حالياً. يرجى استخدام ملف Excel أو CSV لاستيراد أكواد المستندات.');
-        }
-    },
-
-    quickAssignFormCode(name, code, type, department) {
-        this.showDocumentCodeForm({
-            documentName: name,
-            code: code,
-            documentType: type,
-            department: department,
-            status: 'نشط'
-        });
-    },
-
-    async showDocumentCodeForm(data = null) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `;return e&&e.returnStatus?{html:u,timedOut:d}:u},async reloadCodingCenter(){const e=document.getElementById("iso-content");if(e)try{Loading.show(),this.currentTab="coding-center";const t=await this.renderCodingCenter({returnStatus:!0}),o=t&&typeof t=="object"&&t.html!==void 0?t.html:t;e.innerHTML=o,!(t&&typeof t=="object"&&t.timedOut===!0)&&typeof Notification<"u"&&Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}catch(t){Utils.safeError("Error reloading coding center:",t),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u062D\u0645\u064A\u0644: "+(t&&t.message?t.message:""))}finally{Loading.hide()}},async exportCodingCenterToExcel(){try{if(typeof XLSX>"u"){typeof Notification<"u"&&Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}Loading.show();const[e,t]=await Promise.all([GoogleIntegration.fetchData("getDocumentCodes",{}).catch(()=>({success:!1,data:[]})),GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null}).catch(()=>({success:!1,data:[]}))]),o=e&&e.success&&e.data?e.data:[],s=t&&t.success&&t.data?t.data:[];if(o.length===0&&s.length===0){typeof Notification<"u"&&Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631"),Loading.hide();return}const a=XLSX.utils.book_new();if(o.length>0){const d=["\u0627\u0644\u0643\u0648\u062F","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0646\u0648\u0639 \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0627\u0644\u0642\u0633\u0645","\u0627\u0644\u062D\u0627\u0644\u0629","\u0627\u0644\u0648\u0635\u0641","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u062D\u062F\u064A\u062B","\u0623\u0646\u0634\u0626 \u0628\u0648\u0627\u0633\u0637\u0629"],n=o.map(c=>[c.code||"",c.documentName||"",c.documentType||"",c.department||"",c.status||"",c.description||"",c.createdAt?typeof c.createdAt=="string"?c.createdAt:new Date(c.createdAt).toISOString():"",c.updatedAt?typeof c.updatedAt=="string"?c.updatedAt:new Date(c.updatedAt).toISOString():"",c.createdBy||""]),r=XLSX.utils.aoa_to_sheet([d,...n]);XLSX.utils.book_append_sheet(a,r,"\u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A")}if(s.length>0){const d=["\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631","\u0646\u0634\u0637","\u0627\u0644\u062D\u0627\u0644\u0629","\u0645\u0644\u0627\u062D\u0638\u0627\u062A"],n={};o.forEach(l=>{n[l.id]=l.code});const r=s.map(l=>[n[l.documentCodeId]||l.documentCodeId||"",l.versionNumber||"",l.issueDate?typeof l.issueDate=="string"?l.issueDate:new Date(l.issueDate).toISOString().slice(0,10):"",l.isActive===!0||l.isActive==="true"?"\u0646\u0639\u0645":"\u0644\u0627",l.status||"",l.notes||""]),c=XLSX.utils.aoa_to_sheet([d,...r]);XLSX.utils.book_append_sheet(a,c,"\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A")}const i="\u0645\u0631\u0643\u0632_\u0627\u0644\u062A\u0643\u0648\u064A\u062F_\u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631_"+new Date().toISOString().slice(0,10)+".xlsx";XLSX.writeFile(a,i),typeof Notification<"u"&&Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 Excel \u0628\u0646\u062C\u0627\u062D")}catch(e){Utils.safeError("\u062A\u0635\u062F\u064A\u0631 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0625\u0644\u0649 Excel:",e),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0627\u0644\u062A\u0635\u062F\u064A\u0631: "+(e.message||e))}finally{Loading.hide()}},async exportCodingCenterToPDF(){try{Loading.show();const e=(m,u)=>new Promise((p,g)=>{if(u())return p();const y=document.createElement("script");y.src=m,y.onload=()=>p(),y.onerror=()=>g(new Error("Failed: "+m)),document.head.appendChild(y)});await e("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>typeof window.jspdf<"u"),await e("https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js",()=>typeof window.jspdf?.jsPDF?.prototype?.autoTable<"u");const[t,o]=await Promise.all([GoogleIntegration.fetchData("getDocumentCodes",{}).catch(()=>({success:!1,data:[]})),GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null}).catch(()=>({success:!1,data:[]}))]),s=t&&t.success&&t.data?t.data:[],a=o&&o.success&&o.data?o.data:[];if(s.length===0&&a.length===0){typeof Notification<"u"&&Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631"),Loading.hide();return}if(typeof window.jspdf>"u"){typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 PDF. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."),Loading.hide();return}const{jsPDF:i}=window.jspdf,d=new i("l","mm","a4"),n=d.internal.pageSize.getWidth(),r=d.internal.pageSize.getHeight(),c=new Date().toLocaleDateString("ar-EG",{dateStyle:"medium"});d.setFontSize(14),d.text("Document Coding and Issuing Center",n/2,14,{align:"center"}),d.setFontSize(9),d.text("Export Date: "+c,n/2,21,{align:"center"});let l=28;if(s.length>0){d.setFontSize(10),d.text("Document Codes",14,l),l+=6;const m=["Code","Document Name","Type","Department","Status"],u=s.map(p=>[String(p.code||""),String(p.documentName||"").substring(0,25),String(p.documentType||""),String(p.department||""),String(p.status||"")]);d.autoTable({head:[m],body:u,startY:l,styles:{fontSize:7,cellPadding:2,font:"helvetica"},headStyles:{fillColor:[37,99,235],textColor:255},margin:{left:8,right:8}}),l=d.lastAutoTable.finalY+10}if(a.length>0&&l<r-40){d.setFontSize(10),d.text("Document Versions",14,l),l+=6;const m={};s.forEach(g=>{m[g.id]=g.code});const u=["Document Code","Version","Issue Date","Active","Status"],p=a.slice(0,50).map(g=>[String(m[g.documentCodeId]||""),String(g.versionNumber||""),String(g.issueDate||"").slice(0,10),g.isActive===!0||g.isActive==="true"?"Yes":"No",String(g.status||"")]);d.autoTable({head:[u],body:p,startY:l,styles:{fontSize:7,cellPadding:2,font:"helvetica"},headStyles:{fillColor:[34,197,94],textColor:255},margin:{left:8,right:8}})}d.setFontSize(8),d.setTextColor(128,128,128),d.text("\u2014 Document Coding and Issuing Center \u2014 "+c,n/2,r-10,{align:"center"}),d.save("Coding_Center_"+new Date().toISOString().slice(0,10)+".pdf"),typeof Notification<"u"&&Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 PDF \u0628\u0646\u062C\u0627\u062D")}catch(e){Utils.safeError("\u062A\u0635\u062F\u064A\u0631 \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0625\u0644\u0649 PDF:",e),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0627\u0644\u062A\u0635\u062F\u064A\u0631: "+(e.message||e))}finally{Loading.hide()}},importCodingCenterFromExcel(){const e=document.createElement("input");e.type="file",e.accept=".xlsx,.xls,.csv",e.style.display="none",e.onchange=async t=>{const o=t.target&&t.target.files&&t.target.files[0];if(!o)return;const s=(o.name||"").toLowerCase();try{Loading.show();let a=[];if(s.endsWith(".csv")){const n=await new Promise((b,f)=>{const v=new FileReader;v.onload=()=>b(v.result),v.onerror=f,v.readAsText(o,"UTF-8")}),r=n.split(/\r?\n/).filter(b=>b.trim()),c=n.indexOf("	")>=0?"	":n.indexOf(";")>=0?";":",",l=r[0]?r[0].split(c).map(b=>b.trim()):[],m=l.findIndex(b=>/كود|code/i.test(b)),u=l.findIndex(b=>/اسم|name|document/i.test(b)),p=l.findIndex(b=>/نوع|type/i.test(b)),g=l.findIndex(b=>/قسم|department/i.test(b)),y=l.findIndex(b=>/حالة|status/i.test(b)),h=l.findIndex(b=>/وصف|description/i.test(b));for(let b=1;b<r.length;b++){const f=r[b].split(c),v=(m>=0?f[m]:f[0])||"",x=(u>=0?f[u]:f[1])||"";String(v).trim()&&a.push({code:String(v).trim(),documentName:String(x).trim()||String(v).trim(),documentType:p>=0?(f[p]||"").trim():"\u0648\u062B\u064A\u0642\u0629",department:g>=0?(f[g]||"").trim():"",status:y>=0?(f[y]||"").trim():"\u0646\u0634\u0637",description:h>=0?(f[h]||"").trim():""})}}else{if(typeof XLSX>"u"){typeof Notification<"u"&&Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."),Loading.hide();return}const n=await new Promise((f,v)=>{const x=new FileReader;x.onload=()=>f(x.result),x.onerror=v,x.readAsArrayBuffer(o)}),r=XLSX.read(n,{type:"array"}),c=r.SheetNames[0]?r.Sheets[r.SheetNames[0]]:null;if(!c){Loading.hide();return}const l=XLSX.utils.sheet_to_json(c,{header:1});if(!l||l.length<2){Loading.hide(),Notification&&Notification.warning("\u0627\u0644\u0645\u0644\u0641 \u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u0635\u0641\u0648\u0641 \u0628\u064A\u0627\u0646\u0627\u062A.");return}const m=(l[0]||[]).map(f=>String(f).trim()),u=m.findIndex(f=>/كود|code/i.test(f)),p=m.findIndex(f=>/اسم|name|document/i.test(f)),g=m.findIndex(f=>/نوع|type/i.test(f)),y=m.findIndex(f=>/قسم|department/i.test(f)),h=m.findIndex(f=>/حالة|status/i.test(f)),b=m.findIndex(f=>/وصف|description/i.test(f));for(let f=1;f<l.length;f++){const v=l[f]||[],x=u>=0?v[u]:v[0],w=p>=0?v[p]:v[1],I=x!=null&&x!==void 0?String(x).trim():"";I&&a.push({code:I,documentName:w!=null&&w!==void 0?String(w).trim():I,documentType:g>=0?String(v[g]||"").trim():"\u0648\u062B\u064A\u0642\u0629",department:y>=0?String(v[y]||"").trim():"",status:h>=0?String(v[h]||"").trim():"\u0646\u0634\u0637",description:b>=0?String(v[b]||"").trim():""})}}if(a.length===0){typeof Notification<"u"&&Notification.warning("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0635\u0641\u0648\u0641 \u0635\u0627\u0644\u062D\u0629 (\u064A\u062C\u0628 \u0648\u062C\u0648\u062F \u0639\u0645\u0648\u062F \u0627\u0644\u0643\u0648\u062F)."),Loading.hide();return}let i=0,d=0;for(const n of a)try{const r=await GoogleIntegration.fetchData("addDocumentCode",{code:n.code,documentName:n.documentName,documentType:n.documentType,department:n.department,status:n.status,description:n.description});r&&r.success?i++:d++}catch{d++}typeof Notification<"u"&&Notification.success("\u062A\u0645 \u0627\u0633\u062A\u064A\u0631\u0627\u062F "+i+" \u0643\u0648\u062F\u0627\u064B. \u0641\u0634\u0644: "+d+" (\u0642\u062F \u064A\u0643\u0648\u0646 \u0628\u0633\u0628\u0628 \u062A\u0643\u0631\u0627\u0631 \u0627\u0644\u0643\u0648\u062F)."),this.reloadCodingCenter()}catch(a){Utils.safeError("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0645\u0646 Excel:",a),typeof Notification<"u"&&Notification.error("\u0641\u0634\u0644 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F: "+(a.message||a))}finally{Loading.hide()}e.value=""},document.body.appendChild(e),e.click(),setTimeout(()=>e.remove(),500)},importCodingCenterFromPDF(){typeof Notification<"u"&&Notification.warning("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0646\u0638\u0645\u0629 \u0645\u0646 \u0645\u0644\u0641 PDF \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u062D\u0627\u0644\u064A\u0627\u064B. \u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0645\u0644\u0641 Excel \u0623\u0648 CSV \u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0623\u0643\u0648\u0627\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A.")},quickAssignFormCode(e,t,o,s){this.showDocumentCodeForm({documentName:e,code:t,documentType:o,department:s,status:"\u0646\u0634\u0637"})},async showDocumentCodeForm(e=null){const t=document.createElement("div");t.className="modal-overlay iso-professional-modal",t.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.editCodeTitle', 'تعديل كود المستند') : 'تعديل كود المستند') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.addCodeTitle', 'إضافة كود مستند جديد') : 'إضافة كود مستند جديد')}</h2>
+                    <h2 class="modal-title">${e?typeof I18n<"u"?I18n.t("module.iso.coding.editCodeTitle","\u062A\u0639\u062F\u064A\u0644 \u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F"):"\u062A\u0639\u062F\u064A\u0644 \u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F":typeof I18n<"u"?I18n.t("module.iso.coding.addCodeTitle","\u0625\u0636\u0627\u0641\u0629 \u0643\u0648\u062F \u0645\u0633\u062A\u0646\u062F \u062C\u062F\u064A\u062F"):"\u0625\u0636\u0627\u0641\u0629 \u0643\u0648\u062F \u0645\u0633\u062A\u0646\u062F \u062C\u062F\u064A\u062F"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -4176,194 +2553,57 @@ const ISO = {
                 <div class="modal-body">
                     <form id="document-code-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.codeLabel', 'الكود *') : 'الكود *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.codeLabel","\u0627\u0644\u0643\u0648\u062F *"):"\u0627\u0644\u0643\u0648\u062F *"}</label>
                             <input type="text" id="doc-code" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.code || '')}" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.codePlaceholder', 'مثال: DOC-001, FORM-002') : 'مثال: DOC-001, FORM-002'}">
+                                value="${Utils.escapeHTML(e?.code||"")}" 
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.codePlaceholder","\u0645\u062B\u0627\u0644: DOC-001, FORM-002"):"\u0645\u062B\u0627\u0644: DOC-001, FORM-002"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.nameLabel', 'اسم المستند / الإجراء *') : 'اسم المستند / الإجراء *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.nameLabel","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F / \u0627\u0644\u0625\u062C\u0631\u0627\u0621 *"):"\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F / \u0627\u0644\u0625\u062C\u0631\u0627\u0621 *"}</label>
                             <input type="text" id="doc-name" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.documentName || '')}" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.namePlaceholder', 'اسم المستند') : 'اسم المستند'}">
+                                value="${Utils.escapeHTML(e?.documentName||"")}" 
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.namePlaceholder","\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F"):"\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeLabel', 'نوع المستند *') : 'نوع المستند *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.typeLabel","\u0646\u0648\u0639 \u0627\u0644\u0645\u0633\u062A\u0646\u062F *"):"\u0646\u0648\u0639 \u0627\u0644\u0645\u0633\u062A\u0646\u062F *"}</label>
                             <select id="doc-type" required class="form-input">
-                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.selectTypeOption', 'اختر النوع') : 'اختر النوع'}</option>
-                                <option value="وثيقة" ${data?.documentType === 'وثيقة' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeDoc', 'وثيقة') : 'وثيقة'}</option>
-                                <option value="إجراء" ${data?.documentType === 'إجراء' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeProc', 'إجراء') : 'إجراء'}</option>
-                                <option value="نموذج" ${data?.documentType === 'نموذج' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeForm', 'نموذج') : 'نموذج'}</option>
-                                <option value="تقرير" ${data?.documentType === 'تقرير' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeReport', 'تقرير') : 'تقرير'}</option>
-                                <option value="سجل" ${data?.documentType === 'سجل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.typeRecord', 'سجل') : 'سجل'}</option>
+                                <option value="">${typeof I18n<"u"?I18n.t("module.iso.coding.form.selectTypeOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639"}</option>
+                                <option value="\u0648\u062B\u064A\u0642\u0629" ${e?.documentType==="\u0648\u062B\u064A\u0642\u0629"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.coding.form.typeDoc","\u0648\u062B\u064A\u0642\u0629"):"\u0648\u062B\u064A\u0642\u0629"}</option>
+                                <option value="\u0625\u062C\u0631\u0627\u0621" ${e?.documentType==="\u0625\u062C\u0631\u0627\u0621"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.coding.form.typeProc","\u0625\u062C\u0631\u0627\u0621"):"\u0625\u062C\u0631\u0627\u0621"}</option>
+                                <option value="\u0646\u0645\u0648\u0630\u062C" ${e?.documentType==="\u0646\u0645\u0648\u0630\u062C"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.coding.form.typeForm","\u0646\u0645\u0648\u0630\u062C"):"\u0646\u0645\u0648\u0630\u062C"}</option>
+                                <option value="\u062A\u0642\u0631\u064A\u0631" ${e?.documentType==="\u062A\u0642\u0631\u064A\u0631"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.coding.form.typeReport","\u062A\u0642\u0631\u064A\u0631"):"\u062A\u0642\u0631\u064A\u0631"}</option>
+                                <option value="\u0633\u062C\u0644" ${e?.documentType==="\u0633\u062C\u0644"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.coding.form.typeRecord","\u0633\u062C\u0644"):"\u0633\u062C\u0644"}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.departmentLabel', 'القسم *') : 'القسم *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.departmentLabel","\u0627\u0644\u0642\u0633\u0645 *"):"\u0627\u0644\u0642\u0633\u0645 *"}</label>
                             <input type="text" id="doc-department" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.department || '')}" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.departmentPlaceholder', 'القسم التابع له') : 'القسم التابع له'}">
+                                value="${Utils.escapeHTML(e?.department||"")}" 
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.departmentPlaceholder","\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u062A\u0627\u0628\u0639 \u0644\u0647"):"\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u062A\u0627\u0628\u0639 \u0644\u0647"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusLabel', 'الحالة *') : 'الحالة *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.statusLabel","\u0627\u0644\u062D\u0627\u0644\u0629 *"):"\u0627\u0644\u062D\u0627\u0644\u0629 *"}</label>
                             <select id="doc-status" required class="form-input">
-                                <option value="نشط" ${data?.status === 'نشط' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusActive', 'نشط') : 'نشط'}</option>
-                                <option value="معطل" ${data?.status === 'معطل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusInactive', 'معطل') : 'معطل'}</option>
+                                <option value="\u0646\u0634\u0637" ${e?.status==="\u0646\u0634\u0637"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.coding.form.statusActive","\u0646\u0634\u0637"):"\u0646\u0634\u0637"}</option>
+                                <option value="\u0645\u0639\u0637\u0644" ${e?.status==="\u0645\u0639\u0637\u0644"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.coding.form.statusInactive","\u0645\u0639\u0637\u0644"):"\u0645\u0639\u0637\u0644"}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.descLabel', 'الوصف') : 'الوصف'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.descLabel","\u0627\u0644\u0648\u0635\u0641"):"\u0627\u0644\u0648\u0635\u0641"}</label>
                             <textarea id="doc-description" class="form-input" rows="3" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.descPlaceholder', 'وصف اختياري للمستند') : 'وصف اختياري للمستند'}">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.descPlaceholder","\u0648\u0635\u0641 \u0627\u062E\u062A\u064A\u0627\u0631\u064A \u0644\u0644\u0645\u0633\u062A\u0646\u062F"):"\u0648\u0635\u0641 \u0627\u062E\u062A\u064A\u0627\u0631\u064A \u0644\u0644\u0645\u0633\u062A\u0646\u062F"}">${Utils.escapeHTML(e?.description||"")}</textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
-                    <button type="button" id="save-doc-code-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.cancel","\u0625\u0644\u063A\u0627\u0621"):"\u0625\u0644\u063A\u0627\u0621"}</button>
+                    <button type="button" id="save-doc-code-btn" class="btn-primary">${typeof I18n<"u"?I18n.t("core.buttons.save","\u062D\u0641\u0638"):"\u062D\u0641\u0638"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        const saveBtn = modal.querySelector('#save-doc-code-btn');
-        saveBtn.addEventListener('click', () => this.handleDocumentCodeSubmit(data?.id, modal));
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async handleDocumentCodeSubmit(editId = null, modal) {
-        // فحص العناصر قبل الاستخدام
-        const codeEl = document.getElementById('doc-code');
-        const nameEl = document.getElementById('doc-name');
-        const typeEl = document.getElementById('doc-type');
-        const departmentEl = document.getElementById('doc-department');
-        const statusEl = document.getElementById('doc-status');
-        const descriptionEl = document.getElementById('doc-description');
-        
-        if (!codeEl || !nameEl || !typeEl || !departmentEl || !statusEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            return;
-        }
-
-        const code = codeEl.value.trim();
-        const documentName = nameEl.value.trim();
-        if (!code) {
-            Notification.error('حقل الكود مطلوب.');
-            return;
-        }
-        if (!documentName) {
-            Notification.error('حقل اسم المستند / الإجراء مطلوب.');
-            return;
-        }
-
-        const formData = {
-            id: editId || Utils.generateId('DOC_CODE'),
-            code: code,
-            documentName: documentName,
-            documentType: typeEl.value,
-            department: departmentEl.value.trim(),
-            status: statusEl.value,
-            description: descriptionEl?.value.trim() || '',
-            createdAt: editId ? (await this.getDocumentCodeById(editId))?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            createdBy: AppState.currentUser?.name || AppState.currentUser?.email || 'System'
-        };
-
-        Loading.show();
-        try {
-            const action = editId ? 'updateDocumentCode' : 'addDocumentCode';
-            const result = await GoogleIntegration.fetchData(action, formData);
-
-            if (result.success) {
-                Notification.success(editId ? 'تم تحديث الكود بنجاح' : 'تم إضافة الكود بنجاح');
-                modal.remove();
-                this.load();
-            } else {
-                const msg = result.message || 'حدث خطأ أثناء الحفظ';
-                Notification.error(result.errorCode === 'DUPLICATE_CODE' ? 'كود المستند موجود مسبقاً. يرجى اختيار كود فريد (مثل: DOC-001، FORM-002).' : msg);
-            }
-        } catch (error) {
-            const msg = error && error.message ? String(error.message) : '';
-            if (msg.indexOf('غير معترف به') !== -1 || msg.indexOf('ACTION_NOT_RECOGNIZED') !== -1) {
-                Notification.error(
-                    'الخادم لا يتعرّف على عملية إضافة كود المستند. ' +
-                    'تأكد من: 1) تحديث ملفات Code.gs و ISO.gs و Headers.gs و Config.gs في مشروع Google Apps Script. ' +
-                    '2) نشر نسخة جديدة (Deploy → Manage deployments → Edit → New version → Deploy). ' +
-                    '3) استخدام الرابط الذي ينتهي بـ /exec في الإعدادات.'
-                );
-            } else {
-                Notification.error('حدث خطأ: ' + msg);
-            }
-        } finally {
-            Loading.hide();
-        }
-    },
-
-    async getDocumentCodeById(id) {
-        try {
-            const result = await GoogleIntegration.fetchData('getDocumentCodes', {});
-            if (result.success && result.data) {
-                return result.data.find(c => c.id === id);
-            }
-        } catch (error) {
-            Utils.safeError('Error getting document code:', error);
-        }
-        return null;
-    },
-
-    async editDocumentCode(id) {
-        const code = await this.getDocumentCodeById(id);
-        if (code) {
-            this.showDocumentCodeForm(code);
-        } else {
-            Notification.error('الكود غير موجود');
-        }
-    },
-
-    async deleteDocumentCode(id) {
-        const item = await this.getDocumentCodeById(id);
-        const label = item ? (item.code || item.documentName || id) : id;
-        if (!confirm('هل أنت متأكد من حذف الكود "' + label + '"؟ سيتم حذف جميع الإصدارات المرتبطة به.')) {
-            return;
-        }
-
-        Loading.show();
-        try {
-            const result = await GoogleIntegration.fetchData('deleteDocumentCode', { id: id });
-            if (result.success) {
-                Notification.success('تم حذف الكود بنجاح');
-                this.load();
-            } else {
-                Notification.error(result.message || 'حدث خطأ أثناء الحذف');
-            }
-        } catch (error) {
-            Notification.error('حدث خطأ: ' + error.message);
-        } finally {
-            Loading.hide();
-        }
-    },
-
-    async showDocumentVersionForm(data = null, documentCodeId = null) {
-        // جلب قائمة الأكواد
-        let codes = [];
-        try {
-            const result = await GoogleIntegration.fetchData('getDocumentCodes', {});
-            if (result.success && result.data) {
-                codes = result.data;
-            }
-        } catch (error) {
-            Utils.safeError('Error loading codes:', error);
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-        modal.innerHTML = `
+        `,document.body.appendChild(t),t.querySelector("#save-doc-code-btn").addEventListener("click",()=>this.handleDocumentCodeSubmit(e?.id,t)),t.addEventListener("click",s=>{s.target===t&&t.remove()})},async handleDocumentCodeSubmit(e=null,t){const o=document.getElementById("doc-code"),s=document.getElementById("doc-name"),a=document.getElementById("doc-type"),i=document.getElementById("doc-department"),d=document.getElementById("doc-status"),n=document.getElementById("doc-description");if(!o||!s||!a||!i||!d){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const r=o.value.trim(),c=s.value.trim();if(!r){Notification.error("\u062D\u0642\u0644 \u0627\u0644\u0643\u0648\u062F \u0645\u0637\u0644\u0648\u0628.");return}if(!c){Notification.error("\u062D\u0642\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0646\u062F / \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u0637\u0644\u0648\u0628.");return}const l={id:e||Utils.generateId("DOC_CODE"),code:r,documentName:c,documentType:a.value,department:i.value.trim(),status:d.value,description:n?.value.trim()||"",createdAt:e?(await this.getDocumentCodeById(e))?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:AppState.currentUser?.name||AppState.currentUser?.email||"System"};Loading.show();try{const m=e?"updateDocumentCode":"addDocumentCode",u=await GoogleIntegration.fetchData(m,l);if(u.success)Notification.success(e?"\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0643\u0648\u062F \u0628\u0646\u062C\u0627\u062D":"\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0643\u0648\u062F \u0628\u0646\u062C\u0627\u062D"),t.remove(),this.load();else{const p=u.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0641\u0638";Notification.error(u.errorCode==="DUPLICATE_CODE"?"\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0645\u0648\u062C\u0648\u062F \u0645\u0633\u0628\u0642\u0627\u064B. \u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0643\u0648\u062F \u0641\u0631\u064A\u062F (\u0645\u062B\u0644: DOC-001\u060C FORM-002).":p)}}catch(m){const u=m&&m.message?String(m.message):"";u.indexOf("\u063A\u064A\u0631 \u0645\u0639\u062A\u0631\u0641 \u0628\u0647")!==-1||u.indexOf("ACTION_NOT_RECOGNIZED")!==-1?Notification.error("\u0627\u0644\u062E\u0627\u062F\u0645 \u0644\u0627 \u064A\u062A\u0639\u0631\u0651\u0641 \u0639\u0644\u0649 \u0639\u0645\u0644\u064A\u0629 \u0625\u0636\u0627\u0641\u0629 \u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F. \u062A\u0623\u0643\u062F \u0645\u0646: 1) \u062A\u062D\u062F\u064A\u062B \u0645\u0644\u0641\u0627\u062A Code.gs \u0648 ISO.gs \u0648 Headers.gs \u0648 Config.gs \u0641\u064A \u0645\u0634\u0631\u0648\u0639 Google Apps Script. 2) \u0646\u0634\u0631 \u0646\u0633\u062E\u0629 \u062C\u062F\u064A\u062F\u0629 (Deploy \u2192 Manage deployments \u2192 Edit \u2192 New version \u2192 Deploy). 3) \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0630\u064A \u064A\u0646\u062A\u0647\u064A \u0628\u0640 /exec \u0641\u064A \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A."):Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+u)}finally{Loading.hide()}},async getDocumentCodeById(e){try{const t=await GoogleIntegration.fetchData("getDocumentCodes",{});if(t.success&&t.data)return t.data.find(o=>o.id===e)}catch(t){Utils.safeError("Error getting document code:",t)}return null},async editDocumentCode(e){const t=await this.getDocumentCodeById(e);t?this.showDocumentCodeForm(t):Notification.error("\u0627\u0644\u0643\u0648\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F")},async deleteDocumentCode(e){const t=await this.getDocumentCodeById(e),o=t&&(t.code||t.documentName)||e;if(confirm('\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0627\u0644\u0643\u0648\u062F "'+o+'"\u061F \u0633\u064A\u062A\u0645 \u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0647.')){Loading.show();try{const s=await GoogleIntegration.fetchData("deleteDocumentCode",{id:e});s.success?(Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0643\u0648\u062F \u0628\u0646\u062C\u0627\u062D"),this.load()):Notification.error(s.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0630\u0641")}catch(s){Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+s.message)}finally{Loading.hide()}}},async showDocumentVersionForm(e=null,t=null){let o=[];try{const i=await GoogleIntegration.fetchData("getDocumentCodes",{});i.success&&i.data&&(o=i.data)}catch(i){Utils.safeError("Error loading codes:",i)}const s=document.createElement("div");s.className="modal-overlay iso-professional-modal",s.innerHTML=`
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${data ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.editVersionTitle', 'تعديل إصدار المستند') : 'تعديل إصدار المستند') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.addVersionTitle', 'إضافة إصدار جديد') : 'إضافة إصدار جديد')}</h2>
+                    <h2 class="modal-title">${e?typeof I18n<"u"?I18n.t("module.iso.coding.editVersionTitle","\u062A\u0639\u062F\u064A\u0644 \u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u0645\u0633\u062A\u0646\u062F"):"\u062A\u0639\u062F\u064A\u0644 \u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u0645\u0633\u062A\u0646\u062F":typeof I18n<"u"?I18n.t("module.iso.coding.addVersionTitle","\u0625\u0636\u0627\u0641\u0629 \u0625\u0635\u062F\u0627\u0631 \u062C\u062F\u064A\u062F"):"\u0625\u0636\u0627\u0641\u0629 \u0625\u0635\u062F\u0627\u0631 \u062C\u062F\u064A\u062F"}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -4371,489 +2611,154 @@ const ISO = {
                 <div class="modal-body">
                     <form id="document-version-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.docCodeLabel', 'كود المستند *') : 'كود المستند *'}</label>
-                            <select id="version-code-id" required class="form-input" ${data ? 'disabled' : ''}>
-                                <option value="">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.selectCodeOption', 'اختر الكود') : 'اختر الكود'}</option>
-                                ${codes.map(code => `
-                                    <option value="${code.id}" 
-                                        ${(data?.documentCodeId === code.id || documentCodeId === code.id) ? 'selected' : ''}>
-                                        ${Utils.escapeHTML(code.code || '')} - ${Utils.escapeHTML(code.documentName || '')}
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.docCodeLabel","\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F *"):"\u0643\u0648\u062F \u0627\u0644\u0645\u0633\u062A\u0646\u062F *"}</label>
+                            <select id="version-code-id" required class="form-input" ${e?"disabled":""}>
+                                <option value="">${typeof I18n<"u"?I18n.t("module.iso.coding.form.selectCodeOption","\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F"):"\u0627\u062E\u062A\u0631 \u0627\u0644\u0643\u0648\u062F"}</option>
+                                ${o.map(i=>`
+                                    <option value="${i.id}" 
+                                        ${e?.documentCodeId===i.id||t===i.id?"selected":""}>
+                                        ${Utils.escapeHTML(i.code||"")} - ${Utils.escapeHTML(i.documentName||"")}
                                     </option>
-                                `).join('')}
+                                `).join("")}
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.versionNumLabel', 'رقم الإصدار *') : 'رقم الإصدار *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.versionNumLabel","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 *"):"\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 *"}</label>
                             <input type="text" id="version-number" required class="form-input" 
-                                value="${Utils.escapeHTML(data?.versionNumber || '')}" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.versionNumPlaceholder', 'مثال: 1.0, 2.1') : 'مثال: 1.0, 2.1'}">
+                                value="${Utils.escapeHTML(e?.versionNumber||"")}" 
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.versionNumPlaceholder","\u0645\u062B\u0627\u0644: 1.0, 2.1"):"\u0645\u062B\u0627\u0644: 1.0, 2.1"}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.issueDateLabel', 'تاريخ الإصدار *') : 'تاريخ الإصدار *'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.issueDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 *"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631 *"}</label>
                             <input type="date" id="version-issue-date" required class="form-input" 
-                                value="${data?.issueDate ? new Date(data.issueDate).toISOString().slice(0, 10) : ''}">
+                                value="${e?.issueDate?new Date(e.issueDate).toISOString().slice(0,10):""}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.revDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.revDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"}</label>
                             <input type="date" id="version-revision-date" class="form-input" 
-                                value="${data?.revisionDate ? new Date(data.revisionDate).toISOString().slice(0, 10) : ''}">
+                                value="${e?.revisionDate?new Date(e.revisionDate).toISOString().slice(0,10):""}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusLabel', 'الحالة') : 'الحالة'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.statusLabel","\u0627\u0644\u062D\u0627\u0644\u0629"):"\u0627\u0644\u062D\u0627\u0644\u0629"}</label>
                             <select id="version-status" class="form-input">
-                                <option value="نشط" ${data?.status === 'نشط' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusActive', 'نشط') : 'نشط'}</option>
-                                <option value="معطل" ${data?.status === 'معطل' ? 'selected' : ''}>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusInactive', 'معطل') : 'معطل'}</option>
+                                <option value="\u0646\u0634\u0637" ${e?.status==="\u0646\u0634\u0637"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.coding.form.statusActive","\u0646\u0634\u0637"):"\u0646\u0634\u0637"}</option>
+                                <option value="\u0645\u0639\u0637\u0644" ${e?.status==="\u0645\u0639\u0637\u0644"?"selected":""}>${typeof I18n<"u"?I18n.t("module.iso.coding.form.statusInactive","\u0645\u0639\u0637\u0644"):"\u0645\u0639\u0637\u0644"}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.notesLabel', 'ملاحظة الإصدار') : 'ملاحظة الإصدار'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.notesLabel","\u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0645\u0644\u0627\u062D\u0638\u0629 \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</label>
                             <textarea id="version-notes" class="form-input" rows="3" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.notesPlaceholder', 'ملاحظات حول هذا الإصدار') : 'ملاحظات حول هذا الإصدار'}">${Utils.escapeHTML(data?.notes || '')}</textarea>
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.notesPlaceholder","\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062D\u0648\u0644 \u0647\u0630\u0627 \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062D\u0648\u0644 \u0647\u0630\u0627 \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}">${Utils.escapeHTML(e?.notes||"")}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.changeReasonLabel', 'سبب التعديل (سجل التغييرات)') : 'سبب التعديل (سجل التغييرات)'}</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${typeof I18n<"u"?I18n.t("module.iso.coding.form.changeReasonLabel","\u0633\u0628\u0628 \u0627\u0644\u062A\u0639\u062F\u064A\u0644 (\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A)"):"\u0633\u0628\u0628 \u0627\u0644\u062A\u0639\u062F\u064A\u0644 (\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A)"}</label>
                             <input type="text" id="version-change-reason" class="form-input" 
-                                value="${Utils.escapeHTML(data?.changeReason || '')}" 
-                                placeholder="${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.changeReasonPlaceholder', 'مثال: تحديث الإجراء بناءً على المراجعة السنوية') : 'مثال: تحديث الإجراء بناءً على المراجعة السنوية'}">
+                                value="${Utils.escapeHTML(e?.changeReason||"")}" 
+                                placeholder="${typeof I18n<"u"?I18n.t("module.iso.coding.form.changeReasonPlaceholder","\u0645\u062B\u0627\u0644: \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u0633\u0646\u0648\u064A\u0629"):"\u0645\u062B\u0627\u0644: \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u0633\u0646\u0648\u064A\u0629"}">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.cancel', 'إلغاء') : 'إلغاء'}</button>
-                    <button type="button" id="save-version-btn" class="btn-primary">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.save', 'حفظ') : 'حفظ'}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.cancel","\u0625\u0644\u063A\u0627\u0621"):"\u0625\u0644\u063A\u0627\u0621"}</button>
+                    <button type="button" id="save-version-btn" class="btn-primary">${typeof I18n<"u"?I18n.t("core.buttons.save","\u062D\u0641\u0638"):"\u062D\u0641\u0638"}</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-
-        const saveBtn = modal.querySelector('#save-version-btn');
-        saveBtn.addEventListener('click', () => this.handleDocumentVersionSubmit(data?.id, modal));
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
-    },
-
-    async handleDocumentVersionSubmit(editId = null, modal) {
-        // فحص العناصر قبل الاستخدام
-        const codeIdEl = document.getElementById('version-code-id');
-        const versionNumberEl = document.getElementById('version-number');
-        const issueDateEl = document.getElementById('version-issue-date');
-        const revisionDateEl = document.getElementById('version-revision-date');
-        const statusEl = document.getElementById('version-status');
-        const notesEl = document.getElementById('version-notes');
-        const changeReasonEl = document.getElementById('version-change-reason');
-        
-        if (!codeIdEl || !versionNumberEl || !issueDateEl || !statusEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-            return;
-        }
-
-        const codeId = codeIdEl.value;
-        const code = await this.getDocumentCodeById(codeId);
-
-        const formData = {
-            id: editId || Utils.generateId('DOC_VER'),
-            documentCodeId: codeId,
-            documentCode: code?.code || '',
-            versionNumber: versionNumberEl.value.trim(),
-            issueDate: new Date(issueDateEl.value).toISOString(),
-            revisionDate: revisionDateEl?.value
-                ? new Date(revisionDateEl.value).toISOString()
-                : null,
-            status: statusEl.value,
-            notes: notesEl?.value.trim() || '',
-            changeReason: changeReasonEl?.value.trim() || '',
-            isActive: statusEl.value === 'نشط',
-            createdAt: editId ? (await this.getDocumentVersionById(editId))?.createdAt : new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            createdBy: AppState.currentUser?.name || AppState.currentUser?.email || 'System'
-        };
-
-        Loading.show();
-        try {
-            const action = editId ? 'updateDocumentVersion' : 'addDocumentVersion';
-            const result = await GoogleIntegration.fetchData(action, formData);
-
-            if (result.success) {
-                Notification.success(editId ? 'تم تحديث الإصدار بنجاح' : 'تم إضافة الإصدار بنجاح');
-                modal.remove();
-                this.load();
-            } else {
-                Notification.error(result.message || 'حدث خطأ أثناء الحفظ');
-            }
-        } catch (error) {
-            Notification.error('حدث خطأ: ' + error.message);
-        } finally {
-            Loading.hide();
-        }
-    },
-
-    async getDocumentVersionById(id) {
-        try {
-            const result = await GoogleIntegration.fetchData('getDocumentVersions', { documentCodeId: null });
-            if (result.success && result.data) {
-                return result.data.find(v => v.id === id);
-            }
-        } catch (error) {
-            Utils.safeError('Error getting document version:', error);
-        }
-        return null;
-    },
-
-    async editDocumentVersion(id) {
-        const version = await this.getDocumentVersionById(id);
-        if (version) {
-            this.showDocumentVersionForm(version);
-        } else {
-            Notification.error('الإصدار غير موجود');
-        }
-    },
-
-    async viewDocumentVersions(documentCodeId) {
-        try {
-            Loading.show();
-            const result = await GoogleIntegration.fetchData('getDocumentVersions', { documentCodeId: documentCodeId });
-            Loading.hide();
-
-            if (!result.success || !result.data) {
-                Notification.error(typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.fetchVersionsFailed', 'فشل جلب الإصدارات') : 'فشل جلب الإصدارات');
-                return;
-            }
-
-            const versions = result.data;
-            const code = await this.getDocumentCodeById(documentCodeId);
-
-            const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal';
-            modal.innerHTML = `
+        `,document.body.appendChild(s),s.querySelector("#save-version-btn").addEventListener("click",()=>this.handleDocumentVersionSubmit(e?.id,s)),s.addEventListener("click",i=>{i.target===s&&s.remove()})},async handleDocumentVersionSubmit(e=null,t){const o=document.getElementById("version-code-id"),s=document.getElementById("version-number"),a=document.getElementById("version-issue-date"),i=document.getElementById("version-revision-date"),d=document.getElementById("version-status"),n=document.getElementById("version-notes"),r=document.getElementById("version-change-reason");if(!o||!s||!a||!d){Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const c=o.value,l=await this.getDocumentCodeById(c),m={id:e||Utils.generateId("DOC_VER"),documentCodeId:c,documentCode:l?.code||"",versionNumber:s.value.trim(),issueDate:new Date(a.value).toISOString(),revisionDate:i?.value?new Date(i.value).toISOString():null,status:d.value,notes:n?.value.trim()||"",changeReason:r?.value.trim()||"",isActive:d.value==="\u0646\u0634\u0637",createdAt:e?(await this.getDocumentVersionById(e))?.createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),createdBy:AppState.currentUser?.name||AppState.currentUser?.email||"System"};Loading.show();try{const u=e?"updateDocumentVersion":"addDocumentVersion",p=await GoogleIntegration.fetchData(u,m);p.success?(Notification.success(e?"\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0628\u0646\u062C\u0627\u062D":"\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0628\u0646\u062C\u0627\u062D"),t.remove(),this.load()):Notification.error(p.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0641\u0638")}catch(u){Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+u.message)}finally{Loading.hide()}},async getDocumentVersionById(e){try{const t=await GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null});if(t.success&&t.data)return t.data.find(o=>o.id===e)}catch(t){Utils.safeError("Error getting document version:",t)}return null},async editDocumentVersion(e){const t=await this.getDocumentVersionById(e);t?this.showDocumentVersionForm(t):Notification.error("\u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F")},async viewDocumentVersions(e){try{Loading.show();const t=await GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:e});if(Loading.hide(),!t.success||!t.data){Notification.error(typeof I18n<"u"?I18n.t("module.iso.coding.fetchVersionsFailed","\u0641\u0634\u0644 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A"):"\u0641\u0634\u0644 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A");return}const o=t.data,s=await this.getDocumentCodeById(e),a=document.createElement("div");a.className="modal-overlay iso-professional-modal",a.innerHTML=`
                 <div class="modal-content" style="max-width: 800px;">
                     <div class="modal-header">
-                        <h2 class="modal-title">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.versionsTitle', 'سجل التغييرات والإصدارات:') : 'سجل التغييرات والإصدارات:'} ${Utils.escapeHTML(code?.code || '')} - ${Utils.escapeHTML(code?.documentName || '')}</h2>
+                        <h2 class="modal-title">${typeof I18n<"u"?I18n.t("module.iso.coding.versionsTitle","\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A:"):"\u0633\u062C\u0644 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A:"} ${Utils.escapeHTML(s?.code||"")} - ${Utils.escapeHTML(s?.documentName||"")}</h2>
                         <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-4">
-                            <button class="btn-primary" onclick="ISO.showDocumentVersionForm(null, '${documentCodeId}'); this.closest('.modal-overlay').remove();">
-                                <i class="fas fa-plus ml-2"></i>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.actions.addVersion', 'إضافة إصدار جديد') : 'إضافة إصدار جديد'}
+                            <button class="btn-primary" onclick="ISO.showDocumentVersionForm(null, '${e}'); this.closest('.modal-overlay').remove();">
+                                <i class="fas fa-plus ml-2"></i>${typeof I18n<"u"?I18n.t("module.iso.coding.actions.addVersion","\u0625\u0636\u0627\u0641\u0629 \u0625\u0635\u062F\u0627\u0631 \u062C\u062F\u064A\u062F"):"\u0625\u0636\u0627\u0641\u0629 \u0625\u0635\u062F\u0627\u0631 \u062C\u062F\u064A\u062F"}
                             </button>
                         </div>
-                        ${versions.length === 0 ? `
+                        ${o.length===0?`
                             <div class="empty-state">
-                                <p class="text-gray-500">${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.noVersions', 'لا توجد إصدارات لهذا المستند') : 'لا توجد إصدارات لهذا المستند'}</p>
+                                <p class="text-gray-500">${typeof I18n<"u"?I18n.t("module.iso.coding.noVersions","\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u0646\u062F"):"\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u0646\u062F"}</p>
                             </div>
-                        ` : `
+                        `:`
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.versionNumLabel', 'رقم الإصدار') : 'رقم الإصدار'}</th>
-                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.issueDateLabel', 'تاريخ الإصدار') : 'تاريخ الإصدار'}</th>
-                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.revDateLabel', 'تاريخ التعديل') : 'تاريخ التعديل'}</th>
-                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusLabel', 'الحالة') : 'الحالة'}</th>
-                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.notesLabel', 'ملاحظات') : 'ملاحظات'}</th>
-                                        <th>${typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.changeReasonLabel', 'سبب التعديل') : 'سبب التعديل'}</th>
-                                        <th>${typeof I18n !== 'undefined' ? I18n.t('core.table.actions', 'الإجراءات') : 'الإجراءات'}</th>
+                                        <th>${typeof I18n<"u"?I18n.t("module.iso.coding.form.versionNumLabel","\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</th>
+                                        <th>${typeof I18n<"u"?I18n.t("module.iso.coding.form.issueDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631"}</th>
+                                        <th>${typeof I18n<"u"?I18n.t("module.iso.coding.form.revDateLabel","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0639\u062F\u064A\u0644"}</th>
+                                        <th>${typeof I18n<"u"?I18n.t("module.iso.coding.form.statusLabel","\u0627\u0644\u062D\u0627\u0644\u0629"):"\u0627\u0644\u062D\u0627\u0644\u0629"}</th>
+                                        <th>${typeof I18n<"u"?I18n.t("module.iso.coding.form.notesLabel","\u0645\u0644\u0627\u062D\u0638\u0627\u062A"):"\u0645\u0644\u0627\u062D\u0638\u0627\u062A"}</th>
+                                        <th>${typeof I18n<"u"?I18n.t("module.iso.coding.form.changeReasonLabel","\u0633\u0628\u0628 \u0627\u0644\u062A\u0639\u062F\u064A\u0644"):"\u0633\u0628\u0628 \u0627\u0644\u062A\u0639\u062F\u064A\u0644"}</th>
+                                        <th>${typeof I18n<"u"?I18n.t("core.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"):"\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${versions.map(v => `
+                                    ${o.map(i=>`
                                         <tr>
-                                            <td><strong>${Utils.escapeHTML(v.versionNumber || '')}</strong></td>
-                                            <td>${v.issueDate ? Utils.formatDate(v.issueDate) : '-'}</td>
-                                            <td>${v.revisionDate ? Utils.formatDate(v.revisionDate) : '-'}</td>
+                                            <td><strong>${Utils.escapeHTML(i.versionNumber||"")}</strong></td>
+                                            <td>${i.issueDate?Utils.formatDate(i.issueDate):"-"}</td>
+                                            <td>${i.revisionDate?Utils.formatDate(i.revisionDate):"-"}</td>
                                             <td>
-                                                <span class="badge badge-${v.isActive === true || v.isActive === 'true' ? 'success' : 'secondary'}">
-                                                    ${v.isActive === true || v.isActive === 'true' ? (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusActive', 'نشط') : 'نشط') : (typeof I18n !== 'undefined' ? I18n.t('module.iso.coding.form.statusInactive', 'غير نشط') : 'غير نشط')}
+                                                <span class="badge badge-${i.isActive===!0||i.isActive==="true"?"success":"secondary"}">
+                                                    ${i.isActive===!0||i.isActive==="true"?typeof I18n<"u"?I18n.t("module.iso.coding.form.statusActive","\u0646\u0634\u0637"):"\u0646\u0634\u0637":typeof I18n<"u"?I18n.t("module.iso.coding.form.statusInactive","\u063A\u064A\u0631 \u0646\u0634\u0637"):"\u063A\u064A\u0631 \u0646\u0634\u0637"}
                                                 </span>
                                             </td>
-                                            <td>${Utils.escapeHTML(v.notes || '-')}</td>
-                                            <td>${Utils.escapeHTML(v.changeReason || '-')}</td>
+                                            <td>${Utils.escapeHTML(i.notes||"-")}</td>
+                                            <td>${Utils.escapeHTML(i.changeReason||"-")}</td>
                                             <td>
-                                                <button onclick="ISO.editDocumentVersion('${v.id}'); this.closest('.modal-overlay').remove();" 
-                                                    class="btn-icon btn-icon-info" title="${typeof I18n !== 'undefined' ? I18n.t('module.iso.codingCenter.actions.edit', 'تعديل') : 'تعديل'}">
+                                                <button onclick="ISO.editDocumentVersion('${i.id}'); this.closest('.modal-overlay').remove();" 
+                                                    class="btn-icon btn-icon-info" title="${typeof I18n<"u"?I18n.t("module.iso.codingCenter.actions.edit","\u062A\u0639\u062F\u064A\u0644"):"\u062A\u0639\u062F\u064A\u0644"}">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                             </td>
                                         </tr>
-                                    `).join('')}
+                                    `).join("")}
                                 </tbody>
                             </table>
                         `}
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n !== 'undefined' ? I18n.t('core.buttons.close', 'إغلاق') : 'إغلاق'}</button>
+                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${typeof I18n<"u"?I18n.t("core.buttons.close","\u0625\u063A\u0644\u0627\u0642"):"\u0625\u063A\u0644\u0627\u0642"}</button>
                     </div>
                 </div>
-            `;
-            document.body.appendChild(modal);
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) modal.remove();
-            });
-        } catch (error) {
-            Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
-        }
-    },
-
-    async reissueDocument(versionId) {
-        const version = await this.getDocumentVersionById(versionId);
-        if (!version) {
-            Notification.error('الإصدار غير موجود');
-            return;
-        }
-
-        if (!confirm('هل تريد إغلاق هذا الإصدار وفتح إصدار جديد؟')) {
-            return;
-        }
-
-        // عرض نموذج لإصدار جديد
-        this.showDocumentVersionForm(null, version.documentCodeId);
-    },
-
-    filterDocumentCodes() {
-        const searchTerm = document.getElementById('document-code-search')?.value.toLowerCase() || '';
-        const rows = document.querySelectorAll('#document-codes-table-body tr');
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(searchTerm) ? '' : 'none';
-        });
-    },
-
-    filterDocumentVersions() {
-        const codeId = document.getElementById('version-filter-code')?.value || '';
-        const rows = document.querySelectorAll('#document-versions-table-body tr');
-        rows.forEach(row => {
-            const rowCodeId = row.getAttribute('data-code-id') || '';
-            row.style.display = !codeId || rowCodeId === codeId ? '' : 'none';
-        });
-    },
-
-    // دالة لجلب الإصدار تلقائياً عند اختيار الكود
-    async loadDocumentCodeVersion(formType = 'document', code = null) {
-        try {
-            // تحديد معرفات الحقول حسب نوع النموذج
-            const codeSelectId = formType === 'document' ? 'document-code-select' :
-                formType === 'procedure' ? 'procedure-code-select' :
-                    'form-code-select';
-            const versionInputId = formType === 'document' ? 'document-version' :
-                formType === 'procedure' ? 'procedure-version' :
-                    'form-version';
-            const issueDateInputId = formType === 'document' ? 'document-issue-date' :
-                formType === 'procedure' ? 'procedure-issue-date' :
-                    'form-issue-date';
-            const revisionDateInputId = formType === 'document' ? 'document-revision-date' :
-                formType === 'procedure' ? 'procedure-revision-date' :
-                    'form-revision-date';
-
-            const codeSelect = document.getElementById(codeSelectId);
-            const selectedCode = code || codeSelect?.value || '';
-
-            if (!selectedCode) {
-                // مسح الحقول إذا لم يتم اختيار كود
-                const versionInput = document.getElementById(versionInputId);
-                const issueDateInput = document.getElementById(issueDateInputId);
-                const revisionDateInput = document.getElementById(revisionDateInputId);
-
-                if (versionInput) versionInput.value = '';
-                if (issueDateInput) issueDateInput.value = '';
-                if (revisionDateInput) revisionDateInput.value = '';
-                return;
-            }
-
-            Loading.show();
-
-            // جلب الكود والإصدار من المركز
-            const result = await GoogleIntegration.fetchData('getDocumentCodeAndVersion', {
-                documentCode: selectedCode
-            });
-
-            Loading.hide();
-
-            if (result.success && result.version) {
-                // ملء الحقول تلقائياً
-                const versionInput = document.getElementById(versionInputId);
-                const issueDateInput = document.getElementById(issueDateInputId);
-                const revisionDateInput = document.getElementById(revisionDateInputId);
-
-                if (versionInput) {
-                    versionInput.value = result.version.versionNumber || '';
-                }
-                if (issueDateInput) {
-                    issueDateInput.value = result.version.issueDate ? Utils.formatDate(result.version.issueDate) : '';
-                }
-                if (revisionDateInput) {
-                    revisionDateInput.value = result.version.revisionDate ? Utils.formatDate(result.version.revisionDate) : '';
-                }
-
-                Notification.success('تم جلب بيانات الإصدار تلقائياً من المركز');
-            } else if (result.success && result.code) {
-                // الكود موجود ولكن لا يوجد إصدار نشط
-                const versionInput = document.getElementById(versionInputId);
-                if (versionInput) {
-                    versionInput.value = 'غير محدد';
-                }
-                Notification.warning('الكود موجود ولكن لا يوجد إصدار نشط في المركز');
-            } else {
-                Notification.error('الكود غير موجود في مركز التكويد والإصدار');
-            }
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('Error loading document code version:', error);
-            Notification.error('حدث خطأ أثناء جلب بيانات الإصدار: ' + error.message);
-        }
-    },
-
-    /**
-     * دالة مساعدة للحصول على تفاصيل كود مستند مع أحدث إصدار نشط (تُستخدم للربط الديناميكي مع النماذج الأخرى)
-     * @param {string} codeString - الكود الثابت للنموذج (مثال: Form ICP (F14-26-01))
-     */
-    async getFormCodeDetails(codeString) {
-        try {
-            const [codesRes, versionsRes] = await Promise.all([
-                GoogleIntegration.fetchData('getDocumentCodes', {}).catch(() => null),
-                GoogleIntegration.fetchData('getDocumentVersions', { documentCodeId: null }).catch(() => null)
-            ]);
-            
-            if (codesRes?.success && versionsRes?.success) {
-                const code = codesRes.data.find(c => c.code === codeString || c.documentName === codeString);
-                if (code) {
-                    const activeVersions = versionsRes.data.filter(v => v.documentCodeId === code.id && (v.isActive === true || v.isActive === 'true'));
-                    if (activeVersions.length > 0) {
-                        activeVersions.sort((a, b) => new Date(b.issueDate || 0) - new Date(a.issueDate || 0));
-                        return {
-                            code: code.code,
-                            documentName: code.documentName,
-                            versionNumber: activeVersions[0].versionNumber,
-                            issueDate: activeVersions[0].issueDate,
-                            revisionDate: activeVersions[0].revisionDate,
-                            changeReason: activeVersions[0].changeReason
-                        };
-                    }
-                }
-            }
-        } catch (e) {
-            if (typeof Utils !== 'undefined') Utils.safeWarn('Error fetching ISO code details:', e);
-        }
-        return null;
-    },
-
-    // ==========================================
-    // ISO 45001 Forms and Logic
-    // ==========================================
-    
-    showHSERiskAssessmentForm(existingData = null) {
-        const data = existingData || {};
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay iso-professional-modal fixed inset-0 bg-black/50 z-50 flex justify-center items-center';
-        modal.innerHTML = `
+            `,document.body.appendChild(a),a.addEventListener("click",i=>{i.target===a&&a.remove()})}catch(t){Loading.hide(),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623: "+t.message)}},async reissueDocument(e){const t=await this.getDocumentVersionById(e);if(!t){Notification.error("\u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}confirm("\u0647\u0644 \u062A\u0631\u064A\u062F \u0625\u063A\u0644\u0627\u0642 \u0647\u0630\u0627 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0648\u0641\u062A\u062D \u0625\u0635\u062F\u0627\u0631 \u062C\u062F\u064A\u062F\u061F")&&this.showDocumentVersionForm(null,t.documentCodeId)},filterDocumentCodes(){const e=document.getElementById("document-code-search")?.value.toLowerCase()||"";document.querySelectorAll("#document-codes-table-body tr").forEach(o=>{const s=o.textContent.toLowerCase();o.style.display=s.includes(e)?"":"none"})},filterDocumentVersions(){const e=document.getElementById("version-filter-code")?.value||"";document.querySelectorAll("#document-versions-table-body tr").forEach(o=>{const s=o.getAttribute("data-code-id")||"";o.style.display=!e||s===e?"":"none"})},async loadDocumentCodeVersion(e="document",t=null){try{const o=e==="document"?"document-code-select":e==="procedure"?"procedure-code-select":"form-code-select",s=e==="document"?"document-version":e==="procedure"?"procedure-version":"form-version",a=e==="document"?"document-issue-date":e==="procedure"?"procedure-issue-date":"form-issue-date",i=e==="document"?"document-revision-date":e==="procedure"?"procedure-revision-date":"form-revision-date",d=document.getElementById(o),n=t||d?.value||"";if(!n){const c=document.getElementById(s),l=document.getElementById(a),m=document.getElementById(i);c&&(c.value=""),l&&(l.value=""),m&&(m.value="");return}Loading.show();const r=await GoogleIntegration.fetchData("getDocumentCodeAndVersion",{documentCode:n});if(Loading.hide(),r.success&&r.version){const c=document.getElementById(s),l=document.getElementById(a),m=document.getElementById(i);c&&(c.value=r.version.versionNumber||""),l&&(l.value=r.version.issueDate?Utils.formatDate(r.version.issueDate):""),m&&(m.value=r.version.revisionDate?Utils.formatDate(r.version.revisionDate):""),Notification.success("\u062A\u0645 \u062C\u0644\u0628 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0631\u0643\u0632")}else if(r.success&&r.code){const c=document.getElementById(s);c&&(c.value="\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"),Notification.warning("\u0627\u0644\u0643\u0648\u062F \u0645\u0648\u062C\u0648\u062F \u0648\u0644\u0643\u0646 \u0644\u0627 \u064A\u0648\u062C\u062F \u0625\u0635\u062F\u0627\u0631 \u0646\u0634\u0637 \u0641\u064A \u0627\u0644\u0645\u0631\u0643\u0632")}else Notification.error("\u0627\u0644\u0643\u0648\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0645\u0631\u0643\u0632 \u0627\u0644\u062A\u0643\u0648\u064A\u062F \u0648\u0627\u0644\u0625\u0635\u062F\u0627\u0631")}catch(o){Loading.hide(),Utils.safeError("Error loading document code version:",o),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062C\u0644\u0628 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0625\u0635\u062F\u0627\u0631: "+o.message)}},async getFormCodeDetails(e){try{const[t,o]=await Promise.all([GoogleIntegration.fetchData("getDocumentCodes",{}).catch(()=>null),GoogleIntegration.fetchData("getDocumentVersions",{documentCodeId:null}).catch(()=>null)]);if(t?.success&&o?.success){const s=t.data.find(a=>a.code===e||a.documentName===e);if(s){const a=o.data.filter(i=>i.documentCodeId===s.id&&(i.isActive===!0||i.isActive==="true"));if(a.length>0)return a.sort((i,d)=>new Date(d.issueDate||0)-new Date(i.issueDate||0)),{code:s.code,documentName:s.documentName,versionNumber:a[0].versionNumber,issueDate:a[0].issueDate,revisionDate:a[0].revisionDate,changeReason:a[0].changeReason}}}}catch(t){typeof Utils<"u"&&Utils.safeWarn("Error fetching ISO code details:",t)}return null},showHSERiskAssessmentForm(e=null){const t=e||{},o=document.createElement("div");o.className="modal-overlay iso-professional-modal fixed inset-0 bg-black/50 z-50 flex justify-center items-center",o.innerHTML=`
             <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden d-flex flex-column" style="max-height: 90vh;">
                 <div class="modal-header bg-light p-4 border-bottom d-flex justify-content-between align-items-center">
-                    <h5 class="modal-title fw-bold m-0"><i class="fas fa-shield-alt text-primary me-2"></i>${data.id ? 'تعديل تقييم المخاطر' : 'إضافة تقييم مخاطر جديد'}</h5>
+                    <h5 class="modal-title fw-bold m-0"><i class="fas fa-shield-alt text-primary me-2"></i>${t.id?"\u062A\u0639\u062F\u064A\u0644 \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631":"\u0625\u0636\u0627\u0641\u0629 \u062A\u0642\u064A\u064A\u0645 \u0645\u062E\u0627\u0637\u0631 \u062C\u062F\u064A\u062F"}</h5>
                     <button type="button" class="btn-close" onclick="this.closest('.modal-overlay').remove()"></button>
                 </div>
                 <div class="modal-body p-4 overflow-auto flex-grow-1">
                     <form id="iso-risk-form">
                         <div class="mb-3">
-                            <label class="form-label fw-bold">النشاط / المهمة <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="risk-activity" required value="${Utils.escapeHTML(data.activity || '')}">
+                            <label class="form-label fw-bold">\u0627\u0644\u0646\u0634\u0627\u0637 / \u0627\u0644\u0645\u0647\u0645\u0629 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="risk-activity" required value="${Utils.escapeHTML(t.activity||"")}">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold">المخاطر المحتملة (Hazards) <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="risk-hazards" rows="3" required>${Utils.escapeHTML(data.hazards || '')}</textarea>
+                            <label class="form-label fw-bold">\u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u0645\u062D\u062A\u0645\u0644\u0629 (Hazards) <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="risk-hazards" rows="3" required>${Utils.escapeHTML(t.hazards||"")}</textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold">مستوى الخطر <span class="text-danger">*</span></label>
+                            <label class="form-label fw-bold">\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0631 <span class="text-danger">*</span></label>
                             <select class="form-select" id="risk-level" required>
-                                <option value="" disabled ${!data.riskLevel ? 'selected' : ''}>اختر مستوى الخطر...</option>
-                                <option value="منخفض" ${data.riskLevel === 'منخفض' || data.riskLevel === 'Low' ? 'selected' : ''}>منخفض (Low)</option>
-                                <option value="متوسط" ${data.riskLevel === 'متوسط' || data.riskLevel === 'Medium' ? 'selected' : ''}>متوسط (Medium)</option>
-                                <option value="عالي" ${data.riskLevel === 'عالي' || data.riskLevel === 'High' ? 'selected' : ''}>عالي (High)</option>
+                                <option value="" disabled ${t.riskLevel?"":"selected"}>\u0627\u062E\u062A\u0631 \u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0637\u0631...</option>
+                                <option value="\u0645\u0646\u062E\u0641\u0636" ${t.riskLevel==="\u0645\u0646\u062E\u0641\u0636"||t.riskLevel==="Low"?"selected":""}>\u0645\u0646\u062E\u0641\u0636 (Low)</option>
+                                <option value="\u0645\u062A\u0648\u0633\u0637" ${t.riskLevel==="\u0645\u062A\u0648\u0633\u0637"||t.riskLevel==="Medium"?"selected":""}>\u0645\u062A\u0648\u0633\u0637 (Medium)</option>
+                                <option value="\u0639\u0627\u0644\u064A" ${t.riskLevel==="\u0639\u0627\u0644\u064A"||t.riskLevel==="High"?"selected":""}>\u0639\u0627\u0644\u064A (High)</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold">إجراءات التحكم والوقاية (Control Measures)</label>
-                            <textarea class="form-control" id="risk-controls" rows="3">${Utils.escapeHTML(data.controlMeasures || '')}</textarea>
+                            <label class="form-label fw-bold">\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u062A\u062D\u0643\u0645 \u0648\u0627\u0644\u0648\u0642\u0627\u064A\u0629 (Control Measures)</label>
+                            <textarea class="form-control" id="risk-controls" rows="3">${Utils.escapeHTML(t.controlMeasures||"")}</textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer bg-light p-3 border-top d-flex justify-content-end">
-                    <button type="button" class="btn btn-secondary me-2 px-4" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" class="btn btn-primary px-4" onclick="ISO.handleHSERiskSubmit('${data.id || ''}', this.closest('.modal-overlay'))">
-                        <i class="fas fa-save me-2"></i>حفظ
+                    <button type="button" class="btn btn-secondary me-2 px-4" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
+                    <button type="button" class="btn btn-primary px-4" onclick="ISO.handleHSERiskSubmit('${t.id||""}', this.closest('.modal-overlay'))">
+                        <i class="fas fa-save me-2"></i>\u062D\u0641\u0638
                     </button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-    },
-
-    handleHSERiskSubmit(editId, modal) {
-        const activity = document.getElementById('risk-activity').value.trim();
-        const hazards = document.getElementById('risk-hazards').value.trim();
-        const riskLevel = document.getElementById('risk-level').value;
-        const controlMeasures = document.getElementById('risk-controls').value.trim();
-
-        if (!activity || !hazards || !riskLevel) {
-            Notification.warning('يرجى تعبئة الحقول المطلوبة');
-            return;
-        }
-
-        const riskRecord = {
-            id: editId || Utils.generateId('RSK'),
-            activity,
-            hazards,
-            riskLevel,
-            controlMeasures,
-            createdAt: new Date().toISOString()
-        };
-
-        if (!AppState.appData.hseRiskAssessments) AppState.appData.hseRiskAssessments = [];
-
-        if (editId) {
-            const idx = AppState.appData.hseRiskAssessments.findIndex(r => r.id === editId);
-            if (idx >= 0) AppState.appData.hseRiskAssessments[idx] = { ...AppState.appData.hseRiskAssessments[idx], ...riskRecord };
-        } else {
-            AppState.appData.hseRiskAssessments.push(riskRecord);
-        }
-
-        Notification.success('تم حفظ بيانات تقييم المخاطر بنجاح');
-        modal.remove();
-        ISO.load(); // Refresh view
-    },
-
-    deleteHSERiskAssessment(id) {
-        if (!confirm('هل أنت متأكد من رغبتك في حذف هذا التقييم؟')) return;
-        AppState.appData.hseRiskAssessments = AppState.appData.hseRiskAssessments.filter(r => r.id !== id);
-        Notification.success('تم الحذف بنجاح');
-        ISO.load();
-    },
-
-};
-
-// ===== Export module to global scope =====
-// تصدير الموديول إلى window فوراً لضمان توافره
-(function () {
-    'use strict';
-    try {
-        if (typeof window !== 'undefined' && typeof ISO !== 'undefined') {
-            window.ISO = ISO;
-            
-            // إشعار عند تحميل الموديول بنجاح
-            if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
-                Utils.safeLog('✅ ISO module loaded and available on window.ISO');
-            }
-        }
-    } catch (error) {
-        console.error('❌ خطأ في تصدير ISO:', error);
-        // محاولة التصدير مرة أخرى حتى في حالة الخطأ
-        if (typeof window !== 'undefined' && typeof ISO !== 'undefined') {
-            try {
-                window.ISO = ISO;
-            } catch (e) {
-                console.error('❌ فشل تصدير ISO:', e);
-            }
-        }
-    }
-})();
+        `,document.body.appendChild(o)},handleHSERiskSubmit(e,t){const o=document.getElementById("risk-activity").value.trim(),s=document.getElementById("risk-hazards").value.trim(),a=document.getElementById("risk-level").value,i=document.getElementById("risk-controls").value.trim();if(!o||!s||!a){Notification.warning("\u064A\u0631\u062C\u0649 \u062A\u0639\u0628\u0626\u0629 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629");return}const d={id:e||Utils.generateId("RSK"),activity:o,hazards:s,riskLevel:a,controlMeasures:i,createdAt:new Date().toISOString()};if(AppState.appData.hseRiskAssessments||(AppState.appData.hseRiskAssessments=[]),e){const n=AppState.appData.hseRiskAssessments.findIndex(r=>r.id===e);n>=0&&(AppState.appData.hseRiskAssessments[n]={...AppState.appData.hseRiskAssessments[n],...d})}else AppState.appData.hseRiskAssessments.push(d);Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0628\u064A\u0627\u0646\u0627\u062A \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0645\u062E\u0627\u0637\u0631 \u0628\u0646\u062C\u0627\u062D"),t.remove(),ISO.load()},deleteHSERiskAssessment(e){confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u0631\u063A\u0628\u062A\u0643 \u0641\u064A \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u062A\u0642\u064A\u064A\u0645\u061F")&&(AppState.appData.hseRiskAssessments=AppState.appData.hseRiskAssessments.filter(t=>t.id!==e),Notification.success("\u062A\u0645 \u0627\u0644\u062D\u0630\u0641 \u0628\u0646\u062C\u0627\u062D"),ISO.load())}};(function(){"use strict";try{typeof window<"u"&&typeof ISO<"u"&&(window.ISO=ISO,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 ISO module loaded and available on window.ISO"))}catch{if(typeof window<"u"&&typeof ISO<"u")try{window.ISO=ISO}catch{}}})();
