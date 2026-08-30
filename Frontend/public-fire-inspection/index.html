@@ -1,0 +1,3059 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>SafetyHub | نموذج الفحص الشهري لمعدات الإطفاء</title>
+    
+            <!-- PWA & Mobile Web App Meta -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="فحص مهمات الحريق">
+    <meta name="application-name" content="فحص مهمات الحريق">
+    <meta name="msapplication-TileColor" content="#0f172a">
+    <meta name="msapplication-TileImage" content="./icons/icon-144x144.png">
+    <link rel="manifest" href="./manifest-fire-inspection.json">
+
+    <!-- Favicon & Touch Icons (All Sizes for Mobile & Desktop) -->
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    <link rel="shortcut icon" href="./favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="./icons/icon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="./icons/icon-48x48.png">
+    <link rel="icon" type="image/png" sizes="72x72" href="./icons/icon-72x72.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="./icons/icon-96x96.png">
+    <link rel="icon" type="image/png" sizes="128x128" href="./icons/icon-128x128.png">
+    <link rel="icon" type="image/png" sizes="144x144" href="./icons/icon-144x144.png">
+    <link rel="icon" type="image/png" sizes="152x152" href="./icons/icon-152x152.png">
+    <link rel="icon" type="image/png" sizes="180x180" href="./icons/icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="384x384" href="./icons/icon-384x384.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512x512.png">
+    <link rel="apple-touch-icon" href="./icons/icon-180x180.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="./icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180x180.png">
+    <link rel="apple-touch-icon-precomposed" href="./icons/icon-180x180.png">
+    
+    <!-- الخطوط والأيقونات -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #dc2626;
+            --primary-dark: #b91c1c;
+            --primary-light: #fef2f2;
+            --secondary: #1e40af;
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 12px 40px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        /* 📌 رأس النموذج الثابت أثناء الانزلاق (Sticky Header: Tools + ISO Table) */
+        .form-sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--bg-base);
+            padding-top: 6px;
+            padding-bottom: 2px;
+            margin-bottom: 8px;
+            transition: all 0.25s ease;
+        }
+        [data-theme="dark"] .form-sticky-header {
+            background: var(--bg-base);
+        }
+
+        /* ترويسة ISO المعتمدة ثلاثية الأعمدة */
+        .iso-header-table {
+            display: grid;
+            grid-template-columns: minmax(145px, 1.1fr) 2.2fr minmax(140px, 1fr);
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-top: 4px solid #dc2626;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+            margin-bottom: 4px;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .iso-col-brand {
+            padding: 12px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border-left: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, #ffffff 0%, #fef2f2 100%);
+            overflow: hidden;
+        }
+
+        .iso-logo-wrap {
+            max-width: 140px;
+            min-height: 48px;
+            max-height: 56px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 3px 6px;
+            box-shadow: 0 2px 6px rgba(220, 38, 38, 0.08);
+        }
+
+        .iso-logo-img {
+            max-height: 48px;
+            max-width: 125px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .iso-dept-name {
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: #b91c1c;
+            line-height: 1.2;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .iso-col-title {
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: #ffffff;
+        }
+
+        .iso-doc-title {
+            font-size: 1.22rem;
+            font-weight: 900;
+            color: #0f172a;
+            margin-bottom: 3px;
+            line-height: 1.2;
+            letter-spacing: -0.3px;
+            white-space: nowrap;
+        }
+
+        .iso-doc-subtitle {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 5px;
+            letter-spacing: 0.2px;
+        }
+
+        .iso-platform-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .iso-col-meta {
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+            border-right: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            font-size: 0.68rem;
+            overflow: hidden;
+        }
+
+        .iso-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 4px;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 3px;
+        }
+
+        .iso-meta-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .iso-meta-key {
+            color: #64748b;
+            font-weight: 700;
+            font-size: 0.62rem;
+        }
+
+        .iso-meta-val {
+            color: #0f172a;
+            font-weight: 800;
+            font-family: monospace, inherit;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 0 4px;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-size: 0.65rem;
+        }
+
+        @media (max-width: 768px) {
+            .iso-header-table {
+                grid-template-columns: minmax(75px, 95px) 1fr minmax(95px, 125px);
+                border-radius: 10px;
+                margin-bottom: 14px;
+            }
+            .iso-col-brand {
+                padding: 6px 4px;
+                gap: 4px;
+                border-left: 1px solid #e2e8f0;
+                border-bottom: none;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+            .iso-logo-wrap {
+                max-width: 65px;
+                min-height: 36px;
+                max-height: 40px;
+                padding: 2px 4px;
+                border-radius: 8px;
+            }
+            .iso-logo-img {
+                max-height: 32px;
+                max-width: 55px;
+            }
+            .iso-dept-name {
+                font-size: 0.52rem;
+                text-align: center;
+                white-space: normal;
+                line-height: 1.2;
+            }
+            .iso-col-title {
+                padding: 6px 6px;
+                border-bottom: none;
+                gap: 2px;
+            }
+            .iso-doc-title {
+                font-size: 0.88rem;
+                font-weight: 900;
+                white-space: normal;
+                line-height: 1.25;
+                text-align: center;
+            }
+            .iso-doc-subtitle {
+                font-size: 0.55rem;
+                line-height: 1.2;
+                text-align: center;
+            }
+            .iso-col-meta {
+                padding: 4px 6px;
+                border-right: 1px solid #e2e8f0;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                gap: 2px;
+                background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            }
+            .iso-meta-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 2px;
+                border-bottom: 1px dashed #e2e8f0;
+                padding-bottom: 1px;
+            }
+            .iso-meta-row:last-child {
+                border-bottom: none;
+                padding-bottom: 0;
+            }
+            .iso-meta-key {
+                font-size: 0.52rem;
+                white-space: nowrap;
+            }
+            .iso-meta-val {
+                font-size: 0.52rem;
+                padding: 0 3px;
+                border-radius: 3px;
+                white-space: nowrap;
+            }
+        }
+
+        /* حالة التحميل */
+        .loading-bar {
+            height: 3px;
+            width: 100%;
+            background: #e2e8f0;
+            position: relative;
+            overflow: hidden;
+            border-radius: 2px;
+            margin-bottom: 15px;
+        }
+
+        .loading-bar::after {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 40%;
+            background: var(--primary);
+            animation: loadingIndeterminate 1.5s infinite ease-in-out;
+        }
+
+        @keyframes loadingIndeterminate {
+            0% { left: -40%; width: 40%; }
+            50% { left: 30%; width: 60%; }
+            100% { left: 100%; width: 40%; }
+        }
+
+        /* كارت النموذج الرئيسي */
+        .form-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 24px 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .form-section {
+            margin-bottom: 22px;
+            padding: 18px 16px 20px;
+            border-radius: var(--radius-md);
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-right-width: 4px;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+            transition: all 0.2s ease;
+        }
+
+        .form-section:hover {
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+        }
+
+        /* تمييز ألوان الأقسام */
+        .form-section.sec-device { border-right-color: #dc2626; }
+        .form-section.sec-device .section-badge { background: #fef2f2; color: #b91c1c; border: 1.5px solid #fecaca; }
+
+        .form-section.sec-inspector { border-right-color: #2563eb; }
+        .form-section.sec-inspector .section-badge { background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; }
+
+        .form-section.sec-checklist { border-right-color: #d97706; }
+        .form-section.sec-checklist .section-badge { background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; }
+
+        .form-section.sec-doc { border-right-color: #10b981; }
+        .form-section.sec-doc .section-badge { background: #f0fdf4; color: #047857; border: 1.5px solid #bbf7d0; }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .section-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.82rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .section-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            padding-right: 38px;
+        }
+
+        /* حقول الإدخال */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            font-weight: 750;
+            color: #1e293b;
+            margin-bottom: 7px;
+        }
+
+        .form-label i {
+            font-size: 0.9rem;
+        }
+
+        .req-star {
+            color: #dc2626;
+            font-weight: 900;
+        }
+
+        .form-control, .form-select {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            background-color: #ffffff;
+            color: #0f172a;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3.5px rgba(220, 38, 38, 0.12);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        @media (max-width: 640px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* بطاقة مواصفات الجهاز المحدد */
+        .device-card-preview {
+            background: linear-gradient(135deg, #0b2a55 0%, #1e3a75 70%, #245a9b 100%);
+            color: #ffffff;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+            box-shadow: 0 6px 18px rgba(11, 42, 85, 0.2);
+            position: relative;
+            overflow: hidden;
+            display: none;
+        }
+
+        .device-card-preview::before {
+            content: "";
+            position: absolute;
+            top: -40px;
+            left: -40px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+        }
+
+        .device-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+        }
+
+        .device-card-id {
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: #fde68a;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .device-card-status {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+
+        .device-grid-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            font-size: 0.8rem;
+        }
+
+        .device-info-item {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 8px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .device-info-label {
+            color: #bfdbfe;
+            font-size: 0.68rem;
+            margin-bottom: 2px;
+            display: block;
+        }
+
+        .device-info-val {
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        /* كروت اختيار الحالة */
+        .status-options-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .status-option-btn {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px 8px;
+            background: #ffffff;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-option-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+        }
+
+        .status-option-btn.active.status-valid {
+            border-color: #16a34a;
+            background: #f0fdf4;
+            color: #15803d;
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+        }
+
+        .status-option-btn.active.status-warn {
+            border-color: #f59e0b;
+            background: #fffbeb;
+            color: #b45309;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+        }
+
+        .status-option-btn.active.status-danger {
+            border-color: #dc2626;
+            background: #fef2f2;
+            color: #b91c1c;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+        }
+
+        .status-option-icon {
+            font-size: 1.2rem;
+        }
+
+        .status-option-text {
+            font-size: 0.85rem;
+            font-weight: 800;
+        }
+
+        /* أزرار الإجراءات */
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 15px 24px;
+            font-size: 1.05rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(220, 38, 38, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(220, 38, 38, 0.45);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        /* منطقة رفع الصورة */
+        .photo-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .photo-area:hover {
+            border-color: #dc2626;
+            background: #fef2f2;
+        }
+
+        .photo-preview-wrap {
+            position: relative;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .photo-preview-img {
+            max-width: 100%;
+            max-height: 180px;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .photo-remove-btn {
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            background: #dc2626;
+            color: #fff;
+            border: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        /* شاشة النجاح */
+        .success-screen {
+            display: none;
+            background: #ffffff;
+            border-radius: var(--radius-lg);
+            padding: 32px 20px;
+            text-align: center;
+            border: 1px solid #cbd5e1;
+            box-shadow: var(--shadow-md);
+        }
+
+        .success-icon {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            margin: 0 auto 18px;
+            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
+        }
+
+        .receipt-card {
+            background: #f8fafc;
+            border: 1.5px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 20px 0;
+            text-align: right;
+        }
+
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 0;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.88rem;
+        }
+
+        .receipt-row:last-child {
+            border-bottom: none;
+        }
+
+        .receipt-label {
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .receipt-val {
+            color: #0f172a;
+            font-weight: 800;
+        }
+
+        .success-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-outline {
+            padding: 11px 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            border: 1.5px solid #cbd5e1;
+            background: #ffffff;
+            color: #1e293b;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+        .btn-primary-action {
+            padding: 11px 22px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            border: none;
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: #ffffff;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35);
+        }
+
+        /* الإشعارات Toast */
+        .toast-msg {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0f172a;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast-msg.error { background: #dc2626; }
+        .toast-msg.success { background: #16a34a; }
+
+        /* التذييل */
+        .footer-card {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 0.72rem;
+            color: #64748b;
+            line-height: 1.6;
+        }
+    
+        /* زر مسح QR المدمج داخل النموذج */
+        .btn-scan-qr-inline {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 0.82rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 3px 10px rgba(220, 38, 38, 0.28);
+            transition: all 0.2s ease;
+        }
+        .btn-scan-qr-inline:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 14px rgba(220, 38, 38, 0.38);
+            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        }
+        .btn-scan-qr-inline:active {
+            transform: scale(0.97);
+        }
+
+        /* نافذة كاميرا مسح الـ QR */
+        .qr-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        .qr-modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .qr-modal-box {
+            background: #ffffff;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 480px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+            border: 1.5px solid #cbd5e1;
+            transform: translateY(20px) scale(0.98);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .qr-modal-overlay.active .qr-modal-box {
+            transform: translateY(0) scale(1);
+        }
+        .qr-modal-header {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: #ffffff;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .qr-modal-body {
+            padding: 18px 16px;
+        }
+        .qr-scanner-viewport {
+            width: 100%;
+            height: 270px;
+            background: #0f172a;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+            border: 2px solid #334155;
+        }
+        #qr-reader {
+            width: 100% !important;
+            height: 100% !important;
+            border: none !important;
+        }
+        #qr-reader video {
+            object-fit: cover !important;
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 10px !important;
+        }
+        .qr-scan-laser {
+            position: absolute;
+            left: 10%;
+            right: 10%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #ef4444, #dc2626, #ef4444, transparent);
+            box-shadow: 0 0 14px #ef4444, 0 0 4px #fff;
+            animation: scanLaser 2.2s infinite linear;
+            z-index: 10;
+            pointer-events: none;
+        }
+        @keyframes scanLaser {
+            0% { top: 15%; opacity: 0.3; }
+            50% { top: 85%; opacity: 1; }
+            100% { top: 15%; opacity: 0.3; }
+        }
+        .qr-viewfinder-guide {
+            position: absolute;
+            inset: 20px;
+            border: 2px dashed rgba(255, 255, 255, 0.4);
+            border-radius: 12px;
+            pointer-events: none;
+            z-index: 9;
+        }
+
+        .floating-hub-btn {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            z-index: 999;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            color: #ffffff !important;
+            padding: 9px 15px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            font-weight: 800;
+            text-decoration: none !important;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.25s ease;
+            backdrop-filter: blur(8px);
+        }
+        .floating-hub-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55);
+        }
+        /* LTR Overrides */
+        html[dir="ltr"] body {
+            direction: ltr;
+            text-align: left;
+        }
+        html[dir="ltr"] .form-section,
+        html[dir="ltr"] .section-header,
+        html[dir="ltr"] .section-desc,
+        html[dir="ltr"] .form-group,
+        html[dir="ltr"] .receipt-card,
+        html[dir="ltr"] .receipt-row,
+        html[dir="ltr"] .iso-col-title,
+        html[dir="ltr"] .check-item-title,
+        html[dir="ltr"] .device-info-item,
+        html[dir="ltr"] .footer-card {
+            text-align: left;
+        }
+        html[dir="ltr"] .iso-col-brand {
+            border-left: none;
+            border-right: 1px solid #e2e8f0;
+        }
+        html[dir="ltr"] .iso-col-meta {
+            border-right: none;
+            border-left: 1px solid #e2e8f0;
+        }
+        html[dir="ltr"] .floating-hub-btn {
+            right: auto;
+            left: 22px;
+        }
+        @media (max-width: 640px) {
+            html[dir="ltr"] .floating-hub-btn {
+                right: auto;
+                left: 14px;
+            }
+        }
+
+        .lang-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            background: #e0e7ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+            border-radius: 9999px;
+            padding: 2px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .lang-btn:hover {
+            background: #c7d2fe;
+        }
+    
+        /* ======================================================================
+         * 📱 UI/UX PRO MAX - MOBILE DESIGN SYSTEM & TOUCH OPTIMIZATION (≤768px)
+         * Standardized WCAG 2.5.5 Touch Targets (44px+), 16px iOS anti-zoom,
+         * Safe Area insets, tactile active states & fluid form responsiveness.
+         * ====================================================================== */
+        @media (max-width: 768px) {
+            /* 1. Prevent iOS Safari auto-zoom on field focus */
+            input, select, textarea, .form-control {
+                font-size: 16px !important;
+                min-height: 46px !important;
+                border-radius: 10px !important;
+                padding: 10px 14px !important;
+                touch-action: manipulation;
+            }
+
+            /* 2. Touch targets & tactile active feedback */
+            button, .btn, .btn-submit, .date-preset-btn, .action-btn {
+                min-height: 48px !important;
+                font-size: 0.92rem !important;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+                border-radius: 10px !important;
+            }
+
+            button:active, .btn:active, .date-preset-btn:active, .form-card:active {
+                transform: scale(0.98) !important;
+                transition: transform 0.12s ease !important;
+            }
+
+            /* 3. Fluid container spacing without overflow */
+            .form-container, .main-container, .hub-container, .page-container {
+                padding: 8px 10px !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .form-card, .section-card, .card-box {
+                padding: 14px 12px !important;
+                margin-bottom: 12px !important;
+                border-radius: 14px !important;
+            }
+
+            /* 4. Labels & Helper typography readability */
+            .form-label, label {
+                font-size: 0.88rem !important;
+                font-weight: 800 !important;
+                margin-bottom: 6px !important;
+                color: #1e293b !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 4px !important;
+            }
+
+            /* 5. Safe Area Inset for mobile bottom action bars */
+            .bottom-actions, .floating-submit-bar, .sticky-bottom-bar {
+                padding-bottom: max(14px, env(safe-area-inset-bottom)) !important;
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+
+            /* 6. Choice chips, pills & option grids */
+            .type-cards-grid, .risk-grid, .options-grid, .selection-grid {
+                grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+                gap: 8px !important;
+            }
+
+            .option-card, .type-card, .risk-pill {
+                min-height: 48px !important;
+                padding: 10px 8px !important;
+            }
+        }
+
+        /* 🌡️ Live Weather & Heat Stress Badge */
+        .weather-badge {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(254, 243, 199, 0.85);
+            color: #92400e;
+            border: 1px solid #fde68a;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .weather-badge:hover { background: #fef3c7; transform: translateY(-1px); }
+        .heat-index-pill {
+            padding: 1px 6px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: 800;
+            background: #10b981;
+            color: #ffffff;
+        }
+
+        /* 🚨 SOS Emergency Button */
+        .sos-btn {
+            padding: 4px 11px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #ffffff;
+            border: 1px solid #b91c1c;
+            font-weight: 800;
+            font-size: 0.78rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+            animation: sosPulse 2.5s infinite;
+            transition: all 0.2s;
+        }
+        .sos-btn:hover {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            transform: translateY(-1px);
+            box-shadow: 0 0 14px rgba(239, 68, 68, 0.65);
+        }
+        @keyframes sosPulse {
+            0%, 100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.35); }
+            50% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.7); }
+        }
+
+        /* Emergency Contacts Modal & Cards */
+        .qr-scanner-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .emergency-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .emergency-modal-dialog {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+            animation: popModal 0.2s ease-out;
+        }
+        @keyframes popModal {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .emergency-contact-card {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+        .emergency-contact-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            transform: translateY(-1px);
+        }
+        .emergency-call-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            background: #10b981;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 0.78rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .emergency-call-btn:hover { background: #059669; transform: scale(1.03); }
+
+</style>
+</head>
+<body>
+
+    <!-- 🚨 Emergency SOS Contacts Modal -->
+    <div id="emergencyContactsModal" class="emergency-modal-overlay" onclick="closeEmergencySosModal(event)">
+        <div class="emergency-modal-dialog" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #ef4444, #b91c1c); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-phone-volume"></i>
+                    <span id="txtSosModalTitle">دليل خطوط وأرقام الطوارئ الميدانية</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer;" onclick="closeEmergencySosModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+                    <div class="emergency-contact-card">
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.86rem; color: #1e293b;">
+                                <i class="fas fa-hospital text-emerald-600 ml-1"></i> <span id="txtContactClinic">عيادة المصنع</span>
+                            </div>
+                            <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">طوارئ طبية وإسعافات</div>
+                            <div style="font-size: 0.76rem; font-weight: 800; color: #059669; font-family: monospace;" id="valCallClinic">01000000001</div>
+                        </div>
+                        <a id="linkCallClinic" href="tel:01000000001" class="emergency-call-btn">
+                            <i class="fas fa-phone"></i>
+                            <span>اتصال</span>
+                        </a>
+                    </div>
+
+                    <div class="emergency-contact-card">
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.86rem; color: #1e293b;">
+                                <i class="fas fa-shield-halved text-blue-600 ml-1"></i> <span id="txtContactHse">غرفة عمليات السلامة</span>
+                            </div>
+                            <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">بلاغات الحوادث والمخاطر</div>
+                            <div style="font-size: 0.76rem; font-weight: 800; color: #2563eb; font-family: monospace;" id="valCallHse">01000000002</div>
+                        </div>
+                        <a id="linkCallHse" href="tel:01000000002" class="emergency-call-btn" style="background: #2563eb;">
+                            <i class="fas fa-phone"></i>
+                            <span>اتصال</span>
+                        </a>
+                    </div>
+
+                    <div class="emergency-contact-card">
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.86rem; color: #1e293b;">
+                                <i class="fas fa-fire-extinguisher text-red-600 ml-1"></i> <span id="txtContactFire">فريق مكافحة الحريق</span>
+                            </div>
+                            <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">طوارئ الإطفاء والإنقاذ</div>
+                            <div style="font-size: 0.76rem; font-weight: 800; color: #dc2626; font-family: monospace;" id="valCallFire">01000000003</div>
+                        </div>
+                        <a id="linkCallFire" href="tel:01000000003" class="emergency-call-btn" style="background: #dc2626;">
+                            <i class="fas fa-phone"></i>
+                            <span>اتصال</span>
+                        </a>
+                    </div>
+
+                    <div class="emergency-contact-card">
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.86rem; color: #1e293b;">
+                                <i class="fas fa-shield text-amber-600 ml-1"></i> <span id="txtContactSecurity">أمن البوابات والحراسات</span>
+                            </div>
+                            <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">إخلاء وحصر التواجد</div>
+                            <div style="font-size: 0.76rem; font-weight: 800; color: #d97706; font-family: monospace;" id="valCallSecurity">01000000004</div>
+                        </div>
+                        <a id="linkCallSecurity" href="tel:01000000004" class="emergency-call-btn" style="background: #d97706;">
+                            <i class="fas fa-phone"></i>
+                            <span>اتصال</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; padding: 10px 14px;">
+                    <span style="font-size: 0.76rem; font-weight: 800; color: #475569; display: block; margin-bottom: 8px;">
+                        <i class="fas fa-tower-broadcast text-blue-500 ml-1"></i> <span id="txtNationalSosTitle">أرقام الطوارئ القومية المعتمدة:</span>
+                    </span>
+                    <div style="display: flex; gap: 8px; justify-content: space-around; flex-wrap: wrap;">
+                        <a id="linkCallAmbulance" href="tel:123" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #047857; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-truck-medical"></i> الإسعاف: <span id="valCallAmbulance">123</span>
+                        </a>
+                        <a id="linkCallNatFire" href="tel:180" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #b91c1c; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-fire"></i> المطافئ: <span id="valCallNatFire">180</span>
+                        </a>
+                        <a id="linkCallPolice" href="tel:122" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #1e40af; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-handcuffs"></i> شرطة النجدة: <span id="valCallPolice">122</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🌡️ Live Plant Weather & Heat Stress Advisory Modal -->
+    <div id="heatStressAdvisoryModal" class="emergency-modal-overlay" onclick="closeHeatStressAdvisoryModal(event)">
+        <div class="emergency-modal-dialog" style="max-width: 580px;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-sun-plant-wilt"></i>
+                    <span id="txtHeatModalTitle">حالة الطقس الميداني ودليل الإجهاد الحراري</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer;" onclick="closeHeatStressAdvisoryModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
+                        <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">حرارة المصانع</span>
+                        <span id="heatModalTemp" style="font-size: 1.3rem; font-weight: 900; color: #b45309;">32°C</span>
+                    </div>
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
+                        <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">الرطوبة النسبية</span>
+                        <span id="heatModalHumidity" style="font-size: 1.3rem; font-weight: 900; color: #2563eb;">45%</span>
+                    </div>
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
+                        <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">مستوى الخطورة</span>
+                        <span id="heatModalRiskPill" class="heat-index-pill" style="font-size: 0.82rem; padding: 3px 8px; display: inline-block; margin-top: 4px;">طبيعي وآمن</span>
+                    </div>
+                </div>
+
+                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px;">
+                    <span style="font-size: 0.8rem; font-weight: 800; color: #92400e; display: block; margin-bottom: 6px;">
+                        <i class="fas fa-clipboard-check ml-1"></i> <span id="txtHeatInstructionsTitle">تعليمات وبروتوكول الوقاية من الإجهاد الحراري (OSHA):</span>
+                    </span>
+                    <ul style="font-size: 0.78rem; color: #78350f; line-height: 1.6; margin: 0; padding-right: 18px;">
+                        <li>شرب 1 كوب ماء بارد كل 15-20 دقيقة حتى بدون الشعور بالعطش.</li>
+                        <li>الالتزام بفترات راحة في مناطق مظللة وجيدة التهوية كل ساعتين من العمل الميداني.</li>
+                        <li>مراقبة الزملاء للتعرف المبكر على أعراض الدوار أو الصداع أو الإعياء الحراري.</li>
+                        <li>ارتداء ملابس قطنية خفيفة مع غطاء الرأس ومهمات السلامة المعتمدة.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 📌 رأس النموذج الثابت أثناء الانزلاق (Sticky Header: Tools + ISO Table) -->
+        <header class="form-sticky-header">
+            <!-- شريط أدوات علوي موحد (الحالة، الطقس، الطوارئ، العودة للبوابة، واللغة) -->
+            <div class="top-tools-bar" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                    <!-- مؤشر حالة الاتصال وسرعة استجابة السيرفر (Live Ping Meter) -->
+                    <div id="onlineStatus" onclick="measureCloudPing(true)" title="انقر لفحص سرعة الاستجابة اللحظية للسيرفر" style="padding: 4px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; cursor: pointer; transition: all 0.2s;">
+                        <span id="onlineStatusDot" style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 6px #10b981;"></span>
+                        <span id="onlineStatusText">متصل بالسحابة</span>
+                        <span id="onlineStatusPing" style="background: rgba(4, 120, 87, 0.12); padding: 1px 5px; border-radius: 4px; font-size: 0.68rem; font-family: monospace; display: none;">--ms</span>
+                    </div>
+
+                    <!-- ودجت الطقس ومستوى الإجهاد الحراري اللحظي بالمصانع -->
+                    <div class="weather-badge" id="plantWeatherWidget" onclick="openHeatStressAdvisoryModal(event)" title="حالة الطقس ومؤشر الإجهاد الحراري (انقر للإرشادات التفصيلية)">
+                        <span id="weatherIcon">☀️</span>
+                        <span id="weatherTemp">32°C</span>
+                        <span class="heat-index-pill" id="heatIndexPill">طبيعي</span>
+                    </div>
+                </div>
+
+                <!-- أزرار الأدوات والطوارئ واللغة والعودة للبوابة -->
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                    <!-- زر الطوارئ الفوري SOS -->
+                    <button type="button" class="sos-btn" id="btnEmergencySos" onclick="openEmergencySosModal(event)" title="أرقام وخطوط الطوارئ الميدانية / Emergency SOS">
+                        <i class="fas fa-phone-volume"></i>
+                        <span id="txtSosBtn">طوارئ SOS</span>
+                    </button>
+
+                    <!-- زر العودة لبوابة النماذج -->
+                    <a href="forms-hub.html" title="العودة لبوابة النماذج الرئيسية" style="text-decoration: none; padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #4338ca; font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        <i class="fas fa-th-large"></i>
+                        <span id="txtBackToHub">البوابة</span>
+                    </a>
+
+                    <!-- زر تبديل اللغة -->
+                    <button type="button" id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()" style="padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        <i class="fas fa-globe"></i>
+                        <span id="langBtnText">EN</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════════
+                 ترويسة ISO المعتمدة لنموذج الفحص الشهري
+            ══════════════════════════════════════════════════════ -->
+            <div class="iso-header-table">
+                <div class="iso-col-brand">
+                    <div class="iso-logo-wrap">
+                        <img id="companyLogoImg" src="/icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
+                    </div>
+                    <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
+                </div>
+
+                <div class="iso-col-title">
+                    <h1 class="iso-doc-title" id="isoDocTitle">نموذج الفحص الشهري لمعدات الإطفاء</h1>
+                    <div class="iso-doc-subtitle" id="isoDocSubtitle">Monthly Fire Equipment Inspection Form</div>
+                </div>
+
+                <div class="iso-col-meta">
+                    <div class="iso-meta-row">
+                        <span class="iso-meta-key">كود الوثيقة:</span>
+                        <span class="iso-meta-val">DOC-HSE-FEI-01</span>
+                    </div>
+                    <div class="iso-meta-row">
+                        <span class="iso-meta-key">رقم الإصدار:</span>
+                        <span class="iso-meta-val">VER-02</span>
+                    </div>
+                    <div class="iso-meta-row">
+                        <span class="iso-meta-key">تاريخ الاعتماد:</span>
+                        <span class="iso-meta-val">2026-08</span>
+                    </div>
+                    <div class="iso-meta-row">
+                        <span class="iso-meta-key">المعيار:</span>
+                        <span class="iso-meta-val">ISO 45001 / NFPA 10</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="loading-bar" id="loadingBar"></div>
+
+        <!-- رسالة الخطأ العامة -->
+        <div id="errorAlert" style="display: none; background: #fef2f2; border: 1.5px solid #fecaca; color: #b91c1c; padding: 12px 16px; border-radius: 10px; margin-bottom: 18px; font-weight: 700; font-size: 0.88rem;">
+            <i class="fas fa-exclamation-circle ml-1"></i> <span id="errorAlertText"></span>
+        </div>
+
+        <!-- النموذج الرئيسي -->
+        <form id="fireInspectionForm" class="form-card">
+            <!-- حقل الحماية ضد السبام (Honeypot) -->
+            <input type="text" name="website" style="display:none !important;" tabindex="-1" autocomplete="off">
+
+            <!-- 1. تحديد جهاز الإطفاء -->
+            <div class="form-section sec-device">
+                <div class="section-header">
+                    <div class="section-badge">1</div>
+                    <div class="section-title">بيانات وموقع جهاز الإطفاء</div>
+                </div>
+                <div class="section-desc">حدد الجهاز من القائمة أو امسح كود QR الملصق على الطفاية</div>
+
+                <div id="deviceLockedNotice" style="display: none; background: #fef2f2; border: 1.5px solid #fecaca; color: #991b1b; padding: 10px 14px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; margin-bottom: 12px; align-items: center; gap: 8px;">
+                    <i class="fas fa-lock text-red-600"></i>
+                    <span id="deviceLockedNoticeText">تم قفل النموذج على هذا الجهاز المحدد بواسطة كود الـ QR</span>
+                </div>
+
+                <div class="form-group" id="deviceSelectGroup">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                        <label class="form-label" style="margin-bottom: 0;">
+                            <i class="fas fa-barcode text-red-600"></i>
+                            جهاز الإطفاء المراد فحصه: <span class="req-star">*</span>
+                        </label>
+                        <button type="button" id="scanQrInFormBtn" class="btn-scan-qr-inline" onclick="openQrScannerModal()">
+                            <i class="fas fa-qrcode"></i>
+                            <span>مسح كود الجهاز (QR)</span>
+                        </button>
+                    </div>
+                    <select id="deviceSelect" class="form-select" required>
+                        <option value="">— جاري تحميل قائمة الأجهزة... —</option>
+                    </select>
+                </div>
+
+                <!-- معاينة بيانات الجهاز المختار -->
+                <div id="deviceCardPreview" class="device-card-preview">
+                    <div class="device-card-header">
+                        <div class="device-card-id">
+                            <i class="fas fa-fire-extinguisher"></i>
+                            <span id="cardDeviceId">EFA-0000</span>
+                        </div>
+                        <div id="cardDeviceStatus" class="device-card-status">صالح</div>
+                    </div>
+                    <div class="device-grid-info">
+                        <div class="device-info-item">
+                            <span class="device-info-label">النوع والوزن:</span>
+                            <span id="cardDeviceType" class="device-info-val">-</span>
+                        </div>
+                        <div class="device-info-item">
+                            <span class="device-info-label">الموقع والمكان:</span>
+                            <span id="cardDeviceLocation" class="device-info-val">-</span>
+                        </div>
+                        <div class="device-info-item">
+                            <span class="device-info-label">رقم الجهاز بالسجل:</span>
+                            <span id="cardDeviceNumber" class="device-info-val">-</span>
+                        </div>
+                        <div class="device-info-item">
+                            <span class="device-info-label">آخر فحص مسجل:</span>
+                            <span id="cardDeviceLastInsp" class="device-info-val">لم يفحص بعد</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. بيانات الفحص ومسؤول السلامة -->
+            <div class="form-section sec-inspector">
+                <div class="section-header">
+                    <div class="section-badge">2</div>
+                    <div class="section-title">بيانات الفحص ومسؤول السلامة</div>
+                </div>
+                <div class="section-desc">توثيق تاريخ الفحص وهوية مفتش ومسؤول السلامة الميداني</div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-calendar-day text-blue-600"></i>
+                            تاريخ الفحص: <span class="req-star">*</span>
+                        </label>
+                        <input type="date" id="inspectionDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-user-shield text-blue-600"></i>
+                            مسؤول / مفتش السلامة: <span class="req-star">*</span>
+                        </label>
+                        <select id="inspectorSelect" class="form-select" required>
+                            <option value="">— اختر اسم مسؤول السلامة —</option>
+                            <option value="__CUSTOM__">✍️ إدخال اسم مفتش آخر يدوي...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" id="customInspectorGroup" style="display: none; margin-top: 10px;">
+                    <label class="form-label">اكتب اسم مسؤول السلامة: <span class="req-star">*</span></label>
+                    <input type="text" id="customInspectorInput" class="form-control" placeholder="الاسم الثلاثي لمسؤول السلامة...">
+                </div>
+            </div>
+
+            <!-- 3. معايير الفحص الميداني المعتمدة -->
+            <div class="form-section sec-checklist">
+                <div class="section-header">
+                    <div class="section-badge">3</div>
+                    <div class="section-title">معايير ونقاط الفحص الفني (Checklist)</div>
+                </div>
+                <div class="section-desc">التحقق من سلامة الأجزاء التشغيلية للطفاية طبقا لـ NFPA 10</div>
+
+                <!-- الحالة العامة للجهاز -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-heart-pulse text-amber-600"></i>
+                        الحالة التشغيلية العامة للجهاز: <span class="req-star">*</span>
+                    </label>
+                    <div class="status-options-grid">
+                        <div class="status-option-btn status-valid active" data-status="صالح" onclick="selectStatus('صالح', this)">
+                            <i class="fas fa-check-circle status-option-icon" style="color: #16a34a;"></i>
+                            <span class="status-option-text">صالح للعمل</span>
+                        </div>
+                        <div class="status-option-btn status-warn" data-status="يحتاج صيانة" onclick="selectStatus('يحتاج صيانة', this)">
+                            <i class="fas fa-tools status-option-icon" style="color: #d97706;"></i>
+                            <span class="status-option-text">يحتاج صيانة</span>
+                        </div>
+                        <div class="status-option-btn status-danger" data-status="خارج الخدمة" onclick="selectStatus('خارج الخدمة', this)">
+                            <i class="fas fa-ban status-option-icon" style="color: #dc2626;"></i>
+                            <span class="status-option-text">خارج الخدمة</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="statusVal" value="صالح">
+                </div>
+
+                <div class="grid-2">
+                    <!-- قراءة المؤشر والضغط -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-gauge-high text-blue-500"></i>
+                            مؤشر عداد الضغط (Pressure Gauge):
+                        </label>
+                        <select id="gaugeReading" class="form-select">
+                            <option value="المنطقة الخضراء (Normal)">🟢 في المنطقة الخضراء (Normal)</option>
+                            <option value="منخفض (Undercharged)">🟡 منخفض / يحتاج شحن (Low)</option>
+                            <option value="مرتفع (Overcharged)">🔴 مرتفع / زائد عن الحد (High)</option>
+                            <option value="غير مزود بعداد (CO2 / خرطوم)">⚪ غير مزود بعداد (طفاية CO2 / خرطوم)</option>
+                        </select>
+                    </div>
+
+                    <!-- صمام وتيلة الأمان -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-lock text-indigo-500"></i>
+                            صمام وتيلة الأمان: <span class="req-star">*</span>
+                        </label>
+                        <select id="sealIntact" class="form-select" required>
+                            <option value="سليم">✅ سليم ومثبت بإحكام</option>
+                            <option value="مفقود">⚠️ مفقود أو غير مثبت</option>
+                            <option value="مكسور">❌ مكسور أو تالف</option>
+                        </select>
+                    </div>
+
+                    <!-- الخرطوم والقاذف -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-spray-can text-cyan-600"></i>
+                            الخرطوم والقاذف (Hose & Nozzle):
+                        </label>
+                        <select id="hoseCondition" class="form-select">
+                            <option value="سليم">✅ سليم ونظيف ولا يوجد شروخ</option>
+                            <option value="تالف أو مشروخ">⚠️ به شروخ أو جفاف بالمطاط</option>
+                            <option value="مسدود">❌ مسدود أو تالف</option>
+                        </select>
+                    </div>
+
+                    <!-- جسم الأسطوانة والحامل -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-shield text-emerald-600"></i>
+                            جسم الأسطوانة والحامل الجداري:
+                        </label>
+                        <select id="bodyCondition" class="form-select">
+                            <option value="سليم ومثبت">✅ سليم ونظيف والحامل مثبت</option>
+                            <option value="به صدأ أو خدوش">⚠️ به صدأ سطحي أو خدوش</option>
+                            <option value="الحامل غير مثبت / عائق">❌ الحامل مخلخل أو يوجد عائق أمام الطفاية</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. التوثيق البصري والملاحظات والإجراءات -->
+            <div class="form-section sec-doc">
+                <div class="section-header">
+                    <div class="section-badge">4</div>
+                    <div class="section-title">التوثيق والملاحظات والإجراءات</div>
+                </div>
+                <div class="section-desc">إرفاق صورة توضيحية وتدوين الإجراءات المتخذة</div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-camera text-emerald-600"></i>
+                        صورة توضيحية للجهاز أثناء الفحص:
+                    </label>
+                    <div class="photo-area" id="photoArea" style="padding: 16px 12px; text-align: center; border: 2px dashed #cbd5e1; border-radius: 12px; background: #f8fafc;">
+                        <i class="fas fa-camera-retro" style="font-size: 28px; color: #dc2626; margin-bottom: 6px; display: block;"></i>
+                        <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b; margin-bottom: 4px;">إرفاق صورة توضيحية للجهاز أثناء الفحص</div>
+                        <div style="font-size: 0.76rem; color: #64748b; margin-bottom: 12px;">التصوير المباشر بالكاميرا لتوثيق حالة الجهاز</div>
+                        <div style="display: flex; justify-content: center; width: 100%; max-width: 320px; margin: 0 auto;">
+                            <button type="button" class="btn-action-photo" onclick="document.getElementById('photoInputCamera').click()" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 18px; background: #dc2626; color: #ffffff; border: none; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; box-shadow: 0 2px 6px rgba(220,38,38,0.25);">
+                                <i class="fas fa-camera"></i>
+                                <span>التقاط صورة بالكاميرا</span>
+                            </button>
+                        </div>
+                        <input type="file" id="photoInputCamera" accept="image/*" capture="environment" style="display: none;">
+                    </div>
+                    <div id="photoPreviewWrap" class="photo-preview-wrap" style="display: none;">
+                        <img id="photoPreview" src="" alt="Preview" class="photo-preview-img">
+                        <button type="button" class="photo-remove-btn" onclick="removePhoto()"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-comment-dots text-slate-600"></i>
+                        أية ملاحظات إضافية:
+                    </label>
+                    <textarea id="remarksInput" class="form-control" rows="2" placeholder="اكتب أية ملاحظات تم رصدها أثناء المعاينة..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-wrench text-amber-600"></i>
+                        الإجراء المتخذ / التوصيات:
+                    </label>
+                    <textarea id="actionsInput" class="form-control" rows="2" placeholder="مثال: تم ضبط ضغط الطفاية / تم استبدال تيلة الأمان / تم طلب إعادة تعبئة..."></textarea>
+                </div>
+            </div>
+
+            <!-- زر الإرسال -->
+            <button type="submit" id="submitBtn" class="submit-btn">
+                <i class="fas fa-clipboard-check"></i>
+                <span>تسجيل وتوثيق الفحص الشهري الآن</span>
+            </button>
+        </form>
+
+        <!-- شاشة النجاح وتأكيد التسجيل -->
+        <div id="successScreen" class="success-screen">
+            <div class="success-icon"><i class="fas fa-check"></i></div>
+            <h2 style="font-size: 1.35rem; font-weight: 900; color: #0f172a; margin-bottom: 6px;">تم توثيق الفحص بنجاح!</h2>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 12px;">تم حفظ سجل الفحص وتحديث بيانات الجهاز بالسجل المركزي للسلامة</p>
+            
+            <div style="display: inline-block; background: #eff6ff; border: 1.5px solid #bfdbfe; color: #1d4ed8; font-weight: 900; padding: 6px 18px; border-radius: 20px; font-size: 0.9rem;" id="successRefCode">
+                FEI-0000
+            </div>
+
+            <div class="receipt-card" id="receiptSummary">
+                <!-- ملخص الفحص -->
+            </div>
+
+            <div class="success-actions">
+                <button type="button" class="btn-primary-action" onclick="resetFormForNextDevice()">
+                    <i class="fas fa-plus"></i> فحص طفاية / جهاز آخر
+                </button>
+                <button type="button" class="btn-outline" onclick="window.print()">
+                    <i class="fas fa-print"></i> طباعة إيصال الفحص
+                </button>
+                <a href="forms-hub.html" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">
+                    <i class="fas fa-layer-group"></i> <span id="hubBtnText">الرجوع لبوابة النماذج</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- التذييل -->
+        <div class="footer-card">
+            <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">منظومة إدارة السلامة والصحة المهنية والبيئة (HSE 360 Platform) © 2026</div>
+            <div>نموذج معتمد طبقا لمعايير الأيزو والسلامة المهنية (ISO 45001 / NFPA 10) — جميع الحقوق محفوظة</div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-msg"></div>
+
+    <script>
+        // ==========================================
+        // Full Bilingual Translation Dictionary (i18n)
+        // ==========================================
+        const FIRE_INSP_I18N = {
+            ar: {
+                dir: 'rtl',
+                langBtn: 'EN',
+                pageTitle: 'SafetyHub | نموذج الفحص الشهري لمعدات الإطفاء',
+                deptName: 'إدارة السلامة والصحة المهنية والبيئة',
+                docTitle: 'نموذج الفحص الشهري لمعدات الإطفاء',
+                docSubtitle: 'Monthly Fire Equipment Inspection Form',
+                platformTag: 'بوابة الفحص الميداني',
+                hubBtn: 'بوابة النماذج',
+                docCodeKey: 'كود الوثيقة:',
+                docRevKey: 'رقم الإصدار:',
+                docDateKey: 'تاريخ الاعتماد:',
+                docStdKey: 'المعيار:',
+                sec1Title: 'بيانات وموقع جهاز الإطفاء',
+                sec1Desc: 'حدد الجهاز من القائمة أو امسح كود QR الملصق على الطفاية',
+                scanQrBtn: 'مسح كود QR',
+                siteLabel: 'المصنع / الموقع *',
+                sitePlaceholder: '— اختر المصنع / الموقع —',
+                deviceLabel: 'كود / رقم جهاز الإطفاء *',
+                devicePlaceholder: '— اختر كود الطفاية —',
+                deviceLockedNotice: 'تم قفل النموذج على هذا الجهاز المحدد بواسطة كود الـ QR',
+                sec2Title: 'بيانات الفحص والمفتش',
+                sec2Desc: 'تسجيل تاريخ الفحص واسم القائم بالمهمة',
+                dateLabel: 'تاريخ الفحص *',
+                inspectorLabel: 'القائم بالفحص (مسؤول السلامة) *',
+                inspectorPlaceholder: '— اختر اسمك من قائمة السلامة المعتمدة —',
+                sec3Title: 'الفحص الفني والظاهري لمهمة الإطفاء',
+                sec3Desc: 'فحص المؤشر وسلامة الصمام والأجزاء الميكانيكية',
+                statusLabel: 'الحالة العامة للطفاية *',
+                statusValid: 'سليم وصالح للاستخدام',
+                statusWarn: 'يحتاج صيانة / ملاحظات',
+                statusDanger: 'تالف / غير صالح',
+                pressureLabel: 'مؤشر الضغط (Pressure Gauge):',
+                pressure1: '✅ في المنطقة الخضراء (سليم)',
+                pressure2: '⚠️ منخفض (يحتاج شحن)',
+                pressure3: '⚠️ مرتفع (ضغط زائد)',
+                pressure4: '➖ لا ينطبق (طفاية CO2)',
+                sealLabel: 'محبس وتيلة الأمان والشريط الرصاصي (Safety Pin & Seal):',
+                seal1: '✅ سليم ومثبت بإحكام',
+                seal2: '⚠️ مفقود أو غير مثبت',
+                seal3: '❌ مكسور أو تالف',
+                hoseLabel: 'الخرطوم والقاذف (Hose & Nozzle):',
+                hose1: '✅ سليم ونظيف ولا يوجد شروخ',
+                hose2: '⚠️ به شروخ أو جفاف بالمطاط',
+                hose3: '❌ مسدود أو تالف',
+                bodyLabel: 'جسم الأسطوانة والحامل الجداري:',
+                body1: '✅ سليم ونظيف والحامل مثبت',
+                body2: '⚠️ به صدأ سطحي أو خدوش',
+                body3: '❌ الحامل مخلخل أو يوجد عائق أمام الطفاية',
+                sec4Title: 'التوثيق والملاحظات والإجراءات',
+                sec4Desc: 'إرفاق صورة توضيحية وتدوين الإجراءات المتخذة',
+                photoLabel: 'صورة توضيحية للجهاز أثناء الفحص:',
+                photoCaptureBtn: 'التقاط صورة بالكاميرا',
+                remarksLabel: 'أية ملاحظات إضافية:',
+                remarksPlaceholder: 'اكتب أية ملاحظات تم رصدها أثناء المعاينة...',
+                actionsLabel: 'الإجراء المتخذ / التوصيات:',
+                actionsPlaceholder: 'مثال: تم ضبط ضغط الطفاية / تم استبدال تيلة الأمان / تم طلب إعادة تعبئة...',
+                submitBtn: 'تسجيل وتوثيق الفحص الشهري الآن',
+                submittingBtn: 'جاري تسجيل وتوثيق الفحص...',
+                successTitle: 'تم توثيق الفحص بنجاح!',
+                successDesc: 'تم حفظ سجل الفحص وتحديث بيانات الجهاز بالسجل المركزي للسلامة',
+                newBtn: 'فحص طفاية أخرى',
+                backHubBtn: 'الرجوع إلى بوابة النماذج',
+                floatingHub: 'بوابة النماذج'
+            },
+            en: {
+                dir: 'ltr',
+                langBtn: 'AR',
+                pageTitle: 'SafetyHub | Monthly Fire Equipment Inspection Form',
+                deptName: 'HSE & Environmental Department',
+                docTitle: 'Monthly Fire Equipment Inspection Form',
+                docSubtitle: 'Monthly Fire Equipment Inspection Form',
+                platformTag: 'Field Inspection Portal',
+                hubBtn: 'Forms Hub',
+                docCodeKey: 'Doc Code:',
+                docRevKey: 'Version:',
+                docDateKey: 'Approval Date:',
+                docStdKey: 'Standard:',
+                sec1Title: 'Fire Equipment & Location Details',
+                sec1Desc: 'Select equipment from list or scan extinguisher QR code',
+                scanQrBtn: 'Scan QR Code',
+                siteLabel: 'Factory / Site *',
+                sitePlaceholder: '— Select Factory / Site —',
+                deviceLabel: 'Equipment Code / ID *',
+                devicePlaceholder: '— Select Equipment ID —',
+                deviceLockedNotice: 'Form locked to this specific equipment via QR code',
+                sec2Title: 'Inspection & Inspector Details',
+                sec2Desc: 'Record inspection date and certified safety officer name',
+                dateLabel: 'Inspection Date *',
+                inspectorLabel: 'Inspector (Safety Officer) *',
+                inspectorPlaceholder: '— Select Safety Officer —',
+                sec3Title: 'Technical & Visual Equipment Check',
+                sec3Desc: 'Inspect pressure gauge, safety pin, hose and physical condition',
+                statusLabel: 'General Equipment Status *',
+                statusValid: 'Valid & Operable',
+                statusWarn: 'Needs Maintenance / Warning',
+                statusDanger: 'Out of Service / Inoperable',
+                pressureLabel: 'Pressure Gauge Status:',
+                pressure1: '✅ In Green Zone (Normal)',
+                pressure2: '⚠️ Low Pressure (Needs Recharge)',
+                pressure3: '⚠️ Overcharged (High Pressure)',
+                pressure4: '➖ N/A (CO2 Cylinder)',
+                sealLabel: 'Safety Pin & Tamper Seal:',
+                seal1: '✅ Intact & Properly Secured',
+                seal2: '⚠️ Missing or Unsecured',
+                seal3: '❌ Broken or Damaged',
+                hoseLabel: 'Hose & Nozzle Condition:',
+                hose1: '✅ Clean, Intact & No Cracks',
+                hose2: '⚠️ Cracked or Dry Rubber',
+                hose3: '❌ Blocked or Damaged',
+                bodyLabel: 'Cylinder Body & Wall Bracket:',
+                body1: '✅ Clean, Intact & Bracket Mounted',
+                body2: '⚠️ Minor Surface Rust / Scratches',
+                body3: '❌ Loose Bracket or Blocked Access',
+                sec4Title: 'Documentation & Corrective Actions',
+                sec4Desc: 'Attach inspection photo and record corrective actions',
+                photoLabel: 'Equipment Inspection Photo:',
+                photoCaptureBtn: 'Capture Inspection Photo',
+                remarksLabel: 'Additional Notes / Findings:',
+                remarksPlaceholder: 'Enter any findings observed during inspection...',
+                actionsLabel: 'Action Taken / Recommendation:',
+                actionsPlaceholder: 'e.g. Pressure verified / Pin replaced / Sent for refill...',
+                submitBtn: 'Submit & Certify Fire Inspection',
+                submittingBtn: 'Saving & certifying inspection...',
+                successTitle: 'Inspection Recorded Successfully!',
+                successDesc: 'Inspection logged into safety registry and next inspection date updated.',
+                newBtn: 'Inspect Another Equipment',
+                backHubBtn: 'Back to Forms Portal',
+                floatingHub: 'Forms Hub'
+            }
+        };
+
+        let currentLang = 'ar';
+
+        function applyLanguage(lang) {
+            currentLang = lang;
+            const t = FIRE_INSP_I18N[lang] || FIRE_INSP_I18N.ar;
+            document.documentElement.lang = lang;
+            document.documentElement.dir = t.dir;
+            document.title = t.pageTitle;
+
+            const langBtnText = document.getElementById('langBtnText');
+            if (langBtnText) langBtnText.textContent = t.langBtn;
+
+            // ISO Header
+            const deptName = document.getElementById('isoDeptName');
+            if (deptName) deptName.textContent = t.deptName;
+            const docTitle = document.getElementById('isoDocTitle');
+            if (docTitle) docTitle.textContent = t.docTitle;
+            const docSubtitle = document.querySelector('#isoDocSubtitle');
+            if (docSubtitle) docSubtitle.textContent = t.docSubtitle;
+            const platformTag = document.getElementById('platformTagText');
+            if (platformTag) platformTag.textContent = t.platformTag;
+            const hubBtnText = document.getElementById('hubBtnText');
+            if (hubBtnText) hubBtnText.textContent = t.hubBtn;
+
+            const metaKeys = document.querySelectorAll('.iso-meta-key');
+            if (metaKeys[0]) metaKeys[0].textContent = t.docCodeKey;
+            if (metaKeys[1]) metaKeys[1].textContent = t.docRevKey;
+            if (metaKeys[2]) metaKeys[2].textContent = t.docDateKey;
+            if (metaKeys[3]) metaKeys[3].textContent = t.docStdKey;
+
+            // Section Titles & Descriptions
+            const secTitles = document.querySelectorAll('.section-title');
+            if (secTitles[0]) secTitles[0].textContent = t.sec1Title;
+            if (secTitles[1]) secTitles[1].textContent = t.sec2Title;
+            if (secTitles[2]) secTitles[2].textContent = t.sec3Title;
+            if (secTitles[3]) secTitles[3].textContent = t.sec4Title;
+
+            const secDescs = document.querySelectorAll('.section-desc');
+            if (secDescs[0]) secDescs[0].textContent = t.sec1Desc;
+            if (secDescs[1]) secDescs[1].textContent = t.sec2Desc;
+            if (secDescs[2]) secDescs[2].textContent = t.sec3Desc;
+            if (secDescs[3]) secDescs[3].textContent = t.sec4Desc;
+
+            // Scan QR Button
+            const scanQrBtn = document.querySelector('.btn-scan-qr-inline span');
+            if (scanQrBtn) scanQrBtn.textContent = t.scanQrBtn;
+
+            // Section 1 Labels
+            const siteLabel = document.querySelector('.sec-device .form-group:nth-of-type(1) .form-label');
+            if (siteLabel) siteLabel.innerHTML = `<i class="fas fa-building text-slate-500"></i> ${t.siteLabel}`;
+            const deviceLabel = document.querySelector('.sec-device .form-group:nth-of-type(2) .form-label');
+            if (deviceLabel) deviceLabel.innerHTML = `<i class="fas fa-barcode text-red-600"></i> ${t.deviceLabel}`;
+
+            const deviceNoticeText = document.getElementById('deviceLockedNoticeText');
+            if (deviceNoticeText) deviceNoticeText.textContent = t.deviceLockedNotice;
+
+            // Section 2 Labels
+            const dateLabel = document.querySelector('.sec-insp .form-group:nth-of-type(1) .form-label');
+            if (dateLabel) dateLabel.innerHTML = `<i class="fas fa-calendar-alt text-slate-500"></i> ${t.dateLabel}`;
+            const inspLabel = document.querySelector('.sec-insp .form-group:nth-of-type(2) .form-label');
+            if (inspLabel) inspLabel.innerHTML = `<i class="fas fa-user-check text-blue-600"></i> ${t.inspectorLabel}`;
+
+            // Section 3 Status & Checks
+            const statusLabel = document.querySelector('.sec-tech .form-label');
+            if (statusLabel) statusLabel.innerHTML = `<i class="fas fa-heart-pulse text-rose-600"></i> ${t.statusLabel}`;
+
+            const statusOptSpans = document.querySelectorAll('.status-option-btn span');
+            if (statusOptSpans[0]) statusOptSpans[0].textContent = t.statusValid;
+            if (statusOptSpans[1]) statusOptSpans[1].textContent = t.statusWarn;
+            if (statusOptSpans[2]) statusOptSpans[2].textContent = t.statusDanger;
+
+            // Select Dropdowns
+            const pressureSelect = document.getElementById('pressureGauge');
+            if (pressureSelect && pressureSelect.options.length >= 4) {
+                pressureSelect.options[0].textContent = t.pressure1;
+                pressureSelect.options[1].textContent = t.pressure2;
+                pressureSelect.options[2].textContent = t.pressure3;
+                pressureSelect.options[3].textContent = t.pressure4;
+            }
+
+            const sealSelect = document.getElementById('sealIntact');
+            if (sealSelect && sealSelect.options.length >= 3) {
+                sealSelect.options[0].textContent = t.seal1;
+                sealSelect.options[1].textContent = t.seal2;
+                sealSelect.options[2].textContent = t.seal3;
+            }
+
+            const hoseSelect = document.getElementById('hoseCondition');
+            if (hoseSelect && hoseSelect.options.length >= 3) {
+                hoseSelect.options[0].textContent = t.hose1;
+                hoseSelect.options[1].textContent = t.hose2;
+                hoseSelect.options[2].textContent = t.hose3;
+            }
+
+            const bodySelect = document.getElementById('bodyCondition');
+            if (bodySelect && bodySelect.options.length >= 3) {
+                bodySelect.options[0].textContent = t.body1;
+                bodySelect.options[1].textContent = t.body2;
+                bodySelect.options[2].textContent = t.body3;
+            }
+
+            // Section 4 Photos & Remarks
+            const photoLabel = document.querySelector('.sec-doc .form-group:nth-of-type(1) .form-label');
+            if (photoLabel) photoLabel.innerHTML = `<i class="fas fa-camera text-emerald-600"></i> ${t.photoLabel}`;
+            const photoBtn = document.querySelector('.btn-action-photo span');
+            if (photoBtn) photoBtn.textContent = t.photoCaptureBtn;
+
+            const remarksLabel = document.querySelector('.sec-doc .form-group:nth-of-type(2) .form-label');
+            if (remarksLabel) remarksLabel.innerHTML = `<i class="fas fa-comment-dots text-slate-600"></i> ${t.remarksLabel}`;
+            const remarksInp = document.getElementById('remarksInput');
+            if (remarksInp) remarksInp.placeholder = t.remarksPlaceholder;
+
+            const actionsLabel = document.querySelector('.sec-doc .form-group:nth-of-type(3) .form-label');
+            if (actionsLabel) actionsLabel.innerHTML = `<i class="fas fa-wrench text-amber-600"></i> ${t.actionsLabel}`;
+            const actionsInp = document.getElementById('actionsInput');
+            if (actionsInp) actionsInp.placeholder = t.actionsPlaceholder;
+
+            // Submit Button
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.innerHTML = `<i class="fas fa-clipboard-check"></i> <span>${t.submitBtn}</span>`;
+            }
+
+            // Success Screen
+            const succH2 = document.querySelector('#successScreen h2');
+            if (succH2) succH2.textContent = t.successTitle;
+            const succP = document.querySelector('#successScreen p');
+            if (succP) succP.textContent = t.successDesc;
+            const newBtn = document.querySelector('#successScreen button[onclick="resetInspectionForm()"]');
+            if (newBtn) newBtn.innerHTML = `<i class="fas fa-plus"></i> ${t.newBtn}`;
+            const succHub = document.querySelector('#successScreen a[href*="forms-hub.html"]');
+            if (succHub) succHub.innerHTML = `<i class="fas fa-layer-group"></i> ${t.backHubBtn}`;
+
+            // Floating Hub
+            const floatHub = document.querySelector('.floating-hub-btn span');
+            if (floatHub) floatHub.textContent = t.floatingHub;
+
+            // Update hub links href with ?lang=
+            document.querySelectorAll('a[href*="forms-hub.html"]').forEach(a => {
+                a.href = `forms-hub.html${lang === 'en' ? '?lang=en' : ''}`;
+            });
+
+            try {
+                localStorage.setItem('HSE_PORTAL_LANG', lang);
+                localStorage.setItem('language', lang);
+            } catch(e) {}
+        }
+
+        function toggleLanguage() {
+            const next = currentLang === 'ar' ? 'en' : 'ar';
+            applyLanguage(next);
+        }
+
+        const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+        let allAssets = [];
+        let currentPhotoBase64 = '';
+
+        function getEffectiveApiUrl() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const p = urlParams.get('apiUrl') || urlParams.get('api');
+                if (p && p.includes('script.google.com')) return p;
+                const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
+                if (s1) {
+                    const parsed = JSON.parse(s1);
+                    if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+                }
+                const s2 = localStorage.getItem('hse_app_settings');
+                if (s2) {
+                    const parsed = JSON.parse(s2);
+                    if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+                }
+            } catch(e) {}
+            return DEFAULT_API_URL;
+        }
+
+        
+        // ═══ منطق ماسح الـ QR المدمج ═══
+        let html5QrScannerInstance = null;
+        let currentFacingMode = 'environment';
+        let isTorchOn = false;
+
+        function playSuccessChime() {
+            try {
+                if (navigator.vibrate) navigator.vibrate([70, 40, 70]);
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+                osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08); // A5
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.25);
+            } catch(e) {}
+        }
+
+        async function openQrScannerModal() {
+            const modal = document.getElementById('qrScannerModal');
+            if (!modal) return;
+
+            document.getElementById('manualQrInput').value = '';
+            document.getElementById('qr-camera-error').style.display = 'none';
+            modal.classList.add('active');
+
+            if (typeof Html5Qrcode === 'undefined') {
+                showToast('جاري تحميل مكتبة قراءة الكود...', 'info', 2000);
+                return;
+            }
+
+            try {
+                if (html5QrScannerInstance) {
+                    try { await html5QrScannerInstance.stop(); } catch(e) {}
+                    html5QrScannerInstance.clear();
+                }
+
+                html5QrScannerInstance = new Html5Qrcode('qr-reader');
+                const config = {
+                    fps: 15,
+                    qrbox: { width: 220, height: 220 },
+                    aspectRatio: 1.0
+                };
+
+                await html5QrScannerInstance.start(
+                    { facingMode: currentFacingMode },
+                    config,
+                    (decodedText) => {
+                        handleScannedCode(decodedText);
+                    },
+                    (errorMessage) => {
+                        // Scan frame miss - ignore normal polling
+                    }
+                );
+            } catch(err) {
+                console.error('Camera start error:', err);
+                document.getElementById('qr-camera-error').style.display = 'flex';
+            }
+        }
+
+        async function closeQrScannerModal() {
+            const modal = document.getElementById('qrScannerModal');
+            if (modal) modal.classList.remove('active');
+
+            if (html5QrScannerInstance) {
+                try {
+                    await html5QrScannerInstance.stop();
+                    html5QrScannerInstance.clear();
+                } catch(e) {}
+                html5QrScannerInstance = null;
+            }
+            isTorchOn = false;
+        }
+
+        async function switchScannerCamera() {
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            if (html5QrScannerInstance) {
+                try {
+                    await html5QrScannerInstance.stop();
+                    html5QrScannerInstance.clear();
+                } catch(e) {}
+                html5QrScannerInstance = null;
+            }
+            openQrScannerModal();
+        }
+
+        async function toggleScannerTorch() {
+            if (!html5QrScannerInstance) return;
+            try {
+                isTorchOn = !isTorchOn;
+                await html5QrScannerInstance.applyVideoConstraints({
+                    advanced: [{ torch: isTorchOn }]
+                });
+                showToast(isTorchOn ? 'تم تشغيل الفلاش' : 'تم إيقاف الفلاش', 'info', 1500);
+            } catch(e) {
+                showToast('الفلاش غير مدعوم على هذه الكاميرا', 'warning', 2000);
+            }
+        }
+
+        function handleScannedCode(rawText) {
+            if (!rawText) return;
+            const text = String(rawText).trim();
+
+            let targetId = '';
+
+            // 1. فحص إذا كان رابط يحتوي على id= أو assetId= أو deviceId=
+            try {
+                if (text.includes('?') || text.startsWith('http')) {
+                    const url = new URL(text.startsWith('http') ? text : 'https://dummy.local/' + text);
+                    targetId = url.searchParams.get('id') || url.searchParams.get('assetId') || url.searchParams.get('deviceId') || '';
+                }
+            } catch(e) {}
+
+            // 2. فحص إذا كان JSON
+            if (!targetId && text.startsWith('{') && text.endsWith('}')) {
+                try {
+                    const parsed = JSON.parse(text);
+                    targetId = parsed.id || parsed.assetId || parsed.deviceId || '';
+                } catch(e) {}
+            }
+
+            // 3. استخدام النص ككود مباشر
+            if (!targetId) {
+                targetId = text;
+            }
+
+            const cleanTarget = targetId.toLowerCase().trim();
+
+            // البحث في قائمة الأجهزة المحملة
+            const match = allAssets.find(a => {
+                const id = String(a.id || '').toLowerCase().trim();
+                const num = String(a.number || '').toLowerCase().trim();
+                return id === cleanTarget || num === cleanTarget || cleanTarget.includes(id) || cleanTarget.includes(num);
+            });
+
+            if (match) {
+                playSuccessChime();
+                const select = document.getElementById('deviceSelect');
+                if (select) {
+                    select.value = match.id;
+                    updateDeviceCard(match);
+                }
+                showToast(`✅ تم التعرف على الجهاز: ${match.id} (${match.location || ''})`, 'success', 3500);
+                closeQrScannerModal();
+            } else {
+                showToast(`⚠️ تم قراءة الكود (${targetId}) ولكن لم يُعثر على جهاز مطابق في النظام`, 'warning', 4000);
+            }
+        }
+
+        function submitManualDeviceSearch() {
+            const val = document.getElementById('manualQrInput')?.value?.trim();
+            if (!val) {
+                showToast('يرجى كتابة كود أو رقم الجهاز', 'warning', 2000);
+                return;
+            }
+            handleScannedCode(val);
+        }
+
+
+        function showToast(msg, type = 'info', duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast-msg ' + type;
+            toast.style.display = 'flex';
+            if (duration > 0) {
+                setTimeout(() => { toast.style.display = 'none'; }, duration);
+            }
+        }
+
+        // تهيئة الصفحة
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const qLang = urlParams.get('lang');
+                const savedLang = qLang || localStorage.getItem('HSE_PORTAL_LANG') || localStorage.getItem('language') || 'ar';
+                applyLanguage(savedLang);
+            } catch(e) {
+                applyLanguage('ar');
+            }
+
+            // ضبط تاريخ اليوم
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('inspectionDate').value = today;
+
+            // قراءة الباراميترز من الرابط
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetId = urlParams.get('id') || urlParams.get('deviceId') || urlParams.get('assetId') || '';
+            const presetInspector = urlParams.get('inspector') || '';
+
+            // محاولة قراءة التكوين المدمج في hash (#cfg=...)
+            let embeddedConfig = null;
+            if (window.location.hash && window.location.hash.includes('cfg=')) {
+                try {
+                    const b64 = decodeURIComponent(window.location.hash.split('cfg=')[1]);
+                    const jsonStr = decodeURIComponent(escape(atob(b64)));
+                    embeddedConfig = JSON.parse(jsonStr);
+                } catch(e) {}
+            }
+
+            if (embeddedConfig) {
+                applyConfigData(embeddedConfig, targetId, presetInspector);
+                document.getElementById('loadingBar').style.display = 'none';
+            }
+
+            // جلب البيانات المحدثة من السيرفر
+            await fetchServerConfig(targetId, presetInspector);
+        });
+
+        async function fetchServerConfig(targetId, presetInspector) {
+            const targetUrl = getEffectiveApiUrl();
+            try {
+                const res = await fetch(targetUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'getPublicFireInspectionConfig' })
+                });
+                const result = await res.json();
+                if (result && result.success) {
+                    applyConfigData(result, targetId, presetInspector);
+                }
+            } catch (err) {
+                console.warn('⚠️ Server config fetch fallback:', err);
+            } finally {
+                document.getElementById('loadingBar').style.display = 'none';
+            }
+        }
+
+                function updatePageFaviconAndLogo(logoUrl) {
+            if (!logoUrl || typeof logoUrl !== 'string' || logoUrl.trim().length < 5) return;
+            const cleanUrl = logoUrl.trim();
+            
+            // 1. Update header logo
+            const logoImg = document.getElementById('isoLogoImg');
+            if (logoImg) {
+                logoImg.src = cleanUrl;
+                logoImg.style.display = 'block';
+            }
+
+            // 2. Update all browser favicon links
+            document.querySelectorAll('link[rel*="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]').forEach(link => {
+                link.href = cleanUrl;
+            });
+
+            // 3. Cache locally
+            try {
+                localStorage.setItem('hse_company_logo', cleanUrl);
+                localStorage.setItem('company_logo', cleanUrl);
+            } catch(e) {}
+        }
+
+        // Apply immediately from local cache on startup
+        (function initInstantLogo() {
+            try {
+                const cachedLogo = localStorage.getItem('hse_company_logo') || localStorage.getItem('company_logo');
+                if (cachedLogo) {
+                    updatePageFaviconAndLogo(cachedLogo);
+                } else {
+                    const localData = localStorage.getItem('appData');
+                    if (localData) {
+                        const p = JSON.parse(localData);
+                        const l = p.companyLogo || (p.companySettings && p.companySettings.logo);
+                        if (l) updatePageFaviconAndLogo(l);
+                    }
+                }
+            } catch(e) {}
+        })();
+
+        function applyConfigData(config, targetId, presetInspector) {
+            let finalLogo = config.logo || config.companyLogo;
+            if (!finalLogo) {
+                try {
+                    finalLogo = localStorage.getItem('hse_company_logo') || localStorage.getItem('company_logo');
+                    if (!finalLogo) {
+                        const localData = localStorage.getItem('appData');
+                        if (localData) {
+                            const p = JSON.parse(localData);
+                            finalLogo = p.companyLogo || (p.companySettings && p.companySettings.logo) || (p.settings && p.settings.logo);
+                        }
+                    }
+                    if (!finalLogo) {
+                        const cData = localStorage.getItem('companySettings') || localStorage.getItem('hse_company_settings');
+                        if (cData) {
+                            const p2 = JSON.parse(cData);
+                            finalLogo = p2.logo || p2.companyLogo;
+                        }
+                    }
+                } catch(e) {}
+            }
+            if (finalLogo) {
+                updatePageFaviconAndLogo(finalLogo);
+            }
+
+            if (config.assets && Array.isArray(config.assets)) {
+                allAssets = config.assets;
+                populateDeviceSelect(allAssets, targetId);
+            }
+
+            if (config.safetyMembers && Array.isArray(config.safetyMembers)) {
+                populateInspectors(config.safetyMembers, presetInspector);
+            }
+        }
+
+        function populateDeviceSelect(assets, preselectId) {
+            const select = document.getElementById('deviceSelect');
+            const lockedNotice = document.getElementById('deviceLockedNotice');
+            const lockedText = document.getElementById('deviceLockedNoticeText');
+
+            if (preselectId) {
+                const found = assets.find(a => a.id.toLowerCase() === preselectId.toLowerCase());
+                if (found) {
+                    select.innerHTML = '';
+                    const opt = document.createElement('option');
+                    opt.value = found.id;
+                    const locStr = found.location ? ` | ${found.location}` : '';
+                    const typeStr = found.type ? ` (${found.type})` : '';
+                    opt.textContent = `${found.id} — ${found.number || found.id}${typeStr}${locStr}`;
+                    select.appendChild(opt);
+                    select.value = found.id;
+                    select.disabled = true;
+                    select.style.backgroundColor = '#f8fafc';
+                    select.style.cursor = 'not-allowed';
+
+                    if (lockedNotice) {
+                        lockedNotice.style.display = 'flex';
+                        lockedText.innerHTML = `تم قفل النموذج على هذا الجهاز المحدد برمز الـ QR: <strong>${found.id}</strong> (لا يمكن اختيار أجهزة أخرى)`;
+                    }
+                    updateDeviceCard(found);
+                    return;
+                }
+            }
+
+            // في حال تم فتح الرابط العام بدون باراميتر جهاز محدد
+            if (lockedNotice) lockedNotice.style.display = 'none';
+            select.disabled = false;
+            select.style.backgroundColor = '#ffffff';
+            select.style.cursor = 'default';
+            const t = FIRE_INSP_I18N[currentLang] || FIRE_INSP_I18N.ar;
+            select.innerHTML = `<option value="">${t.devicePlaceholder || '— اختر كود الطفاية —'}</option>`;
+            
+            assets.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                const locStr = a.location ? ` | ${a.location}` : '';
+                const typeStr = a.type ? ` (${a.type})` : '';
+                opt.textContent = `${a.id} — ${a.number || a.id}${typeStr}${locStr}`;
+                select.appendChild(opt);
+            });
+
+            select.addEventListener('change', () => {
+                const curId = select.value;
+                const asset = allAssets.find(a => a.id === curId);
+                if (asset) {
+                    updateDeviceCard(asset);
+                } else {
+                    document.getElementById('deviceCardPreview').style.display = 'none';
+                }
+            });
+        }
+
+        function updateDeviceCard(asset) {
+            const card = document.getElementById('deviceCardPreview');
+            document.getElementById('cardDeviceId').textContent = asset.id || 'EFA-0000';
+            document.getElementById('cardDeviceType').textContent = (asset.type || (currentLang === 'en' ? 'Fire Extinguisher' : 'طفاية حريق')) + (asset.capacity ? ` - ${asset.capacity}` : '');
+            document.getElementById('cardDeviceLocation').textContent = (asset.location || (currentLang === 'en' ? 'Unspecified' : 'غير محدد')) + (asset.subLocation ? ` (${asset.subLocation})` : '');
+            document.getElementById('cardDeviceNumber').textContent = asset.number || asset.id || '-';
+            document.getElementById('cardDeviceLastInsp').textContent = asset.lastInspection || (currentLang === 'en' ? 'Not inspected yet' : 'لم يفحص بعد');
+            
+            const statusEl = document.getElementById('cardDeviceStatus');
+            statusEl.textContent = asset.status || (currentLang === 'en' ? 'Valid' : 'صالح');
+            if (asset.status === 'صالح' || asset.status === 'Valid') {
+                statusEl.style.color = '#86efac';
+            } else if (asset.status === 'يحتاج صيانة' || asset.status === 'Needs Maintenance') {
+                statusEl.style.color = '#fde68a';
+            } else {
+                statusEl.style.color = '#fca5a5';
+            }
+
+            card.style.display = 'block';
+        }
+
+        function populateInspectors(members, preset) {
+            const select = document.getElementById('inspectorSelect');
+            const customOption = select.querySelector('option[value="__CUSTOM__"]');
+            if (customOption) {
+                customOption.textContent = currentLang === 'en' ? '➕ Other Inspector (Manual Entry)...' : '➕ اسم آخر (إدخال يدوي)...';
+            }
+            const firstOpt = select.querySelector('option[value=""]');
+            if (firstOpt) {
+                const t = FIRE_INSP_I18N[currentLang] || FIRE_INSP_I18N.ar;
+                firstOpt.textContent = t.inspectorPlaceholder || '— اختر مسؤول السلامة —';
+            }
+            
+            // تنظيف الخيارات السابقة لتجنب التكرار
+            const options = Array.from(select.querySelectorAll('option'));
+            options.forEach(opt => {
+                if (opt.value !== '' && opt.value !== '__CUSTOM__') {
+                    opt.remove();
+                }
+            });
+
+            const seen = new Set();
+            members.forEach(m => {
+                const name = typeof m === 'string' ? m.trim() : (m.name ? m.name.trim() : '');
+                if (!name || seen.has(name.toLowerCase())) return;
+                seen.add(name.toLowerCase());
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                select.insertBefore(opt, customOption);
+            });
+
+            if (preset) {
+                const found = members.find(m => (typeof m === 'string' ? m.trim() : m.name?.trim()) === preset.trim());
+                if (found) {
+                    select.value = preset.trim();
+                } else {
+                    select.value = '__CUSTOM__';
+                    document.getElementById('customInspectorGroup').style.display = 'block';
+                    document.getElementById('customInspectorInput').value = preset;
+                }
+            }
+
+            select.addEventListener('change', () => {
+                const isCustom = select.value === '__CUSTOM__';
+                document.getElementById('customInspectorGroup').style.display = isCustom ? 'block' : 'none';
+                if (isCustom) document.getElementById('customInspectorInput').focus();
+            });
+        }
+
+        function selectStatus(status, el) {
+            document.querySelectorAll('.status-option-btn').forEach(btn => btn.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('statusVal').value = status;
+        }
+
+        // معالجة الصور وضغطها بكفاءة
+        ['photoInput', 'photoInputCamera', 'photoInputGallery'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        const img = new Image();
+                        img.onload = function() {
+                            const canvas = document.createElement('canvas');
+                            const maxDim = 1100;
+                            let w = img.width;
+                            let h = img.height;
+                            if (w > maxDim || h > maxDim) {
+                                if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                                else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                            }
+                            canvas.width = w;
+                            canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+
+                            // Stamp official inspection watermark
+                            const devId = document.getElementById('deviceSelect')?.value || 'طفاية حريق';
+                            const bannerHeight = Math.max(36, Math.round(h * 0.08));
+                            ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+                            ctx.fillRect(0, h - bannerHeight, w, bannerHeight);
+                            ctx.fillStyle = '#dc2626';
+                            ctx.fillRect(0, h - bannerHeight, w, 3);
+                            
+                            ctx.fillStyle = '#ffffff';
+                            ctx.font = `bold ${Math.max(11, Math.round(bannerHeight * 0.32))}px 'Cairo', sans-serif`;
+                            ctx.textAlign = 'right';
+                            const now = new Date();
+                            const dateStr = now.toLocaleDateString('ar-EG') + ' ' + now.toLocaleTimeString('ar-EG');
+                            ctx.fillText(`🧯 ICAPP HSE | فحص معدات الإطفاء (${devId})`, w - 12, h - bannerHeight + (bannerHeight * 0.42));
+                            ctx.fillStyle = '#cbd5e1';
+                            ctx.font = `${Math.max(10, Math.round(bannerHeight * 0.28))}px 'Cairo', sans-serif`;
+                            ctx.fillText(`📅 ${dateStr} | تم الفحص والتوثيق الميداني المعتمد`, w - 12, h - (bannerHeight * 0.22));
+
+                            currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.72);
+                            
+                            document.getElementById('photoPreview').src = currentPhotoBase64;
+                            document.getElementById('photoPreviewWrap').style.display = 'inline-block';
+                            document.getElementById('photoArea').style.display = 'none';
+                        };
+                        img.src = evt.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        });
+
+        function removePhoto() {
+            currentPhotoBase64 = '';
+            const cam = document.getElementById('photoInputCamera');
+            if (cam) cam.value = '';
+            document.getElementById('photoPreview').src = '';
+            document.getElementById('photoPreviewWrap').style.display = 'none';
+            document.getElementById('photoArea').style.display = 'block';
+        }
+
+        // إرسال النموذج
+        document.getElementById('fireInspectionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorAlert = document.getElementById('errorAlert');
+            const errorAlertText = document.getElementById('errorAlertText');
+            errorAlert.style.display = 'none';
+
+            const assetId = document.getElementById('deviceSelect').value;
+            if (!assetId) {
+                errorAlertText.textContent = 'يرجى اختيار جهاز الإطفاء المراد فحصه (*)';
+                errorAlert.style.display = 'block';
+                showToast('يرجى اختيار جهاز الإطفاء', 'error');
+                return;
+            }
+
+            let inspectorName = document.getElementById('inspectorSelect').value;
+            if (inspectorName === '__CUSTOM__') {
+                inspectorName = document.getElementById('customInspectorInput').value.trim();
+            }
+            if (!inspectorName) {
+                errorAlertText.textContent = 'يرجى تحديد أو إدخال اسم مسؤول السلامة (*)';
+                errorAlert.style.display = 'block';
+                showToast('يرجى تحديد اسم مسؤول السلامة', 'error');
+                return;
+            }
+
+            const checkDate = document.getElementById('inspectionDate').value;
+            const statusVal = document.getElementById('statusVal').value || 'صالح';
+            const gaugeReading = document.getElementById('gaugeReading').value;
+            const sealIntact = document.getElementById('sealIntact').value;
+            const hoseCondition = document.getElementById('hoseCondition').value;
+            const bodyCondition = document.getElementById('bodyCondition').value;
+            const remarks = document.getElementById('remarksInput').value.trim();
+            const actions = document.getElementById('actionsInput').value.trim();
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>جاري حفظ وتوثيق الفحص بالسجلات...</span>';
+            showToast('جاري إرسال وتوثيق الفحص في قاعدة البيانات...', 'info', 0);
+
+            const payload = {
+                action: 'submitPublicFireInspection',
+                assetId: assetId,
+                checkDate: checkDate,
+                inspector: inspectorName,
+                status: statusVal,
+                gaugeReading: gaugeReading,
+                sealIntact: sealIntact,
+                hoseCondition: hoseCondition,
+                bodyCondition: bodyCondition,
+                remarks: remarks,
+                actions: actions,
+                photoBase64: currentPhotoBase64
+            };
+
+            const targetApiUrl = getEffectiveApiUrl();
+            let success = false;
+            let resultData = null;
+            let errMsg = '';
+
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 85000);
+
+                    const response = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload),
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+
+                    const res = await response.json();
+                    if (res && res.success) {
+                        success = true;
+                        resultData = res;
+                        break;
+                    } else {
+                        errMsg = (res && res.message) ? res.message : 'فشل تسجيل الفحص من الخادم';
+                    }
+                } catch(err) {
+                    if (err.name === 'AbortError' || String(err).includes('abort')) {
+                        errMsg = 'استغرقت عملية الإرسال وقتاً طويلاً. يرجى التحقق من اتصال الإنترنت ومن نشر الإصدار الجديد في Google Apps Script.';
+                    } else {
+                        errMsg = err.message || 'تعذر الاتصال بالخادم';
+                    }
+                    if (attempt < 2) await new Promise(r => setTimeout(r, 1500));
+                }
+            }
+
+            if (success && resultData) {
+                showSuccessScreen(resultData.id || 'FEI-0000', payload);
+            } else {
+                // حفظ أوفلاين إذا تعذر الاتصال
+                const offlineRef = 'FEI-OFFLINE-' + Math.floor(1000 + Math.random()*9000);
+                saveFireInspectionOffline(payload, offlineRef);
+                showSuccessScreen(offlineRef + ' (محلي)', payload);
+                showToast('تم حفظ الفحص محلياً بنجاح وسيتم مزامنته تلقائياً عند توفر الإنترنت!', 'info', 5000);
+            }
+        });
+
+        // Offline Queue Management
+        function saveFireInspectionOffline(payload, refCode) {
+            try {
+                const q = JSON.parse(localStorage.getItem('HSE_OFFLINE_FIRE_INSPECTION_QUEUE') || '[]');
+                q.push({ payload, refCode, timestamp: Date.now() });
+                localStorage.setItem('HSE_OFFLINE_FIRE_INSPECTION_QUEUE', JSON.stringify(q));
+            } catch(e) {}
+        }
+
+        async function syncFireInspectionOfflineQueue() {
+            try {
+                const q = JSON.parse(localStorage.getItem('HSE_OFFLINE_FIRE_INSPECTION_QUEUE') || '[]');
+                if (q.length === 0 || !navigator.onLine) return;
+                const targetApiUrl = getEffectiveApiUrl();
+                const remaining = [];
+                for (const item of q) {
+                    try {
+                        const res = await fetch(targetApiUrl, {
+                            method: 'POST',
+                            mode: 'cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'submitFireInspection', ...item.payload })
+                        });
+                        const data = await res.json();
+                        if (!data || !data.success) remaining.push(item);
+                    } catch(e) {
+                        remaining.push(item);
+                    }
+                }
+                localStorage.setItem('HSE_OFFLINE_FIRE_INSPECTION_QUEUE', JSON.stringify(remaining));
+            } catch(e) {}
+        }
+
+        window.addEventListener('online', () => {
+            console.log('Network restored — syncing Fire Inspection offline queue...');
+            syncFireInspectionOfflineQueue();
+        });
+        if (navigator.onLine) {
+            setTimeout(syncFireInspectionOfflineQueue, 3000);
+        }
+
+        function showSuccessScreen(refId, payload) {
+            showToast('تم تسجيل الفحص بنجاح!', 'success', 4000);
+            document.getElementById('fireInspectionForm').style.display = 'none';
+            document.getElementById('successRefCode').textContent = 'رقم الفحص: ' + refId;
+
+            const selectedAsset = allAssets.find(a => a.id === payload.assetId) || {};
+            const summary = document.getElementById('receiptSummary');
+            summary.innerHTML = `
+                <div class="receipt-row">
+                    <span class="receipt-label"><i class="fas fa-fire-extinguisher text-red-600"></i> كود الجهاز:</span>
+                    <span class="receipt-val">${payload.assetId} (${selectedAsset.type || 'طفاية'})</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label"><i class="fas fa-map-pin text-blue-600"></i> موقع الجهاز:</span>
+                    <span class="receipt-val">${selectedAsset.location || '-'}</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label"><i class="fas fa-calendar-check text-blue-600"></i> تاريخ الفحص:</span>
+                    <span class="receipt-val">${payload.checkDate}</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label"><i class="fas fa-user-shield text-blue-600"></i> مسؤول الفحص:</span>
+                    <span class="receipt-val">${payload.inspector}</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label"><i class="fas fa-heart-pulse text-red-600"></i> الحالة المسجلة:</span>
+                    <span class="receipt-val" style="color: ${payload.status === 'صالح' ? '#16a34a' : '#dc2626'}">${payload.status}</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label"><i class="fas fa-lock text-indigo-600"></i> صمام وتيلة الأمان:</span>
+                    <span class="receipt-val">${payload.sealIntact}</span>
+                </div>
+                ${payload.actions ? `
+                <div class="receipt-row">
+                    <span class="receipt-label"><i class="fas fa-wrench text-amber-600"></i> الإجراء المتخذ:</span>
+                    <span class="receipt-val">${payload.actions}</span>
+                </div>` : ''}
+            `;
+
+            document.getElementById('successScreen').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetFormForNextDevice() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('id') || urlParams.get('deviceId')) {
+                // عند الانتهاء من فحص جهاز عبر QR، إزالة الباراميتر للعودة للوضع العام أو مسح جهاز آخر
+                window.location.href = window.location.pathname;
+                return;
+            }
+            document.getElementById('fireInspectionForm').reset();
+            document.getElementById('inspectionDate').value = new Date().toISOString().split('T')[0];
+            removePhoto();
+            selectStatus('صالح', document.querySelector('.status-option-btn.status-valid'));
+            const select = document.getElementById('deviceSelect');
+            select.value = '';
+            select.disabled = false;
+            select.style.backgroundColor = '#ffffff';
+            select.style.cursor = 'default';
+            const lockedNotice = document.getElementById('deviceLockedNotice');
+            if (lockedNotice) lockedNotice.style.display = 'none';
+            document.getElementById('deviceCardPreview').style.display = 'none';
+            document.getElementById('customInspectorGroup').style.display = 'none';
+            document.getElementById('errorAlert').style.display = 'none';
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-clipboard-check"></i> <span>تسجيل وتوثيق الفحص الشهري الآن</span>';
+            
+            document.getElementById('successScreen').style.display = 'none';
+            document.getElementById('fireInspectionForm').style.display = 'block';
+        }
+    </script>
+
+    <!-- ═══ نافذة ماسح الـ QR المدمجة داخل النموذج ═══ -->
+    <div id="qrScannerModal" class="qr-modal-overlay">
+        <div class="qr-modal-box">
+            <div class="qr-modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.95rem; line-height: 1.2;">مسح كود الجهاز (QR Code)</div>
+                        <div style="font-size: 0.68rem; opacity: 0.85;">وجّه الكاميرا نحو ملصق الطفاية</div>
+                    </div>
+                </div>
+                <button type="button" onclick="closeQrScannerModal()" style="background: rgba(255,255,255,0.15); border: none; color: #fff; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; cursor: pointer; transition: all .2s;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="qr-modal-body">
+                <div class="qr-scanner-viewport">
+                    <div id="qr-reader"></div>
+                    <div class="qr-scan-laser"></div>
+                    <div class="qr-viewfinder-guide"></div>
+                    <div id="qr-camera-error" style="display: none; position: absolute; inset: 0; background: #0f172a; color: #fca5a5; padding: 20px; text-align: center; flex-direction: column; align-items: center; justify-content: center; font-size: 0.82rem; z-index: 15;">
+                        <i class="fas fa-video-slash" style="font-size: 2.2rem; color: #ef4444; margin-bottom: 8px;"></i>
+                        <span style="font-weight: 700;">تعذر فتح الكاميرا</span>
+                        <span style="font-size: 0.72rem; color: #94a3b8; margin-top: 4px;">يرجى السماح بصلاحية الكاميرا أو استخدام البحث اليدوي أدناه.</span>
+                    </div>
+                </div>
+
+                <!-- أدوات تبديل الكاميرا والفلاش -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 8px;">
+                    <button type="button" id="btnSwitchCamera" onclick="switchScannerCamera()" style="flex: 1; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 0.78rem; font-weight: 700; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fas fa-sync-alt text-blue-600"></i>
+                        <span>تبديل الكاميرا</span>
+                    </button>
+                    <button type="button" id="btnToggleTorch" onclick="toggleScannerTorch()" style="flex: 1; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 10px; font-size: 0.78rem; font-weight: 700; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fas fa-bolt text-amber-500"></i>
+                        <span>الفلاش / الإضاءة</span>
+                    </button>
+                </div>
+
+                <!-- بحث يدوي سريع بالرقم أو الكود -->
+                <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #cbd5e1;">
+                    <label style="font-size: 0.75rem; font-weight: 700; color: #64748b; display: block; margin-bottom: 5px;">
+                        أو اكتب كود الجهاز / الرقم يدويًا:
+                    </label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="text" id="manualQrInput" placeholder="مثال: EFA-0001 أو رقم الجهاز" style="flex: 1; padding: 8px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem; font-weight: 600;" onkeypress="if(event.key==='Enter'){event.preventDefault();submitManualDeviceSearch();}">
+                        <button type="button" onclick="submitManualDeviceSearch()" style="background: #dc2626; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all .2s;">
+                            اختيار
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تسجيل Service Worker لضمان استقرار التطبيق وعمله أوفلاين ومحركات الطوارئ والطقس -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+            });
+        }
+
+        // ==========================================
+        // Unified Header Tools (Ping, Weather, SOS)
+        // ==========================================
+        // ======================================================================
+        // 🚨 Emergency SOS Contacts Engine (Dynamic Cloud & Sheets Sync)
+        // ======================================================================
+        const DEFAULT_EMERGENCY_CONTACTS = {
+            clinicPhone: '01000000001',
+            hsePhone: '01000000002',
+            firePhone: '01000000003',
+            securityPhone: '01000000004',
+            ambulancePhone: '123',
+            nationalFirePhone: '180',
+            policePhone: '122'
+        };
+
+        function getCachedEmergencyContacts() {
+            try {
+                const raw = localStorage.getItem('HSE_EMERGENCY_CONTACTS_CACHE');
+                return raw ? JSON.parse(raw) : DEFAULT_EMERGENCY_CONTACTS;
+            } catch(e) {
+                return DEFAULT_EMERGENCY_CONTACTS;
+            }
+        }
+
+        function saveCachedEmergencyContacts(data) {
+            try {
+                localStorage.setItem('HSE_EMERGENCY_CONTACTS_CACHE', JSON.stringify(data));
+            } catch(e) {}
+        }
+
+        function renderEmergencyContacts(contacts) {
+            const c = contacts || getCachedEmergencyContacts();
+            const map = {
+                valCallClinic: c.clinicPhone,
+                linkCallClinic: c.clinicPhone,
+                valCallHse: c.hsePhone,
+                linkCallHse: c.hsePhone,
+                valCallFire: c.firePhone,
+                linkCallFire: c.firePhone,
+                valCallSecurity: c.securityPhone,
+                linkCallSecurity: c.securityPhone,
+                valCallAmbulance: c.ambulancePhone,
+                linkCallAmbulance: c.ambulancePhone,
+                valCallNatFire: c.nationalFirePhone,
+                linkCallNatFire: c.nationalFirePhone,
+                valCallPolice: c.policePhone,
+                linkCallPolice: c.policePhone
+            };
+
+            for (const [id, val] of Object.entries(map)) {
+                const el = document.getElementById(id);
+                if (!el) continue;
+                if (id.startsWith('linkCall')) {
+                    el.href = `tel:${val || ''}`;
+                } else {
+                    el.textContent = val || '';
+                }
+            }
+        }
+
+        async function fetchEmergencyContactsCloud() {
+            renderEmergencyContacts();
+            if (!navigator.onLine) return;
+            try {
+                const targetApiUrl = (typeof SCRIPT_URL !== 'undefined') ? SCRIPT_URL : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+                const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data && data.success && data.contacts) {
+                    saveCachedEmergencyContacts(data.contacts);
+                    renderEmergencyContacts(data.contacts);
+                }
+            } catch(e) {}
+        }
+
+        function openEmergencySosModal(event) {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            renderEmergencyContacts();
+            const modal = document.getElementById('emergencyContactsModal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeEmergencySosModal(event) {
+            const modal = document.getElementById('emergencyContactsModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function calculateHeatStressCategory(temp, humidity) {
+            let heatIndex = temp;
+            if (temp >= 27 && humidity >= 40) heatIndex = temp + (humidity * 0.1);
+            if (heatIndex >= 40) {
+                return { category: 'danger', labelAr: 'خطر إجهاد حراري 🚨', labelEn: 'Extreme Danger 🚨', color: '#ef4444' };
+            } else if (heatIndex >= 34) {
+                return { category: 'warning', labelAr: 'إجهاد متوسط ⚠️', labelEn: 'High Caution ⚠️', color: '#d97706' };
+            } else if (heatIndex >= 29) {
+                return { category: 'caution', labelAr: 'معتدل ☀️', labelEn: 'Caution ☀️', color: '#b45309' };
+            } else {
+                return { category: 'safe', labelAr: 'طبيعي وآمن 🟢', labelEn: 'Safe 🟢', color: '#059669' };
+            }
+        }
+
+        function renderWeatherWidget(weather) {
+            if (!weather) {
+                try {
+                    const raw = localStorage.getItem('HSE_WEATHER_CACHE');
+                    weather = raw ? JSON.parse(raw) : { temp: 32, humidity: 45, weatherCode: 0 };
+                } catch(e) {
+                    weather = { temp: 32, humidity: 45, weatherCode: 0 };
+                }
+            }
+            const tempEl = document.getElementById('weatherTemp');
+            const iconEl = document.getElementById('weatherIcon');
+            const pillEl = document.getElementById('heatIndexPill');
+            if (!tempEl || !pillEl) return;
+
+            const lang = (typeof currentLang !== 'undefined' ? currentLang : 'ar');
+            const risk = calculateHeatStressCategory(weather.temp, weather.humidity);
+
+            tempEl.textContent = `${Math.round(weather.temp)}°C`;
+            pillEl.textContent = (lang === 'en') ? risk.labelEn : risk.labelAr;
+            pillEl.style.background = risk.color;
+
+            if (weather.temp >= 36) { if (iconEl) iconEl.textContent = '🔥'; }
+            else if (weather.temp >= 28) { if (iconEl) iconEl.textContent = '☀️'; }
+            else { if (iconEl) iconEl.textContent = '🌤️'; }
+
+            const mTemp = document.getElementById('heatModalTemp');
+            const mHum = document.getElementById('heatModalHumidity');
+            const mPill = document.getElementById('heatModalRiskPill');
+            if (mTemp) mTemp.textContent = `${Math.round(weather.temp)}°C`;
+            if (mHum) mHum.textContent = `${Math.round(weather.humidity)}%`;
+            if (mPill) {
+                mPill.textContent = (lang === 'en') ? risk.labelEn : risk.labelAr;
+                mPill.style.background = risk.color;
+            }
+        }
+
+        async function fetchPlantWeatherData() {
+            renderWeatherWidget();
+            if (!navigator.onLine) return;
+            try {
+                const url = 'https://api.open-meteo.com/v1/forecast?latitude=30.0444&longitude=31.2357&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Africa%2FCairo';
+                const res = await fetch(url, { cache: 'no-cache' });
+                if (!res.ok) throw new Error('Weather fetch failed');
+                const data = await res.json();
+                if (data && data.current) {
+                    const weatherObj = {
+                        temp: data.current.temperature_2m || 32,
+                        humidity: data.current.relative_humidity_2m || 45,
+                        weatherCode: data.current.weather_code || 0,
+                        updatedAt: new Date().toISOString()
+                    };
+                    try { localStorage.setItem('HSE_WEATHER_CACHE', JSON.stringify(weatherObj)); } catch(e) {}
+                    renderWeatherWidget(weatherObj);
+                }
+            } catch(e) {
+                renderWeatherWidget();
+            }
+        }
+
+        function openHeatStressAdvisoryModal(event) {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            renderWeatherWidget();
+            const modal = document.getElementById('heatStressAdvisoryModal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeHeatStressAdvisoryModal(event) {
+            const modal = document.getElementById('heatStressAdvisoryModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function measureCloudPing(forceInteractive = false) {
+            const statusEl = document.getElementById('onlineStatus');
+            const dotEl = document.getElementById('onlineStatusDot');
+            const textEl = document.getElementById('onlineStatusText');
+            const pingEl = document.getElementById('onlineStatusPing');
+            if (!statusEl || !textEl || !dotEl) return;
+
+            if (!navigator.onLine) {
+                statusEl.style.background = '#fef2f2';
+                statusEl.style.color = '#b91c1c';
+                statusEl.style.borderColor = '#fecaca';
+                dotEl.style.background = '#ef4444';
+                dotEl.style.boxShadow = '0 0 6px #ef4444';
+                textEl.textContent = 'وضع أوفلاين';
+                if (pingEl) pingEl.style.display = 'none';
+                return;
+            }
+
+            try {
+                const startTime = performance.now();
+                const targetUrl = (typeof SCRIPT_URL !== 'undefined') ? SCRIPT_URL : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+                await fetch(`${targetUrl}?action=ping&_t=${Date.now()}`, { method: 'HEAD', mode: 'no-cors', cache: 'no-store' });
+                const latency = Math.round(performance.now() - startTime);
+
+                if (pingEl) {
+                    pingEl.textContent = `${latency}ms`;
+                    pingEl.style.display = 'inline-block';
+                }
+                statusEl.style.background = '#ecfdf5';
+                statusEl.style.color = '#047857';
+                statusEl.style.borderColor = '#a7f3d0';
+                dotEl.style.background = '#10b981';
+                dotEl.style.boxShadow = '0 0 6px #10b981';
+                textEl.textContent = (latency <= 300) ? 'متصل وسريع' : 'متصل بالسحابة';
+            } catch(e) {
+                statusEl.style.background = '#ecfdf5';
+                statusEl.style.color = '#047857';
+                statusEl.style.borderColor = '#a7f3d0';
+                dotEl.style.background = '#10b981';
+                textEl.textContent = 'متصل بالسحابة';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            measureCloudPing();
+            fetchPlantWeatherData();
+            fetchEmergencyContactsCloud();
+        });
+    </script>
+
+    <!-- زر الرجوع العائم للبوابة أثناء التمرير في الجوال -->
+    <a href="forms-hub.html" class="floating-hub-btn" title="الرجوع لبوابة النماذج">
+        <i class="fas fa-layer-group"></i>
+        <span>بوابة النماذج</span>
+    </a>
+</body>
+</html>
