@@ -8,6 +8,17 @@
 (function() {
     'use strict';
 
+    // 🌐 توجيه المستخدمين تلقائياً من الدومين القديم إلى الدومين الرسمي الجديد
+    (function enforceCanonicalDomain() {
+        try {
+            const h = window.location.hostname;
+            if (h === 'safetyicapp-ecru.vercel.app' || (h.endsWith('.vercel.app') && !h.includes('localhost'))) {
+                const targetUrl = 'https://www.safety-icapp.com' + window.location.pathname + window.location.search + window.location.hash;
+                window.location.replace(targetUrl);
+            }
+        } catch (_) {}
+    })();
+
     // Logger صامت في الإنتاج (يعتمد على Utils.safeLog)
     const log = (...args) => {
         try {
