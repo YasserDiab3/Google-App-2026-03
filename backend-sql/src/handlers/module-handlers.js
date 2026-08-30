@@ -1442,6 +1442,48 @@ const moduleHandlers = {
             count: alerts.length,
             timestamp: new Date().toISOString()
         };
+    },
+
+    'getAllClinicVisits': function(payload, postData, action) {
+        const db = getDatabase();
+        const empVisits = (db.readSheet('ClinicVisits') || []).map(v => {
+            if (v && typeof v === 'object') v.personType = v.personType || 'employee';
+            return v;
+        });
+        const conVisits = (db.readSheet('ClinicContractorVisits') || []).map(v => {
+            if (v && typeof v === 'object') v.personType = v.personType || 'contractor';
+            return v;
+        });
+        const allVisits = empVisits.concat(conVisits);
+        return {
+            success: true,
+            data: allVisits,
+            visits: allVisits,
+            count: allVisits.length,
+            total: allVisits.length,
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    'getAllInjuries': function(payload, postData, action) {
+        const db = getDatabase();
+        const empInjuries = (db.readSheet('Injuries') || []).map(v => {
+            if (v && typeof v === 'object') v.personType = v.personType || 'employee';
+            return v;
+        });
+        const conInjuries = (db.readSheet('ClinicContractorInjuries') || []).map(v => {
+            if (v && typeof v === 'object') v.personType = v.personType || 'contractor';
+            return v;
+        });
+        const allInjuries = empInjuries.concat(conInjuries);
+        return {
+            success: true,
+            data: allInjuries,
+            injuries: allInjuries,
+            count: allInjuries.length,
+            total: allInjuries.length,
+            timestamp: new Date().toISOString()
+        };
     }
 };
 
