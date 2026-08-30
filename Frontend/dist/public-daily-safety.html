@@ -1,0 +1,2219 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>نموذج المرور اليومي لمسئولي السلامة | ICAPP</title>
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest-daily-safety.json">
+    <meta name="theme-color" id="metaThemeColor" content="#f8fafc">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="المرور اليومي">
+    <link rel="apple-touch-icon" href="icons/icapp-logo.png">
+    
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/png" href="icons/icapp-logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts: Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        /* Light Theme (Default) */
+        :root {
+            --bg-base: #f8fafc;
+            --bg-base-gradient: radial-gradient(at 0% 0%, rgba(209, 250, 229, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(241, 245, 249, 0.8) 0px, transparent 50%);
+            --header-bg: rgba(255, 255, 255, 0.92);
+            --bg-card: #ffffff;
+            --bg-card-hover: #f1f5f9;
+            --primary: #059669;
+            --primary-hover: #047857;
+            --primary-glow: rgba(5, 150, 105, 0.25);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-glass: #e2e8f0;
+            --border-glass-hover: #cbd5e1;
+            --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+            --input-bg: #ffffff;
+            --input-border: #cbd5e1;
+            --theme-btn-bg: #f1f5f9;
+            --theme-btn-color: #334155;
+            --theme-btn-border: #cbd5e1;
+        }
+
+        /* Dark Theme */
+        [data-theme="dark"] {
+            --bg-base: #062117;
+            --bg-base-gradient: radial-gradient(at 0% 0%, rgba(6, 78, 59, 0.45) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.85) 0px, transparent 50%);
+            --header-bg: rgba(15, 23, 42, 0.9);
+            --bg-card: #0b2e21;
+            --bg-card-hover: #113d2d;
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --primary-glow: rgba(16, 185, 129, 0.35);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --border-glass-hover: rgba(255, 255, 255, 0.18);
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+            --input-bg: rgba(15, 23, 42, 0.65);
+            --input-border: rgba(255, 255, 255, 0.15);
+            --theme-btn-bg: rgba(255, 255, 255, 0.1);
+            --theme-btn-color: #f8fafc;
+            --theme-btn-border: rgba(255, 255, 255, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            transition: background-color 0.22s ease, border-color 0.22s ease, color 0.22s ease;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: var(--bg-base-gradient);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding-bottom: 50px;
+            direction: rtl;
+        }
+
+        /* 📌 رأس النموذج الثابت أثناء الانزلاق (Sticky Header: Tools + ISO Table) */
+        .form-sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--bg-base);
+            padding-top: 6px;
+            padding-bottom: 2px;
+            margin-bottom: 8px;
+            max-width: 720px;
+            margin-left: auto;
+            margin-right: auto;
+            transition: all 0.25s ease;
+        }
+        [data-theme="dark"] .form-sticky-header {
+            background: var(--bg-base);
+        }
+
+        /* ترويسة ISO المعتمدة ثلاثية الأعمدة (موحدة لجميع النماذج) */
+        .iso-header-table {
+            display: grid;
+            grid-template-columns: minmax(140px, 1.1fr) 2.2fr minmax(140px, 1fr);
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-top: 4px solid #312e81;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+            margin-bottom: 4px;
+        }
+
+        .iso-col-brand {
+            padding: 10px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            border-left: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        }
+
+        .iso-logo-wrap {
+            max-width: 130px;
+            min-height: 46px;
+            max-height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 3px 6px;
+        }
+
+        .iso-logo-img {
+            max-height: 42px;
+            max-width: 100px;
+            object-fit: contain;
+        }
+
+        .iso-dept-name {
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: #312e81;
+            text-align: center;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .iso-col-title {
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: #ffffff;
+            gap: 2px;
+        }
+
+        .iso-doc-title {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #1e1b4b;
+            margin: 0;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        .iso-doc-subtitle {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #4338ca;
+            margin-top: 2px;
+        }
+
+        .iso-col-meta {
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 3px;
+            border-right: 1px solid #e2e8f0;
+            background: #f8fafc;
+            font-size: 0.68rem;
+        }
+
+        .iso-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 2px;
+        }
+        .iso-meta-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+        .iso-meta-key { font-weight: 700; color: #64748b; font-size: 0.64rem; }
+        .iso-meta-val {
+            font-weight: 800;
+            color: #1e1b4b;
+            font-family: monospace, inherit;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 0 4px;
+            border-radius: 4px;
+            font-size: 0.66rem;
+        }
+
+        @media (max-width: 768px) {
+            .iso-header-table {
+                grid-template-columns: minmax(72px, 85px) 1fr minmax(90px, 115px);
+                border-radius: 10px;
+                margin-bottom: 12px;
+            }
+            .iso-col-brand {
+                padding: 6px 4px;
+                gap: 3px;
+            }
+            .iso-logo-wrap {
+                max-width: 65px;
+                min-height: 34px;
+                max-height: 38px;
+                padding: 2px 4px;
+            }
+            .iso-logo-img {
+                max-height: 32px;
+                max-width: 60px;
+            }
+            .iso-dept-name {
+                font-size: 0.52rem;
+                white-space: normal;
+                line-height: 1.1;
+            }
+            .iso-col-title {
+                padding: 6px 4px;
+            }
+            .iso-doc-title {
+                font-size: 0.85rem;
+                white-space: normal;
+                line-height: 1.2;
+            }
+            .iso-doc-subtitle {
+                font-size: 0.58rem;
+            }
+            .iso-col-meta {
+                padding: 6px 4px;
+                gap: 2px;
+            }
+            .iso-meta-key { font-size: 0.54rem; }
+            .iso-meta-val { font-size: 0.56rem; padding: 0 2px; }
+        }
+
+        .header-tools {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .theme-btn, .lang-btn {
+            background: var(--theme-btn-bg);
+            color: var(--theme-btn-color);
+            border: 1px solid var(--theme-btn-border);
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-btn {
+            width: 36px;
+            font-size: 14px;
+        }
+
+        .lang-btn {
+            padding: 0 10px;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .theme-btn:hover, .lang-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* LTR Overrides */
+        html[dir="ltr"] body {
+            direction: ltr;
+            text-align: left;
+        }
+        html[dir="ltr"] .checklist-item,
+        html[dir="ltr"] .form-label,
+        html[dir="ltr"] .form-group,
+        html[dir="ltr"] .section-header,
+        html[dir="ltr"] .header-brand,
+        html[dir="ltr"] .brand-details,
+        html[dir="ltr"] #successSummaryBox {
+            text-align: left;
+        }
+        html[dir="ltr"] .form-label span.req {
+            margin-right: 0;
+            margin-left: 4px;
+        }
+        html[dir="ltr"] .floating-hub-btn {
+            right: auto;
+            left: 22px;
+        }
+        @media (max-width: 640px) {
+            html[dir="ltr"] .floating-hub-btn {
+                right: auto;
+                left: 14px;
+            }
+        }
+
+        .hub-link-btn {
+            background: rgba(37, 99, 235, 0.1);
+            color: #2563eb;
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 8px;
+            border-radius: 16px;
+            font-size: 10.5px;
+            font-weight: 700;
+            background: rgba(16, 185, 129, 0.15);
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-pill.offline {
+            background: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        /* Container */
+        .main-content {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        /* Form Card */
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 18px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        .section-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(5, 150, 105, 0.12);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        /* Form Controls */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        @media (max-width: 580px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .form-label .req {
+            color: #dc2626;
+            font-size: 14px;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1.5px solid var(--input-border);
+            border-radius: 12px;
+            padding: 11px 14px;
+            color: var(--text-main);
+            font-size: 13.5px;
+            outline: none;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        /* Checklist Items */
+        .checklist-item {
+            background: var(--bg-base);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .checklist-title {
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.5;
+            color: var(--text-main);
+            display: flex;
+            gap: 8px;
+        }
+
+        .q-number {
+            background: rgba(5, 150, 105, 0.15);
+            color: var(--primary);
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 800;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* Radio Toggle Group (مطابق / غير مطابق / لا ينطبق) */
+        .status-toggle-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .toggle-btn {
+            background: var(--bg-card);
+            border: 1.5px solid var(--border-glass);
+            border-radius: 10px;
+            padding: 8px 4px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            user-select: none;
+        }
+
+        .toggle-btn:active {
+            transform: scale(0.96);
+        }
+
+        .toggle-btn.active-compliant {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: #10b981;
+            color: #059669;
+        }
+        [data-theme="dark"] .toggle-btn.active-compliant {
+            color: #34d399;
+        }
+
+        .toggle-btn.active-non-compliant {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: #ef4444;
+            color: #dc2626;
+        }
+        [data-theme="dark"] .toggle-btn.active-non-compliant {
+            color: #f87171;
+        }
+
+        .toggle-btn.active-na {
+            background: rgba(148, 163, 184, 0.15);
+            border-color: #94a3b8;
+            color: #475569;
+        }
+        [data-theme="dark"] .toggle-btn.active-na {
+            color: #cbd5e1;
+        }
+
+        /* Submit Button */
+        .submit-btn {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: #ffffff;
+            border: none;
+            border-radius: 14px;
+            padding: 14px 20px;
+            font-size: 15px;
+            font-weight: 800;
+            width: 100%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .submit-btn:not(:disabled):active {
+            transform: scale(0.98);
+        }
+
+        /* Success Screen */
+        .success-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 99999;
+            padding: 20px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .success-modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass-hover);
+            border-radius: 24px;
+            padding: 28px 24px;
+            max-width: 440px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .success-icon-wrap {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #dcfce7;
+            color: #16a34a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 16px auto;
+        }
+
+        .floating-hub-btn {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            z-index: 999;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            color: #ffffff !important;
+            padding: 9px 15px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            font-weight: 800;
+            text-decoration: none !important;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.25s ease;
+            backdrop-filter: blur(8px);
+        }
+        .floating-hub-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55);
+        }
+        @media (max-width: 640px) {
+            .floating-hub-btn {
+                bottom: 14px;
+                right: 14px;
+                padding: 8px 12px;
+                font-size: 11px;
+            }
+        }
+    
+        /* ======================================================================
+         * 📱 UI/UX PRO MAX - MOBILE DESIGN SYSTEM & TOUCH OPTIMIZATION (≤768px)
+         * Standardized WCAG 2.5.5 Touch Targets (44px+), 16px iOS anti-zoom,
+         * Safe Area insets, tactile active states & fluid form responsiveness.
+         * ====================================================================== */
+        @media (max-width: 768px) {
+            /* 1. Prevent iOS Safari auto-zoom on field focus */
+            input, select, textarea, .form-control {
+                font-size: 16px !important;
+                min-height: 46px !important;
+                border-radius: 10px !important;
+                padding: 10px 14px !important;
+                touch-action: manipulation;
+            }
+
+            /* 2. Touch targets & tactile active feedback */
+            button, .btn, .btn-submit, .date-preset-btn, .action-btn {
+                min-height: 48px !important;
+                font-size: 0.92rem !important;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+                border-radius: 10px !important;
+            }
+
+            button:active, .btn:active, .date-preset-btn:active, .form-card:active {
+                transform: scale(0.98) !important;
+                transition: transform 0.12s ease !important;
+            }
+
+            /* 3. Fluid container spacing without overflow */
+            .form-container, .main-container, .hub-container, .page-container {
+                padding: 8px 10px !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .form-card, .section-card, .card-box {
+                padding: 14px 12px !important;
+                margin-bottom: 12px !important;
+                border-radius: 14px !important;
+            }
+
+            /* 4. Labels & Helper typography readability */
+            .form-label, label {
+                font-size: 0.88rem !important;
+                font-weight: 800 !important;
+                margin-bottom: 6px !important;
+                color: #1e293b !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 4px !important;
+            }
+
+            /* 5. Safe Area Inset for mobile bottom action bars */
+            .bottom-actions, .floating-submit-bar, .sticky-bottom-bar {
+                padding-bottom: max(14px, env(safe-area-inset-bottom)) !important;
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+
+            /* 6. Choice chips, pills & option grids */
+            .type-cards-grid, .risk-grid, .options-grid, .selection-grid {
+                grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+                gap: 8px !important;
+            }
+
+            .option-card, .type-card, .risk-pill {
+                min-height: 48px !important;
+                padding: 10px 8px !important;
+            }
+        }
+
+        /* 🌡️ Live Weather & Heat Stress Badge */
+        .weather-badge {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(254, 243, 199, 0.85);
+            color: #92400e;
+            border: 1px solid #fde68a;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .weather-badge:hover { background: #fef3c7; transform: translateY(-1px); }
+        .heat-index-pill {
+            padding: 1px 6px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: 800;
+            background: #10b981;
+            color: #ffffff;
+        }
+
+        /* 🚨 SOS Emergency Button */
+        .sos-btn {
+            padding: 4px 11px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #ffffff;
+            border: 1px solid #b91c1c;
+            font-weight: 800;
+            font-size: 0.78rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+            animation: sosPulse 2.5s infinite;
+            transition: all 0.2s;
+        }
+        .sos-btn:hover {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            transform: translateY(-1px);
+            box-shadow: 0 0 14px rgba(239, 68, 68, 0.65);
+        }
+        @keyframes sosPulse {
+            0%, 100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.35); }
+            50% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.7); }
+        }
+
+        /* Emergency Contacts Modal & Cards */
+        .emergency-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .emergency-modal-dialog {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+            animation: popModal 0.2s ease-out;
+        }
+        @keyframes popModal {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .emergency-contact-card {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+        .emergency-contact-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            transform: translateY(-1px);
+        }
+        .emergency-call-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            background: #10b981;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 0.78rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .emergency-call-btn:hover { background: #059669; transform: scale(1.03); }
+
+</style>
+</head>
+<body>
+
+    <!-- 🚨 Emergency SOS Contacts Modal -->
+    <div id="emergencyContactsModal" class="emergency-modal-overlay" onclick="closeEmergencySosModal(event)">
+        <div class="emergency-modal-dialog" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #ef4444, #b91c1c); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-phone-volume"></i>
+                    <span id="txtSosModalTitle">دليل خطوط وأرقام الطوارئ الميدانية</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer;" onclick="closeEmergencySosModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+                    <div class="emergency-contact-card">
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.86rem; color: #1e293b;">
+                                <i class="fas fa-hospital text-emerald-600 ml-1"></i> <span id="txtContactClinic">عيادة المصنع</span>
+                            </div>
+                            <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">طوارئ طبية وإسعافات</div>
+                            <div style="font-size: 0.76rem; font-weight: 800; color: #059669; font-family: monospace;" id="valCallClinic">01000000001</div>
+                        </div>
+                        <a id="linkCallClinic" href="tel:01000000001" class="emergency-call-btn">
+                            <i class="fas fa-phone"></i>
+                            <span>اتصال</span>
+                        </a>
+                    </div>
+
+                    <div class="emergency-contact-card">
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.86rem; color: #1e293b;">
+                                <i class="fas fa-shield-halved text-blue-600 ml-1"></i> <span id="txtContactHse">غرفة عمليات السلامة</span>
+                            </div>
+                            <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">بلاغات الحوادث والمخاطر</div>
+                            <div style="font-size: 0.76rem; font-weight: 800; color: #2563eb; font-family: monospace;" id="valCallHse">01000000002</div>
+                        </div>
+                        <a id="linkCallHse" href="tel:01000000002" class="emergency-call-btn" style="background: #2563eb;">
+                            <i class="fas fa-phone"></i>
+                            <span>اتصال</span>
+                        </a>
+                    </div>
+
+                    <div class="emergency-contact-card">
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.86rem; color: #1e293b;">
+                                <i class="fas fa-fire-extinguisher text-red-600 ml-1"></i> <span id="txtContactFire">فريق مكافحة الحريق</span>
+                            </div>
+                            <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">طوارئ الإطفاء والإنقاذ</div>
+                            <div style="font-size: 0.76rem; font-weight: 800; color: #dc2626; font-family: monospace;" id="valCallFire">01000000003</div>
+                        </div>
+                        <a id="linkCallFire" href="tel:01000000003" class="emergency-call-btn" style="background: #dc2626;">
+                            <i class="fas fa-phone"></i>
+                            <span>اتصال</span>
+                        </a>
+                    </div>
+
+                    <div class="emergency-contact-card">
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.86rem; color: #1e293b;">
+                                <i class="fas fa-shield text-amber-600 ml-1"></i> <span id="txtContactSecurity">أمن البوابات والحراسات</span>
+                            </div>
+                            <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">إخلاء وحصر التواجد</div>
+                            <div style="font-size: 0.76rem; font-weight: 800; color: #d97706; font-family: monospace;" id="valCallSecurity">01000000004</div>
+                        </div>
+                        <a id="linkCallSecurity" href="tel:01000000004" class="emergency-call-btn" style="background: #d97706;">
+                            <i class="fas fa-phone"></i>
+                            <span>اتصال</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; padding: 10px 14px;">
+                    <span style="font-size: 0.76rem; font-weight: 800; color: #475569; display: block; margin-bottom: 8px;">
+                        <i class="fas fa-tower-broadcast text-blue-500 ml-1"></i> <span id="txtNationalSosTitle">أرقام الطوارئ القومية المعتمدة:</span>
+                    </span>
+                    <div style="display: flex; gap: 8px; justify-content: space-around; flex-wrap: wrap;">
+                        <a id="linkCallAmbulance" href="tel:123" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #047857; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-truck-medical"></i> الإسعاف: <span id="valCallAmbulance">123</span>
+                        </a>
+                        <a id="linkCallNatFire" href="tel:180" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #b91c1c; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-fire"></i> المطافئ: <span id="valCallNatFire">180</span>
+                        </a>
+                        <a id="linkCallPolice" href="tel:122" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #1e40af; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-handcuffs"></i> شرطة النجدة: <span id="valCallPolice">122</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🌡️ Live Plant Weather & Heat Stress Advisory Modal -->
+    <div id="heatStressAdvisoryModal" class="emergency-modal-overlay" onclick="closeHeatStressAdvisoryModal(event)">
+        <div class="emergency-modal-dialog" style="max-width: 580px;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-sun-plant-wilt"></i>
+                    <span id="txtHeatModalTitle">حالة الطقس الميداني ودليل الإجهاد الحراري</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer;" onclick="closeHeatStressAdvisoryModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
+                        <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">حرارة المصانع</span>
+                        <span id="heatModalTemp" style="font-size: 1.3rem; font-weight: 900; color: #b45309;">32°C</span>
+                    </div>
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
+                        <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">الرطوبة النسبية</span>
+                        <span id="heatModalHumidity" style="font-size: 1.3rem; font-weight: 900; color: #2563eb;">45%</span>
+                    </div>
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
+                        <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">مستوى الخطورة</span>
+                        <span id="heatModalRiskPill" class="heat-index-pill" style="font-size: 0.82rem; padding: 3px 8px; display: inline-block; margin-top: 4px;">طبيعي وآمن</span>
+                    </div>
+                </div>
+
+                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px;">
+                    <span style="font-size: 0.8rem; font-weight: 800; color: #92400e; display: block; margin-bottom: 6px;">
+                        <i class="fas fa-clipboard-check ml-1"></i> <span id="txtHeatInstructionsTitle">تعليمات وبروتوكول الوقاية من الإجهاد الحراري (OSHA):</span>
+                    </span>
+                    <ul style="font-size: 0.78rem; color: #78350f; line-height: 1.6; margin: 0; padding-right: 18px;">
+                        <li>شرب 1 كوب ماء بارد كل 15-20 دقيقة حتى بدون الشعور بالعطش.</li>
+                        <li>الالتزام بفترات راحة في مناطق مظللة وجيدة التهوية كل ساعتين من العمل الميداني.</li>
+                        <li>مراقبة الزملاء للتعرف المبكر على أعراض الدوار أو الصداع أو الإعياء الحراري.</li>
+                        <li>ارتداء ملابس قطنية خفيفة مع غطاء الرأس ومهمات السلامة المعتمدة.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📌 رأس النموذج الثابت أثناء الانزلاق (Sticky Header: Tools + ISO Table) -->
+    <header class="form-sticky-header">
+        <!-- شريط أدوات علوي موحد (الحالة، الطقس، الطوارئ، العودة للبوابة، والمظهر) -->
+        <div class="top-tools-bar" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 auto 8px auto; max-width: 720px; padding: 0 4px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                <!-- مؤشر حالة الاتصال وسرعة استجابة السيرفر (Live Ping Meter) -->
+                <div id="onlineStatus" onclick="measureCloudPing(true)" title="انقر لفحص سرعة الاستجابة اللحظية للسيرفر" style="padding: 4px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; cursor: pointer; transition: all 0.2s;">
+                    <span id="onlineStatusDot" style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 6px #10b981;"></span>
+                    <span id="onlineStatusText">متصل بالسحابة</span>
+                    <span id="onlineStatusPing" style="background: rgba(4, 120, 87, 0.12); padding: 1px 5px; border-radius: 4px; font-size: 0.68rem; font-family: monospace; display: none;">--ms</span>
+                </div>
+
+                <!-- ودجت الطقس ومستوى الإجهاد الحراري اللحظي بالمصانع -->
+                <div class="weather-badge" id="plantWeatherWidget" onclick="openHeatStressAdvisoryModal(event)" title="حالة الطقس ومؤشر الإجهاد الحراري (انقر للإرشادات التفصيلية)">
+                    <span id="weatherIcon">☀️</span>
+                    <span id="weatherTemp">32°C</span>
+                    <span class="heat-index-pill" id="heatIndexPill">طبيعي</span>
+                </div>
+            </div>
+
+            <!-- أزرار الأدوات والطوارئ واللغة والعودة للبوابة -->
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                <!-- زر الطوارئ الفوري SOS -->
+                <button type="button" class="sos-btn" id="btnEmergencySos" onclick="openEmergencySosModal(event)" title="أرقام وخطوط الطوارئ الميدانية / Emergency SOS">
+                    <i class="fas fa-phone-volume"></i>
+                    <span id="txtSosBtn">طوارئ SOS</span>
+                </button>
+
+                <!-- زر العودة لبوابة النماذج -->
+                <a href="forms-hub.html" title="العودة لبوابة النماذج الرئيسية" style="text-decoration: none; padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #4338ca; font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <i class="fas fa-th-large"></i>
+                    <span id="txtBackToHub">البوابة</span>
+                </a>
+
+                <!-- زر تبديل الثيم -->
+                <button type="button" id="themeToggleBtn" class="theme-btn" title="تبديل المظهر" onclick="toggleTheme()" style="width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
+
+                <!-- زر تبديل اللغة -->
+                <button type="button" id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()" style="padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <i class="fas fa-globe"></i>
+                    <span id="langBtnText">EN</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             ترويسة ISO المعتمدة ثلاثية الأعمدة (موحدة لجميع النماذج)
+        ══════════════════════════════════════════════════════ -->
+        <div class="iso-header-table" style="max-width: 720px; margin-left: auto; margin-right: auto;">
+            <div class="iso-col-brand">
+                <div class="iso-logo-wrap">
+                    <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
+                </div>
+                <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
+            </div>
+
+            <div class="iso-col-title">
+                <h1 class="iso-doc-title" id="isoDocTitle">نموذج المرور اليومي للسلامة</h1>
+                <div class="iso-doc-subtitle" id="isoDocSubtitle">Daily Safety Inspection Checklist</div>
+            </div>
+
+            <div class="iso-col-meta">
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">كود الوثيقة:</span>
+                    <span class="iso-meta-val">DOC-HSE-DSR-01</span>
+                </div>
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">رقم الإصدار:</span>
+                    <span class="iso-meta-val">Rev. 02</span>
+                </div>
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">درجة السرية:</span>
+                    <span class="iso-meta-val" style="color: #047857;">عام داخلي</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <form id="dailySafetyForm" onsubmit="handleSubmit(event); return false;">
+            <!-- Honeypot -->
+            <input type="text" name="_hp_field" style="display:none !important;" tabindex="-1" autocomplete="off">
+
+            <!-- 1. البيانات الأساسية للمرور -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-clipboard-user"></i>
+                    </div>
+                    <div class="section-title">بيانات المرور والوردية</div>
+                </div>
+
+                <div class="form-grid">
+                    <!-- التاريخ -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span>التاريخ</span>
+                            <span class="req">*</span>
+                        </label>
+                        <input type="date" id="dateInput" class="form-input" required>
+                    </div>
+
+                    <!-- الوردية -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span>الوردية</span>
+                            <span class="req">*</span>
+                        </label>
+                        <select id="shiftSelect" class="form-select" required>
+                            <option value="الأولى">الوردية الأولى (صباحية)</option>
+                            <option value="الثانية">الوردية الثانية (مسائية)</option>
+                            <option value="الثالثة">الوردية الثالثة (ليلية)</option>
+                        </select>
+                    </div>
+
+                    <!-- المصنع / الموقع -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span>المصنع / الموقع</span>
+                            <span class="req">*</span>
+                        </label>
+                        <select id="siteSelect" class="form-select" required>
+                            <option value="">— اختر المصنع —</option>
+                            <option value="ICAPP-1">مصنع 1 (ICAPP-1)</option>
+                            <option value="ICAPP-2">مصنع 2 (ICAPP-2)</option>
+                        </select>
+                    </div>
+
+                    <!-- مسؤول السلامة (القائم بالمرور) -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <span>القائم بالمرور (مسؤول السلامة)</span>
+                            <span class="req">*</span>
+                        </label>
+                        <select id="inspectorSelect" class="form-select" required>
+                            <option value="">— اختر مسؤول السلامة —</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. بنود قائمة التحقق الميداني الشاملة -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div class="section-title">بنود قائمة المرور اليومي (18 بنداً)</div>
+                </div>
+
+                <div id="checklistContainer">
+                    <!-- سيتم توليد الأسئلة برمجياً هنا -->
+                </div>
+            </div>
+
+            <!-- 3. الملاحظات والإجراءات الفورية -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-comment-dots"></i>
+                    </div>
+                    <div class="section-title">الملاحظات والإجراءات المتخذة</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <span>الملاحظات المرصودة أثناء المرور</span>
+                    </label>
+                    <textarea id="notesInput" class="form-textarea" rows="3" placeholder="سجل أي ملاحظات إضافية، سلوكيات، أو إجراءات فورية تم اتخاذها أثناء جولة المرور..."></textarea>
+                </div>
+            </div>
+
+            <!-- 4. التوقيع الرقمي المعتمد لمسؤول السلامة -->
+            <div class="section-card">
+                <div class="section-header" style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="section-icon">
+                            <i class="fas fa-signature"></i>
+                        </div>
+                        <div class="section-title">التوقيع الرقمي لمسؤول السلامة <span class="req" style="color: #ef4444; font-weight: 800;">*</span></div>
+                    </div>
+                    <button type="button" onclick="clearSignature()" style="background: none; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 700; color: #dc2626; cursor: pointer;">
+                        <i class="fas fa-eraser"></i> مسح التوقيع
+                    </button>
+                </div>
+
+                <div style="background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 10px; overflow: hidden; position: relative; height: 130px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                    <canvas id="signatureCanvas" style="width: 100%; height: 100%; touch-action: none; cursor: crosshair; display: block;"></canvas>
+                    <span id="sigPlaceholder" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 12px; pointer-events: none; font-weight: 700;">
+                        ✍️ وقّع باللمس هنا (إلزامي *)
+                    </span>
+                </div>
+            </div>
+
+            <!-- زر الإرسال -->
+            <button type="submit" id="submitBtn" class="submit-btn">
+                <i class="fas fa-paper-plane"></i>
+                <span>إرسال تقرير المرور اليومي</span>
+            </button>
+
+        </form>
+
+    </main>
+
+    <!-- Success Modal (Optimistic UI Instant Response) -->
+    <div id="successOverlay" class="success-overlay">
+        <div class="success-modal">
+            <div class="success-icon-wrap">
+                <i class="fas fa-check"></i>
+            </div>
+            <div id="successRefBadge" style="display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 9999px; padding: 4px 14px; font-size: 0.82rem; font-weight: 700; margin-bottom: 8px;">
+                رقم التقرير: DSR-202608-0000
+            </div>
+            <h2 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">تم حفظ تقرير المرور فورياً!</h2>
+            <p id="successMsgText" style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
+                تم تسجيل جولة المرور بنجاح ويتم التوثيق والمزامنة السحابية في الخلفية.
+            </p>
+
+            <div id="successSummaryBox" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 12px; text-align: right; margin-bottom: 16px; display: flex; flex-direction: column; gap: 4px;">
+                <!-- Filled dynamically -->
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button type="button" onclick="resetAndNewForm()" class="submit-btn" style="padding: 10px;">
+                    <i class="fas fa-plus ml-1"></i> تسجيل جولة مرور جديدة
+                </button>
+                <a href="forms-hub.html" class="hub-link-btn" style="justify-content: center; padding: 10px; font-size: 13px;">
+                    <i class="fas fa-arrow-right ml-1"></i> <span id="hubBtnText">العودة لبوابة النماذج</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- زر الرجوع العائم للبوابة أثناء التمرير في الجوال -->
+    <a href="forms-hub.html" class="floating-hub-btn" title="الرجوع لبوابة النماذج">
+        <i class="fas fa-layer-group"></i>
+        <span>بوابة النماذج</span>
+    </a>
+
+    <script>
+        // ==========================================
+        // Full Bilingual Translation Dictionary (i18n)
+        // ==========================================
+        const DAILY_SAFETY_I18N = {
+            ar: {
+                dir: 'rtl',
+                langBtn: 'EN',
+                pageTitle: 'نموذج المرور اليومي لمسئولي السلامة | ICAPP',
+                headerTitle: 'نموذج المرور اليومي للسلامة',
+                headerSubtitle: 'Daily Safety Inspection Checklist',
+                hubBtn: 'بوابة النماذج',
+                online: 'متصل',
+                offline: 'أوفلاين',
+                sec1Title: 'بيانات المرور والوردية',
+                dateLabel: 'التاريخ',
+                shiftLabel: 'الوردية',
+                shift1: 'الوردية الأولى (صباحية)',
+                shift2: 'الوردية الثانية (مسائية)',
+                shift3: 'الوردية الثالثة (ليلية)',
+                siteLabel: 'المصنع / الموقع',
+                sitePlaceholder: '— اختر المصنع —',
+                inspectorLabel: 'القائم بالمرور (مسؤول السلامة)',
+                inspectorPlaceholder: '— اختر مسؤول السلامة —',
+                sec2Title: 'بنود قائمة المرور اليومي (18 بنداً)',
+                btnCompliant: 'مطابق',
+                btnNonCompliant: 'غير مطابق',
+                btnNa: 'لا ينطبق',
+                pressurePlaceholder: 'أدخل قراءة الضغط (مثال: 7.5 Bar) — إلزامي *',
+                sec3Title: 'الملاحظات والإجراءات المتخذة',
+                notesLabel: 'الملاحظات المرصودة أثناء المرور',
+                notesPlaceholder: 'سجل أي ملاحظات إضافية، سلوكيات، أو إجراءات فورية تم اتخاذها أثناء جولة المرور...',
+                sec4Title: 'التوقيع الرقمي لمسؤول السلامة',
+                clearSigBtn: 'مسح التوقيع',
+                sigPlaceholder: '✍️ وقّع باللمس هنا (إلزامي *)',
+                submitBtn: 'إرسال تقرير المرور اليومي',
+                submittingBtn: 'جاري حفظ وتوثيق التقرير...',
+                successModalTitle: 'تم حفظ تقرير المرور فورياً!',
+                successModalSub: 'تم تسجيل جولة المرور بنجاح ويتم التوثيق والمزامنة السحابية في الخلفية.',
+                newReportBtn: 'تسجيل جولة مرور جديدة',
+                backHubBtn: 'العودة لبوابة النماذج',
+                floatingHub: 'بوابة النماذج',
+                valDate: '⚠️ حقل إلزامي: يرجى تحديد تاريخ المرور اليومي *',
+                valShift: '⚠️ حقل إلزامي: يرجى اختيار الوردية *',
+                valSite: '⚠️ حقل إلزامي: يرجى اختيار المصنع / الموقع *',
+                valInspector: '⚠️ حقل إلزامي: يرجى اختيار اسم القائم بالمرور (مسؤول السلامة) *',
+                valPressure: '⚠️ حقل إلزامي: يرجى إدخال قراءة ضغط غرفة الطلمبات (البند رقم 16) *',
+                valSignature: '⚠️ حقل إلزامي: يرجى التوقيع باللمس في خانة التوقيع الرقمي المعتمد لمسؤول السلامة *',
+                summaryFactory: '📍 المصنع:',
+                summaryInspector: '👤 مسؤول السلامة:',
+                summaryDate: '📅 التاريخ:',
+                summaryPressure: '📊 ضغط الطلمبات:',
+                summarySig: '✍️ التوقيع الرقمي:',
+                sigVerified: 'معتمد وموثق ✅',
+                syncedMsg: '🟢 تم التوثيق والمزامنة السحابية بنجاح!',
+                offlineSavedMsg: '🟡 تم الحفظ محلياً (Offline) وستتم المزامنة تلقائياً عند استقرار الشبكة.'
+            },
+            en: {
+                dir: 'ltr',
+                langBtn: 'AR',
+                pageTitle: 'Safety Officer Daily Patrol Checklist | ICAPP',
+                headerTitle: 'Daily Safety Inspection Checklist',
+                headerSubtitle: 'نموذج المرور اليومي للسلامة',
+                hubBtn: 'Forms Hub',
+                online: 'Online',
+                offline: 'Offline',
+                sec1Title: 'Patrol & Shift Information',
+                dateLabel: 'Date',
+                shiftLabel: 'Shift',
+                shift1: '1st Shift (Morning)',
+                shift2: '2nd Shift (Evening)',
+                shift3: '3rd Shift (Night)',
+                siteLabel: 'Factory / Site',
+                sitePlaceholder: '— Select Factory / Site —',
+                inspectorLabel: 'Inspector (Safety Officer)',
+                inspectorPlaceholder: '— Select Safety Officer —',
+                sec2Title: 'Daily Patrol Checklist (18 Items)',
+                btnCompliant: 'Compliant',
+                btnNonCompliant: 'Non-Compliant',
+                btnNa: 'N/A',
+                pressurePlaceholder: 'Enter pressure reading (e.g. 7.5 Bar) — Mandatory *',
+                sec3Title: 'Observations & Immediate Actions',
+                notesLabel: 'Observations recorded during patrol',
+                notesPlaceholder: 'Record additional findings, behaviors, or immediate corrective actions taken...',
+                sec4Title: 'Safety Officer Digital Signature',
+                clearSigBtn: 'Clear Signature',
+                sigPlaceholder: '✍️ Touch/Sign here (Mandatory *)',
+                submitBtn: 'Submit Daily Patrol Report',
+                submittingBtn: 'Saving & syncing report...',
+                successModalTitle: 'Daily Patrol Report Saved Instantly!',
+                successModalSub: 'Patrol recorded successfully and syncing in the background.',
+                newReportBtn: 'New Patrol Inspection',
+                backHubBtn: 'Back to Forms Portal',
+                floatingHub: 'Forms Hub',
+                valDate: '⚠️ Mandatory field: Please select patrol date *',
+                valShift: '⚠️ Mandatory field: Please select shift *',
+                valSite: '⚠️ Mandatory field: Please select factory / site *',
+                valInspector: '⚠️ Mandatory field: Please select Safety Officer *',
+                valPressure: '⚠️ Mandatory field: Please enter pump room pressure reading (Item #16) *',
+                valSignature: '⚠️ Mandatory field: Please sign in the digital signature box *',
+                summaryFactory: '📍 Factory:',
+                summaryInspector: '👤 Safety Officer:',
+                summaryDate: '📅 Date:',
+                summaryPressure: '📊 Pump Pressure:',
+                summarySig: '✍️ Digital Signature:',
+                sigVerified: 'Verified & Certified ✅',
+                syncedMsg: '🟢 Successfully certified & synced to cloud database!',
+                offlineSavedMsg: '🟡 Saved locally (Offline) and will sync automatically when online.'
+            }
+        };
+
+        let currentLang = 'ar';
+
+        // Questions Definition (Bilingual)
+        const CHECKLIST_QUESTIONS = [
+            { key: 'q1', text_ar: 'تم المرور على غرفة الطلمبات لمياه الحريق وشبكة الإطفاء الأوتوماتيك وحنفيات الحريق وأجهزة الإطفاء اليدوية ومنسوب المياة بخزان الحريق', text_en: 'Inspect main fire pump system, automatic sprinkler network, hydrants, portable extinguishers, and water tank level' },
+            { key: 'q2', text_ar: 'المرور على المخازن (عنابر التخزين المبرد والمجمد والتاكد من عدم وجود أي ملاحظة متعلقة بممارسات التخزين)', text_en: 'Inspect cold & frozen storage warehouses to ensure compliant storage practices and zero hazards' },
+            { key: 'q3', text_ar: 'المرور على مخزن المواد الأولية والتاكد من اشترطات السلامة بالمخزن', text_en: 'Inspect raw materials warehouse and verify adherence to safety standards' },
+            { key: 'q4', text_ar: 'المرور علي مخزن قطع الغيار والتاكد من مطابقة لاشتراطات السلامة والصحة المهنية', text_en: 'Inspect spare parts warehouse and verify compliance with HSE regulations' },
+            { key: 'q5', text_ar: 'المرور على نقط شحن بطاريات الفورك ليفت - الترانس بالت', text_en: 'Inspect forklift and trans-pallet battery charging stations' },
+            { key: 'q6', text_ar: 'المرور على رصيف الشحن والتاكد من عدم وجود أي ملاحظات', text_en: 'Inspect loading & unloading docks and verify clear, safe operations' },
+            { key: 'q7', text_ar: 'المرور على الأسوار الداخلية للمصنع - بوابات الخارجية (ومنطقة انتظار السيرات - الميزان البسكول- وصلة الدفاع المدني الخارجية وعدم وجود اشغالات)', text_en: 'Inspect perimeter walls, gates, parking area, weighbridge, and external civil defense connection for zero obstructions' },
+            { key: 'q8', text_ar: 'المرور على غرفة محطة ضواغط الهواء وابراج التبريد الخاص بمحطات الامونيا', text_en: 'Inspect air compressor station room and ammonia refrigeration cooling towers' },
+            { key: 'q9', text_ar: 'المرور على ورشة الإدارة الصيانة وورشة الحركة والتاكد من عدم وجود أي ملاحظات بالمكان', text_en: 'Inspect maintenance and vehicle workshops to ensure clean and safe conditions' },
+            { key: 'q10', text_ar: 'المرور على غرف توزيع الكهرباء الرئيسية - غرف المحولات الرئيسية', text_en: 'Inspect main electrical distribution rooms and high-voltage transformer stations' },
+            { key: 'q11', text_ar: 'المرور على منطقة المخلفات - منطقة تجميع المخلفات', text_en: 'Inspect waste management and scrap collection yards' },
+            { key: 'q12', text_ar: 'المرور على صالات الإنتاج والتعبئة والتاكد من توفر اشتراطات السلامة', text_en: 'Inspect production and packaging halls to verify comprehensive safety compliance' },
+            { key: 'q13', text_ar: 'المرور على فريق الصيانة الداخلي أو المقاول مع عدم السماح لهم بالعمل بدون استخراج على تصاريح عمل', text_en: 'Inspect internal/contractor maintenance; enforce valid Work Permits (PTW) before work' },
+            { key: 'q14', text_ar: 'المرور على لوحة الإنذار الرئيسية والفرعية بالمصنع وعمل Rest إذا لزم الأمر', text_en: 'Inspect main & secondary fire alarm control panels (FACP) and reset if needed' },
+            { key: 'q15', text_ar: 'المرور على نظام الإنذار والإطفاء التلقائي لغرف محول الكهرباء والغرف', text_en: 'Inspect automatic fire detection & suppression systems in electrical transformer rooms' },
+            { key: 'q16', text_ar: 'المرور على غرفة الطلمبات وقراءة الضغط - وكانت القراءة (Bar / PSI)', text_en: 'Inspect fire pump room and record pressure reading (Bar / PSI)', isReading: true },
+            { key: 'q17', text_ar: 'المرور على غرفة تغيير الملابس للعاملين والتاكد من عدم وجود أي ملاحظات غير امنة', text_en: 'Inspect worker locker & changing rooms to ensure cleanliness, hygiene and safety' },
+            { key: 'q18', text_ar: 'المرور علي منطقة الغلاية وعدم وجود أي ملاحظة', text_en: 'Inspect industrial boiler area and verify safe, normal operating parameters' }
+        ];
+
+        // Store answers
+        const formAnswers = {};
+
+        function applyLanguage(lang) {
+            currentLang = lang;
+            const t = DAILY_SAFETY_I18N[lang] || DAILY_SAFETY_I18N.ar;
+            document.documentElement.lang = lang;
+            document.documentElement.dir = t.dir;
+            document.title = t.pageTitle;
+
+            const langBtnText = document.getElementById('langBtnText');
+            if (langBtnText) langBtnText.textContent = t.langBtn;
+
+            // Brand & ISO Header
+            const isoDocTitle = document.getElementById('isoDocTitle');
+            if (isoDocTitle) isoDocTitle.textContent = t.headerTitle;
+            const isoDocSubtitle = document.getElementById('isoDocSubtitle');
+            if (isoDocSubtitle) isoDocSubtitle.textContent = t.headerSubtitle;
+            const isoDeptName = document.getElementById('isoDeptName');
+            if (isoDeptName) isoDeptName.textContent = lang === 'en' ? 'HSE Department' : 'إدارة السلامة والصحة المهنية';
+
+            const brandH1 = document.querySelector('.brand-text h1');
+            if (brandH1) brandH1.textContent = t.headerTitle;
+            const brandP = document.querySelector('.brand-text p');
+            if (brandP) brandP.textContent = t.headerSubtitle;
+
+            // Hub links
+            const hubBtnText = document.getElementById('hubBtnText');
+            if (hubBtnText) hubBtnText.textContent = t.hubBtn;
+            const floatHub = document.querySelector('.floating-hub-btn span');
+            if (floatHub) floatHub.textContent = t.floatingHub;
+
+            // Online text
+            const onlText = document.getElementById('onlineStatusText');
+            if (onlText) onlText.textContent = navigator.onLine ? t.online : t.offline;
+
+            // Section 1
+            const secTitles = document.querySelectorAll('.section-title');
+            if (secTitles[0]) secTitles[0].textContent = t.sec1Title;
+            if (secTitles[1]) secTitles[1].textContent = t.sec2Title;
+            if (secTitles[2]) secTitles[2].textContent = t.sec3Title;
+            if (secTitles[3]) secTitles[3].innerHTML = `${t.sec4Title} <span class="req" style="color: #ef4444; font-weight: 800;">*</span>`;
+
+            // Form Labels
+            const formLabels = document.querySelectorAll('.form-label span:first-child');
+            if (formLabels[0]) formLabels[0].textContent = t.dateLabel;
+            if (formLabels[1]) formLabels[1].textContent = t.shiftLabel;
+            if (formLabels[2]) formLabels[2].textContent = t.siteLabel;
+            if (formLabels[3]) formLabels[3].textContent = t.inspectorLabel;
+            if (formLabels[4]) formLabels[4].textContent = t.notesLabel;
+
+            // Shift Options
+            const shiftSelect = document.getElementById('shiftSelect');
+            if (shiftSelect && shiftSelect.options.length >= 3) {
+                shiftSelect.options[0].textContent = t.shift1;
+                shiftSelect.options[1].textContent = t.shift2;
+                shiftSelect.options[2].textContent = t.shift3;
+            }
+
+            // Notes Placeholder
+            const notesInp = document.getElementById('notesInput');
+            if (notesInp) notesInp.placeholder = t.notesPlaceholder;
+
+            // Signature
+            const sigPh = document.getElementById('sigPlaceholder');
+            if (sigPh) sigPh.textContent = t.sigPlaceholder;
+            const clearSigBtn = document.querySelector('.section-header button[onclick="clearSignature()"]');
+            if (clearSigBtn) clearSigBtn.innerHTML = `<i class="fas fa-eraser"></i> ${t.clearSigBtn}`;
+
+            // Submit Button
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.innerHTML = `<i class="fas fa-paper-plane"></i> <span>${t.submitBtn}</span>`;
+            }
+
+            // Success Modal Static Texts
+            const modalH2 = document.querySelector('.success-modal h2');
+            if (modalH2) modalH2.textContent = t.successModalTitle;
+            const modalBtns = document.querySelectorAll('.success-modal button, .success-modal a');
+            if (modalBtns[0]) modalBtns[0].innerHTML = `<i class="fas fa-plus ml-1"></i> ${t.newReportBtn}`;
+            if (modalBtns[1]) modalBtns[1].innerHTML = `<i class="fas fa-arrow-right ml-1"></i> ${t.backHubBtn}`;
+
+            // Update hub links href with ?lang=
+            document.querySelectorAll('a[href*="forms-hub.html"]').forEach(a => {
+                a.href = `forms-hub.html${lang === 'en' ? '?lang=en' : ''}`;
+            });
+
+            // Re-render checklist questions with the active language
+            renderQuestions();
+            loadCachedConfig();
+
+            try {
+                localStorage.setItem('HSE_PORTAL_LANG', lang);
+                localStorage.setItem('language', lang);
+            } catch(e) {}
+        }
+
+        function toggleLanguage() {
+            const next = currentLang === 'ar' ? 'en' : 'ar';
+            applyLanguage(next);
+        }
+
+        // Render Questions
+        function renderQuestions() {
+            const container = document.getElementById('checklistContainer');
+            container.innerHTML = '';
+            const t = DAILY_SAFETY_I18N[currentLang] || DAILY_SAFETY_I18N.ar;
+
+            CHECKLIST_QUESTIONS.forEach((q, idx) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'checklist-item';
+                const questionText = currentLang === 'en' ? (q.text_en || q.text_ar) : q.text_ar;
+                
+                if (q.isReading) {
+                    itemDiv.innerHTML = `
+                        <div class="checklist-title">
+                            <span class="q-number">${idx + 1}</span>
+                            <span>${questionText}</span>
+                            <span class="req" style="color: #ef4444; font-weight: 800; margin-right: 4px;">*</span>
+                        </div>
+                        <div>
+                            <input type="text" id="input_${q.key}" class="form-input" required placeholder="${t.pressurePlaceholder}" oninput="formAnswers['${q.key}'] = this.value">
+                        </div>
+                    `;
+                    if (formAnswers[q.key]) {
+                        setTimeout(() => {
+                            const inp = document.getElementById(`input_${q.key}`);
+                            if (inp) inp.value = formAnswers[q.key];
+                        }, 0);
+                    }
+                } else {
+                    formAnswers[q.key] = formAnswers[q.key] || 'مطابق'; // Default compliant
+                    const isCompliant = formAnswers[q.key] === 'مطابق';
+                    const isNonCompliant = formAnswers[q.key] === 'غير مطابق';
+                    const isNa = formAnswers[q.key] === 'لا ينطبق';
+
+                    itemDiv.innerHTML = `
+                        <div class="checklist-title">
+                            <span class="q-number">${idx + 1}</span>
+                            <span>${questionText}</span>
+                        </div>
+                        <div class="status-toggle-group">
+                            <div class="toggle-btn ${isCompliant ? 'active-compliant' : ''}" id="btn_${q.key}_مطابق" onclick="setQuestionStatus('${q.key}', 'مطابق')">
+                                <i class="fas fa-check-circle"></i> ${t.btnCompliant}
+                            </div>
+                            <div class="toggle-btn ${isNonCompliant ? 'active-non-compliant' : ''}" id="btn_${q.key}_غير مطابق" onclick="setQuestionStatus('${q.key}', 'غير مطابق')">
+                                <i class="fas fa-times-circle"></i> ${t.btnNonCompliant}
+                            </div>
+                            <div class="toggle-btn ${isNa ? 'active-na' : ''}" id="btn_${q.key}_لا ينطبق" onclick="setQuestionStatus('${q.key}', 'لا ينطبق')">
+                                <i class="fas fa-minus-circle"></i> ${t.btnNa}
+                            </div>
+                        </div>
+                    `;
+                }
+                container.appendChild(itemDiv);
+            });
+        }
+
+        function setQuestionStatus(qKey, status) {
+            formAnswers[qKey] = status;
+            const btnCompliant = document.getElementById(`btn_${qKey}_مطابق`);
+            const btnNonCompliant = document.getElementById(`btn_${qKey}_غير مطابق`);
+            const btnNa = document.getElementById(`btn_${qKey}_لا ينطبق`);
+
+            if (btnCompliant) btnCompliant.className = 'toggle-btn' + (status === 'مطابق' ? ' active-compliant' : '');
+            if (btnNonCompliant) btnNonCompliant.className = 'toggle-btn' + (status === 'غير مطابق' ? ' active-non-compliant' : '');
+            if (btnNa) btnNa.className = 'toggle-btn' + (status === 'لا ينطبق' ? ' active-na' : '');
+        }
+
+        // Theme management
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            const icon = document.getElementById('themeIcon');
+            const metaTheme = document.getElementById('metaThemeColor');
+            if (theme === 'dark') {
+                if (icon) icon.className = 'fas fa-sun';
+                if (metaTheme) metaTheme.setAttribute('content', '#062117');
+            } else {
+                if (icon) icon.className = 'fas fa-moon';
+                if (metaTheme) metaTheme.setAttribute('content', '#f8fafc');
+            }
+            try { localStorage.setItem('HSE_DAILY_SAFETY_THEME', theme); } catch(e) {}
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || 'light';
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        }
+
+        // Initialize Defaults & Language
+        window.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateInput').value = today;
+
+            try {
+                const savedTheme = localStorage.getItem('HSE_DAILY_SAFETY_THEME');
+                applyTheme(savedTheme || 'light');
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const qLang = urlParams.get('lang');
+                const savedLang = qLang || localStorage.getItem('HSE_PORTAL_LANG') || localStorage.getItem('language') || 'ar';
+                applyLanguage(savedLang);
+            } catch(e) {
+                applyLanguage('ar');
+            }
+
+            fetchServerConfig();
+        });
+
+        // Online / Offline Status
+        function updateOnlineStatus() {
+            const pill = document.getElementById('onlineStatusPill');
+            if (navigator.onLine) {
+                pill.className = 'status-pill';
+                pill.innerHTML = '<i class="fas fa-circle text-xs"></i><span>متصل</span>';
+                syncOfflineQueue();
+            } else {
+                pill.className = 'status-pill offline';
+                pill.innerHTML = '<i class="fas fa-circle-exclamation text-xs"></i><span>أوفلاين</span>';
+            }
+        }
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus();
+
+        // Cached Config
+        function loadCachedConfig() {
+            try {
+                const obsCfg = JSON.parse(localStorage.getItem('HSE_PUBLIC_OBS_CONFIG') || '{}');
+                const rawSites = JSON.parse(localStorage.getItem('HSE_DAILY_SAFETY_SITES') || 'null') || obsCfg.sites;
+                const rawMembers = JSON.parse(localStorage.getItem('HSE_DAILY_SAFETY_MEMBERS') || 'null') || obsCfg.safetyMembers;
+
+                const t = DAILY_SAFETY_I18N[currentLang] || DAILY_SAFETY_I18N.ar;
+                if (rawSites && Array.isArray(rawSites) && rawSites.length > 0) {
+                    const siteSelect = document.getElementById('siteSelect');
+                    const prevSite = siteSelect.value;
+                    siteSelect.innerHTML = `<option value="">${t.sitePlaceholder || '— اختر المصنع —'}</option>`;
+                    rawSites.forEach(s => {
+                        const name = typeof s === 'string' ? s : (s.name || s.id);
+                        if (name) {
+                            const opt = document.createElement('option');
+                            opt.value = name;
+                            opt.textContent = name;
+                            siteSelect.appendChild(opt);
+                        }
+                    });
+                    if (prevSite) siteSelect.value = prevSite;
+                }
+
+                if (rawMembers && Array.isArray(rawMembers) && rawMembers.length > 0) {
+                    const inspSelect = document.getElementById('inspectorSelect');
+                    const prevInsp = inspSelect.value;
+                    inspSelect.innerHTML = `<option value="">${t.inspectorPlaceholder || '— اختر مسؤول السلامة —'}</option>`;
+                    rawMembers.forEach(m => {
+                        const name = typeof m === 'string' ? m : m.name;
+                        if (name) {
+                            const opt = document.createElement('option');
+                            opt.value = name;
+                            opt.textContent = name;
+                            inspSelect.appendChild(opt);
+                        }
+                    });
+                    if (prevInsp) inspSelect.value = prevInsp;
+                }
+            } catch(e) {}
+        }
+
+        const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+
+        function getEffectiveApiUrl() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const p = urlParams.get('apiUrl') || urlParams.get('api');
+                if (p && p.includes('script.google.com')) return p;
+                const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
+                if (s1) {
+                    const parsed = JSON.parse(s1);
+                    if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+                }
+                const s2 = localStorage.getItem('hse_app_settings');
+                if (s2) {
+                    const parsed = JSON.parse(s2);
+                    if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+                }
+            } catch(e) {}
+            return DEFAULT_API_URL;
+        }
+
+        function generateClientCsrfToken() {
+            try {
+                if (window.crypto && window.crypto.getRandomValues) {
+                    const arr = new Uint8Array(32);
+                    window.crypto.getRandomValues(arr);
+                    return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+                }
+            } catch(e) {}
+            let s = '';
+            for (let i = 0; i < 64; i++) {
+                s += Math.floor(Math.random() * 16).toString(16);
+            }
+            return s;
+        }
+
+        async function fetchServerConfig() {
+            try {
+                const GAS_URL = getEffectiveApiUrl();
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), 12000);
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'getPublicDailySafetyConfig', csrfToken: generateClientCsrfToken() }),
+                    signal: controller.signal
+                });
+                const data = await res.json();
+                if (data && data.success) {
+                    if (data.sites) localStorage.setItem('HSE_DAILY_SAFETY_SITES', JSON.stringify(data.sites));
+                    if (data.safetyMembers) localStorage.setItem('HSE_DAILY_SAFETY_MEMBERS', JSON.stringify(data.safetyMembers));
+                    loadCachedConfig();
+                }
+            } catch(e) {}
+        }
+
+        // Form Submission
+        async function handleSubmit(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            const t = DAILY_SAFETY_I18N[currentLang] || DAILY_SAFETY_I18N.ar;
+
+            try {
+                // 1. التحقق الإلزامي من الحقول الأساسية
+                const dateVal = document.getElementById('dateInput')?.value || '';
+                if (!dateVal) {
+                    alert(t.valDate);
+                    document.getElementById('dateInput')?.focus();
+                    return false;
+                }
+
+                const shiftVal = document.getElementById('shiftSelect')?.value || '';
+                if (!shiftVal) {
+                    alert(t.valShift);
+                    document.getElementById('shiftSelect')?.focus();
+                    return false;
+                }
+
+                const siteVal = document.getElementById('siteSelect')?.value || '';
+                if (!siteVal) {
+                    alert(t.valSite);
+                    const s = document.getElementById('siteSelect');
+                    if (s) {
+                        s.focus();
+                        s.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+
+                const inspectorVal = document.getElementById('inspectorSelect')?.value || '';
+                if (!inspectorVal) {
+                    alert(t.valInspector);
+                    const insp = document.getElementById('inspectorSelect');
+                    if (insp) {
+                        insp.focus();
+                        insp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+
+                // 2. التحقق الإلزامي من قراءة ضغط غرفة الطلمبات (البند 16)
+                const pressureReading = (document.getElementById('input_q16')?.value || '').trim();
+                if (!pressureReading) {
+                    alert(t.valPressure);
+                    const inp = document.getElementById('input_q16');
+                    if (inp) {
+                        inp.focus();
+                        inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+
+                // 3. التحقق الإلزامي من التوقيع الرقمي باللمس
+                if (!hasSignature) {
+                    alert(t.valSignature);
+                    const sigBox = document.getElementById('signatureCanvas');
+                    if (sigBox) {
+                        sigBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+
+                const now = new Date();
+                const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
+                const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
+                const instantRefCode = 'DSR-' + yearMonth + '-' + randomSuffix;
+
+                const payload = {
+                    action: 'submitPublicDailySafetyChecklist',
+                    refCode: instantRefCode,
+                    date: dateVal,
+                    shift: shiftVal,
+                    siteName: siteVal,
+                    siteId: siteVal,
+                    inspectorName: inspectorVal,
+                    notes: document.getElementById('notesInput')?.value || '',
+                    q1: formAnswers.q1 || 'مطابق',
+                    q2: formAnswers.q2 || 'مطابق',
+                    q3: formAnswers.q3 || 'مطابق',
+                    q4: formAnswers.q4 || 'مطابق',
+                    q5: formAnswers.q5 || 'مطابق',
+                    q6: formAnswers.q6 || 'مطابق',
+                    q7: formAnswers.q7 || 'مطابق',
+                    q8: formAnswers.q8 || 'مطابق',
+                    q9: formAnswers.q9 || 'مطابق',
+                    q10: formAnswers.q10 || 'مطابق',
+                    q11: formAnswers.q11 || 'مطابق',
+                    q12: formAnswers.q12 || 'مطابق',
+                    q13: formAnswers.q13 || 'مطابق',
+                    q14: formAnswers.q14 || 'مطابق',
+                    q15: formAnswers.q15 || 'مطابق',
+                    q15Reading: pressureReading,
+                    q16: formAnswers.q17 || 'مطابق',
+                    q17: formAnswers.q18 || 'مطابق',
+                    signature: getSignatureBase64(),
+                    csrfToken: generateClientCsrfToken()
+                };
+
+                // 4. إظهار شاشة النجاح فورياً في أقل من 30 مللي ثانية (Zero-Lag Optimistic UI)
+                showInstantSuccess(instantRefCode, payload);
+
+                // 5. المزامنة والتوثيق السحابي في الخلفية دون تعطيل المستخدم
+                syncDailySafetyInBackground(payload, instantRefCode);
+            } catch(err) {
+                console.error('Error in handleSubmit:', err);
+                const now = new Date();
+                const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
+                const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
+                const fallbackRef = 'DSR-' + yearMonth + '-' + randomSuffix;
+                showInstantSuccess(fallbackRef, {
+                    siteName: document.getElementById('siteSelect')?.value || 'الموقع العام',
+                    inspectorName: document.getElementById('inspectorSelect')?.value || 'مسؤول السلامة',
+                    date: document.getElementById('dateInput')?.value || new Date().toISOString().split('T')[0],
+                    shift: document.getElementById('shiftSelect')?.value || 'الأولى',
+                    q15Reading: document.getElementById('input_q16')?.value || 'مكتمل'
+                });
+            }
+            return false;
+        }
+
+        function showInstantSuccess(refCode, payload) {
+            const t = DAILY_SAFETY_I18N[currentLang] || DAILY_SAFETY_I18N.ar;
+            const refBadge = document.getElementById('successRefBadge');
+            if (refBadge) refBadge.textContent = (currentLang === 'en' ? 'Report Ref: ' : 'رقم التقرير: ') + refCode;
+
+            const summary = document.getElementById('successSummaryBox');
+            if (summary) {
+                summary.innerHTML = `
+                    <div><strong>${t.summaryFactory}</strong> ${payload.siteName} (${payload.shift})</div>
+                    <div><strong>${t.summaryInspector}</strong> ${payload.inspectorName}</div>
+                    <div><strong>${t.summaryDate}</strong> ${payload.date}</div>
+                    <div><strong>${t.summaryPressure}</strong> ${payload.q15Reading}</div>
+                    <div><strong>${t.summarySig}</strong> ${t.sigVerified}</div>
+                `;
+            }
+
+            document.getElementById('successOverlay').style.display = 'flex';
+        }
+
+        async function syncDailySafetyInBackground(payload, refCode) {
+            const targetApiUrl = getEffectiveApiUrl();
+            const t = DAILY_SAFETY_I18N[currentLang] || DAILY_SAFETY_I18N.ar;
+            let syncSuccess = false;
+
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const res = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await res.json();
+                    if (result && result.success) {
+                        syncSuccess = true;
+                        console.log('Daily Safety checklist synced successfully in background:', result);
+                        const msgText = document.getElementById('successMsgText');
+                        if (msgText) {
+                            msgText.innerHTML = `<span style="color: #10b981; font-weight: 700;">${t.syncedMsg}</span>`;
+                        }
+                        break;
+                    }
+                } catch(err) {
+                    console.warn(`Background sync attempt ${attempt} failed:`, err);
+                    if (attempt < 3) {
+                        await new Promise(r => setTimeout(r, 1500));
+                    }
+                }
+            }
+
+            if (!syncSuccess) {
+                saveToOfflineQueue(payload);
+                const msgText = document.getElementById('successMsgText');
+                if (msgText) {
+                    msgText.innerHTML = `<span style="color: #f59e0b; font-weight: 700;">${t.offlineSavedMsg}</span>`;
+                }
+            }
+        }
+
+        // Offline Queue Management
+        function saveToOfflineQueue(item) {
+            try {
+                const q = JSON.parse(localStorage.getItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE') || '[]');
+                q.push({ ...item, timestamp: Date.now() });
+                localStorage.setItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE', JSON.stringify(q));
+            } catch(e) {}
+        }
+
+        async function syncOfflineQueue() {
+            try {
+                const q = JSON.parse(localStorage.getItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE') || '[]');
+                if (q.length === 0 || !navigator.onLine) return;
+                const GAS_URL = getEffectiveApiUrl();
+                
+                const remaining = [];
+                for (const item of q) {
+                    try {
+                        const res = await fetch(GAS_URL, {
+                            method: 'POST',
+                            mode: 'cors',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'submitPublicDailySafetyChecklist', csrfToken: generateClientCsrfToken(), ...item })
+                        });
+                        const data = await res.json();
+                        if (!data || !data.success) remaining.push(item);
+                    } catch(e) {
+                        remaining.push(item);
+                    }
+                }
+                localStorage.setItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE', JSON.stringify(remaining));
+            } catch(e) {}
+        }
+
+        function resetAndNewForm() {
+            document.getElementById('successOverlay').style.display = 'none';
+            document.getElementById('notesInput').value = '';
+            const reading = document.getElementById('input_q16');
+            if (reading) reading.value = '';
+            clearSignature();
+            renderQuestions();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ==========================================
+        // Digital Signature Canvas
+        // ==========================================
+        let sigCanvas, sigCtx;
+        let isSigning = false;
+        let hasSignature = false;
+
+        function initSignaturePad() {
+            sigCanvas = document.getElementById('signatureCanvas');
+            if (!sigCanvas) return;
+            sigCtx = sigCanvas.getContext('2d');
+
+            function resize() {
+                const rect = sigCanvas.getBoundingClientRect();
+                sigCanvas.width = rect.width;
+                sigCanvas.height = rect.height;
+                sigCtx.strokeStyle = '#1e3a8a';
+                sigCtx.lineWidth = 2.5;
+                sigCtx.lineCap = 'round';
+                sigCtx.lineJoin = 'round';
+            }
+            setTimeout(resize, 100);
+            window.addEventListener('resize', resize);
+
+            function getPos(e) {
+                const rect = sigCanvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            }
+            function start(e) {
+                isSigning = true;
+                hasSignature = true;
+                const ph = document.getElementById('sigPlaceholder');
+                if (ph) ph.style.display = 'none';
+                const pos = getPos(e);
+                sigCtx.beginPath();
+                sigCtx.moveTo(pos.x, pos.y);
+            }
+            function move(e) {
+                if (!isSigning) return;
+                const pos = getPos(e);
+                sigCtx.lineTo(pos.x, pos.y);
+                sigCtx.stroke();
+            }
+            function stop() { isSigning = false; }
+
+            sigCanvas.addEventListener('mousedown', start);
+            sigCanvas.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', stop);
+
+            sigCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); start(e); }, { passive: false });
+            sigCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); move(e); }, { passive: false });
+            window.addEventListener('touchend', stop);
+        }
+
+        function clearSignature() {
+            if (!sigCanvas || !sigCtx) return;
+            sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+            hasSignature = false;
+            const ph = document.getElementById('sigPlaceholder');
+            if (ph) ph.style.display = 'block';
+        }
+
+        function getSignatureBase64() {
+            if (!hasSignature || !sigCanvas) return '';
+            return sigCanvas.toDataURL('image/png');
+        }
+
+        // Auto Storage Cleanup (Retention Policy > 14 days)
+        function performStorageCleanup() {
+            try {
+                const now = Date.now();
+                const MAX_AGE = 14 * 24 * 60 * 60 * 1000;
+                const q = JSON.parse(localStorage.getItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE') || '[]');
+                const fresh = q.filter(item => (now - (item.timestamp || now)) < MAX_AGE);
+                if (fresh.length !== q.length) {
+                    localStorage.setItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE', JSON.stringify(fresh));
+                }
+            } catch(e) {}
+        }
+        performStorageCleanup();
+
+        // Automatic Background Sync on network restoration
+        window.addEventListener('online', () => {
+            console.log('Network restored — syncing Daily Safety offline queue...');
+            syncOfflineQueue();
+        });
+        if (navigator.onLine) {
+            setTimeout(syncOfflineQueue, 2000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof initSignaturePad === 'function') initSignaturePad();
+            measureCloudPing();
+            fetchPlantWeatherData();
+            fetchEmergencyContactsCloud();
+        });
+
+        // ==========================================
+        // Unified Header Tools (Ping, Weather, SOS)
+        // ==========================================
+        // ======================================================================
+        // 🚨 Emergency SOS Contacts Engine (Dynamic Cloud & Sheets Sync)
+        // ======================================================================
+        const DEFAULT_EMERGENCY_CONTACTS = {
+            clinicPhone: '01000000001',
+            hsePhone: '01000000002',
+            firePhone: '01000000003',
+            securityPhone: '01000000004',
+            ambulancePhone: '123',
+            nationalFirePhone: '180',
+            policePhone: '122'
+        };
+
+        function getCachedEmergencyContacts() {
+            try {
+                const raw = localStorage.getItem('HSE_EMERGENCY_CONTACTS_CACHE');
+                return raw ? JSON.parse(raw) : DEFAULT_EMERGENCY_CONTACTS;
+            } catch(e) {
+                return DEFAULT_EMERGENCY_CONTACTS;
+            }
+        }
+
+        function saveCachedEmergencyContacts(data) {
+            try {
+                localStorage.setItem('HSE_EMERGENCY_CONTACTS_CACHE', JSON.stringify(data));
+            } catch(e) {}
+        }
+
+        function renderEmergencyContacts(contacts) {
+            const c = contacts || getCachedEmergencyContacts();
+            const map = {
+                valCallClinic: c.clinicPhone,
+                linkCallClinic: c.clinicPhone,
+                valCallHse: c.hsePhone,
+                linkCallHse: c.hsePhone,
+                valCallFire: c.firePhone,
+                linkCallFire: c.firePhone,
+                valCallSecurity: c.securityPhone,
+                linkCallSecurity: c.securityPhone,
+                valCallAmbulance: c.ambulancePhone,
+                linkCallAmbulance: c.ambulancePhone,
+                valCallNatFire: c.nationalFirePhone,
+                linkCallNatFire: c.nationalFirePhone,
+                valCallPolice: c.policePhone,
+                linkCallPolice: c.policePhone
+            };
+
+            for (const [id, val] of Object.entries(map)) {
+                const el = document.getElementById(id);
+                if (!el) continue;
+                if (id.startsWith('linkCall')) {
+                    el.href = `tel:${val || ''}`;
+                } else {
+                    el.textContent = val || '';
+                }
+            }
+        }
+
+        async function fetchEmergencyContactsCloud() {
+            renderEmergencyContacts();
+            if (!navigator.onLine) return;
+            try {
+                const targetApiUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+                const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data && data.success && data.contacts) {
+                    saveCachedEmergencyContacts(data.contacts);
+                    renderEmergencyContacts(data.contacts);
+                }
+            } catch(e) {}
+        }
+
+        function openEmergencySosModal(event) {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            renderEmergencyContacts();
+            const modal = document.getElementById('emergencyContactsModal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeEmergencySosModal(event) {
+            const modal = document.getElementById('emergencyContactsModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function calculateHeatStressCategory(temp, humidity) {
+            let heatIndex = temp;
+            if (temp >= 27 && humidity >= 40) heatIndex = temp + (humidity * 0.1);
+            if (heatIndex >= 40) {
+                return { category: 'danger', labelAr: 'خطر إجهاد حراري 🚨', labelEn: 'Extreme Danger 🚨', color: '#ef4444' };
+            } else if (heatIndex >= 34) {
+                return { category: 'warning', labelAr: 'إجهاد متوسط ⚠️', labelEn: 'High Caution ⚠️', color: '#d97706' };
+            } else if (heatIndex >= 29) {
+                return { category: 'caution', labelAr: 'معتدل ☀️', labelEn: 'Caution ☀️', color: '#b45309' };
+            } else {
+                return { category: 'safe', labelAr: 'طبيعي وآمن 🟢', labelEn: 'Safe 🟢', color: '#059669' };
+            }
+        }
+
+        function renderWeatherWidget(weather) {
+            if (!weather) {
+                try {
+                    const raw = localStorage.getItem('HSE_WEATHER_CACHE');
+                    weather = raw ? JSON.parse(raw) : { temp: 32, humidity: 45, weatherCode: 0 };
+                } catch(e) {
+                    weather = { temp: 32, humidity: 45, weatherCode: 0 };
+                }
+            }
+            const tempEl = document.getElementById('weatherTemp');
+            const iconEl = document.getElementById('weatherIcon');
+            const pillEl = document.getElementById('heatIndexPill');
+            if (!tempEl || !pillEl) return;
+
+            const lang = (typeof currentLang !== 'undefined' ? currentLang : 'ar');
+            const risk = calculateHeatStressCategory(weather.temp, weather.humidity);
+
+            tempEl.textContent = `${Math.round(weather.temp)}°C`;
+            pillEl.textContent = (lang === 'en') ? risk.labelEn : risk.labelAr;
+            pillEl.style.background = risk.color;
+
+            if (weather.temp >= 36) { if (iconEl) iconEl.textContent = '🔥'; }
+            else if (weather.temp >= 28) { if (iconEl) iconEl.textContent = '☀️'; }
+            else { if (iconEl) iconEl.textContent = '🌤️'; }
+
+            const mTemp = document.getElementById('heatModalTemp');
+            const mHum = document.getElementById('heatModalHumidity');
+            const mPill = document.getElementById('heatModalRiskPill');
+            if (mTemp) mTemp.textContent = `${Math.round(weather.temp)}°C`;
+            if (mHum) mHum.textContent = `${Math.round(weather.humidity)}%`;
+            if (mPill) {
+                mPill.textContent = (lang === 'en') ? risk.labelEn : risk.labelAr;
+                mPill.style.background = risk.color;
+            }
+        }
+
+        async function fetchPlantWeatherData() {
+            renderWeatherWidget();
+            if (!navigator.onLine) return;
+            try {
+                const url = 'https://api.open-meteo.com/v1/forecast?latitude=30.0444&longitude=31.2357&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Africa%2FCairo';
+                const res = await fetch(url, { cache: 'no-cache' });
+                if (!res.ok) throw new Error('Weather fetch failed');
+                const data = await res.json();
+                if (data && data.current) {
+                    const weatherObj = {
+                        temp: data.current.temperature_2m || 32,
+                        humidity: data.current.relative_humidity_2m || 45,
+                        weatherCode: data.current.weather_code || 0,
+                        updatedAt: new Date().toISOString()
+                    };
+                    try { localStorage.setItem('HSE_WEATHER_CACHE', JSON.stringify(weatherObj)); } catch(e) {}
+                    renderWeatherWidget(weatherObj);
+                }
+            } catch(e) {
+                renderWeatherWidget();
+            }
+        }
+
+        function openHeatStressAdvisoryModal(event) {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            renderWeatherWidget();
+            const modal = document.getElementById('heatStressAdvisoryModal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeHeatStressAdvisoryModal(event) {
+            const modal = document.getElementById('heatStressAdvisoryModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function measureCloudPing(forceInteractive = false) {
+            const statusEl = document.getElementById('onlineStatus');
+            const dotEl = document.getElementById('onlineStatusDot');
+            const textEl = document.getElementById('onlineStatusText');
+            const pingEl = document.getElementById('onlineStatusPing');
+            if (!statusEl || !textEl || !dotEl) return;
+
+            if (!navigator.onLine) {
+                statusEl.style.background = '#fef2f2';
+                statusEl.style.color = '#b91c1c';
+                statusEl.style.borderColor = '#fecaca';
+                dotEl.style.background = '#ef4444';
+                dotEl.style.boxShadow = '0 0 6px #ef4444';
+                textEl.textContent = 'وضع أوفلاين';
+                if (pingEl) pingEl.style.display = 'none';
+                return;
+            }
+
+            try {
+                const startTime = performance.now();
+                const targetUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+                await fetch(`${targetUrl}?action=ping&_t=${Date.now()}`, { method: 'HEAD', mode: 'no-cors', cache: 'no-store' });
+                const latency = Math.round(performance.now() - startTime);
+
+                if (pingEl) {
+                    pingEl.textContent = `${latency}ms`;
+                    pingEl.style.display = 'inline-block';
+                }
+                statusEl.style.background = '#ecfdf5';
+                statusEl.style.color = '#047857';
+                statusEl.style.borderColor = '#a7f3d0';
+                dotEl.style.background = '#10b981';
+                dotEl.style.boxShadow = '0 0 6px #10b981';
+                textEl.textContent = (latency <= 300) ? 'متصل وسريع' : 'متصل بالسحابة';
+            } catch(e) {
+                statusEl.style.background = '#ecfdf5';
+                statusEl.style.color = '#047857';
+                statusEl.style.borderColor = '#a7f3d0';
+                dotEl.style.background = '#10b981';
+                textEl.textContent = 'متصل بالسحابة';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -3,6 +3,7 @@
   "private": true,
   "description": "HSE clinic-repo root tooling (Playwright smoke + shared scripts)",
   "scripts": {
+    "build": "node Frontend/scripts/build-frontend-prod.mjs",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test tests/e2e/smoke",
     "test:e2e:ui": "playwright test --ui",
@@ -13,6 +14,7 @@
     "test:gates": "npm run test:p3 && npm run test:e2e:smoke"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.0"
+    "@playwright/test": "^1.58.0",
+    "esbuild": "^0.25.12"
   }
 }

@@ -1,0 +1,2000 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#1e1b4b">
+    <title>SafetyHub | نموذج الإبلاغ عن حادث وشيك (Near Miss)</title>
+    
+    <!-- PWA & Mobile Meta -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="الإبلاغ عن وشيكة">
+    <meta name="application-name" content="الإبلاغ عن وشيكة">
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    <link rel="manifest" href="./manifest-near-miss.json">
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #312e81;
+            --primary-dark: #1e1b4b;
+            --accent: #f59e0b;
+            --bg-page: #f8fafc;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 10px 40px;
+        }
+
+        /* LTR Overrides */
+        html[dir="ltr"] body {
+            direction: ltr;
+            text-align: left;
+        }
+        html[dir="ltr"] .form-card,
+        html[dir="ltr"] .section-header,
+        html[dir="ltr"] label,
+        html[dir="ltr"] .iso-col-title,
+        html[dir="ltr"] .receipt-card,
+        html[dir="ltr"] .receipt-row,
+        html[dir="ltr"] .iso-footer {
+            text-align: left;
+        }
+        html[dir="ltr"] .iso-col-brand {
+            border-left: none;
+            border-right: 1px solid #e2e8f0;
+        }
+        html[dir="ltr"] .iso-col-meta {
+            border-right: none;
+            border-left: 1px solid #e2e8f0;
+        }
+        html[dir="ltr"] .floating-hub-btn {
+            right: auto;
+            left: 22px;
+        }
+        @media (max-width: 640px) {
+            html[dir="ltr"] .floating-hub-btn {
+                right: auto;
+                left: 14px;
+            }
+        }
+
+        .lang-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            background: #e0e7ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+            border-radius: 9999px;
+            padding: 2px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .lang-btn:hover {
+            background: #c7d2fe;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 760px;
+        }
+
+        /* ══════════════════════════════════════════════════════
+           ترويسة ISO المعتمدة ثلاثية الأعمدة
+        ══════════════════════════════════════════════════════ */
+        /* 📌 رأس النموذج الثابت أثناء الانزلاق (Sticky Header: Tools + ISO Table) */
+        .form-sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--bg-base);
+            padding-top: 6px;
+            padding-bottom: 2px;
+            margin-bottom: 8px;
+            transition: all 0.25s ease;
+        }
+        [data-theme="dark"] .form-sticky-header {
+            background: var(--bg-base);
+        }
+
+        .iso-header-table {
+            display: grid;
+            grid-template-columns: minmax(140px, 1.1fr) 2.2fr minmax(140px, 1fr);
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-top: 4px solid #312e81;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+            margin-bottom: 4px;
+        }
+
+        .iso-col-brand {
+            padding: 10px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            border-left: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        }
+
+        .iso-logo-wrap {
+            max-width: 130px;
+            min-height: 46px;
+            max-height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 3px 6px;
+        }
+
+        .iso-logo-img {
+            max-height: 42px;
+            max-width: 100px;
+            object-fit: contain;
+        }
+
+        .iso-dept-name {
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: #312e81;
+            text-align: center;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .iso-col-title {
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: #ffffff;
+            gap: 2px;
+        }
+
+        .iso-doc-title {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #1e1b4b;
+            margin: 0;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        .iso-doc-subtitle {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #4338ca;
+            margin-top: 2px;
+        }
+
+        .iso-col-meta {
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 3px;
+            border-right: 1px solid #e2e8f0;
+            background: #f8fafc;
+            font-size: 0.68rem;
+        }
+
+        .iso-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 2px;
+        }
+        .iso-meta-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+        .iso-meta-key { font-weight: 700; color: #64748b; font-size: 0.64rem; }
+        .iso-meta-val {
+            font-weight: 800;
+            color: #1e1b4b;
+            font-family: monospace, inherit;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 0 4px;
+            border-radius: 4px;
+            font-size: 0.66rem;
+        }
+
+        /* استجابة الهيدر على الهواتف */
+        @media (max-width: 768px) {
+            .iso-header-table {
+                grid-template-columns: minmax(72px, 85px) 1fr minmax(90px, 115px);
+                border-radius: 10px;
+                margin-bottom: 12px;
+            }
+            .iso-col-brand {
+                padding: 6px 4px;
+                gap: 3px;
+            }
+            .iso-logo-wrap {
+                max-width: 65px;
+                min-height: 34px;
+                max-height: 38px;
+                padding: 2px 4px;
+                border-radius: 6px;
+            }
+            .iso-logo-img {
+                max-height: 30px;
+                max-width: 55px;
+            }
+            .iso-dept-name {
+                font-size: 0.5rem;
+                white-space: normal;
+            }
+            .iso-col-title {
+                padding: 6px 4px;
+            }
+            .iso-doc-title {
+                font-size: 0.86rem;
+                white-space: normal;
+                line-height: 1.2;
+            }
+            .iso-doc-subtitle {
+                font-size: 0.54rem;
+            }
+            .iso-col-meta {
+                padding: 4px 6px;
+                gap: 2px;
+            }
+            .iso-meta-key {
+                font-size: 0.52rem;
+            }
+            .iso-meta-val {
+                font-size: 0.52rem;
+                padding: 0 2px;
+            }
+        }
+
+        /* كروت الأقسام */
+        .form-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 14px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.03);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .section-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-badge {
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            background: #e0e7ff;
+            color: #3730a3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #1e1b4b;
+        }
+
+        label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 5px;
+        }
+
+        .input-control, select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1.5px solid #cbd5e1;
+            font-size: 0.86rem;
+            background: #f8fafc;
+            color: #0f172a;
+            transition: all 0.2s;
+        }
+
+        .input-control:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #4338ca;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.15);
+        }
+
+        /* حقول الموقع الممسوحة بالـ QR الثابتة */
+        .qr-fixed-input {
+            background-color: #f1f5f9 !important;
+            border: 1.5px solid #10b981 !important;
+            color: #065f46 !important;
+            font-weight: 800 !important;
+            cursor: default !important;
+            pointer-events: none;
+        }
+
+        /* شبكة الخطورة */
+        .severity-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+
+        .sev-btn {
+            padding: 8px 3px;
+            border-radius: 10px;
+            border: 1.5px solid #e2e8f0;
+            background: #f8fafc;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.76rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .sev-btn.active[data-val="منخفض"] { background: #dcfce7; border-color: #22c55e; color: #15803d; }
+        .sev-btn.active[data-val="متوسط"] { background: #fef9c3; border-color: #eab308; color: #854d0e; }
+        .sev-btn.active[data-val="عالي"] { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+        .sev-btn.active[data-val="وشيك / كارثي"] { background: #450a0a; border-color: #991b1b; color: #fecaca; }
+
+        /* زر الإرسال */
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+            color: #fff;
+            font-size: 1.02rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(49, 46, 129, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s;
+        }
+
+        .btn-submit:active { transform: scale(0.98); }
+
+        /* الفوتر الرسمي المعتمد */
+        .iso-footer {
+            margin-top: 24px;
+            padding: 16px 14px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-top: 3px solid #312e81;
+            border-radius: 14px;
+            text-align: center;
+            font-size: 0.72rem;
+            color: #64748b;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            width: 100%;
+        }
+
+        .iso-footer-top {
+            font-weight: 800;
+            color: #1e1b4b;
+            margin-bottom: 3px;
+        }
+
+        /* شاشة النجاح */
+        #successScreen {
+            display: none;
+            text-align: center;
+            background: #fff;
+            border-radius: 20px;
+            padding: 30px 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+        }
+
+        .success-badge {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            background: #dcfce7;
+            color: #16a34a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 14px;
+        }
+
+        .floating-hub-btn {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            z-index: 999;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            color: #ffffff !important;
+            padding: 9px 15px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            font-weight: 800;
+            text-decoration: none !important;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.25s ease;
+            backdrop-filter: blur(8px);
+        }
+        .floating-hub-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55);
+        }
+        @media (max-width: 640px) {
+            .floating-hub-btn {
+                bottom: 14px;
+                right: 14px;
+                padding: 8px 12px;
+                font-size: 11px;
+            }
+        }
+    
+        /* ======================================================================
+         * 📱 UI/UX PRO MAX - MOBILE DESIGN SYSTEM & TOUCH OPTIMIZATION (≤768px)
+         * Standardized WCAG 2.5.5 Touch Targets (44px+), 16px iOS anti-zoom,
+         * Safe Area insets, tactile active states & fluid form responsiveness.
+         * ====================================================================== */
+        @media (max-width: 768px) {
+            /* 1. Prevent iOS Safari auto-zoom on field focus */
+            input, select, textarea, .form-control {
+                font-size: 16px !important;
+                min-height: 46px !important;
+                border-radius: 10px !important;
+                padding: 10px 14px !important;
+                touch-action: manipulation;
+            }
+
+            /* 2. Touch targets & tactile active feedback */
+            button, .btn, .btn-submit, .date-preset-btn, .action-btn {
+                min-height: 48px !important;
+                font-size: 0.92rem !important;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+                border-radius: 10px !important;
+            }
+
+            button:active, .btn:active, .date-preset-btn:active, .form-card:active {
+                transform: scale(0.98) !important;
+                transition: transform 0.12s ease !important;
+            }
+
+            /* 3. Fluid container spacing without overflow */
+            .form-container, .main-container, .hub-container, .page-container {
+                padding: 8px 10px !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .form-card, .section-card, .card-box {
+                padding: 14px 12px !important;
+                margin-bottom: 12px !important;
+                border-radius: 14px !important;
+            }
+
+            /* 4. Labels & Helper typography readability */
+            .form-label, label {
+                font-size: 0.88rem !important;
+                font-weight: 800 !important;
+                margin-bottom: 6px !important;
+                color: #1e293b !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 4px !important;
+            }
+
+            /* 5. Safe Area Inset for mobile bottom action bars */
+            .bottom-actions, .floating-submit-bar, .sticky-bottom-bar {
+                padding-bottom: max(14px, env(safe-area-inset-bottom)) !important;
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+
+            /* 6. Choice chips, pills & option grids */
+            .type-cards-grid, .risk-grid, .options-grid, .selection-grid {
+                grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+                gap: 8px !important;
+            }
+
+            .option-card, .type-card, .risk-pill {
+                min-height: 48px !important;
+                padding: 10px 8px !important;
+            }
+        }
+
+        /* 🌡️ Live Weather & Heat Stress Badge */
+        .weather-badge {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(254, 243, 199, 0.85);
+            color: #92400e;
+            border: 1px solid #fde68a;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .weather-badge:hover { background: #fef3c7; transform: translateY(-1px); }
+        .heat-index-pill {
+            padding: 1px 6px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: 800;
+            background: #10b981;
+            color: #ffffff;
+        }
+
+        /* 🚨 SOS Emergency Button */
+        .sos-btn {
+            padding: 4px 11px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #ffffff;
+            border: 1px solid #b91c1c;
+            font-weight: 800;
+            font-size: 0.78rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+            animation: sosPulse 2.5s infinite;
+            transition: all 0.2s;
+        }
+        .sos-btn:hover {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            transform: translateY(-1px);
+            box-shadow: 0 0 14px rgba(239, 68, 68, 0.65);
+        }
+        @keyframes sosPulse {
+            0%, 100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.35); }
+            50% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.7); }
+        }
+
+        /* Emergency Contacts Modal & Cards */
+        .emergency-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .emergency-modal-dialog {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+            animation: popModal 0.2s ease-out;
+        }
+        @keyframes popModal {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .emergency-contact-card {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+        .emergency-contact-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            transform: translateY(-1px);
+        }
+        .emergency-call-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            background: #10b981;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 0.78rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .emergency-call-btn:hover { background: #059669; transform: scale(1.03); }
+
+</style>
+</head>
+<body>
+
+<!-- 🚨 Emergency SOS Contacts Modal -->
+<div id="emergencyContactsModal" class="emergency-modal-overlay" onclick="closeEmergencySosModal(event)">
+    <div class="emergency-modal-dialog" onclick="event.stopPropagation()">
+        <div style="background: linear-gradient(135deg, #ef4444, #b91c1c); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-phone-volume"></i>
+                <span id="txtSosModalTitle">دليل خطوط وأرقام الطوارئ الميدانية</span>
+            </div>
+            <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer;" onclick="closeEmergencySosModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div style="padding: 16px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+                <div class="emergency-contact-card">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.86rem; color: #1e293b;">
+                            <i class="fas fa-hospital text-emerald-600 ml-1"></i> <span id="txtContactClinic">عيادة المصنع</span>
+                        </div>
+                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">طوارئ طبية وإسعافات</div>
+                        <div style="font-size: 0.76rem; font-weight: 800; color: #059669; font-family: monospace;" id="valCallClinic">01000000001</div>
+                    </div>
+                    <a id="linkCallClinic" href="tel:01000000001" class="emergency-call-btn">
+                        <i class="fas fa-phone"></i>
+                        <span>اتصال</span>
+                    </a>
+                </div>
+
+                <div class="emergency-contact-card">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.86rem; color: #1e293b;">
+                            <i class="fas fa-shield-halved text-blue-600 ml-1"></i> <span id="txtContactHse">غرفة عمليات السلامة</span>
+                        </div>
+                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">بلاغات الحوادث والمخاطر</div>
+                        <div style="font-size: 0.76rem; font-weight: 800; color: #2563eb; font-family: monospace;" id="valCallHse">01000000002</div>
+                    </div>
+                    <a id="linkCallHse" href="tel:01000000002" class="emergency-call-btn" style="background: #2563eb;">
+                        <i class="fas fa-phone"></i>
+                        <span>اتصال</span>
+                    </a>
+                </div>
+
+                <div class="emergency-contact-card">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.86rem; color: #1e293b;">
+                            <i class="fas fa-fire-extinguisher text-red-600 ml-1"></i> <span id="txtContactFire">فريق مكافحة الحريق</span>
+                        </div>
+                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">طوارئ الإطفاء والإنقاذ</div>
+                        <div style="font-size: 0.76rem; font-weight: 800; color: #dc2626; font-family: monospace;" id="valCallFire">01000000003</div>
+                    </div>
+                    <a id="linkCallFire" href="tel:01000000003" class="emergency-call-btn" style="background: #dc2626;">
+                        <i class="fas fa-phone"></i>
+                        <span>اتصال</span>
+                    </a>
+                </div>
+
+                <div class="emergency-contact-card">
+                    <div>
+                        <div style="font-weight: 800; font-size: 0.86rem; color: #1e293b;">
+                            <i class="fas fa-shield text-amber-600 ml-1"></i> <span id="txtContactSecurity">أمن البوابات والحراسات</span>
+                        </div>
+                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">إخلاء وحصر التواجد</div>
+                        <div style="font-size: 0.76rem; font-weight: 800; color: #d97706; font-family: monospace;" id="valCallSecurity">01000000004</div>
+                    </div>
+                    <a id="linkCallSecurity" href="tel:01000000004" class="emergency-call-btn" style="background: #d97706;">
+                        <i class="fas fa-phone"></i>
+                        <span>اتصال</span>
+                    </a>
+                </div>
+            </div>
+
+            <div style="background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; padding: 10px 14px;">
+                <span style="font-size: 0.76rem; font-weight: 800; color: #475569; display: block; margin-bottom: 8px;">
+                    <i class="fas fa-tower-broadcast text-blue-500 ml-1"></i> <span id="txtNationalSosTitle">أرقام الطوارئ القومية المعتمدة:</span>
+                </span>
+                <div style="display: flex; gap: 8px; justify-content: space-around; flex-wrap: wrap;">
+                    <a id="linkCallAmbulance" href="tel:123" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #047857; display: inline-flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-truck-medical"></i> الإسعاف: <span id="valCallAmbulance">123</span>
+                    </a>
+                    <a id="linkCallNatFire" href="tel:180" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #b91c1c; display: inline-flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-fire"></i> المطافئ: <span id="valCallNatFire">180</span>
+                    </a>
+                    <a id="linkCallPolice" href="tel:122" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #1e40af; display: inline-flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-handcuffs"></i> شرطة النجدة: <span id="valCallPolice">122</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🌡️ Live Plant Weather & Heat Stress Advisory Modal -->
+<div id="heatStressAdvisoryModal" class="emergency-modal-overlay" onclick="closeHeatStressAdvisoryModal(event)">
+    <div class="emergency-modal-dialog" style="max-width: 580px;" onclick="event.stopPropagation()">
+        <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-sun-plant-wilt"></i>
+                <span id="txtHeatModalTitle">حالة الطقس الميداني ودليل الإجهاد الحراري</span>
+            </div>
+            <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer;" onclick="closeHeatStressAdvisoryModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div style="padding: 16px;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
+                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">حرارة المصانع</span>
+                    <span id="heatModalTemp" style="font-size: 1.3rem; font-weight: 900; color: #b45309;">32°C</span>
+                </div>
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
+                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">الرطوبة النسبية</span>
+                    <span id="heatModalHumidity" style="font-size: 1.3rem; font-weight: 900; color: #2563eb;">45%</span>
+                </div>
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
+                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">مستوى الخطورة</span>
+                    <span id="heatModalRiskPill" class="heat-index-pill" style="font-size: 0.82rem; padding: 3px 8px; display: inline-block; margin-top: 4px;">طبيعي وآمن</span>
+                </div>
+            </div>
+
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: #92400e; display: block; margin-bottom: 6px;">
+                    <i class="fas fa-clipboard-check ml-1"></i> <span id="txtHeatInstructionsTitle">تعليمات وبروتوكول الوقاية من الإجهاد الحراري (OSHA):</span>
+                </span>
+                <ul style="font-size: 0.78rem; color: #78350f; line-height: 1.6; margin: 0; padding-right: 18px;">
+                    <li>شرب 1 كوب ماء بارد كل 15-20 دقيقة حتى بدون الشعور بالعطش.</li>
+                    <li>الالتزام بفترات راحة في مناطق مظللة وجيدة التهوية كل ساعتين من العمل الميداني.</li>
+                    <li>مراقبة الزملاء للتعرف المبكر على أعراض الدوار أو الصداع أو الإعياء الحراري.</li>
+                    <li>ارتداء ملابس قطنية خفيفة مع غطاء الرأس ومهمات السلامة المعتمدة.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- 📌 رأس النموذج الثابت أثناء الانزلاق (Sticky Header: Tools + ISO Table) -->
+    <header class="form-sticky-header">
+        <!-- شريط أدوات الحالة والطقس والطوارئ والعودة للبوابة واللغة الموحد -->
+        <div class="top-tools-bar" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                <!-- مؤشر حالة الاتصال وسرعة استجابة السيرفر (Live Ping Meter) -->
+                <div id="onlineStatus" onclick="measureCloudPing(true)" title="انقر لفحص سرعة الاستجابة اللحظية للسيرفر" style="padding: 4px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; cursor: pointer; transition: all 0.2s;">
+                    <span id="onlineStatusDot" style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 6px #10b981;"></span>
+                    <span id="onlineStatusText">متصل بالسحابة</span>
+                    <span id="onlineStatusPing" style="background: rgba(4, 120, 87, 0.12); padding: 1px 5px; border-radius: 4px; font-size: 0.68rem; font-family: monospace; display: none;">--ms</span>
+                </div>
+
+                <!-- ودجت الطقس ومستوى الإجهاد الحراري اللحظي بالمصانع -->
+                <div class="weather-badge" id="plantWeatherWidget" onclick="openHeatStressAdvisoryModal(event)" title="حالة الطقس ومؤشر الإجهاد الحراري (انقر للإرشادات التفصيلية)">
+                    <span id="weatherIcon">☀️</span>
+                    <span id="weatherTemp">32°C</span>
+                    <span class="heat-index-pill" id="heatIndexPill">طبيعي</span>
+                </div>
+            </div>
+
+            <!-- أزرار الأدوات والطوارئ واللغة والعودة للبوابة -->
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                <!-- زر الطوارئ الفوري SOS -->
+                <button type="button" class="sos-btn" id="btnEmergencySos" onclick="openEmergencySosModal(event)" title="أرقام وخطوط الطوارئ الميدانية / Emergency SOS">
+                    <i class="fas fa-phone-volume"></i>
+                    <span id="txtSosBtn">طوارئ SOS</span>
+                </button>
+
+                <!-- زر العودة لبوابة النماذج -->
+                <a href="forms-hub.html" title="العودة لبوابة النماذج الرئيسية" style="text-decoration: none; padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #4338ca; font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <i class="fas fa-th-large"></i>
+                    <span id="txtBackToHub">البوابة</span>
+                </a>
+
+                <!-- زر تبديل اللغة -->
+                <button type="button" id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()" style="padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <i class="fas fa-globe"></i>
+                    <span id="langBtnText">EN</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             1. ترويسة ISO المعتمدة ثلاثية الأعمدة (Near Miss Header)
+        ══════════════════════════════════════════════════════ -->
+        <div class="iso-header-table">
+            <div class="iso-col-brand">
+                <div class="iso-logo-wrap">
+                    <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
+                </div>
+                <div class="iso-dept-name">إدارة السلامة والصحة المهنية</div>
+            </div>
+
+            <div class="iso-col-title">
+                <h1 class="iso-doc-title" id="isoDocTitle">نموذج الإبلاغ عن حادث وشيك</h1>
+                <div class="iso-doc-subtitle" id="isoDocSubtitle">Near Miss Incident Report</div>
+            </div>
+
+            <div class="iso-col-meta">
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">كود الوثيقة:</span>
+                    <span class="iso-meta-val">DOC-HSE-NRM-01</span>
+                </div>
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">رقم الإصدار:</span>
+                    <span class="iso-meta-val">Rev. 02</span>
+                </div>
+                <div class="iso-meta-row">
+                    <span class="iso-meta-key">درجة السرية:</span>
+                    <span class="iso-meta-val" style="color: #047857;">عام داخلي</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Success Screen -->
+    <div id="successScreen">
+        <div class="success-badge">
+            <i class="fas fa-check"></i>
+        </div>
+        <h2 style="font-size: 1.3rem; font-weight: 900; color: #1e1b4b; margin-bottom: 6px;">تم إرسال تقرير الحادث الوشيك بنجاح!</h2>
+        <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 16px;">تم توثيق البلاغ في سجلات السلامة بقاعدة البيانات وإحالته للمتابعة الفورية لمنع وقوع الحوادث.</p>
+        <div style="background: #e0e7ff; color: #3730a3; padding: 8px 16px; border-radius: 12px; font-weight: 900; font-size: 1.1rem; display: inline-block; margin-bottom: 18px;" id="resIsoCode">
+            NM-2026-0000
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <a id="whatsappShareBtn" href="#" target="_blank" style="text-decoration:none; background:#22c55e; color:#fff; padding:10px; border-radius:10px; font-weight:700; font-size:0.82rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <i class="fab fa-whatsapp"></i> مشاركة عبر واتساب
+            </a>
+            <button onclick="location.reload()" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; padding:10px; border-radius:10px; font-weight:700; font-size:0.82rem; cursor:pointer;">
+                <i class="fas fa-plus"></i> بلاغ وشيك آخر
+            </button>
+        </div>
+        <a href="forms-hub.html" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; border-radius: 10px; background: #e0e7ff; color: #3730a3; font-weight: 800; text-decoration: none; font-size: 0.85rem; transition: all 0.2s;" onmouseover="this.style.background='#c7d2fe'" onmouseout="this.style.background='#e0e7ff'">
+            <i class="fas fa-layer-group"></i> <span id="hubBtnText">الرجوع إلى بوابة النماذج</span>
+        </a>
+    </div>
+
+    <!-- Main Simple Form -->
+    <form id="nearMissForm">
+        <!-- 1. الموقع والمكان داخل المصنع -->
+        <div class="form-card">
+            <div class="section-header">
+                <div class="section-title-wrap">
+                    <span class="section-badge">1</span>
+                    <span class="section-title">الموقع والمصنع داخل المنشأة</span>
+                </div>
+                <!-- أيقونة الموقع فقط بدون نص الملاحظة -->
+                <span id="gpsStatusBadge" title="تحديد الموقع الجغرافي">
+                    <i id="gpsIcon" class="fas fa-location-crosshairs" style="color: #64748b; font-size: 1.1rem; transition: all 0.3s ease;"></i>
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label>المصنع / المنشأة *</label>
+                    <select id="siteSelect" required onchange="handleSiteChange(this.value)">
+                        <option value="">— اختر المصنع أولاً —</option>
+                    </select>
+                </div>
+                <div>
+                    <label>المكان الفرعي بالمصنع *</label>
+                    <select id="placeSelect" required onchange="handlePlaceChange(this.value)" disabled>
+                        <option value="">— اختر المصنع أولاً —</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="customPlaceGroup" style="display:none; margin-top:10px;">
+                <label>اكتب اسم المكان الفرعي بدقة *</label>
+                <input type="text" id="customPlaceInput" class="input-control" placeholder="اكتب تفاصيل المكان الفرعي...">
+            </div>
+        </div>
+
+        <!-- 2. تصنيف الحادث والخطورة -->
+        <div class="form-card">
+            <div class="section-header">
+                <div class="section-title-wrap">
+                    <span class="section-badge">2</span>
+                    <span class="section-title">تصنيف الواقعة ومستوى الخطورة</span>
+                </div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label>نوع وتصنيف الحادث الوشيك *</label>
+                <select id="typeSelect" required>
+                    <option value="سقوط أشياء / أحمال">سقوط أشياء / أحمال</option>
+                    <option value="تعثر / انزلاق">تعثر / انزلاق</option>
+                    <option value="اقتراب معدات / فوركلفت">اقتراب معدات / فوركلفت</option>
+                    <option value="خطر كهربائي وشيك">خطر كهربائي وشيك</option>
+                    <option value="تسريب مواد كيميائية / غاز">تسريب مواد كيميائية / غاز</option>
+                    <option value="حريق وشيك">حريق وشيك</option>
+                    <option value="تصرف غير آمن">تصرف غير آمن</option>
+                    <option value="وضع غير آمن">وضع غير آمن</option>
+                    <option value="حادث وشيك عام">حادث وشيك عام</option>
+                </select>
+            </div>
+
+            <div>
+                <label>مستوى الخطورة المحتملة *</label>
+                <div class="severity-grid">
+                    <div class="sev-btn" data-val="منخفض" onclick="setSeverity(this, 'منخفض')">🟢 منخفض</div>
+                    <div class="sev-btn active" data-val="متوسط" onclick="setSeverity(this, 'متوسط')">🟡 متوسط</div>
+                    <div class="sev-btn" data-val="عالي" onclick="setSeverity(this, 'عالي')">🔴 عالي</div>
+                    <div class="sev-btn" data-val="وشيك / كارثي" onclick="setSeverity(this, 'وشيك / كارثي')">🚨 وشيك</div>
+                </div>
+                <input type="hidden" id="severityInput" value="متوسط">
+            </div>
+        </div>
+
+        <!-- 3. تفاصيل الواقعة وما كاد أن يحدث -->
+        <div class="form-card" style="background:#fffbeb; border-color:#fde68a;">
+            <div class="section-header" style="border-color:#fef3c7;">
+                <div class="section-title-wrap">
+                    <span class="section-badge" style="background:#fef3c7; color:#92400e;">3</span>
+                    <span class="section-title" style="color:#92400e;">تفاصيل الواقعة (ما كاد أن يحدث) *</span>
+                </div>
+            </div>
+            <textarea id="descriptionInput" rows="3" placeholder="صف الواقعة بدقة: ماذا حدث بالتحديد وما هي الإصابة أو الخسائر التي كادت أن تقع لولا تدارك الأمر؟" required style="background:#fff; border-color:#fcd34d;"></textarea>
+        </div>
+
+        <!-- 4. الإجراء الوقائي المتخذ -->
+        <div class="form-card" style="background:#f0fdf4; border-color:#bbf7d0;">
+            <div class="section-header" style="border-color:#dcfce7;">
+                <div class="section-title-wrap">
+                    <span class="section-badge" style="background:#dcfce7; color:#166534;">4</span>
+                    <span class="section-title" style="color:#166534;">الإجراء الوقائي المتخذ / المقترح (اختياري)</span>
+                </div>
+            </div>
+            <textarea id="correctiveInput" rows="2" placeholder="ما هو الإجراء الفوري المتخذ أو المطلوب لمنع تكرار الواقعة؟" style="background:#fff; border-color:#86efac;"></textarea>
+        </div>
+
+        <!-- 5. صورة ومرفقات -->
+        <div class="form-card">
+            <div class="section-header">
+                <div class="section-title-wrap">
+                    <span class="section-badge">5</span>
+                    <span class="section-title">صورة توضيحية من الموقع (اختياري)</span>
+                </div>
+            </div>
+            <input type="file" id="photoInput" accept="image/*" class="input-control" onchange="previewPhoto(this)">
+            <div id="photoPreviewWrap" style="display:none; margin-top:10px;">
+                <img id="photoPreviewImg" src="" style="width:100%; height:180px; object-fit:cover; border-radius:10px; border:1px solid #cbd5e1;" />
+            </div>
+        </div>
+
+        <!-- 6. بيانات المبلّغ -->
+        <div class="form-card">
+            <div class="section-header">
+                <div class="section-title-wrap">
+                    <span class="section-badge">6</span>
+                    <span class="section-title">بيانات المبلّغ</span>
+                </div>
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.76rem; color:#312e81; font-weight:800; cursor:pointer; margin-bottom:0;">
+                    <input type="checkbox" id="anonCheck" onchange="toggleAnonymous(this.checked)">
+                    <span>🔒 إبلاغ سري بدون اسم</span>
+                </label>
+            </div>
+            <div id="reporterInputs" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label>الاسم</label>
+                    <input type="text" id="observerNameInput" class="input-control" placeholder="الاسم ثلاثي">
+                </div>
+                <div>
+                    <label>رقم التليفون</label>
+                    <input type="tel" id="phoneInput" class="input-control" placeholder="+20XXXXXXXXXX">
+                </div>
+            </div>
+        </div>
+
+        <!-- زر الإرسال -->
+        <button type="submit" id="submitBtn" class="btn-submit">
+            <i class="fas fa-paper-plane text-amber-300"></i>
+            <span>إرسال تقرير الحادث الوشيك 🚀</span>
+        </button>
+    </form>
+
+    <!-- الفوتر الرسمي المعتمد -->
+    <div class="iso-footer">
+        <div class="iso-footer-top">SafetyHub | ICAPP — منظومة السلامة والصحة المهنية المتكاملة</div>
+        <div>نظام الإبلاغ الفوري عن الحوادث الوشيكة وإدارة الإجراءات الوقائية © 2026 جميع الحقوق محفوظة</div>
+    </div>
+</div>
+
+<script>
+    const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+    
+    function getEffectiveApiUrl() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const p = urlParams.get('apiUrl') || urlParams.get('api');
+            if (p && p.includes('script.google.com')) return p;
+            const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
+            if (s1) {
+                const parsed = JSON.parse(s1);
+                if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+            }
+            const s2 = localStorage.getItem('hse_app_settings');
+            if (s2) {
+                const parsed = JSON.parse(s2);
+                if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+            }
+        } catch(e) {}
+        return DEFAULT_API_URL;
+    }
+
+    const defaultSites = [
+  {
+    "name": "ICAPP-1",
+    "places": [
+      "صالة تصنيع الفاكهة (1)",
+      "صالة تصنيع الفاكهة (2)",
+      "صالة الفراولة بالسكر",
+      "صالة التعبئة الآلي",
+      "صالة التعبئة اليدوي",
+      "صالة التجهيز (1)",
+      "صالة التجهيز (2)",
+      "صالة البيوريه",
+      "خط فراولة رقم (2)",
+      "خط فراولة رقم (4)",
+      "مشروع التجفيد الجديد",
+      "ممر الثلاجات",
+      "ثلاجات الخام",
+      "عنبر تخزين 301",
+      "عنبر تخزين 302",
+      "عنبر تخزين 303",
+      "عنبر تخزين 304",
+      "عنبر تخزين 401",
+      "عنبر تخزين 402",
+      "رصيف التحميل الرئيسي",
+      "رامب أمام عنبر 304",
+      "ورشة الصيانة الميكانيكية",
+      "ورشة الحركة",
+      "مخزن قطع الغيار",
+      "مخزن الخدمات",
+      "محطة ضواغط الأمونيا (1)",
+      "محطة ضواغط الأمونيا (2)",
+      "محطة ضواغط الأمونيا (3)",
+      "غرفة الغلايات",
+      "غرفة الغاز الطبيعي",
+      "ضواغط الهواء",
+      "محولات الكهرباء (1 & 2 & 3)",
+      "محولات الكهرباء (4 & 5)",
+      "مولد الكهرباء (2)",
+      "منظومة طلمبات الحريق",
+      "غرفة الإنذار ولوحات التحكم",
+      "منطقة الاستقبال وممر الاستقبال",
+      "الميزان البسكول",
+      "مغسلة البرانيك",
+      "منطقة تشوين البالتات",
+      "منطقة المخلفات والويست",
+      "أحواض ترسيب محطة المعالجة",
+      "سقف المصنع وأبراج التبريد",
+      "سطح المصنع والبانل",
+      "مبنى المالية والإدارة",
+      "مبنى الزراعة والكافتيريا",
+      "مبنى العاملين الجديد وغرف الملابس",
+      "بوابة أمن رقم 1",
+      "بوابة أمن رقم 2",
+      "بوابة أمن رقم 3",
+      "الشوارع والساحات الخارجية"
+    ]
+  },
+  {
+    "name": "ICAPP-2",
+    "places": [
+      "خط الخضار والتصنيع",
+      "خط الورقيات",
+      "خط الجزر وتقشير الجزر",
+      "صالة فراز البامية وتدريج البامية",
+      "صالة تعبئة التصنيع",
+      "صالة التعبئة الآلي",
+      "صالة التعبئة اليدوي",
+      "منطقة البلانشر",
+      "منطقة التعقيم وغرفة التعقيم",
+      "معمل الجودة والمختبر",
+      "ممر صالة التصنيع",
+      "ممر الثلاجات ومنطقة الثلاجات",
+      "ثلاجة المنتج الخام",
+      "عنبر تخزين 701",
+      "عنبر تخزين 702",
+      "عنبر تخزين 703",
+      "عنبر تخزين 704",
+      "عنبر تخزين 705",
+      "عنبر تخزين 706",
+      "عنبر تخزين 707",
+      "عنبر تخزين 708",
+      "مخزن مواد التعبئة والتغليف",
+      "رصيف التحميل الرئيسي",
+      "رصيف التحميل الجانبي",
+      "رصيف خروج الويست والمخلفات",
+      "ورشة الصيانة",
+      "محطة ضواغط الأمونيا (1)",
+      "محطة ضواغط الأمونيا (2)",
+      "غرفة الغلايات ومحطة الترسيب",
+      "غرفة الغاز الطبيعي",
+      "ضواغط الهواء والكباسات الجديدة",
+      "محولات الكهرباء الرئيسية وغرفة MCC",
+      "مولد الكهرباء",
+      "منظومة طلمبات الحريق وخزانات GRP",
+      "منطقة الاستقبال والميزان البسكول",
+      "المغاسل وغرف الهايجين",
+      "المبنى الإداري (الدور الأرضي)",
+      "المبنى الإداري (الدور الأول)",
+      "المبنى الإداري (الدور الثاني)",
+      "المبنى الإداري (الدور الثالث)",
+      "كافتيريا العاملين وغرف تغيير الملابس",
+      "بوابة أمن رقم 1",
+      "بوابة أمن رقم 2",
+      "سطح المصنع وسقف البانل وأعلى الثلاجات",
+      "الشوارع والساحات الخارجية"
+    ]
+  },
+  {
+    "name": "WH",
+    "places": [
+      "المستودعات المركزية (المخزن الرئيسي)",
+      "مستودع الكراتين ومواد التغليف",
+      "مخزن الكيماويات والمطهرات",
+      "مسارات حركة رافعات الشوكة (Forklift)",
+      "منطقة شحن البطاريات",
+      "رصيف استلام البضائع والمهمات",
+      "ساحات التخزين المفتوحة",
+      "مكاتب أمناء المخازن"
+    ]
+  },
+  {
+    "name": "الموقع العام",
+    "places": [
+      "الشوارع والممرات الرئيسية بين المصانع",
+      "الساحات الخارجية ومحيط الأسوار",
+      "مجمع الورش الهندسية",
+      "مواقف سيارات النقل والمعدات الثقيلة",
+      "البوابات الرئيسية ونقاط التفتيش",
+      "نقطة التجمع الرئيسية لحالات الطوارئ"
+    ]
+  }
+];
+    // ==========================================
+    // Full Bilingual Translation Dictionary (i18n)
+    // ==========================================
+    const NEAR_MISS_I18N = {
+        ar: {
+            dir: 'rtl',
+            langBtn: 'EN',
+            pageTitle: 'SafetyHub | نموذج الإبلاغ عن حادث وشيك (Near Miss)',
+            deptName: 'إدارة السلامة والصحة المهنية',
+            docTitle: 'نموذج الإبلاغ عن حادث وشيك',
+            docSubtitle: 'Near Miss Report',
+            hubBtn: 'بوابة النماذج',
+            docCodeKey: 'كود الوثيقة:',
+            docRevKey: 'رقم الإصدار:',
+            docConfKey: 'درجة السرية:',
+            docConfVal: 'عام داخلي',
+            sec1Title: 'الموقع والمصنع داخل المنشأة',
+            siteLabel: 'المصنع / المنشأة *',
+            sitePlaceholder: '— اختر المصنع أولاً —',
+            placeLabel: 'المكان الفرعي بالمصنع *',
+            placePlaceholder: '— اختر المصنع أولاً —',
+            customPlaceLabel: 'اكتب اسم المكان الفرعي بدقة *',
+            customPlacePlaceholder: 'اكتب تفاصيل المكان الفرعي...',
+            sec2Title: 'تصنيف الواقعة ومستوى الخطورة',
+            typeLabel: 'نوع وتصنيف الحادث الوشيك *',
+            types: [
+                { val: 'سقوط أشياء / أحمال', text: 'سقوط أشياء / أحمال' },
+                { val: 'تعثر / انزلاق', text: 'تعثر / انزلاق' },
+                { val: 'اقتراب معدات / فوركلفت', text: 'اقتراب معدات / فوركلفت' },
+                { val: 'خطر كهربائي وشيك', text: 'خطر كهربائي وشيك' },
+                { val: 'تسريب مواد كيميائية / غاز', text: 'تسريب مواد كيميائية / غاز' },
+                { val: 'حريق وشيك', text: 'حريق وشيك' },
+                { val: 'تصرف غير آمن', text: 'تصرف غير آمن' },
+                { val: 'وضع غير آمن', text: 'وضع غير آمن' },
+                { val: 'حادث وشيك عام', text: 'حادث وشيك عام' }
+            ],
+            sevLabel: 'مستوى الخطورة المحتملة *',
+            sevLow: '🟢 منخفض',
+            sevMed: '🟡 متوسط',
+            sevHigh: '🔴 عالي',
+            sevCrit: '🚨 وشيك',
+            sec3Title: 'تفاصيل الواقعة (ما كاد أن يحدث) *',
+            descPlaceholder: 'صف الواقعة بدقة: ماذا حدث بالتحديد وما هي الإصابة أو الخسائر التي كادت أن تقع لولا تدارك الأمر؟',
+            sec4Title: 'الإجراء الوقائي المتخذ / المقترح (اختياري)',
+            corrPlaceholder: 'ما هو الإجراء الفوري المتخذ أو المطلوب لمنع تكرار الواقعة؟',
+            sec5Title: 'صورة توضيحية من الموقع (اختياري)',
+            sec6Title: 'بيانات المبلّغ',
+            anonCheck: '🔒 إبلاغ سري بدون اسم',
+            nameLabel: 'الاسم',
+            namePlaceholder: 'الاسم ثلاثي',
+            phoneLabel: 'رقم التليفون',
+            phonePlaceholder: '+20XXXXXXXXXX',
+            submitBtn: 'إرسال تقرير الحادث الوشيك 🚀',
+            submittingBtn: 'جاري إرسال البلاغ...',
+            successTitle: 'تم إرسال تقرير الحادث الوشيك بنجاح!',
+            successDesc: 'تم توثيق البلاغ في سجلات السلامة بقاعدة البيانات وإحالته للمتابعة الفورية لمنع وقوع الحوادث.',
+            waShareBtn: 'مشاركة عبر واتساب',
+            anotherReportBtn: 'بلاغ وشيك آخر',
+            backHubBtn: 'الرجوع إلى بوابة النماذج',
+            floatingHub: 'بوابة النماذج',
+            footerTop: 'SafetyHub | ICAPP — منظومة السلامة والصحة المهنية المتكاملة',
+            footerSub: 'نظام الإبلاغ الفوري عن الحوادث الوشيكة وإدارة الإجراءات الوقائية © 2026 جميع الحقوق محفوظة',
+            valSite: 'يرجى اختيار المصنع أولاً',
+            valPlace: 'يرجى اختيار المكان الفرعي بدقة',
+            valDesc: 'يرجى وصف ما كاد أن يحدث بالتفصيل'
+        },
+        en: {
+            dir: 'ltr',
+            langBtn: 'AR',
+            pageTitle: 'SafetyHub | Near Miss Incident Report',
+            deptName: 'HSE Department',
+            docTitle: 'Near Miss Incident Report',
+            docSubtitle: 'Near Miss Incident Report',
+            hubBtn: 'Forms Hub',
+            docCodeKey: 'Doc Code:',
+            docRevKey: 'Revision:',
+            docConfKey: 'Classification:',
+            docConfVal: 'Internal Public',
+            sec1Title: 'Facility & Location Details',
+            siteLabel: 'Factory / Facility *',
+            sitePlaceholder: '— Select Factory First —',
+            placeLabel: 'Specific Area / Sub-location *',
+            placePlaceholder: '— Select Factory First —',
+            customPlaceLabel: 'Specify exact sub-location *',
+            customPlacePlaceholder: 'Enter detailed area name...',
+            sec2Title: 'Incident Classification & Severity',
+            typeLabel: 'Near Miss Classification Type *',
+            types: [
+                { val: 'سقوط أشياء / أحمال', text: 'Falling Objects / Loads' },
+                { val: 'تعثر / انزلاق', text: 'Slip / Trip / Fall' },
+                { val: 'اقتراب معدات / فوركلفت', text: 'Forklift / Vehicle Near Contact' },
+                { val: 'خطر كهربائي وشيك', text: 'Electrical Hazard' },
+                { val: 'تسريب مواد كيميائية / غاز', text: 'Chemical / Gas Leak' },
+                { val: 'حريق وشيك', text: 'Fire Hazard / Flash' },
+                { val: 'تصرف غير آمن', text: 'Unsafe Act / Behavior' },
+                { val: 'وضع غير آمن', text: 'Unsafe Condition' },
+                { val: 'حادث وشيك عام', text: 'General Near Miss' }
+            ],
+            sevLabel: 'Potential Severity Level *',
+            sevLow: '🟢 Low',
+            sevMed: '🟡 Medium',
+            sevHigh: '🔴 High',
+            sevCrit: '🚨 Critical',
+            sec3Title: 'Incident Description (What almost happened) *',
+            descPlaceholder: 'Describe accurately: What happened and what injury or loss could have occurred?',
+            sec4Title: 'Preventive Action Taken / Suggested (Optional)',
+            corrPlaceholder: 'What immediate or recommended corrective action is needed to prevent recurrence?',
+            sec5Title: 'Incident Scene Photo (Optional)',
+            sec6Title: 'Reporter Information',
+            anonCheck: '🔒 Anonymous Report',
+            nameLabel: 'Full Name',
+            namePlaceholder: 'Full Name',
+            phoneLabel: 'Phone Number',
+            phonePlaceholder: '+20XXXXXXXXXX',
+            submitBtn: 'Submit Near Miss Report 🚀',
+            submittingBtn: 'Submitting report...',
+            successTitle: 'Near Miss Report Submitted Successfully!',
+            successDesc: 'Incident logged in the HSE database and routed for immediate corrective action.',
+            waShareBtn: 'Share via WhatsApp',
+            anotherReportBtn: 'Submit Another Report',
+            backHubBtn: 'Back to Forms Portal',
+            floatingHub: 'Forms Hub',
+            footerTop: 'SafetyHub | ICAPP — Integrated HSE Management System',
+            footerSub: 'Instant Near Miss Incident Reporting & CAPA Management System © 2026',
+            valSite: 'Please select the factory / facility',
+            valPlace: 'Please select or specify the specific area',
+            valDesc: 'Please describe what almost happened in detail'
+        }
+    };
+
+    let currentLang = 'ar';
+
+    function applyLanguage(lang) {
+        currentLang = lang;
+        const t = NEAR_MISS_I18N[lang] || NEAR_MISS_I18N.ar;
+        document.documentElement.lang = lang;
+        document.documentElement.dir = t.dir;
+        document.title = t.pageTitle;
+
+        const langBtnText = document.getElementById('langBtnText');
+        if (langBtnText) langBtnText.textContent = t.langBtn;
+
+        // ISO Header
+        const deptName = document.querySelector('.iso-dept-name');
+        if (deptName) deptName.textContent = t.deptName;
+        const docTitle = document.getElementById('isoDocTitle');
+        if (docTitle) docTitle.textContent = t.docTitle;
+        const docSubtitle = document.getElementById('isoDocSubtitle');
+        if (docSubtitle) docSubtitle.textContent = t.docSubtitle;
+        const hubBtnText = document.getElementById('hubBtnText');
+        if (hubBtnText) hubBtnText.textContent = t.hubBtn;
+
+        const metaKeys = document.querySelectorAll('.iso-meta-key');
+        if (metaKeys[0]) metaKeys[0].textContent = t.docCodeKey;
+        if (metaKeys[1]) metaKeys[1].textContent = t.docRevKey;
+        if (metaKeys[2]) metaKeys[2].textContent = t.docConfKey;
+        const metaValConf = document.querySelectorAll('.iso-meta-val');
+        if (metaValConf[2]) metaValConf[2].textContent = t.docConfVal;
+
+        // Section Titles
+        const secTitles = document.querySelectorAll('.section-title');
+        if (secTitles[0]) secTitles[0].textContent = t.sec1Title;
+        if (secTitles[1]) secTitles[1].textContent = t.sec2Title;
+        if (secTitles[2]) secTitles[2].textContent = t.sec3Title;
+        if (secTitles[3]) secTitles[3].textContent = t.sec4Title;
+        if (secTitles[4]) secTitles[4].textContent = t.sec5Title;
+        if (secTitles[5]) secTitles[5].textContent = t.sec6Title;
+
+        // Section 1 Labels
+        const sec1Labels = document.querySelectorAll('#nearMissForm .form-card:nth-of-type(1) label');
+        if (sec1Labels[0]) sec1Labels[0].textContent = t.siteLabel;
+        if (sec1Labels[1]) sec1Labels[1].textContent = t.placeLabel;
+        const customPlaceLabel = document.querySelector('#customPlaceGroup label');
+        if (customPlaceLabel) customPlaceLabel.textContent = t.customPlaceLabel;
+        const customPlaceInp = document.getElementById('customPlaceInput');
+        if (customPlaceInp) customPlaceInp.placeholder = t.customPlacePlaceholder;
+
+        // Section 2 Types & Severity
+        const sec2Labels = document.querySelectorAll('#nearMissForm .form-card:nth-of-type(2) label');
+        if (sec2Labels[0]) sec2Labels[0].textContent = t.typeLabel;
+        if (sec2Labels[1]) sec2Labels[1].textContent = t.sevLabel;
+
+        const typeSelect = document.getElementById('typeSelect');
+        if (typeSelect) {
+            const curVal = typeSelect.value;
+            typeSelect.innerHTML = '';
+            t.types.forEach(ty => {
+                const opt = document.createElement('option');
+                opt.value = ty.val;
+                opt.textContent = ty.text;
+                if (curVal === ty.val) opt.selected = true;
+                typeSelect.appendChild(opt);
+            });
+        }
+
+        const sevBtns = document.querySelectorAll('.sev-btn');
+        if (sevBtns[0]) sevBtns[0].textContent = t.sevLow;
+        if (sevBtns[1]) sevBtns[1].textContent = t.sevMed;
+        if (sevBtns[2]) sevBtns[2].textContent = t.sevHigh;
+        if (sevBtns[3]) sevBtns[3].textContent = t.sevCrit;
+
+        // Section 3 & 4 Textareas
+        const descInp = document.getElementById('descriptionInput');
+        if (descInp) descInp.placeholder = t.descPlaceholder;
+        const corrInp = document.getElementById('correctiveInput');
+        if (corrInp) corrInp.placeholder = t.corrPlaceholder;
+
+        // Section 6 Reporter
+        const anonSpan = document.querySelector('#nearMissForm .form-card:nth-of-type(5) label span, #anonCheck ~ span');
+        if (anonSpan) anonSpan.textContent = t.anonCheck;
+        const repLabels = document.querySelectorAll('#reporterInputs label');
+        if (repLabels[0]) repLabels[0].textContent = t.nameLabel;
+        if (repLabels[1]) repLabels[1].textContent = t.phoneLabel;
+        const nameInp = document.getElementById('observerNameInput');
+        if (nameInp) nameInp.placeholder = t.namePlaceholder;
+        const phoneInp = document.getElementById('phoneInput');
+        if (phoneInp) phoneInp.placeholder = t.phonePlaceholder;
+
+        // Submit Button
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.innerHTML = `<i class="fas fa-paper-plane text-amber-300"></i> <span>${t.submitBtn}</span>`;
+        }
+
+        // Success Screen
+        const succH2 = document.querySelector('#successScreen h2');
+        if (succH2) succH2.textContent = t.successTitle;
+        const succP = document.querySelector('#successScreen p');
+        if (succP) succP.textContent = t.successDesc;
+        const waBtn = document.getElementById('whatsappShareBtn');
+        if (waBtn) waBtn.innerHTML = `<i class="fab fa-whatsapp"></i> ${t.waShareBtn}`;
+        const newRepBtn = document.querySelector('#successScreen button[onclick="location.reload()"]');
+        if (newRepBtn) newRepBtn.innerHTML = `<i class="fas fa-plus"></i> ${t.anotherReportBtn}`;
+        const succHubBtn = document.querySelector('#successScreen a[href*="forms-hub.html"]');
+        if (succHubBtn) succHubBtn.innerHTML = `<i class="fas fa-layer-group"></i> ${t.backHubBtn}`;
+
+        // Floating Hub
+        const floatHub = document.querySelector('.floating-hub-btn span');
+        if (floatHub) floatHub.textContent = t.floatingHub;
+
+        // Footer
+        const footTop = document.querySelector('.iso-footer-top');
+        if (footTop) footTop.textContent = t.footerTop;
+        const footSub = document.querySelector('.iso-footer div:nth-child(2)');
+        if (footSub) footSub.textContent = t.footerSub;
+
+        // Update hub links href with ?lang=
+        document.querySelectorAll('a[href*="forms-hub.html"]').forEach(a => {
+            a.href = `forms-hub.html${lang === 'en' ? '?lang=en' : ''}`;
+        });
+
+        // Re-render dropdowns if needed
+        renderSitesDropdown(loadedConfig);
+
+        try {
+            localStorage.setItem('HSE_PORTAL_LANG', lang);
+            localStorage.setItem('language', lang);
+        } catch(e) {}
+    }
+
+    function toggleLanguage() {
+        const next = currentLang === 'ar' ? 'en' : 'ar';
+        applyLanguage(next);
+    }
+
+    let loadedConfig = { sites: defaultSites };
+    let userGps = { lat: null, lng: null, accuracy: null, mapLink: '' };
+    let photoBase64 = '';
+    let isDirectQrScan = false;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const qLang = urlParams.get('lang');
+            const savedLang = qLang || localStorage.getItem('HSE_PORTAL_LANG') || localStorage.getItem('language') || 'ar';
+            applyLanguage(savedLang);
+        } catch(e) {
+            applyLanguage('ar');
+        }
+
+        initGpsCapture();
+        loadConfiguration();
+    });
+
+    async function loadConfiguration() {
+        // فحص ما إذا كان الرابط قادماً من مسح رمز QR لموقع محدد
+        const urlParams = new URLSearchParams(window.location.search);
+        const factoryParam = urlParams.get('factory') || urlParams.get('site') || urlParams.get('factoryName');
+        const placeParam = urlParams.get('place') || urlParams.get('location') || urlParams.get('subLocation');
+
+        if (factoryParam && placeParam) {
+            isDirectQrScan = true;
+            setupFixedQrLocation(factoryParam, placeParam);
+            return;
+        }
+
+        try {
+            const cached = localStorage.getItem('HSE_SETTINGS_CACHE') || localStorage.getItem('appData');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed.companySettings && (parsed.companySettings.sites || parsed.companySettings.observationSites)) {
+                    const rawS = parsed.companySettings.sites || parsed.companySettings.observationSites;
+                    if (Array.isArray(rawS) && rawS.length > 0) {
+                        loadedConfig = { sites: rawS };
+                    }
+                }
+            }
+        } catch(e) {}
+
+        renderSitesDropdown(loadedConfig);
+
+        // جلب الإعدادات المحدثة من السحابة في الخلفية
+        try {
+            const targetUrl = getEffectiveApiUrl();
+            const res = await fetch(targetUrl + '?action=getPublicObservationConfig', { method: 'GET', mode: 'cors' });
+            const data = await res.json();
+            if (data && data.success && Array.isArray(data.sites) && data.sites.length > 0) {
+                loadedConfig = data;
+                if (!isDirectQrScan) {
+                    renderSitesDropdown(loadedConfig);
+                }
+            }
+        } catch(e) {}
+    }
+
+    // إعداد وتثبيت الموقع الممسوح بالـ QR فقط دون أي مواقع أخرى وبدون رسائل تثبيت
+    function setupFixedQrLocation(factoryName, placeName) {
+        const siteSelect = document.getElementById('siteSelect');
+        const placeSelect = document.getElementById('placeSelect');
+        const cleanPlace = getCleanPlaceName(placeName);
+
+        // وضع خيار وحيد للمصنع وخيار وحيد للمكان الفرعي
+        siteSelect.innerHTML = `<option value="${factoryName}" selected>${factoryName}</option>`;
+        placeSelect.innerHTML = `<option value="${cleanPlace}" selected>${cleanPlace}</option>`;
+
+        siteSelect.classList.add('qr-fixed-input');
+        placeSelect.classList.add('qr-fixed-input');
+        placeSelect.disabled = false;
+    }
+
+    function renderSitesDropdown(cfg) {
+        if (isDirectQrScan) return;
+
+        const siteSelect = document.getElementById('siteSelect');
+        const rawSites = (Array.isArray(cfg.sites) && cfg.sites.length > 0) ? cfg.sites : defaultSites;
+        const t = NEAR_MISS_I18N[currentLang] || NEAR_MISS_I18N.ar;
+
+        const prevVal = siteSelect.value;
+        siteSelect.innerHTML = `<option value="">${t.sitePlaceholder || '— اختر المصنع / الموقع —'}</option>`;
+        rawSites.forEach(site => {
+            const siteName = (typeof site === 'string') ? site : (site.name || site.siteName || site.factoryName || '');
+            if (siteName && siteName !== '__OTHER_SITE__') {
+                const opt = document.createElement('option');
+                opt.value = siteName;
+                opt.textContent = siteName;
+                siteSelect.appendChild(opt);
+            }
+        });
+
+        if (prevVal) {
+            siteSelect.value = prevVal;
+        } else if (siteSelect.options.length > 1) {
+            siteSelect.selectedIndex = 1;
+        }
+
+        if (siteSelect.selectedIndex > 0) {
+            handleSiteChange(siteSelect.value);
+        }
+    }
+
+    function getCleanPlaceName(p) {
+        if (!p) return '';
+        let str = '';
+        if (typeof p === 'string') {
+            const trimmed = p.trim();
+            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                try {
+                    const obj = JSON.parse(trimmed);
+                    str = String(obj.name || obj.placeName || obj.locationName || obj.place || obj.label || obj.title || obj.id || '').trim();
+                } catch (e) {
+                    str = trimmed;
+                }
+            } else {
+                str = trimmed;
+            }
+        } else if (typeof p === 'object') {
+            str = String(p.name || p.placeName || p.locationName || p.place || p.label || p.title || p.id || '').trim();
+        } else {
+            str = String(p).trim();
+        }
+
+        return str.replace(/^(ICAPP-[1-4]|WH)[_—\s-]+/i, '').trim() || str;
+    }
+
+    function handleSiteChange(siteName, targetPlace = '') {
+        if (isDirectQrScan) return;
+
+        const placeSelect = document.getElementById('placeSelect');
+        const customGroup = document.getElementById('customPlaceGroup');
+        const t = NEAR_MISS_I18N[currentLang] || NEAR_MISS_I18N.ar;
+        if (customGroup) customGroup.style.display = 'none';
+
+        if (!siteName) {
+            placeSelect.innerHTML = `<option value="">${t.placePlaceholder || '— اختر المصنع أولاً —'}</option>`;
+            placeSelect.disabled = true;
+            return;
+        }
+
+        placeSelect.disabled = false;
+        placeSelect.innerHTML = `<option value="">${currentLang === 'en' ? '— Select Specific Sub-Location —' : '— اختر الموقع الفرعي / المكان —'}</option>`;
+
+        const sites = (loadedConfig && loadedConfig.sites) ? loadedConfig.sites : defaultSites;
+        const foundSite = sites.find(s => {
+            const sName = (typeof s === 'string') ? s : (s.name || s.siteName || s.factoryName || '');
+            return sName === siteName || sName.toLowerCase() === siteName.toLowerCase();
+        });
+
+        const seenPlaces = new Set();
+        let matchedTarget = false;
+
+        if (foundSite && Array.isArray(foundSite.places) && foundSite.places.length > 0) {
+            foundSite.places.forEach(rawP => {
+                const pName = getCleanPlaceName(rawP);
+                if (pName && !seenPlaces.has(pName.toLowerCase()) && pName !== '[object Object]') {
+                    seenPlaces.add(pName.toLowerCase());
+                    const opt = document.createElement('option');
+                    opt.value = pName;
+                    opt.textContent = pName;
+                    if (targetPlace && (pName.toLowerCase().includes(targetPlace.toLowerCase()) || targetPlace.toLowerCase().includes(pName.toLowerCase()))) {
+                        opt.selected = true;
+                        matchedTarget = true;
+                    }
+                    placeSelect.appendChild(opt);
+                }
+            });
+        }
+
+        // خيار مكان فرعي آخر
+        const otherOpt = document.createElement('option');
+        otherOpt.value = '__OTHER_PLACE__';
+        otherOpt.textContent = currentLang === 'en' ? '➕ Other Area (Manual Entry)...' : '➕ مكان فرعي آخر (إدخال يدوي)...';
+        placeSelect.appendChild(otherOpt);
+
+        if (!targetPlace && placeSelect.options.length > 1) {
+            placeSelect.selectedIndex = 1;
+        }
+    }
+
+    function handlePlaceChange(val) {
+        const customGroup = document.getElementById('customPlaceGroup');
+        if (val === '__OTHER_PLACE__') {
+            if (customGroup) {
+                customGroup.style.display = 'block';
+                document.getElementById('customPlaceInput').focus();
+            }
+        } else {
+            if (customGroup) customGroup.style.display = 'none';
+        }
+    }
+
+    function setSeverity(el, val) {
+        document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('severityInput').value = val;
+    }
+
+    function toggleAnonymous(isAnon) {
+        const wrap = document.getElementById('reporterInputs');
+        if (isAnon) {
+            wrap.style.display = 'none';
+            document.getElementById('observerNameInput').value = 'فاعل خير (سري)';
+        } else {
+            wrap.style.display = 'grid';
+            document.getElementById('observerNameInput').value = '';
+        }
+    }
+
+    function previewPhoto(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxDim = 1200;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                        else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+
+                    // Stamp official tamper-evident watermark
+                    const factory = document.getElementById('factorySelect')?.value || '';
+                    const place = document.getElementById('subLocationInput')?.value || '';
+                    const loc = (factory && place) ? `${factory} - ${place}` : (factory || place || 'الموقع العام');
+                    
+                    const bannerHeight = Math.max(38, Math.round(h * 0.08));
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+                    ctx.fillRect(0, h - bannerHeight, w, bannerHeight);
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(0, h - bannerHeight, w, 3);
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = `bold ${Math.max(11, Math.round(bannerHeight * 0.32))}px 'Cairo', sans-serif`;
+                    ctx.textAlign = 'right';
+                    const now = new Date();
+                    const dateStr = now.toLocaleDateString('ar-EG') + ' ' + now.toLocaleTimeString('ar-EG');
+                    ctx.fillText(`🚨 ICAPP HSE | بلاغ حادث وشيك`, w - 12, h - bannerHeight + (bannerHeight * 0.42));
+                    ctx.fillStyle = '#cbd5e1';
+                    ctx.font = `${Math.max(10, Math.round(bannerHeight * 0.28))}px 'Cairo', sans-serif`;
+                    ctx.fillText(`📅 ${dateStr} | 📍 ${loc}`, w - 12, h - (bannerHeight * 0.22));
+
+                    photoBase64 = canvas.toDataURL('image/jpeg', 0.75);
+                    document.getElementById('photoPreviewImg').src = photoBase64;
+                    document.getElementById('photoPreviewWrap').style.display = 'block';
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function initGpsCapture() {
+        const icon = document.getElementById('gpsIcon');
+        if (!navigator.geolocation) return;
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                userGps.lat = pos.coords.latitude;
+                userGps.lng = pos.coords.longitude;
+                userGps.accuracy = Math.round(pos.coords.accuracy);
+                userGps.mapLink = 'https://www.google.com/maps?q=' + userGps.lat + ',' + userGps.lng;
+                
+                if (icon) {
+                    icon.style.color = '#10b981';
+                    icon.className = 'fas fa-location-dot';
+                }
+            },
+            (err) => {
+                if (icon) icon.style.color = '#64748b';
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        );
+    }
+
+    // إرسال البلاغ والمزامنة مع قاعدة البيانات السحابية
+    document.getElementById('nearMissForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إرسال البلاغ وتوثيقه...';
+
+        const factory = document.getElementById('siteSelect').value;
+        let place = document.getElementById('placeSelect').value;
+        if (place === '__OTHER_PLACE__') {
+            place = document.getElementById('customPlaceInput').value.trim() || 'مكان غير محدد';
+        }
+
+        const type = document.getElementById('typeSelect').value;
+        const severity = document.getElementById('severityInput').value;
+        const description = document.getElementById('descriptionInput').value;
+        const corrective = document.getElementById('correctiveInput').value;
+        const isAnon = document.getElementById('anonCheck').checked;
+        const observerName = isAnon ? 'فاعل خير (سري)' : (document.getElementById('observerNameInput').value || 'فاعل خير');
+        const phone = isAnon ? '' : document.getElementById('phoneInput').value;
+
+        const instantRefCode = 'NM-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random()*9000);
+
+        const payload = {
+            action: 'submitPublicNearMiss',
+            instantRefCode: instantRefCode,
+            siteName: factory,
+            subLocation: place,
+            type: type,
+            severity: severity,
+            description: description,
+            correctiveProposed: corrective,
+            observerName: observerName,
+            phone: phone,
+            isAnonymous: isAnon,
+            image: photoBase64,
+            gpsLocation: (userGps.lat && userGps.lng) ? (userGps.lat + ', ' + userGps.lng) : '',
+            gpsMapLink: userGps.mapLink
+        };
+
+        // عرض شاشة النجاح فوراً
+        document.getElementById('resIsoCode').textContent = instantRefCode;
+        const waText = encodeURIComponent(`🚨 *تقرير حادث وشيك — ICAPP*\n📌 *الرقم المرجعي:* ${instantRefCode}\n📍 *الموقع:* ${factory} — ${place}\n⚠️ *التصنيف:* ${type} (${severity})\n📝 *الوصف:* ${description}`);
+        document.getElementById('whatsappShareBtn').href = 'https://api.whatsapp.com/send?text=' + waText;
+
+        document.getElementById('nearMissForm').style.display = 'none';
+        document.getElementById('successScreen').style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // مزامنة فورية في الخلفية مع قاعدة البيانات السحابية (NearMiss Sheet)
+        syncNearMissToCloud(payload, instantRefCode);
+    });
+
+    async function syncNearMissToCloud(payload, refCode) {
+        if (!navigator.onLine) {
+            saveToNearMissOfflineQueue(payload, refCode);
+            return;
+        }
+        const targetApiUrl = getEffectiveApiUrl();
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                const response = await fetch(targetApiUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result && result.success) {
+                    console.log('✅ Near Miss successfully recorded to cloud sheet:', result);
+                    if (result.isoCode) {
+                        document.getElementById('resIsoCode').textContent = result.isoCode;
+                    }
+                    return;
+                }
+            } catch (err) {
+                console.warn(`Cloud sync attempt ${attempt} failed:`, err);
+                if (attempt < 3) {
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+        }
+        // If all attempts failed, save to offline queue
+        saveToNearMissOfflineQueue(payload, refCode);
+    }
+
+    // Offline Queue
+    function saveToNearMissOfflineQueue(payload, refCode) {
+        try {
+            const q = JSON.parse(localStorage.getItem('HSE_OFFLINE_NEARMISS_QUEUE') || '[]');
+            q.push({ payload, refCode, timestamp: Date.now() });
+            localStorage.setItem('HSE_OFFLINE_NEARMISS_QUEUE', JSON.stringify(q));
+            console.log('Saved Near Miss to offline queue:', refCode);
+        } catch(e) {}
+    }
+
+    async function syncNearMissOfflineQueue() {
+        try {
+            const q = JSON.parse(localStorage.getItem('HSE_OFFLINE_NEARMISS_QUEUE') || '[]');
+            if (q.length === 0 || !navigator.onLine) return;
+            const targetApiUrl = getEffectiveApiUrl();
+            const remaining = [];
+            for (const item of q) {
+                try {
+                    const res = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(item.payload)
+                    });
+                    const data = await res.json();
+                    if (!data || !data.success) remaining.push(item);
+                } catch(e) {
+                    remaining.push(item);
+                }
+            }
+            localStorage.setItem('HSE_OFFLINE_NEARMISS_QUEUE', JSON.stringify(remaining));
+        } catch(e) {}
+    }
+
+    window.addEventListener('online', () => {
+        console.log('Network restored — syncing Near Miss offline queue...');
+        syncNearMissOfflineQueue();
+    });
+    if (navigator.onLine) {
+        setTimeout(syncNearMissOfflineQueue, 2500);
+    }
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+        });
+    }
+
+    // ==========================================
+    // Unified Header Tools (Ping, Weather, SOS)
+    // ==========================================
+    // ======================================================================
+    // 🚨 Emergency SOS Contacts Engine (Dynamic Cloud & Sheets Sync)
+    // ======================================================================
+    const DEFAULT_EMERGENCY_CONTACTS = {
+        clinicPhone: '01000000001',
+        hsePhone: '01000000002',
+        firePhone: '01000000003',
+        securityPhone: '01000000004',
+        ambulancePhone: '123',
+        nationalFirePhone: '180',
+        policePhone: '122'
+    };
+
+    function getCachedEmergencyContacts() {
+        try {
+            const raw = localStorage.getItem('HSE_EMERGENCY_CONTACTS_CACHE');
+            return raw ? JSON.parse(raw) : DEFAULT_EMERGENCY_CONTACTS;
+        } catch(e) {
+            return DEFAULT_EMERGENCY_CONTACTS;
+        }
+    }
+
+    function saveCachedEmergencyContacts(data) {
+        try {
+            localStorage.setItem('HSE_EMERGENCY_CONTACTS_CACHE', JSON.stringify(data));
+        } catch(e) {}
+    }
+
+    function renderEmergencyContacts(contacts) {
+        const c = contacts || getCachedEmergencyContacts();
+        const map = {
+            valCallClinic: c.clinicPhone,
+            linkCallClinic: c.clinicPhone,
+            valCallHse: c.hsePhone,
+            linkCallHse: c.hsePhone,
+            valCallFire: c.firePhone,
+            linkCallFire: c.firePhone,
+            valCallSecurity: c.securityPhone,
+            linkCallSecurity: c.securityPhone,
+            valCallAmbulance: c.ambulancePhone,
+            linkCallAmbulance: c.ambulancePhone,
+            valCallNatFire: c.nationalFirePhone,
+            linkCallNatFire: c.nationalFirePhone,
+            valCallPolice: c.policePhone,
+            linkCallPolice: c.policePhone
+        };
+
+        for (const [id, val] of Object.entries(map)) {
+            const el = document.getElementById(id);
+            if (!el) continue;
+            if (id.startsWith('linkCall')) {
+                el.href = `tel:${val || ''}`;
+            } else {
+                el.textContent = val || '';
+            }
+        }
+    }
+
+    async function fetchEmergencyContactsCloud() {
+        renderEmergencyContacts();
+        if (!navigator.onLine) return;
+        try {
+            const targetApiUrl = (typeof SCRIPT_URL !== 'undefined') ? SCRIPT_URL : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data && data.success && data.contacts) {
+                saveCachedEmergencyContacts(data.contacts);
+                renderEmergencyContacts(data.contacts);
+            }
+        } catch(e) {}
+    }
+
+    function openEmergencySosModal(event) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        renderEmergencyContacts();
+        const modal = document.getElementById('emergencyContactsModal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function closeEmergencySosModal(event) {
+        const modal = document.getElementById('emergencyContactsModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        measureCloudPing();
+        fetchPlantWeatherData();
+        fetchEmergencyContactsCloud();
+    });
+</script>
+
+<!-- زر الرجوع العائم للبوابة أثناء التمرير في الجوال -->
+<a href="forms-hub.html" class="floating-hub-btn" title="الرجوع لبوابة النماذج">
+    <i class="fas fa-layer-group"></i>
+    <span>بوابة النماذج</span>
+</a>
+</body>
+</html>
