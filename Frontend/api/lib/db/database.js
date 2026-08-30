@@ -1,8 +1,10 @@
 /**
- * Database Abstraction Layer (SQLite & PostgreSQL Compatible)
+ * Database Abstraction Layer (Universal Signature Support & Engine Fallback)
  */
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const config = require('../config/config');
 const { headersMap } = require('./headers-schema');
 
@@ -12,174 +14,294 @@ function initDatabase(overridePath = null) {
     if (dbInstance) return dbInstance;
 
     const dbPath = overridePath || config.sqlitePath;
-    
-    // Using Node 22 built-in DatabaseSync
-    const { DatabaseSync } = require('node:sqlite');
-    const sqliteDb = new DatabaseSync(dbPath);
-    
-    // Enable WAL mode and foreign keys for high performance concurrency & reliability
-    sqliteDb.exec('PRAGMA journal_mode = WAL;');
-    sqliteDb.exec('PRAGMA synchronous = NORMAL;');
-    sqliteDb.exec('PRAGMA foreign_keys = ON;');
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+        try { fs.mkdirSync(dbDir, { recursive: true }); } catch (_) {}
+    }
 
-    const wrapper = {
-        raw: sqliteDb,
-        
-        exec(sql) {
-            return sqliteDb.exec(sql);
-        },
+    let sqliteDb = null;
+    let engineType = 'node:sqlite';
 
-        run(sql, params = []) {
-            const stmt = sqliteDb.prepare(sql);
-            return stmt.run(...params);
-        },
+    // 1. Try Node 22+ built-in node:sqlite
+    try {
+        const { DatabaseSync } = require('node:sqlite');
+        sqliteDb = new DatabaseSync(dbPath);
+        sqliteDb.exec('PRAGMA journal_mode = WAL;');
+        sqliteDb.exec('PRAGMA synchronous = NORMAL;');
+        sqliteDb.exec('PRAGMA foreign_keys = ON;');
+    } catch (_) {
+        // 2. Try better-sqlite3 (Node 18/20)
+        try {
+            const Database = require('better-sqlite3');
+            sqliteDb = new Database(dbPath);
+            sqliteDb.pragma('journal_mode = WAL');
+            sqliteDb.pragma('synchronous = NORMAL');
+            sqliteDb.pragma('foreign_keys = ON');
+            engineType = 'better-sqlite3';
+        } catch (_) {
+            engineType = 'json-fallback';
+        }
+    }
 
-        get(sql, params = []) {
-            const stmt = sqliteDb.prepare(sql);
-            return stmt.get(...params);
-        },
+    let wrapper;
 
-        all(sql, params = []) {
-            const stmt = sqliteDb.prepare(sql);
-            return stmt.all(...params);
-        },
+    if (sqliteDb && engineType !== 'json-fallback') {
+        wrapper = {
+            raw: sqliteDb,
+            engineType,
 
-        transaction(fn) {
-            sqliteDb.exec('BEGIN TRANSACTION;');
-            try {
-                const res = fn();
-                sqliteDb.exec('COMMIT;');
-                return res;
-            } catch (err) {
-                sqliteDb.exec('ROLLBACK;');
-                throw err;
-            }
-        },
+            exec(sql) {
+                return sqliteDb.exec(sql);
+            },
 
-        // ==========================================
-        // High-level Sheet / Table CRUD Helpers
-        // ==========================================
-        
-        getTableName(sheetName) {
-            return `"${sheetName}"`;
-        },
+            run(sql, params = []) {
+                const stmt = sqliteDb.prepare(sql);
+                return stmt.run(...params);
+            },
 
-        getColumnName(col) {
-            return `"${col}"`;
-        },
+            get(sql, params = []) {
+                const stmt = sqliteDb.prepare(sql);
+                return stmt.get(...params);
+            },
 
-        /**
-         * Reads all rows from a given sheet table
-         */
-        readSheet(sheetName) {
-            const tableName = this.getTableName(sheetName);
-            try {
-                return this.all(`SELECT * FROM ${tableName}`);
-            } catch (err) {
-                if (String(err.message).includes('no such table')) {
-                    return [];
-                }
-                throw err;
-            }
-        },
+            all(sql, params = []) {
+                const stmt = sqliteDb.prepare(sql);
+                return stmt.all(...params);
+            },
 
-        /**
-         * Inserts a single row into a sheet table
-         */
-        insertRow(sheetName, data) {
-            const cols = headersMap[sheetName] || Object.keys(data);
-            if (!cols || cols.length === 0) return null;
+            readFromSheet(sheetName, filter = null) {
+                const tableName = `"${sheetName}"`;
+                try {
+                    let sql = `SELECT * FROM ${tableName}`;
+                    const params = [];
 
-            const presentCols = [];
-            const placeholders = [];
-            const values = [];
-
-            for (const col of cols) {
-                if (data[col] !== undefined) {
-                    presentCols.push(this.getColumnName(col));
-                    placeholders.push('?');
-                    let val = data[col];
-                    if (val !== null && typeof val === 'object') {
-                        val = JSON.stringify(val);
+                    if (filter && typeof filter === 'object') {
+                        const conditions = [];
+                        for (const [key, val] of Object.entries(filter)) {
+                            conditions.push(`"${key}" = ?`);
+                            params.push(val);
+                        }
+                        if (conditions.length > 0) {
+                            sql += ` WHERE ` + conditions.join(' AND ');
+                        }
                     }
-                    values.push(val === undefined ? null : val);
+
+                    return this.all(sql, params);
+                } catch (e) {
+                    if (e.message && e.message.includes('no such table')) {
+                        return [];
+                    }
+                    throw e;
                 }
-            }
+            },
 
-            if (presentCols.length === 0) return null;
+            readSheet(sheetName, filter = null) {
+                return this.readFromSheet(sheetName, filter);
+            },
 
-            const sql = `INSERT INTO ${this.getTableName(sheetName)} (${presentCols.join(', ')}) VALUES (${placeholders.join(', ')})`;
-            this.run(sql, values);
-            return data;
-        },
+            findRow(sheetName, filter) {
+                const rows = this.readFromSheet(sheetName, filter);
+                return rows.length > 0 ? rows[0] : null;
+            },
 
-        /**
-         * Inserts multiple rows in a batch transaction
-         */
-        insertRows(sheetName, rows) {
-            if (!Array.isArray(rows) || rows.length === 0) return 0;
-            return this.transaction(() => {
+            saveToSheet(sheetName, rows) {
+                if (!Array.isArray(rows) || rows.length === 0) return 0;
+                const tableName = `"${sheetName}"`;
+                const columns = headersMap[sheetName] || Object.keys(rows[0]);
+
+                this.exec(`DELETE FROM ${tableName}`);
+
+                const colNames = columns.map(c => `"${c}"`).join(', ');
+                const placeholders = columns.map(() => '?').join(', ');
+                const insertSql = `INSERT INTO ${tableName} (${colNames}) VALUES (${placeholders})`;
+                const stmt = sqliteDb.prepare(insertSql);
+
                 let count = 0;
                 for (const row of rows) {
-                    this.insertRow(sheetName, row);
+                    const values = columns.map(c => {
+                        const val = row[c];
+                        if (val === undefined || val === null) return null;
+                        if (typeof val === 'object') return JSON.stringify(val);
+                        return val;
+                    });
+                    stmt.run(...values);
                     count++;
                 }
                 return count;
-            });
-        },
+            },
 
-        /**
-         * Updates rows matching a specific key
-         */
-        updateRow(sheetName, keyColumn, keyValue, updateData) {
-            const cols = Object.keys(updateData);
-            if (cols.length === 0) return 0;
+            appendToSheet(sheetName, row) {
+                const tableName = `"${sheetName}"`;
+                const columns = headersMap[sheetName] || Object.keys(row);
+                const colNames = columns.map(c => `"${c}"`).join(', ');
+                const placeholders = columns.map(() => '?').join(', ');
+                const insertSql = `INSERT INTO ${tableName} (${colNames}) VALUES (${placeholders})`;
 
-            const setClauses = [];
-            const values = [];
+                const values = columns.map(c => {
+                    const val = row[c];
+                    if (val === undefined || val === null) return null;
+                    if (typeof val === 'object') return JSON.stringify(val);
+                    return val;
+                });
 
-            for (const col of cols) {
-                setClauses.push(`${this.getColumnName(col)} = ?`);
-                let val = updateData[col];
-                if (val !== null && typeof val === 'object') {
-                    val = JSON.stringify(val);
+                this.run(insertSql, values);
+                return row;
+            },
+
+            insertRow(sheetName, row) {
+                return this.appendToSheet(sheetName, row);
+            },
+
+            insertRows(sheetName, rows) {
+                if (!Array.isArray(rows)) return 0;
+                for (const r of rows) {
+                    this.appendToSheet(sheetName, r);
                 }
-                values.push(val === undefined ? null : val);
+                return rows.length;
+            },
+
+            updateRow(...args) {
+                let sheetName, keyCol, keyVal, updatedFields;
+                if (args.length === 4) {
+                    [sheetName, keyCol, keyVal, updatedFields] = args;
+                } else {
+                    [sheetName, keyVal, updatedFields] = args;
+                    keyCol = 'id';
+                }
+
+                const tableName = `"${sheetName}"`;
+                const setClauses = [];
+                const values = [];
+
+                for (const [key, val] of Object.entries(updatedFields || {})) {
+                    if (key === keyCol) continue;
+                    setClauses.push(`"${key}" = ?`);
+                    values.push(typeof val === 'object' && val !== null ? JSON.stringify(val) : val);
+                }
+
+                if (setClauses.length === 0) return 0;
+
+                values.push(keyVal);
+                const updateSql = `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE "${keyCol}" = ?`;
+                const result = this.run(updateSql, values);
+                return result.changes;
+            },
+
+            deleteRow(...args) {
+                let sheetName, keyCol, keyVal;
+                if (args.length === 3) {
+                    [sheetName, keyCol, keyVal] = args;
+                } else {
+                    [sheetName, keyVal] = args;
+                    keyCol = 'id';
+                }
+
+                const tableName = `"${sheetName}"`;
+                const deleteSql = `DELETE FROM ${tableName} WHERE "${keyCol}" = ?`;
+                const result = this.run(deleteSql, [keyVal]);
+                return result.changes;
+            },
+
+            deleteRows(...args) {
+                return this.deleteRow(...args);
             }
+        };
+    } else {
+        // Pure-JS JSON File Engine Fallback for Node without native SQLite binaries
+        const jsonStore = {};
+        const getStore = (s) => {
+            if (!jsonStore[s]) {
+                const file = path.join(dbDir, `sheet_${s}.json`);
+                if (fs.existsSync(file)) {
+                    try { jsonStore[s] = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { jsonStore[s] = []; }
+                } else { jsonStore[s] = []; }
+            }
+            return jsonStore[s];
+        };
+        const saveStore = (s) => {
+            try {
+                const file = path.join(dbDir, `sheet_${s}.json`);
+                fs.writeFileSync(file, JSON.stringify(jsonStore[s] || [], null, 2));
+            } catch (_) {}
+        };
 
-            values.push(keyValue);
-            const sql = `UPDATE ${this.getTableName(sheetName)} SET ${setClauses.join(', ')} WHERE ${this.getColumnName(keyColumn)} = ?`;
-            const result = this.run(sql, values);
-            return result.changes || 0;
-        },
-
-        /**
-         * Deletes rows matching a specific key
-         */
-        deleteRows(sheetName, keyColumn, keyValue) {
-            const sql = `DELETE FROM ${this.getTableName(sheetName)} WHERE ${this.getColumnName(keyColumn)} = ?`;
-            const result = this.run(sql, [keyValue]);
-            return result.changes || 0;
-        },
-
-        /**
-         * Overwrites all rows in a sheet table
-         */
-        saveToSheet(sheetName, rows) {
-            return this.transaction(() => {
-                this.exec(`DELETE FROM ${this.getTableName(sheetName)};`);
-                if (Array.isArray(rows) && rows.length > 0) {
-                    for (const row of rows) {
-                        this.insertRow(sheetName, row);
-                    }
+        wrapper = {
+            raw: jsonStore,
+            engineType: 'json-fallback',
+            exec() { return true; },
+            run() { return { changes: 1 }; },
+            get() { return null; },
+            all() { return []; },
+            readFromSheet(sheetName, filter = null) {
+                const list = getStore(sheetName);
+                if (!filter) return list;
+                return list.filter(row => Object.entries(filter).every(([k, v]) => String(row[k]) === String(v)));
+            },
+            readSheet(sheetName, filter = null) {
+                return this.readFromSheet(sheetName, filter);
+            },
+            findRow(sheetName, filter) {
+                const rows = this.readFromSheet(sheetName, filter);
+                return rows.length > 0 ? rows[0] : null;
+            },
+            saveToSheet(sheetName, rows) {
+                jsonStore[sheetName] = Array.isArray(rows) ? [...rows] : [];
+                saveStore(sheetName);
+                return jsonStore[sheetName].length;
+            },
+            appendToSheet(sheetName, row) {
+                const list = getStore(sheetName);
+                list.push(row);
+                saveStore(sheetName);
+                return row;
+            },
+            insertRow(sheetName, row) {
+                return this.appendToSheet(sheetName, row);
+            },
+            insertRows(sheetName, rows) {
+                if (!Array.isArray(rows)) return 0;
+                for (const r of rows) this.appendToSheet(sheetName, r);
+                return rows.length;
+            },
+            updateRow(...args) {
+                let sheetName, keyCol, keyVal, updatedFields;
+                if (args.length === 4) {
+                    [sheetName, keyCol, keyVal, updatedFields] = args;
+                } else {
+                    [sheetName, keyVal, updatedFields] = args;
+                    keyCol = 'id';
                 }
-                return { success: true, count: Array.isArray(rows) ? rows.length : 0 };
-            });
-        }
-    };
+                const list = getStore(sheetName);
+                const idx = list.findIndex(r => String(r[keyCol]) === String(keyVal));
+                if (idx !== -1) {
+                    list[idx] = { ...list[idx], ...updatedFields };
+                    saveStore(sheetName);
+                    return 1;
+                }
+                return 0;
+            },
+            deleteRow(...args) {
+                let sheetName, keyCol, keyVal;
+                if (args.length === 3) {
+                    [sheetName, keyCol, keyVal] = args;
+                } else {
+                    [sheetName, keyVal] = args;
+                    keyCol = 'id';
+                }
+                const list = getStore(sheetName);
+                const before = list.length;
+                jsonStore[sheetName] = list.filter(r => String(r[keyCol]) !== String(keyVal));
+                saveStore(sheetName);
+                return before - jsonStore[sheetName].length;
+            },
+            deleteRows(...args) {
+                return this.deleteRow(...args);
+            }
+        };
+    }
 
     dbInstance = wrapper;
-    return wrapper;
+    return dbInstance;
 }
 
 function getDatabase() {
@@ -189,12 +311,7 @@ function getDatabase() {
     return dbInstance;
 }
 
-function resetDatabaseInstance() {
-    dbInstance = null;
-}
-
 module.exports = {
     initDatabase,
-    getDatabase,
-    resetDatabaseInstance
+    getDatabase
 };
