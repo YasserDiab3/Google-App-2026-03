@@ -13,7 +13,9 @@ function sha256(str) {
 
 const authHandlers = {
     'login': function(payload, postData, action) {
-        const data = payload || postData || {};
+        const data = (payload && (payload.email || payload.password || payload.passwordHash))
+            ? payload
+            : (postData && (postData.email || postData.password || postData.passwordHash) ? postData : (payload?.data || postData?.data || {}));
         const email = String(data.email || '').trim().toLowerCase();
         const password = String(data.password || '');
         const providedHash = data.passwordHash || (password ? sha256(password) : '');
