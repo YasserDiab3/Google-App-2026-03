@@ -923,6 +923,7 @@ const Settings = {
             <!-- Tab Content: إعدادات النظام -->
             <div class="tab-content" id="tab-system-settings">
                 ${this.renderSystemVersionCard()}
+                ${this.renderEmergencyContactsCard()}
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
@@ -1864,6 +1865,192 @@ const Settings = {
             </div>`;
     },
 
+    renderEmergencyContactsCard() {
+        return `
+            <div class="content-card mt-6" id="card-hse-emergency-contacts">
+                <div class="card-header flex justify-between items-center" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(185, 28, 28, 0.04));">
+                    <h2 class="card-title text-red-600">
+                        <i class="fas fa-phone-volume ml-2"></i>
+                        أرقام وخطوط الطوارئ الميدانية والقومية (One-Tap SOS)
+                    </h2>
+                    <span class="badge badge-success text-xs font-bold" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 4px 8px; border-radius: 6px;">
+                        <i class="fas fa-cloud ml-1"></i> مزامنة سحابية مع HSE_Settings
+                    </span>
+                </div>
+                <div class="card-body space-y-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        يتم تعميم هذه الأرقام تلقائياً على <strong>بوابة النماذج الميدانية الموحدة</strong> وجميع نماذج البلاغات والتفتيش وبوابة الزوار للمصنع. التعديل هنا يُحفظ مباشرة في شيت <code>HSE_Settings</code> بالسحابة.
+                    </p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">🏥 عيادة المصنع (طوارئ وإسعافات)</label>
+                            <input type="tel" id="settings-clinic-phone" class="form-input font-mono" placeholder="01000000001" dir="ltr" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">🛡️ غرفة عمليات السلامة (HSE)</label>
+                            <input type="tel" id="settings-hse-phone" class="form-input font-mono" placeholder="01000000002" dir="ltr" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">🚒 فريق مكافحة الحريق</label>
+                            <input type="tel" id="settings-fire-phone" class="form-input font-mono" placeholder="01000000003" dir="ltr" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">🛂 أمن البوابات والحراسات</label>
+                            <input type="tel" id="settings-security-phone" class="form-input font-mono" placeholder="01000000004" dir="ltr" />
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-4 mt-2">
+                        <h3 class="text-xs font-bold text-gray-700 uppercase mb-3">
+                            <i class="fas fa-tower-broadcast text-blue-500 ml-1"></i> أرقام الطوارئ القومية المعتمدة
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">🚑 الإسعاف</label>
+                                <input type="tel" id="settings-ambulance-phone" class="form-input font-mono" placeholder="123" dir="ltr" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">🔥 المطافئ</label>
+                                <input type="tel" id="settings-natfire-phone" class="form-input font-mono" placeholder="180" dir="ltr" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">🚔 شرطة النجدة</label>
+                                <input type="tel" id="settings-police-phone" class="form-input font-mono" placeholder="122" dir="ltr" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button type="button" id="btn-save-emergency-contacts" class="btn-primary" style="background: linear-gradient(135deg, #1e40af, #2563eb);">
+                            <i class="fas fa-cloud-arrow-up ml-2"></i>حفظ وتعميم أرقام الطوارئ سحابياً
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+    },
+
+    async loadEmergencyContactsSettings() {
+        try {
+            const cClinic = document.getElementById('settings-clinic-phone');
+            const cHse = document.getElementById('settings-hse-phone');
+            const cFire = document.getElementById('settings-fire-phone');
+            const cSec = document.getElementById('settings-security-phone');
+            const cAmb = document.getElementById('settings-ambulance-phone');
+            const cNatFire = document.getElementById('settings-natfire-phone');
+            const cPol = document.getElementById('settings-police-phone');
+
+            let contacts = null;
+            try {
+                const raw = localStorage.getItem('HSE_EMERGENCY_CONTACTS_CACHE');
+                if (raw) contacts = JSON.parse(raw);
+            } catch(e) {}
+
+            if (!contacts) {
+                contacts = {
+                    clinicPhone: '01000000001',
+                    hsePhone: '01000000002',
+                    firePhone: '01000000003',
+                    securityPhone: '01000000004',
+                    ambulancePhone: '123',
+                    nationalFirePhone: '180',
+                    policePhone: '122'
+                };
+            }
+
+            if (cClinic) cClinic.value = contacts.clinicPhone || '';
+            if (cHse) cHse.value = contacts.hsePhone || '';
+            if (cFire) cFire.value = contacts.firePhone || '';
+            if (cSec) cSec.value = contacts.securityPhone || '';
+            if (cAmb) cAmb.value = contacts.ambulancePhone || '123';
+            if (cNatFire) cNatFire.value = contacts.nationalFirePhone || '180';
+            if (cPol) cPol.value = contacts.policePhone || '122';
+
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+                const res = await GoogleIntegration.sendRequest({ action: 'getHseEmergencyContacts' });
+                if (res && res.success && res.contacts) {
+                    contacts = res.contacts;
+                    try { localStorage.setItem('HSE_EMERGENCY_CONTACTS_CACHE', JSON.stringify(contacts)); } catch(e) {}
+                    if (cClinic) cClinic.value = contacts.clinicPhone || '';
+                    if (cHse) cHse.value = contacts.hsePhone || '';
+                    if (cFire) cFire.value = contacts.firePhone || '';
+                    if (cSec) cSec.value = contacts.securityPhone || '';
+                    if (cAmb) cAmb.value = contacts.ambulancePhone || '123';
+                    if (cNatFire) cNatFire.value = contacts.nationalFirePhone || '180';
+                    if (cPol) cPol.value = contacts.policePhone || '122';
+                }
+            }
+        } catch(err) {
+            console.warn('loadEmergencyContactsSettings error:', err);
+        }
+    },
+
+    async saveEmergencyContactsSettings() {
+        const cClinic = document.getElementById('settings-clinic-phone');
+        const cHse = document.getElementById('settings-hse-phone');
+        const cFire = document.getElementById('settings-fire-phone');
+        const cSec = document.getElementById('settings-security-phone');
+        const cAmb = document.getElementById('settings-ambulance-phone');
+        const cNatFire = document.getElementById('settings-natfire-phone');
+        const cPol = document.getElementById('settings-police-phone');
+        const btn = document.getElementById('btn-save-emergency-contacts');
+
+        const updated = {
+            clinicPhone: cClinic ? cClinic.value.trim() : '01000000001',
+            hsePhone: cHse ? cHse.value.trim() : '01000000002',
+            firePhone: cFire ? cFire.value.trim() : '01000000003',
+            securityPhone: cSec ? cSec.value.trim() : '01000000004',
+            ambulancePhone: cAmb ? cAmb.value.trim() : '123',
+            nationalFirePhone: cNatFire ? cNatFire.value.trim() : '180',
+            policePhone: cPol ? cPol.value.trim() : '122'
+        };
+
+        try {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin ml-2"></i>جاري الحفظ بالسحابة...';
+            }
+
+            try { localStorage.setItem('HSE_EMERGENCY_CONTACTS_CACHE', JSON.stringify(updated)); } catch(e) {}
+
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+                const res = await GoogleIntegration.sendRequest({
+                    action: 'saveHseEmergencyContacts',
+                    data: {
+                        ...updated,
+                        adminPin: '2026',
+                        updatedBy: (AppState && AppState.currentUser && (AppState.currentUser.name || AppState.currentUser.username)) || 'مدير السلامة والصحة المهنية'
+                    }
+                });
+
+                if (res && res.success) {
+                    if (typeof Notification !== 'undefined' && typeof Notification.success === 'function') {
+                        Notification.success('تم حفظ وتعميم أرقام الطوارئ بنجاح ومزامنتها بشيت HSE_Settings');
+                    } else {
+                        alert('✅ تم حفظ وتعميم أرقام الطوارئ بنجاح ومزامنتها بشيت HSE_Settings');
+                    }
+                } else {
+                    throw new Error((res && res.message) || 'تعذر الحفظ');
+                }
+            } else {
+                if (typeof Notification !== 'undefined' && typeof Notification.success === 'function') {
+                    Notification.success('تم حفظ أرقام الطوارئ محلياً');
+                }
+            }
+        } catch(err) {
+            if (typeof Notification !== 'undefined' && typeof Notification.error === 'function') {
+                Notification.error('تعذر الحفظ السحابي: ' + (err.message || err));
+            } else {
+                alert('⚠️ تعذر الحفظ السحابي: ' + err.message);
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-cloud-arrow-up ml-2"></i>حفظ وتعميم أرقام الطوارئ سحابياً';
+            }
+        }
+    },
+
     setupTabsNavigation() {
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -1890,6 +2077,9 @@ const Settings = {
                             Utils.safeError('❌ خطأ في تحميل إعدادات النماذج:', error);
                         });
                     }
+                }
+                if (targetTab === 'system-settings' && this.isCurrentUserAdmin()) {
+                    this.loadEmergencyContactsSettings();
                 }
                 if (targetTab === 'help-content' && this.isCurrentUserAdmin()) {
                     Settings.bindHelpContentSettingsEvents();
@@ -2329,6 +2519,17 @@ const Settings = {
                         Notification.error('تعذر حفظ إعدادات ساعات العمل');
                     }
                 });
+            }
+
+            // إعدادات أرقام الطوارئ الميدانية والقومية (One-Tap SOS)
+            const saveEmergencyContactsBtn = document.getElementById('btn-save-emergency-contacts');
+            if (saveEmergencyContactsBtn) {
+                saveEmergencyContactsBtn.addEventListener('click', () => {
+                    this.saveEmergencyContactsSettings();
+                });
+            }
+            if (this.isCurrentUserAdmin()) {
+                this.loadEmergencyContactsSettings();
             }
 
             const companyNameInput = document.getElementById('company-name-input');
