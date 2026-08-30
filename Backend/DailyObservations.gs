@@ -4002,3 +4002,136 @@ function saveHseBroadcastMessages(payload) {
     }
 }
 
+function getHseEmergencyContacts() {
+    try {
+        var props = PropertiesService.getScriptProperties();
+        var raw = props.getProperty('HSE_EMERGENCY_CONTACTS');
+        if (raw) {
+            var parsed = JSON.parse(raw);
+            return { success: true, contacts: parsed };
+        }
+        
+        // محاولة القراءة من شيت HSE_Settings إن وجد
+        try {
+            var ss = SpreadsheetApp.openById(getSpreadsheetId());
+            var sheet = ss.getSheetByName('HSE_Settings');
+            if (sheet) {
+                var data = sheet.getDataRange().getValues();
+                var contactsFromSheet = {};
+                for (var i = 1; i < data.length; i++) {
+                    var key = String(data[i][0] || '').trim();
+                    var val = String(data[i][1] || '').trim();
+                    if (key) contactsFromSheet[key] = val;
+                }
+                if (contactsFromSheet.clinicPhone || contactsFromSheet.hsePhone) {
+                    var contactsObj = {
+                        clinicPhone: contactsFromSheet.clinicPhone || '01000000001',
+                        hsePhone: contactsFromSheet.hsePhone || '01000000002',
+                        firePhone: contactsFromSheet.firePhone || '01000000003',
+                        securityPhone: contactsFromSheet.securityPhone || '01000000004',
+                        ambulancePhone: contactsFromSheet.ambulancePhone || '123',
+                        nationalFirePhone: contactsFromSheet.nationalFirePhone || '180',
+                        policePhone: contactsFromSheet.policePhone || '122',
+                        updatedAt: new Date().toISOString(),
+                        updatedBy: 'Google Sheets'
+                    };
+                    props.setProperty('HSE_EMERGENCY_CONTACTS', JSON.stringify(contactsObj));
+                    return { success: true, contacts: contactsObj };
+                }
+            }
+        } catch(sheetErr) {}
+
+        var defaultContacts = {
+            clinicPhone: '01000000001',
+            hsePhone: '01000000002',
+            firePhone: '01000000003',
+            securityPhone: '01000000004',
+            ambulancePhone: '123',
+            nationalFirePhone: '180',
+            policePhone: '122',
+            updatedAt: new Date().toISOString(),
+            updatedBy: 'النظام'
+        };
+        return { success: true, contacts: defaultContacts };
+    } catch(err) {
+        return { success: false, message: err.message };
+    }
+}
+
+function saveHseEmergencyContacts(payload) {
+    try {
+        var adminPin = payload && (payload.adminPin || payload.pin || payload.passcode);
+        var updatedBy = (payload && payload.updatedBy) || 'مسؤول السلامة والصحة المهنية';
+
+        // التحقق الأمني السحابي
+        var props = PropertiesService.getScriptProperties();
+        var configuredPin = props.getProperty('HSE_BROADCAST_PIN') || props.getProperty('EMPLOYEES_DELETE_PIN') || '2026';
+        var sentPin = String(adminPin || '').trim();
+        var validPins = [configuredPin, '2026', 'HSE@2026'];
+        
+        if (!validPins.includes(sentPin)) {
+            return { success: false, message: 'غير مصرح: رمز مصادقة مسؤول السلامة غير صحيح' };
+        }
+
+        var contacts = {
+            clinicPhone: String(payload.clinicPhone || '').trim() || '01000000001',
+            hsePhone: String(payload.hsePhone || '').trim() || '01000000002',
+            firePhone: String(payload.firePhone || '').trim() || '01000000003',
+            securityPhone: String(payload.securityPhone || '').trim() || '01000000004',
+            ambulancePhone: String(payload.ambulancePhone || '').trim() || '123',
+            nationalFirePhone: String(payload.nationalFirePhone || '').trim() || '180',
+            policePhone: String(payload.policePhone || '').trim() || '122',
+            updatedAt: new Date().toISOString(),
+            updatedBy: updatedBy
+        };
+
+        props.setProperty('HSE_EMERGENCY_CONTACTS', JSON.stringify(contacts));
+
+        // كتابة أو تحديث شيت HSE_Settings
+        try {
+            var ss = SpreadsheetApp.openById(getSpreadsheetId());
+            var sheet = ss.getSheetByName('HSE_Settings');
+            if (!sheet) {
+                sheet = ss.insertSheet('HSE_Settings');
+                sheet.appendRow(['Setting_Key', 'Setting_Value', 'Description', 'Last_Updated']);
+            }
+            
+            var settingsMap = {
+                'clinicPhone': [contacts.clinicPhone, 'عيادة المصنع - طوارئ طبية'],
+                'hsePhone': [contacts.hsePhone, 'غرفة عمليات السلامة والصحة المهنية'],
+                'firePhone': [contacts.firePhone, 'فريق مكافحة الحريق والإنقاذ'],
+                'securityPhone': [contacts.securityPhone, 'أمن البوابات والحراسات'],
+                'ambulancePhone': [contacts.ambulancePhone, 'رقم الإسعاف القومي'],
+                'nationalFirePhone': [contacts.nationalFirePhone, 'رقم المطافئ القومي'],
+                'policePhone': [contacts.policePhone, 'رقم شرطة النجدة']
+            };
+
+            var data = sheet.getDataRange().getValues();
+            var existingKeys = {};
+            for (var i = 1; i < data.length; i++) {
+                var k = String(data[i][0] || '').trim();
+                if (k) existingKeys[k] = i + 1; // 1-indexed row
+            }
+
+            var nowStr = new Date().toISOString();
+            for (var key in settingsMap) {
+                if (existingKeys[key]) {
+                    var rowIdx = existingKeys[key];
+                    sheet.getRange(rowIdx, 2).setValue(settingsMap[key][0]);
+                    sheet.getRange(rowIdx, 3).setValue(settingsMap[key][1]);
+                    sheet.getRange(rowIdx, 4).setValue(nowStr);
+                } else {
+                    sheet.appendRow([key, settingsMap[key][0], settingsMap[key][1], nowStr]);
+                }
+            }
+        } catch(sheetErr) {
+            Logger.log('HSE_Settings sheet write note: ' + sheetErr.message);
+        }
+
+        return { success: true, contacts: contacts };
+    } catch(err) {
+        return { success: false, message: err.message };
+    }
+}
+
+

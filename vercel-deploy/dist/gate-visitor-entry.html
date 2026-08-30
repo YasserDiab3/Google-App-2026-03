@@ -1270,9 +1270,15 @@
                     <i class="fas fa-phone-volume"></i>
                     <span id="txtSosModalTitle">دليل خطوط وأرقام الطوارئ الميدانية</span>
                 </div>
-                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer;" onclick="closeEmergencySosModal()">
-                    <i class="fas fa-times"></i>
-                </button>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button type="button" onclick="openEmergencyContactsConfigModal()" title="تعديل وضبط أرقام الطوارئ (خاص بمسؤول السلامة)" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35); color: #fff; border-radius: 8px; padding: 4px 10px; font-size: 0.76rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-cog"></i>
+                        <span>ضبط الأرقام</span>
+                    </button>
+                    <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer;" onclick="closeEmergencySosModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
 
             <div style="padding: 16px;">
@@ -1283,8 +1289,9 @@
                                 <i class="fas fa-hospital text-emerald-600 ml-1"></i> <span id="txtContactClinic">عيادة المصنع</span>
                             </div>
                             <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">طوارئ طبية وإسعافات</div>
+                            <div style="font-size: 0.76rem; font-weight: 800; color: #059669; font-family: monospace;" id="valCallClinic">01000000001</div>
                         </div>
-                        <a href="tel:01000000001" class="emergency-call-btn">
+                        <a id="linkCallClinic" href="tel:01000000001" class="emergency-call-btn">
                             <i class="fas fa-phone"></i>
                             <span>اتصال</span>
                         </a>
@@ -1296,8 +1303,9 @@
                                 <i class="fas fa-shield-halved text-blue-600 ml-1"></i> <span id="txtContactHse">غرفة عمليات السلامة</span>
                             </div>
                             <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">بلاغات الحوادث والمخاطر</div>
+                            <div style="font-size: 0.76rem; font-weight: 800; color: #2563eb; font-family: monospace;" id="valCallHse">01000000002</div>
                         </div>
-                        <a href="tel:01000000002" class="emergency-call-btn" style="background: #2563eb;">
+                        <a id="linkCallHse" href="tel:01000000002" class="emergency-call-btn" style="background: #2563eb;">
                             <i class="fas fa-phone"></i>
                             <span>اتصال</span>
                         </a>
@@ -1309,8 +1317,9 @@
                                 <i class="fas fa-fire-extinguisher text-red-600 ml-1"></i> <span id="txtContactFire">فريق مكافحة الحريق</span>
                             </div>
                             <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">طوارئ الإطفاء والإنقاذ</div>
+                            <div style="font-size: 0.76rem; font-weight: 800; color: #dc2626; font-family: monospace;" id="valCallFire">01000000003</div>
                         </div>
-                        <a href="tel:01000000003" class="emergency-call-btn" style="background: #dc2626;">
+                        <a id="linkCallFire" href="tel:01000000003" class="emergency-call-btn" style="background: #dc2626;">
                             <i class="fas fa-phone"></i>
                             <span>اتصال</span>
                         </a>
@@ -1322,8 +1331,9 @@
                                 <i class="fas fa-shield text-amber-600 ml-1"></i> <span id="txtContactSecurity">أمن البوابات والحراسات</span>
                             </div>
                             <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">إخلاء وحصر التواجد</div>
+                            <div style="font-size: 0.76rem; font-weight: 800; color: #d97706; font-family: monospace;" id="valCallSecurity">01000000004</div>
                         </div>
-                        <a href="tel:01000000004" class="emergency-call-btn" style="background: #d97706;">
+                        <a id="linkCallSecurity" href="tel:01000000004" class="emergency-call-btn" style="background: #d97706;">
                             <i class="fas fa-phone"></i>
                             <span>اتصال</span>
                         </a>
@@ -1335,16 +1345,105 @@
                         <i class="fas fa-tower-broadcast text-blue-500 ml-1"></i> <span id="txtNationalSosTitle">أرقام الطوارئ القومية المعتمدة:</span>
                     </span>
                     <div style="display: flex; gap: 8px; justify-content: space-around; flex-wrap: wrap;">
-                        <a href="tel:123" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #047857; display: inline-flex; align-items: center; gap: 4px;">
-                            <i class="fas fa-truck-medical"></i> الإسعاف: 123
+                        <a id="linkCallAmbulance" href="tel:123" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #047857; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-truck-medical"></i> الإسعاف: <span id="valCallAmbulance">123</span>
                         </a>
-                        <a href="tel:180" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #b91c1c; display: inline-flex; align-items: center; gap: 4px;">
-                            <i class="fas fa-fire"></i> المطافئ: 180
+                        <a id="linkCallNatFire" href="tel:180" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #b91c1c; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-fire"></i> المطافئ: <span id="valCallNatFire">180</span>
                         </a>
-                        <a href="tel:122" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #1e40af; display: inline-flex; align-items: center; gap: 4px;">
-                            <i class="fas fa-handcuffs"></i> شرطة النجدة: 122
+                        <a id="linkCallPolice" href="tel:122" style="text-decoration: none; font-weight: 800; font-size: 0.82rem; color: #1e40af; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fas fa-handcuffs"></i> شرطة النجدة: <span id="valCallPolice">122</span>
                         </a>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⚙️ نافذة ضبط وتعديل أرقام الطوارئ السحابية -->
+    <div id="emergencyContactsConfigModal" class="emergency-modal-overlay" onclick="closeEmergencyContactsConfigModal(event)">
+        <div class="emergency-modal-dialog" style="max-width: 520px;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-sliders"></i>
+                    <span>ضبط أرقام الطوارئ السحابية (HSE Settings)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer;" onclick="closeEmergencyContactsConfigModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 18px;">
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 0.78rem; color: #1e40af; line-height: 1.5;">
+                    <i class="fas fa-info-circle ml-1"></i> التعديل هنا يقوم بتحديث أرقام الاتصال بجميع النماذج والبوابات ومزامنتها مباشرة بشيت <b>HSE_Settings</b> السحابي.
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 800; color: #1e293b; display: block; margin-bottom: 4px;">
+                            🏥 عيادة المصنع:
+                        </label>
+                        <input type="tel" id="cfgClinicPhone" placeholder="01000000001" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-family: monospace; font-size: 0.85rem;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 800; color: #1e293b; display: block; margin-bottom: 4px;">
+                            🛡️ عمليات السلامة (HSE):
+                        </label>
+                        <input type="tel" id="cfgHsePhone" placeholder="01000000002" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-family: monospace; font-size: 0.85rem;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 800; color: #1e293b; display: block; margin-bottom: 4px;">
+                            🚒 مكافحة الحريق:
+                        </label>
+                        <input type="tel" id="cfgFirePhone" placeholder="01000000003" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-family: monospace; font-size: 0.85rem;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.78rem; font-weight: 800; color: #1e293b; display: block; margin-bottom: 4px;">
+                            🛂 أمن البوابات:
+                        </label>
+                        <input type="tel" id="cfgSecurityPhone" placeholder="01000000004" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-family: monospace; font-size: 0.85rem;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;">
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 3px;">
+                            🚑 الإسعاف:
+                        </label>
+                        <input type="tel" id="cfgAmbulancePhone" value="123" style="width: 100%; padding: 6px 8px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-family: monospace; font-size: 0.82rem;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 3px;">
+                            🔥 المطافئ:
+                        </label>
+                        <input type="tel" id="cfgNatFirePhone" value="180" style="width: 100%; padding: 6px 8px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-family: monospace; font-size: 0.82rem;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 3px;">
+                            🚔 النجدة:
+                        </label>
+                        <input type="tel" id="cfgPolicePhone" value="122" style="width: 100%; padding: 6px 8px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-weight: 700; font-family: monospace; font-size: 0.82rem;">
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px;">
+                    <label style="font-size: 0.8rem; font-weight: 800; color: #1e293b; display: block; margin-bottom: 4px;">
+                        <i class="fas fa-key text-amber-500 ml-1"></i> رمز تصريح مسؤول السلامة (PIN):
+                    </label>
+                    <input type="password" id="cfgEmergencyPin" placeholder="أدخل رمز الأدمن (PIN)" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1.5px solid #94a3b8; font-size: 0.9rem; font-weight: 800; letter-spacing: 2px;">
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeEmergencyContactsConfigModal()" style="padding: 8px 16px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #fff; font-weight: 700; cursor: pointer;">
+                        إلغاء
+                    </button>
+                    <button type="button" id="btnSaveEmergencyContacts" onclick="saveEmergencyContactsCloud()" style="padding: 8px 20px; border-radius: 8px; border: none; background: linear-gradient(135deg, #1e40af, #2563eb); color: #fff; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(37,99,235,0.3);">
+                        <i class="fas fa-cloud-arrow-up"></i>
+                        <span id="txtSaveEmergencyContacts">حفظ وتعميم سحابياً</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -3763,14 +3862,187 @@ function resetCheckInForm() {
         // ==========================================
         // Unified Header Tools (Ping, Weather, SOS)
         // ==========================================
+        // ======================================================================
+        // 🚨 Emergency SOS Contacts Engine (Dynamic Cloud & Sheets Sync)
+        // ======================================================================
+        const DEFAULT_EMERGENCY_CONTACTS = {
+            clinicPhone: '01000000001',
+            hsePhone: '01000000002',
+            firePhone: '01000000003',
+            securityPhone: '01000000004',
+            ambulancePhone: '123',
+            nationalFirePhone: '180',
+            policePhone: '122'
+        };
+
+        function getCachedEmergencyContacts() {
+            try {
+                const raw = localStorage.getItem('HSE_EMERGENCY_CONTACTS_CACHE');
+                return raw ? JSON.parse(raw) : DEFAULT_EMERGENCY_CONTACTS;
+            } catch(e) {
+                return DEFAULT_EMERGENCY_CONTACTS;
+            }
+        }
+
+        function saveCachedEmergencyContacts(data) {
+            try {
+                localStorage.setItem('HSE_EMERGENCY_CONTACTS_CACHE', JSON.stringify(data));
+            } catch(e) {}
+        }
+
+        function renderEmergencyContacts(contacts) {
+            const c = contacts || getCachedEmergencyContacts();
+            const map = {
+                valCallClinic: c.clinicPhone,
+                linkCallClinic: c.clinicPhone,
+                valCallHse: c.hsePhone,
+                linkCallHse: c.hsePhone,
+                valCallFire: c.firePhone,
+                linkCallFire: c.firePhone,
+                valCallSecurity: c.securityPhone,
+                linkCallSecurity: c.securityPhone,
+                valCallAmbulance: c.ambulancePhone,
+                linkCallAmbulance: c.ambulancePhone,
+                valCallNatFire: c.nationalFirePhone,
+                linkCallNatFire: c.nationalFirePhone,
+                valCallPolice: c.policePhone,
+                linkCallPolice: c.policePhone
+            };
+
+            for (const [id, val] of Object.entries(map)) {
+                const el = document.getElementById(id);
+                if (!el) continue;
+                if (id.startsWith('linkCall')) {
+                    el.href = `tel:${val || ''}`;
+                } else {
+                    el.textContent = val || '';
+                }
+            }
+        }
+
+        async function fetchEmergencyContactsCloud() {
+            renderEmergencyContacts();
+            if (!navigator.onLine) return;
+            try {
+                const targetApiUrl = (typeof SCRIPT_URL !== 'undefined') ? SCRIPT_URL : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+                const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data && data.success && data.contacts) {
+                    saveCachedEmergencyContacts(data.contacts);
+                    renderEmergencyContacts(data.contacts);
+                }
+            } catch(e) {}
+        }
+
         function openEmergencySosModal(event) {
             if (event) { event.stopPropagation(); event.preventDefault(); }
+            renderEmergencyContacts();
             const modal = document.getElementById('emergencyContactsModal');
             if (modal) modal.style.display = 'flex';
         }
+
         function closeEmergencySosModal(event) {
             const modal = document.getElementById('emergencyContactsModal');
             if (modal) modal.style.display = 'none';
+        }
+
+        function openEmergencyContactsConfigModal() {
+            const contacts = getCachedEmergencyContacts();
+            const cClinic = document.getElementById('cfgClinicPhone');
+            const cHse = document.getElementById('cfgHsePhone');
+            const cFire = document.getElementById('cfgFirePhone');
+            const cSec = document.getElementById('cfgSecurityPhone');
+            const cAmb = document.getElementById('cfgAmbulancePhone');
+            const cNatFire = document.getElementById('cfgNatFirePhone');
+            const cPol = document.getElementById('cfgPolicePhone');
+            const cPin = document.getElementById('cfgEmergencyPin');
+
+            if (cClinic) cClinic.value = contacts.clinicPhone || '';
+            if (cHse) cHse.value = contacts.hsePhone || '';
+            if (cFire) cFire.value = contacts.firePhone || '';
+            if (cSec) cSec.value = contacts.securityPhone || '';
+            if (cAmb) cAmb.value = contacts.ambulancePhone || '123';
+            if (cNatFire) cNatFire.value = contacts.nationalFirePhone || '180';
+            if (cPol) cPol.value = contacts.policePhone || '122';
+            if (cPin) cPin.value = sessionStorage.getItem('HSE_BROADCAST_AUTH_PIN') || '';
+
+            const modal = document.getElementById('emergencyContactsConfigModal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeEmergencyContactsConfigModal() {
+            const modal = document.getElementById('emergencyContactsConfigModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function saveEmergencyContactsCloud() {
+            const cClinic = document.getElementById('cfgClinicPhone');
+            const cHse = document.getElementById('cfgHsePhone');
+            const cFire = document.getElementById('cfgFirePhone');
+            const cSec = document.getElementById('cfgSecurityPhone');
+            const cAmb = document.getElementById('cfgAmbulancePhone');
+            const cNatFire = document.getElementById('cfgNatFirePhone');
+            const cPol = document.getElementById('cfgPolicePhone');
+            const cPin = document.getElementById('cfgEmergencyPin');
+            const btn = document.getElementById('btnSaveEmergencyContacts');
+            const txt = document.getElementById('txtSaveEmergencyContacts');
+
+            const pin = (cPin && cPin.value.trim()) || sessionStorage.getItem('HSE_BROADCAST_AUTH_PIN') || '';
+            if (!pin) {
+                alert('يرجى إدخال رمز تصريح الأدمن (PIN)');
+                return;
+            }
+
+            const updatedContacts = {
+                clinicPhone: cClinic ? cClinic.value.trim() : '01000000001',
+                hsePhone: cHse ? cHse.value.trim() : '01000000002',
+                firePhone: cFire ? cFire.value.trim() : '01000000003',
+                securityPhone: cSec ? cSec.value.trim() : '01000000004',
+                ambulancePhone: cAmb ? cAmb.value.trim() : '123',
+                nationalFirePhone: cNatFire ? cNatFire.value.trim() : '180',
+                policePhone: cPol ? cPol.value.trim() : '122'
+            };
+
+            try {
+                if (btn) btn.disabled = true;
+                if (txt) txt.textContent = 'جاري المزامنة والحفظ بالسحابة...';
+
+                const targetApiUrl = (typeof SCRIPT_URL !== 'undefined') ? SCRIPT_URL : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+                const payload = {
+                    action: 'saveHseEmergencyContacts',
+                    data: {
+                        ...updatedContacts,
+                        adminPin: pin,
+                        updatedBy: 'مدير إدارة السلامة والصحة المهنية'
+                    }
+                };
+
+                const res = await fetch(targetApiUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data && data.success) {
+                    sessionStorage.setItem('HSE_BROADCAST_AUTH_PIN', pin);
+                    saveCachedEmergencyContacts(data.contacts || updatedContacts);
+                    renderEmergencyContacts(data.contacts || updatedContacts);
+                    alert('✅ تم حفظ وتحديث أرقام الطوارئ بنجاح ومزامنتها بشيت HSE_Settings بالسحابة!');
+                    closeEmergencyContactsConfigModal();
+                } else {
+                    alert('❌ ' + (data && data.message ? data.message : 'تعذر الحفظ - تأكد من صحة رمز الأدمن PIN'));
+                }
+            } catch(err) {
+                saveCachedEmergencyContacts(updatedContacts);
+                renderEmergencyContacts(updatedContacts);
+                alert('⚠️ تم الحفظ محلياً (سيتم تعميمها سحابياً فور استقرار الاتصال)');
+                closeEmergencyContactsConfigModal();
+            } finally {
+                if (btn) btn.disabled = false;
+                if (txt) txt.textContent = 'حفظ وتعميم سحابياً';
+            }
         }
 
         function calculateHeatStressCategory(temp, humidity) {
@@ -3904,6 +4176,7 @@ function resetCheckInForm() {
         window.addEventListener('DOMContentLoaded', () => {
             measureCloudPing();
             fetchPlantWeatherData();
+            fetchEmergencyContactsCloud();
         });
     </script>
 

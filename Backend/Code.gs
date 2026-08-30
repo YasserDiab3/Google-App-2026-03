@@ -313,7 +313,7 @@ function doPost(e) {
             'getEmployeesSheetHealth',
             'getEmployeesLoadSmoke',
             'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'getPublicLivePTWSummary',
-            'getHseBroadcastMessages'
+            'getHseBroadcastMessages', 'getHseEmergencyContacts'
             // تقرير الجلسات اليومي (قراءة فقط — يتطلب CSRF + مدير)
             // getDailyUserSessionActivityReport, getAllUserActivityLogs, getUserActivityLogs, getLogStatistics, getAllAuditLogs
             // ✅ P2.2: قراءات PPE أُخرجت — تتطلب CSRF + جلسة (مثل باقي القراءات الحساسة)
@@ -339,7 +339,7 @@ function doPost(e) {
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'setOfficialChampionsApproval', 'getPublicLivePTWSummary', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList', 'getHseBroadcastMessages', 'saveHseBroadcastMessages'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'setOfficialChampionsApproval', 'getPublicLivePTWSummary', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList', 'getHseBroadcastMessages', 'saveHseBroadcastMessages', 'getHseEmergencyContacts', 'saveHseEmergencyContacts'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
@@ -560,6 +560,10 @@ function doPost(e) {
                 result = getHseBroadcastMessages();
             } else if (action === 'saveHseBroadcastMessages' && typeof saveHseBroadcastMessages === 'function') {
                 result = saveHseBroadcastMessages(payload || postData.data || postData || {});
+            } else if (action === 'getHseEmergencyContacts' && typeof getHseEmergencyContacts === 'function') {
+                result = getHseEmergencyContacts();
+            } else if (action === 'saveHseEmergencyContacts' && typeof saveHseEmergencyContacts === 'function') {
+                result = saveHseEmergencyContacts(payload || postData.data || postData || {});
             } else if (typeof ActionHandlers[action] === 'function') {
                 const spreadsheetId = getSpreadsheetId() || postData.spreadsheetId || '';
                 result = ActionHandlers[action](payload, postData, action, actorUserData, spreadsheetId);
