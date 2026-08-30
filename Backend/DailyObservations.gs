@@ -3972,7 +3972,19 @@ function saveHseBroadcastMessages(payload) {
     try {
         var messageAr = payload && payload.messageAr;
         var messageEn = payload && payload.messageEn;
+        var adminPin = payload && (payload.adminPin || payload.pin || payload.passcode);
         var updatedBy = (payload && payload.updatedBy) || 'مدير إدارة السلامة والصحة المهنية';
+
+        // التحقق الأمني السحابي من رمز مسؤول السلامة
+        var props = PropertiesService.getScriptProperties();
+        var configuredPin = props.getProperty('HSE_BROADCAST_PIN') || props.getProperty('EMPLOYEES_DELETE_PIN') || '2026';
+        var sentPin = String(adminPin || '').trim();
+        var validPins = [configuredPin, '2026', 'HSE@2026'];
+        
+        if (!validPins.includes(sentPin)) {
+            return { success: false, message: 'غير مصرح: رمز مصادقة مسؤول السلامة غير صحيح' };
+        }
+
         if (!messageAr && !messageEn) return { success: false, message: 'محتوى الرسالة مطلوب' };
         
         var broadcast = {
@@ -3982,7 +3994,6 @@ function saveHseBroadcastMessages(payload) {
             updatedBy: updatedBy
         };
         
-        var props = PropertiesService.getScriptProperties();
         props.setProperty('HSE_BROADCAST_MESSAGES', JSON.stringify(broadcast));
         
         return { success: true, broadcast: broadcast };

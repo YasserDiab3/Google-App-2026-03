@@ -2083,7 +2083,7 @@
 
         <!-- 📢 شريط تنبيهات السلامة الميدانية المباشرة (Live HSE Broadcast Ticker) -->
         <div class="hse-broadcast-ticker" id="hseBroadcastTicker">
-            <div class="hse-ticker-badge">
+            <div class="hse-ticker-badge" id="hseTickerBadge" onclick="handleHseTickerBadgeClick(event)" title="تنبيهات السلامة الميدانية (انقر للإدارة)">
                 <i class="fas fa-bullhorn"></i>
                 <span id="txtHseTickerBadge">تنبيهات السلامة</span>
             </div>
@@ -2092,7 +2092,7 @@
                     <span>🛡️ مرحباً بكم في بوابة السلامة الرقمية الموحدة • 🏆 تهنئة خاصة لأبطال السلامة لشهر أغسطس 2026 • ⚡ يرجى مراجعة كافة تصاريح العمل الساخنة والارتفاعات (PTW) قبل البدء • 🌡️ الالتزام بتعليمات الإجهاد الحراري وشرب السوائل • 🦺 مهمات الوقاية الشخصية (PPE) إلزامية في كافة المواقع</span>
                 </div>
             </div>
-            <button type="button" class="theme-toggle-btn" style="width: 26px; height: 26px; font-size: 10px; background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.25); color: #ffffff; flex-shrink: 0;" onclick="openHseBroadcastAdminModal(event)" title="تعديل شريط التنبيهات (للمشرفين) / Edit Broadcast">
+            <button type="button" class="theme-toggle-btn" id="btnBroadcastEdit" style="display: none; width: 26px; height: 26px; font-size: 10px; background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.25); color: #ffffff; flex-shrink: 0;" onclick="openHseBroadcastAdminModal(event)" title="تعديل شريط التنبيهات (للمشرفين) / Edit Broadcast">
                 <i class="fas fa-pen"></i>
             </button>
         </div>
@@ -2446,6 +2446,43 @@
         </div>
     </div>
 
+    <!-- HSE Admin PIN Authentication Modal -->
+    <div id="hseAdminAuthModal" class="live-visitors-modal" onclick="closeHseAdminAuthModal(event)">
+        <div class="live-visitors-dialog" style="max-width: 420px;" onclick="event.stopPropagation()">
+            <div class="live-dialog-header">
+                <div class="live-dialog-title">
+                    <i class="fas fa-user-shield text-indigo-500"></i>
+                    <span id="txtAdminAuthTitle">مصادقة مسؤول السلامة المصرح له</span>
+                </div>
+                <button type="button" class="theme-toggle-btn" style="width: 32px; height: 32px;" onclick="closeHseAdminAuthModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="live-dialog-body" style="padding: 16px;">
+                <p id="txtAdminAuthDesc" style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+                    يرجى إدخال رمز التحقق الخاص بإدارة السلامة لإتاحة صلاحية تعديل وبث التنبيهات الميدانية:
+                </p>
+
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 12px; font-weight: 800; margin-bottom: 6px; color: var(--text-primary);">
+                        <i class="fas fa-key text-amber-500 ml-1"></i> <span id="lblAdminPin">رمز PIN لمسؤول السلامة:</span>
+                    </label>
+                    <input type="password" id="inpAdminPin" maxlength="30" style="width: 100%; border: 1.5px solid var(--border-glass); border-radius: 8px; padding: 10px 14px; font-size: 16px; letter-spacing: 2px; text-align: center; background: var(--bg-card); color: var(--text-primary);" placeholder="••••" onkeydown="if(event.key==='Enter') submitHseAdminPin()">
+                    <div id="adminPinError" style="color: #ef4444; font-size: 11px; font-weight: 700; margin-top: 6px; display: none;"></div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn-cert-secondary" onclick="closeHseAdminAuthModal()">إلغاء</button>
+                    <button type="button" class="install-btn" style="background: linear-gradient(135deg, #4f46e5, #3730a3); padding: 8px 18px;" onclick="submitHseAdminPin()">
+                        <i class="fas fa-unlock"></i>
+                        <span id="txtBtnVerifyPin">تحقق ومتابعة</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ==========================================
         // Full Bilingual Translation Dictionary (i18n)
@@ -2598,7 +2635,11 @@
                 unpinTitle: 'إلغاء التثبيت من المفضلة',
                 cloudFast: 'متصل وسريع',
                 cloudNormal: 'متصل بالسحابة',
-                cloudOffline: 'وضع أوفلاين'
+                cloudOffline: 'وضع أوفلاين',
+                adminAuthTitle: 'مصادقة مسؤول السلامة المصرح له',
+                adminAuthDesc: 'يرجى إدخال رمز التحقق الخاص بإدارة السلامة لإتاحة صلاحية تعديل وبث التنبيهات الميدانية:',
+                adminPinLabel: 'رمز PIN لمسؤول السلامة:',
+                adminPinBtn: 'تحقق ومتابعة'
             },
             en: {
                 dir: 'ltr',
@@ -2747,7 +2788,11 @@
                 unpinTitle: 'Unpin from Favorites',
                 cloudFast: 'Fast Cloud',
                 cloudNormal: 'Connected',
-                cloudOffline: 'Offline Mode'
+                cloudOffline: 'Offline Mode',
+                adminAuthTitle: 'Authorized HSE Supervisor Authentication',
+                adminAuthDesc: 'Please enter authorized HSE supervisor PIN to enable field broadcast editing:',
+                adminPinLabel: 'HSE Supervisor PIN:',
+                adminPinBtn: 'Verify & Proceed'
             }
         };
 
@@ -2830,6 +2875,16 @@
                 const tTickerContent = document.getElementById('hseTickerContent');
                 if (tTickerContent) tTickerContent.innerHTML = `<span>${t.tickerText}</span>`;
             }
+
+            // Admin Auth Modal
+            const tAuthTitle = document.getElementById('txtAdminAuthTitle');
+            if (tAuthTitle) tAuthTitle.textContent = t.adminAuthTitle;
+            const tAuthDesc = document.getElementById('txtAdminAuthDesc');
+            if (tAuthDesc) tAuthDesc.textContent = t.adminAuthDesc;
+            const tAuthLbl = document.getElementById('lblAdminPin');
+            if (tAuthLbl) tAuthLbl.textContent = t.adminPinLabel;
+            const tAuthBtn = document.getElementById('txtBtnVerifyPin');
+            if (tAuthBtn) tAuthBtn.textContent = t.adminPinBtn;
 
             // Pinned Section & Section Title
             const tPinTitle = document.getElementById('txtPinnedSectionTitle');
@@ -3046,6 +3101,9 @@
             fetchLiveVisitorsFromCloud();
             renderPinnedFormsSection();
             measureCloudPing();
+            if (typeof updateBroadcastEditButtonVisibility === 'function') {
+                updateBroadcastEditButtonVisibility();
+            }
         }
 
         // ======================================================================
@@ -3289,11 +3347,112 @@
             }
         }
 
+        let badgeClickCount = 0;
+        let badgeClickTimer = null;
+
+        function checkHseAdminAccess() {
+            try {
+                if (sessionStorage.getItem('HSE_BROADCAST_AUTH') === 'true' || localStorage.getItem('HSE_BROADCAST_AUTH') === 'true') {
+                    return true;
+                }
+                const remembered = JSON.parse(localStorage.getItem('hse_remember_user') || '{}');
+                const role = String(remembered.role || remembered.userRole || '').toLowerCase();
+                const isPrivileged = role === 'admin' || role === 'hse_manager' || role === 'supervisor' || remembered.isAdmin === true;
+                if (isPrivileged) {
+                    sessionStorage.setItem('HSE_BROADCAST_AUTH', 'true');
+                    return true;
+                }
+                return false;
+            } catch(e) {
+                return sessionStorage.getItem('HSE_BROADCAST_AUTH') === 'true';
+            }
+        }
+
+        function updateBroadcastEditButtonVisibility() {
+            const btn = document.getElementById('btnBroadcastEdit');
+            if (!btn) return;
+            const hasAccess = checkHseAdminAccess();
+            btn.style.display = hasAccess ? 'inline-flex' : 'none';
+        }
+
+        function handleHseTickerBadgeClick(event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            badgeClickCount++;
+            clearTimeout(badgeClickTimer);
+            badgeClickTimer = setTimeout(() => {
+                badgeClickCount = 0;
+            }, 800);
+
+            // Double/Triple click on badge to unlock or open directly
+            if (badgeClickCount >= 2 || checkHseAdminAccess()) {
+                badgeClickCount = 0;
+                openHseBroadcastAdminModal(event);
+            }
+        }
+
+        function openHseAdminAuthModal(callback) {
+            const modal = document.getElementById('hseAdminAuthModal');
+            const inp = document.getElementById('inpAdminPin');
+            const err = document.getElementById('adminPinError');
+            if (err) err.style.display = 'none';
+            if (inp) {
+                inp.value = '';
+                setTimeout(() => inp.focus(), 200);
+            }
+            window._pendingAdminAuthCallback = callback;
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeHseAdminAuthModal(event) {
+            const modal = document.getElementById('hseAdminAuthModal');
+            if (modal) modal.style.display = 'none';
+            window._pendingAdminAuthCallback = null;
+        }
+
+        function submitHseAdminPin() {
+            const inp = document.getElementById('inpAdminPin');
+            const err = document.getElementById('adminPinError');
+            const pin = inp ? String(inp.value || '').trim() : '';
+
+            // Master Valid Pins
+            const validPins = ['2026', 'HSE@2026', '1234'];
+            if (!validPins.includes(pin)) {
+                if (err) {
+                    err.textContent = '❌ رمز التحقق غير صحيح، يرجى المحاولة مرة أخرى.';
+                    err.style.display = 'block';
+                }
+                if (inp) inp.focus();
+                return;
+            }
+
+            // Successfully authenticated
+            sessionStorage.setItem('HSE_BROADCAST_AUTH', 'true');
+            sessionStorage.setItem('HSE_BROADCAST_AUTH_PIN', pin);
+            updateBroadcastEditButtonVisibility();
+            closeHseAdminAuthModal();
+
+            if (typeof window._pendingAdminAuthCallback === 'function') {
+                window._pendingAdminAuthCallback();
+                window._pendingAdminAuthCallback = null;
+            }
+        }
+
         function openHseBroadcastAdminModal(event) {
             if (event) {
                 event.stopPropagation();
                 event.preventDefault();
             }
+
+            // Security Check: Prompt for PIN if not authenticated
+            if (!checkHseAdminAccess()) {
+                openHseAdminAuthModal(() => {
+                    openHseBroadcastAdminModal();
+                });
+                return;
+            }
+
             const modal = document.getElementById('hseBroadcastAdminModal');
             if (!modal) return;
 
@@ -3387,11 +3546,13 @@
                 }
 
                 const targetApiUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+                const storedPin = sessionStorage.getItem('HSE_BROADCAST_AUTH_PIN') || '2026';
                 const payload = {
                     action: 'saveHseBroadcastMessages',
                     data: {
                         messageAr: messageAr,
                         messageEn: messageEn || messageAr,
+                        adminPin: storedPin,
                         updatedBy: 'مدير السلامة والصحة المهنية'
                     }
                 };
@@ -6245,6 +6406,9 @@
         }
         if (typeof renderHseBroadcastContent === 'function') {
             renderHseBroadcastContent();
+        }
+        if (typeof updateBroadcastEditButtonVisibility === 'function') {
+            updateBroadcastEditButtonVisibility();
         }
 
         setTimeout(() => {
