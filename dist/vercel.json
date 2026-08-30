@@ -5,16 +5,18 @@
       "includeFiles": "api/lib/data/**"
     }
   },
-  "rewrites": [
-    { "source": "/forms", "destination": "/forms-hub.html" },
-    { "source": "/forms-hub", "destination": "/forms-hub.html" },
-    { "source": "/gate", "destination": "/gate-visitor-entry.html" },
-    { "source": "/visitors", "destination": "/gate-visitor-entry.html" },
-    { "source": "/gate-visitor-entry", "destination": "/gate-visitor-entry.html" },
-    { "source": "/observation", "destination": "/public-observation.html" },
-    { "source": "/near-miss", "destination": "/public-near-miss.html" },
-    { "source": "/fire-inspection", "destination": "/public-fire-inspection.html" },
-    { "source": "/daily-safety", "destination": "/public-daily-safety.html" }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/forms", "dest": "/forms-hub.html" },
+    { "src": "/forms-hub", "dest": "/forms-hub.html" },
+    { "src": "/gate", "dest": "/gate-visitor-entry.html" },
+    { "src": "/visitors", "dest": "/gate-visitor-entry.html" },
+    { "src": "/gate-visitor-entry", "dest": "/gate-visitor-entry.html" },
+    { "src": "/observation", "dest": "/public-observation.html" },
+    { "src": "/near-miss", "dest": "/public-near-miss.html" },
+    { "src": "/fire-inspection", "dest": "/public-fire-inspection.html" },
+    { "src": "/daily-safety", "dest": "/public-daily-safety.html" },
+    { "handle": "filesystem" }
   ],
   "headers": [
     {
