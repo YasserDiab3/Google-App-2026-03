@@ -363,6 +363,13 @@ const GoogleIntegration = {
      * تطبيع رابط Web App (/dev → /exec) قبل الطلب
      */
     _resolveScriptUrl() {
+        if (typeof getEffectiveApiUrl === 'function') {
+            const live = getEffectiveApiUrl();
+            if (live) return live;
+        }
+        if (typeof window.LIVE_BACKEND_URL !== 'undefined' && window.LIVE_BACKEND_URL) {
+            return window.LIVE_BACKEND_URL;
+        }
         let url = String(AppState?.googleConfig?.appsScript?.scriptUrl || '').trim();
         if (typeof Utils !== 'undefined' && typeof Utils.getAppsScriptScriptUrl === 'function') {
             const normalized = String(Utils.getAppsScriptScriptUrl() || '').trim();
@@ -374,21 +381,19 @@ const GoogleIntegration = {
     },
 
     /**
-     * التحقق من صحة رابط نشر Google Apps Script (Web App ينتهي بـ /exec)
+     * التحقق من صحة رابط الباك إند (Google Apps Script أو SQL Tunnel)
      */
     isValidGoogleAppsScriptUrl(url) {
         try {
+            if (!url || typeof url !== 'string') return false;
             const urlObj = new URL(url);
-            if (urlObj.protocol !== 'https:') {
-                return false;
-            }
             const host = urlObj.hostname.toLowerCase();
             const path = urlObj.pathname || '';
-            if (host === 'script.google.com' || host.endsWith('.script.google.com')) {
+            if (host === 'script.google.com' || host.endsWith('.script.google.com') || host.includes('googleusercontent.com')) {
                 return path.endsWith('/exec');
             }
-            if (host.includes('googleusercontent.com')) {
-                return path.endsWith('/exec');
+            if (host.endsWith('.trycloudflare.com') || host.includes('vercel.app') || host === 'localhost' || host === '127.0.0.1') {
+                return true;
             }
             return false;
         } catch (error) {
