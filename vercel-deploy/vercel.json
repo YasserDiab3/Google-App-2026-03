@@ -1,5 +1,10 @@
 {
   "outputDirectory": "dist",
+  "functions": {
+    "api/*.js": {
+      "includeFiles": "api/lib/data/**"
+    }
+  },
   "headers": [
     {
       "source": "/service-worker.js",
@@ -29,60 +34,12 @@
       ]
     },
     {
-      "source": "/public-observation.html",
+      "source": "/api/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
-      ]
-    },
-    {
-      "source": "/(.*).html",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
-      ]
-    },
-    {
-      "source": "/icons/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
-    },
-    {
-      "source": "/(.*).js",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
-      ]
-    },
-    {
-      "source": "/(.*).css",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-XSS-Protection", "value": "1; mode=block" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "geolocation=self, microphone=self, camera=self" },
-        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains; preload" },
-        {
-          "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://*.vercel.app https://*.teams.microsoft.com https://teams.microsoft.com https://*.office.com https://*.office365.com; default-src 'self'; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://maps.googleapis.com https://*.googleapis.com https://vercel.live https://*.vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' https://fonts.gstatic.com data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: blob: https: https://*.googleapis.com https://*.gstatic.com https://*.openstreetmap.org; connect-src 'self' https://script.google.com https://*.googleapis.com https://*.googleusercontent.com https://maps.googleapis.com https://graph.microsoft.com https://login.microsoftonline.com https://oauth2.googleapis.com https://api.ipify.org https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://vercel.live https://*.vercel.live https://fonts.gstatic.com https://fonts.googleapis.com; frame-src 'self' https://vercel.live https://*.vercel.live https://*.vercel.app https://*.teams.microsoft.com https://teams.microsoft.com;"
-        },
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-CSRF-Token" }
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Requested-With, X-CSRF-Token" }
       ]
     }
-  ],
-  "rewrites": [
-    { "source": "/forms", "destination": "/forms-hub.html" },
-    { "source": "/hub", "destination": "/forms-hub.html" },
-    { "source": "/obs", "destination": "/public-observation.html" },
-    { "source": "/near-miss", "destination": "/public-near-miss.html" },
-    { "source": "/fire", "destination": "/public-fire-inspection.html" },
-    { "source": "/daily-safety", "destination": "/public-daily-safety.html" },
-    { "source": "/patrol", "destination": "/public-daily-safety.html" }
   ]
 }
