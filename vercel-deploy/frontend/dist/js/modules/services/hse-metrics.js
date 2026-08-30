@@ -1,1 +1,652 @@
-(function(P){"use strict";const Z=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"],h={TRIR:2e5,AFR:1e6,FAR:1e8,FR:1e6,SR:1e6,IR:1e6};function D(t){if(t==null||t==="")return NaN;const n=parseFloat(String(t).replace(/,/g,""));return Number.isFinite(n)?n:NaN}function I(t){if(!t)return null;if(t instanceof Date)return Number.isNaN(t.getTime())?null:t;const n=new Date(t);return Number.isNaN(n.getTime())?null:n}function d(t){return new Array(12).fill(t)}function M(){const t=typeof localStorage<"u"?localStorage:null,n=(e,r)=>{if(!t)return r;const i=D(t.getItem(e));return Number.isFinite(i)&&i>0?i:r};return{TRIR:n("hse_multiplier_trir",h.TRIR),AFR:n("hse_multiplier_afr",h.AFR),FAR:n("hse_multiplier_far",h.FAR),FR:n("hse_multiplier_fr",h.FR),SR:n("hse_multiplier_sr",h.SR),IR:n("hse_multiplier_ir",h.IR)}}function R(){const t=typeof localStorage<"u"?localStorage:null,n=D(t&&t.getItem("hse_hours_per_day")),e=D(t&&t.getItem("hse_work_days_per_month")),r=t&&t.getItem("hse_work_hours_include_contractors"),i=r===null||r===""?!0:r!=="0"&&String(r).toLowerCase()!=="false";return{hoursPerDay:Number.isFinite(n)&&n>0?n:8,workDaysPerMonth:Number.isFinite(e)&&e>0?e:22,includeContractors:i}}function F(t){if(!t||typeof t!="object")return"";const n=Array.isArray(t.investigation?.incidentTypes)?t.investigation.incidentTypes.join(" "):"";return[t.incidentType,t.type,t.title,t.description,t.reason,t.diagnosis,t.severity,t.result,t.status,n].filter(Boolean).join(" ").toLowerCase()}function _(t,n){const e=parseInt(t?.lostDays||t?.daysLost||t?.lostTimeDays||t?.timeOffWork||0,10)||0,r=n&&parseInt(n.totalLeaveDays||n.lostDays||0,10)||0;return Math.max(e,r)}function $(t){if(!t)return!1;const n=String(t.status||t.employmentStatus||"").trim().toLowerCase();return t.resignationDate||t.terminationDate?!0:n==="inactive"||n==="\u063A\u064A\u0631 \u0646\u0634\u0637"}function k(t,n,e){const r=new Date(n,e+1,0,23,59,59,999);return(t||[]).filter(i=>{if(!i)return!1;const s=I(i.hireDate||i.startDate||i.createdAt),o=I(i.resignationDate||i.terminationDate||i.endDate);return!(s&&s>r||o&&o<=r||$(i)&&!o)}).length}function Y(t,n,e){const r=Z[n];if(!r)return 0;const i=typeof Employees<"u"?Employees:P.Employees||null;if(i&&typeof i.getAvailableContractorsForExternalWorkforce=="function"&&typeof i.getExternalWorkforceRecord=="function"){const s=i.getAvailableContractorsForExternalWorkforce();if(Array.isArray(s)&&s.length>0)return s.reduce((o,u)=>{const a=i.getExternalWorkforceRecord(t,u.stableKey);if(!a)return o;const c=parseFloat(a[r]);return o+(Number.isFinite(c)&&c>=0?c:0)},0)}return(e?.externalWorkforceMonthly||[]).reduce((s,o)=>!o||Number(o.year)!==Number(t)?s:s+(parseFloat(o[r])||0),0)}function v(t,n,e){const r=String(n+1).padStart(2,"0"),s=(Array.isArray(e?.safetyPerformanceKPIs)?e.safetyPerformanceKPIs:[]).find(a=>a&&a.recordType==="scorecard-manual"&&Number(a.year)===Number(t)&&String(a.month).padStart(2,"0")===r);if(!s||s.hoursWorked===void 0||s.hoursWorked===null)return null;const o=String(s.hoursWorked).trim();if(!o)return null;const u=parseFloat(o);return Number.isFinite(u)&&u>=0?u:null}function O(t,n,e){const r=v(t,n,e);if(r!==null)return r;const i=R(),s=Array.isArray(e?.employees)?e.employees:[],o=k(s,t,n),u=i.includeContractors?Y(t,n,e):0,c=(o+u)*i.hoursPerDay*i.workDaysPerMonth;return parseFloat(c.toFixed(2))}function ct(t){return I(t?.date||t?.incidentDate||t?.createdAt)}function B(t,n){const e=I(t);return!e||e.getFullYear()!==n?-1:e.getMonth()}function tt(t){const n=new Map;return(t?.incidentsRegistry||[]).forEach(e=>{e&&[e.id,e.incidentId,e.registryId].map(r=>r!=null?String(r).trim():"").filter(Boolean).forEach(r=>{n.has(r)||n.set(r,e)})}),n}function E(t){const n=Array.isArray(t?.incidents)?t.incidents.filter(Boolean):[];if(n.length>0){const e=new Set;return n.filter(r=>{const i=String(r.id||r.incidentId||"").trim();return!i||e.has(i)?!1:(e.add(i),!0)})}return W(t)}function W(t){const n=Array.isArray(t?.incidents)?t.incidents.filter(Boolean):[],e=Array.isArray(t?.incidentsRegistry)?t.incidentsRegistry.filter(Boolean):[];if(n.length===0)return e;const r=new Set(n.map(s=>String(s?.id||s?.incidentId||"").trim()).filter(Boolean)),i=e.filter(s=>{const o=String(s.incidentId||"").trim();if(o&&r.has(o))return!1;const u=String(s.id||s.registryId||o||"").trim();return u&&!r.has(u)});return i.length?n.concat(i):n}function S(t,n){const e=F(t),r=Array.isArray(t?.investigation?.incidentTypes)?t.investigation.incidentTypes:[],i=_(t,n);return!!(r.includes("injury-lost")||i>0||e.includes("lost time")||e.includes("\u062A\u0648\u0642\u0641 \u0639\u0646 \u0627\u0644\u0639\u0645\u0644")||e.includes(" lti")||(t?.severity||"").toUpperCase().includes("LTI"))}function T(t){const n=F(t);return(Array.isArray(t?.investigation?.incidentTypes)?t.investigation.incidentTypes:[]).includes("fatality")||n.includes("fatality")||n.includes("\u0648\u0641\u0627\u0629")}function w(t){const n=F(t);return n.includes("first aid")||n.includes("\u0627\u0633\u0639\u0627\u0641\u0627\u062A")||n.includes("\u0625\u0633\u0639\u0627\u0641\u0627\u062A")||n.includes("\u0627\u0633\u0639\u0627\u0641")}function L(t,n){if(S(t,n)||w(t))return!1;const e=F(t);return(Array.isArray(t?.investigation?.incidentTypes)?t.investigation.incidentTypes:[]).includes("injury-no-lost")||e.includes("nlti")}function j(t,n){return T(t)||S(t,n)||L(t,n)?!0:F(t).includes("recordable")}function K(t,n){return j(t,n)||w(t)}function U(t,n){return{isFatality:T(t),isLTI:S(t,n),isNLTI:L(t,n),isFirstAid:w(t),isRecordable:j(t,n),isInjury:K(t,n),daysLost:_(t,n)}}function m(t,n,e){const r=parseFloat(t)||0,i=parseFloat(n)||0,s=parseFloat(e)||0;return i<=0?0:r*s/i}function p(t,n){const e=Number.isFinite(n)?n:2,r=parseFloat(t);return Number.isFinite(r)?r.toFixed(e):0 .toFixed(e)}function nt(t,n){const e=Number.isFinite(n)?n:2,r=parseFloat(t);return Number.isFinite(r)?r.toLocaleString("en-US",{minimumFractionDigits:e,maximumFractionDigits:e,useGrouping:!0}):0 .toLocaleString("en-US",{minimumFractionDigits:e,maximumFractionDigits:e})}function G(t,n){const e=n||M(),r=t.manHours||0;return{trir:m(t.recordables,r,e.TRIR),afr:m(t.injuries,r,e.AFR),far:m(t.fatalities,r,e.FAR),fr:m(t.lti,r,e.FR),sr:m(t.daysLost,r,e.SR),ir:m(t.totalIncidents,r,e.IR),ltiCount:t.lti||0,recordables:t.recordables||0,injuries:t.injuries||0,fatalities:t.fatalities||0,daysLost:t.daysLost||0,totalIncidents:t.totalIncidents||0,manHours:r}}function g(t,n){let e=0;const r=Math.min(n,(t||[]).length-1);for(let i=0;i<=r;i+=1)e+=parseFloat(t[i])||0;return e}function x(t,n){const e=n||{},r=tt(e),i=R(),s=Array.isArray(e.employees)?e.employees:[],o={year:t,recordables:d(0),injuries:d(0),fatalities:d(0),lti:d(0),nlti:d(0),firstAid:d(0),daysLost:d(0),totalIncidents:d(0),manHours:d(0),employeeCounts:d(0)};for(let u=0;u<12;u+=1){const a=k(s,t,u),c=i.includeContractors?Y(t,u,e):0;o.employeeCounts[u]=a+c,o.manHours[u]=O(t,u,e)}return E(e).forEach(u=>{const a=B(u?.date||u?.incidentDate||u?.createdAt,t);if(a<0)return;const c=u.id||u.incidentId,l=c?r.get(String(c)):null,f=U(u,l);f.isLTI?o.lti[a]+=1:f.isNLTI&&(o.nlti[a]+=1),f.isFirstAid&&(o.firstAid[a]+=1),f.isRecordable&&(o.recordables[a]+=1),f.isInjury&&(o.injuries[a]+=1),f.isFatality&&(o.fatalities[a]+=1),f.daysLost>0&&(o.daysLost[a]+=f.daysLost),o.totalIncidents[a]+=1}),o}function y(t,n,e){return t.map((r,i)=>m(r,n[i],e))}function V(t){const n=new Date;return t===n.getFullYear()?n.getMonth():11}function et(t,n){return new Date(t,n+1,0).getDate()}function H(t,n,e){const r=e instanceof Date?e:new Date;if(Number(t)!==r.getFullYear()||Number(n)!==r.getMonth())return 1;const i=et(t,n);return i<=0?1:Math.min(1,Math.max(0,r.getDate()/i))}function q(t,n,e,r){return(parseFloat(t)||0)*H(n,e,r)}function z(t,n,e){const r=t?.year,i=Math.min(Math.max(n,0),11),s=e?.asOfDate instanceof Date?e.asOfDate:new Date,o=e?.appData;let u=0;for(let l=0;l<i;l+=1)u+=parseFloat(t.manHours[l])||0;const a=parseFloat(t.manHours[i])||0,c=o&&v(r,i,o)!==null;return u+=c?a:q(a,r,i,s),u}function C(t,n,e){const r=z(t,n,e),i=typeof localStorage<"u"?localStorage:null;if(!i)return r;const s=i.getItem("hse_total_work_hours");if(s==null||String(s).trim()==="")return r;const o=D(String(s).replace(/,/g,""));if(!Number.isFinite(o)||o<=0)return r;const u=D(i.getItem("hse_work_months_per_year")),a=Number.isFinite(u)&&u>0?u:12,c=t?.year,l=Math.min(Math.max(n,0),11),f=e?.asOfDate instanceof Date?e.asOfDate:new Date,N=l,b=H(c,l,f),A=(N+b)/a;return o*A}function J(t,n,e){const r=R(),i=C(t,n,e);if(i>0&&r.hoursPerDay>0)return Math.round(i/r.hoursPerDay);const s=t?.year,o=Math.min(Math.max(n,0),11),u=e?.asOfDate instanceof Date?e.asOfDate:new Date;let a=0;for(let l=0;l<o;l+=1)a+=Math.round((t.employeeCounts[l]||0)*r.workDaysPerMonth);const c=(t.employeeCounts[o]||0)*r.workDaysPerMonth;return a+=Math.round(q(c,s,o,u)),a}function rt(t,n){const e=R(),r=parseFloat(t?.manHours?.[n])||0;return r>0&&e.hoursPerDay>0?Math.round(r/e.hoursPerDay):Math.round((t?.employeeCounts?.[n]||0)*e.workDaysPerMonth)}function Q(t,n,e){const r={asOfDate:e?.asOfDate,appData:e?.appData};return{recordables:g(t.recordables,n),injuries:g(t.injuries,n),fatalities:g(t.fatalities,n),lti:g(t.lti,n),daysLost:g(t.daysLost,n),totalIncidents:g(t.totalIncidents,n),manHours:C(t,n,r),manDays:J(t,n,r)}}function it(t,n,e){const r=t instanceof Date?t:new Date(t),i=n instanceof Date?n:new Date(n),s={recordables:0,injuries:0,fatalities:0,lti:0,daysLost:0,totalIncidents:0,manHours:0},o=r.getFullYear(),u=i.getFullYear();for(let a=o;a<=u;a+=1){const c=x(a,e);for(let l=0;l<12;l+=1){const f=new Date(a,l,1);new Date(a,l+1,0,23,59,59,999)<r||f>i||(s.recordables+=c.recordables[l]||0,s.injuries+=c.injuries[l]||0,s.fatalities+=c.fatalities[l]||0,s.lti+=c.lti[l]||0,s.daysLost+=c.daysLost[l]||0,s.totalIncidents+=c.totalIncidents[l]||0,s.manHours+=c.manHours[l]||0)}}return s}function st(t,n){const e=n||{},r=e.year||new Date().getFullYear(),i=e.ytdLimit!==void 0?e.ytdLimit:V(r),s=x(r,t),o=Q(s,i,{appData:t}),u=M(),a=G(o,u);return{year:r,ytdLimit:i,monthly:s,totals:o,rates:a,multipliers:u,formatted:{trir:p(a.trir,2),afr:p(a.afr,2),far:p(a.far,4),fr:p(a.fr,2),sr:p(a.sr,2),ir:p(a.ir,2),lti:String(a.ltiCount),manDays:String(o.manDays||0)}}}function ot(t,n){const e=n||M(),r=t.manHours;return{trir:y(t.recordables,r,e.TRIR),afr:y(t.injuries,r,e.AFR),far:y(t.fatalities,r,e.FAR),fr:y(t.lti,r,e.FR),ltir:y(t.lti,r,e.FR),sr:y(t.daysLost,r,e.SR),ir:y(t.totalIncidents,r,e.IR)}}function at(t,n,e,r){const i=g(t,e),s=g(n,e);return m(i,s,r)}function ut(t,n,e,r,i){const s=[...n||[],...t||[]],o=[...r||[],...e||[]],u=d(0),a=i||M().FR;for(let c=12;c<24;c+=1){const l=Math.max(0,c-11),f=s.slice(l,c+1).reduce((b,A)=>b+(parseFloat(A)||0),0),N=o.slice(l,c+1).reduce((b,A)=>b+(parseFloat(A)||0),0);u[c-12]=m(f,N,a)}return u}const X={DEFAULT_MULTIPLIERS:h,loadMultipliers:M,getWorkConfig:R,parseDate:I,getTextBag:F,getDaysLost:_,isFatality:T,isLostTimeIncident:S,isFirstAidIncident:w,isNonLostTimeIncident:L,isRecordableIncident:j,isInjuryIncident:K,classifyIncident:U,computeRate:m,computeRates:G,formatRate:p,formatRateDisplay:nt,resolveYtdManHours:C,resolveYtdManDays:J,sumYtdManHours:z,getCurrentMonthProrationFactor:H,resolveManDaysForMonth:rt,buildMonthlyBase:x,buildMonthlyRateSeries:y,aggregatePeriod:it,aggregateYtd:Q,getDashboardSnapshot:st,getScorecardRates:ot,getYtdRate:at,calculateRollingSeries:ut,currentYtdLimit:V,getManHoursForMonth:O,getUnifiedIncidents:W,getIncidentsForMetrics:E,sumSlice:g};P.HseMetrics=X,typeof module<"u"&&module.exports&&(module.exports=X)})(typeof window<"u"?window:globalThis);
+/**
+ * HseMetrics — مصدر الحقيقة الموحّد لمؤشرات السلامة (لوحة التحكم + سكوركارد + Lagging).
+ * TRIR = Recordables × 200,000 / Man-Hours
+ * AFR  = Total Injuries × 1,000,000 / Man-Hours
+ * FAR  = Fatalities × 100,000,000 / Man-Hours
+ * FR   = LTI × 1,000,000 / Man-Hours
+ * SR   = Days Lost × 1,000,000 / Man-Hours
+ * IR   = Total Incidents × 1,000,000 / Man-Hours
+ */
+(function (global) {
+    'use strict';
+
+    const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+    const DEFAULT_MULTIPLIERS = {
+        TRIR: 200000,
+        AFR: 1000000,
+        FAR: 100000000,
+        FR: 1000000,
+        SR: 1000000,
+        IR: 1000000
+    };
+
+    function parseNum(v) {
+        if (v === undefined || v === null || v === '') return NaN;
+        const x = parseFloat(String(v).replace(/,/g, ''));
+        return Number.isFinite(x) ? x : NaN;
+    }
+
+    function parseDate(value) {
+        if (!value) return null;
+        if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function createMonthlyArray(defaultValue) {
+        return new Array(12).fill(defaultValue);
+    }
+
+    function loadMultipliers() {
+        const ls = typeof localStorage !== 'undefined' ? localStorage : null;
+        const read = (key, fallback) => {
+            if (!ls) return fallback;
+            const n = parseNum(ls.getItem(key));
+            return Number.isFinite(n) && n > 0 ? n : fallback;
+        };
+        return {
+            TRIR: read('hse_multiplier_trir', DEFAULT_MULTIPLIERS.TRIR),
+            AFR: read('hse_multiplier_afr', DEFAULT_MULTIPLIERS.AFR),
+            FAR: read('hse_multiplier_far', DEFAULT_MULTIPLIERS.FAR),
+            FR: read('hse_multiplier_fr', DEFAULT_MULTIPLIERS.FR),
+            SR: read('hse_multiplier_sr', DEFAULT_MULTIPLIERS.SR),
+            IR: read('hse_multiplier_ir', DEFAULT_MULTIPLIERS.IR)
+        };
+    }
+
+    function getWorkConfig() {
+        const ls = typeof localStorage !== 'undefined' ? localStorage : null;
+        const hpd = parseNum(ls && ls.getItem('hse_hours_per_day'));
+        const dpm = parseNum(ls && ls.getItem('hse_work_days_per_month'));
+        const includeRaw = ls && ls.getItem('hse_work_hours_include_contractors');
+        const includeContractors = includeRaw === null || includeRaw === ''
+            ? true
+            : includeRaw !== '0' && String(includeRaw).toLowerCase() !== 'false';
+        return {
+            hoursPerDay: Number.isFinite(hpd) && hpd > 0 ? hpd : 8,
+            workDaysPerMonth: Number.isFinite(dpm) && dpm > 0 ? dpm : 22,
+            includeContractors
+        };
+    }
+
+    function getTextBag(record) {
+        if (!record || typeof record !== 'object') return '';
+        const investigationTypes = Array.isArray(record.investigation?.incidentTypes)
+            ? record.investigation.incidentTypes.join(' ')
+            : '';
+        return [
+            record.incidentType,
+            record.type,
+            record.title,
+            record.description,
+            record.reason,
+            record.diagnosis,
+            record.severity,
+            record.result,
+            record.status,
+            investigationTypes
+        ].filter(Boolean).join(' ').toLowerCase();
+    }
+
+    function getDaysLost(record, registryEntry) {
+        const fromRecord = parseInt(record?.lostDays || record?.daysLost || record?.lostTimeDays || record?.timeOffWork || 0, 10) || 0;
+        const fromRegistry = registryEntry
+            ? parseInt(registryEntry.totalLeaveDays || registryEntry.lostDays || 0, 10) || 0
+            : 0;
+        return Math.max(fromRecord, fromRegistry);
+    }
+
+    function isEmployeeInactive(employee) {
+        if (!employee) return false;
+        const status = String(employee.status || employee.employmentStatus || '').trim().toLowerCase();
+        if (employee.resignationDate || employee.terminationDate) return true;
+        return status === 'inactive' || status === 'غير نشط';
+    }
+
+    function getOperationalEmployeesForMonth(employees, year, monthIndex) {
+        const monthEnd = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+        return (employees || []).filter((employee) => {
+            if (!employee) return false;
+            const hireDate = parseDate(employee.hireDate || employee.startDate || employee.createdAt);
+            const resignationDate = parseDate(employee.resignationDate || employee.terminationDate || employee.endDate);
+            if (hireDate && hireDate > monthEnd) return false;
+            if (resignationDate && resignationDate <= monthEnd) return false;
+            if (isEmployeeInactive(employee) && !resignationDate) return false;
+            return true;
+        }).length;
+    }
+
+    function getExternalWorkforceForMonth(year, monthIndex, appData) {
+        const monthKey = MONTH_KEYS[monthIndex];
+        if (!monthKey) return 0;
+
+        const Emp = typeof Employees !== 'undefined' ? Employees : (global.Employees || null);
+        if (Emp && typeof Emp.getAvailableContractorsForExternalWorkforce === 'function' && typeof Emp.getExternalWorkforceRecord === 'function') {
+            const contractors = Emp.getAvailableContractorsForExternalWorkforce();
+            if (Array.isArray(contractors) && contractors.length > 0) {
+                return contractors.reduce((sum, contractor) => {
+                    const rec = Emp.getExternalWorkforceRecord(year, contractor.stableKey);
+                    if (!rec) return sum;
+                    const v = parseFloat(rec[monthKey]);
+                    return sum + (Number.isFinite(v) && v >= 0 ? v : 0);
+                }, 0);
+            }
+        }
+
+        return (appData?.externalWorkforceMonthly || []).reduce((sum, record) => {
+            if (!record || Number(record.year) !== Number(year)) return sum;
+            return sum + (parseFloat(record[monthKey]) || 0);
+        }, 0);
+    }
+
+    function getManualHoursForMonth(year, monthIndex, appData) {
+        const month = String(monthIndex + 1).padStart(2, '0');
+        const records = Array.isArray(appData?.safetyPerformanceKPIs) ? appData.safetyPerformanceKPIs : [];
+        const record = records.find((r) =>
+            r &&
+            r.recordType === 'scorecard-manual' &&
+            Number(r.year) === Number(year) &&
+            String(r.month).padStart(2, '0') === month
+        );
+        if (!record || record.hoursWorked === undefined || record.hoursWorked === null) return null;
+        const trimmed = String(record.hoursWorked).trim();
+        if (!trimmed) return null;
+        const parsed = parseFloat(trimmed);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+    }
+
+    function getManHoursForMonth(year, monthIndex, appData) {
+        const manual = getManualHoursForMonth(year, monthIndex, appData);
+        if (manual !== null) return manual;
+
+        const cfg = getWorkConfig();
+        const employees = Array.isArray(appData?.employees) ? appData.employees : [];
+        const directCount = getOperationalEmployeesForMonth(employees, year, monthIndex);
+        const contractorCount = cfg.includeContractors
+            ? getExternalWorkforceForMonth(year, monthIndex, appData)
+            : 0;
+        const headcount = directCount + contractorCount;
+        const derived = headcount * cfg.hoursPerDay * cfg.workDaysPerMonth;
+        return parseFloat(derived.toFixed(2));
+    }
+
+    function getIncidentDate(record) {
+        return parseDate(record?.date || record?.incidentDate || record?.createdAt);
+    }
+
+    function getMonthIndexForYear(value, year) {
+        const date = parseDate(value);
+        if (!date || date.getFullYear() !== year) return -1;
+        return date.getMonth();
+    }
+
+    function buildRegistryMap(appData) {
+        const map = new Map();
+        (appData?.incidentsRegistry || []).forEach((entry) => {
+            if (!entry) return;
+            [entry.id, entry.incidentId, entry.registryId]
+                .map((k) => (k != null ? String(k).trim() : ''))
+                .filter(Boolean)
+                .forEach((key) => {
+                    if (!map.has(key)) map.set(key, entry);
+                });
+        });
+        return map;
+    }
+
+    /**
+     * حوادث لحساب المؤشرات — مصدر قائمة incidents عند توفرها (مطابق لكارت اللوحة)؛
+     * السجل يُستخدم للإثراء (أيام ضياع، تصنيف) عبر buildRegistryMap وليس للتضخيم.
+     */
+    function getIncidentsForMetrics(appData) {
+        const incidents = Array.isArray(appData?.incidents) ? appData.incidents.filter(Boolean) : [];
+        if (incidents.length > 0) {
+            const seen = new Set();
+            return incidents.filter((i) => {
+                const id = String(i.id || i.incidentId || '').trim();
+                if (!id || seen.has(id)) return false;
+                seen.add(id);
+                return true;
+            });
+        }
+        return getUnifiedIncidents(appData);
+    }
+
+    function getUnifiedIncidents(appData) {
+        const incidents = Array.isArray(appData?.incidents) ? appData.incidents.filter(Boolean) : [];
+        const registry = Array.isArray(appData?.incidentsRegistry) ? appData.incidentsRegistry.filter(Boolean) : [];
+        if (incidents.length === 0) return registry;
+        const incidentIds = new Set(
+            incidents
+                .map((r) => String(r?.id || r?.incidentId || '').trim())
+                .filter(Boolean)
+        );
+        const extra = registry.filter((r) => {
+            const linkedId = String(r.incidentId || '').trim();
+            if (linkedId && incidentIds.has(linkedId)) return false;
+            const selfKey = String(r.id || r.registryId || linkedId || '').trim();
+            return selfKey && !incidentIds.has(selfKey);
+        });
+        return extra.length ? incidents.concat(extra) : incidents;
+    }
+
+    function isLostTimeIncident(record, registryEntry) {
+        const bag = getTextBag(record);
+        const types = Array.isArray(record?.investigation?.incidentTypes) ? record.investigation.incidentTypes : [];
+        const lostDays = getDaysLost(record, registryEntry);
+        if (types.includes('injury-lost')) return true;
+        if (lostDays > 0) return true;
+        if (bag.includes('lost time') || bag.includes('توقف عن العمل') || bag.includes(' lti')) return true;
+        if ((record?.severity || '').toUpperCase().includes('LTI')) return true;
+        return false;
+    }
+
+    function isFatality(record) {
+        const bag = getTextBag(record);
+        const types = Array.isArray(record?.investigation?.incidentTypes) ? record.investigation.incidentTypes : [];
+        return types.includes('fatality') || bag.includes('fatality') || bag.includes('وفاة');
+    }
+
+    function isFirstAidIncident(record) {
+        const bag = getTextBag(record);
+        return bag.includes('first aid') || bag.includes('اسعافات') || bag.includes('إسعافات') || bag.includes('اسعاف');
+    }
+
+    function isNonLostTimeIncident(record, registryEntry) {
+        if (isLostTimeIncident(record, registryEntry) || isFirstAidIncident(record)) return false;
+        const bag = getTextBag(record);
+        const types = Array.isArray(record?.investigation?.incidentTypes) ? record.investigation.incidentTypes : [];
+        return types.includes('injury-no-lost') || bag.includes('nlti');
+    }
+
+    function isRecordableIncident(record, registryEntry) {
+        if (isFatality(record)) return true;
+        if (isLostTimeIncident(record, registryEntry) || isNonLostTimeIncident(record, registryEntry)) return true;
+        const bag = getTextBag(record);
+        return bag.includes('recordable');
+    }
+
+    function isInjuryIncident(record, registryEntry) {
+        return isRecordableIncident(record, registryEntry) || isFirstAidIncident(record);
+    }
+
+    function classifyIncident(record, registryEntry) {
+        return {
+            isFatality: isFatality(record),
+            isLTI: isLostTimeIncident(record, registryEntry),
+            isNLTI: isNonLostTimeIncident(record, registryEntry),
+            isFirstAid: isFirstAidIncident(record),
+            isRecordable: isRecordableIncident(record, registryEntry),
+            isInjury: isInjuryIncident(record, registryEntry),
+            daysLost: getDaysLost(record, registryEntry)
+        };
+    }
+
+    function computeRate(numerator, manHours, multiplier) {
+        const num = parseFloat(numerator) || 0;
+        const hours = parseFloat(manHours) || 0;
+        const mult = parseFloat(multiplier) || 0;
+        if (hours <= 0) return 0;
+        return (num * mult) / hours;
+    }
+
+    function formatRate(value, decimals) {
+        const d = Number.isFinite(decimals) ? decimals : 2;
+        const n = parseFloat(value);
+        if (!Number.isFinite(n)) return (0).toFixed(d);
+        return n.toFixed(d);
+    }
+
+    /** تنسيق عرض المعدلات في الواجهة (فواصل + منازل عشرية) */
+    function formatRateDisplay(value, decimals) {
+        const d = Number.isFinite(decimals) ? decimals : 2;
+        const n = parseFloat(value);
+        if (!Number.isFinite(n)) {
+            return (0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+        }
+        return n.toLocaleString('en-US', {
+            minimumFractionDigits: d,
+            maximumFractionDigits: d,
+            useGrouping: true
+        });
+    }
+
+    function computeRates(totals, multipliers) {
+        const mult = multipliers || loadMultipliers();
+        const hours = totals.manHours || 0;
+        return {
+            trir: computeRate(totals.recordables, hours, mult.TRIR),
+            afr: computeRate(totals.injuries, hours, mult.AFR),
+            far: computeRate(totals.fatalities, hours, mult.FAR),
+            fr: computeRate(totals.lti, hours, mult.FR),
+            sr: computeRate(totals.daysLost, hours, mult.SR),
+            ir: computeRate(totals.totalIncidents, hours, mult.IR),
+            ltiCount: totals.lti || 0,
+            recordables: totals.recordables || 0,
+            injuries: totals.injuries || 0,
+            fatalities: totals.fatalities || 0,
+            daysLost: totals.daysLost || 0,
+            totalIncidents: totals.totalIncidents || 0,
+            manHours: hours
+        };
+    }
+
+    function sumSlice(arr, limit) {
+        let sum = 0;
+        const end = Math.min(limit, (arr || []).length - 1);
+        for (let i = 0; i <= end; i += 1) {
+            sum += parseFloat(arr[i]) || 0;
+        }
+        return sum;
+    }
+
+    function buildMonthlyBase(year, appData) {
+        const data = appData || {};
+        const registryMap = buildRegistryMap(data);
+        const cfg = getWorkConfig();
+        const employees = Array.isArray(data.employees) ? data.employees : [];
+
+        const base = {
+            year,
+            recordables: createMonthlyArray(0),
+            injuries: createMonthlyArray(0),
+            fatalities: createMonthlyArray(0),
+            lti: createMonthlyArray(0),
+            nlti: createMonthlyArray(0),
+            firstAid: createMonthlyArray(0),
+            daysLost: createMonthlyArray(0),
+            totalIncidents: createMonthlyArray(0),
+            manHours: createMonthlyArray(0),
+            employeeCounts: createMonthlyArray(0)
+        };
+
+        for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+            const direct = getOperationalEmployeesForMonth(employees, year, monthIndex);
+            const contractor = cfg.includeContractors
+                ? getExternalWorkforceForMonth(year, monthIndex, data)
+                : 0;
+            base.employeeCounts[monthIndex] = direct + contractor;
+            base.manHours[monthIndex] = getManHoursForMonth(year, monthIndex, data);
+        }
+
+        getIncidentsForMetrics(data).forEach((record) => {
+            const monthIndex = getMonthIndexForYear(
+                record?.date || record?.incidentDate || record?.createdAt,
+                year
+            );
+            if (monthIndex < 0) return;
+
+            const regId = record.id || record.incidentId;
+            const registryEntry = regId ? registryMap.get(String(regId)) : null;
+            const c = classifyIncident(record, registryEntry);
+
+            if (c.isLTI) base.lti[monthIndex] += 1;
+            else if (c.isNLTI) base.nlti[monthIndex] += 1;
+            if (c.isFirstAid) base.firstAid[monthIndex] += 1;
+            if (c.isRecordable) base.recordables[monthIndex] += 1;
+            if (c.isInjury) base.injuries[monthIndex] += 1;
+            if (c.isFatality) base.fatalities[monthIndex] += 1;
+            if (c.daysLost > 0) base.daysLost[monthIndex] += c.daysLost;
+            base.totalIncidents[monthIndex] += 1;
+        });
+
+        return base;
+    }
+
+    function buildMonthlyRateSeries(numeratorSeries, hoursSeries, multiplier) {
+        return numeratorSeries.map((value, index) =>
+            computeRate(value, hoursSeries[index], multiplier)
+        );
+    }
+
+    function currentYtdLimit(year) {
+        const now = new Date();
+        return year === now.getFullYear() ? now.getMonth() : 11;
+    }
+
+    function getDaysInMonth(year, monthIndex) {
+        return new Date(year, monthIndex + 1, 0).getDate();
+    }
+
+    /**
+     * نسبة الشهر الحالي المنقضية (1 = شهر كامل) — لتحديث YTD يومياً وليس فقط عند بداية الشهر.
+     */
+    function getCurrentMonthProrationFactor(year, monthIndex, asOfDate) {
+        const asOf = asOfDate instanceof Date ? asOfDate : new Date();
+        if (Number(year) !== asOf.getFullYear() || Number(monthIndex) !== asOf.getMonth()) {
+            return 1;
+        }
+        const daysInMonth = getDaysInMonth(year, monthIndex);
+        if (daysInMonth <= 0) return 1;
+        return Math.min(1, Math.max(0, asOf.getDate() / daysInMonth));
+    }
+
+    function prorateMonthlyValue(value, year, monthIndex, asOfDate) {
+        const base = parseFloat(value) || 0;
+        return base * getCurrentMonthProrationFactor(year, monthIndex, asOfDate);
+    }
+
+    function sumYtdManHours(monthlyBase, ytdLimit, options) {
+        const year = monthlyBase?.year;
+        const limit = Math.min(Math.max(ytdLimit, 0), 11);
+        const asOf = options?.asOfDate instanceof Date ? options.asOfDate : new Date();
+        const appData = options?.appData;
+        let total = 0;
+
+        for (let i = 0; i < limit; i += 1) {
+            total += parseFloat(monthlyBase.manHours[i]) || 0;
+        }
+
+        const currentMonthHours = parseFloat(monthlyBase.manHours[limit]) || 0;
+        const hasManualCurrent = appData && getManualHoursForMonth(year, limit, appData) !== null;
+        total += hasManualCurrent
+            ? currentMonthHours
+            : prorateMonthlyValue(currentMonthHours, year, limit, asOf);
+
+        return total;
+    }
+
+    function resolveYtdManHours(monthlyBase, ytdLimit, options) {
+        const summed = sumYtdManHours(monthlyBase, ytdLimit, options);
+        const ls = typeof localStorage !== 'undefined' ? localStorage : null;
+        if (!ls) return summed;
+        const raw = ls.getItem('hse_total_work_hours');
+        if (raw == null || String(raw).trim() === '') return summed;
+        const annual = parseNum(String(raw).replace(/,/g, ''));
+        if (!Number.isFinite(annual) || annual <= 0) return summed;
+        const mo = parseNum(ls.getItem('hse_work_months_per_year'));
+        const monthsPerYear = Number.isFinite(mo) && mo > 0 ? mo : 12;
+        const year = monthlyBase?.year;
+        const limit = Math.min(Math.max(ytdLimit, 0), 11);
+        const asOf = options?.asOfDate instanceof Date ? options.asOfDate : new Date();
+        const completeMonths = limit;
+        const currentMonthFraction = getCurrentMonthProrationFactor(year, limit, asOf);
+        const yearFraction = (completeMonths + currentMonthFraction) / monthsPerYear;
+        return annual * yearFraction;
+    }
+
+    function resolveYtdManDays(monthlyBase, ytdLimit, options) {
+        const cfg = getWorkConfig();
+        const ytdHours = resolveYtdManHours(monthlyBase, ytdLimit, options);
+        if (ytdHours > 0 && cfg.hoursPerDay > 0) {
+            return Math.round(ytdHours / cfg.hoursPerDay);
+        }
+        const year = monthlyBase?.year;
+        const limit = Math.min(Math.max(ytdLimit, 0), 11);
+        const asOf = options?.asOfDate instanceof Date ? options.asOfDate : new Date();
+        let total = 0;
+        for (let i = 0; i < limit; i += 1) {
+            total += Math.round((monthlyBase.employeeCounts[i] || 0) * cfg.workDaysPerMonth);
+        }
+        const currentMonthDays = (monthlyBase.employeeCounts[limit] || 0) * cfg.workDaysPerMonth;
+        total += Math.round(prorateMonthlyValue(currentMonthDays, year, limit, asOf));
+        return total;
+    }
+
+    function resolveManDaysForMonth(monthlyBase, monthIndex) {
+        const cfg = getWorkConfig();
+        const hours = parseFloat(monthlyBase?.manHours?.[monthIndex]) || 0;
+        if (hours > 0 && cfg.hoursPerDay > 0) {
+            return Math.round(hours / cfg.hoursPerDay);
+        }
+        return Math.round((monthlyBase?.employeeCounts?.[monthIndex] || 0) * cfg.workDaysPerMonth);
+    }
+
+    function aggregateYtd(monthlyBase, ytdLimit, options) {
+        const ytdOptions = {
+            asOfDate: options?.asOfDate,
+            appData: options?.appData
+        };
+        return {
+            recordables: sumSlice(monthlyBase.recordables, ytdLimit),
+            injuries: sumSlice(monthlyBase.injuries, ytdLimit),
+            fatalities: sumSlice(monthlyBase.fatalities, ytdLimit),
+            lti: sumSlice(monthlyBase.lti, ytdLimit),
+            daysLost: sumSlice(monthlyBase.daysLost, ytdLimit),
+            totalIncidents: sumSlice(monthlyBase.totalIncidents, ytdLimit),
+            manHours: resolveYtdManHours(monthlyBase, ytdLimit, ytdOptions),
+            manDays: resolveYtdManDays(monthlyBase, ytdLimit, ytdOptions)
+        };
+    }
+
+    function aggregatePeriod(start, end, appData) {
+        const startDate = start instanceof Date ? start : new Date(start);
+        const endDate = end instanceof Date ? end : new Date(end);
+        const totals = {
+            recordables: 0,
+            injuries: 0,
+            fatalities: 0,
+            lti: 0,
+            daysLost: 0,
+            totalIncidents: 0,
+            manHours: 0
+        };
+
+        const year = startDate.getFullYear();
+        const endYear = endDate.getFullYear();
+        for (let y = year; y <= endYear; y += 1) {
+            const monthly = buildMonthlyBase(y, appData);
+            for (let m = 0; m < 12; m += 1) {
+                const monthStart = new Date(y, m, 1);
+                const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999);
+                if (monthEnd < startDate || monthStart > endDate) continue;
+                totals.recordables += monthly.recordables[m] || 0;
+                totals.injuries += monthly.injuries[m] || 0;
+                totals.fatalities += monthly.fatalities[m] || 0;
+                totals.lti += monthly.lti[m] || 0;
+                totals.daysLost += monthly.daysLost[m] || 0;
+                totals.totalIncidents += monthly.totalIncidents[m] || 0;
+                totals.manHours += monthly.manHours[m] || 0;
+            }
+        }
+
+        return totals;
+    }
+
+    function getDashboardSnapshot(appData, options) {
+        const opts = options || {};
+        const year = opts.year || new Date().getFullYear();
+        const ytdLimit = opts.ytdLimit !== undefined ? opts.ytdLimit : currentYtdLimit(year);
+        const monthly = buildMonthlyBase(year, appData);
+        const totals = aggregateYtd(monthly, ytdLimit, { appData });
+        const multipliers = loadMultipliers();
+        const rates = computeRates(totals, multipliers);
+        return {
+            year,
+            ytdLimit,
+            monthly,
+            totals,
+            rates,
+            multipliers,
+            formatted: {
+                trir: formatRate(rates.trir, 2),
+                afr: formatRate(rates.afr, 2),
+                far: formatRate(rates.far, 4),
+                fr: formatRate(rates.fr, 2),
+                sr: formatRate(rates.sr, 2),
+                ir: formatRate(rates.ir, 2),
+                lti: String(rates.ltiCount),
+                manDays: String(totals.manDays || 0)
+            }
+        };
+    }
+
+    function getScorecardRates(monthlyBase, multipliers) {
+        const mult = multipliers || loadMultipliers();
+        const hours = monthlyBase.manHours;
+        return {
+            trir: buildMonthlyRateSeries(monthlyBase.recordables, hours, mult.TRIR),
+            afr: buildMonthlyRateSeries(monthlyBase.injuries, hours, mult.AFR),
+            far: buildMonthlyRateSeries(monthlyBase.fatalities, hours, mult.FAR),
+            fr: buildMonthlyRateSeries(monthlyBase.lti, hours, mult.FR),
+            ltir: buildMonthlyRateSeries(monthlyBase.lti, hours, mult.FR),
+            sr: buildMonthlyRateSeries(monthlyBase.daysLost, hours, mult.SR),
+            ir: buildMonthlyRateSeries(monthlyBase.totalIncidents, hours, mult.IR)
+        };
+    }
+
+    function getYtdRate(numeratorSeries, hoursSeries, ytdLimit, multiplier) {
+        const numerator = sumSlice(numeratorSeries, ytdLimit);
+        const hours = sumSlice(hoursSeries, ytdLimit);
+        return computeRate(numerator, hours, multiplier);
+    }
+
+    function calculateRollingSeries(currentYearSeries, previousYearSeries, currentYearHours, previousYearHours, multiplier) {
+        const mergedNumerator = [...(previousYearSeries || []), ...(currentYearSeries || [])];
+        const mergedHours = [...(previousYearHours || []), ...(currentYearHours || [])];
+        const result = createMonthlyArray(0);
+        const mult = multiplier || loadMultipliers().FR;
+
+        for (let index = 12; index < 24; index += 1) {
+            const start = Math.max(0, index - 11);
+            const numerator = mergedNumerator.slice(start, index + 1).reduce((sum, value) => sum + (parseFloat(value) || 0), 0);
+            const hours = mergedHours.slice(start, index + 1).reduce((sum, value) => sum + (parseFloat(value) || 0), 0);
+            result[index - 12] = computeRate(numerator, hours, mult);
+        }
+        return result;
+    }
+
+    const HseMetrics = {
+        DEFAULT_MULTIPLIERS,
+        loadMultipliers,
+        getWorkConfig,
+        parseDate,
+        getTextBag,
+        getDaysLost,
+        isFatality,
+        isLostTimeIncident,
+        isFirstAidIncident,
+        isNonLostTimeIncident,
+        isRecordableIncident,
+        isInjuryIncident,
+        classifyIncident,
+        computeRate,
+        computeRates,
+        formatRate,
+        formatRateDisplay,
+        resolveYtdManHours,
+        resolveYtdManDays,
+        sumYtdManHours,
+        getCurrentMonthProrationFactor,
+        resolveManDaysForMonth,
+        buildMonthlyBase,
+        buildMonthlyRateSeries,
+        aggregatePeriod,
+        aggregateYtd,
+        getDashboardSnapshot,
+        getScorecardRates,
+        getYtdRate,
+        calculateRollingSeries,
+        currentYtdLimit,
+        getManHoursForMonth,
+        getUnifiedIncidents,
+        getIncidentsForMetrics,
+        sumSlice
+    };
+
+    global.HseMetrics = HseMetrics;
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = HseMetrics;
+    }
+})(typeof window !== 'undefined' ? window : globalThis);

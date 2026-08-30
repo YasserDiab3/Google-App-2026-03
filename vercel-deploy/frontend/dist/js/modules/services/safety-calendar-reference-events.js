@@ -1,1 +1,138 @@
-(function(){"use strict";const o=[{month:1,day:7,title:"\u0639\u064A\u062F \u0627\u0644\u0645\u064A\u0644\u0627\u062F \u0627\u0644\u0645\u062C\u064A\u062F"},{month:1,day:25,title:"\u0639\u064A\u062F \u0627\u0644\u062B\u0648\u0631\u0629 25 \u064A\u0646\u0627\u064A\u0631"},{month:4,day:25,title:"\u0639\u064A\u062F \u062A\u062D\u0631\u064A\u0631 \u0633\u064A\u0646\u0627\u0621"},{month:5,day:1,title:"\u0639\u064A\u062F \u0627\u0644\u0639\u0645\u0627\u0644"},{month:6,day:30,title:"\u0639\u064A\u062F \u062B\u0648\u0631\u0629 30 \u064A\u0648\u0646\u064A\u0648"},{month:7,day:23,title:"\u0639\u064A\u062F \u062B\u0648\u0631\u0629 23 \u064A\u0648\u0644\u064A\u0648"},{month:10,day:6,title:"\u0639\u064A\u062F \u0627\u0644\u0642\u0648\u0627\u062A \u0627\u0644\u0645\u0633\u0644\u062D\u0629"}],d=[{start:"2025-04-20",title:"\u0639\u064A\u062F \u0627\u0644\u0642\u064A\u0627\u0645\u0629 \u0627\u0644\u0645\u062C\u064A\u062F (\u0623\u0642\u0628\u0627\u0637)"},{start:"2025-04-21",title:"\u0634\u0645 \u0627\u0644\u0646\u0633\u064A\u0645"},{start:"2025-03-30",end:"2025-04-02",title:"\u0639\u064A\u062F \u0627\u0644\u0641\u0637\u0631 \u0627\u0644\u0645\u0628\u0627\u0631\u0643"},{start:"2025-06-06",end:"2025-06-09",title:"\u0639\u064A\u062F \u0627\u0644\u0623\u0636\u062D\u0649 \u0627\u0644\u0645\u0628\u0627\u0631\u0643"},{start:"2025-06-26",title:"\u0631\u0623\u0633 \u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u0647\u062C\u0631\u064A\u0629"},{start:"2025-09-05",title:"\u0627\u0644\u0645\u0648\u0644\u062F \u0627\u0644\u0646\u0628\u0648\u064A \u0627\u0644\u0634\u0631\u064A\u0641"},{start:"2026-04-12",title:"\u0639\u064A\u062F \u0627\u0644\u0642\u064A\u0627\u0645\u0629 \u0627\u0644\u0645\u062C\u064A\u062F (\u0623\u0642\u0628\u0627\u0637)"},{start:"2026-04-13",title:"\u0634\u0645 \u0627\u0644\u0646\u0633\u064A\u0645"},{start:"2026-03-20",end:"2026-03-23",title:"\u0639\u064A\u062F \u0627\u0644\u0641\u0637\u0631 \u0627\u0644\u0645\u0628\u0627\u0631\u0643"},{start:"2026-05-27",end:"2026-05-30",title:"\u0639\u064A\u062F \u0627\u0644\u0623\u0636\u062D\u0649 \u0627\u0644\u0645\u0628\u0627\u0631\u0643"},{start:"2026-06-16",title:"\u0631\u0623\u0633 \u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u0647\u062C\u0631\u064A\u0629"},{start:"2026-08-25",title:"\u0627\u0644\u0645\u0648\u0644\u062F \u0627\u0644\u0646\u0628\u0648\u064A \u0627\u0644\u0634\u0631\u064A\u0641"},{start:"2027-04-04",title:"\u0639\u064A\u062F \u0627\u0644\u0642\u064A\u0627\u0645\u0629 \u0627\u0644\u0645\u062C\u064A\u062F (\u0623\u0642\u0628\u0627\u0637)"},{start:"2027-04-05",title:"\u0634\u0645 \u0627\u0644\u0646\u0633\u064A\u0645"},{start:"2027-03-10",end:"2027-03-13",title:"\u0639\u064A\u062F \u0627\u0644\u0641\u0637\u0631 \u0627\u0644\u0645\u0628\u0627\u0631\u0643"},{start:"2027-05-17",end:"2027-05-20",title:"\u0639\u064A\u062F \u0627\u0644\u0623\u0636\u062D\u0649 \u0627\u0644\u0645\u0628\u0627\u0631\u0643"},{start:"2027-06-06",title:"\u0631\u0623\u0633 \u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u0647\u062C\u0631\u064A\u0629"},{start:"2027-08-15",title:"\u0627\u0644\u0645\u0648\u0644\u062F \u0627\u0644\u0646\u0628\u0648\u064A \u0627\u0644\u0634\u0631\u064A\u0641"}],s=[{month:2,day:4,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0644\u0633\u0631\u0637\u0627\u0646"},{month:3,day:21,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0644\u063A\u0627\u0628\u0627\u062A"},{month:3,day:22,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0644\u0645\u064A\u0627\u0647"},{month:4,day:7,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0644\u0635\u062D\u0629"},{month:4,day:28,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629"},{month:5,day:31,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0631\u0641\u0636 \u0627\u0644\u062A\u062F\u062E\u064A\u0646"},{month:6,day:5,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0644\u0628\u064A\u0626\u0629"},{month:6,day:8,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0644\u0645\u062D\u064A\u0637\u0627\u062A"},{month:6,day:17,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0645\u0643\u0627\u0641\u062D\u0629 \u0627\u0644\u062A\u0635\u062D\u0631"},{month:9,day:16,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u062D\u0645\u0627\u064A\u0629 \u0637\u0628\u0642\u0629 \u0627\u0644\u0623\u0648\u0632\u0648\u0646"},{month:9,day:21,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0644\u0633\u0644\u0627\u0645"},{month:10,day:13,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u062F\u0648\u0644\u064A \u0644\u0644\u062D\u062F \u0645\u0646 \u0645\u062E\u0627\u0637\u0631 \u0627\u0644\u0643\u0648\u0627\u0631\u062B"},{month:11,day:14,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0644\u0633\u0643\u0631\u064A"},{month:12,day:3,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0630\u0648\u064A \u0627\u0644\u0625\u0639\u0627\u0642\u0629"},{month:12,day:5,title:"\u0627\u0644\u064A\u0648\u0645 \u0627\u0644\u0639\u0627\u0644\u0645\u064A \u0644\u0644\u062A\u0631\u0628\u0629"}];function y(t){return String(t).padStart(2,"0")}function h(t,e,r){return`${t}-${y(e)}-${y(r)}`}function g(t){if(!t)return null;const e=new Date(t+"T12:00:00");return isNaN(e.getTime())?null:(e.setDate(e.getDate()+1),h(e.getFullYear(),e.getMonth()+1,e.getDate()))}function c(t,e,r,l){const n=[];return(e||[]).forEach(i=>{(t||[]).forEach((a,$)=>{n.push({id:`${l}:fixed:${i}:${a.month}-${a.day}:${$}`,title:a.title,start:h(i,a.month,a.day),category:r,sourceId:`${l}-${a.month}-${a.day}`,recurring:"yearly"})})}),n}function f(t,e){const r=new Set(e||[]),l=[];return(t||[]).forEach((n,i)=>{const a=parseInt(String(n.start).slice(0,4),10);r.has(a)&&l.push({id:`egypt-holiday:dated:${n.start}:${i}`,title:n.title,start:n.start,end:n.end?g(n.end):null,category:"egypt-holiday",sourceId:`egypt-dated-${n.start}`,recurring:"once"})}),l}function u(){const t=new Date().getFullYear();return[t-1,t,t+1,t+2]}function m(t){const e=t&&Array.isArray(t.years)&&t.years.length?t.years:u(),r=c(o,e,"egypt-holiday","egypt"),l=f(d,e),n=c(s,e,"intl-hse-env","intl");return r.concat(l,n)}window.SafetyCalendarReferenceEvents={getReferenceEvents:m,getDefaultYears:u,EGYPT_FIXED:o,EGYPT_DATED:d,INTL_HSE_ENV:s}})();
+/**
+ * Safety Calendar — أعياد مصر + مناسبات عالمية (سلامة/بيئة)
+ * fixed = تكرار سنوي (شهر/يوم) | dated = تواريخ محددة (أعياد متحركة)
+ */
+(function () {
+    'use strict';
+
+    /** @type {{month:number,day:number,title:string}[]} */
+    const EGYPT_FIXED = [
+        { month: 1, day: 7, title: 'عيد الميلاد المجيد' },
+        { month: 1, day: 25, title: 'عيد الثورة 25 يناير' },
+        { month: 4, day: 25, title: 'عيد تحرير سيناء' },
+        { month: 5, day: 1, title: 'عيد العمال' },
+        { month: 6, day: 30, title: 'عيد ثورة 30 يونيو' },
+        { month: 7, day: 23, title: 'عيد ثورة 23 يوليو' },
+        { month: 10, day: 6, title: 'عيد القوات المسلحة' }
+    ];
+
+    /** @type {{start:string,end?:string,title:string}[]} */
+    const EGYPT_DATED = [
+        { start: '2025-04-20', title: 'عيد القيامة المجيد (أقباط)' },
+        { start: '2025-04-21', title: 'شم النسيم' },
+        { start: '2025-03-30', end: '2025-04-02', title: 'عيد الفطر المبارك' },
+        { start: '2025-06-06', end: '2025-06-09', title: 'عيد الأضحى المبارك' },
+        { start: '2025-06-26', title: 'رأس السنة الهجرية' },
+        { start: '2025-09-05', title: 'المولد النبوي الشريف' },
+        { start: '2026-04-12', title: 'عيد القيامة المجيد (أقباط)' },
+        { start: '2026-04-13', title: 'شم النسيم' },
+        { start: '2026-03-20', end: '2026-03-23', title: 'عيد الفطر المبارك' },
+        { start: '2026-05-27', end: '2026-05-30', title: 'عيد الأضحى المبارك' },
+        { start: '2026-06-16', title: 'رأس السنة الهجرية' },
+        { start: '2026-08-25', title: 'المولد النبوي الشريف' },
+        { start: '2027-04-04', title: 'عيد القيامة المجيد (أقباط)' },
+        { start: '2027-04-05', title: 'شم النسيم' },
+        { start: '2027-03-10', end: '2027-03-13', title: 'عيد الفطر المبارك' },
+        { start: '2027-05-17', end: '2027-05-20', title: 'عيد الأضحى المبارك' },
+        { start: '2027-06-06', title: 'رأس السنة الهجرية' },
+        { start: '2027-08-15', title: 'المولد النبوي الشريف' }
+    ];
+
+    /** @type {{month:number,day:number,title:string}[]} */
+    const INTL_HSE_ENV = [
+        { month: 2, day: 4, title: 'اليوم العالمي للسرطان' },
+        { month: 3, day: 21, title: 'اليوم العالمي للغابات' },
+        { month: 3, day: 22, title: 'اليوم العالمي للمياه' },
+        { month: 4, day: 7, title: 'اليوم العالمي للصحة' },
+        { month: 4, day: 28, title: 'اليوم العالمي للسلامة والصحة المهنية' },
+        { month: 5, day: 31, title: 'اليوم العالمي لرفض التدخين' },
+        { month: 6, day: 5, title: 'اليوم العالمي للبيئة' },
+        { month: 6, day: 8, title: 'اليوم العالمي للمحيطات' },
+        { month: 6, day: 17, title: 'اليوم العالمي لمكافحة التصحر' },
+        { month: 9, day: 16, title: 'اليوم العالمي لحماية طبقة الأوزون' },
+        { month: 9, day: 21, title: 'اليوم العالمي للسلام' },
+        { month: 10, day: 13, title: 'اليوم الدولي للحد من مخاطر الكوارث' },
+        { month: 11, day: 14, title: 'اليوم العالمي للسكري' },
+        { month: 12, day: 3, title: 'اليوم العالمي لذوي الإعاقة' },
+        { month: 12, day: 5, title: 'اليوم العالمي للتربة' }
+    ];
+
+    function pad2(n) {
+        return String(n).padStart(2, '0');
+    }
+
+    function toIso(y, m, d) {
+        return `${y}-${pad2(m)}-${pad2(d)}`;
+    }
+
+    function addExclusiveEnd(endInclusive) {
+        if (!endInclusive) return null;
+        const d = new Date(endInclusive + 'T12:00:00');
+        if (isNaN(d.getTime())) return null;
+        d.setDate(d.getDate() + 1);
+        return toIso(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    }
+
+    function expandFixedForYears(fixedList, years, category, idPrefix) {
+        const out = [];
+        (years || []).forEach((year) => {
+            (fixedList || []).forEach((item, idx) => {
+                out.push({
+                    id: `${idPrefix}:fixed:${year}:${item.month}-${item.day}:${idx}`,
+                    title: item.title,
+                    start: toIso(year, item.month, item.day),
+                    category,
+                    sourceId: `${idPrefix}-${item.month}-${item.day}`,
+                    recurring: 'yearly'
+                });
+            });
+        });
+        return out;
+    }
+
+    function expandDatedForYears(datedList, years) {
+        const yearSet = new Set(years || []);
+        const out = [];
+        (datedList || []).forEach((item, idx) => {
+            const y = parseInt(String(item.start).slice(0, 4), 10);
+            if (!yearSet.has(y)) return;
+            out.push({
+                id: `egypt-holiday:dated:${item.start}:${idx}`,
+                title: item.title,
+                start: item.start,
+                end: item.end ? addExclusiveEnd(item.end) : null,
+                category: 'egypt-holiday',
+                sourceId: `egypt-dated-${item.start}`,
+                recurring: 'once'
+            });
+        });
+        return out;
+    }
+
+    function getDefaultYears() {
+        const y = new Date().getFullYear();
+        return [y - 1, y, y + 1, y + 2];
+    }
+
+    /**
+     * @param {{years?: number[]}} options
+     * @returns {Array<{id:string,title:string,start:string,end?:string|null,category:string,sourceId:string,recurring?:string}>}
+     */
+    function getReferenceEvents(options) {
+        const years = (options && Array.isArray(options.years) && options.years.length)
+            ? options.years
+            : getDefaultYears();
+        const egyptFixed = expandFixedForYears(EGYPT_FIXED, years, 'egypt-holiday', 'egypt');
+        const egyptDated = expandDatedForYears(EGYPT_DATED, years);
+        const intl = expandFixedForYears(INTL_HSE_ENV, years, 'intl-hse-env', 'intl');
+        return egyptFixed.concat(egyptDated, intl);
+    }
+
+    window.SafetyCalendarReferenceEvents = {
+        getReferenceEvents,
+        getDefaultYears,
+        EGYPT_FIXED,
+        EGYPT_DATED,
+        INTL_HSE_ENV
+    };
+})();

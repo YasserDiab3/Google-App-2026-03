@@ -1,1 +1,124 @@
-(function(){"use strict";const a=Object.create(null),s=[];let o=0,i=null;function u(){return typeof GoogleIntegration<"u"}function l(e){s.push(e),s.length>40&&s.shift()}const f={hasLocalList(e){return Array.isArray(e)&&e.length>0},mergeNonEmpty(e,t){const r=Array.isArray(e)?e:[];return!Array.isArray(t)||t.length===0&&r.length>0?r:t},markPaint(e,t,r){const n={t:Date.now(),module:e,tab:t||"",phase:"paint-local",extra:r||{}};l(n),this.log(e,t||"ui","paint-local",r||{})},beginOwnedFetch(e){o+=1,u()&&(GoogleIntegration._maxQueueWorkers=2),i&&clearTimeout(i),i=setTimeout(()=>{o>0&&(this.log(e,"queue","watchdog-release",{depth:o}),o=0,u()&&(GoogleIntegration._maxQueueWorkers=3))},45e3),this.log(e,"queue","begin",{workers:2,depth:o})},endOwnedFetch(e){o=Math.max(0,o-1),o===0&&(i&&(clearTimeout(i),i=null),u()&&(GoogleIntegration._maxQueueWorkers=3)),this.log(e,"queue","end",{workers:o===0?3:2,depth:o})},async runExclusive(e,t){return a[e]||(a[e]=(async()=>{const r=Date.now();try{return await t()}finally{const n=Date.now()-r;l({t:Date.now(),module:e,phase:"fetch-done",ms:n}),this.log(e,"fetch","done",{ms:n}),delete a[e]}})()),a[e]},async withUiTimeout(e,t,r){let n=null;const c=new Promise((_,h)=>{n=setTimeout(()=>h(new Error(r||"STABLE_LOADER_TIMEOUT")),t)});try{return await Promise.race([e,c])}finally{n&&clearTimeout(n)}},getMetrics(){return s.slice()},log(e,t,r,n){try{if(typeof AppState>"u"||!AppState.debugMode)return;typeof Utils<"u"&&typeof Utils.safeLog=="function"&&Utils.safeLog("[StableLoader]",e,t,r,n||{})}catch{}}};u()&&typeof GoogleIntegration._maxQueueWorkers=="number"&&(GoogleIntegration._maxQueueWorkers=3),window.StableLoader=f})();
+/**
+ * عقد التحميل المستقر: عرض محلي فوري + جلب تبويب ظاهر + دمج آمن.
+ * لا يغيّر مسارات الموديولات الثقيلة؛ يوفّر أدوات مشتركة فقط.
+ */
+(function () {
+    'use strict';
+
+    const DEFAULT_WORKERS = 3;
+    const HEAVY_WORKERS = 2;
+    const OWNED_FETCH_WATCHDOG_MS = 45000;
+    const inflight = Object.create(null);
+    const metrics = [];
+    let heavyDepth = 0;
+    let watchdogTimer = null;
+
+    function hasGi() {
+        return typeof GoogleIntegration !== 'undefined';
+    }
+
+    function pushMetric(entry) {
+        metrics.push(entry);
+        if (metrics.length > 40) metrics.shift();
+    }
+
+    const StableLoader = {
+        hasLocalList(value) {
+            return Array.isArray(value) && value.length > 0;
+        },
+
+        mergeNonEmpty(existing, incoming) {
+            const oldList = Array.isArray(existing) ? existing : [];
+            if (!Array.isArray(incoming)) return oldList;
+            if (incoming.length === 0 && oldList.length > 0) return oldList;
+            return incoming;
+        },
+
+        markPaint(moduleName, tab, extra) {
+            const entry = {
+                t: Date.now(),
+                module: moduleName,
+                tab: tab || '',
+                phase: 'paint-local',
+                extra: extra || {}
+            };
+            pushMetric(entry);
+            this.log(moduleName, tab || 'ui', 'paint-local', extra || {});
+        },
+
+        beginOwnedFetch(moduleName) {
+            heavyDepth += 1;
+            if (hasGi()) {
+                GoogleIntegration._maxQueueWorkers = HEAVY_WORKERS;
+            }
+            if (watchdogTimer) clearTimeout(watchdogTimer);
+            watchdogTimer = setTimeout(() => {
+                if (heavyDepth > 0) {
+                    this.log(moduleName, 'queue', 'watchdog-release', { depth: heavyDepth });
+                    heavyDepth = 0;
+                    if (hasGi()) GoogleIntegration._maxQueueWorkers = DEFAULT_WORKERS;
+                }
+            }, OWNED_FETCH_WATCHDOG_MS);
+            this.log(moduleName, 'queue', 'begin', { workers: HEAVY_WORKERS, depth: heavyDepth });
+        },
+
+        endOwnedFetch(moduleName) {
+            heavyDepth = Math.max(0, heavyDepth - 1);
+            if (heavyDepth === 0) {
+                if (watchdogTimer) {
+                    clearTimeout(watchdogTimer);
+                    watchdogTimer = null;
+                }
+                if (hasGi()) GoogleIntegration._maxQueueWorkers = DEFAULT_WORKERS;
+            }
+            this.log(moduleName, 'queue', 'end', { workers: heavyDepth === 0 ? DEFAULT_WORKERS : HEAVY_WORKERS, depth: heavyDepth });
+        },
+
+        async runExclusive(key, task) {
+            if (inflight[key]) return inflight[key];
+            inflight[key] = (async () => {
+                const started = Date.now();
+                try {
+                    return await task();
+                } finally {
+                    const ms = Date.now() - started;
+                    pushMetric({ t: Date.now(), module: key, phase: 'fetch-done', ms });
+                    this.log(key, 'fetch', 'done', { ms });
+                    delete inflight[key];
+                }
+            })();
+            return inflight[key];
+        },
+
+        async withUiTimeout(promise, timeoutMs, label) {
+            let timer = null;
+            const timeoutPromise = new Promise((_, reject) => {
+                timer = setTimeout(() => reject(new Error(label || 'STABLE_LOADER_TIMEOUT')), timeoutMs);
+            });
+            try {
+                return await Promise.race([promise, timeoutPromise]);
+            } finally {
+                if (timer) clearTimeout(timer);
+            }
+        },
+
+        getMetrics() {
+            return metrics.slice();
+        },
+
+        log(moduleName, tab, phase, extra) {
+            try {
+                if (typeof AppState === 'undefined' || !AppState.debugMode) return;
+                if (typeof Utils !== 'undefined' && typeof Utils.safeLog === 'function') {
+                    Utils.safeLog('[StableLoader]', moduleName, tab, phase, extra || {});
+                }
+            } catch (_e) { /* ignore */ }
+        }
+    };
+
+    if (hasGi() && typeof GoogleIntegration._maxQueueWorkers === 'number') {
+        GoogleIntegration._maxQueueWorkers = DEFAULT_WORKERS;
+    }
+
+    window.StableLoader = StableLoader;
+})();

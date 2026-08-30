@@ -1,4 +1,78 @@
-(function(){"use strict";const q={ClinicVisits:9e4,ClinicContractorVisits:9e4,PTW:9e4,PTWRegistry:6e4,Training:6e4,Employees:9e4,UserActivityLog:45e3,DailyObservations:6e4,Incidents:45e3,Violations:45e3,ActionTrackingRegister:45e3,PeriodicInspectionRecords:45e3,BehaviorMonitoring:45e3},O=25e3,k=["UserActivityLog"],F=["ClinicVisits","ClinicContractorVisits","Training","Employees","ExternalWorkforceMonthly","PTW","PTWRegistry","DailyObservations"],l={_progressHidden:!1,_totalSheets:0,_progressWatchdog:null,_completedSheets:0,_sheetTimeout(e){return q[e]||O},_startProgressWatchdog(e){this._clearProgressWatchdog(),this._progressWatchdog=setTimeout(()=>{Utils.safeWarn("\u23F1\uFE0F \u0625\u064A\u0642\u0627\u0641 \u0645\u0624\u0634\u0631 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0628\u0639\u062F \u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u0645\u062F\u0629 \u0627\u0644\u0642\u0635\u0648\u0649"),this.removeProgressIndicator()},e||18e4)},_clearProgressWatchdog(){this._progressWatchdog&&(clearTimeout(this._progressWatchdog),this._progressWatchdog=null)},createProgressIndicator(e){this.removeProgressIndicator(),this._progressHidden=!1,this._totalSheets=e;const i=document.createElement("div");i.id="sync-progress-indicator",i.style.cssText=`
+/**
+ * تحسينات المزامنة مع Google Sheets
+ * Sync Improvements Module
+ * 
+ * Features:
+ * - Batch processing للتخفيف من الحمل
+ * - Progress indicator لعرض التقدم
+ * - Auto-save بعد كل دفعة
+ * - Error handling محسّن
+ */
+
+(function() {
+    'use strict';
+    
+    const HEAVY_SHEET_TIMEOUTS = {
+        ClinicVisits: 90000,
+        ClinicContractorVisits: 90000,
+        PTW: 90000,
+        PTWRegistry: 60000,
+        Training: 60000,
+        Employees: 90000,
+        UserActivityLog: 45000,
+        DailyObservations: 60000,
+        Incidents: 45000,
+        Violations: 45000,
+        ActionTrackingRegister: 45000,
+        PeriodicInspectionRecords: 45000,
+        BehaviorMonitoring: 45000
+    };
+    const DEFAULT_SHEET_TIMEOUT = 25000;
+    const DEFERRED_GLOBAL_SHEETS = ['UserActivityLog'];
+    const MODULE_OWNED_HEAVY_SHEETS = [
+        'ClinicVisits', 'ClinicContractorVisits',
+        'Training', 'Employees', 'ExternalWorkforceMonthly',
+        'PTW', 'PTWRegistry', 'DailyObservations'
+    ];
+
+    const SyncImprovements = {
+        /** حالة إخفاء النافذة (التحميل يستمر في الخلفية) */
+        _progressHidden: false,
+        _totalSheets: 0,
+        _progressWatchdog: null,
+        _completedSheets: 0,
+
+        _sheetTimeout(sheetName) {
+            return HEAVY_SHEET_TIMEOUTS[sheetName] || DEFAULT_SHEET_TIMEOUT;
+        },
+
+        _startProgressWatchdog(maxMs) {
+            this._clearProgressWatchdog();
+            this._progressWatchdog = setTimeout(() => {
+                Utils.safeWarn('⏱️ إيقاف مؤشر المزامنة بعد تجاوز المدة القصوى');
+                this.removeProgressIndicator();
+            }, maxMs || 180000);
+        },
+
+        _clearProgressWatchdog() {
+            if (this._progressWatchdog) {
+                clearTimeout(this._progressWatchdog);
+                this._progressWatchdog = null;
+            }
+        },
+
+        /**
+         * إنشاء مؤشر التقدم
+         */
+        createProgressIndicator(totalSheets) {
+            // حذف أي مؤشر قديم أولاً
+            this.removeProgressIndicator();
+            this._progressHidden = false;
+            this._totalSheets = totalSheets;
+
+            const progressIndicator = document.createElement('div');
+            progressIndicator.id = 'sync-progress-indicator';
+            progressIndicator.style.cssText = `
                 position: fixed;
                 top: 50%;
                 left: 50%;
@@ -11,12 +85,13 @@
                 text-align: center;
                 min-width: 350px;
                 direction: rtl;
-            `,i.innerHTML=`
+            `;
+            progressIndicator.innerHTML = `
                 <div style="margin-bottom: 20px;">
                     <i class="fas fa-sync fa-spin" style="font-size: 36px; color: #3B82F6;"></i>
                 </div>
                 <div style="font-size: 18px; font-weight: 600; margin-bottom: 15px; color: #1F2937;">
-                    \u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A  Database loaded.
+                    جاري تحميل قاعدة البيانات  Database loaded.
                 </div>
                 <div style="margin-bottom: 15px;">
                     <div style="background: #E5E7EB; height: 8px; border-radius: 4px; overflow: hidden;">
@@ -24,10 +99,10 @@
                     </div>
                 </div>
                 <div id="sync-progress-text" style="color: #6B7280; font-size: 14px;">
-                    0 \u0645\u0646 ${e} (0%)
+                    0 من ${totalSheets} (0%)
                 </div>
                 <div style="margin-top: 15px; color: #9CA3AF; font-size: 12px;">
-                    \u064A\u0631\u062C\u0649 \u0639\u062F\u0645 \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0645\u062A\u0635\u0641\u062D \u0623\u0648 \u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0641\u062D\u0629
+                    يرجى عدم إغلاق المتصفح أو إعادة تحميل الصفحة
                 </div>
                 <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #E5E7EB;">
                     <button type="button" id="sync-progress-hide-btn" style="
@@ -39,11 +114,655 @@
                         font-size: 14px;
                         cursor: pointer;
                         font-family: inherit;
-                    " title="\u0625\u062E\u0641\u0627\u0621 \u0627\u0644\u0646\u0627\u0641\u0630\u0629 \u0645\u0639 \u0627\u0633\u062A\u0645\u0631\u0627\u0631 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629">\u0625\u062E\u0641\u0627\u0621 \u0627\u0644\u0646\u0627\u0641\u0630\u0629</button>
+                    " title="إخفاء النافذة مع استمرار التحميل في الخلفية">إخفاء النافذة</button>
                 </div>
-            `,document.body.appendChild(i);const c=document.getElementById("sync-progress-hide-btn");return c&&c.addEventListener("click",()=>this.hideProgressIndicator()),i},hideProgressIndicator(){const e=document.getElementById("sync-progress-indicator");e&&(e.style.display="none",this._progressHidden=!0,this._createFloatingBottomBar())},showProgressIndicator(){const e=document.getElementById("sync-progress-indicator");e&&(e.style.display="",this._progressHidden=!1),this._removeFloatingShowButton()},_createFloatingBottomBar(){this._removeFloatingShowButton();const e=document.createElement("div");e.id="sync-progress-floating",e.className="sync-progress-floating-bar",e.setAttribute("role","status"),e.setAttribute("aria-live","polite"),e.innerHTML=`
-                <button type="button" id="sync-floating-show-btn" class="sync-floating-circle" title="\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644 - \u0627\u0636\u063A\u0637 \u0644\u0625\u0638\u0647\u0627\u0631 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
+            `;
+            document.body.appendChild(progressIndicator);
+
+            const hideBtn = document.getElementById('sync-progress-hide-btn');
+            if (hideBtn) {
+                hideBtn.addEventListener('click', () => this.hideProgressIndicator());
+            }
+            return progressIndicator;
+        },
+
+        /**
+         * إخفاء نافذة التقدم مع استمرار التحميل في الخلفية
+         * عرض شريط التقدم في الهيدر السفلي فقط (شريط عائم صغير)
+         */
+        hideProgressIndicator() {
+            const el = document.getElementById('sync-progress-indicator');
+            if (!el) return;
+            el.style.display = 'none';
+            this._progressHidden = true;
+            this._createFloatingBottomBar();
+        },
+
+        /**
+         * إظهار نافذة التقدم مرة أخرى
+         */
+        showProgressIndicator() {
+            const el = document.getElementById('sync-progress-indicator');
+            if (el) {
+                el.style.display = '';
+                this._progressHidden = false;
+            }
+            this._removeFloatingShowButton();
+        },
+
+        /**
+         * إنشاء الشريط السفلي فقط (شريط تقدم مضغوط + زر إظهار)
+         */
+        _createFloatingBottomBar() {
+            this._removeFloatingShowButton();
+            const floating = document.createElement('div');
+            floating.id = 'sync-progress-floating';
+            floating.className = 'sync-progress-floating-bar';
+            floating.setAttribute('role', 'status');
+            floating.setAttribute('aria-live', 'polite');
+            floating.innerHTML = `
+                <button type="button" id="sync-floating-show-btn" class="sync-floating-circle" title="جاري التحميل - اضغط لإظهار التفاصيل">
                     <i class="fas fa-sync fa-spin" aria-hidden="true"></i>
                     <span id="sync-floating-percent" class="sync-floating-percent">0%</span>
                 </button>
-            `,document.body.appendChild(e);const i=document.getElementById("sync-floating-show-btn");i&&i.addEventListener("click",()=>this.showProgressIndicator()),this._updateFloatingProgress(0,this._totalSheets||1)},_updateFloatingProgress(e,i,c){const r=i?Math.round(e/i*100):0,f=document.getElementById("sync-floating-percent");f&&(f.textContent=r+"%");const y=document.getElementById("sync-floating-show-btn");if(y){const m=c?` \u2014 ${c}`:"";y.title=`\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644 ${r}%${m} - \u0627\u0636\u063A\u0637 \u0644\u0625\u0638\u0647\u0627\u0631 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644`}},_removeFloatingShowButton(){const e=document.getElementById("sync-progress-floating");e&&e.parentNode&&e.parentNode.removeChild(e)},updateProgress(e,i,c){const r=i?Math.round(e/i*100):0,f=document.getElementById("sync-progress-bar"),y=document.getElementById("sync-progress-text");if(f&&(f.style.width=`${r}%`),y){const m=c?` \u2014 ${c}`:"";y.textContent=`${e} \u0645\u0646 ${i} (${r}%)${m}`}this._progressHidden&&this._updateFloatingProgress(e,i,c)},removeProgressIndicator(){this._progressHidden=!1,this._clearProgressWatchdog(),this._removeFloatingShowButton();const e=document.getElementById("sync-progress-indicator");e&&e.parentNode&&e.parentNode.removeChild(e)},async processBatch(e,i,c,r,f){const y=await Promise.allSettled(e.map(d=>i(d,this._sheetTimeout(d)).then(E=>(typeof f=="function"&&f(d),{sheetName:d,data:E,success:!0})).catch(E=>(typeof f=="function"&&f(d),{sheetName:d,error:E,success:!1}))));let m=0;const p=[];return y.forEach((d,E)=>{let o,g,a,P;d.status==="fulfilled"?{sheetName:o,data:g,error:a,success:P}=d.value:(o=e[E],a=d.reason?.message||d.reason||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641",P=!1);const h=typeof GoogleIntegration<"u"&&typeof GoogleIntegration.applyResourceConsumptionSheetSyncResult=="function"?GoogleIntegration.applyResourceConsumptionSheetSyncResult(o,{data:g,error:a,success:P}):null;if(h&&h.handled){h.failed?(p.push(o),r&&Utils.safeWarn(`\u26A0 \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 ${o}:`,a?.message||a)):h.syncedRecords>0?(m++,r&&Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 ${h.syncedRecords} \u0633\u062C\u0644 \u0645\u0646 ${o}`)):r&&Utils.safeLog(`\u2705 ${o} \u0641\u0627\u0631\u063A\u0629 (\u062A\u0645 \u0627\u0644\u062A\u062E\u0637\u064A \u0628\u0634\u0643\u0644 \u0622\u0645\u0646)`);return}const n=c[o];if(!n){r&&Utils.safeWarn(`\u26A0 \u0644\u0645 \u064A\u062A\u0645 \u062A\u0639\u064A\u064A\u0646 \u0645\u0641\u062A\u0627\u062D \u0644\u0640 \u0648\u0631\u0642\u0629 \u0627\u0644\u0639\u0645\u0644 ${o}`);return}if(!P||a){p.push(o),r&&Utils.safeWarn(`\u26A0 \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 ${o}:`,a?.message||a);return}if(Array.isArray(g)){const I=Array.isArray(AppState.appData[n])?AppState.appData[n]:[],s=g.length===0&&I.length>0,v=s?I:g;s||(AppState.appData[n]=g),v.length>0?(m++,r&&Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 ${v.length} \u0633\u062C\u0644 \u0645\u0646 ${o}`)):r&&Utils.safeLog(`\u2705 ${o} \u0641\u0627\u0631\u063A\u0629 (\u062A\u0645 \u0627\u0644\u062A\u062E\u0637\u064A \u0628\u0634\u0643\u0644 \u0622\u0645\u0646)`)}else{const I=AppState.appData[n]||[];I.length>0?r&&Utils.safeLog(`\u26A0\uFE0F ${o} \u0644\u0645 \u062A\u064F\u0631\u062C\u0639 array - \u0627\u0644\u0627\u062D\u062A\u0641\u0627\u0638 \u0628\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062D\u0627\u0644\u064A\u0629 (${I.length} \u0633\u062C\u0644)`):(AppState.appData[n]=[],r&&Utils.safeLog(`\u2705 ${o} \u0641\u0627\u0631\u063A\u0629 \u0648\u062A\u0637\u0628\u064A\u0642 \u0628\u0640 array \u0641\u0627\u0631\u063A \u0643\u0642\u064A\u0645\u0629 \u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0622\u0645\u0646\u0629`))}}),{syncedInBatch:m,failedInBatch:p}}};window.SyncImprovements=l,document.addEventListener("DOMContentLoaded",function(){setTimeout(function(){if(typeof GoogleIntegration<"u"&&GoogleIntegration.syncData){const e=GoogleIntegration.syncData;GoogleIntegration.syncData=async function(i={}){const{silent:c=!1,showLoader:r=!1,notifyOnSuccess:f=!c,notifyOnError:y=!c,includeUsersSheet:m=!0,sheets:p=null,incremental:d=!1,forceRefresh:E=!1}=i,o=typeof AppState<"u"&&typeof AppState._suppressSyncProgressOverlayUntil=="number"&&Date.now()<AppState._suppressSyncProgressOverlayUntil,g=r&&o,a=r&&!o,P=f&&!o,h=y&&!o;if(GoogleIntegration._syncInProgress&&GoogleIntegration._syncInProgress.global){const n=Number(GoogleIntegration._syncInProgress.lastSyncStart||0);if(!n||Date.now()-n>18e4)GoogleIntegration._syncInProgress.global=!1;else if(E){const s=Date.now();for(;GoogleIntegration._syncInProgress.global&&Date.now()-s<6e4;)if(await new Promise(M=>setTimeout(M,250)),Date.now()-Number(GoogleIntegration._syncInProgress.lastSyncStart||Date.now())>18e4){GoogleIntegration._syncInProgress.global=!1;break}}if(GoogleIntegration._syncInProgress.global)return GoogleIntegration._lastSyncBusy=!0,GoogleIntegration._lastSyncError="",!c&&typeof Notification<"u"&&Notification.info("\u062C\u0627\u0631\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0628\u0627\u0644\u0641\u0639\u0644\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631..."),!1}if(GoogleIntegration._lastSyncBusy=!1,!AppState.googleConfig.appsScript.enabled||!AppState.googleConfig.appsScript.scriptUrl)return c||(Utils.safeLog("Google Sheets \u063A\u064A\u0631 \u0645\u0641\u0639\u0644 \u0623\u0648 \u0644\u0627 \u064A\u0648\u062C\u062F \u0631\u0627\u0628\u0637 \u0633\u0643\u0631\u064A\u0628\u062A - \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629"),Notification.warning("Google Sheets \u063A\u064A\u0631 \u0645\u0641\u0639\u0644. \u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0641\u0642\u0637")),!1;GoogleIntegration._syncInProgress.global=!0,GoogleIntegration._syncInProgress.lastSyncStart=Date.now();try{const n=AppState.debugMode&&!c;n&&Utils.safeLog("\u{1F504}  \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A    Database loading"),a&&typeof Loading<"u"&&Loading.show();let s=["Users","Incidents","NearMiss","PTW","Training","ClinicVisits","Medications","SickLeave","Injuries","ClinicInventory","ClinicStaff","ClinicStaffAttendance","ClinicStaffTimeOffRequests","FireEquipment","FireEquipmentAssets","FireEquipmentInspections","PeriodicInspectionCategories","PeriodicInspectionRecords","PeriodicInspectionSchedules","PeriodicInspectionChecklists","PeriodicEquipmentTypes","PeriodicEquipmentAssets","PeriodicEquipmentInspections","PPE","ViolationTypes","Violations","Contractors","ApprovedContractors","ContractorEvaluations","ContractorApprovalRequests","ContractorEvaluationApprovalRequests","ContractorDeletionRequests","Employees","ExternalWorkforceMonthly","BehaviorMonitoring","ContractorBehaviorMonitoring","ChemicalSafety","DailyObservations","ISODocuments","ISOProcedures","ISOForms","SOPJHA","RiskAssessments","LegalDocuments","HSEAudits","HSENonConformities","HSECorrectiveActions","HSEObjectives","HSERiskAssessments","EnvironmentalAspects","EnvironmentalMonitoring","Sustainability","CarbonFootprint","WasteManagement","EnergyEfficiency","WaterManagement","WaterManagement_Records","GasManagement_Records","ElectricityManagement_Records","RecyclingPrograms","EmergencyAlerts","EmergencyPlans","EmergencyPlansUpdates","SafetyTeamMembers","SafetyOrganizationalStructure","SafetyJobDescriptions","SafetyTeamKPIs","SafetyTeamAttendance","SafetyTeamLeaves","SafetyTeamTasks","SafetyBudgets","SafetyBudgetTransactions","SafetyPerformanceKPIs","ActionTrackingRegister","UserActivityLog"].slice();p&&Array.isArray(p)&&p.length>0&&(s=p.slice(),n&&Utils.safeLog(`\u2705 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0623\u0648\u0631\u0627\u0642 \u0645\u062D\u062F\u062F\u0629 \u0641\u064A syncData: ${s.join(", ")}`));const v={Users:"users",Incidents:"incidents",NearMiss:"nearmiss",PTW:"ptw",Training:"training",ClinicVisits:"clinicVisits",ClinicContractorVisits:"clinicContractorVisits",Medications:"medications",SickLeave:"sickLeave",Injuries:"injuries",ClinicContractorInjuries:"clinicContractorInjuries",ClinicInventory:"clinicInventory",ClinicStaff:"clinicStaff",ClinicStaffAttendance:"clinicStaffAttendance",ClinicStaffTimeOffRequests:"clinicStaffTimeOffRequests",FireEquipment:"fireEquipment",FireEquipmentAssets:"fireEquipmentAssets",FireEquipmentInspections:"fireEquipmentInspections",PeriodicInspectionCategories:"periodicInspectionCategories",PeriodicInspectionRecords:"periodicInspectionRecords",PeriodicInspectionSchedules:"periodicInspectionSchedules",PeriodicInspectionChecklists:"periodicInspectionChecklists",PeriodicEquipmentTypes:"periodicEquipmentTypes",PeriodicEquipmentAssets:"periodicEquipmentAssets",PeriodicEquipmentInspections:"periodicEquipmentInspections",PPE:"ppe",ViolationTypes:"violationTypes",Violations:"violations",Contractors:"contractors",ApprovedContractors:"approvedContractors",ContractorEvaluations:"contractorEvaluations",ContractorApprovalRequests:"contractorApprovalRequests",ContractorEvaluationApprovalRequests:"contractorEvaluationApprovalRequests",ContractorDeletionRequests:"contractorDeletionRequests",Employees:"employees",ExternalWorkforceMonthly:"externalWorkforceMonthly",BehaviorMonitoring:"behaviorMonitoring",ContractorBehaviorMonitoring:"contractorBehaviorMonitoring",ChemicalSafety:"chemicalSafety",DailyObservations:"dailyObservations",ISODocuments:"isoDocuments",ISOProcedures:"isoProcedures",ISOForms:"isoForms",SOPJHA:"sopJHA",RiskAssessments:"riskAssessments",LegalDocuments:"legalDocuments",HSEAudits:"hseAudits",HSENonConformities:"hseNonConformities",HSECorrectiveActions:"hseCorrectiveActions",HSEObjectives:"hseObjectives",HSERiskAssessments:"hseRiskAssessments",EnvironmentalAspects:"environmentalAspects",EnvironmentalMonitoring:"environmentalMonitoring",Sustainability:"sustainability",CarbonFootprint:"carbonFootprint",WasteManagement:"wasteManagement",EnergyEfficiency:"energyEfficiency",WaterManagement:"waterManagement",RecyclingPrograms:"recyclingPrograms",EmergencyAlerts:"emergencyAlerts",EmergencyPlans:"emergencyPlans",EmergencyPlansUpdates:"emergencyPlansUpdates",SafetyTeamMembers:"safetyTeamMembers",SafetyOrganizationalStructure:"safetyOrganizationalStructure",SafetyJobDescriptions:"safetyJobDescriptions",SafetyTeamKPIs:"safetyTeamKPIs",SafetyTeamAttendance:"safetyTeamAttendance",SafetyTeamLeaves:"safetyTeamLeaves",SafetyTeamTasks:"safetyTeamTasks",SafetyBudgets:"safetyBudgets",SafetyBudgetTransactions:"safetyBudgetTransactions",SafetyPerformanceKPIs:"safetyPerformanceKPIs",ActionTrackingRegister:"actionTrackingRegister",UserActivityLog:"user_activity_log",SafetyCalendarCustomEvents:"safetyCalendarCustomEvents"},M=typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin();if(AppState.currentUser&&!M&&typeof Permissions<"u"){const t=Permissions.getAccessibleModules(!0),w={users:["Users"],incidents:["Incidents"],nearmiss:["NearMiss"],ptw:["PTW"],training:["Training"],clinic:["ClinicVisits","Medications","SickLeave","Injuries","ClinicInventory","ClinicStaff","ClinicStaffAttendance","ClinicStaffTimeOffRequests"],"fire-equipment":["FireEquipment","FireEquipmentAssets","FireEquipmentInspections"],"periodic-inspections":["PeriodicInspectionCategories","PeriodicInspectionRecords","PeriodicInspectionSchedules","PeriodicInspectionChecklists","PeriodicEquipmentTypes","PeriodicEquipmentAssets","PeriodicEquipmentInspections"],ppe:["PPE"],violations:["Violations","ViolationTypes"],contractors:["Contractors","ApprovedContractors","ContractorEvaluations","ContractorApprovalRequests","ContractorEvaluationApprovalRequests","ContractorDeletionRequests"],employees:["Employees","ExternalWorkforceMonthly"],"behavior-monitoring":["BehaviorMonitoring","ContractorBehaviorMonitoring"],"chemical-safety":["ChemicalSafety"],"daily-observations":["DailyObservations"],iso:["ISODocuments","ISOProcedures","ISOForms","HSEAudits"],"sop-jha":["SOPJHA"],"risk-assessment":["RiskAssessments","HSERiskAssessments"],"legal-documents":["LegalDocuments"],sustainability:["Sustainability","EnvironmentalAspects","EnvironmentalMonitoring","CarbonFootprint","WasteManagement","EnergyEfficiency","WaterManagement","WaterManagement_Records","GasManagement_Records","ElectricityManagement_Records","RecyclingPrograms"],emergency:["EmergencyAlerts","EmergencyPlans","EmergencyPlansUpdates"],"safety-budget":["SafetyBudgets","SafetyBudgetTransactions"],"safety-performance-kpis":["SafetyPerformanceKPIs","SafetyTeamKPIs"],"safety-health-management":["SafetyTeamMembers","SafetyOrganizationalStructure","SafetyJobDescriptions","SafetyTeamKPIs","SafetyTeamAttendance","SafetyTeamLeaves","SafetyTeamTasks"],"action-tracking":["ActionTrackingRegister","HSECorrectiveActions","HSENonConformities","HSEObjectives"]},A=new Set;m&&typeof Permissions.hasAccess=="function"&&Permissions.hasAccess("users")&&A.add("Users"),t.forEach(S=>{const u=w[S];Array.isArray(u)&&u.forEach(_=>A.add(_))}),["clinic","training","ptw","violations"].some(S=>t.includes(S))&&!t.includes("contractors")&&["Contractors","ApprovedContractors"].forEach(u=>{s.includes(u)||s.push(u),A.add(u)}),s=s.filter(S=>A.has(S))}if(typeof GoogleIntegration._filterSheetsForCurrentUser=="function"&&(s=GoogleIntegration._filterSheetsForCurrentUser(s)),p||(s=s.filter(t=>!k.includes(t)),s=s.filter(t=>!F.includes(t))),d&&!p&&typeof GoogleIntegration.getIncompleteSheets=="function"){const t=GoogleIntegration.getIncompleteSheets(v,s);if(Array.isArray(t)&&t.length===0)return a&&typeof Loading<"u"&&Loading.hide(),n&&Utils.safeLog("\u2705 \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u062F\u062B\u0629 \u2014 \u062A\u062E\u0637\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0643\u0627\u0645\u0644\u0629"),!0;Array.isArray(t)&&t.length>0&&(s=t,n&&Utils.safeLog(`\u2705 \u062A\u062D\u0645\u064A\u0644 \u062A\u062F\u0631\u064A\u062C\u064A: ${s.length} \u0648\u0631\u0642\u0629 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644\u0629`))}if(s.length===0)return a&&typeof Loading<"u"&&Loading.hide(),n&&Utils.safeLog("\u274C \u0644\u0627 \u064A\u0648\u062C\u062F \u0623\u0648\u0631\u0627\u0642 \u0639\u0645\u0644 \u0644\u0644\u0645\u0632\u0627\u0645\u0646\u0629"),!0;const C=2;let b=0;const T=[];let B=0;a?(l.createProgressIndicator(s.length),l.updateProgress(0,s.length),l._startProgressWatchdog(18e4)):g&&(l._progressHidden=!0,l._totalSheets=s.length,l._createFloatingBottomBar(),l.updateProgress(0,s.length),l._startProgressWatchdog(18e4));for(let t=0;t<s.length;t+=C){const w=s.slice(t,Math.min(t+C,s.length)),A=Math.floor(t/C)+1,U=Math.ceil(s.length/C);n&&Utils.safeLog(`\u{1F504} \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u062F\u0641\u0639\u0629 ${A} \u0645\u0646 ${U} (${w.join(", ")})`);const{syncedInBatch:L,failedInBatch:S}=await l.processBatch(w,GoogleIntegration.readFromSheets.bind(GoogleIntegration),v,n,_=>{B+=1,(a||g)&&l.updateProgress(B,s.length,_)});b+=L,T.push(...S);const u=typeof window<"u"&&window.DataManager||typeof DataManager<"u"&&DataManager;u&&typeof u.save=="function"&&u.save(),t+C<s.length&&await new Promise(_=>setTimeout(_,200))}(a||g)&&l.updateProgress(s.length,s.length);try{const t=await GoogleIntegration.sendRequest({action:"getAllInjuries",data:{}});t&&t.success&&Array.isArray(t.data)&&(t.data.length>0||!(AppState.appData.injuries&&AppState.appData.injuries.length>0))&&(AppState.appData.injuries=t.data,n&&Utils.safeLog(`\u2705 \u0625\u0635\u0627\u0628\u0627\u062A \u0645\u062F\u0645\u062C\u0629: ${t.data.length} \u0633\u062C\u0644 (\u0645\u0648\u0638\u0641\u064A\u0646 + \u0645\u0642\u0627\u0648\u0644\u064A\u0646)`))}catch(t){n&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0651\u0631 \u062C\u0644\u0628 \u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A \u0627\u0644\u0645\u062F\u0645\u062C\u0629:",t)}typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized(),typeof PeriodicInspectionStore<"u"&&PeriodicInspectionStore.ensureInitialized(),typeof PeriodicEquipmentStore<"u"&&PeriodicEquipmentStore.ensureInitialized();const D=typeof window<"u"&&window.DataManager||typeof DataManager<"u"&&DataManager;D&&typeof D.save=="function"&&await new Promise(t=>{D.save(),setTimeout(t,300)});try{typeof Dashboard<"u"&&typeof Dashboard.updateReportsStatistics=="function"&&Dashboard.updateReportsStatistics()}catch{}typeof window<"u"&&window.dispatchEvent(new CustomEvent("syncDataCompleted",{detail:{syncedCount:b,failedSheets:T,sheets:s.map(t=>v[t]||t).filter(Boolean)}})),(a||g)&&(await new Promise(t=>setTimeout(t,500)),l.removeProgressIndicator()),a&&typeof Loading<"u"&&Loading.hide();const R=T.length===0;return R?P&&b>0?Notification.success("  \u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A  \u0628\u0646\u062C\u0627\u062D Database loaded successfully."):n&&Utils.safeLog(`\u2705 \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: ${b} \u0648\u0631\u0642\u0629 \u062A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A`):(h&&Notification.warning(`\u0641\u0634\u0644 \u0645\u0632\u0627\u0645\u0646\u0629 \u0628\u0639\u0636 \u0627\u0644\u0623\u0648\u0631\u0627\u0642: ${T.join(", ")}`),n&&Utils.safeWarn("\u26A0 \u0627\u0644\u0623\u0648\u0631\u0627\u0642 \u0627\u0644\u062A\u064A \u0641\u0634\u0644\u062A \u0641\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629:",T)),R||b>0}catch(n){return(a||g)&&(l.removeProgressIndicator(),typeof Loading<"u"&&Loading.hide()),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629:",n),h&&Notification.error("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 Google Sheets: "+n.message),!1}finally{GoogleIntegration._syncInProgress&&(GoogleIntegration._syncInProgress.global=!1,GoogleIntegration._syncInProgress.lastSyncEnd=Date.now())}},Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0637\u0628\u064A\u0642 \u062A\u062D\u0633\u064A\u0646\u0627\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0628\u0646\u062C\u0627\u062D")}},2e3)})})();
+            `;
+            document.body.appendChild(floating);
+            const showBtn = document.getElementById('sync-floating-show-btn');
+            if (showBtn) showBtn.addEventListener('click', () => this.showProgressIndicator());
+            this._updateFloatingProgress(0, this._totalSheets || 1);
+        },
+
+        _updateFloatingProgress(completed, total, currentSheet) {
+            const percent = total ? Math.round((completed / total) * 100) : 0;
+            const percentEl = document.getElementById('sync-floating-percent');
+            if (percentEl) percentEl.textContent = percent + '%';
+            const showBtn = document.getElementById('sync-floating-show-btn');
+            if (showBtn) {
+                const sheetHint = currentSheet ? ` — ${currentSheet}` : '';
+                showBtn.title = `جاري التحميل ${percent}%${sheetHint} - اضغط لإظهار التفاصيل`;
+            }
+        },
+
+        _removeFloatingShowButton() {
+            const floating = document.getElementById('sync-progress-floating');
+            if (floating && floating.parentNode) {
+                floating.parentNode.removeChild(floating);
+            }
+        },
+        
+        /**
+         * تحديث مؤشر التقدم
+         */
+        updateProgress(completed, total, currentSheet) {
+            const percent = total ? Math.round((completed / total) * 100) : 0;
+            const progressBar = document.getElementById('sync-progress-bar');
+            const progressText = document.getElementById('sync-progress-text');
+            if (progressBar) progressBar.style.width = `${percent}%`;
+            if (progressText) {
+                const sheetHint = currentSheet ? ` — ${currentSheet}` : '';
+                progressText.textContent = `${completed} من ${total} (${percent}%)${sheetHint}`;
+            }
+            if (this._progressHidden) this._updateFloatingProgress(completed, total, currentSheet);
+        },
+        
+        /**
+         * إزالة مؤشر التقدم والزر العائم
+         */
+        removeProgressIndicator() {
+            this._progressHidden = false;
+            this._clearProgressWatchdog();
+            this._removeFloatingShowButton();
+            const progressIndicator = document.getElementById('sync-progress-indicator');
+            if (progressIndicator && progressIndicator.parentNode) {
+                progressIndicator.parentNode.removeChild(progressIndicator);
+            }
+        },
+        
+        /**
+         * معالجة دفعة من الأوراق
+         */
+        async processBatch(batch, readFromSheetsFunc, sheetMapping, shouldLog, onSheetDone) {
+            const results = await Promise.allSettled(
+                batch.map(sheetName =>
+                    readFromSheetsFunc(sheetName, this._sheetTimeout(sheetName))
+                        .then(data => {
+                            if (typeof onSheetDone === 'function') onSheetDone(sheetName);
+                            return { sheetName, data, success: true };
+                        })
+                        .catch(error => {
+                            if (typeof onSheetDone === 'function') onSheetDone(sheetName);
+                            return { sheetName, error, success: false };
+                        })
+                )
+            );
+            
+            let syncedInBatch = 0;
+            const failedInBatch = [];
+            
+            results.forEach((result, index) => {
+                let sheetName, data, error, success;
+                
+                if (result.status === 'fulfilled') {
+                    ({ sheetName, data, error, success } = result.value);
+                } else {
+                    // معالجة الرفض
+                    sheetName = batch[index];
+                    error = result.reason?.message || result.reason || 'خطأ غير معروف';
+                    success = false;
+                }
+
+                const rcMerge = typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.applyResourceConsumptionSheetSyncResult === 'function'
+                    ? GoogleIntegration.applyResourceConsumptionSheetSyncResult(sheetName, { data, error, success })
+                    : null;
+                if (rcMerge && rcMerge.handled) {
+                    if (rcMerge.failed) {
+                        failedInBatch.push(sheetName);
+                        if (shouldLog) {
+                            Utils.safeWarn(`⚠ فشل تحميل ${sheetName}:`, error?.message || error);
+                        }
+                    } else if (rcMerge.syncedRecords > 0) {
+                        syncedInBatch++;
+                        if (shouldLog) {
+                            Utils.safeLog(`✅ تم تحميل ${rcMerge.syncedRecords} سجل من ${sheetName}`);
+                        }
+                    } else if (shouldLog) {
+                        Utils.safeLog(`✅ ${sheetName} فارغة (تم التخطي بشكل آمن)`);
+                    }
+                    return;
+                }
+                
+                const key = sheetMapping[sheetName];
+                
+                if (!key) {
+                    if (shouldLog) {
+                        Utils.safeWarn(`⚠ لم يتم تعيين مفتاح لـ ورقة العمل ${sheetName}`);
+                    }
+                    return;
+                }
+                
+                if (!success || error) {
+                    failedInBatch.push(sheetName);
+                    if (shouldLog) {
+                        Utils.safeWarn(`⚠ فشل تحميل ${sheetName}:`, error?.message || error);
+                    }
+                    return;
+                }
+                
+                if (Array.isArray(data)) {
+                    const oldData = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
+                    // ✅ حماية: لا نُبدّل البيانات المحلية بمصفوفة فارغة
+                    const shouldKeepOld = data.length === 0 && oldData.length > 0;
+                    const effectiveData = shouldKeepOld ? oldData : data;
+
+                    if (!shouldKeepOld) {
+                        AppState.appData[key] = data;
+                    }
+
+                    if (effectiveData.length > 0) {
+                        syncedInBatch++;
+                        if (shouldLog) {
+                            Utils.safeLog(`✅ تم تحميل ${effectiveData.length} سجل من ${sheetName}`);
+                        }
+                    } else if (shouldLog) {
+                        Utils.safeLog(`✅ ${sheetName} فارغة (تم التخطي بشكل آمن)`);
+                    }
+                } else {
+                    // ✅ تحسين: التحقق من وجود بيانات قديمة قبل استبدالها بمصفوفة فارغة
+                    const oldData = AppState.appData[key] || [];
+                    if (oldData.length > 0) {
+                        // الاحتفاظ بالبيانات القديمة
+                        if (shouldLog) {
+                            Utils.safeLog(`⚠️ ${sheetName} لم تُرجع array - الاحتفاظ بالبيانات الحالية (${oldData.length} سجل)`);
+                        }
+                    } else {
+                        // فقط إذا لم تكن هناك بيانات قديمة، نستخدم مصفوفة فارغة
+                        AppState.appData[key] = [];
+                        if (shouldLog) {
+                            Utils.safeLog(`✅ ${sheetName} فارغة وتطبيق بـ array فارغ كقيمة افتراضية آمنة`);
+                        }
+                    }
+                }
+            });
+            
+            return { syncedInBatch, failedInBatch };
+        }
+    };
+    
+    // تصدير للاستخدام العام
+    window.SyncImprovements = SyncImprovements;
+    
+    // Monkey patch لدالة syncData في GoogleIntegration
+    // ننتظر حتى يتم تحميل GoogleIntegration ثم نقوم بالـ patch
+    document.addEventListener('DOMContentLoaded', function() {
+        // استخدام setTimeout للتأكد من تحميل جميع الملفات
+        setTimeout(function() {
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.syncData) {
+                const originalSyncData = GoogleIntegration.syncData;
+                
+                GoogleIntegration.syncData = async function(options = {}) {
+                    const {
+                        silent = false,
+                        showLoader = false,
+                        notifyOnSuccess = !silent,
+                        notifyOnError = !silent,
+                        includeUsersSheet = true,
+                        sheets: requestedSheets = null,
+                        incremental = false,
+                        forceRefresh = false
+                    } = options;
+                    const suppressProgressOverlay = !!(
+                        typeof AppState !== 'undefined' &&
+                        typeof AppState._suppressSyncProgressOverlayUntil === 'number' &&
+                        Date.now() < AppState._suppressSyncProgressOverlayUntil
+                    );
+                    const useFloatingProgressOnly = showLoader && suppressProgressOverlay;
+                    const effectiveShowLoader = showLoader && !suppressProgressOverlay;
+                    const effectiveNotifyOnSuccess = notifyOnSuccess && !suppressProgressOverlay;
+                    const effectiveNotifyOnError = notifyOnError && !suppressProgressOverlay;
+
+                    if (GoogleIntegration._syncInProgress && GoogleIntegration._syncInProgress.global) {
+                        const startedAt = Number(GoogleIntegration._syncInProgress.lastSyncStart || 0);
+                        const stale = !startedAt || (Date.now() - startedAt) > 180000;
+                        if (stale) {
+                            GoogleIntegration._syncInProgress.global = false;
+                        } else if (forceRefresh) {
+                            const waitStart = Date.now();
+                            while (GoogleIntegration._syncInProgress.global && (Date.now() - waitStart) < 60000) {
+                                await new Promise((resolve) => setTimeout(resolve, 250));
+                                const age = Date.now() - Number(GoogleIntegration._syncInProgress.lastSyncStart || Date.now());
+                                if (age > 180000) {
+                                    GoogleIntegration._syncInProgress.global = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (GoogleIntegration._syncInProgress.global) {
+                            GoogleIntegration._lastSyncBusy = true;
+                            GoogleIntegration._lastSyncError = '';
+                            if (!silent && typeof Notification !== 'undefined') {
+                                Notification.info('جاري المزامنة بالفعل، يرجى الانتظار...');
+                            }
+                            return false;
+                        }
+                    }
+                    GoogleIntegration._lastSyncBusy = false;
+                    
+                    if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
+                        if (!silent) {
+                            Utils.safeLog('Google Sheets غير مفعل أو لا يوجد رابط سكريبت - سيتم استخدام البيانات المحلية');
+                            Notification.warning('Google Sheets غير مفعل. يتم استخدام البيانات المحلية فقط');
+                        }
+                        return false;
+                    }
+
+                    GoogleIntegration._syncInProgress.global = true;
+                    GoogleIntegration._syncInProgress.lastSyncStart = Date.now();
+                    
+                    try {
+                        const shouldLog = AppState.debugMode && !silent;
+                        if (shouldLog) {
+                            Utils.safeLog('🔄  تحميل قاعدة البيانات    Database loading');
+                        }
+                        
+                        if (effectiveShowLoader && typeof Loading !== 'undefined') {
+                            Loading.show();
+                        }
+                        
+                        // جلب قائمة الأوراق (نسخة من الكود الأصلي)
+                        const baseSheets = [
+                            'Users', 'Incidents', 'NearMiss', 'PTW', 'Training',
+                            'ClinicVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicInventory', 'ClinicStaff', 'ClinicStaffAttendance', 'ClinicStaffTimeOffRequests',
+                            'FireEquipment', 'FireEquipmentAssets', 'FireEquipmentInspections',
+                            'PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists',
+                            'PeriodicEquipmentTypes', 'PeriodicEquipmentAssets', 'PeriodicEquipmentInspections',
+                            'PPE', 'ViolationTypes', 'Violations',
+                            'Contractors', 'ApprovedContractors', 'ContractorEvaluations',
+                            'ContractorApprovalRequests', 'ContractorEvaluationApprovalRequests', 'ContractorDeletionRequests',
+                            'Employees', 'ExternalWorkforceMonthly', 'BehaviorMonitoring', 'ContractorBehaviorMonitoring', 'ChemicalSafety', 'DailyObservations',
+                            'ISODocuments', 'ISOProcedures', 'ISOForms', 'SOPJHA', 'RiskAssessments',
+                            'LegalDocuments', 'HSEAudits', 'HSENonConformities', 'HSECorrectiveActions',
+                            'HSEObjectives', 'HSERiskAssessments', 'EnvironmentalAspects', 'EnvironmentalMonitoring',
+                            'Sustainability', 'CarbonFootprint', 'WasteManagement', 'EnergyEfficiency',
+                            'WaterManagement', 'WaterManagement_Records', 'GasManagement_Records', 'ElectricityManagement_Records',
+                            'RecyclingPrograms', 'EmergencyAlerts', 'EmergencyPlans', 'EmergencyPlansUpdates',
+                            'SafetyTeamMembers', 'SafetyOrganizationalStructure', 'SafetyJobDescriptions',
+                            'SafetyTeamKPIs', 'SafetyTeamAttendance', 'SafetyTeamLeaves', 'SafetyTeamTasks',
+                            'SafetyBudgets', 'SafetyBudgetTransactions', 'SafetyPerformanceKPIs',
+                            'ActionTrackingRegister', 'UserActivityLog'
+                        ];
+                        
+                        // تطبيق نفس منطق التصفية من الكود الأصلي
+                        let sheets = baseSheets.slice();
+
+                        // ✅ إذا تم تحديد sheets في options، استخدمها بدلاً من baseSheets
+                        if (requestedSheets && Array.isArray(requestedSheets) && requestedSheets.length > 0) {
+                            sheets = requestedSheets.slice();
+                            if (shouldLog) {
+                                Utils.safeLog(`✅ استخدام أوراق محددة في syncData: ${sheets.join(', ')}`);
+                            }
+                        }
+                        const sheetMapping = {
+                            'Users': 'users', 'Incidents': 'incidents', 'NearMiss': 'nearmiss',
+                            'PTW': 'ptw', 'Training': 'training',
+                            'ClinicVisits': 'clinicVisits', 'ClinicContractorVisits': 'clinicContractorVisits',
+                            'Medications': 'medications', 'SickLeave': 'sickLeave',
+                            'Injuries': 'injuries', 'ClinicContractorInjuries': 'clinicContractorInjuries',
+                            'ClinicInventory': 'clinicInventory', 'ClinicStaff': 'clinicStaff', 'ClinicStaffAttendance': 'clinicStaffAttendance', 'ClinicStaffTimeOffRequests': 'clinicStaffTimeOffRequests', 'FireEquipment': 'fireEquipment',
+                            'FireEquipmentAssets': 'fireEquipmentAssets', 'FireEquipmentInspections': 'fireEquipmentInspections',
+                            'PeriodicInspectionCategories': 'periodicInspectionCategories',
+                            'PeriodicInspectionRecords': 'periodicInspectionRecords',
+                            'PeriodicInspectionSchedules': 'periodicInspectionSchedules',
+                            'PeriodicInspectionChecklists': 'periodicInspectionChecklists',
+                            'PeriodicEquipmentTypes': 'periodicEquipmentTypes',
+                            'PeriodicEquipmentAssets': 'periodicEquipmentAssets',
+                            'PeriodicEquipmentInspections': 'periodicEquipmentInspections',
+                            'PPE': 'ppe', 'ViolationTypes': 'violationTypes', 'Violations': 'violations',
+                            'Contractors': 'contractors', 'ApprovedContractors': 'approvedContractors',
+                            'ContractorEvaluations': 'contractorEvaluations',
+                            'ContractorApprovalRequests': 'contractorApprovalRequests',
+                            'ContractorEvaluationApprovalRequests': 'contractorEvaluationApprovalRequests',
+                            'ContractorDeletionRequests': 'contractorDeletionRequests',
+                            'Employees': 'employees',
+                            'ExternalWorkforceMonthly': 'externalWorkforceMonthly',
+                            'BehaviorMonitoring': 'behaviorMonitoring', 'ContractorBehaviorMonitoring': 'contractorBehaviorMonitoring', 'ChemicalSafety': 'chemicalSafety',
+                            'DailyObservations': 'dailyObservations', 'ISODocuments': 'isoDocuments',
+                            'ISOProcedures': 'isoProcedures', 'ISOForms': 'isoForms',
+                            'SOPJHA': 'sopJHA', 'RiskAssessments': 'riskAssessments',
+                            'LegalDocuments': 'legalDocuments', 'HSEAudits': 'hseAudits',
+                            'HSENonConformities': 'hseNonConformities', 'HSECorrectiveActions': 'hseCorrectiveActions',
+                            'HSEObjectives': 'hseObjectives', 'HSERiskAssessments': 'hseRiskAssessments',
+                            'EnvironmentalAspects': 'environmentalAspects', 'EnvironmentalMonitoring': 'environmentalMonitoring',
+                            'Sustainability': 'sustainability', 'CarbonFootprint': 'carbonFootprint',
+                            'WasteManagement': 'wasteManagement', 'EnergyEfficiency': 'energyEfficiency',
+                            'WaterManagement': 'waterManagement', 'RecyclingPrograms': 'recyclingPrograms',
+                            'EmergencyAlerts': 'emergencyAlerts', 'EmergencyPlans': 'emergencyPlans', 'EmergencyPlansUpdates': 'emergencyPlansUpdates',
+                            'SafetyTeamMembers': 'safetyTeamMembers',
+                            'SafetyOrganizationalStructure': 'safetyOrganizationalStructure',
+                            'SafetyJobDescriptions': 'safetyJobDescriptions',
+                            'SafetyTeamKPIs': 'safetyTeamKPIs', 'SafetyTeamAttendance': 'safetyTeamAttendance',
+                            'SafetyTeamLeaves': 'safetyTeamLeaves', 'SafetyTeamTasks': 'safetyTeamTasks',
+                            'SafetyBudgets': 'safetyBudgets', 'SafetyBudgetTransactions': 'safetyBudgetTransactions',
+                            'SafetyPerformanceKPIs': 'safetyPerformanceKPIs',
+                            'ActionTrackingRegister': 'actionTrackingRegister',
+                            'UserActivityLog': 'user_activity_log',
+                            'SafetyCalendarCustomEvents': 'safetyCalendarCustomEvents'
+                        };
+                        
+                        // تطبيق صلاحيات المستخدم (منطق مبسط)
+                        const isEffectiveAdmin = (typeof Permissions !== 'undefined'
+                            && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                            && Permissions.isCurrentUserEffectiveAdmin());
+                        if (AppState.currentUser && !isEffectiveAdmin && typeof Permissions !== 'undefined') {
+                            const accessibleModules = Permissions.getAccessibleModules(true);
+                            const moduleSheetsMap = {
+                                'users': ['Users'], 'incidents': ['Incidents'], 'nearmiss': ['NearMiss'],
+                                'ptw': ['PTW'], 'training': ['Training'],
+                                'clinic': ['ClinicVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicInventory', 'ClinicStaff', 'ClinicStaffAttendance', 'ClinicStaffTimeOffRequests'],
+                                'fire-equipment': ['FireEquipment', 'FireEquipmentAssets', 'FireEquipmentInspections'],
+                                'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists', 'PeriodicEquipmentTypes', 'PeriodicEquipmentAssets', 'PeriodicEquipmentInspections'],
+                                'ppe': ['PPE'], 'violations': ['Violations', 'ViolationTypes'],
+                                'contractors': ['Contractors', 'ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorEvaluationApprovalRequests', 'ContractorDeletionRequests'],
+                                'employees': ['Employees', 'ExternalWorkforceMonthly'], 'behavior-monitoring': ['BehaviorMonitoring', 'ContractorBehaviorMonitoring'],
+                                'chemical-safety': ['ChemicalSafety'], 'daily-observations': ['DailyObservations'],
+                                'iso': ['ISODocuments', 'ISOProcedures', 'ISOForms', 'HSEAudits'],
+                                'sop-jha': ['SOPJHA'], 'risk-assessment': ['RiskAssessments', 'HSERiskAssessments'],
+                                'legal-documents': ['LegalDocuments'],
+                                'sustainability': ['Sustainability', 'EnvironmentalAspects', 'EnvironmentalMonitoring', 'CarbonFootprint', 'WasteManagement', 'EnergyEfficiency', 'WaterManagement', 'WaterManagement_Records', 'GasManagement_Records', 'ElectricityManagement_Records', 'RecyclingPrograms'],
+                                'emergency': ['EmergencyAlerts', 'EmergencyPlans', 'EmergencyPlansUpdates'],
+                                'safety-budget': ['SafetyBudgets', 'SafetyBudgetTransactions'],
+                                'safety-performance-kpis': ['SafetyPerformanceKPIs', 'SafetyTeamKPIs'],
+                                'safety-health-management': ['SafetyTeamMembers', 'SafetyOrganizationalStructure', 'SafetyJobDescriptions', 'SafetyTeamKPIs', 'SafetyTeamAttendance', 'SafetyTeamLeaves', 'SafetyTeamTasks'],
+                                'action-tracking': ['ActionTrackingRegister', 'HSECorrectiveActions', 'HSENonConformities', 'HSEObjectives']
+                            };
+                            
+                            const allowedSheets = new Set();
+                            if (includeUsersSheet && typeof Permissions.hasAccess === 'function' && Permissions.hasAccess('users')) {
+                                allowedSheets.add('Users');
+                            }
+                            accessibleModules.forEach(module => {
+                                const moduleSheets = moduleSheetsMap[module];
+                                if (Array.isArray(moduleSheets)) {
+                                    moduleSheets.forEach(sheet => allowedSheets.add(sheet));
+                                }
+                            });
+                            
+                            // ✅ إصلاح: إضافة أوراق المقاولين تلقائياً عند وجود صلاحيات لمديولات تحتاجها
+                            // المديولات التي تحتاج قائمة المقاولين (dropdown/select):
+                            // - clinic: تسجيل تردد المقاولين بالعيادة
+                            // - training: تسجيل تدريب للمقاولين
+                            // - ptw: إضافة مقاولين في تصاريح العمل (teamMembers, authorizedParty)
+                            // - violations: تسجيل مخالفات للمقاولين
+                            const modulesNeedingContractors = ['clinic', 'training', 'ptw', 'violations'];
+                            const needsContractors = modulesNeedingContractors.some(module => accessibleModules.includes(module));
+                            
+                            if (needsContractors && !accessibleModules.includes('contractors')) {
+                                // إضافة أوراق المقاولين الأساسية فقط (بدون التقييمات وطلبات الموافقة)
+                                const contractorSheets = ['Contractors', 'ApprovedContractors'];
+                                contractorSheets.forEach(sheet => {
+                                    // إضافة الورقة إلى sheets إذا لم تكن موجودة
+                                    if (!sheets.includes(sheet)) {
+                                        sheets.push(sheet);
+                                    }
+                                    // إضافة الورقة إلى allowedSheets
+                                    allowedSheets.add(sheet);
+                                });
+                            }
+                            
+                            sheets = sheets.filter(sheet => allowedSheets.has(sheet));
+                        }
+
+                        if (typeof GoogleIntegration._filterSheetsForCurrentUser === 'function') {
+                            sheets = GoogleIntegration._filterSheetsForCurrentUser(sheets);
+                        }
+
+                        if (!requestedSheets) {
+                            sheets = sheets.filter((sheet) => !DEFERRED_GLOBAL_SHEETS.includes(sheet));
+                            sheets = sheets.filter((sheet) => !MODULE_OWNED_HEAVY_SHEETS.includes(sheet));
+                        }
+
+                        if (incremental && !requestedSheets && typeof GoogleIntegration.getIncompleteSheets === 'function') {
+                            const incompleteSheets = GoogleIntegration.getIncompleteSheets(sheetMapping, sheets);
+                            if (Array.isArray(incompleteSheets) && incompleteSheets.length === 0) {
+                                if (effectiveShowLoader && typeof Loading !== 'undefined') {
+                                    Loading.hide();
+                                }
+                                if (shouldLog) {
+                                    Utils.safeLog('✅ جميع البيانات محدثة — تخطي المزامنة الكاملة');
+                                }
+                                return true;
+                            }
+                            if (Array.isArray(incompleteSheets) && incompleteSheets.length > 0) {
+                                sheets = incompleteSheets;
+                                if (shouldLog) {
+                                    Utils.safeLog(`✅ تحميل تدريجي: ${sheets.length} ورقة غير مكتملة`);
+                                }
+                            }
+                        }
+                        
+                        if (sheets.length === 0) {
+                            if (effectiveShowLoader && typeof Loading !== 'undefined') {
+                                Loading.hide();
+                            }
+                            if (shouldLog) {
+                                Utils.safeLog('❌ لا يوجد أوراق عمل للمزامنة');
+                            }
+                            return true;
+                        }
+                        
+                        // ========================================
+                        // البدء في المعالجة المحسّنة
+                        // ========================================
+                        const BATCH_SIZE = 2;
+                        let syncedCount = 0;
+                        const failedSheets = [];
+                        let completedSheets = 0;
+                        
+                        // عرض مؤشر التقدم
+                        if (effectiveShowLoader) {
+                            SyncImprovements.createProgressIndicator(sheets.length);
+                            SyncImprovements.updateProgress(0, sheets.length);
+                            SyncImprovements._startProgressWatchdog(180000);
+                        } else if (useFloatingProgressOnly) {
+                            SyncImprovements._progressHidden = true;
+                            SyncImprovements._totalSheets = sheets.length;
+                            SyncImprovements._createFloatingBottomBar();
+                            SyncImprovements.updateProgress(0, sheets.length);
+                            SyncImprovements._startProgressWatchdog(180000);
+                        }
+                        
+                        // معالجة الأوراق على دفعات
+                        for (let i = 0; i < sheets.length; i += BATCH_SIZE) {
+                            const batch = sheets.slice(i, Math.min(i + BATCH_SIZE, sheets.length));
+                            const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+                            const totalBatches = Math.ceil(sheets.length / BATCH_SIZE);
+                            
+                            if (shouldLog) {
+                                Utils.safeLog(`🔄 معالجة الدفعة ${batchNumber} من ${totalBatches} (${batch.join(', ')})`);
+                            }
+                            
+                            const { syncedInBatch, failedInBatch } = await SyncImprovements.processBatch(
+                                batch,
+                                GoogleIntegration.readFromSheets.bind(GoogleIntegration),
+                                sheetMapping,
+                                shouldLog,
+                                (sheetName) => {
+                                    completedSheets += 1;
+                                    if (effectiveShowLoader || useFloatingProgressOnly) {
+                                        SyncImprovements.updateProgress(completedSheets, sheets.length, sheetName);
+                                    }
+                                }
+                            );
+                            
+                            syncedCount += syncedInBatch;
+                            failedSheets.push(...failedInBatch);
+                            
+                            const dm = (typeof window !== 'undefined' && window.DataManager) || 
+                                       (typeof DataManager !== 'undefined' && DataManager);
+                            if (dm && typeof dm.save === 'function') {
+                                dm.save();
+                            }
+                            
+                            if (i + BATCH_SIZE < sheets.length) {
+                                await new Promise(resolve => setTimeout(resolve, 200));
+                            }
+                        }
+                        
+                        // تحديث مؤشر التقدم إلى 100% قبل الحفظ النهائي
+                        if (effectiveShowLoader || useFloatingProgressOnly) {
+                            SyncImprovements.updateProgress(sheets.length, sheets.length);
+                        }
+                        
+                        // ✅ إصلاح: إعادة جلب الإصابات المدمجة (Injuries + ClinicContractorInjuries)
+                        // لأن processBatch يقرأ ورقة Injuries فقط وقد يمسح إصابات المقاولين
+                        try {
+                            const injuriesResult = await GoogleIntegration.sendRequest({
+                                action: 'getAllInjuries',
+                                data: {}
+                            });
+                            if (injuriesResult && injuriesResult.success && Array.isArray(injuriesResult.data)) {
+                                if (injuriesResult.data.length > 0 || !(AppState.appData.injuries && AppState.appData.injuries.length > 0)) {
+                                    AppState.appData.injuries = injuriesResult.data;
+                                    if (shouldLog) {
+                                        Utils.safeLog(`✅ إصابات مدمجة: ${injuriesResult.data.length} سجل (موظفين + مقاولين)`);
+                                    }
+                                }
+                            }
+                        } catch (injErr) {
+                            if (shouldLog) {
+                                Utils.safeWarn('⚠️ تعذّر جلب الإصابات المدمجة:', injErr);
+                            }
+                        }
+
+                        // التهيئة النهائية
+                        if (typeof ViolationTypesManager !== 'undefined') {
+                            ViolationTypesManager.ensureInitialized();
+                        }
+                        if (typeof PeriodicInspectionStore !== 'undefined') {
+                            PeriodicInspectionStore.ensureInitialized();
+                        }
+                        if (typeof PeriodicEquipmentStore !== 'undefined') {
+                            PeriodicEquipmentStore.ensureInitialized();
+                        }
+                        
+                        // حفظ نهائي مع انتظار اكتمال الحفظ
+                        const dm = (typeof window !== 'undefined' && window.DataManager) || 
+                                   (typeof DataManager !== 'undefined' && DataManager);
+                        if (dm && typeof dm.save === 'function') {
+                            await new Promise(resolve => {
+                                dm.save();
+                                // إعطاء وقت للحفظ
+                                setTimeout(resolve, 300);
+                            });
+                        }
+
+                        try {
+                            if (typeof Dashboard !== 'undefined' && typeof Dashboard.updateReportsStatistics === 'function') {
+                                Dashboard.updateReportsStatistics();
+                            }
+                        } catch (_dashRc) { /* ignore */ }
+                        
+                        // إرسال حدث لإعلام الوحدات بتحديث الواجهة
+                        if (typeof window !== 'undefined') {
+                            window.dispatchEvent(new CustomEvent('syncDataCompleted', {
+                                detail: { 
+                                    syncedCount,
+                                    failedSheets,
+                                    sheets: sheets.map(s => sheetMapping[s] || s).filter(Boolean)
+                                }
+                            }));
+                        }
+                        
+                        // إزالة مؤشر التقدم بعد التأكد من اكتمال الحفظ
+                        if (effectiveShowLoader || useFloatingProgressOnly) {
+                            // انتظار قصير للتأكد من عرض التقدم الكامل
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            SyncImprovements.removeProgressIndicator();
+                        }
+                        
+                        if (effectiveShowLoader && typeof Loading !== 'undefined') {
+                            Loading.hide();
+                        }
+                        
+                        const success = failedSheets.length === 0;
+                        
+                        if (success) {
+                            if (effectiveNotifyOnSuccess && syncedCount > 0) {
+                                Notification.success('  ✅ تم تحميل قاعدة البيانات  بنجاح Database loaded successfully.');
+                            } else if (shouldLog) {
+                                Utils.safeLog(`✅ مزامنة البيانات: ${syncedCount} ورقة تحتوي على بيانات`);
+                            }
+                        } else {
+                            if (effectiveNotifyOnError) {
+                                Notification.warning(`فشل مزامنة بعض الأوراق: ${failedSheets.join(', ')}`);
+                            }
+                            if (shouldLog) {
+                                Utils.safeWarn('⚠ الأوراق التي فشلت في المزامنة:', failedSheets);
+                            }
+                        }
+                        
+                        return success || syncedCount > 0;
+                    } catch (error) {
+                        if (effectiveShowLoader || useFloatingProgressOnly) {
+                            SyncImprovements.removeProgressIndicator();
+                            if (typeof Loading !== 'undefined') {
+                                Loading.hide();
+                            }
+                        }
+                        Utils.safeError('خطأ في المزامنة:', error);
+                        if (effectiveNotifyOnError) {
+                            Notification.error('خطأ في المزامنة مع Google Sheets: ' + error.message);
+                        }
+                        return false;
+                    } finally {
+                        if (GoogleIntegration._syncInProgress) {
+                            GoogleIntegration._syncInProgress.global = false;
+                            GoogleIntegration._syncInProgress.lastSyncEnd = Date.now();
+                        }
+                    }
+                };
+                
+                Utils.safeLog('✅ تم تطبيق تحسينات المزامنة بنجاح');
+            }
+        }, 2000); // انتظار 2 ثانية للتأكد من تحميل جميع الملفات
+    });
+})();

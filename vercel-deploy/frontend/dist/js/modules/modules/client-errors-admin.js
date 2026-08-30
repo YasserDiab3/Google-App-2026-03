@@ -1,9 +1,119 @@
-const ClientErrorsAdmin={_data:[],_stats:null,_loading:!1,_pollTimer:null,_live:!1,_knownIds:new Set,_filters:{level:"",status:"",q:"",limit:200},_rootId:null,_mounted:!1,_refreshSeq:0,_actionBusy:!1,_lastError:"",_isAdmin(){try{if(typeof Permissions<"u"&&Permissions.isCurrentUserAdmin)return Permissions.isCurrentUserAdmin()}catch{}return String(AppState.currentUser?.role||"").toLowerCase()==="admin"},_esc(t){return typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(String(t??"")):String(t??"").replace(/[&<>"']/g,e=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[e])},_fmtTime(t){try{if(!t)return"\u2014";const e=String(t).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(e))return e;const s=e.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::(\d{2}))?/);if(s&&!/[zZ]|[+-]\d{2}:?\d{2}$/.test(e))return`${s[1]} ${s[2]}${s[3]?":"+s[3]:""}`;const i=new Date(e);if(isNaN(i.getTime()))return e;const a=r=>String(r).padStart(2,"0");return`${i.getFullYear()}-${a(i.getMonth()+1)}-${a(i.getDate())} ${a(i.getHours())}:${a(i.getMinutes())}:${a(i.getSeconds())}`}catch{return String(t||"\u2014")}},_levelBadge(t){const e=String(t||"error").toLowerCase(),s={error:{bg:"#fef2f2",color:"#b91c1c",label:"\u062E\u0637\u0623"},warning:{bg:"#fffbeb",color:"#b45309",label:"\u062A\u0646\u0628\u064A\u0647"},unhandled:{bg:"#f5f3ff",color:"#6d28d9",label:"\u063A\u064A\u0631 \u0645\u0639\u0627\u0644\u062C"},info:{bg:"#eff6ff",color:"#1d4ed8",label:"\u0645\u0639\u0644\u0648\u0645\u0629"}},i=s[e]||s.error;return`<span class="cea-badge" style="background:${i.bg};color:${i.color};">${i.label}</span>`},_statusBadge(t){const e=String(t||"new").toLowerCase(),s={new:{bg:"#ecfeff",color:"#0e7490",label:"\u062C\u062F\u064A\u062F"},seen:{bg:"#f1f5f9",color:"#475569",label:"\u062A\u0645\u062A \u0627\u0644\u0645\u0634\u0627\u0647\u062F\u0629"},ignored:{bg:"#f8fafc",color:"#64748b",label:"\u0645\u062A\u062C\u0627\u0647\u0644"},resolved:{bg:"#ecfdf5",color:"#047857",label:"\u0645\u062D\u0644\u0648\u0644"}},i=s[e]||s.new;return`<span class="cea-badge" style="background:${i.bg};color:${i.color};">${i.label}</span>`},_getRoot(){return this._rootId?document.getElementById(this._rootId):null},_isPanelVisible(){try{const t=typeof AppState<"u"&&AppState.currentSection==="client-errors",e=!!document.getElementById("client-errors-admin-modal");return!!(t||e)}catch{return!!this._getRoot()}},_ensureStyles(){if(document.getElementById("cea-admin-css"))return;const t=document.createElement("link");t.id="cea-admin-css",t.rel="stylesheet",t.href="css/client-errors-admin.css?v=20260803-1",document.head.appendChild(t)},_statsCardsHtml(t){return[{key:"total",label:"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0633\u062C\u0644\u0627\u062A",accent:"#0f766e"},{key:"last24h",label:"\u0622\u062E\u0631 24 \u0633\u0627\u0639\u0629",accent:"#b91c1c"},{key:"new",label:"\u062C\u062F\u064A\u062F",accent:"#0e7490"},{key:"errors",label:"\u0623\u062E\u0637\u0627\u0621",accent:"#7f1d1d"}].map(s=>`
-            <div class="cea-stat${t?" is-loading":""}" data-stat="${s.key}" style="--cea-accent:${s.accent}">
-                <div class="cea-stat__label">${s.label}</div>
-                <div class="cea-stat__value" data-stat-value>${t?"\u2014":"0"}</div>
+/**
+ * ClientErrorsAdmin — لوحة مراقبة أخطاء العملاء للمدير
+ * استقرار العرض: لا تُمسح البيانات عند فشل التحديث؛ فلتر افتراضي = الكل
+ */
+const ClientErrorsAdmin = {
+    _data: [],
+    _stats: null,
+    _loading: false,
+    _pollTimer: null,
+    _live: false,
+    _knownIds: new Set(),
+    _filters: { level: '', status: '', q: '', limit: 200 },
+    _rootId: null,
+    _mounted: false,
+    _refreshSeq: 0,
+    _actionBusy: false,
+    _lastError: '',
+
+    _isAdmin() {
+        try {
+            if (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin) {
+                return Permissions.isCurrentUserAdmin();
+            }
+        } catch (_e) { /* ignore */ }
+        return String(AppState.currentUser?.role || '').toLowerCase() === 'admin';
+    },
+
+    _esc(v) {
+        if (typeof Utils !== 'undefined' && Utils.escapeHTML) return Utils.escapeHTML(String(v ?? ''));
+        return String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    },
+
+    _fmtTime(iso) {
+        try {
+            if (!iso) return '—';
+            const raw = String(iso).trim();
+            // تاريخ فقط (بعد قطع الوقت في القراءة) — لا تفسّره كمنتصف ليل UTC فيظهر 03:00:00
+            if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+            const localish = raw.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::(\d{2}))?/);
+            if (localish && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)) {
+                return `${localish[1]} ${localish[2]}${localish[3] ? ':' + localish[3] : ''}`;
+            }
+            const d = new Date(raw);
+            if (isNaN(d.getTime())) return raw;
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        } catch (_e) {
+            return String(iso || '—');
+        }
+    },
+
+    _levelBadge(level) {
+        const lv = String(level || 'error').toLowerCase();
+        const map = {
+            error: { bg: '#fef2f2', color: '#b91c1c', label: 'خطأ' },
+            warning: { bg: '#fffbeb', color: '#b45309', label: 'تنبيه' },
+            unhandled: { bg: '#f5f3ff', color: '#6d28d9', label: 'غير معالج' },
+            info: { bg: '#eff6ff', color: '#1d4ed8', label: 'معلومة' }
+        };
+        const m = map[lv] || map.error;
+        return `<span class="cea-badge" style="background:${m.bg};color:${m.color};">${m.label}</span>`;
+    },
+
+    _statusBadge(status) {
+        const st = String(status || 'new').toLowerCase();
+        const map = {
+            new: { bg: '#ecfeff', color: '#0e7490', label: 'جديد' },
+            seen: { bg: '#f1f5f9', color: '#475569', label: 'تمت المشاهدة' },
+            ignored: { bg: '#f8fafc', color: '#64748b', label: 'متجاهل' },
+            resolved: { bg: '#ecfdf5', color: '#047857', label: 'محلول' }
+        };
+        const m = map[st] || map.new;
+        return `<span class="cea-badge" style="background:${m.bg};color:${m.color};">${m.label}</span>`;
+    },
+
+    _getRoot() {
+        if (!this._rootId) return null;
+        return document.getElementById(this._rootId);
+    },
+
+    _isPanelVisible() {
+        try {
+            const onSection = typeof AppState !== 'undefined' && AppState.currentSection === 'client-errors';
+            const modalOpen = !!document.getElementById('client-errors-admin-modal');
+            return !!(onSection || modalOpen);
+        } catch (_e) {
+            return !!this._getRoot();
+        }
+    },
+
+    _ensureStyles() {
+        if (document.getElementById('cea-admin-css')) return;
+        const link = document.createElement('link');
+        link.id = 'cea-admin-css';
+        link.rel = 'stylesheet';
+        link.href = 'css/client-errors-admin.css?v=20260803-1';
+        document.head.appendChild(link);
+    },
+
+    _statsCardsHtml(loading) {
+        const cards = [
+            { key: 'total', label: 'إجمالي السجلات', accent: '#0f766e' },
+            { key: 'last24h', label: 'آخر 24 ساعة', accent: '#b91c1c' },
+            { key: 'new', label: 'جديد', accent: '#0e7490' },
+            { key: 'errors', label: 'أخطاء', accent: '#7f1d1d' }
+        ];
+        return cards.map((c) => `
+            <div class="cea-stat${loading ? ' is-loading' : ''}" data-stat="${c.key}" style="--cea-accent:${c.accent}">
+                <div class="cea-stat__label">${c.label}</div>
+                <div class="cea-stat__value" data-stat-value>${loading ? '—' : '0'}</div>
             </div>
-        `).join("")},_tableSkeletonHtml(){const t=`
+        `).join('');
+    },
+
+    _tableSkeletonHtml() {
+        const row = `
             <tr class="cea-skeleton-row">
                 <td><span class="cea-skel cea-skel--sm"></span></td>
                 <td><span class="cea-skel cea-skel--sm"></span></td>
@@ -12,124 +122,647 @@ const ClientErrorsAdmin={_data:[],_stats:null,_loading:!1,_pollTimer:null,_live:
                 <td><span class="cea-skel cea-skel--sm"></span></td>
                 <td><span class="cea-skel cea-skel--sm"></span></td>
                 <td><span class="cea-skel cea-skel--md"></span></td>
-            </tr>`;return`
+            </tr>`;
+        return `
             <table class="cea-table" aria-hidden="true">
                 <thead>
                     <tr>
-                        <th>\u0627\u0644\u0648\u0642\u062A</th>
-                        <th>\u0627\u0644\u0645\u0633\u062A\u0648\u0649</th>
-                        <th>\u0627\u0644\u0631\u0633\u0627\u0644\u0629</th>
-                        <th>\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645</th>
-                        <th>\u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644</th>
-                        <th>\u0627\u0644\u062D\u0627\u0644\u0629</th>
-                        <th>\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                        <th>الوقت</th>
+                        <th>المستوى</th>
+                        <th>الرسالة</th>
+                        <th>المستخدم</th>
+                        <th>الموديول</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
                     </tr>
                 </thead>
-                <tbody>${t}${t}${t}${t}${t}</tbody>
-            </table>`},async open(){if(this._ensureStyles(),!this._isAdmin()){typeof Notification<"u"&&Notification.error&&Notification.error("\u0647\u0630\u0647 \u0627\u0644\u0635\u0641\u062D\u0629 \u0645\u062A\u0627\u062D\u0629 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637");return}const t=document.getElementById("client-errors-admin-modal");t&&t.remove();const e=document.createElement("div");e.className="modal-overlay",e.id="client-errors-admin-modal",e.innerHTML=`
+                <tbody>${row}${row}${row}${row}${row}</tbody>
+            </table>`;
+    },
+
+    async open() {
+        this._ensureStyles();
+        if (!this._isAdmin()) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('هذه الصفحة متاحة لمدير النظام فقط');
+            }
+            return;
+        }
+        const existing = document.getElementById('client-errors-admin-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'client-errors-admin-modal';
+        modal.innerHTML = `
             <div class="modal-content cea-panel-modal" style="max-width: 1180px; max-height: 92vh; overflow-y: auto;">
                 <div class="modal-header" style="background: linear-gradient(135deg, #b91c1c, #7f1d1d); color: #fff;">
                     <h2 class="modal-title" style="color:#fff;">
                         <i class="fas fa-bug ml-2"></i>
-                        \u0645\u0631\u0627\u0642\u0628\u0629 \u0623\u062E\u0637\u0627\u0621 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646
+                        مراقبة أخطاء المستخدمين
                     </h2>
-                    <button type="button" class="modal-close" id="cea-modal-x" style="color:#fff;" title="\u0625\u063A\u0644\u0627\u0642">
+                    <button type="button" class="modal-close" id="cea-modal-x" style="color:#fff;" title="إغلاق">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body" id="cea-modal-body"></div>
             </div>
-        `,document.body.appendChild(e);const s=()=>{this.stopLive(),this._mounted=!1,e.remove()};e.addEventListener("click",i=>{i.target===e&&s()}),e.querySelector("#cea-modal-x")?.addEventListener("click",s),this.mount(e.querySelector("#cea-modal-body"),{liveDefault:!0})},async load(){if(this._ensureStyles(),!this._isAdmin()){const s=document.getElementById("client-errors-section");s&&(s.innerHTML='<div class="p-6 text-slate-600">\u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645 \u0645\u062A\u0627\u062D \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637.</div>'),this._mounted=!1;return}const t=document.getElementById("client-errors-section");if(!t)return;let e=t.querySelector("#cea-section-root");if(e&&this._mounted&&this._rootId==="cea-section-root"&&this._getRoot()){this.refresh({silent:!0}),this._live||this.startLive();return}e||(t.innerHTML='<div id="cea-section-root" class="cea-panel"></div>',e=t.querySelector("#cea-section-root")),this.mount(e,{liveDefault:!0})},mount(t,e={}){t&&(this._ensureStyles(),this._rootId=t.id||"cea-root-"+Date.now(),t.id||(t.id=this._rootId),t.className="cea-panel is-booting",t.setAttribute("aria-busy","true"),t.innerHTML=this._shellHtml(!!e.liveDefault),this._bindShell(t),this._mounted=!0,this._renderStats({keepLoading:!this._stats}),this._data&&this._data.length&&(this._renderTable(0),t.classList.remove("is-booting"),t.setAttribute("aria-busy","false")),this.refresh({force:!0}),e.liveDefault&&this.startLive())},_shellHtml(t){return`
+        `;
+        document.body.appendChild(modal);
+        const closeModal = () => {
+            this.stopLive();
+            this._mounted = false;
+            modal.remove();
+        };
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+        modal.querySelector('#cea-modal-x')?.addEventListener('click', closeModal);
+        this.mount(modal.querySelector('#cea-modal-body'), { liveDefault: true });
+    },
+
+    /** تحميل داخل قسم الصفحة — هيكل فوري ثم بيانات */
+    async load() {
+        this._ensureStyles();
+        if (!this._isAdmin()) {
+            const section = document.getElementById('client-errors-section');
+            if (section) {
+                section.innerHTML = '<div class="p-6 text-slate-600">هذا القسم متاح لمدير النظام فقط.</div>';
+            }
+            this._mounted = false;
+            return;
+        }
+        const section = document.getElementById('client-errors-section');
+        if (!section) return;
+
+        let root = section.querySelector('#cea-section-root');
+        if (root && this._mounted && this._rootId === 'cea-section-root' && this._getRoot()) {
+            // أبقي الهيكل ظاهراً وحدّث فقط
+            this.refresh({ silent: true });
+            if (!this._live) this.startLive();
+            return;
+        }
+
+        if (!root) {
+            section.innerHTML = '<div id="cea-section-root" class="cea-panel"></div>';
+            root = section.querySelector('#cea-section-root');
+        }
+        this.mount(root, { liveDefault: true });
+    },
+
+    mount(root, opts = {}) {
+        if (!root) return;
+        this._ensureStyles();
+        this._rootId = root.id || ('cea-root-' + Date.now());
+        if (!root.id) root.id = this._rootId;
+        // رسم الهيكل فوراً قبل أي طلب شبكة
+        root.className = 'cea-panel is-booting';
+        root.setAttribute('aria-busy', 'true');
+        root.innerHTML = this._shellHtml(!!opts.liveDefault);
+        this._bindShell(root);
+        this._mounted = true;
+        // عرض كروت/هيكل الجدول فوراً من الكاش المحلي إن وُجد
+        this._renderStats({ keepLoading: !this._stats });
+        if (this._data && this._data.length) {
+            this._renderTable(0);
+            root.classList.remove('is-booting');
+            root.setAttribute('aria-busy', 'false');
+        }
+        this.refresh({ force: true });
+        if (opts.liveDefault) this.startLive();
+    },
+
+    _shellHtml(liveOn) {
+        return `
             <div class="cea-toolbar">
                 <div class="cea-toolbar__meta">
                     <i class="fas fa-satellite-dish" style="color:#b91c1c" aria-hidden="true"></i>
-                    <span>\u0645\u0631\u0627\u0642\u0628\u0629 \u0623\u062E\u0637\u0627\u0621 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0627\u0644\u0638\u0627\u0647\u0631\u0629 \u0641\u064A \u0627\u0644\u0648\u0627\u062C\u0647\u0629</span>
-                    <span id="cea-live-indicator" class="cea-live-dot" style="color:${t?"#047857":"#64748b"};">
-                        ${t?"\u25CF \u0645\u0628\u0627\u0634\u0631":"\u25CB \u0645\u062A\u0648\u0642\u0641"}
+                    <span>مراقبة أخطاء المستخدمين الظاهرة في الواجهة</span>
+                    <span id="cea-live-indicator" class="cea-live-dot" style="color:${liveOn ? '#047857' : '#64748b'};">
+                        ${liveOn ? '● مباشر' : '○ متوقف'}
                     </span>
-                    <span id="cea-sync-hint" class="cea-sync-hint">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644\u2026</span>
+                    <span id="cea-sync-hint" class="cea-sync-hint">جاري التحميل…</span>
                 </div>
                 <div class="cea-toolbar__actions">
-                    <button type="button" id="cea-refresh-btn" class="btn-secondary"><i class="fas fa-sync-alt ml-2"></i>\u062A\u062D\u062F\u064A\u062B</button>
+                    <button type="button" id="cea-refresh-btn" class="btn-secondary"><i class="fas fa-sync-alt ml-2"></i>تحديث</button>
                     <button type="button" id="cea-live-btn" class="btn-primary" style="background:linear-gradient(135deg,#b91c1c,#7f1d1d);">
-                        <i class="fas fa-broadcast-tower ml-2"></i>${t?"\u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0645\u0628\u0627\u0634\u0631":"\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0645\u0628\u0627\u0634\u0631"}
+                        <i class="fas fa-broadcast-tower ml-2"></i>${liveOn ? 'إيقاف المباشر' : 'تشغيل المباشر'}
                     </button>
-                    <button type="button" id="cea-export-btn" class="btn-success"><i class="fas fa-file-excel ml-2"></i>\u062A\u0635\u062F\u064A\u0631</button>
+                    <button type="button" id="cea-export-btn" class="btn-success"><i class="fas fa-file-excel ml-2"></i>تصدير</button>
                 </div>
             </div>
 
-            <div id="cea-stats" class="cea-stats">${this._statsCardsHtml(!0)}</div>
+            <div id="cea-stats" class="cea-stats">${this._statsCardsHtml(true)}</div>
             <div id="cea-banner" class="cea-banner" hidden></div>
 
             <div class="cea-filters">
-                <input id="cea-q" class="form-input" placeholder="\u0628\u062D\u062B \u0641\u064A \u0627\u0644\u0631\u0633\u0627\u0644\u0629 / \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645..." value="${this._esc(this._filters.q)}" />
+                <input id="cea-q" class="form-input" placeholder="بحث في الرسالة / المستخدم..." value="${this._esc(this._filters.q)}" />
                 <select id="cea-level" class="form-input">
-                    <option value="">\u0643\u0644 \u0627\u0644\u0645\u0633\u062A\u0648\u064A\u0627\u062A</option>
-                    <option value="error" ${this._filters.level==="error"?"selected":""}>\u062E\u0637\u0623</option>
-                    <option value="warning" ${this._filters.level==="warning"?"selected":""}>\u062A\u0646\u0628\u064A\u0647</option>
-                    <option value="unhandled" ${this._filters.level==="unhandled"?"selected":""}>\u063A\u064A\u0631 \u0645\u0639\u0627\u0644\u062C</option>
+                    <option value="">كل المستويات</option>
+                    <option value="error" ${this._filters.level === 'error' ? 'selected' : ''}>خطأ</option>
+                    <option value="warning" ${this._filters.level === 'warning' ? 'selected' : ''}>تنبيه</option>
+                    <option value="unhandled" ${this._filters.level === 'unhandled' ? 'selected' : ''}>غير معالج</option>
                 </select>
                 <select id="cea-status" class="form-input">
-                    <option value="" ${this._filters.status?"":"selected"}>\u0643\u0644 \u0627\u0644\u062D\u0627\u0644\u0627\u062A</option>
-                    <option value="new" ${this._filters.status==="new"?"selected":""}>\u062C\u062F\u064A\u062F</option>
-                    <option value="seen" ${this._filters.status==="seen"?"selected":""}>\u062A\u0645\u062A \u0627\u0644\u0645\u0634\u0627\u0647\u062F\u0629</option>
-                    <option value="ignored" ${this._filters.status==="ignored"?"selected":""}>\u0645\u062A\u062C\u0627\u0647\u0644</option>
-                    <option value="resolved" ${this._filters.status==="resolved"?"selected":""}>\u0645\u062D\u0644\u0648\u0644</option>
+                    <option value="" ${!this._filters.status ? 'selected' : ''}>كل الحالات</option>
+                    <option value="new" ${this._filters.status === 'new' ? 'selected' : ''}>جديد</option>
+                    <option value="seen" ${this._filters.status === 'seen' ? 'selected' : ''}>تمت المشاهدة</option>
+                    <option value="ignored" ${this._filters.status === 'ignored' ? 'selected' : ''}>متجاهل</option>
+                    <option value="resolved" ${this._filters.status === 'resolved' ? 'selected' : ''}>محلول</option>
                 </select>
-                <button type="button" id="cea-apply-filters" class="btn-secondary"><i class="fas fa-filter ml-2"></i>\u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u0641\u0644\u062A\u0631</button>
+                <button type="button" id="cea-apply-filters" class="btn-secondary"><i class="fas fa-filter ml-2"></i>تطبيق الفلتر</button>
             </div>
 
             <div id="cea-table" class="cea-table-wrap">${this._tableSkeletonHtml()}</div>
-        `},_bindShell(t){t.querySelector("#cea-refresh-btn")?.addEventListener("click",()=>this.refresh({force:!0})),t.querySelector("#cea-live-btn")?.addEventListener("click",()=>{this._live?this.stopLive():this.startLive(),this._updateLiveUi(t)}),t.querySelector("#cea-export-btn")?.addEventListener("click",()=>this.exportToExcel()),t.querySelector("#cea-apply-filters")?.addEventListener("click",()=>{this._filters.q=t.querySelector("#cea-q")?.value?.trim()||"",this._filters.level=t.querySelector("#cea-level")?.value||"",this._filters.status=t.querySelector("#cea-status")?.value||"",this.refresh({force:!0})}),t.addEventListener("click",e=>{const s=e.target.closest("[data-cea-action]");if(!s||!t.contains(s)||(e.preventDefault(),e.stopPropagation(),this._actionBusy||s.disabled))return;const i=s.getAttribute("data-id"),a=s.getAttribute("data-cea-action");!i||!a||(a==="status"?this.setStatus(i,s.getAttribute("data-status")):a==="report"?this.reportIssue(i):a==="detail"?this.showDetail(i):a==="ignore"&&this.setStatus(i,"ignored"))})},_updateLiveUi(t){const e=t||this._getRoot();if(!e)return;const s=e.querySelector("#cea-live-btn"),i=e.querySelector("#cea-live-indicator");s&&(s.innerHTML=`<i class="fas fa-broadcast-tower ml-2"></i>${this._live?"\u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0645\u0628\u0627\u0634\u0631":"\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0645\u0628\u0627\u0634\u0631"}`),i&&(i.style.color=this._live?"#047857":"#64748b",i.textContent=this._live?"\u25CF \u0645\u0628\u0627\u0634\u0631":"\u25CB \u0645\u062A\u0648\u0642\u0641")},startLive(){this.stopLive(),this._live=!0,this._pollTimer=setInterval(()=>{if(document.visibilityState!=="hidden"){if(!this._isPanelVisible()){this.stopLive();return}this.refresh({silent:!0})}},2e4),this._updateLiveUi()},stopLive(){this._live=!1,this._pollTimer&&(clearInterval(this._pollTimer),this._pollTimer=null),this._updateLiveUi()},cleanup(){this.stopLive(),this._mounted=!1},_setSyncHint(t){const e=this._getRoot(),s=e&&e.querySelector("#cea-sync-hint");s&&(s.textContent=t||"")},_setBanner(t,e){const s=this._getRoot(),i=s&&s.querySelector("#cea-banner");if(!i)return;if(!t){i.hidden=!0,i.innerHTML="";return}const a=e==="ok"?"cea-alert-ok":e==="warn"?"cea-alert-warn":"cea-alert-err";i.hidden=!1,i.innerHTML=`<div class="cea-alert ${a}">${t}</div>`},async refresh(t={}){if(this._loading&&!t.force)return;if(t.silent&&!this._isPanelVisible()){this.stopLive();return}if(!this._getRoot())return;this._loading=!0;const e=++this._refreshSeq;this._setSyncHint("\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u062F\u064A\u062B\u2026");try{const s={level:this._filters.level||"",status:this._filters.status||"",q:this._filters.q||"",limit:Number(this._filters.limit)||200},[i,a]=await Promise.all([GoogleIntegration.sendToAppsScript("getAllClientErrorLogs",{filters:s,__timeoutMs:45e3,__highPriority:!1}),GoogleIntegration.sendToAppsScript("getClientErrorStats",{filters:{},__timeoutMs:45e3,__highPriority:!1})]);if(e!==this._refreshSeq)return;const r=!!(i&&i.success&&Array.isArray(i.data)),l=!!(a&&a.success);if(r){const c=i.data;let n=0;c.forEach(o=>{o.id&&!this._knownIds.has(o.id)&&(this._knownIds.size>0&&(n+=1),this._knownIds.add(o.id))}),this._data=c,this._lastError="",this._renderTable(n),n>0?this._setBanner(`\u0648\u0631\u062F ${n} \u062E\u0637\u0623 \u062C\u062F\u064A\u062F`,"ok"):this._setBanner("")}else this._lastError=i&&i.message||"\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0633\u062C\u0644",this._setBanner(`\u062A\u0639\u0630\u0631 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u2014 \u062A\u0645 \u0627\u0644\u0625\u0628\u0642\u0627\u0621 \u0639\u0644\u0649 \u0622\u062E\u0631 \u0628\u064A\u0627\u0646\u0627\u062A \u0646\u0627\u062C\u062D\u0629. ${this._esc(this._lastError)}`,"warn"),!t.silent&&typeof Notification<"u"&&Notification.error&&Notification.error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0633\u062C\u0644 \u0627\u0644\u0623\u062E\u0637\u0627\u0621: "+this._lastError),this._data.length||this._renderTable(0);l&&(this._stats=a),this._renderStats({keepLoading:!1}),this._setSyncHint(r?"\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B: "+new Date().toLocaleTimeString("ar-EG"):"\u062A\u062D\u062F\u064A\u062B \u062C\u0632\u0626\u064A")}catch(s){if(e!==this._refreshSeq)return;this._lastError=s&&s.message?s.message:String(s||"\u062E\u0637\u0623 \u0634\u0628\u0643\u0629"),this._setBanner(`\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u2014 \u0627\u0644\u0625\u0628\u0642\u0627\u0621 \u0639\u0644\u0649 \u0622\u062E\u0631 \u0628\u064A\u0627\u0646\u0627\u062A. ${this._esc(this._lastError)}`,"err"),!t.silent&&typeof Notification<"u"&&Notification.error&&Notification.error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0633\u062C\u0644 \u0627\u0644\u0623\u062E\u0637\u0627\u0621: "+this._lastError),this._renderStats({keepLoading:!this._stats}),this._data.length||this._renderTable(0),this._setSyncHint("\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u062F\u064A\u062B")}finally{if(e===this._refreshSeq){this._loading=!1;const s=this._getRoot();s&&(s.classList.remove("is-booting"),s.setAttribute("aria-busy","false"))}}},_renderStats(t={}){const e=this._getRoot(),s=e&&e.querySelector("#cea-stats");if(!s)return;s.querySelector('[data-stat="total"]')||(s.innerHTML=this._statsCardsHtml(!!t.keepLoading));const i=this._stats||{},a=i.byLevel||{},r=i.byStatus||{},l={total:i.total!=null?i.total:this._data.length||0,last24h:i.last24h||0,new:r.new||0,errors:a.error||0};Object.keys(l).forEach(c=>{const n=s.querySelector(`[data-stat="${c}"]`);if(!n)return;const o=n.querySelector("[data-stat-value]");o&&(t.keepLoading&&!this._stats?(n.classList.add("is-loading"),o.textContent="\u2014"):(n.classList.remove("is-loading"),o.textContent=String(l[c])))})},_renderTable(t){const e=this._getRoot(),s=e&&e.querySelector("#cea-table");if(!s)return;if(s.classList.add("cea-table-wrap"),!this._data.length){s.innerHTML=`<div class="cea-empty">
-                \u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u062E\u0637\u0627\u0621 \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0644\u0641\u0644\u062A\u0631 \u062D\u0627\u0644\u064A\u0627\u064B.
-                ${this._filters.status||this._filters.level||this._filters.q?'<div style="margin-top:8px;font-size:12px;">\u062C\u0631\u0651\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \xAB\u0643\u0644 \u0627\u0644\u062D\u0627\u0644\u0627\u062A\xBB \u062B\u0645 \u062A\u062D\u062F\u064A\u062B.</div>':""}
-            </div>`;return}const i=t>0?`<div class="cea-alert cea-alert-ok" style="margin:10px;">\u0648\u0631\u062F ${t} \u062E\u0637\u0623 \u062C\u062F\u064A\u062F \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u062C\u0648\u0644\u0629</div>`:"";s.innerHTML=i+`
+        `;
+    },
+
+    _bindShell(root) {
+        root.querySelector('#cea-refresh-btn')?.addEventListener('click', () => this.refresh({ force: true }));
+        root.querySelector('#cea-live-btn')?.addEventListener('click', () => {
+            if (this._live) this.stopLive();
+            else this.startLive();
+            this._updateLiveUi(root);
+        });
+        root.querySelector('#cea-export-btn')?.addEventListener('click', () => this.exportToExcel());
+        root.querySelector('#cea-apply-filters')?.addEventListener('click', () => {
+            this._filters.q = root.querySelector('#cea-q')?.value?.trim() || '';
+            this._filters.level = root.querySelector('#cea-level')?.value || '';
+            this._filters.status = root.querySelector('#cea-status')?.value || '';
+            this.refresh({ force: true });
+        });
+        // تفويض أحداث الصف — يمنع فقدان الأزرار بعد إعادة الرسم
+        root.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-cea-action]');
+            if (!btn || !root.contains(btn)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (this._actionBusy || btn.disabled) return;
+            const id = btn.getAttribute('data-id');
+            const action = btn.getAttribute('data-cea-action');
+            if (!id || !action) return;
+            if (action === 'status') this.setStatus(id, btn.getAttribute('data-status'));
+            else if (action === 'report') this.reportIssue(id);
+            else if (action === 'detail') this.showDetail(id);
+            else if (action === 'ignore') this.setStatus(id, 'ignored');
+        });
+    },
+
+    _updateLiveUi(root) {
+        const host = root || this._getRoot();
+        if (!host) return;
+        const btn = host.querySelector('#cea-live-btn');
+        const ind = host.querySelector('#cea-live-indicator');
+        if (btn) btn.innerHTML = `<i class="fas fa-broadcast-tower ml-2"></i>${this._live ? 'إيقاف المباشر' : 'تشغيل المباشر'}`;
+        if (ind) {
+            ind.style.color = this._live ? '#047857' : '#64748b';
+            ind.textContent = this._live ? '● مباشر' : '○ متوقف';
+        }
+    },
+
+    startLive() {
+        this.stopLive();
+        this._live = true;
+        this._pollTimer = setInterval(() => {
+            if (document.visibilityState === 'hidden') return;
+            if (!this._isPanelVisible()) {
+                this.stopLive();
+                return;
+            }
+            this.refresh({ silent: true });
+        }, 20000);
+        this._updateLiveUi();
+    },
+
+    stopLive() {
+        this._live = false;
+        if (this._pollTimer) {
+            clearInterval(this._pollTimer);
+            this._pollTimer = null;
+        }
+        this._updateLiveUi();
+    },
+
+    cleanup() {
+        this.stopLive();
+        this._mounted = false;
+    },
+
+    _setSyncHint(text) {
+        const root = this._getRoot();
+        const el = root && root.querySelector('#cea-sync-hint');
+        if (el) el.textContent = text || '';
+    },
+
+    _setBanner(html, kind) {
+        const root = this._getRoot();
+        const box = root && root.querySelector('#cea-banner');
+        if (!box) return;
+        if (!html) {
+            box.hidden = true;
+            box.innerHTML = '';
+            return;
+        }
+        const cls = kind === 'ok' ? 'cea-alert-ok' : (kind === 'warn' ? 'cea-alert-warn' : 'cea-alert-err');
+        box.hidden = false;
+        box.innerHTML = `<div class="cea-alert ${cls}">${html}</div>`;
+    },
+
+    async refresh(opts = {}) {
+        if (this._loading && !opts.force) return;
+        if (opts.silent && !this._isPanelVisible()) {
+            this.stopLive();
+            return;
+        }
+        if (!this._getRoot()) return;
+
+        this._loading = true;
+        const seq = ++this._refreshSeq;
+        this._setSyncHint('جاري التحديث…');
+        try {
+            const filters = {
+                level: this._filters.level || '',
+                status: this._filters.status || '',
+                q: this._filters.q || '',
+                limit: Number(this._filters.limit) || 200
+            };
+            const [listRes, statsRes] = await Promise.all([
+                GoogleIntegration.sendToAppsScript('getAllClientErrorLogs', {
+                    filters: filters,
+                    __timeoutMs: 45000,
+                    __highPriority: false
+                }),
+                GoogleIntegration.sendToAppsScript('getClientErrorStats', {
+                    filters: {},
+                    __timeoutMs: 45000,
+                    __highPriority: false
+                })
+            ]);
+
+            if (seq !== this._refreshSeq) return;
+
+            const listOk = !!(listRes && listRes.success && Array.isArray(listRes.data));
+            const statsOk = !!(statsRes && statsRes.success);
+
+            if (listOk) {
+                const rows = listRes.data;
+                let newCount = 0;
+                rows.forEach((r) => {
+                    if (r.id && !this._knownIds.has(r.id)) {
+                        if (this._knownIds.size > 0) newCount += 1;
+                        this._knownIds.add(r.id);
+                    }
+                });
+                this._data = rows;
+                this._lastError = '';
+                this._renderTable(newCount);
+                if (newCount > 0) {
+                    this._setBanner(`ورد ${newCount} خطأ جديد`, 'ok');
+                } else {
+                    this._setBanner('');
+                }
+            } else {
+                // لا تمسح البيانات السابقة عند الفشل
+                this._lastError = (listRes && listRes.message) || 'فشل تحميل السجل';
+                this._setBanner(
+                    `تعذر تحديث القائمة — تم الإبقاء على آخر بيانات ناجحة. ${this._esc(this._lastError)}`,
+                    'warn'
+                );
+                if (!opts.silent && typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error('فشل تحميل سجل الأخطاء: ' + this._lastError);
+                }
+                if (!this._data.length) this._renderTable(0);
+            }
+
+            if (statsOk) {
+                this._stats = statsRes;
+            }
+            this._renderStats({ keepLoading: false });
+            this._setSyncHint(listOk ? ('آخر تحديث: ' + new Date().toLocaleTimeString('ar-EG')) : 'تحديث جزئي');
+        } catch (error) {
+            if (seq !== this._refreshSeq) return;
+            this._lastError = error && error.message ? error.message : String(error || 'خطأ شبكة');
+            this._setBanner(
+                `تعذر الاتصال — الإبقاء على آخر بيانات. ${this._esc(this._lastError)}`,
+                'err'
+            );
+            if (!opts.silent && typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('فشل تحميل سجل الأخطاء: ' + this._lastError);
+            }
+            this._renderStats({ keepLoading: !this._stats });
+            if (!this._data.length) this._renderTable(0);
+            this._setSyncHint('فشل التحديث');
+        } finally {
+            if (seq === this._refreshSeq) {
+                this._loading = false;
+                const root = this._getRoot();
+                if (root) {
+                    root.classList.remove('is-booting');
+                    root.setAttribute('aria-busy', 'false');
+                }
+            }
+        }
+    },
+
+    _renderStats(opts = {}) {
+        const root = this._getRoot();
+        const box = root && root.querySelector('#cea-stats');
+        if (!box) return;
+
+        if (!box.querySelector('[data-stat="total"]')) {
+            box.innerHTML = this._statsCardsHtml(!!opts.keepLoading);
+        }
+
+        const s = this._stats || {};
+        const byLevel = s.byLevel || {};
+        const byStatus = s.byStatus || {};
+        const values = {
+            total: s.total != null ? s.total : (this._data.length || 0),
+            last24h: s.last24h || 0,
+            new: byStatus.new || 0,
+            errors: byLevel.error || 0
+        };
+
+        Object.keys(values).forEach((key) => {
+            const card = box.querySelector(`[data-stat="${key}"]`);
+            if (!card) return;
+            const valEl = card.querySelector('[data-stat-value]');
+            if (!valEl) return;
+            if (opts.keepLoading && !this._stats) {
+                card.classList.add('is-loading');
+                valEl.textContent = '—';
+            } else {
+                card.classList.remove('is-loading');
+                valEl.textContent = String(values[key]);
+            }
+        });
+    },
+
+    _renderTable(newCount) {
+        const root = this._getRoot();
+        const box = root && root.querySelector('#cea-table');
+        if (!box) return;
+        box.classList.add('cea-table-wrap');
+
+        if (!this._data.length) {
+            box.innerHTML = `<div class="cea-empty">
+                لا توجد أخطاء مطابقة للفلتر حالياً.
+                ${this._filters.status || this._filters.level || this._filters.q
+                    ? '<div style="margin-top:8px;font-size:12px;">جرّب اختيار «كل الحالات» ثم تحديث.</div>'
+                    : ''}
+            </div>`;
+            return;
+        }
+
+        const banner = newCount > 0
+            ? `<div class="cea-alert cea-alert-ok" style="margin:10px;">ورد ${newCount} خطأ جديد في هذه الجولة</div>`
+            : '';
+
+        box.innerHTML = banner + `
             <table class="cea-table">
                 <thead>
                     <tr>
-                        <th>\u0627\u0644\u0648\u0642\u062A</th>
-                        <th>\u0627\u0644\u0645\u0633\u062A\u0648\u0649</th>
-                        <th>\u0627\u0644\u0631\u0633\u0627\u0644\u0629</th>
-                        <th>\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645</th>
-                        <th>\u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644</th>
-                        <th>\u0627\u0644\u062D\u0627\u0644\u0629</th>
-                        <th>\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                        <th>الوقت</th>
+                        <th>المستوى</th>
+                        <th>الرسالة</th>
+                        <th>المستخدم</th>
+                        <th>الموديول</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${this._data.map(a=>{const r=this._esc(a.id);return`
-                        <tr data-cea-row="${r}">
-                            <td class="whitespace-nowrap" dir="ltr">${this._esc(this._fmtTime(a.createdAt))}</td>
-                            <td>${this._levelBadge(a.level)}</td>
+                    ${this._data.map((r) => {
+                        const rid = this._esc(r.id);
+                        return `
+                        <tr data-cea-row="${rid}">
+                            <td class="whitespace-nowrap" dir="ltr">${this._esc(this._fmtTime(r.createdAt))}</td>
+                            <td>${this._levelBadge(r.level)}</td>
                             <td style="max-width:340px;">
-                                <div style="font-weight:600;">${this._esc(String(a.message||"").slice(0,160))}</div>
-                                <div style="font-size:12px;color:#64748b;" dir="ltr">${this._esc(String(a.appVersion||""))} \xB7 ${this._esc(String(a.source||"").slice(0,60))}</div>
+                                <div style="font-weight:600;">${this._esc(String(r.message || '').slice(0, 160))}</div>
+                                <div style="font-size:12px;color:#64748b;" dir="ltr">${this._esc(String(r.appVersion || ''))} · ${this._esc(String(r.source || '').slice(0, 60))}</div>
                             </td>
                             <td>
-                                <div>${this._esc(a.username||"\u2014")}</div>
-                                <div style="font-size:12px;color:#64748b;" dir="ltr">${this._esc(a.userEmail||"")}</div>
+                                <div>${this._esc(r.username || '—')}</div>
+                                <div style="font-size:12px;color:#64748b;" dir="ltr">${this._esc(r.userEmail || '')}</div>
                             </td>
-                            <td>${this._esc(a.module||"\u2014")}</td>
-                            <td class="cea-status-cell">${this._statusBadge(a.status)}</td>
+                            <td>${this._esc(r.module || '—')}</td>
+                            <td class="cea-status-cell">${this._statusBadge(r.status)}</td>
                             <td>
                                 <div class="cea-row-actions">
-                                    <button type="button" class="btn-secondary" data-cea-action="detail" data-id="${r}">\u062A\u0641\u0627\u0635\u064A\u0644</button>
-                                    <button type="button" class="btn-secondary" data-cea-action="status" data-status="seen" data-id="${r}">\u0645\u0634\u0627\u0647\u062F\u0629</button>
-                                    <button type="button" class="btn-secondary" data-cea-action="status" data-status="resolved" data-id="${r}">\u062D\u0644</button>
-                                    <button type="button" class="btn-secondary" data-cea-action="ignore" data-id="${r}">\u062A\u062C\u0627\u0647\u0644</button>
-                                    <button type="button" class="btn-primary" data-cea-action="report" data-id="${r}">\u0625\u0628\u0644\u0627\u063A</button>
+                                    <button type="button" class="btn-secondary" data-cea-action="detail" data-id="${rid}">تفاصيل</button>
+                                    <button type="button" class="btn-secondary" data-cea-action="status" data-status="seen" data-id="${rid}">مشاهدة</button>
+                                    <button type="button" class="btn-secondary" data-cea-action="status" data-status="resolved" data-id="${rid}">حل</button>
+                                    <button type="button" class="btn-secondary" data-cea-action="ignore" data-id="${rid}">تجاهل</button>
+                                    <button type="button" class="btn-primary" data-cea-action="report" data-id="${rid}">إبلاغ</button>
                                 </div>
                             </td>
-                        </tr>`}).join("")}
+                        </tr>`;
+                    }).join('')}
                 </tbody>
             </table>
-        `},_patchRowStatus(t,e){const s=this._data.find(l=>String(l.id)===String(t));s&&(s.status=e);const i=this._getRoot(),a=i&&i.querySelector(`[data-cea-row="${CSS.escape?CSS.escape(String(t)):String(t).replace(/"/g,'\\"')}"]`),r=a&&a.querySelector(".cea-status-cell");r&&(r.innerHTML=this._statusBadge(e)),this._filters.status&&this._filters.status,this._renderStats()},showDetail(t){const e=this._data.find(a=>String(a.id)===String(t));if(!e)return;const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+        `;
+    },
+
+    _patchRowStatus(id, status) {
+        const row = this._data.find((r) => String(r.id) === String(id));
+        if (row) row.status = status;
+        const root = this._getRoot();
+        const tr = root && root.querySelector(`[data-cea-row="${CSS.escape ? CSS.escape(String(id)) : String(id).replace(/"/g, '\\"')}"]`);
+        const cell = tr && tr.querySelector('.cea-status-cell');
+        if (cell) cell.innerHTML = this._statusBadge(status);
+        // إن كان الفلتر يستبعد الحالة الجديدة — أعد الجلب لاحقاً فقط
+        if (this._filters.status && this._filters.status !== status) {
+            // أبقِ الصف حتى التحديث اليدوي؛ لا تُفرغ القائمة فوراً
+        }
+        this._renderStats();
+    },
+
+    showDetail(id) {
+        const row = this._data.find((r) => String(r.id) === String(id));
+        if (!row) return;
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width:720px;">
-                <div class="modal-header"><h3 class="modal-title">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u062E\u0637\u0623</h3>
+                <div class="modal-header"><h3 class="modal-title">تفاصيل الخطأ</h3>
                     <button type="button" class="modal-close" id="cea-detail-close"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body text-sm" style="white-space:pre-wrap;direction:ltr;text-align:left;">
-${this._esc(JSON.stringify(e,null,2))}
+${this._esc(JSON.stringify(row, null, 2))}
                 </div>
-            </div>`,document.body.appendChild(s);const i=()=>s.remove();s.addEventListener("click",a=>{a.target===s&&i()}),s.querySelector("#cea-detail-close")?.addEventListener("click",i)},async setStatus(t,e){if(!(!t||!e)&&!this._actionBusy){this._actionBusy=!0;try{const s=await GoogleIntegration.sendToAppsScript("updateClientErrorStatus",{id:t,status:e,__timeoutMs:3e4,__highPriority:!1});s&&s.success?(this._patchRowStatus(t,e),typeof Notification<"u"&&Notification.success&&Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0627\u0644\u0629"),setTimeout(()=>this.refresh({silent:!0}),800)):typeof Notification<"u"&&Notification.error&&Notification.error(s&&s.message||"\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0627\u0644\u0629")}catch(s){typeof Notification<"u"&&Notification.error&&Notification.error(s.message||"\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0627\u0644\u0629")}finally{this._actionBusy=!1}}},async reportIssue(t){const e=this._data.find(s=>String(s.id)===String(t));if(!e){typeof Notification<"u"&&Notification.error&&Notification.error("\u0644\u0645 \u064A\u064F\u0639\u062B\u0631 \u0639\u0644\u0649 \u0633\u062C\u0644 \u0627\u0644\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u2014 \u062D\u062F\u0651\u062B \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u062B\u0645 \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629");return}if(!this._actionBusy){this._actionBusy=!0;try{const s=("\u062E\u0637\u0623 \u0648\u0627\u062C\u0647\u0629: "+String(e.message||"").slice(0,80)).trim(),i=["\u0628\u0644\u0627\u063A \u062A\u0644\u0642\u0627\u0626\u064A \u0645\u0646 \u0645\u0631\u0627\u0642\u0628\u0629 \u0623\u062E\u0637\u0627\u0621 \u0627\u0644\u0639\u0645\u0644\u0627\u0621","Error ID: "+(e.id||""),"Level: "+(e.level||""),"Module: "+(e.module||""),"User: "+(e.username||"")+" <"+(e.userEmail||"")+">","Version: "+(e.appVersion||""),"Source: "+(e.source||""),"URL: "+(e.pageUrl||""),"","Message:",e.message||"","","Stack:",e.stack||"\u2014"].join(`
-`);let a=null;if(typeof IssueTrackingService<"u"&&typeof IssueTrackingService.reportIssue=="function"?a=await IssueTrackingService.reportIssue({title:s,description:i,category:"Bug",priority:String(e.level||"").toLowerCase()==="warning"?"Medium":"High"},{module:e.module||"client-errors",recordId:e.id||null,section:"client-errors",action:"client-error-report"}):a=await GoogleIntegration.sendToAppsScript("addIssue",{title:s,description:i,category:"Bug",priority:String(e.level||"").toLowerCase()==="warning"?"Medium":"High",status:"New",module:e.module||"client-errors",reportedBy:AppState.currentUser?.name||AppState.currentUser?.email||"",createdBy:AppState.currentUser?.email||"",sourceErrorId:e.id||"",__timeoutMs:45e3,__highPriority:!1}),a&&a.success){if(this._patchRowStatus(t,"seen"),GoogleIntegration.sendToAppsScript("updateClientErrorStatus",{id:t,status:"seen",__timeoutMs:3e4,__highPriority:!1}).catch(()=>{}),typeof Notification<"u"&&Notification.success){const r=a.issueId||a.data?.id||"";Notification.success(r?"\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0628\u0644\u0627\u063A \u0645\u0634\u0643\u0644\u0629: "+r:"\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0628\u0644\u0627\u063A \u0645\u0634\u0643\u0644\u0629 \u0645\u0646 \u0627\u0644\u062E\u0637\u0623")}}else typeof Notification<"u"&&Notification.error&&Notification.error(a&&a.message||"\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0628\u0644\u0627\u063A")}catch(s){typeof Notification<"u"&&Notification.error&&Notification.error(s.message||"\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0628\u0644\u0627\u063A")}finally{this._actionBusy=!1}}},exportToExcel(){try{if(typeof XLSX>"u"){typeof Notification<"u"&&Notification.error&&Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629");return}if(!this._data.length){typeof Notification<"u"&&Notification.warning&&Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631");return}const t=this._data.map(i=>({id:i.id,createdAt:i.createdAt,level:i.level,status:i.status,message:i.message,module:i.module,username:i.username,userEmail:i.userEmail,appVersion:i.appVersion,source:i.source,pageUrl:i.pageUrl,fingerprint:i.fingerprint})),e=XLSX.utils.json_to_sheet(t),s=XLSX.utils.book_new();XLSX.utils.book_append_sheet(s,e,"ClientErrors"),XLSX.writeFile(s,"client-errors-"+new Date().toISOString().slice(0,10)+".xlsx"),typeof Notification<"u"&&Notification.success&&Notification.success("\u062A\u0645 \u0627\u0644\u062A\u0635\u062F\u064A\u0631")}catch(t){typeof Notification<"u"&&Notification.error&&Notification.error(t.message||"\u0641\u0634\u0644 \u0627\u0644\u062A\u0635\u062F\u064A\u0631")}}};typeof window<"u"&&(window.ClientErrorsAdmin=ClientErrorsAdmin);
+            </div>`;
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+        modal.querySelector('#cea-detail-close')?.addEventListener('click', close);
+    },
+
+    async setStatus(id, status) {
+        if (!id || !status) return;
+        if (this._actionBusy) return;
+        this._actionBusy = true;
+        try {
+            const res = await GoogleIntegration.sendToAppsScript('updateClientErrorStatus', {
+                id: id,
+                status: status,
+                __timeoutMs: 30000,
+                __highPriority: false
+            });
+            if (res && res.success) {
+                this._patchRowStatus(id, status);
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    Notification.success('تم تحديث الحالة');
+                }
+                // تحديث صامت لاحقاً دون مسح القائمة
+                setTimeout(() => this.refresh({ silent: true }), 800);
+            } else {
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error((res && res.message) || 'فشل تحديث الحالة');
+                }
+            }
+        } catch (e) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error(e.message || 'فشل تحديث الحالة');
+            }
+        } finally {
+            this._actionBusy = false;
+        }
+    },
+
+    async reportIssue(id) {
+        const row = this._data.find((r) => String(r.id) === String(id));
+        if (!row) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('لم يُعثر على سجل الخطأ في الذاكرة — حدّث القائمة ثم أعد المحاولة');
+            }
+            return;
+        }
+        if (this._actionBusy) return;
+        this._actionBusy = true;
+        try {
+            const title = ('خطأ واجهة: ' + String(row.message || '').slice(0, 80)).trim();
+            const description = [
+                'بلاغ تلقائي من مراقبة أخطاء العملاء',
+                'Error ID: ' + (row.id || ''),
+                'Level: ' + (row.level || ''),
+                'Module: ' + (row.module || ''),
+                'User: ' + (row.username || '') + ' <' + (row.userEmail || '') + '>',
+                'Version: ' + (row.appVersion || ''),
+                'Source: ' + (row.source || ''),
+                'URL: ' + (row.pageUrl || ''),
+                '',
+                'Message:',
+                row.message || '',
+                '',
+                'Stack:',
+                row.stack || '—'
+            ].join('\n');
+
+            let res = null;
+            if (typeof IssueTrackingService !== 'undefined' && typeof IssueTrackingService.reportIssue === 'function') {
+                res = await IssueTrackingService.reportIssue(
+                    {
+                        title: title,
+                        description: description,
+                        category: 'Bug',
+                        priority: String(row.level || '').toLowerCase() === 'warning' ? 'Medium' : 'High'
+                    },
+                    {
+                        module: row.module || 'client-errors',
+                        recordId: row.id || null,
+                        section: 'client-errors',
+                        action: 'client-error-report'
+                    }
+                );
+            } else {
+                res = await GoogleIntegration.sendToAppsScript('addIssue', {
+                    title: title,
+                    description: description,
+                    category: 'Bug',
+                    priority: String(row.level || '').toLowerCase() === 'warning' ? 'Medium' : 'High',
+                    status: 'New',
+                    module: row.module || 'client-errors',
+                    reportedBy: AppState.currentUser?.name || AppState.currentUser?.email || '',
+                    createdBy: AppState.currentUser?.email || '',
+                    sourceErrorId: row.id || '',
+                    __timeoutMs: 45000,
+                    __highPriority: false
+                });
+            }
+
+            if (res && res.success) {
+                this._patchRowStatus(id, 'seen');
+                // تحديث الخادم دون انتظار فشل يمنع الرسالة
+                GoogleIntegration.sendToAppsScript('updateClientErrorStatus', {
+                    id: id,
+                    status: 'seen',
+                    __timeoutMs: 30000,
+                    __highPriority: false
+                }).catch(() => {});
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    const issueId = res.issueId || res.data?.id || '';
+                    Notification.success(issueId
+                        ? ('تم إنشاء بلاغ مشكلة: ' + issueId)
+                        : 'تم إنشاء بلاغ مشكلة من الخطأ');
+                }
+            } else {
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error((res && res.message) || 'فشل إنشاء البلاغ');
+                }
+            }
+        } catch (e) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error(e.message || 'فشل إنشاء البلاغ');
+            }
+        } finally {
+            this._actionBusy = false;
+        }
+    },
+
+    exportToExcel() {
+        try {
+            if (typeof XLSX === 'undefined') {
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error('مكتبة Excel غير متاحة');
+                }
+                return;
+            }
+            if (!this._data.length) {
+                if (typeof Notification !== 'undefined' && Notification.warning) {
+                    Notification.warning('لا توجد بيانات للتصدير');
+                }
+                return;
+            }
+            const rows = this._data.map((r) => ({
+                id: r.id,
+                createdAt: r.createdAt,
+                level: r.level,
+                status: r.status,
+                message: r.message,
+                module: r.module,
+                username: r.username,
+                userEmail: r.userEmail,
+                appVersion: r.appVersion,
+                source: r.source,
+                pageUrl: r.pageUrl,
+                fingerprint: r.fingerprint
+            }));
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'ClientErrors');
+            XLSX.writeFile(wb, 'client-errors-' + new Date().toISOString().slice(0, 10) + '.xlsx');
+            if (typeof Notification !== 'undefined' && Notification.success) {
+                Notification.success('تم التصدير');
+            }
+        } catch (e) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error(e.message || 'فشل التصدير');
+            }
+        }
+    }
+};
+
+if (typeof window !== 'undefined') {
+    window.ClientErrorsAdmin = ClientErrorsAdmin;
+}

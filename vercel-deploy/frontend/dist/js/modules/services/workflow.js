@@ -1,1 +1,206 @@
-const Workflow={STATUSES:{DRAFT:"draft",IN_REVIEW:"in_review",AWAITING_APPROVAL:"awaiting_approval",APPROVED:"approved",REJECTED:"rejected"},create(t,e){return{id:Utils.generateId("WF"),module:t,recordId:e,status:this.STATUSES.DRAFT,steps:[],history:[],currentStep:0,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}},addStep(t,e){t.steps||(t.steps=[]);const s={key:e.key,label:e.label,role:e.role||null,roles:e.roles||null,description:e.description||"",status:"pending",createdAt:new Date().toISOString(),completedAt:null,completedBy:null};return t.steps.push(s),this._touch(t),s},start(t,e=0){!t.steps||t.steps.length===0||(t.steps.forEach((s,r)=>{s.status=r===e?"in_progress":r<e?"completed":"pending"}),t.currentStep=e,t.status=e===0?this.STATUSES.DRAFT:this.STATUSES.IN_REVIEW,this._touch(t))},getCurrentStep(t){return!t||!t.steps||t.steps.length===0?null:t.steps[Math.min(t.currentStep,t.steps.length-1)]||null},canUserAction(t,e){if(!t||!e||t.status===this.STATUSES.APPROVED)return!1;const s=this.getCurrentStep(t);return!s||t.status===this.STATUSES.REJECTED&&s.status!=="in_progress"?!1:!!(!s.role&&!s.roles||s.role&&e.role===s.role||Array.isArray(s.roles)&&s.roles.includes(e.role)||s.userId&&e.id&&s.userId===e.id||s.email&&e.email&&s.email===e.email)},completeCurrentStep(t,e,s={}){const r=this.getCurrentStep(t);if(!r)return t;const n=new Date().toISOString();return r.status="completed",r.completedAt=n,r.completedBy=this._extractUser(e),t.history.push({type:"step_completed",stepKey:r.key,stepLabel:r.label,timestamp:n,user:this._extractUser(e),metadata:s}),t.currentStep<t.steps.length-1?(t.currentStep+=1,t.steps[t.currentStep].status="in_progress",t.status=t.currentStep===t.steps.length-1?this.STATUSES.AWAITING_APPROVAL:this.STATUSES.IN_REVIEW):t.status=this.STATUSES.APPROVED,this._touch(t),t},reject(t,e,s={}){const r=new Date().toISOString();return t.status=this.STATUSES.REJECTED,t.rejectedAt=r,t.history.push({type:"rejected",stepKey:this.getCurrentStep(t)?.key||null,stepLabel:this.getCurrentStep(t)?.label||"",timestamp:r,user:this._extractUser(e),metadata:s}),this._touch(t),t},resetToStep(t,e){return!t.steps||e<0||e>=t.steps.length||(t.steps.forEach((s,r)=>{r<e?s.status="completed":r===e?(s.status="in_progress",s.completedAt=null,s.completedBy=null):(s.status="pending",s.completedAt=null,s.completedBy=null)}),t.currentStep=e,t.status=e===0?this.STATUSES.DRAFT:this.STATUSES.IN_REVIEW,this._touch(t)),t},getStatusLabel(t){if(!t)return"";switch(t.status){case this.STATUSES.DRAFT:return"\u0645\u0633\u0648\u062F\u0629";case this.STATUSES.IN_REVIEW:return"\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629";case this.STATUSES.AWAITING_APPROVAL:return"\u0641\u064A \u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629";case this.STATUSES.APPROVED:return"\u0645\u0648\u0627\u0641\u0642 \u0639\u0644\u064A\u0647";case this.STATUSES.REJECTED:return"\u0645\u0631\u0641\u0648\u0636";default:return"\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"}},_touch(t){t.updatedAt=new Date().toISOString()},_extractUser(t){return t?{id:t.id||null,name:t.name||t.fullName||t.displayName||"",email:t.email||"",role:t.role||""}:null}};typeof window<"u"&&(window.Workflow=Workflow);
+/**
+ * Workflow Engine Service
+ * Handles multi-step workflow processes
+ */
+
+const Workflow = {
+    STATUSES: {
+        DRAFT: 'draft',
+        IN_REVIEW: 'in_review',
+        AWAITING_APPROVAL: 'awaiting_approval',
+        APPROVED: 'approved',
+        REJECTED: 'rejected'
+    },
+
+    create(module, recordId) {
+        return {
+            id: Utils.generateId('WF'),
+            module,
+            recordId,
+            status: this.STATUSES.DRAFT,
+            steps: [],
+            history: [],
+            currentStep: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+    },
+
+    addStep(workflow, stepConfig) {
+        if (!workflow.steps) {
+            workflow.steps = [];
+        }
+
+        const step = {
+            key: stepConfig.key,
+            label: stepConfig.label,
+            role: stepConfig.role || null,
+            roles: stepConfig.roles || null,
+            description: stepConfig.description || '',
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+            completedAt: null,
+            completedBy: null
+        };
+
+        workflow.steps.push(step);
+        this._touch(workflow);
+        return step;
+    },
+
+    start(workflow, startIndex = 0) {
+        if (!workflow.steps || workflow.steps.length === 0) return;
+        workflow.steps.forEach((step, index) => {
+            step.status = index === startIndex ? 'in_progress' : (index < startIndex ? 'completed' : 'pending');
+        });
+        workflow.currentStep = startIndex;
+        workflow.status = startIndex === 0 ? this.STATUSES.DRAFT : this.STATUSES.IN_REVIEW;
+        this._touch(workflow);
+    },
+
+    getCurrentStep(workflow) {
+        if (!workflow || !workflow.steps || workflow.steps.length === 0) return null;
+        return workflow.steps[Math.min(workflow.currentStep, workflow.steps.length - 1)] || null;
+    },
+
+    canUserAction(workflow, user) {
+        if (!workflow || !user) return false;
+        if (workflow.status === this.STATUSES.APPROVED) return false;
+        const step = this.getCurrentStep(workflow);
+        if (!step) return false;
+        if (workflow.status === this.STATUSES.REJECTED && step.status !== 'in_progress') {
+            return false;
+        }
+
+        if (!step.role && !step.roles) {
+            return true;
+        }
+
+        if (step.role && user.role === step.role) {
+            return true;
+        }
+
+        if (Array.isArray(step.roles) && step.roles.includes(user.role)) {
+            return true;
+        }
+
+        if (step.userId && user.id && step.userId === user.id) {
+            return true;
+        }
+
+        if (step.email && user.email && step.email === user.email) {
+            return true;
+        }
+
+        return false;
+    },
+
+    completeCurrentStep(workflow, user, metadata = {}) {
+        const step = this.getCurrentStep(workflow);
+        if (!step) return workflow;
+
+        const timestamp = new Date().toISOString();
+        step.status = 'completed';
+        step.completedAt = timestamp;
+        step.completedBy = this._extractUser(user);
+
+        workflow.history.push({
+            type: 'step_completed',
+            stepKey: step.key,
+            stepLabel: step.label,
+            timestamp,
+            user: this._extractUser(user),
+            metadata
+        });
+
+        if (workflow.currentStep < workflow.steps.length - 1) {
+            workflow.currentStep += 1;
+            workflow.steps[workflow.currentStep].status = 'in_progress';
+            workflow.status = workflow.currentStep === workflow.steps.length - 1
+                ? this.STATUSES.AWAITING_APPROVAL
+                : this.STATUSES.IN_REVIEW;
+        } else {
+            workflow.status = this.STATUSES.APPROVED;
+        }
+
+        this._touch(workflow);
+        return workflow;
+    },
+
+    reject(workflow, user, metadata = {}) {
+        const timestamp = new Date().toISOString();
+        workflow.status = this.STATUSES.REJECTED;
+        workflow.rejectedAt = timestamp;
+        workflow.history.push({
+            type: 'rejected',
+            stepKey: this.getCurrentStep(workflow)?.key || null,
+            stepLabel: this.getCurrentStep(workflow)?.label || '',
+            timestamp,
+            user: this._extractUser(user),
+            metadata
+        });
+        this._touch(workflow);
+        return workflow;
+    },
+
+    resetToStep(workflow, stepIndex) {
+        if (!workflow.steps || stepIndex < 0 || stepIndex >= workflow.steps.length) return workflow;
+
+        workflow.steps.forEach((step, index) => {
+            if (index < stepIndex) {
+                step.status = 'completed';
+            } else if (index === stepIndex) {
+                step.status = 'in_progress';
+                step.completedAt = null;
+                step.completedBy = null;
+            } else {
+                step.status = 'pending';
+                step.completedAt = null;
+                step.completedBy = null;
+            }
+        });
+
+        workflow.currentStep = stepIndex;
+        workflow.status = stepIndex === 0 ? this.STATUSES.DRAFT : this.STATUSES.IN_REVIEW;
+        this._touch(workflow);
+        return workflow;
+    },
+
+    getStatusLabel(workflow) {
+        if (!workflow) return '';
+        switch (workflow.status) {
+            case this.STATUSES.DRAFT:
+                return 'مسودة';
+            case this.STATUSES.IN_REVIEW:
+                return 'قيد المراجعة';
+            case this.STATUSES.AWAITING_APPROVAL:
+                return 'في انتظار الموافقة';
+            case this.STATUSES.APPROVED:
+                return 'موافق عليه';
+            case this.STATUSES.REJECTED:
+                return 'مرفوض';
+            default:
+                return 'غير معروف';
+        }
+    },
+
+    _touch(workflow) {
+        workflow.updatedAt = new Date().toISOString();
+    },
+
+    _extractUser(user) {
+        if (!user) return null;
+        return {
+            id: user.id || null,
+            name: user.name || user.fullName || user.displayName || '',
+            email: user.email || '',
+            role: user.role || ''
+        };
+    }
+};
+
+// Export to global window (for script tag loading)
+if (typeof window !== 'undefined') {
+    window.Workflow = Workflow;
+}
+

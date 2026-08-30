@@ -1,1 +1,239 @@
-const SmartCache={DEFAULT_CACHE_DURATION:864e5,CACHE_DURATIONS:{user_specific:36e5,shared_data:216e5,static_data:864e5,frequent_updates:18e5},getCacheKey(e,t,a,s){try{const r={action:e,data:this._normalizeData(t),userId:a,permissionsHash:this.hashPermissions(s)};return btoa(JSON.stringify(r))}catch{return`${e}_${a}_${JSON.stringify(t||{})}`}},_normalizeData(e){if(!e)return{};const t={...e};return delete t.timestamp,delete t._cache,delete t._temp,t},hashPermissions(e){if(!e)return"none";try{const t=Object.keys(e||{}).sort().reduce((s,r)=>(s[r]=e[r],s),{}),a=JSON.stringify(t);return this._simpleHash(a)}catch{return"error"}},_simpleHash(e){let t=0;for(let a=0;a<e.length;a++){const s=e.charCodeAt(a);t=(t<<5)-t+s,t=t&t}return Math.abs(t).toString(36)},isCacheValid(e,t,a="static_data"){if(!e||!e.timestamp)return!1;const r=Date.now()-e.timestamp,c=this.CACHE_DURATIONS[a]||this.DEFAULT_CACHE_DURATION;return!(!this.hasSamePermissions(e.permissions,t)||r>c)},hasSamePermissions(e,t){if(!e&&!t)return!0;if(!e||!t)return!1;try{return this.hashPermissions(e)===this.hashPermissions(t)}catch{return!1}},setCache(e,t,a,s="static_data"){try{const r={data:t,timestamp:Date.now(),permissions:{...a},dataType:s,version:"2.0"},c=`hse_smart_cache_${e}`;localStorage.setItem(c,JSON.stringify(r)),AppState?.debugMode&&Utils?.safeLog(`\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0641\u064A Smart Cache: ${e}`)}catch(r){Utils?.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062D\u0641\u0638 Smart Cache:",r)}},getCache(e,t,a="static_data"){try{const s=`hse_smart_cache_${e}`,r=localStorage.getItem(s);if(!r)return null;const c=JSON.parse(r);return this.isCacheValid(c,t,a)?(AppState?.debugMode&&Utils?.safeLog(`\u2705 \u062A\u0645 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0645\u0646 Smart Cache: ${e}`),c.data):(localStorage.removeItem(s),null)}catch(s){return Utils?.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0633\u062A\u0631\u062C\u0627\u0639 Smart Cache:",s),null}},cleanupOldCache(){try{const t=Object.keys(localStorage).filter(s=>s.startsWith("hse_smart_cache_"));let a=0;t.forEach(s=>{try{const r=localStorage.getItem(s);if(r){const c=JSON.parse(r);Date.now()-(c.timestamp||0)>6048e5&&(localStorage.removeItem(s),a++)}}catch{localStorage.removeItem(s),a++}}),a>0&&AppState?.debugMode&&Utils?.safeLog(`\u{1F9F9} \u062A\u0645 \u062A\u0646\u0638\u064A\u0641 ${a} \u0639\u0646\u0635\u0631 \u0645\u0646 Smart Cache`)}catch(e){Utils?.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0646\u0638\u064A\u0641 Smart Cache:",e)}},clearAllCache(){try{const t=Object.keys(localStorage).filter(a=>a.startsWith("hse_smart_cache_"));t.forEach(a=>localStorage.removeItem(a)),AppState?.debugMode&&Utils?.safeLog(`\u{1F5D1}\uFE0F \u062A\u0645 \u0645\u0633\u062D \u062C\u0645\u064A\u0639 Smart Cache (${t.length} \u0639\u0646\u0635\u0631)`)}catch(e){Utils?.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0633\u062D Smart Cache:",e)}}};typeof window<"u"&&window.addEventListener("load",()=>{setTimeout(()=>SmartCache.cleanupOldCache(),5e3)});
+/**
+ * Smart Cache System - نظام Cache ذكي حسب الصلاحيات والمستخدم
+ * يحسن الأداء ويقلل من تحميل البيانات غير الضرورية
+ */
+
+const SmartCache = {
+    // مدة الـ cache الافتراضية (24 ساعة)
+    DEFAULT_CACHE_DURATION: 24 * 60 * 60 * 1000,
+
+    // مدد مختلفة حسب نوع البيانات
+    CACHE_DURATIONS: {
+        'user_specific': 60 * 60 * 1000, // ساعة واحدة لبيانات المستخدم
+        'shared_data': 6 * 60 * 60 * 1000, // 6 ساعات لبيانات مشتركة
+        'static_data': 24 * 60 * 60 * 1000, // 24 ساعة لبيانات ثابتة
+        'frequent_updates': 30 * 60 * 1000 // 30 دقيقة لبيانات تتحدث كثيراً
+    },
+
+    /**
+     * إنشاء مفتاح cache ذكي
+     * ملاحظة: لا يتضمن timestamp في المفتاح — صلاحية الـ cache تُتحقق عبر isCacheValid() بالـ TTL
+     */
+    getCacheKey(action, data, userId, permissions) {
+        try {
+            const keyData = {
+                action,
+                data: this._normalizeData(data),
+                userId,
+                permissionsHash: this.hashPermissions(permissions)
+            };
+            return btoa(JSON.stringify(keyData));
+        } catch (e) {
+            // Fallback للمفتاح البسيط
+            return `${action}_${userId}_${JSON.stringify(data || {})}`;
+        }
+    },
+
+    /**
+     * تطبيع البيانات للمفتاح
+     */
+    _normalizeData(data) {
+        if (!data) return {};
+
+        // إزالة الحقول غير المهمة للمفتاح
+        const normalized = { ...data };
+        delete normalized.timestamp;
+        delete normalized._cache;
+        delete normalized._temp;
+
+        return normalized;
+    },
+
+    /**
+     * إنشاء hash للصلاحيات
+     */
+    hashPermissions(permissions) {
+        if (!permissions) return 'none';
+
+        try {
+            // ترتيب الصلاحيات لضمان hash متسق
+            const sortedPerms = Object.keys(permissions || {})
+                .sort()
+                .reduce((result, key) => {
+                    result[key] = permissions[key];
+                    return result;
+                }, {});
+
+            const permString = JSON.stringify(sortedPerms);
+            return this._simpleHash(permString);
+        } catch (e) {
+            return 'error';
+        }
+    },
+
+    /**
+     * Hash بسيط للنصوص
+     */
+    _simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return Math.abs(hash).toString(36);
+    },
+
+    /**
+     * التحقق من صحة الـ cache
+     */
+    isCacheValid(cacheEntry, userPermissions, dataType = 'static_data') {
+        if (!cacheEntry || !cacheEntry.timestamp) return false;
+
+        const now = Date.now();
+        const age = now - cacheEntry.timestamp;
+        const maxAge = this.CACHE_DURATIONS[dataType] || this.DEFAULT_CACHE_DURATION;
+
+        // فحص الصلاحيات
+        if (!this.hasSamePermissions(cacheEntry.permissions, userPermissions)) {
+            return false;
+        }
+
+        // فحص الوقت
+        if (age > maxAge) {
+            return false;
+        }
+
+        return true;
+    },
+
+    /**
+     * التحقق من تطابق الصلاحيات
+     */
+    hasSamePermissions(cachedPerms, currentPerms) {
+        if (!cachedPerms && !currentPerms) return true;
+        if (!cachedPerms || !currentPerms) return false;
+
+        try {
+            return this.hashPermissions(cachedPerms) === this.hashPermissions(currentPerms);
+        } catch (e) {
+            return false;
+        }
+    },
+
+    /**
+     * حفظ في الـ cache
+     */
+    setCache(key, data, userPermissions, dataType = 'static_data') {
+        try {
+            const cacheEntry = {
+                data,
+                timestamp: Date.now(),
+                permissions: { ...userPermissions },
+                dataType,
+                version: '2.0' // للتحقق من توافق الإصدارات
+            };
+
+            const cacheKey = `hse_smart_cache_${key}`;
+            localStorage.setItem(cacheKey, JSON.stringify(cacheEntry));
+
+            if (AppState?.debugMode) {
+                Utils?.safeLog(`✅ تم حفظ في Smart Cache: ${key}`);
+            }
+        } catch (e) {
+            Utils?.safeWarn('⚠️ فشل حفظ Smart Cache:', e);
+        }
+    },
+
+    /**
+     * استرجاع من الـ cache
+     */
+    getCache(key, userPermissions, dataType = 'static_data') {
+        try {
+            const cacheKey = `hse_smart_cache_${key}`;
+            const cached = localStorage.getItem(cacheKey);
+
+            if (!cached) return null;
+
+            const cacheEntry = JSON.parse(cached);
+
+            // التحقق من صحة الـ cache
+            if (!this.isCacheValid(cacheEntry, userPermissions, dataType)) {
+                // حذف الـ cache القديم
+                localStorage.removeItem(cacheKey);
+                return null;
+            }
+
+            if (AppState?.debugMode) {
+                Utils?.safeLog(`✅ تم استرجاع من Smart Cache: ${key}`);
+            }
+
+            return cacheEntry.data;
+        } catch (e) {
+            Utils?.safeWarn('⚠️ خطأ في استرجاع Smart Cache:', e);
+            return null;
+        }
+    },
+
+    /**
+     * تنظيف الـ cache القديم
+     */
+    cleanupOldCache() {
+        try {
+            const keys = Object.keys(localStorage);
+            const smartCacheKeys = keys.filter(key => key.startsWith('hse_smart_cache_'));
+
+            let cleaned = 0;
+            smartCacheKeys.forEach(key => {
+                try {
+                    const cached = localStorage.getItem(key);
+                    if (cached) {
+                        const cacheEntry = JSON.parse(cached);
+                        const age = Date.now() - (cacheEntry.timestamp || 0);
+
+                        // حذف إذا كان أقدم من 7 أيام
+                        if (age > 7 * 24 * 60 * 60 * 1000) {
+                            localStorage.removeItem(key);
+                            cleaned++;
+                        }
+                    }
+                } catch (e) {
+                    // حذف الـ cache التالف
+                    localStorage.removeItem(key);
+                    cleaned++;
+                }
+            });
+
+            if (cleaned > 0 && AppState?.debugMode) {
+                Utils?.safeLog(`🧹 تم تنظيف ${cleaned} عنصر من Smart Cache`);
+            }
+        } catch (e) {
+            Utils?.safeWarn('⚠️ خطأ في تنظيف Smart Cache:', e);
+        }
+    },
+
+    /**
+     * مسح جميع الـ cache
+     */
+    clearAllCache() {
+        try {
+            const keys = Object.keys(localStorage);
+            const smartCacheKeys = keys.filter(key => key.startsWith('hse_smart_cache_'));
+
+            smartCacheKeys.forEach(key => localStorage.removeItem(key));
+
+            if (AppState?.debugMode) {
+                Utils?.safeLog(`🗑️ تم مسح جميع Smart Cache (${smartCacheKeys.length} عنصر)`);
+            }
+        } catch (e) {
+            Utils?.safeWarn('⚠️ خطأ في مسح Smart Cache:', e);
+        }
+    }
+};
+
+// تنظيف دوري للـ cache القديم
+if (typeof window !== 'undefined') {
+    window.addEventListener('load', () => {
+        setTimeout(() => SmartCache.cleanupOldCache(), 5000);
+    });
+}

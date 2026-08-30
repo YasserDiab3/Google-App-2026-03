@@ -1,1 +1,356 @@
-const dmlLog=(...t)=>{try{typeof Utils<"u"&&typeof Utils.safeLog=="function"&&Utils.safeLog(...t)}catch{}},DynamicModuleLoader={loadedModules:new Map,loadHistory:[],async loadModule(t,e,s={}){try{if(dmlLog(`\u{1F4E6} \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644: ${e} \u0645\u0646 ${t}`),this.loadedModules.has(e)){if(!s.forceReload)return{success:!0,message:"\u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0645\u062D\u0645\u0644 \u0628\u0627\u0644\u0641\u0639\u0644",cached:!0};await this.unloadModule(e)}const r=await this.fetchModule(t);return await this.executeModule(r,e,t),this.loadedModules.set(e,{path:t,loadedAt:new Date().toISOString(),version:s.version||"1.0.0"}),this.addToHistory("load",e,t,!0),dmlLog(`\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644: ${e}`),{success:!0,message:`\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 ${e} \u0628\u0646\u062C\u0627\u062D`}}catch(r){throw this.addToHistory("load",e,t,!1,r.message),r}},async reloadModule(t,e){try{return dmlLog(`\u{1F504} \u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644: ${e}`),await this.unloadModule(e),await this.loadModule(t,e,{forceReload:!0}),{success:!0,message:`\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644 ${e} \u0628\u0646\u062C\u0627\u062D`}}catch(s){throw s}},async unloadModule(t){try{if(dmlLog(`\u{1F5D1}\uFE0F \u0625\u0644\u063A\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644: ${t}`),!this.loadedModules.has(t))return{success:!0,message:"\u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u063A\u064A\u0631 \u0645\u062D\u0645\u0644"};if(typeof window[t]<"u"){if(typeof window[t].cleanup=="function")try{await window[t].cleanup()}catch{}delete window[t]}const e=document.querySelector(`script[data-module="${t}"]`);e&&e.remove();const s=this.loadedModules.get(t);return this.loadedModules.delete(t),this.addToHistory("unload",t,s?.path,!0),dmlLog(`\u2705 \u062A\u0645 \u0625\u0644\u063A\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644: ${t}`),{success:!0,message:`\u062A\u0645 \u0625\u0644\u063A\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 ${t} \u0628\u0646\u062C\u0627\u062D`}}catch(e){throw this.addToHistory("unload",t,null,!1,e.message),e}},async fetchModule(t){try{if(t.startsWith("data:")||t.startsWith("javascript:"))return t;const e=await fetch(t,{cache:"no-cache",headers:{"Cache-Control":"no-cache"}});if(!e.ok)throw new Error(`\u0641\u0634\u0644 \u062C\u0644\u0628 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644: ${e.statusText}`);return await e.text()}catch(e){throw new Error(`\u0641\u0634\u0644 \u062C\u0644\u0628 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 \u0645\u0646 ${t}: ${e.message}`)}},async executeModule(t,e,s){return new Promise((r,n)=>{try{const o=document.createElement("script");if(o.type="text/javascript",o.setAttribute("data-module",e),o.setAttribute("data-module-path",s),t.startsWith("data:")||t.startsWith("javascript:"),o.textContent=t,o.onerror=i=>{n(new Error(`\u0641\u0634\u0644 \u062A\u0646\u0641\u064A\u0630 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 ${e}: ${i.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"}`))},o.onload=()=>{if(typeof window[e]<"u")if(typeof window[e].init=="function")try{const i=window[e].init();i instanceof Promise?i.then(()=>r()).catch(n):r()}catch{r()}else r();else r()},document.head.appendChild(o),o.textContent)try{if(new Function(t)(),typeof window[e]<"u")if(typeof window[e].init=="function"){const a=window[e].init();a instanceof Promise?a.then(()=>r()).catch(n):r()}else r();else r()}catch(i){n(new Error(`\u0641\u0634\u0644 \u062A\u0646\u0641\u064A\u0630 \u0643\u0648\u062F \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644: ${i.message}`))}}catch(o){n(o)}})},addToHistory(t,e,s,r,n=null){const o={id:Date.now().toString(),timestamp:new Date().toISOString(),action:t,moduleName:e,modulePath:s,success:r,error:n||null,user:AppState?.currentUser?.email||"System"};this.loadHistory.unshift(o),this.loadHistory.length>100&&(this.loadHistory=this.loadHistory.slice(0,100))},getLoadedModules(){const t=[];return this.loadedModules.forEach((e,s)=>{t.push({name:s,path:e.path,loadedAt:e.loadedAt,version:e.version})}),t},isModuleLoaded(t){return this.loadedModules.has(t)},getModuleInfo(t){if(!this.loadedModules.has(t))return null;const e=this.loadedModules.get(t);return{name:t,...e,exists:typeof window[t]<"u"}},async loadModules(t){const e=[];for(const s of t)try{const r=await this.loadModule(s.path,s.name,s.options||{});e.push({module:s.name,success:!0,result:r})}catch(r){e.push({module:s.name,success:!1,error:r.message})}return e},async reloadAllModules(){const t=Array.from(this.loadedModules.entries()),e=[];for(const[s,r]of t)try{await this.reloadModule(r.path,s),e.push({module:s,success:!0})}catch(n){e.push({module:s,success:!1,error:n.message})}return e}};typeof window<"u"&&(window.DynamicModuleLoader=DynamicModuleLoader);
+/* ========================================
+   نظام تحميل الموديولات الديناميكية
+   Dynamic Module Loader System
+   ======================================== */
+
+/**
+ * نظام تحميل الموديولات الديناميكية
+ * يسمح بتحميل وإعادة تحميل الموديولات بدون إعادة تحميل الصفحة
+ */
+const dmlLog = (...args) => {
+    try {
+        if (typeof Utils !== 'undefined' && typeof Utils.safeLog === 'function') {
+            Utils.safeLog(...args);
+        }
+    } catch (e) { /* ignore */ }
+};
+
+const DynamicModuleLoader = {
+    // الموديولات المحملة
+    loadedModules: new Map(),
+    
+    // سجل التحميل
+    loadHistory: [],
+
+    /**
+     * تحميل موديول جديد
+     */
+    async loadModule(modulePath, moduleName, options = {}) {
+        try {
+            dmlLog(`📦 تحميل الموديول: ${moduleName} من ${modulePath}`);
+            
+            // التحقق من وجود الموديول
+            if (this.loadedModules.has(moduleName)) {
+                console.warn(`⚠️ الموديول ${moduleName} محمل بالفعل`);
+                if (!options.forceReload) {
+                    return { success: true, message: 'الموديول محمل بالفعل', cached: true };
+                }
+                // إعادة التحميل إذا طُلب
+                await this.unloadModule(moduleName);
+            }
+            
+            // تحميل الموديول
+            const moduleCode = await this.fetchModule(modulePath);
+            
+            // تنفيذ الموديول
+            await this.executeModule(moduleCode, moduleName, modulePath);
+            
+            // حفظ في السجل
+            this.loadedModules.set(moduleName, {
+                path: modulePath,
+                loadedAt: new Date().toISOString(),
+                version: options.version || '1.0.0'
+            });
+            
+            this.addToHistory('load', moduleName, modulePath, true);
+            
+            dmlLog(`✅ تم تحميل الموديول: ${moduleName}`);
+            
+            return { success: true, message: `تم تحميل ${moduleName} بنجاح` };
+        } catch (error) {
+            console.error(`❌ خطأ في تحميل الموديول ${moduleName}:`, error);
+            this.addToHistory('load', moduleName, modulePath, false, error.message);
+            throw error;
+        }
+    },
+
+    /**
+     * إعادة تحميل موديول
+     */
+    async reloadModule(modulePath, moduleName) {
+        try {
+            dmlLog(`🔄 إعادة تحميل الموديول: ${moduleName}`);
+            
+            // إلغاء تحميل الموديول القديم
+            await this.unloadModule(moduleName);
+            
+            // تحميل الموديول الجديد
+            await this.loadModule(modulePath, moduleName, { forceReload: true });
+            
+            return { success: true, message: `تم إعادة تحميل ${moduleName} بنجاح` };
+        } catch (error) {
+            console.error(`❌ خطأ في إعادة تحميل الموديول ${moduleName}:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * إلغاء تحميل موديول
+     */
+    async unloadModule(moduleName) {
+        try {
+            dmlLog(`🗑️ إلغاء تحميل الموديول: ${moduleName}`);
+            
+            if (!this.loadedModules.has(moduleName)) {
+                console.warn(`⚠️ الموديول ${moduleName} غير محمل`);
+                return { success: true, message: 'الموديول غير محمل' };
+            }
+            
+            // استدعاء دالة التنظيف إذا كانت موجودة
+            if (typeof window[moduleName] !== 'undefined') {
+                if (typeof window[moduleName].cleanup === 'function') {
+                    try {
+                        await window[moduleName].cleanup();
+                    } catch (cleanupError) {
+                        console.warn(`⚠️ خطأ في تنظيف الموديول ${moduleName}:`, cleanupError);
+                    }
+                }
+                
+                // حذف الكائن من window
+                delete window[moduleName];
+            }
+            
+            // إزالة عنصر script إذا كان موجوداً
+            const scriptElement = document.querySelector(`script[data-module="${moduleName}"]`);
+            if (scriptElement) {
+                scriptElement.remove();
+            }
+            
+            // إزالة من السجل
+            const moduleInfo = this.loadedModules.get(moduleName);
+            this.loadedModules.delete(moduleName);
+            
+            this.addToHistory('unload', moduleName, moduleInfo?.path, true);
+            
+            dmlLog(`✅ تم إلغاء تحميل الموديول: ${moduleName}`);
+            
+            return { success: true, message: `تم إلغاء تحميل ${moduleName} بنجاح` };
+        } catch (error) {
+            console.error(`❌ خطأ في إلغاء تحميل الموديول ${moduleName}:`, error);
+            this.addToHistory('unload', moduleName, null, false, error.message);
+            throw error;
+        }
+    },
+
+    /**
+     * جلب كود الموديول
+     */
+    async fetchModule(modulePath) {
+        try {
+            // إذا كان modulePath هو كود مباشر
+            if (modulePath.startsWith('data:') || modulePath.startsWith('javascript:')) {
+                return modulePath;
+            }
+            
+            // جلب من URL
+            const response = await fetch(modulePath, {
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`فشل جلب الموديول: ${response.statusText}`);
+            }
+            
+            const code = await response.text();
+            return code;
+        } catch (error) {
+            throw new Error(`فشل جلب الموديول من ${modulePath}: ${error.message}`);
+        }
+    },
+
+    /**
+     * تنفيذ كود الموديول
+     */
+    async executeModule(moduleCode, moduleName, modulePath) {
+        return new Promise((resolve, reject) => {
+            try {
+                // إنشاء عنصر script
+                const script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.setAttribute('data-module', moduleName);
+                script.setAttribute('data-module-path', modulePath);
+                
+                // إذا كان الكود مباشر
+                if (moduleCode.startsWith('data:') || moduleCode.startsWith('javascript:')) {
+                    script.textContent = moduleCode;
+                } else {
+                    script.textContent = moduleCode;
+                }
+                
+                // معالجة الأخطاء
+                script.onerror = (error) => {
+                    reject(new Error(`فشل تنفيذ الموديول ${moduleName}: ${error.message || 'خطأ غير معروف'}`));
+                };
+                
+                // عند التحميل الناجح
+                script.onload = () => {
+                    // تهيئة الموديول إذا كان لديه دالة init
+                    if (typeof window[moduleName] !== 'undefined') {
+                        if (typeof window[moduleName].init === 'function') {
+                            try {
+                                const initResult = window[moduleName].init();
+                                if (initResult instanceof Promise) {
+                                    initResult.then(() => resolve()).catch(reject);
+                                } else {
+                                    resolve();
+                                }
+                            } catch (initError) {
+                                console.warn(`⚠️ خطأ في تهيئة الموديول ${moduleName}:`, initError);
+                                resolve(); // نستمر حتى لو فشلت التهيئة
+                            }
+                        } else {
+                            resolve();
+                        }
+                    } else {
+                        resolve();
+                    }
+                };
+                
+                // إضافة للصفحة
+                document.head.appendChild(script);
+                
+                // إذا كان الكود نصي مباشر، يتم تنفيذه فوراً
+                if (script.textContent) {
+                    // محاولة تنفيذ مباشر
+                    try {
+                        // استخدام Function constructor لتجنب مشاكل النطاق
+                        const func = new Function(moduleCode);
+                        func();
+                        
+                        // تهيئة الموديول
+                        if (typeof window[moduleName] !== 'undefined') {
+                            if (typeof window[moduleName].init === 'function') {
+                                const initResult = window[moduleName].init();
+                                if (initResult instanceof Promise) {
+                                    initResult.then(() => resolve()).catch(reject);
+                                } else {
+                                    resolve();
+                                }
+                            } else {
+                                resolve();
+                            }
+                        } else {
+                            resolve();
+                        }
+                    } catch (execError) {
+                        reject(new Error(`فشل تنفيذ كود الموديول: ${execError.message}`));
+                    }
+                }
+            } catch (error) {
+                reject(error);
+            }
+        });
+    },
+
+    /**
+     * إضافة للسجل
+     */
+    addToHistory(action, moduleName, modulePath, success, error = null) {
+        const entry = {
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString(),
+            action, // 'load', 'unload', 'reload'
+            moduleName,
+            modulePath,
+            success,
+            error: error || null,
+            user: AppState?.currentUser?.email || 'System'
+        };
+        
+        this.loadHistory.unshift(entry);
+        
+        // الاحتفاظ بآخر 100 سجل
+        if (this.loadHistory.length > 100) {
+            this.loadHistory = this.loadHistory.slice(0, 100);
+        }
+    },
+
+    /**
+     * الحصول على قائمة الموديولات المحملة
+     */
+    getLoadedModules() {
+        const modules = [];
+        this.loadedModules.forEach((info, name) => {
+            modules.push({
+                name,
+                path: info.path,
+                loadedAt: info.loadedAt,
+                version: info.version
+            });
+        });
+        return modules;
+    },
+
+    /**
+     * التحقق من وجود موديول
+     */
+    isModuleLoaded(moduleName) {
+        return this.loadedModules.has(moduleName);
+    },
+
+    /**
+     * الحصول على معلومات موديول
+     */
+    getModuleInfo(moduleName) {
+        if (!this.loadedModules.has(moduleName)) {
+            return null;
+        }
+        
+        const info = this.loadedModules.get(moduleName);
+        return {
+            name: moduleName,
+            ...info,
+            exists: typeof window[moduleName] !== 'undefined'
+        };
+    },
+
+    /**
+     * تحميل عدة موديولات
+     */
+    async loadModules(modules) {
+        const results = [];
+        
+        for (const module of modules) {
+            try {
+                const result = await this.loadModule(
+                    module.path,
+                    module.name,
+                    module.options || {}
+                );
+                results.push({ module: module.name, success: true, result });
+            } catch (error) {
+                results.push({ module: module.name, success: false, error: error.message });
+            }
+        }
+        
+        return results;
+    },
+
+    /**
+     * إعادة تحميل جميع الموديولات
+     */
+    async reloadAllModules() {
+        const modules = Array.from(this.loadedModules.entries());
+        const results = [];
+        
+        for (const [name, info] of modules) {
+            try {
+                await this.reloadModule(info.path, name);
+                results.push({ module: name, success: true });
+            } catch (error) {
+                results.push({ module: name, success: false, error: error.message });
+            }
+        }
+        
+        return results;
+    }
+};
+
+// تصدير للاستخدام العام
+if (typeof window !== 'undefined') {
+    window.DynamicModuleLoader = DynamicModuleLoader;
+}
+

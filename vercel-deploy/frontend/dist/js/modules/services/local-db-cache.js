@@ -1,1 +1,260 @@
-const LocalDBCache={DB_NAME:"HSE_Local_Cache_DB",DB_VERSION:1,STORE_APP_DATA:"appData",STORE_SYNC_META:"syncMeta",_dbPromise:null,async init(){return this._dbPromise?this._dbPromise:(this._dbPromise=new Promise((a,n)=>{if(typeof indexedDB>"u"){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F IndexedDB \u063A\u064A\u0631 \u0645\u062F\u0639\u0648\u0645 \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u062A\u0635\u0641\u062D \u2014 \u0633\u064A\u0639\u062A\u0645\u062F \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0639\u0644\u0649 Memory/LocalStorage"),a(null);return}const t=indexedDB.open(this.DB_NAME,this.DB_VERSION);t.onupgradeneeded=e=>{const s=e.target.result;s.objectStoreNames.contains(this.STORE_APP_DATA)||s.createObjectStore(this.STORE_APP_DATA,{keyPath:"key"}),s.objectStoreNames.contains(this.STORE_SYNC_META)||s.createObjectStore(this.STORE_SYNC_META,{keyPath:"key"})},t.onsuccess=e=>{const s=e.target.result;s.onversionchange=()=>{s.close(),this._dbPromise=null},a(s)},t.onerror=e=>{typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0641\u062A\u062D IndexedDB:",e.target.error),a(null)}}),this._dbPromise)},sanitizeData(a,n){if(!n)return n;if(Array.isArray(n))return n.filter(t=>!t||typeof t!="object"?!0:!String(t.id||t.permitId||"").includes("_TMP_"));if(typeof n=="object"){const t={...n};return Object.keys(t).forEach(e=>{Array.isArray(t[e])&&(t[e]=this.sanitizeData(e,t[e]))}),t}return n},async set(a,n,t=this.STORE_APP_DATA){try{const e=await this.init();if(!e)return!1;const s=this.sanitizeData(a,n);return new Promise(u=>{try{const o=e.transaction(t,"readwrite");o.onerror=i=>{i&&i.preventDefault&&i.preventDefault(),u(!1)},o.onabort=i=>{i&&i.preventDefault&&i.preventDefault(),u(!1)};const r=o.objectStore(t),c={key:a,value:s,updatedAt:Date.now()},f=r.put(c);f.onsuccess=()=>u(!0),f.onerror=i=>{i&&i.preventDefault&&i.preventDefault(),u(!1)}}catch{u(!1)}})}catch{return!1}},async get(a,n=this.STORE_APP_DATA){try{const t=await this.init();return t?new Promise(e=>{try{const s=t.transaction(n,"readonly");s.onerror=r=>{r&&r.preventDefault&&r.preventDefault(),e(null)},s.onabort=r=>{r&&r.preventDefault&&r.preventDefault(),e(null)};const o=s.objectStore(n).get(a);o.onsuccess=r=>{const c=r.target.result;e(c?c.value:null)},o.onerror=r=>{r&&r.preventDefault&&r.preventDefault(),e(null)}}catch{e(null)}}):null}catch{return null}},async remove(a,n=this.STORE_APP_DATA){try{const t=await this.init();return t?new Promise(e=>{try{const s=t.transaction(n,"readwrite");s.onerror=r=>{r&&r.preventDefault&&r.preventDefault(),e(!1)},s.onabort=r=>{r&&r.preventDefault&&r.preventDefault(),e(!1)};const o=s.objectStore(n).delete(a);o.onsuccess=()=>e(!0),o.onerror=r=>{r&&r.preventDefault&&r.preventDefault(),e(!1)}}catch{e(!1)}}):!1}catch{return!1}},async clear(){try{const a=await this.init();return a?new Promise(n=>{const t=a.transaction([this.STORE_APP_DATA,this.STORE_SYNC_META],"readwrite");t.objectStore(this.STORE_APP_DATA).clear(),t.objectStore(this.STORE_SYNC_META).clear(),t.oncomplete=()=>n(!0),t.onerror=()=>n(!1)}):!1}catch{return!1}},async purgeStaleCache(a=60){try{const n=await this.init();if(!n)return!1;const t=Date.now()-a*24*60*60*1e3;return new Promise(e=>{const o=n.transaction(this.STORE_APP_DATA,"readwrite").objectStore(this.STORE_APP_DATA).openCursor();o.onsuccess=r=>{const c=r.target.result;if(c){const f=c.value;f&&f.updatedAt&&f.updatedAt<t&&c.delete(),c.continue()}else e(!0)},o.onerror=()=>e(!1)})}catch{return!1}}};typeof window<"u"&&(window.LocalDBCache=LocalDBCache);
+/**
+ * LocalDBCache - خدمة التخزين المحلي عالي السعة عبر IndexedDB
+ * توفر استرجاع لحظي (0ms) للبيانات عند الريفرش وتتجاوز حد الـ 5MB للـ localStorage
+ */
+const LocalDBCache = {
+    DB_NAME: 'HSE_Local_Cache_DB',
+    DB_VERSION: 1,
+    STORE_APP_DATA: 'appData',
+    STORE_SYNC_META: 'syncMeta',
+    _dbPromise: null,
+
+    /**
+     * إعداد وفتح قاعدة البيانات
+     */
+    async init() {
+        if (this._dbPromise) return this._dbPromise;
+
+        this._dbPromise = new Promise((resolve, reject) => {
+            if (typeof indexedDB === 'undefined') {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ IndexedDB غير مدعوم في هذا المتصفح — سيعتمد التطبيق على Memory/LocalStorage');
+                }
+                resolve(null);
+                return;
+            }
+
+            const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(this.STORE_APP_DATA)) {
+                    db.createObjectStore(this.STORE_APP_DATA, { keyPath: 'key' });
+                }
+                if (!db.objectStoreNames.contains(this.STORE_SYNC_META)) {
+                    db.createObjectStore(this.STORE_SYNC_META, { keyPath: 'key' });
+                }
+            };
+
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                db.onversionchange = () => {
+                    db.close();
+                    this._dbPromise = null;
+                };
+                resolve(db);
+            };
+
+            request.onerror = (event) => {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ فشل فتح IndexedDB:', event.target.error);
+                }
+                resolve(null);
+            };
+        });
+
+        return this._dbPromise;
+    },
+
+    /**
+     * تصفية البيانات لحماية النظام وضوابط PTW السليمة (استبعاد _TMP_)
+     */
+    sanitizeData(key, data) {
+        if (!data) return data;
+
+        if (Array.isArray(data)) {
+            return data.filter(item => {
+                if (!item || typeof item !== 'object') return true;
+                const idStr = String(item.id || item.permitId || '');
+                return !idStr.includes('_TMP_');
+            });
+        }
+
+        if (typeof data === 'object') {
+            const cleaned = { ...data };
+            Object.keys(cleaned).forEach(k => {
+                if (Array.isArray(cleaned[k])) {
+                    cleaned[k] = this.sanitizeData(k, cleaned[k]);
+                }
+            });
+            return cleaned;
+        }
+
+        return data;
+    },
+
+    /**
+     * حفظ عنصر في IndexedDB
+     */
+    async set(key, value, storeName = this.STORE_APP_DATA) {
+        try {
+            const db = await this.init();
+            if (!db) return false;
+
+            const sanitized = this.sanitizeData(key, value);
+
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(storeName, 'readwrite');
+                    tx.onerror = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(false);
+                    };
+                    tx.onabort = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(false);
+                    };
+                    const store = tx.objectStore(storeName);
+                    const record = {
+                        key: key,
+                        value: sanitized,
+                        updatedAt: Date.now()
+                    };
+                    const request = store.put(record);
+
+                    request.onsuccess = () => resolve(true);
+                    request.onerror = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(false);
+                    };
+                } catch (txErr) {
+                    resolve(false);
+                }
+            });
+        } catch (error) {
+            return false;
+        }
+    },
+
+    /**
+     * جلب عنصر من IndexedDB
+     */
+    async get(key, storeName = this.STORE_APP_DATA) {
+        try {
+            const db = await this.init();
+            if (!db) return null;
+
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(storeName, 'readonly');
+                    tx.onerror = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(null);
+                    };
+                    tx.onabort = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(null);
+                    };
+                    const store = tx.objectStore(storeName);
+                    const request = store.get(key);
+
+                    request.onsuccess = (event) => {
+                        const record = event.target.result;
+                        resolve(record ? record.value : null);
+                    };
+                    request.onerror = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(null);
+                    };
+                } catch (txErr) {
+                    resolve(null);
+                }
+            });
+        } catch (error) {
+            return null;
+        }
+    },
+
+    /**
+     * حذف عنصر
+     */
+    async remove(key, storeName = this.STORE_APP_DATA) {
+        try {
+            const db = await this.init();
+            if (!db) return false;
+
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(storeName, 'readwrite');
+                    tx.onerror = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(false);
+                    };
+                    tx.onabort = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(false);
+                    };
+                    const store = tx.objectStore(storeName);
+                    const request = store.delete(key);
+                    request.onsuccess = () => resolve(true);
+                    request.onerror = (e) => {
+                        if (e && e.preventDefault) e.preventDefault();
+                        resolve(false);
+                    };
+                } catch (txErr) {
+                    resolve(false);
+                }
+            });
+        } catch (error) {
+            return false;
+        }
+    },
+
+    /**
+     * مسح كل البيانات من IndexedDB
+     */
+    async clear() {
+        try {
+            const db = await this.init();
+            if (!db) return false;
+
+            return new Promise((resolve) => {
+                const tx = db.transaction([this.STORE_APP_DATA, this.STORE_SYNC_META], 'readwrite');
+                tx.objectStore(this.STORE_APP_DATA).clear();
+                tx.objectStore(this.STORE_SYNC_META).clear();
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            });
+        } catch (error) {
+            return false;
+        }
+    },
+
+    /**
+     * تنظيف دائم وصامت للسجلات التي تجاوزت مدة معينة في الكاش المحرز (افتراضياً 60 يوماً)
+     */
+    async purgeStaleCache(maxAgeDays = 60) {
+        try {
+            const db = await this.init();
+            if (!db) return false;
+
+            const cutoff = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000);
+
+            return new Promise((resolve) => {
+                const tx = db.transaction(this.STORE_APP_DATA, 'readwrite');
+                const store = tx.objectStore(this.STORE_APP_DATA);
+                const request = store.openCursor();
+
+                request.onsuccess = (event) => {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        const record = cursor.value;
+                        if (record && record.updatedAt && record.updatedAt < cutoff) {
+                            cursor.delete();
+                        }
+                        cursor.continue();
+                    } else {
+                        resolve(true);
+                    }
+                };
+                request.onerror = () => resolve(false);
+            });
+        } catch (error) {
+            return false;
+        }
+    }
+};
+
+if (typeof window !== 'undefined') {
+    window.LocalDBCache = LocalDBCache;
+}
