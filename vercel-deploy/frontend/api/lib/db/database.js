@@ -19,6 +19,26 @@ function initDatabase(overridePath = null) {
         try { fs.mkdirSync(dbDir, { recursive: true }); } catch (_) {}
     }
 
+    // Auto-decompress lightweight bundled database on serverless cold start
+    if (!fs.existsSync(dbPath) || fs.statSync(dbPath).size === 0) {
+        const zlib = require('zlib');
+        const candidateGz = [
+            dbPath + '.gz',
+            path.join(__dirname, '..', 'data', 'clinic_hse.db.gz'),
+            path.join(__dirname, '..', '..', 'lib', 'data', 'clinic_hse.db.gz'),
+            path.join(process.cwd(), 'api', 'lib', 'data', 'clinic_hse.db.gz')
+        ];
+        for (const gzFile of candidateGz) {
+            if (fs.existsSync(gzFile)) {
+                try {
+                    const decompressed = zlib.gunzipSync(fs.readFileSync(gzFile));
+                    fs.writeFileSync(dbPath, decompressed);
+                    break;
+                } catch (_) {}
+            }
+        }
+    }
+
     let sqliteDb = null;
     let engineType = 'node:sqlite';
 

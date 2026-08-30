@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1495",
+  "version": "1.0.1496",
   "highlights": {
     "ar": [
-      "تحديث خيارات الفلترة والتحكم في عدد الملاحظات المصدرة لعروض PPT بدون حد 50 ملاحظة.",
-      "إضافة فلترة شاملة لكافة حالات الملاحظات (المفتوحة، المغلقة، الجارية، والمعلقة).",
-      "تحسين أداء وسرعة جلب وتضمن الصور داخل ملفات العروض التقديمية PPTX."
+      "فصل نموذج تسجيل الزائرين لبوابات الأمن كلياً وإزالة زر العودة للبوابة لضمان الخصوصية والاستقلالية.",
+      "تثبيت مستقل (Standalone PWA) مخصص لأفراد الأمن على البوابات.",
+      "تحسين مسارات النشر واستقرار الأداء عبر محرك SQL السريع."
     ],
     "en": [
-      "Updated PPT export filters and slide count controls to export all notes beyond the 50 limit.",
-      "Added complete status filtering (Open, Closed, In Progress, Pending).",
-      "Enhanced image fetching and embedding performance for PPTX presentations."
+      "Completely separated Gate Security Visitor Registration form and removed Back to Portal button.",
+      "Standalone scoped PWA dedicated for Security Officers at gates.",
+      "Optimized deployment routing and stability over fast SQL engine."
     ]
   }
 }
