@@ -1,10 +1,5 @@
 {
   "outputDirectory": "dist",
-  "functions": {
-    "api/*.js": {
-      "includeFiles": "api/lib/data/**"
-    }
-  },
   "redirects": [
     {
       "source": "/(.*)",
@@ -35,20 +30,32 @@
       "headers": [
         { "key": "Content-Type", "value": "application/javascript; charset=utf-8" },
         { "key": "Service-Worker-Allowed", "value": "/" },
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     },
     {
       "source": "/manifest.json",
       "headers": [
         { "key": "Content-Type", "value": "application/manifest+json" },
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     },
     {
       "source": "/manifest-visitor.json",
       "headers": [
         { "key": "Content-Type", "value": "application/manifest+json" },
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
       ]
     },
@@ -59,18 +66,36 @@
       ]
     },
     {
-      "source": "/",
+      "source": "/icons/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     },
     {
-      "source": "/api/(.*)",
+      "source": "/(.*).js",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Requested-With, X-CSRF-Token" }
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/(.*).css",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     }
+  ],
+  "rewrites": [
+    { "source": "/forms", "destination": "/forms-hub.html" },
+    { "source": "/forms-hub", "destination": "/forms-hub.html" },
+    { "source": "/gate", "destination": "/gate-visitor-entry.html" },
+    { "source": "/visitors", "destination": "/gate-visitor-entry.html" },
+    { "source": "/gate-visitor-entry", "destination": "/gate-visitor-entry.html" },
+    { "source": "/obs", "destination": "/public-observation.html" },
+    { "source": "/observation", "destination": "/public-observation.html" },
+    { "source": "/near-miss", "destination": "/public-near-miss.html" },
+    { "source": "/fire", "destination": "/public-fire-inspection.html" },
+    { "source": "/fire-inspection", "destination": "/public-fire-inspection.html" },
+    { "source": "/daily-safety", "destination": "/public-daily-safety.html" },
+    { "source": "/patrol", "destination": "/public-daily-safety.html" }
   ]
 }
