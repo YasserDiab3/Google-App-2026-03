@@ -2,21 +2,21 @@
   "name": "نظام تسجيل الزائرين وبوابات الأمن | ICAPP",
   "short_name": "تسجيل الزوار",
   "description": "نموذج ونظام تسجيل الزائرين والمقاولين عند بوابات الأمن - ICAPP",
-  "start_url": "./gate-visitor-entry.html",
-  "scope": "./gate-visitor-entry.html",
+  "start_url": "/gate-visitor-entry",
+  "scope": "/gate-visitor-entry",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#1e40af",
   "orientation": "any",
   "icons": [
     {
-      "src": "icons/icapp-logo.png",
+      "src": "/icons/icapp-logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icons/icapp-logo.png",
+      "src": "/icons/icapp-logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

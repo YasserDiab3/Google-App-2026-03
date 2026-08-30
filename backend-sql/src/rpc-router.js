@@ -16,6 +16,11 @@ const ActionRegistry = {
     ...moduleHandlers
 };
 
+// Automated & On-Demand Backup Actions
+const { createBackup, listBackups } = require('./services/backup-service');
+ActionRegistry['createDatabaseBackup'] = () => createBackup();
+ActionRegistry['listDatabaseBackups'] = () => ({ success: true, data: listBackups() });
+
 /**
  * Dispatches an incoming RPC request
  * @param {Object} reqBody The POST body sent by the frontend

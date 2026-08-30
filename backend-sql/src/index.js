@@ -9,12 +9,16 @@ const config = require('./config/config');
 const { initDatabase } = require('./db/database');
 const { initSchema } = require('./db/schema-init');
 const { handleRpcRequest } = require('./rpc-router');
+const { startDailyBackupScheduler } = require('./services/backup-service');
 
 const app = express();
 
 // Initialize Database & Schema
 const db = initDatabase();
 initSchema(db);
+
+// Start Automated Backup Scheduler
+startDailyBackupScheduler(db);
 
 // CORS configuration (supports all origins for dev/production)
 app.use(cors({
