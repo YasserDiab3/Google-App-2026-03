@@ -102,11 +102,26 @@ const genericSheetOps = {
 
         const db = getDatabase();
         try {
-            db.saveToSheet(sheetName, rows);
+            // Upsert: update existing rows by id, insert new ones
+            let inserted = 0, updated = 0;
+            for (const row of rows) {
+                if (row.id) {
+                    const existing = db.readFromSheet(sheetName, { id: row.id });
+                    if (existing && existing.length > 0) {
+                        db.updateRow(sheetName, 'id', row.id, row);
+                        updated++;
+                        continue;
+                    }
+                }
+                db.appendToSheet(sheetName, row);
+                inserted++;
+            }
             return {
                 success: true,
                 message: `تم حفظ البيانات في ورقة ${sheetName} بنجاح`,
                 count: rows.length,
+                inserted,
+                updated,
                 timestamp: new Date().toISOString()
             };
         } catch (err) {
@@ -153,8 +168,8 @@ const genericSheetOps = {
 
     'updateRow': function(payload, postData, action, actorUserData) {
         const sheetName = payload?.sheetName || postData?.sheetName;
-        const id = payload?.id || postData?.id || payload?.data?.id;
-        const updateData = payload?.data || postData?.data;
+        const id = payload?.id || postData?.id || payload?.recordId || postData?.recordId;
+        const updateData = payload?.updateData || payload?.data || postData?.updateData || postData?.data;
 
         if (!sheetName || !id || !updateData) {
             return { success: false, message: 'المعطيات غير مكتملة للتعديل', errorCode: 'INVALID_UPDATE_PAYLOAD' };

@@ -21,6 +21,13 @@ function sanitizeIdentifier(name) {
     return clean;
 }
 
+function formatSqliteValue(val) {
+    if (val === undefined || val === null) return null;
+    if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+    if (typeof val === 'object') return JSON.stringify(val);
+    return val;
+}
+
 let dbInstance = null;
 
 function initDatabase(overridePath = null) {
@@ -166,12 +173,7 @@ function initDatabase(overridePath = null) {
 
                 let count = 0;
                 for (const row of rows) {
-                    const values = columns.map(c => {
-                        const val = row[c];
-                        if (val === undefined || val === null) return null;
-                        if (typeof val === 'object') return JSON.stringify(val);
-                        return val;
-                    });
+                    const values = columns.map(c => formatSqliteValue(row[c]));
                     stmt.run(...values);
                     count++;
                 }
@@ -186,12 +188,7 @@ function initDatabase(overridePath = null) {
                 const placeholders = columns.map(() => '?').join(', ');
                 const insertSql = `INSERT INTO ${tableName} (${colNames}) VALUES (${placeholders})`;
 
-                const values = columns.map(c => {
-                    const val = row[c];
-                    if (val === undefined || val === null) return null;
-                    if (typeof val === 'object') return JSON.stringify(val);
-                    return val;
-                });
+                const values = columns.map(c => formatSqliteValue(row[c]));
 
                 this.run(insertSql, values);
                 return row;
@@ -230,12 +227,12 @@ function initDatabase(overridePath = null) {
                     if (validCols && !validCols.has(key)) continue;
                     const safeCol = sanitizeIdentifier(key);
                     setClauses.push(`"${safeCol}" = ?`);
-                    values.push(typeof val === 'object' && val !== null ? JSON.stringify(val) : val);
+                    values.push(formatSqliteValue(val));
                 }
 
                 if (setClauses.length === 0) return 0;
 
-                values.push(keyVal);
+                values.push(formatSqliteValue(keyVal));
                 const updateSql = `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE "${safeKeyCol}" = ?`;
                 const result = this.run(updateSql, values);
                 return result.changes;
