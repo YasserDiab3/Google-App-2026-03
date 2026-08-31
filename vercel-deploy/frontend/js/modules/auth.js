@@ -219,13 +219,15 @@ window.Auth = {
 
             const nowIso = new Date().toISOString();
             const sessionId = this._getPresenceSessionId();
+            const authSessionId = this._getServerSessionToken();
             const users = AppState.appData?.users;
             if (Array.isArray(users)) {
                 const idx = users.findIndex((u) => u && String(u.id) === String(user.id));
                 if (idx !== -1) {
                     users[idx].isOnline = true;
                     users[idx].lastPresenceAt = nowIso;
-                    if (sessionId) users[idx].activeSessionId = sessionId;
+                    // لا نكتب SESS_ محلياً في activeSessionId — يتعارض مع token الخادم SES_
+                    if (authSessionId) users[idx].activeSessionId = authSessionId;
                 }
             }
 
@@ -347,7 +349,8 @@ window.Auth = {
         if (!this._presenceUnloadBound && typeof window !== 'undefined') {
             this._presenceUnloadBound = true;
             const onPageHide = () => {
-                try { this.markPresenceOffline({ beacon: true }); } catch (_e) { /* ignore */ }
+                // إعادة التحميل/إغلاق التبويب: محلي فقط — لا نُسقط جلسة الخادم عبر markUserOffline
+                try { this.markPresenceOffline({ beacon: true, localOnly: true }); } catch (_e) { /* ignore */ }
             };
             window.addEventListener('pagehide', onPageHide);
             document.addEventListener('visibilitychange', () => {
@@ -439,15 +442,33 @@ window.Auth = {
         try { AppState.isPageRefresh = false; } catch (e2) { /* ignore */ }
     },
 
-    _hasValidServerSessionToken() {
+    _getServerSessionToken() {
         try {
-            const st = sessionStorage.getItem('hse_server_session_token') ||
+            return String(
+                sessionStorage.getItem('hse_server_session_token') ||
                 localStorage.getItem('hse_server_session_token') ||
-                (typeof AppState !== 'undefined' && AppState.currentUser && AppState.currentUser.serverSessionToken);
-            return !!(st && String(st).trim().length >= 16);
+                (typeof AppState !== 'undefined' && AppState.currentUser && AppState.currentUser.serverSessionToken) ||
+                ''
+            ).trim();
         } catch (_e) {
-            return false;
+            return '';
         }
+    },
+
+    /** معرّف الجلسة للمقارنة مع activeSessionId في قاعدة البيانات (token خادم وليس SESS_ محلي) */
+    _getAuthSessionIdForCompare() {
+        const serverToken = this._getServerSessionToken();
+        if (serverToken) return serverToken;
+        try {
+            return sessionStorage.getItem('hse_session_id') || AppState?.currentUser?.sessionId || '';
+        } catch (_e) {
+            return AppState?.currentUser?.sessionId || '';
+        }
+    },
+
+    _hasValidServerSessionToken() {
+        const st = this._getServerSessionToken();
+        return !!(st && st.length >= 16);
     },
 
     /** جلسة UI قديمة بلا token خادم — بعد تقوية SQL تُرفض القراءات وتظهر الواجهة فارغة */
@@ -1236,6 +1257,7 @@ window.Auth = {
             sessionStorage.setItem('hse_session_id', currentSessionId);
         }
         AppState.currentUser.sessionId = currentSessionId;
+        const serverAuthSessionId = this._getServerSessionToken() || currentSessionId;
         this._touchSessionActivity();
 
         if (typeof UserActivityLog !== 'undefined') {
@@ -1251,7 +1273,7 @@ window.Auth = {
         if (userIndex !== -1) {
             usersList[userIndex].lastLogin = loginTime;
             usersList[userIndex].isOnline = true;
-            usersList[userIndex].activeSessionId = currentSessionId; // حفظ معرف الجلسة
+            usersList[userIndex].activeSessionId = serverAuthSessionId;
             let history = usersList[userIndex].loginHistory;
             if (typeof history === 'string') {
                 try {
@@ -1323,7 +1345,7 @@ window.Auth = {
                 permissions: user.permissions || {},
                 lastLogin: loginTime,
                 isOnline: true,
-                activeSessionId: currentSessionId,
+                activeSessionId: serverAuthSessionId,
                 loginHistory: [{
                     time: loginTime,
                     ip: 'N/A',
@@ -1813,8 +1835,9 @@ window.Auth = {
 
                         // التحقق من معرف الجلسة: عند إعادة التحميل (نفس التبويب) لا نرفض الجلسة بسبب كاش قديم
                         if (!currentSessionId) currentSessionId = sessionStorage.getItem('hse_session_id');
+                        const authSessionId = this._getAuthSessionIdForCompare();
                         if (foundUser && foundUser.isOnline === true && foundUser.activeSessionId && !AppState.isPageRefresh) {
-                            if (foundUser.activeSessionId !== currentSessionId) {
+                            if (foundUser.activeSessionId !== authSessionId) {
                                 Utils.safeWarn('⚠️ المستخدم متصل من جهاز آخر - لا يمكن استعادة الجلسة');
                                 sessionStorage.removeItem('hse_current_session');
                                 localStorage.removeItem('hse_remember_user');
@@ -1824,8 +1847,8 @@ window.Auth = {
                             }
                         }
 
-                        // التحقق من أن معرف الجلسة في بيانات الجلسة يطابق المعرف الحالي
-                        if (user.sessionId && currentSessionId && user.sessionId !== currentSessionId) {
+                        // التحقق من أن معرف الجلسة في بيانات الجلسة يطابق المعرف الحالي (ليس أثناء F5)
+                        if (!AppState.isPageRefresh && user.sessionId && currentSessionId && user.sessionId !== currentSessionId) {
                             Utils.safeWarn('⚠️ معرف الجلسة غير متطابق - مسح الجلسة القديمة');
                             sessionStorage.removeItem('hse_current_session');
                             localStorage.removeItem('hse_remember_user');
@@ -2002,7 +2025,8 @@ window.Auth = {
                         }
 
                         if (foundUser && foundUser.isOnline === true && foundUser.activeSessionId && !AppState.isPageRefresh) {
-                            if (foundUser.activeSessionId !== currentSessionId) {
+                            const authSessionId = this._getAuthSessionIdForCompare();
+                            if (foundUser.activeSessionId !== authSessionId) {
                                 Utils.safeWarn('⚠️ المستخدم متصل من جهاز آخر - لا يمكن استعادة الجلسة من localStorage');
                                 localStorage.removeItem('hse_remember_user');
                                 sessionStorage.removeItem('hse_session_id');
@@ -2011,7 +2035,7 @@ window.Auth = {
                             }
                         }
 
-                        if (user.sessionId && currentSessionId && user.sessionId !== currentSessionId) {
+                        if (!AppState.isPageRefresh && user.sessionId && currentSessionId && user.sessionId !== currentSessionId) {
                             Utils.safeWarn('⚠️ معرف الجلسة في localStorage غير متطابق - مسح الجلسة القديمة');
                             localStorage.removeItem('hse_remember_user');
                             AppState.isPageRefresh = false;
@@ -2267,6 +2291,7 @@ window.Auth = {
                 permissions: permissionsToSave, // استخدام الصلاحيات المدققة
                 id: AppState.currentUser.id,
                 loginTime: AppState.currentUser.loginTime,
+                sessionId: AppState.currentUser.sessionId || sessionStorage.getItem('hse_session_id') || '',
                 photo: AppState.currentUser.photo || '' // ✅ حفظ الصورة لاستعادتها عند فتح الصفحة
             };
 

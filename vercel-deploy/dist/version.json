@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1560",
+  "version": "1.0.1562",
   "highlights": {
     "ar": [
-      "إصلاح الواجهة الفارغة: جلسة بدون token تُوجّه لإعادة تسجيل الدخول تلقائياً.",
-      "رسالة واضحة بعد التحديث الأمني بدل شاشة بيانات فارغة.",
-      "تحسين التعامل مع SESSION_TOKEN_MISSING وSESSION_EXPIRED."
+      "إصلاح الخروج التلقائي عند إعادة تحميل الصفحة (F5) — الجلسة تبقى نشطة.",
+      "توحيد token الجلسة بين الواجهة والخادم وإصلاح تعارض SESS/SES.",
+      "مزامنة قاعدة SQL من Excel (142 ورقة) مع bundle النشر."
     ],
     "en": [
-      "Fix empty UI: sessions without server token now redirect to login.",
-      "Clear message after security update instead of blank data screens.",
-      "Better handling of SESSION_TOKEN_MISSING and SESSION_EXPIRED."
+      "Fix auto-logout on page reload (F5) — session stays active.",
+      "Unified session token between UI and server; SESS/SES mismatch repair.",
+      "SQL database synced from Excel (142 sheets) with deploy bundle."
     ]
   }
 }

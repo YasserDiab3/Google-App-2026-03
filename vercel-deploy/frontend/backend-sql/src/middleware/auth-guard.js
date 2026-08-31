@@ -159,15 +159,19 @@ function validateSessionToken(sessionToken, actorRecord) {
         };
     }
     const stored = String(actorRecord.activeSessionId || '').trim();
-    if (stored && stored !== token) {
-        return {
-            ok: false,
-            success: false,
-            message: 'انتهت صلاحية الجلسة أو تم تسجيل الدخول من جهاز آخر. أعد تسجيل الدخول.',
-            errorCode: 'SESSION_EXPIRED'
-        };
+    if (!stored || stored === token) {
+        return { ok: true };
     }
-    return { ok: true };
+    // Legacy: activeSessionId في DB = SESS_* (واجهة) بينما token المصادقة = SES_*
+    if (stored.startsWith('SESS_') && token.startsWith('SES_')) {
+        return { ok: true, repairSessionId: token };
+    }
+    return {
+        ok: false,
+        success: false,
+        message: 'انتهت صلاحية الجلسة أو تم تسجيل الدخول من جهاز آخر. أعد تسجيل الدخول.',
+        errorCode: 'SESSION_EXPIRED'
+    };
 }
 
 function requireAuthenticatedActor(actorUserData, actionName) {
@@ -373,6 +377,15 @@ function enforceRpcSecurity(action, reqBody) {
 
     const sessionGate = validateSessionToken(sessionToken, authGate.sheetUser);
     if (!sessionGate.ok) return sessionGate;
+
+    if (sessionGate.repairSessionId && authGate.sheetUser?.id) {
+        try {
+            const db = getDatabase();
+            db.updateRow('Users', 'id', authGate.sheetUser.id, {
+                activeSessionId: sessionGate.repairSessionId
+            });
+        } catch (_repairErr) { /* ignore */ }
+    }
 
     if (STRICT_ADMIN_ACTIONS.has(action)) {
         const adminGate = checkAdminActor(actorUserData, action);
