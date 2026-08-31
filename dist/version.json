@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1564",
+  "version": "1.0.1566",
   "highlights": {
     "ar": [
-      "إصلاح تعليق تسجيل دخول المدير — تنظيف جلسات SESS القديمة ومهلة 50 ثانية.",
-      "خطوة MFA أوضح بعد كلمة المرور مع إشعار للمستخدم.",
-      "حفظ token الجلسة من الخادم بعد login/MFA — F5 لا يخرجك.",
-      "تنظيف isOnline في قاعدة SQL من استيراد Excel."
+      "إصلاح دخول yasser@icapp.com — MFA التالف من Excel + تحديث قاعدة SQL.",
+      "MFA على Vercel: tokens موقّعة بدل الذاكرة المؤقتة بين الطلبات.",
+      "سكربت reset-user-password.js لإعادة تعيين كلمات المرور محلياً.",
+      "تنظيف isOnline وجلسات SESS القديمة في bundle النشر."
     ],
     "en": [
-      "Fix admin login hang — stale SESS sessions cleared, 50s timeout.",
-      "Clearer MFA step after password with user notification.",
-      "Server session token saved after login/MFA — F5 keeps you signed in.",
-      "SQL isOnline cleanup from Excel import."
+      "Fix yasser@icapp.com login — corrupt Excel MFA secret + SQL bundle update.",
+      "Vercel MFA: signed challenge tokens instead of ephemeral in-memory store.",
+      "reset-user-password.js script for local password resets.",
+      "Stale isOnline and SESS session cleanup in deploy bundle."
     ]
   }
 }
