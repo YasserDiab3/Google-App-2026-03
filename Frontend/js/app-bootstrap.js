@@ -52,6 +52,27 @@
         } catch (_) {}
     })();
 
+    // 🧹 مزامنة فورية لقاعدة البيانات النظيفة المستوردة ومسح الكاش القديم غير المطابق
+    (function syncCleanDatabaseCache() {
+        try {
+            const SYNC_TAG = 'hse_clean_db_v1528_synced';
+            if (localStorage.getItem('hse_clean_db_tag') !== SYNC_TAG) {
+                localStorage.setItem('hse_clean_db_tag', SYNC_TAG);
+                localStorage.removeItem('hse_app_data');
+                localStorage.removeItem('hse_sync_meta');
+                localStorage.removeItem('hse_data_cache_timestamps');
+                localStorage.removeItem('hse_public_api_url');
+                localStorage.removeItem('HSE_API_URL');
+                sessionStorage.removeItem('hse_app_data');
+                sessionStorage.removeItem('hse_sync_meta');
+                if (typeof indexedDB !== 'undefined') {
+                    try { indexedDB.deleteDatabase('HSELocalCacheDB'); } catch(_) {}
+                    try { indexedDB.deleteDatabase('hse_db'); } catch(_) {}
+                }
+            }
+        } catch (_) {}
+    })();
+
     // Logger صامت في الإنتاج (يعتمد على Utils.safeLog)
     const log = (...args) => {
         try {
@@ -1092,7 +1113,11 @@
             }
 
             if (permissions?.__isAdmin || permissions?.canViewAll || Permissions.isCurrentUserEffectiveAdmin(user)) {
-                requiredData.push('users', 'employees', 'approvedContractors', 'contractors');
+                requiredData.push(
+                    'users', 'employees', 'approvedContractors', 'contractors',
+                    'incidents', 'nearmiss', 'ptw', 'ptwRegistry', 'training',
+                    'clinicVisits', 'clinicContractorVisits', 'injuries', 'clinicContractorInjuries', 'dailyObservations'
+                );
                 return [...new Set(requiredData)];
             }
 
@@ -1112,11 +1137,8 @@
             if (permissions?.canViewTraining) {
                 requiredData.push('training');
             }
-            // PERF/STABLE: لا تجلب ClinicVisits هنا عبر batchRead خام —
-            // يستبدل البيانات المُطبَّعة ويمنع getAllClinicVisits (clinic_last_sync).
-            // سجل التردد يُحمَّل من Clinic.loadVisitsDataFromBackend فقط.
             if (permissions?.canViewClinic) {
-                // لا تدفع clinicVisits / clinicContractorVisits في bootstrap
+                requiredData.push('clinicVisits', 'clinicContractorVisits', 'injuries', 'clinicContractorInjuries');
             }
 
             return [...new Set(requiredData)];
@@ -1135,7 +1157,12 @@
                 'employees': 'getAllEmployees',
                 'training': 'readFromSheet',
                 'clinicVisits': 'readFromSheet',
-                'clinicContractorVisits': 'readFromSheet'
+                'clinicContractorVisits': 'readFromSheet',
+                'injuries': 'readFromSheet',
+                'clinicContractorInjuries': 'readFromSheet',
+                'ptw': 'readFromSheet',
+                'ptwRegistry': 'readFromSheet',
+                'dailyObservations': 'readFromSheet'
             };
 
             return actionMap[dataType] || 'readFromSheet';
@@ -1151,7 +1178,12 @@
                 'nearmiss': 'NearMiss',
                 'training': 'Training',
                 'clinicVisits': 'ClinicVisits',
-                'clinicContractorVisits': 'ClinicContractorVisits'
+                'clinicContractorVisits': 'ClinicContractorVisits',
+                'injuries': 'Injuries',
+                'clinicContractorInjuries': 'ClinicContractorInjuries',
+                'ptw': 'PTW',
+                'ptwRegistry': 'PTWRegistry',
+                'dailyObservations': 'DailyObservations'
             };
             return sheetMap[dataType] || null;
         },
@@ -1170,7 +1202,12 @@
                 'approvedContractors':    'ApprovedContractors',
                 'contractors':            'Contractors',
                 'clinicVisits':           'ClinicVisits',
-                'clinicContractorVisits': 'ClinicContractorVisits'
+                'clinicContractorVisits': 'ClinicContractorVisits',
+                'injuries':               'Injuries',
+                'clinicContractorInjuries': 'ClinicContractorInjuries',
+                'ptw':                    'PTW',
+                'ptwRegistry':            'PTWRegistry',
+                'dailyObservations':      'DailyObservations'
             };
             return map[dataType] || null;
         },
