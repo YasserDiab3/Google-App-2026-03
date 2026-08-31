@@ -381,18 +381,21 @@ const GoogleIntegration = {
     },
 
     /**
-     * التحقق من صحة رابط الباك إند (Google Apps Script أو SQL Tunnel)
+     * التحقق من صحة رابط الباك إند (Google Apps Script أو SQL Serverless / Tunnel)
      */
     isValidGoogleAppsScriptUrl(url) {
         try {
             if (!url || typeof url !== 'string') return false;
-            const urlObj = new URL(url);
+            const trimmed = url.trim();
+            if (trimmed.startsWith('/') || trimmed.startsWith('./')) return true;
+            const base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost';
+            const urlObj = new URL(trimmed, base);
             const host = urlObj.hostname.toLowerCase();
             const path = urlObj.pathname || '';
             if (host === 'script.google.com' || host.endsWith('.script.google.com') || host.includes('googleusercontent.com')) {
                 return path.endsWith('/exec');
             }
-            if (host.endsWith('.trycloudflare.com') || host.includes('vercel.app') || host === 'localhost' || host === '127.0.0.1') {
+            if (host.includes('safety-icapp.com') || host.endsWith('.trycloudflare.com') || host.includes('vercel.app') || host === 'localhost' || host === '127.0.0.1' || host === '') {
                 return true;
             }
             return false;

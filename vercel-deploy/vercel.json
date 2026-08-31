@@ -85,6 +85,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/exec", "destination": "/api/exec" },
     { "source": "/forms", "destination": "/forms-hub.html" },
     { "source": "/forms-hub", "destination": "/forms-hub.html" },
     { "source": "/gate", "destination": "/gate-visitor-entry.html" },
