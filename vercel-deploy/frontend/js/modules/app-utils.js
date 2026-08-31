@@ -531,10 +531,14 @@ const Permissions = {
             try {
                 const companyResult = await GoogleIntegration.sendToAppsScript('getCompanySettings', {});
                 if (companyResult && companyResult.success && companyResult.data) {
+                    let companyRow = companyResult.data;
+                    if (Array.isArray(companyRow)) {
+                        companyRow = companyRow.length > 0 ? companyRow[0] : {};
+                    }
                     // تحليل postLoginItems إذا كانت نصاً (JSON)
                     let postLoginItems = AppState.companySettings?.postLoginItems;
-                    if (companyResult.data.postLoginItems !== undefined) {
-                        const raw = companyResult.data.postLoginItems;
+                    if (companyRow.postLoginItems !== undefined) {
+                        const raw = companyRow.postLoginItems;
                         if (typeof raw === 'string' && raw.trim() !== '') {
                             try {
                                 postLoginItems = JSON.parse(raw);
@@ -549,8 +553,8 @@ const Permissions = {
 
                     // تحليل clinicVisitTypes إذا كانت نصاً (JSON)
                     let clinicVisitTypes = AppState.companySettings?.clinicVisitTypes;
-                    if (companyResult.data.clinicVisitTypes !== undefined) {
-                        const rawClinicTypes = companyResult.data.clinicVisitTypes;
+                    if (companyRow.clinicVisitTypes !== undefined) {
+                        const rawClinicTypes = companyRow.clinicVisitTypes;
                         if (typeof rawClinicTypes === 'string' && rawClinicTypes.trim() !== '') {
                             try {
                                 clinicVisitTypes = JSON.parse(rawClinicTypes);
@@ -567,32 +571,33 @@ const Permissions = {
 
                     // تحديث AppState ببيانات الشركة من قاعدة SQL
                     AppState.companySettings = Object.assign({}, AppState.companySettings, {
-                        name: companyResult.data.name || AppState.companySettings?.name,
-                        secondaryName: companyResult.data.secondaryName || AppState.companySettings?.secondaryName,
-                        nameFontSize: companyResult.data.nameFontSize || AppState.companySettings?.nameFontSize || 16,
-                        secondaryNameFontSize: companyResult.data.secondaryNameFontSize || AppState.companySettings?.secondaryNameFontSize || 14,
-                        secondaryNameColor: companyResult.data.secondaryNameColor || AppState.companySettings?.secondaryNameColor || '#6B7280',
-                        formVersion: companyResult.data.formVersion || AppState.companySettings?.formVersion || '1.0',
-                        address: companyResult.data.address || AppState.companySettings?.address,
-                        phone: companyResult.data.phone || AppState.companySettings?.phone,
-                        email: companyResult.data.email || AppState.companySettings?.email,
+                        name: companyRow.name || AppState.companySettings?.name,
+                        secondaryName: companyRow.secondaryName || AppState.companySettings?.secondaryName,
+                        nameFontSize: companyRow.nameFontSize || AppState.companySettings?.nameFontSize || 16,
+                        secondaryNameFontSize: companyRow.secondaryNameFontSize || AppState.companySettings?.secondaryNameFontSize || 14,
+                        secondaryNameColor: companyRow.secondaryNameColor || AppState.companySettings?.secondaryNameColor || '#6B7280',
+                        formVersion: companyRow.formVersion || AppState.companySettings?.formVersion || '1.0',
+                        address: companyRow.address || AppState.companySettings?.address,
+                        phone: companyRow.phone || AppState.companySettings?.phone,
+                        email: companyRow.email || AppState.companySettings?.email,
                         postLoginItems: postLoginItems,
-                        clinicMonthlyVisitsAlertThreshold: companyResult.data.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
-                        employeeImportHireMonths: companyResult.data.employeeImportHireMonths ?? AppState.companySettings?.employeeImportHireMonths ?? 3,
-                        clinicVisitTypes: clinicVisitTypes
+                        clinicMonthlyVisitsAlertThreshold: companyRow.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                        employeeImportHireMonths: companyRow.employeeImportHireMonths ?? AppState.companySettings?.employeeImportHireMonths ?? 3,
+                        clinicVisitTypes: clinicVisitTypes,
+                        ppeEligibilityRules: companyRow.ppeEligibilityRules ?? AppState.companySettings?.ppeEligibilityRules
                     });
 
                     // تحديث شعار الشركة إذا كان موجوداً
-                    if (companyResult.data.logo) {
-                        AppState.companyLogo = companyResult.data.logo;
+                    if (companyRow.logo) {
+                        AppState.companyLogo = companyRow.logo;
                         // تحديث الشعار في AppState.companySettings أيضاً
                         if (!AppState.companySettings) {
                             AppState.companySettings = {};
                         }
-                        AppState.companySettings.logo = companyResult.data.logo;
+                        AppState.companySettings.logo = companyRow.logo;
                         // حفظ الشعار في localStorage
-                        localStorage.setItem('company_logo', companyResult.data.logo);
-                        localStorage.setItem('hse_company_logo', companyResult.data.logo);
+                        localStorage.setItem('company_logo', companyRow.logo);
+                        localStorage.setItem('hse_company_logo', companyRow.logo);
 
                         // تحديث الشعار في جميع الأماكن المخصصة
                         if (typeof UI !== 'undefined') {
@@ -612,7 +617,7 @@ const Permissions = {
 
                         // إرسال حدث لتحديث الشعار
                         window.dispatchEvent(new CustomEvent('companyLogoUpdated', {
-                            detail: { logoUrl: companyResult.data.logo }
+                            detail: { logoUrl: companyRow.logo }
                         }));
                     }
 
@@ -4341,7 +4346,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1549',
+    appVersion: '1.0.1551',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,

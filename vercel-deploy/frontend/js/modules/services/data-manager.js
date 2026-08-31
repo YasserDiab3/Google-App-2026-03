@@ -1454,10 +1454,15 @@ const DataManager = {
                 try {
                     const result = await GoogleIntegration.sendToAppsScript('getCompanySettings', {});
                     if (result && result.success && result.data) {
+                        let settingsRow = result.data;
+                        if (Array.isArray(settingsRow)) {
+                            settingsRow = settingsRow.length > 0 ? settingsRow[0] : {};
+                        }
+                        result.data = settingsRow;
                         // تحليل postLoginItems (سياسات/تعليمات ما بعد الدخول)
                         let postLoginItems = AppState.companySettings?.postLoginItems;
-                        if (result.data.postLoginItems !== undefined) {
-                            const raw = result.data.postLoginItems;
+                        if (settingsRow.postLoginItems !== undefined) {
+                            const raw = settingsRow.postLoginItems;
                             if (typeof raw === 'string') {
                                 if (raw.trim() !== '') {
                                     try {

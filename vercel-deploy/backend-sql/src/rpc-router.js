@@ -9,6 +9,9 @@ const moduleHandlers = require('./handlers/module-handlers');
 const fileHandlers = require('./handlers/file-handlers');
 const { getEntityActionHandlers } = require('./handlers/entity-action-resolver');
 const { mfaHandlers } = require('./handlers/mfa-handlers');
+const companySettingsHandlers = require('./handlers/company-settings-handlers');
+const ppeHandlers = require('./handlers/ppe-handlers');
+const formSettingsHandlers = require('./handlers/form-settings-handlers');
 
 // Combine all handlers into a single unified registry
 // entity handlers أولاً — module-handlers تتجاوزها عند التعارض
@@ -20,6 +23,14 @@ const ActionRegistry = {
     ...moduleHandlers,
     uploadFileToDrive: (p) => fileHandlers.uploadFileToDrive(p),
     getProfileImage: (p) => fileHandlers.getProfileImage(p),
+    getCompanySettings: companySettingsHandlers.getCompanySettings,
+    saveCompanySettings: companySettingsHandlers.saveCompanySettings,
+    getPPEItemsList: ppeHandlers.getPPEItemsList,
+    getAllPPE: ppeHandlers.getAllPPE,
+    addPPE: ppeHandlers.addPPE,
+    updatePPE: ppeHandlers.updatePPE,
+    getFormSettings: formSettingsHandlers.getFormSettings,
+    saveFormSettings: formSettingsHandlers.saveFormSettings,
     initializeSheets: () => ({
         success: true,
         message: 'قاعدة SQL جاهزة — لا حاجة لتهيئة Google Sheets'

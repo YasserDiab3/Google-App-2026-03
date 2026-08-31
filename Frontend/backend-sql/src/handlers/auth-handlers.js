@@ -100,8 +100,6 @@ const authHandlers = {
             });
         } catch (_) {}
 
-        // MFA block moved above — removed duplicate
-
         const sanitizedUser = {
             id: user.id,
             name: user.name,

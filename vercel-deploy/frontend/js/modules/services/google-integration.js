@@ -458,7 +458,24 @@ const GoogleIntegration = {
     _shouldBypassRequestQueue(action) {
         return this._isAuthRpcAction(action)
             || this._isClinicAttendanceRpcAction(action)
-            || action === 'warmup';
+            || action === 'warmup'
+            || this._isCriticalUserMutation(action);
+    },
+
+    /** عمليات إدارية حرجة — لا تُحجب بـ Circuit Breaker */
+    _isCriticalUserMutation(action) {
+        const critical = new Set([
+            'deleteIncident',
+            'deleteObservation',
+            'deleteNearMiss',
+            'deletePTW',
+            'deleteEmployee',
+            'saveFormSettings',
+            'getFormSettings',
+            'getCompanySettings',
+            'saveCompanySettings'
+        ]);
+        return critical.has(action);
     },
 
     // Circuit Breaker
@@ -777,7 +794,13 @@ const GoogleIntegration = {
                     errorMsg.includes('صلاحية');
 
                 const isAppError = error && error.isAppError === true;
-                if (!isAppError && !isCircuitBreakerError && !isConfigError && !isTransientNetworkError && !isAuthOrPermissionError) {
+                const isKnownServerError = error && (
+                    error.errorCode === 'ACTION_NOT_RECOGNIZED' ||
+                    error.errorCode === 'INTERNAL_SERVER_ERROR' ||
+                    error.errorCode === 'PERMISSION_DENIED' ||
+                    error.errorCode === 'DUPLICATE_ENTRY'
+                );
+                if (!isAppError && !isKnownServerError && !isCircuitBreakerError && !isConfigError && !isTransientNetworkError && !isAuthOrPermissionError) {
                     Utils.safeError('❌ خطأ غير معالج في مزامنة Google - هذا السبب الحقيقي لفتح Circuit Breaker:', error);
                     this._recordFailure();
                 }

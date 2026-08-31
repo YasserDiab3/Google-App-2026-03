@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1549",
+  "version": "1.0.1551",
   "highlights": {
     "ar": [
-      "إصلاح حذف/تعديل/إضافة السجلات: تغطية 80+ إجراء CRUD على خادم SQL دون ACTION_NOT_RECOGNIZED.",
-      "منع فتح Circuit Breaker عند أخطاء التطبيق المتوقعة (إجراء غير معروف، صلاحيات، MFA).",
-      "إصلاح deleteIncident وaddObservationUpdate وربط MFA (تسجيل/تأكيد/تعطيل) على SQL.",
-      "أرشفة Google Apps Script والاعتماد الكامل على /api/exec — v1.0.1549."
+      "إعدادات النماذج: جلب وحفظ المواقع والأماكن والإدارات وفريق السلامة من قاعدة SQL.",
+      "حذف الحادث وعمليات الإدارة الحرجة لا تُحجب بـ Circuit Breaker بعد الآن.",
+      "إصلاح تحميل إعدادات الشركة وقواعد استحقاق مهمات الوقاية (PPE) من SQL.",
+      "تحسين عرض صور البروفايل والملاحظات عبر وكيل /api/exec."
     ],
     "en": [
-      "Fixed record add/update/delete: 80+ CRUD RPC actions mapped on SQL without ACTION_NOT_RECOGNIZED.",
-      "Circuit Breaker no longer opens on expected app errors (unknown action, permissions, MFA).",
-      "deleteIncident, addObservationUpdate, and MFA enroll/confirm/disable wired to SQL.",
-      "Google Apps Script archived; full /api/exec SQL backend — v1.0.1548."
+      "Form settings: load/save sites, places, departments, and safety team from SQL.",
+      "Incident delete and critical admin actions no longer blocked by Circuit Breaker.",
+      "Fixed company settings and PPE eligibility rules loading from SQL.",
+      "Improved profile and observation images via /api/exec proxy."
     ]
   }
 }

@@ -531,10 +531,14 @@ const Permissions = {
             try {
                 const companyResult = await GoogleIntegration.sendToAppsScript('getCompanySettings', {});
                 if (companyResult && companyResult.success && companyResult.data) {
+                    let companyRow = companyResult.data;
+                    if (Array.isArray(companyRow)) {
+                        companyRow = companyRow.length > 0 ? companyRow[0] : {};
+                    }
                     // تحليل postLoginItems إذا كانت نصاً (JSON)
                     let postLoginItems = AppState.companySettings?.postLoginItems;
-                    if (companyResult.data.postLoginItems !== undefined) {
-                        const raw = companyResult.data.postLoginItems;
+                    if (companyRow.postLoginItems !== undefined) {
+                        const raw = companyRow.postLoginItems;
                         if (typeof raw === 'string' && raw.trim() !== '') {
                             try {
                                 postLoginItems = JSON.parse(raw);
@@ -549,8 +553,8 @@ const Permissions = {
 
                     // تحليل clinicVisitTypes إذا كانت نصاً (JSON)
                     let clinicVisitTypes = AppState.companySettings?.clinicVisitTypes;
-                    if (companyResult.data.clinicVisitTypes !== undefined) {
-                        const rawClinicTypes = companyResult.data.clinicVisitTypes;
+                    if (companyRow.clinicVisitTypes !== undefined) {
+                        const rawClinicTypes = companyRow.clinicVisitTypes;
                         if (typeof rawClinicTypes === 'string' && rawClinicTypes.trim() !== '') {
                             try {
                                 clinicVisitTypes = JSON.parse(rawClinicTypes);
@@ -567,32 +571,33 @@ const Permissions = {
 
                     // تحديث AppState ببيانات الشركة من قاعدة SQL
                     AppState.companySettings = Object.assign({}, AppState.companySettings, {
-                        name: companyResult.data.name || AppState.companySettings?.name,
-                        secondaryName: companyResult.data.secondaryName || AppState.companySettings?.secondaryName,
-                        nameFontSize: companyResult.data.nameFontSize || AppState.companySettings?.nameFontSize || 16,
-                        secondaryNameFontSize: companyResult.data.secondaryNameFontSize || AppState.companySettings?.secondaryNameFontSize || 14,
-                        secondaryNameColor: companyResult.data.secondaryNameColor || AppState.companySettings?.secondaryNameColor || '#6B7280',
-                        formVersion: companyResult.data.formVersion || AppState.companySettings?.formVersion || '1.0',
-                        address: companyResult.data.address || AppState.companySettings?.address,
-                        phone: companyResult.data.phone || AppState.companySettings?.phone,
-                        email: companyResult.data.email || AppState.companySettings?.email,
+                        name: companyRow.name || AppState.companySettings?.name,
+                        secondaryName: companyRow.secondaryName || AppState.companySettings?.secondaryName,
+                        nameFontSize: companyRow.nameFontSize || AppState.companySettings?.nameFontSize || 16,
+                        secondaryNameFontSize: companyRow.secondaryNameFontSize || AppState.companySettings?.secondaryNameFontSize || 14,
+                        secondaryNameColor: companyRow.secondaryNameColor || AppState.companySettings?.secondaryNameColor || '#6B7280',
+                        formVersion: companyRow.formVersion || AppState.companySettings?.formVersion || '1.0',
+                        address: companyRow.address || AppState.companySettings?.address,
+                        phone: companyRow.phone || AppState.companySettings?.phone,
+                        email: companyRow.email || AppState.companySettings?.email,
                         postLoginItems: postLoginItems,
-                        clinicMonthlyVisitsAlertThreshold: companyResult.data.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
-                        employeeImportHireMonths: companyResult.data.employeeImportHireMonths ?? AppState.companySettings?.employeeImportHireMonths ?? 3,
-                        clinicVisitTypes: clinicVisitTypes
+                        clinicMonthlyVisitsAlertThreshold: companyRow.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                        employeeImportHireMonths: companyRow.employeeImportHireMonths ?? AppState.companySettings?.employeeImportHireMonths ?? 3,
+                        clinicVisitTypes: clinicVisitTypes,
+                        ppeEligibilityRules: companyRow.ppeEligibilityRules ?? AppState.companySettings?.ppeEligibilityRules
                     });
 
                     // تحديث شعار الشركة إذا كان موجوداً
-                    if (companyResult.data.logo) {
-                        AppState.companyLogo = companyResult.data.logo;
+                    if (companyRow.logo) {
+                        AppState.companyLogo = companyRow.logo;
                         // تحديث الشعار في AppState.companySettings أيضاً
                         if (!AppState.companySettings) {
                             AppState.companySettings = {};
                         }
-                        AppState.companySettings.logo = companyResult.data.logo;
+                        AppState.companySettings.logo = companyRow.logo;
                         // حفظ الشعار في localStorage
-                        localStorage.setItem('company_logo', companyResult.data.logo);
-                        localStorage.setItem('hse_company_logo', companyResult.data.logo);
+                        localStorage.setItem('company_logo', companyRow.logo);
+                        localStorage.setItem('hse_company_logo', companyRow.logo);
 
                         // تحديث الشعار في جميع الأماكن المخصصة
                         if (typeof UI !== 'undefined') {
@@ -612,7 +617,7 @@ const Permissions = {
 
                         // إرسال حدث لتحديث الشعار
                         window.dispatchEvent(new CustomEvent('companyLogoUpdated', {
-                            detail: { logoUrl: companyResult.data.logo }
+                            detail: { logoUrl: companyRow.logo }
                         }));
                     }
 
@@ -4341,7 +4346,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1549',
+    appVersion: '1.0.1551',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -5114,6 +5119,7 @@ const Utils = {
             'documentImage',
             'directLink',
             'shareableLink',
+            'fileId',
             'url'
         ];
 
@@ -5198,6 +5204,9 @@ const Utils = {
         }
 
         const compactBase64 = trimmed.replace(/\s+/g, '');
+        if (/^FILE_[A-Za-z0-9_]+/.test(trimmed)) {
+            return trimmed.split(/[?#\s]/)[0];
+        }
         if (compactBase64.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compactBase64.substring(0, Math.min(120, compactBase64.length)))) {
             return `data:image/jpeg;base64,${compactBase64}`;
         }
@@ -5213,7 +5222,6 @@ const Utils = {
             let u = (typeof AppState !== 'undefined' && AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.scriptUrl)
                 ? String(AppState.googleConfig.appsScript.scriptUrl).trim()
                 : '';
-            // نشر الويب يعمل عادة عبر /exec؛ /dev قد يعيد HTML أو يرفض طلبات getProfileImage
             if (u && u.indexOf('script.google.com/macros/s/') !== -1) {
                 u = u.replace(/\/dev(\?|#|$)/, '/exec$1');
             }
@@ -5223,13 +5231,39 @@ const Utils = {
         }
     },
 
+    /** رابط API للصور — SQL /api/exec أو GAS */
+    getEffectiveImageApiUrl() {
+        const gas = this.getAppsScriptScriptUrl();
+        if (gas) return gas;
+        try {
+            if (typeof window !== 'undefined' && typeof window.getEffectiveApiUrl === 'function') {
+                const u = String(window.getEffectiveApiUrl() || '').trim();
+                if (u) return u;
+            }
+        } catch (_e) { /* ignore */ }
+        return '/api/exec';
+    },
+
+    /** معرف ملف للوكيل: FILE_* أو Google Drive */
+    extractImageProxyId(source) {
+        const raw = String(source || '').trim();
+        if (!raw) return '';
+        if (/^FILE_[A-Za-z0-9_]+/.test(raw)) {
+            return raw.split(/[?#\s]/)[0];
+        }
+        if (/^https?:\/\//i.test(raw)) {
+            return this.extractDriveFileId(raw);
+        }
+        return '';
+    },
+
     /**
      * URL لطلب getProfileImage (صورة من Drive كـ JSON يحوي dataUri) — يتجاوز حظر hotlinking لـ الخادم في وسم img.
      */
     buildGetProfileImageProxyUrl(fileId) {
         const id = String(fileId || '').trim();
         if (!id) return '';
-        const scriptUrl = this.getAppsScriptScriptUrl() || (typeof window !== 'undefined' && window.getEffectiveApiUrl ? window.getEffectiveApiUrl() : '/api/exec');
+        const scriptUrl = this.getEffectiveImageApiUrl();
         if (!scriptUrl) return '';
         return scriptUrl + (scriptUrl.indexOf('?') !== -1 ? '&' : '?') + 'action=getProfileImage&id=' + encodeURIComponent(id);
     },
@@ -5267,6 +5301,11 @@ const Utils = {
                 } catch (e) {}
                 return uri;
             }
+            if (data && data.success && data.redirectUrl) {
+                const redir = String(data.redirectUrl);
+                if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(fileId, redir);
+                return redir;
+            }
         } catch (e) {
             /* ignore */
         }
@@ -5282,8 +5321,7 @@ const Utils = {
         try {
             const root = rootEl || document;
             if (!root || typeof root.querySelectorAll !== 'function') return;
-            const scriptUrl = this.getAppsScriptScriptUrl();
-            if (!scriptUrl || scriptUrl.indexOf('script.google.com') === -1) return;
+            if (!this.getEffectiveImageApiUrl()) return;
 
             const imgs = root.querySelectorAll('img[data-drive-proxy-id]');
             if (!imgs || !imgs.length) return;
@@ -5295,16 +5333,31 @@ const Utils = {
                 const id = String(img.getAttribute('data-drive-proxy-id') || '').trim();
                 if (!id) return;
                 img.dataset.driveProxyHydrated = '1';
-                this.fetchDriveImageDataUri(id).then((dataUri) => {
-                    if (dataUri) {
-                        img.src = dataUri;
-                        try {
-                            if (img.dataset.photoUrl !== undefined) img.dataset.photoUrl = dataUri;
-                        } catch (e2) { /* ignore */ }
-                    } else if (onFetchFail) {
-                        onFetchFail(img);
+
+                const applySrc = (src) => {
+                    if (!src) {
+                        if (onFetchFail) onFetchFail(img);
+                        return;
                     }
-                });
+                    img.src = src;
+                    try {
+                        if (img.dataset.photoUrl !== undefined) img.dataset.photoUrl = src;
+                    } catch (e2) { /* ignore */ }
+                };
+
+                if (/^FILE_/i.test(id)) {
+                    this.fetchDriveImageDataUri(id).then(applySrc);
+                } else {
+                    const proxyUrl = this.buildGetProfileImageProxyUrl(id);
+                    if (proxyUrl) {
+                        img.onerror = () => {
+                            this.fetchDriveImageDataUri(id).then(applySrc);
+                        };
+                        img.src = proxyUrl;
+                    } else {
+                        this.fetchDriveImageDataUri(id).then(applySrc);
+                    }
+                }
             });
         } catch (e) {
             /* ignore */
@@ -5328,16 +5381,12 @@ const Utils = {
             if (/^data:image\//i.test(canonical) || String(canonical).indexOf('blob:') === 0) {
                 return { canonical, displaySrc: canonical, proxyFileId: '', needsProxy: false };
             }
-            if (!/^https?:\/\//i.test(canonical)) {
-                return { canonical, displaySrc: canonical, proxyFileId: '', needsProxy: false };
-            }
-            if (!/drive\.google\.com|googleusercontent\.com/i.test(canonical)) {
-                return { canonical, displaySrc: canonical, proxyFileId: '', needsProxy: false };
-            }
-            const fileId = this.extractDriveFileId(canonical);
-            const scriptUrl = this.getAppsScriptScriptUrl();
-            const canProxy = !!(fileId && scriptUrl && scriptUrl.indexOf('script.google.com') !== -1);
-            if (canProxy) {
+
+            const fileId = this.extractImageProxyId(canonical) || this.extractDriveFileId(canonical);
+            const isDrive = /^FILE_/i.test(canonical) || /drive\.google\.com|googleusercontent\.com/i.test(canonical);
+            const apiUrl = this.getEffectiveImageApiUrl();
+
+            if (fileId && isDrive && apiUrl) {
                 return {
                     canonical,
                     displaySrc: this.IMG_DRIVE_PLACEHOLDER_GIF,
@@ -5345,6 +5394,7 @@ const Utils = {
                     needsProxy: true
                 };
             }
+
             return { canonical, displaySrc: canonical, proxyFileId: '', needsProxy: false };
         } catch (e) {
             return empty;

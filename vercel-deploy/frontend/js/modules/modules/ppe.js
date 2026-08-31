@@ -1881,10 +1881,12 @@ const PPE = {
         const type = (equipmentType || '').toString().trim().toLowerCase();
         if (!code || !type) return null;
         const excludeId = options.excludeId || null;
+        const pending = Array.isArray(options.pendingSameSession) ? options.pendingSameSession : [];
         const list = (typeof AppState !== 'undefined' && Array.isArray(AppState.appData?.ppe)) ? AppState.appData.ppe : [];
+        const combined = list.concat(pending);
         let candidate = null;
         let candidateDate = null;
-        for (const rec of list) {
+        for (const rec of combined) {
             if (!rec) continue;
             if (excludeId && rec.id === excludeId) continue;
             const recCode = (rec.employeeCode || rec.employeeNumber || '').toString().trim().toLowerCase();

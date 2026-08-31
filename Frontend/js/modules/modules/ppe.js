@@ -1881,10 +1881,12 @@ const PPE = {
         const type = (equipmentType || '').toString().trim().toLowerCase();
         if (!code || !type) return null;
         const excludeId = options.excludeId || null;
+        const pending = Array.isArray(options.pendingSameSession) ? options.pendingSameSession : [];
         const list = (typeof AppState !== 'undefined' && Array.isArray(AppState.appData?.ppe)) ? AppState.appData.ppe : [];
+        const combined = list.concat(pending);
         let candidate = null;
         let candidateDate = null;
-        for (const rec of list) {
+        for (const rec of combined) {
             if (!rec) continue;
             if (excludeId && rec.id === excludeId) continue;
             const recCode = (rec.employeeCode || rec.employeeNumber || '').toString().trim().toLowerCase();
@@ -1898,6 +1900,65 @@ const PPE = {
             }
         }
         return candidate;
+    },
+
+    /** صفوف استلام مؤقتة في نفس النموذج (قبل الحفظ) لاحتساب الحد الأدنى بين استلامين */
+    buildPendingSameSessionFromFormRows(rows, rowIndex, employeeCode, receiptDateValue) {
+        const pending = [];
+        const code = (employeeCode || '').toString().trim();
+        if (!code || !Array.isArray(rows) || rowIndex <= 0) return pending;
+        let receiptIso = new Date().toISOString();
+        if (receiptDateValue) {
+            const d = new Date(receiptDateValue);
+            if (!isNaN(d.getTime())) receiptIso = d.toISOString();
+        }
+        for (let i = 0; i < rowIndex; i++) {
+            const prevRow = rows[i];
+            const prevType = (prevRow?.querySelector?.('.ppe-equipment-type')?.value || '').trim();
+            if (!prevType) continue;
+            pending.push({
+                id: `_PENDING_${i}`,
+                employeeCode: code,
+                employeeNumber: code,
+                equipmentType: prevType,
+                receiptDate: receiptIso
+            });
+        }
+        return pending;
+    },
+
+    buildPendingSameSessionFromItems(items, itemIndex, employeeCode, receiptDateValue) {
+        const pending = [];
+        const code = (employeeCode || '').toString().trim();
+        if (!code || !Array.isArray(items) || itemIndex <= 0) return pending;
+        let receiptIso = new Date().toISOString();
+        if (receiptDateValue) {
+            const d = new Date(receiptDateValue);
+            if (!isNaN(d.getTime())) receiptIso = d.toISOString();
+        }
+        for (let i = 0; i < itemIndex; i++) {
+            const item = items[i];
+            if (!item?.equipmentType) continue;
+            pending.push({
+                id: `_PENDING_${i}`,
+                employeeCode: code,
+                employeeNumber: code,
+                equipmentType: item.equipmentType,
+                receiptDate: receiptIso
+            });
+        }
+        return pending;
+    },
+
+    async ensureEligibilityRulesLoaded() {
+        const settings = (typeof AppState !== 'undefined' && AppState.companySettings) ? AppState.companySettings : {};
+        const rules = this.parseEligibilityRules(settings.ppeEligibilityRules);
+        if (rules.length > 0) return;
+        if (typeof DataManager !== 'undefined' && typeof DataManager.loadCompanySettings === 'function') {
+            try {
+                await DataManager.loadCompanySettings(true);
+            } catch (_e) { /* ignore */ }
+        }
     },
 
     /**
@@ -2166,6 +2227,7 @@ const themes = {
     },
 
     async showPPEForm(ppeData = null) {
+        await this.ensureEligibilityRulesLoaded();
         const isEdit = !!ppeData;
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -2680,12 +2742,13 @@ const themes = {
                 const rows = Array.from(itemsContainer.querySelectorAll('.ppe-item-row'));
                 const employeeCode = (employeeCodeInput?.value || '').trim();
                 const receiptDateValue = (receiptDateInput?.value || '').trim();
-                rows.forEach(row => {
+                rows.forEach((row, rowIndex) => {
                     const typeSelect = row.querySelector('.ppe-equipment-type');
                     const equipmentType = (typeSelect?.value || '').trim();
                     const infoEl = row.querySelector('.ppe-eligibility-info');
                     if (!infoEl) return;
-                    const result = PPE.computeEligibility(employeeCode, equipmentType, receiptDateValue, { excludeId: excludeEditId });
+                    const pendingSameSession = PPE.buildPendingSameSessionFromFormRows(rows, rowIndex, employeeCode, receiptDateValue);
+                    const result = PPE.computeEligibility(employeeCode, equipmentType, receiptDateValue, { excludeId: excludeEditId, pendingSameSession });
                     PPE.renderEligibilityInfo(infoEl, result);
                 });
             };
@@ -2863,7 +2926,8 @@ const themes = {
                         const excludeIdForCheck = isEdit && ppeData?.id ? ppeData.id : null;
                         const blockingItems = [];
                         equipmentItems.forEach((item, idx) => {
-                            const r = PPE.computeEligibility(employeeCodeForCheck, item.equipmentType, receiptDateForCheck, { excludeId: excludeIdForCheck });
+                            const pendingSameSession = PPE.buildPendingSameSessionFromItems(equipmentItems, idx, employeeCodeForCheck, receiptDateForCheck);
+                            const r = PPE.computeEligibility(employeeCodeForCheck, item.equipmentType, receiptDateForCheck, { excludeId: excludeIdForCheck, pendingSameSession });
                             if (r.hasRule && r.hasPrevious && !r.isEligible) {
                                 blockingItems.push({ index: idx, item, result: r });
                                 const row = itemRows[idx];
