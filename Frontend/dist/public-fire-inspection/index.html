@@ -2010,13 +2010,19 @@
             applyLanguage(next);
         }
 
-        const LIVE_BACKEND_URL = 'https://foot-likewise-leads-robinson.trycloudflare.com/exec';
+        const LIVE_BACKEND_URL = 'https://www.safety-icapp.com/api/exec';
         const GAS_FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
         const DEFAULT_API_URL = LIVE_BACKEND_URL;
         let allAssets = [];
         let currentPhotoBase64 = '';
 
         function getEffectiveApiUrl() {
+            try {
+                const host = (window.location.hostname || '').toLowerCase();
+                if (host.includes('safety-icapp.com') || host.includes('vercel.app')) {
+                    return window.location.origin + '/api/exec';
+                }
+            } catch (_h) {}
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const p = urlParams.get('apiUrl') || urlParams.get('api');

@@ -84,6 +84,12 @@
       ]
     }
   ],
+  "functions": {
+    "api/exec.js": {
+      "includeFiles": "{backend-sql/src/**,backend-sql/data/clinic_hse.db.gz,api/data/clinic_hse.db.gz,vercel-deploy/api/data/clinic_hse.db.gz}"
+    },
+    "api/health.js": {}
+  },
   "rewrites": [
     { "source": "/exec", "destination": "/api/exec" },
     { "source": "/forms", "destination": "/forms-hub.html" },

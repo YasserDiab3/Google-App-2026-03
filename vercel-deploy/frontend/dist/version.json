@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1534",
+  "version": "1.0.1536",
   "highlights": {
     "ar": [
-      "تقوية أمان الباك إند: initializeSheets وكتابات HSE العامة محمية بجلسة مدير أو PIN مُعدّ على الخادم.",
-      "فصل حضور العيادة في ملف clinic-attendance.js لصيانة أسرع وتحميل أوضح.",
-      "شريط حضور العيادة: أزرار الورديات وبصمة مفقودة وإضافة مسئول في صف واحد.",
-      "سكربت فحص دخان شامل npm run test:smoke:system للأداء والصلاحيات."
+      "دمج قاعدة SQL الموحّدة: زيارات العيادة 485، الموظفين 644، الحوادث 501 — مطابقة كاملة للعرض.",
+      "تفعيل API على www.safety-icapp.com/api/exec للنماذج العامة وإزالة نفق Cloudflare المنتهي.",
+      "إصلاح تحميل SQL على Vercel (مسار /tmp + clinic_hse.db.gz) لتسريع القراءة والكتابة.",
+      "سكربتات استيراد/دمج/تحقق SQL: rebuild-canonical، sync-deploy-bundle، verify-sql-crud."
     ],
     "en": [
-      "Backend security: initializeSheets and HSE public writes require admin session or server-configured PIN.",
-      "Clinic attendance split into clinic-attendance.js for easier maintenance.",
-      "Clinic attendance toolbar: shifts, missing punch, and add staff on one row.",
-      "Full smoke test script: npm run test:smoke:system for performance and auth checks."
+      "Unified SQL database: 485 clinic visits, 644 employees, 501 incidents — full UI parity.",
+      "Public forms now use www.safety-icapp.com/api/exec instead of expired Cloudflare tunnel.",
+      "Vercel SQL API fix: /tmp path + bundled clinic_hse.db.gz for fast read/write.",
+      "SQL import/merge/verify scripts: rebuild-canonical, sync-deploy-bundle, verify-sql-crud."
     ]
   }
 }
