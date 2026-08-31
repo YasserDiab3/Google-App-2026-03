@@ -12,6 +12,7 @@ const { mfaHandlers } = require('./handlers/mfa-handlers');
 const companySettingsHandlers = require('./handlers/company-settings-handlers');
 const ppeHandlers = require('./handlers/ppe-handlers');
 const formSettingsHandlers = require('./handlers/form-settings-handlers');
+const publicFormsHandlers = require('./handlers/public-forms-handlers');
 const {
     enforceRpcSecurity,
     checkSheetReadAccess,
@@ -26,6 +27,7 @@ const ActionRegistry = {
     ...genericSheetOps,
     ...authHandlers,
     ...mfaHandlers,
+    ...publicFormsHandlers,
     ...moduleHandlers,
     uploadFileToDrive: (p) => fileHandlers.uploadFileToDrive(p),
     getProfileImage: (p) => fileHandlers.getProfileImage(p),

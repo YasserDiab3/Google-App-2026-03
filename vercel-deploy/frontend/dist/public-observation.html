@@ -6280,6 +6280,7 @@
             }
 
             let syncSuccess = false;
+            let lastError = '';
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
                     const response = await fetch(targetApiUrl, {
@@ -6289,6 +6290,10 @@
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                         body: JSON.stringify(payload)
                     });
+                    if (!response.ok) {
+                        lastError = 'HTTP ' + response.status;
+                        throw new Error(lastError);
+                    }
                     const result = await response.json();
                     if (result && result.success) {
                         syncSuccess = true;
@@ -6299,7 +6304,10 @@
                         console.log('Observation synced in background:', result);
                         break;
                     }
+                    lastError = (result && result.message) ? result.message : 'رفض الخادم الحفظ';
+                    console.warn('Background sync rejected:', result);
                 } catch (err) {
+                    lastError = err && err.message ? err.message : String(err);
                     console.warn(`Background sync attempt ${attempt} failed:`, err);
                     if (attempt < 3) {
                         await new Promise(r => setTimeout(r, 2000));
@@ -6309,7 +6317,8 @@
 
             if (!syncSuccess) {
                 saveToOfflineQueue(payload, refCode);
-                showToast('تعذر الاتصال بالخادم الآن. تم حفظ الملاحظة محلياً (Offline) وستتم مزامنتها تلقائياً عند عودة الاتصال.', 'warning', 5000);
+                const hint = lastError ? (' (' + lastError + ')') : '';
+                showToast('تعذر الاتصال بالخادم الآن. تم حفظ الملاحظة محلياً (Offline) وستتم مزامنتها تلقائياً عند عودة الاتصال.' + hint, 'warning', 6000);
             }
         }
 

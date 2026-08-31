@@ -7508,6 +7508,10 @@
                 body: JSON.stringify({ action: 'getPublicObservationsAnalytics', data: { force: force } })
             });
 
+            if (!res.ok) {
+                throw new Error('HTTP ' + res.status);
+            }
+
             const data = await res.json();
             if (data && data.success) {
                 rawObservationsAnalyticsData = data;
@@ -7516,9 +7520,32 @@
                 } catch(e) {}
                 populateObserverFilterOptions();
                 renderObservationsAnalytics();
+                return true;
             }
+
+            console.warn('Observations analytics API:', data?.message || data);
+            if (!rawObservationsAnalyticsData) {
+                showAnalyticsEmptyState(data?.message || 'تعذر تحميل بيانات التحليل من الخادم');
+            }
+            return false;
         } catch(err) {
             console.error('Error fetching observations analytics:', err);
+            if (!rawObservationsAnalyticsData) {
+                showAnalyticsEmptyState('تعذر الاتصال بالخادم لتحميل لوحة التحليل');
+            }
+            return false;
+        }
+    }
+
+    function showAnalyticsEmptyState(message) {
+        const champCont = document.getElementById('anlChampionsContainer');
+        const critTbody = document.getElementById('anlCriticalTableBody');
+        const msg = escapeHTML(message || 'لا توجد بيانات تحليل متاحة حالياً');
+        if (champCont) {
+            champCont.innerHTML = `<div style="text-align:center; padding:24px; color:#b45309; font-weight:700; background:#fffbeb; border:1px dashed #fcd34d; border-radius:12px;">${msg}</div>`;
+        }
+        if (critTbody) {
+            critTbody.innerHTML = `<tr><td colspan="7" style="padding:20px; text-align:center; color:#b45309; font-weight:700;">${msg}</td></tr>`;
         }
     }
 

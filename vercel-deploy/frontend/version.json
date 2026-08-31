@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1572",
+  "version": "1.0.1574",
   "highlights": {
     "ar": [
-      "بوابة النماذج: تحميل المواقع والأماكن من إعدادات النماذج بشكل صحيح.",
-      "قوائم فريق السلامة والإدارات تُجلب من Form_SafetyTeam وForm_Departments.",
-      "إصلاح التنقل بين البوابة والنماذج العامة على التطوير المحلي.",
-      "اتصال API محلي تلقائي عبر 127.0.0.1:3001 للنماذج العامة."
+      "تفعيل إرسال الملاحظات والنماذج العامة إلى قاعدة SQL (لم تعد تُحفظ Offline فقط).",
+      "إصلاح API على Vercel بإعادة await لطلبات exec (دخول + إرسال).",
+      "لوحة تحليل الملاحظات في البوابة تعرض البيانات أو رسالة خطأ واضحة.",
+      "دعم إرسال الحوادث الوشيكة وفحص الحريق والمرور اليومي من البوابة."
     ],
     "en": [
-      "Forms hub: sites and places load correctly from form settings.",
-      "Safety team and departments pulled from Form_SafetyTeam and Form_Departments.",
-      "Fixed hub-to-public-form navigation on local development.",
-      "Public forms auto-connect to local API at 127.0.0.1:3001."
+      "Public observation and form submissions now save to SQL (no offline-only fallback).",
+      "Fixed Vercel exec API with await (login and submit requests).",
+      "Observations analytics dashboard shows data or a clear error state.",
+      "Near-miss, fire inspection, and daily safety submit handlers enabled."
     ]
   }
 }
