@@ -4329,9 +4329,19 @@
             if (!navigator.onLine) return;
             try {
                 const targetApiUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
-                const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
-                if (!res.ok) return;
-                const data = await res.json();
+                let data = null;
+                try {
+                    const res = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'getHseEmergencyContacts', data: {} })
+                    });
+                    if (res.ok) data = await res.json();
+                } catch (_postErr) {}
+                if (!data || !data.success) {
+                    const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
+                    if (res.ok) data = await res.json();
+                }
                 if (data && data.success && data.contacts) {
                     saveCachedEmergencyContacts(data.contacts);
                     renderEmergencyContacts(data.contacts);
@@ -4584,12 +4594,23 @@
                 // 4. Field Audits & Observations Closure Rate
                 let closureRate = '98.5%';
                 try {
-                    const obsCache = localStorage.getItem('HSE_PUBLIC_OBSERVATIONS_ANALYTICS_CACHE');
-                    if (obsCache) {
-                        const parsed = JSON.parse(obsCache);
-                        if (parsed && parsed.metrics && parsed.metrics.closureRate) {
-                            closureRate = parsed.metrics.closureRate;
+                    let rateVal = null;
+                    if (typeof rawObservationsAnalyticsData !== 'undefined' && rawObservationsAnalyticsData?.summary?.closeRate != null) {
+                        rateVal = rawObservationsAnalyticsData.summary.closeRate;
+                    }
+                    if (rateVal == null) {
+                        const obsCache = localStorage.getItem('HSE_PUBLIC_OBS_ANALYTICS_CACHE');
+                        if (obsCache) {
+                            const parsed = JSON.parse(obsCache);
+                            if (parsed?.summary?.closeRate != null) {
+                                rateVal = parsed.summary.closeRate;
+                            } else if (parsed?.metrics?.closureRate != null) {
+                                rateVal = parsed.metrics.closureRate;
+                            }
                         }
+                    }
+                    if (rateVal != null) {
+                        closureRate = String(rateVal).includes('%') ? String(rateVal) : `${rateVal}%`;
                     }
                 } catch(e) {}
                 const valKpiClosureEl = document.getElementById('valKpiClosureRate');
@@ -7520,6 +7541,7 @@
                 } catch(e) {}
                 populateObserverFilterOptions();
                 renderObservationsAnalytics();
+                if (typeof updateHubLiveKpis === 'function') updateHubLiveKpis();
                 return true;
             }
 

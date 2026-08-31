@@ -2256,7 +2256,7 @@
 
             // 2. مزامنة حية مع الخادم السحابي وقاعدة البيانات
             try {
-                const endpoint = GATE_CONFIG.cloudEndpoint;
+                const endpoint = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
                 if (endpoint) {
                     const res = await fetch(endpoint, {
                         method: 'POST',
@@ -3114,6 +3114,16 @@ function resetCheckInForm() {
             document.getElementById('checkInTabContainer').style.display = 'block';
         }
 
+                async function parseExecApiResponse(res) {
+                    const text = await res.text();
+                    if (!text) return null;
+                    let data = JSON.parse(text);
+                    if (typeof data === 'string') {
+                        try { data = JSON.parse(data); } catch (_e) {}
+                    }
+                    return data;
+                }
+
                 async function fetchActiveVisitorsFromCloud() {
             if (!navigator.onLine) return;
             try {
@@ -3122,16 +3132,20 @@ function resetCheckInForm() {
                 try {
                     const res = await fetch(targetUrl, {
                         method: 'POST',
+                        mode: 'cors',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                         body: JSON.stringify({ action: 'getAllGateVisitors', data: {} })
                     });
-                    json = await res.json();
+                    if (res.ok) json = await parseExecApiResponse(res);
                 } catch(pErr) {
-                    const res = await fetch(targetUrl + '?action=getAllGateVisitors', { method: 'GET', mode: 'cors' });
-                    json = await res.json();
+                    /* fallback below */
+                }
+                if (!json || !json.success) {
+                    const res = await fetch(targetUrl + (targetUrl.includes('?') ? '&' : '?') + 'action=getAllGateVisitors&_t=' + Date.now(), { method: 'GET', mode: 'cors' });
+                    if (res.ok) json = await parseExecApiResponse(res);
                 }
 
-                const cloudList = (json && json.success) ? (json.visitors || json.activeVisitors || []) : null;
+                const cloudList = (json && json.success) ? (json.visitors || json.activeVisitors || json.data || []) : null;
                 if (Array.isArray(cloudList)) {
                     const now = Date.now();
                     const listWithTs = cloudList.map(v => {

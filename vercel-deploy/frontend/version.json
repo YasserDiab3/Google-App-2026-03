@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1574",
+  "version": "1.0.1576",
   "highlights": {
     "ar": [
-      "تفعيل إرسال الملاحظات والنماذج العامة إلى قاعدة SQL (لم تعد تُحفظ Offline فقط).",
-      "إصلاح API على Vercel بإعادة await لطلبات exec (دخول + إرسال).",
-      "لوحة تحليل الملاحظات في البوابة تعرض البيانات أو رسالة خطأ واضحة.",
-      "دعم إرسال الحوادث الوشيكة وفحص الحريق والمرور اليومي من البوابة."
+      "إصلاح تحميل بيانات الزوار والبوابة: GET ?action= يعمل على /api/exec.",
+      "إصلاح KPIs والتحليلات: مفتاح الكاش ونسبة الإغلاق من summary.closeRate.",
+      "تفعيل بث HSE واتصالات الطوارئ من HSE_Settings.",
+      "بوابة الزوار تجلب السجل من السحابة حتى عند فشل POST."
     ],
     "en": [
-      "Public observation and form submissions now save to SQL (no offline-only fallback).",
-      "Fixed Vercel exec API with await (login and submit requests).",
-      "Observations analytics dashboard shows data or a clear error state.",
-      "Near-miss, fire inspection, and daily safety submit handlers enabled."
+      "Fixed portal and visitor data loading: GET ?action= routed on /api/exec.",
+      "Fixed hub KPIs/analytics cache key and close rate from summary.closeRate.",
+      "HSE broadcast ticker and emergency contacts read from HSE_Settings.",
+      "Gate visitor portal fetches registry from cloud with robust API fallback."
     ]
   }
 }

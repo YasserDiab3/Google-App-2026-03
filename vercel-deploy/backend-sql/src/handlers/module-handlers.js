@@ -1571,11 +1571,71 @@ const moduleHandlers = {
 
     'getHseBroadcastMessages': function(payload, postData, action) {
         const db = getDatabase();
-        const alerts = db.readSheet('SafetyAlerts') || [];
+        const settingsRows = db.readSheet('HSE_Settings') || [];
+        const found = settingsRows.find((s) => {
+            const k = String(s.settingKey || s.Setting_Key || s.key || s.id || '').trim();
+            return k === 'HSE_BROADCAST_MESSAGES';
+        });
+        let broadcast = null;
+        if (found) {
+            const raw = found.value || found.Setting_Value;
+            if (raw) {
+                try {
+                    broadcast = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                } catch (_) {
+                    broadcast = { messageAr: String(raw), messageEn: String(raw) };
+                }
+            }
+        }
+        if (!broadcast || typeof broadcast !== 'object') {
+            broadcast = {
+                messageAr: '🛡️ مرحباً بكم في بوابة السلامة الرقمية الموحدة • 🏆 تهنئة خاصة لأبطال السلامة • ⚡ يرجى مراجعة تصاريح العمل عالية المخاطر (PTW) • 🌡️ الالتزام بتعليمات الإجهاد الحراري • 🦺 مهمات الوقاية الشخصية (PPE) إلزامية',
+                messageEn: '🛡️ Welcome to Digital HSE Hub • 🏆 Safety Champions recognition • ⚡ Review high-risk PTW permits • 🌡️ Follow heat stress advisories • 🦺 PPE compliance is mandatory',
+                updatedAt: new Date().toISOString(),
+                updatedBy: 'النظام'
+            };
+        }
         return {
             success: true,
-            messages: alerts,
-            count: alerts.length,
+            broadcast,
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    'getHseEmergencyContacts': function(payload, postData, action) {
+        const db = getDatabase();
+        const settingsRows = db.readSheet('HSE_Settings') || [];
+        const found = settingsRows.find((s) => {
+            const k = String(s.settingKey || s.Setting_Key || s.key || s.id || '').trim();
+            return k === 'HSE_EMERGENCY_CONTACTS';
+        });
+        let contacts = null;
+        if (found) {
+            const raw = found.value || found.Setting_Value;
+            if (raw) {
+                try {
+                    contacts = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                } catch (_) {
+                    contacts = null;
+                }
+            }
+        }
+        if (!contacts || typeof contacts !== 'object') {
+            contacts = {
+                clinicPhone: '01000000001',
+                hsePhone: '01000000002',
+                firePhone: '01000000003',
+                securityPhone: '01000000004',
+                ambulancePhone: '123',
+                nationalFirePhone: '180',
+                policePhone: '122',
+                updatedAt: new Date().toISOString(),
+                updatedBy: 'النظام'
+            };
+        }
+        return {
+            success: true,
+            contacts,
             timestamp: new Date().toISOString()
         };
     },

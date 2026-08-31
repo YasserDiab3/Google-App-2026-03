@@ -34,6 +34,21 @@ module.exports = async (req, res) => {
             // JSON دائماً — الواجهة تجلب عبر fetch وتتحقق من redirectUrl يدوياً (تجنب 403 في img.src)
             return res.status(200).json(result);
         }
+        if (action) {
+            try {
+                const result = await handleRpcRequest({
+                    action,
+                    data: { ...(req.query || {}) }
+                });
+                return res.status(200).json(result);
+            } catch (err) {
+                return res.status(500).json({
+                    success: false,
+                    message: err.message || 'Internal Server Error',
+                    errorCode: 'SERVERLESS_INTERNAL_ERROR'
+                });
+            }
+        }
         return res.status(200).json({
             status: 'ok',
             server: 'HSE SQL API',
