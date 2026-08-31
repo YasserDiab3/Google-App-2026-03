@@ -21,8 +21,10 @@ const targets = [
     path.join(ROOT, 'data/clinic_hse.db'),
     path.join(repoRoot, 'data/sql/clinic_hse.db'),
     path.join(repoRoot, 'Frontend/data/sql/clinic_hse.db'),
+    path.join(repoRoot, 'Frontend/backend-sql/data/clinic_hse.db'),
     path.join(repoRoot, 'vercel-deploy/data/sql/clinic_hse.db'),
     path.join(repoRoot, 'vercel-deploy/frontend/data/sql/clinic_hse.db'),
+    path.join(repoRoot, 'vercel-deploy/frontend/backend-sql/data/clinic_hse.db'),
     path.join(repoRoot, 'dist/data/sql/clinic_hse.db'),
     path.join(repoRoot, 'Frontend/dist/data/sql/clinic_hse.db'),
     path.join(repoRoot, 'vercel-deploy/dist/data/sql/clinic_hse.db'),
@@ -30,12 +32,36 @@ const targets = [
 ];
 
 const buf = fs.readFileSync(sourceDb);
-const gz = zlib.gzipSync(buf);
+
+// لا تُضمَّن جلسات نشطة في bundle النشر — تسبب رفض الطلبات على Vercel
+try {
+    const { initDatabase } = require('../src/db/database');
+    const db = initDatabase(sourceDb);
+    const users = db.readSheet('Users') || [];
+    let cleared = 0;
+    for (const u of users) {
+        if (!u || !u.id) continue;
+        const sid = String(u.activeSessionId || '').trim();
+        const online = String(u.isOnline || '').toUpperCase();
+        if (sid || online === 'TRUE' || online === '1') {
+            db.updateRow('Users', 'id', u.id, { isOnline: 'false', activeSessionId: '' });
+            cleared++;
+        }
+    }
+    if (cleared > 0) {
+        console.log(`Cleared stale sessions for ${cleared} user(s) before deploy bundle`);
+    }
+} catch (e) {
+    console.warn('Session cleanup skipped:', e.message);
+}
+
+const finalBuf = fs.readFileSync(sourceDb);
+const gz = zlib.gzipSync(finalBuf);
 
 for (const dest of targets) {
     try {
         fs.mkdirSync(path.dirname(dest), { recursive: true });
-        fs.writeFileSync(dest, buf);
+        fs.writeFileSync(dest, finalBuf);
         fs.writeFileSync(dest + '.gz', gz);
         console.log('OK', dest);
     } catch (e) {
@@ -43,4 +69,4 @@ for (const dest of targets) {
     }
 }
 
-console.log(`\nSynced ${(buf.length / (1024 * 1024)).toFixed(2)} MB + gzip to ${targets.length} locations`);
+console.log(`\nSynced ${(finalBuf.length / (1024 * 1024)).toFixed(2)} MB + gzip to ${targets.length} locations`);

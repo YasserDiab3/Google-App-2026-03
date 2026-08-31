@@ -206,6 +206,68 @@ const authHandlers = {
         const db = getDatabase();
         const users = db.readSheet('Users');
         return { success: true, count: users.length, total: users.length };
+    },
+
+    'updateUser': function(payload, postData, action, actorUserData) {
+        const gate = requireAuthenticatedActor(actorUserData, action);
+        if (!gate.ok) return gate;
+
+        const data = payload || postData || {};
+        const userId = data.userId || data.id;
+        const updateData = data.updateData || {};
+        if (!userId) {
+            return { success: false, message: 'معرف المستخدم مطلوب', errorCode: 'USER_ID_REQUIRED' };
+        }
+
+        const db = getDatabase();
+        const users = db.readSheet('Users') || [];
+        const idStr = String(userId).trim();
+        const target = users.find((u) =>
+            u && (String(u.id || '').trim() === idStr
+                || String(u.email || '').trim().toLowerCase() === idStr.toLowerCase())
+        );
+        if (!target) {
+            return { success: false, message: 'المستخدم غير موجود', errorCode: 'USER_NOT_FOUND' };
+        }
+
+        const actorEmail = String(actorUserData?.email || gate.sheetUser?.email || '').trim().toLowerCase();
+        const targetEmail = String(target.email || '').trim().toLowerCase();
+        const isSelf = !!(actorEmail && targetEmail && actorEmail === targetEmail);
+        const isAdmin = checkAdminPermissionsAuthoritative(actorUserData);
+
+        if (!isAdmin && !isSelf) {
+            return {
+                success: false,
+                message: 'ليس لديك صلاحية تحديث هذا المستخدم',
+                errorCode: 'PERMISSION_DENIED'
+            };
+        }
+
+        const selfSafeFields = new Set(['photo', 'phone', 'updatedAt']);
+        const processed = {};
+        for (const [key, val] of Object.entries(updateData || {})) {
+            if (val === undefined) continue;
+            if (isAdmin) {
+                if (key === 'passwordHash' && val === '***') continue;
+                if (key === 'password' && (val === '***' || val === '')) continue;
+                processed[key] = val;
+            } else if (selfSafeFields.has(key)) {
+                processed[key] = val;
+            }
+        }
+
+        if (processed.password && String(processed.password).trim() && processed.password !== '***') {
+            processed.passwordHash = sha256(String(processed.password).trim());
+            processed.password = '';
+        }
+
+        if (!Object.keys(processed).length) {
+            return { success: false, message: 'لا توجد حقول مسموح تحديثها', errorCode: 'NO_ALLOWED_FIELDS' };
+        }
+
+        processed.updatedAt = new Date().toISOString();
+        db.updateRow('Users', 'id', target.id, processed);
+        return { success: true, message: 'تم تحديث المستخدم بنجاح', id: target.id };
     }
 };
 

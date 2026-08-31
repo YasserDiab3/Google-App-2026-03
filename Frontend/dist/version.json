@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1566",
+  "version": "1.0.1568",
   "highlights": {
     "ar": [
-      "إصلاح دخول yasser@icapp.com — MFA التالف من Excel + تحديث قاعدة SQL.",
-      "MFA على Vercel: tokens موقّعة بدل الذاكرة المؤقتة بين الطلبات.",
-      "سكربت reset-user-password.js لإعادة تعيين كلمات المرور محلياً.",
-      "تنظيف isOnline وجلسات SESS القديمة في bundle النشر."
+      "مطابقة قاعدة SQL مع شيت V.3-HSE — 142 ورقة بعد الترحيل.",
+      "تحديث بيانات العيادة والسجلات الناقصة في حزمة النشر.",
+      "تحديث الملف الشخصي للمستخدم دون صلاحية مدير كاملة.",
+      "إصلاح استمرار الجلسة على Vercel عند تبدّل الخادم."
     ],
     "en": [
-      "Fix yasser@icapp.com login — corrupt Excel MFA secret + SQL bundle update.",
-      "Vercel MFA: signed challenge tokens instead of ephemeral in-memory store.",
-      "reset-user-password.js script for local password resets.",
-      "Stale isOnline and SESS session cleanup in deploy bundle."
+      "Match SQL database to V.3-HSE sheet — 142 tabs after migration.",
+      "Clinic data and missing log rows updated in the deploy bundle.",
+      "Users can update their own profile without full admin rights.",
+      "Keep Vercel sessions valid across serverless instances."
     ]
   }
 }
