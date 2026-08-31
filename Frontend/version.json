@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1536",
+  "version": "1.0.1538",
   "highlights": {
     "ar": [
-      "دمج قاعدة SQL الموحّدة: زيارات العيادة 485، الموظفين 644، الحوادث 501 — مطابقة كاملة للعرض.",
-      "تفعيل API على www.safety-icapp.com/api/exec للنماذج العامة وإزالة نفق Cloudflare المنتهي.",
-      "إصلاح تحميل SQL على Vercel (مسار /tmp + clinic_hse.db.gz) لتسريع القراءة والكتابة.",
-      "سكربتات استيراد/دمج/تحقق SQL: rebuild-canonical، sync-deploy-bundle، verify-sql-crud."
+      "إصلاح 404 على /api/health و/api/exec: نقل بيانات SQL من مسار api/ الثابت لتفعيل دوال Vercel.",
+      "تحديث vercel.json: buildCommand + إعدادات دوال exec/health مع clinic_hse.db.gz.",
+      "مسار users-seed وقاعدة SQL أصبح data/sql/ — بدون تعارض مع مسارات API.",
+      "مزامنة database.js ومسارات sync-sql-deploy-bundle للنشر على safety-icapp.com."
     ],
     "en": [
-      "Unified SQL database: 485 clinic visits, 644 employees, 501 incidents — full UI parity.",
-      "Public forms now use www.safety-icapp.com/api/exec instead of expired Cloudflare tunnel.",
-      "Vercel SQL API fix: /tmp path + bundled clinic_hse.db.gz for fast read/write.",
-      "SQL import/merge/verify scripts: rebuild-canonical, sync-deploy-bundle, verify-sql-crud."
+      "Fix /api/health and /api/exec 404: moved static SQL out of api/ so Vercel serverless routes work.",
+      "Updated vercel.json: buildCommand + exec/health function settings with bundled clinic_hse.db.gz.",
+      "users-seed and SQL bundle now under data/sql/ — no conflict with API routes.",
+      "Synced database.js and deploy bundle paths for safety-icapp.com production."
     ]
   }
 }

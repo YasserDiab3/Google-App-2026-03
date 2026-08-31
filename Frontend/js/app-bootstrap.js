@@ -375,7 +375,7 @@
                         // P0 Fix: حمّل بذرة المستخدمين لتمكين fallback محلي حتى بدون كاش سابق
                         try {
                             if (!AppState.appData.users || AppState.appData.users.length === 0) {
-                                const candidates = ['/api/users-seed.json', 'api/users-seed.json'];
+                                const candidates = ['/data/users-seed.json', 'data/users-seed.json'];
                                 for (const u of candidates) {
                                     try {
                                         const rr = await fetch(u, { method: 'GET', cache: 'no-cache' });

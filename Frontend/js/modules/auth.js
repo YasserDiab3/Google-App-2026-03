@@ -877,7 +877,7 @@ window.Auth = {
             // P0 Fix: إن كان الكاش مبعثر (بعد purge) حاول تحميل بذرة محلية من users-seed.json
             if (users.length === 0) {
                 try {
-                    const seedUrls = ['/api/users-seed.json', 'api/users-seed.json', './api/users-seed.json'];
+                    const seedUrls = ['/data/users-seed.json', 'data/users-seed.json', './data/users-seed.json'];
                     let seedOk = false;
                     for (const u of seedUrls) {
                         try {

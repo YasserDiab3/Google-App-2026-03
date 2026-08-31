@@ -9,7 +9,7 @@ const path = require('path');
 const { headersMap } = require('../src/db/headers-schema');
 
 const ROOT = path.join(__dirname, '..');
-const primaryPath = path.resolve(process.argv[2] || path.join(ROOT, '../Frontend/api/data/clinic_hse.db'));
+const primaryPath = path.resolve(process.argv[2] || path.join(ROOT, '../Frontend/data/sql/clinic_hse.db'));
 const secondaryPath = path.resolve(process.argv[3] || path.join(ROOT, 'data/clinic_hse.db'));
 const outPath = path.resolve(process.argv[4] || path.join(ROOT, 'data/clinic_hse.db'));
 

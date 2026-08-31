@@ -19,13 +19,14 @@ if (!fs.existsSync(sourceDb)) {
 
 const targets = [
     path.join(ROOT, 'data/clinic_hse.db'),
-    path.join(repoRoot, 'Frontend/api/data/clinic_hse.db'),
-    path.join(repoRoot, 'vercel-deploy/api/data/clinic_hse.db'),
-    path.join(repoRoot, 'vercel-deploy/frontend/api/data/clinic_hse.db'),
-    path.join(repoRoot, 'dist/api/data/clinic_hse.db'),
-    path.join(repoRoot, 'Frontend/dist/api/data/clinic_hse.db'),
-    path.join(repoRoot, 'vercel-deploy/dist/api/data/clinic_hse.db'),
-    path.join(repoRoot, 'vercel-deploy/frontend/dist/api/data/clinic_hse.db')
+    path.join(repoRoot, 'data/sql/clinic_hse.db'),
+    path.join(repoRoot, 'Frontend/data/sql/clinic_hse.db'),
+    path.join(repoRoot, 'vercel-deploy/data/sql/clinic_hse.db'),
+    path.join(repoRoot, 'vercel-deploy/frontend/data/sql/clinic_hse.db'),
+    path.join(repoRoot, 'dist/data/sql/clinic_hse.db'),
+    path.join(repoRoot, 'Frontend/dist/data/sql/clinic_hse.db'),
+    path.join(repoRoot, 'vercel-deploy/dist/data/sql/clinic_hse.db'),
+    path.join(repoRoot, 'vercel-deploy/frontend/dist/data/sql/clinic_hse.db')
 ];
 
 const buf = fs.readFileSync(sourceDb);

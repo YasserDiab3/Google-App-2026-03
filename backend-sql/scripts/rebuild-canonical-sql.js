@@ -12,8 +12,8 @@ const { DatabaseSync } = require('node:sqlite');
 const { initSchema } = require('../src/db/schema-init');
 
 const repo = path.resolve(__dirname, '../..');
-const aPath = path.join(repo, 'Frontend/api/data/clinic_hse.db');
-const bPath = path.join(repo, 'vercel-deploy/api/data/clinic_hse.db');
+const aPath = path.join(repo, 'Frontend/data/sql/clinic_hse.db');
+const bPath = path.join(repo, 'vercel-deploy/data/sql/clinic_hse.db');
 const outPath = path.join(repo, 'backend-sql/data/clinic_hse.rebuilt.db');
 
 const SAFE_COL = /^[a-zA-Z0-9_\s\-\/#\(\)\.\&%:\+,أ-ي]+$/;

@@ -45,10 +45,9 @@ function initDatabase(overridePath = null) {
         const candidateGz = [
             dbPath + '.gz',
             path.join(__dirname, '..', 'data', 'clinic_hse.db.gz'),
-            path.join(__dirname, '..', '..', 'api', 'data', 'clinic_hse.db.gz'),
-            path.join(__dirname, '..', '..', 'lib', 'data', 'clinic_hse.db.gz'),
-            path.join(process.cwd(), 'api', 'data', 'clinic_hse.db.gz'),
-            path.join(process.cwd(), 'api', 'lib', 'data', 'clinic_hse.db.gz')
+            path.join(__dirname, '..', '..', 'data', 'sql', 'clinic_hse.db.gz'),
+            path.join(process.cwd(), 'data', 'sql', 'clinic_hse.db.gz'),
+            path.join(process.cwd(), 'backend-sql', 'data', 'clinic_hse.db.gz')
         ];
         for (const gzFile of candidateGz) {
             if (fs.existsSync(gzFile)) {

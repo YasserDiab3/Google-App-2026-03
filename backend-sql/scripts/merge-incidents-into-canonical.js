@@ -10,8 +10,8 @@ const path = require('path');
 const { DatabaseSync } = require('node:sqlite');
 
 const repo = path.resolve(__dirname, '../..');
-const basePath = path.join(repo, 'Frontend/api/data/clinic_hse.db');
-const incidentsSrc = path.join(repo, 'vercel-deploy/api/data/clinic_hse.db');
+const basePath = path.join(repo, 'Frontend/data/sql/clinic_hse.db');
+const incidentsSrc = path.join(repo, 'vercel-deploy/data/sql/clinic_hse.db');
 const outPath = path.join(repo, 'backend-sql/data/clinic_hse.merged.db');
 
 function rmSidecar(p) {
