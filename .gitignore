@@ -41,6 +41,8 @@ yarn-error.log*
 # Temporary files
 *.tmp
 *.temp
+data/attachments/
+backend-sql/data/attachments/
 *.diff
 *_debug.txt
 saveToSheet_debug.txt

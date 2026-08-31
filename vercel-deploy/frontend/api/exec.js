@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
         const action = req.query?.action;
         if (action === 'getProfileImage') {
             const { getProfileImage } = require('../backend-sql/src/handlers/file-handlers');
-            const result = getProfileImage(req.query);
+            const result = await getProfileImage(req.query);
             // JSON دائماً — الواجهة تجلب عبر fetch وتتحقق من redirectUrl يدوياً (تجنب 403 في img.src)
             return res.status(200).json(result);
         }
@@ -56,7 +56,7 @@ module.exports = async (req, res) => {
     }
 
     try {
-        const result = handleRpcRequest(body);
+        const result = await handleRpcRequest(body);
         return res.status(200).json(result);
     } catch (err) {
         return res.status(500).json({

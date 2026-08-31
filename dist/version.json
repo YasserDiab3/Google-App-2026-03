@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1568",
+  "version": "1.0.1570",
   "highlights": {
     "ar": [
-      "مطابقة قاعدة SQL مع شيت V.3-HSE — 142 ورقة بعد الترحيل.",
-      "تحديث بيانات العيادة والسجلات الناقصة في حزمة النشر.",
-      "تحديث الملف الشخصي للمستخدم دون صلاحية مدير كاملة.",
-      "إصلاح استمرار الجلسة على Vercel عند تبدّل الخادم."
+      "تخزين دائم للمرفقات وصور المستخدم عبر Vercel Blob.",
+      "صورة الملف الشخصي تبقى بعد إعادة تشغيل الخادم.",
+      "رفع الصور يمر عبر attachment-store مع fallback محلي للتطوير.",
+      "إعداد مطلوب: BLOB_READ_WRITE_TOKEN في Vercel Storage."
     ],
     "en": [
-      "Match SQL database to V.3-HSE sheet — 142 tabs after migration.",
-      "Clinic data and missing log rows updated in the deploy bundle.",
-      "Users can update their own profile without full admin rights.",
-      "Keep Vercel sessions valid across serverless instances."
+      "Persistent attachments and profile photos via Vercel Blob.",
+      "Profile photos survive server restarts.",
+      "Uploads use attachment-store with local disk fallback for dev.",
+      "Setup required: BLOB_READ_WRITE_TOKEN in Vercel Storage."
     ]
   }
 }

@@ -2275,7 +2275,7 @@ const GoogleIntegration = {
      * @param {string} moduleName - اسم الوحدة (اختياري)
      * @returns {Promise<object>} {success, fileId, directLink, shareableLink}
      */
-    async uploadFileToDrive(base64Data, fileName, mimeType, moduleName = null) {
+    async uploadFileToDrive(base64Data, fileName, mimeType, moduleName = null, options = null) {
         try {
             if (!base64Data || !fileName || !mimeType) {
                 throw new Error('معاملات غير كافية. يجب توفير base64Data, fileName, و mimeType');
@@ -2285,12 +2285,19 @@ const GoogleIntegration = {
                 Loading.show('جاري رفع الملف إلى الخادم...');
             }
 
-            const result = await this.sendToAppsScript('uploadFileToDrive', {
+            const payload = {
                 base64Data: base64Data,
                 fileName: fileName,
                 mimeType: mimeType,
                 moduleName: moduleName
-            });
+            };
+            if (options && typeof options === 'object') {
+                if (options.ownerUserId || options.userId) {
+                    payload.ownerUserId = options.ownerUserId || options.userId;
+                }
+            }
+
+            const result = await this.sendToAppsScript('uploadFileToDrive', payload);
 
             if (typeof Loading !== 'undefined' && Loading.hide) {
                 Loading.hide();
@@ -2302,7 +2309,9 @@ const GoogleIntegration = {
                     fileId: result.fileId,
                     directLink: result.directLink,
                     shareableLink: result.shareableLink,
-                    fileName: result.fileName
+                    publicUrl: result.publicUrl || result.shareableLink || '',
+                    fileName: result.fileName,
+                    storage: result.storage || ''
                 };
             } else {
                 throw new Error(result?.message || 'فشل رفع الملف إلى الخادم');

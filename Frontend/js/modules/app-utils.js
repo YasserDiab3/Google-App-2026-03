@@ -4346,7 +4346,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1568',
+    appVersion: '1.0.1570',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -5262,6 +5262,10 @@ const Utils = {
      */
     resolveUploadedPhotoRef(uploadResult) {
         if (!uploadResult || uploadResult.success === false) return '';
+        const publicUrl = String(uploadResult.publicUrl || uploadResult.shareableLink || '').trim();
+        if (/^https?:\/\//i.test(publicUrl) && /blob\.vercel-storage|vercel-storage\.com/i.test(publicUrl)) {
+            return publicUrl.split(/[?#\s]/)[0];
+        }
         const id = String(uploadResult.fileId || '').trim();
         if (/^FILE_[A-Za-z0-9_]+/.test(id)) {
             return id.split(/[?#\s]/)[0];

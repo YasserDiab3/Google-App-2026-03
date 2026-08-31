@@ -71,7 +71,7 @@ app.get('/', (req, res) => {
 });
 
 // Single Dispatcher Endpoint matching GAS WebApp URL (/exec or /api/rpc or /)
-const rpcHandler = (req, res) => {
+const rpcHandler = async (req, res) => {
     let body = req.body;
     
     // Parse text body if delivered as string
@@ -87,7 +87,7 @@ const rpcHandler = (req, res) => {
         }
     }
 
-    const response = handleRpcRequest(body);
+    const response = await handleRpcRequest(body);
     res.json(response);
 };
 

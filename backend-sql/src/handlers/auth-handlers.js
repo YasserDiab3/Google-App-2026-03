@@ -208,7 +208,7 @@ const authHandlers = {
         return { success: true, count: users.length, total: users.length };
     },
 
-    'updateUser': function(payload, postData, action, actorUserData) {
+    'updateUser': async function(payload, postData, action, actorUserData) {
         const gate = requireAuthenticatedActor(actorUserData, action);
         if (!gate.ok) return gate;
 
@@ -267,6 +267,19 @@ const authHandlers = {
 
         processed.updatedAt = new Date().toISOString();
         db.updateRow('Users', 'id', target.id, processed);
+
+        if (processed.photo) {
+            try {
+                const attachmentStore = require('../services/attachment-store');
+                await attachmentStore.saveProfilePhotoMeta(target.id, {
+                    photo: String(processed.photo).trim(),
+                    updatedAt: processed.updatedAt
+                });
+            } catch (err) {
+                console.error('[updateUser] profile meta persist failed:', err.message);
+            }
+        }
+
         return { success: true, message: 'تم تحديث المستخدم بنجاح', id: target.id };
     }
 };

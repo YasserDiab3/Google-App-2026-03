@@ -3156,7 +3156,7 @@ window.UI = {
             const fileName = 'user_photo_' + (userRecord.id || userRecord.email.replace(/@/g, '_')) + '_' + Date.now() + ext;
             const mimeType = file.type || 'image/jpeg';
             const uploadPromise = (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.uploadFileToDrive)
-                ? GoogleIntegration.uploadFileToDrive(base64Data, fileName, mimeType, 'Users')
+                ? GoogleIntegration.uploadFileToDrive(base64Data, fileName, mimeType, 'Users', { ownerUserId: userRecord.id })
                 : Promise.reject(new Error('Google Integration غير متاح'));
             uploadPromise.then(function(uploadResult) {
                 const photoRef = (typeof Utils !== 'undefined' && typeof Utils.resolveUploadedPhotoRef === 'function')

@@ -47,7 +47,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Support text/plain (used by Frontend خادم SQL fetch) and application/json (10MB limit)
+// Support text/plain (used by Frontend Google Apps Script fetch) and application/json (10MB limit)
 app.use(express.text({ type: ['text/plain', 'application/json', '*/*'], limit: '10mb' }));
 app.use(express.json({ limit: '10mb' }));
 
@@ -71,7 +71,7 @@ app.get('/', (req, res) => {
 });
 
 // Single Dispatcher Endpoint matching GAS WebApp URL (/exec or /api/rpc or /)
-const rpcHandler = (req, res) => {
+const rpcHandler = async (req, res) => {
     let body = req.body;
     
     // Parse text body if delivered as string
@@ -87,7 +87,7 @@ const rpcHandler = (req, res) => {
         }
     }
 
-    const response = handleRpcRequest(body);
+    const response = await handleRpcRequest(body);
     res.json(response);
 };
 
@@ -100,7 +100,7 @@ if (require.main === module) {
     const server = app.listen(config.port, config.host, () => {
         console.log(`====================================================`);
         console.log(`🚀 HSE SQL Backend running at: http://${config.host}:${config.port}`);
-        console.log(`📊 Protocol: 100% خادم SQL RPC Parity`);
+        console.log(`📊 Protocol: 100% Google Apps Script RPC Parity`);
         console.log(`🗄️  Database: SQLite (${config.sqlitePath})`);
         console.log(`====================================================`);
     });

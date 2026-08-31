@@ -53,7 +53,7 @@ ActionRegistry['listDatabaseBackups'] = () => ({ success: true, data: listBackup
  * @param {Object} reqBody The POST body sent by the frontend
  * @returns {Object} JSON response object matching GAS structure
  */
-function handleRpcRequest(reqBody) {
+async function handleRpcRequest(reqBody) {
     if (!reqBody || typeof reqBody !== 'object') {
         return {
             success: false,
@@ -154,7 +154,10 @@ function handleRpcRequest(reqBody) {
     if (!securityGate.ok) return securityGate;
 
     try {
-        const result = handler(payload, postData, action, actorUserData, spreadsheetId);
+        let result = handler(payload, postData, action, actorUserData, spreadsheetId);
+        if (result && typeof result.then === 'function') {
+            result = await result;
+        }
         return result || { success: true };
     } catch (err) {
         console.error(`[RPC ERROR] Exception in action "${action}":`, err);

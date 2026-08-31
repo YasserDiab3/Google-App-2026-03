@@ -25,5 +25,6 @@ module.exports = {
     databaseUrl: process.env.DATABASE_URL || '',
     corsOrigin: process.env.CORS_ORIGIN || '*',
     sessionSecret: process.env.SESSION_SECRET || 'hse_secure_local_dev_secret_2026',
+    blobReadWriteToken: process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_READ_WRITE_TOKEN || '',
     buildTag: 'HSE_SQL_BACKEND_v1.0.0'
 };
