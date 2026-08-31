@@ -1,26 +1,26 @@
 {
-  "buildCommand": "npm run build && node ../scripts/prepare-vercel-output.mjs",
+  "buildCommand": "npm run build",
   "installCommand": "npm install --prefix frontend",
+  "functions": {
+    "api/exec.js": {
+      "memory": 1024,
+      "maxDuration": 60,
+      "includeFiles": "{backend-sql/src/**,backend-sql/data/clinic_hse.db.gz,data/sql/clinic_hse.db.gz}"
+    },
+    "api/health.js": {
+      "memory": 128
+    }
+  },
   "redirects": [
     {
       "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "safetyicapp-ecru.vercel.app"
-        }
-      ],
+      "has": [{ "type": "host", "value": "safetyicapp-ecru.vercel.app" }],
       "destination": "https://www.safety-icapp.com/$1",
       "permanent": true
     },
     {
       "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "safety-icapp.com"
-        }
-      ],
+      "has": [{ "type": "host", "value": "safety-icapp.com" }],
       "destination": "https://www.safety-icapp.com/$1",
       "permanent": true
     }
@@ -50,39 +50,44 @@
     },
     {
       "source": "/",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }]
     },
     {
       "source": "/index.html",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }]
     },
     {
       "source": "/(.*).html",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate, no-cache" }]
     },
     {
       "source": "/icons/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     },
     {
       "source": "/(.*).js",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     },
     {
       "source": "/(.*).css",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     }
+  ],
+  "rewrites": [
+    { "source": "/exec", "destination": "/api/exec" },
+    { "source": "/forms", "destination": "/dist/forms-hub.html" },
+    { "source": "/forms-hub", "destination": "/dist/forms-hub.html" },
+    { "source": "/gate", "destination": "/dist/gate-visitor-entry.html" },
+    { "source": "/visitors", "destination": "/dist/gate-visitor-entry.html" },
+    { "source": "/gate-visitor-entry", "destination": "/dist/gate-visitor-entry.html" },
+    { "source": "/obs", "destination": "/dist/public-observation.html" },
+    { "source": "/observation", "destination": "/dist/public-observation.html" },
+    { "source": "/near-miss", "destination": "/dist/public-near-miss.html" },
+    { "source": "/fire", "destination": "/dist/public-fire-inspection.html" },
+    { "source": "/fire-inspection", "destination": "/dist/public-fire-inspection.html" },
+    { "source": "/daily-safety", "destination": "/dist/public-daily-safety.html" },
+    { "source": "/patrol", "destination": "/dist/public-daily-safety.html" },
+    { "source": "/", "destination": "/dist/index.html" },
+    { "source": "/:path((?!api/).*)", "destination": "/dist/:path" }
   ]
 }
