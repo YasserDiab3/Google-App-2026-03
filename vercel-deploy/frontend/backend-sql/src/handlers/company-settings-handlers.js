@@ -5,6 +5,7 @@
 
 const { getDatabase } = require('../db/database');
 
+const COMPANY_SETTINGS_SHEET = 'Company_Settings';
 const DEFAULT_SETTINGS_ID = 'COMPANY-SETTINGS-1';
 
 function getDefaultCompanySettings() {
@@ -125,7 +126,7 @@ function mergeSettingsWithPpeRules(db, rawRow) {
 const companySettingsHandlers = {
     getCompanySettings(payload, postData) {
         const db = getDatabase();
-        const rows = db.readSheet('CompanySettings') || [];
+        const rows = db.readSheet(COMPANY_SETTINGS_SHEET) || [];
         const settingsData = rows.length > 0
             ? mergeSettingsWithPpeRules(db, rows[0])
             : mergeSettingsWithPpeRules(db, null);
@@ -147,7 +148,7 @@ const companySettingsHandlers = {
             }
         }
 
-        const rows = db.readSheet('CompanySettings') || [];
+        const rows = db.readSheet(COMPANY_SETTINGS_SHEET) || [];
         const existing = rows[0] || {};
         const id = data.id || existing.id || DEFAULT_SETTINGS_ID;
 
@@ -167,9 +168,9 @@ const companySettingsHandlers = {
         }
 
         if (rows.length > 0) {
-            db.updateRow('CompanySettings', 'id', id, toSave);
+            db.updateRow(COMPANY_SETTINGS_SHEET, 'id', id, toSave);
         } else {
-            db.insertRow('CompanySettings', toSave);
+            db.insertRow(COMPANY_SETTINGS_SHEET, toSave);
         }
 
         return {

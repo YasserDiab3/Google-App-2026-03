@@ -1,17 +1,15 @@
 {
-  "version": "1.0.1551",
+  "version": "1.0.1553",
   "highlights": {
     "ar": [
-      "إعدادات النماذج: جلب وحفظ المواقع والأماكن والإدارات وفريق السلامة من قاعدة SQL.",
-      "حذف الحادث وعمليات الإدارة الحرجة لا تُحجب بـ Circuit Breaker بعد الآن.",
-      "إصلاح تحميل إعدادات الشركة وقواعد استحقاق مهمات الوقاية (PPE) من SQL.",
-      "تحسين عرض صور البروفايل والملاحظات عبر وكيل /api/exec."
+      "إصلاح حفظ قواعد استحقاق مهمات الوقاية (PPE) — الجدول الصحيح Company_Settings في SQL.",
+      "إزالة مسار upsert القديم لـ saveCompanySettings من entity resolver.",
+      "alias قراءة companysettings في batchReadSheets لمطابقة اسم الجدول."
     ],
     "en": [
-      "Form settings: load/save sites, places, departments, and safety team from SQL.",
-      "Incident delete and critical admin actions no longer blocked by Circuit Breaker.",
-      "Fixed company settings and PPE eligibility rules loading from SQL.",
-      "Improved profile and observation images via /api/exec proxy."
+      "Fixed PPE eligibility rules save — correct SQL table Company_Settings.",
+      "Removed legacy saveCompanySettings upsert path from entity resolver.",
+      "Added companysettings alias in batchReadSheets for table name matching."
     ]
   }
 }

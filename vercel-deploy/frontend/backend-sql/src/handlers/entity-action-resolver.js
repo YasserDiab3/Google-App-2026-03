@@ -121,7 +121,6 @@ const ACTION_MAP = {
 
     // Settings / structure (upsert to settings sheets)
     saveOrganizationalStructure: { sheet: 'OrganizationalStructure', op: 'upsert', idFields: ['id'] },
-    saveCompanySettings: { sheet: 'CompanySettings', op: 'upsert', idFields: ['id'] },
     saveHseEmergencyContacts: { sheet: 'HseEmergencyContacts', op: 'upsert', idFields: ['id'] },
     updateKPITargets: { sheet: 'KPITargets', op: 'upsert', idFields: ['id'] },
     updateLeaveTypes: { sheet: 'LeaveTypes', op: 'upsert', idFields: ['id'] },

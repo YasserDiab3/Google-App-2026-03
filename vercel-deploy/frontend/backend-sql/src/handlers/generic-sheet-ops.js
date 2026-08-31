@@ -50,6 +50,7 @@ const genericSheetOps = {
             'factories': 'Form_Sites',
             'sites': 'Form_Sites',
             'places': 'Form_Places',
+            'companysettings': 'Company_Settings',
             'officers': 'SecurityOfficers',
             'gatevisitors': 'GateVisitors',
             'observations': 'DailyObservations',
