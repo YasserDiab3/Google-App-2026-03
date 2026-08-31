@@ -1,9 +1,9 @@
 /**
  * إصلاح مشكلة عدم ظهور الصور في موديول المخالفات - تبويب الممنوعين من الدخول
  * 
- * المشكلة: الصور مخزنة كـ Base64 في Google Sheets ولا تظهر بشكل صحيح
+ * المشكلة: الصور مخزنة كـ Base64 في قاعدة SQL ولا تظهر بشكل صحيح
  * 
- * الحل: إضافة دالة لتحويل Base64 إلى رابط Google Drive عند التحميل
+ * الحل: إضافة دالة لتحويل Base64 إلى رابط الخادم عند التحميل
  * أو عرض Base64 بشكل صحيح في الواجهة
  */
 
@@ -193,11 +193,11 @@ function debugBlacklistPhotos() {
 }
 
 // ============================================
-// 5. دالة لتحديث جميع الصور من Base64 إلى Google Drive URLs
+// 5. دالة لتحديث جميع الصور من Base64 إلى الخادم URLs
 // ============================================
 
 async function migrateBlacklistPhotosToDrive() {
-    console.log('=== بدء تحويل الصور من Base64 إلى Google Drive ===');
+    console.log('=== بدء تحويل الصور من Base64 إلى الخادم ===');
     
     if (!AppState.appData || !AppState.appData.blacklistRegister) {
         console.error('❌ لا توجد بيانات Blacklist');

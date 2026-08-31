@@ -485,7 +485,7 @@ window.Auth = {
     },
 
     /**
-     * تطبيع passwordHash القادم من الشيت (قد يكون نصاً أو كائناً من Google Sheets).
+     * تطبيع passwordHash القادم من الشيت (قد يكون نصاً أو كائناً من قاعدة SQL).
      */
     _normalizeStoredPasswordHash(raw) {
         if (raw == null || raw === '') return '';
@@ -1314,7 +1314,7 @@ window.Auth = {
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 window.DataManager.save();
             }
-            // لا يتم تحديث Google Sheets تلقائياً بعد تسجيل الدخول للحفاظ على السجلات الأصلية
+            // لا يتم تحديث قاعدة SQL تلقائياً بعد تسجيل الدخول للحفاظ على السجلات الأصلية
         }
 
         // حفظ الجلسة بشكل آمن (بدون passwordHash)
@@ -1468,7 +1468,7 @@ window.Auth = {
                                 AppState.appData[key] = data;
                                 Utils.safeLog(`✅ تم تحميل ${sheetName}: ${data.length} سجل`);
                             } else if (key && Array.isArray(AppState.appData[key]) && AppState.appData[key].length > 0) {
-                                Utils.safeLog(`⚠️ ${sheetName}: فشل التحميل من Google Sheets - استخدام ${AppState.appData[key].length} سجل محلي`);
+                                Utils.safeLog(`⚠️ ${sheetName}: فشل التحميل من قاعدة SQL - استخدام ${AppState.appData[key].length} سجل محلي`);
                             }
                         } catch (error) {
                             const key = sheetMapping[sheetName];
@@ -1793,7 +1793,7 @@ window.Auth = {
                         }
 
                         // نقبل المستخدم حتى لو لم نجده في قاعدة البيانات
-                        // لأنه قد يكون هناك تأخير في تحميل البيانات من Google Sheets
+                        // لأنه قد يكون هناك تأخير في تحميل البيانات من قاعدة SQL
                         if (foundUser) {
                             // استخدام بيانات المستخدم الكاملة من قاعدة البيانات
                             // ✅ ضمان name صحيح حتى في الاستعادة — الجلسة تبقى مصدر البريد/المعرّف
@@ -2316,7 +2316,7 @@ window.Auth = {
             Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
         }
 
-        // حفظ في Google Sheets إذا كان معّلاً
+        // حفظ في قاعدة SQL إذا كان معّلاً
         if (AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.enabled && AppState.googleConfig.sheets && AppState.googleConfig.sheets.spreadsheetId) {
             try {
                 const changeResult = await GoogleIntegration.sendToAppsScript('changePassword', {
@@ -2325,13 +2325,13 @@ window.Auth = {
                     newPassword
                 });
                 if (changeResult && changeResult.success) {
-                    Utils.safeLog('✅ تم حفظ كلمة المرور الجديدة في Google Sheets');
+                    Utils.safeLog('✅ تم حفظ كلمة المرور الجديدة في قاعدة SQL');
                 } else {
-                    Utils.safeWarn('⚠ فشل حفظ كلمة المرور في Google Sheets:', changeResult?.message);
+                    Utils.safeWarn('⚠ فشل حفظ كلمة المرور في قاعدة SQL:', changeResult?.message);
                     Notification.warning('تم التحديث محلياً؛ فشلت المزامنة مع الخادم: ' + (changeResult?.message || ''));
                 }
             } catch (error) {
-                Utils.safeWarn('⚠ فشل حفظ كلمة المرور في Google Sheets:', error);
+                Utils.safeWarn('⚠ فشل حفظ كلمة المرور في قاعدة SQL:', error);
                 Notification.warning('تم التحديث محلياً؛ فشلت المزامنة مع الخادم.');
             }
         }
@@ -2373,7 +2373,7 @@ window.Auth = {
                 return;
             }
 
-            // خريطة الموديولات وأوراق Google Sheets الخاصة بها
+            // خريطة الموديولات وأوراق قاعدة SQL الخاصة بها
             const moduleSheetsMap = {
                 'incidents': ['Incidents'],
                 'nearmiss': ['NearMiss'],
@@ -2414,7 +2414,7 @@ window.Auth = {
                 'daily-observations': 'daily_observations_last_sync',
             };
 
-            // خريطة أوراق Google Sheets إلى مفاتيح AppState
+            // خريطة أوراق قاعدة SQL إلى مفاتيح AppState
             const sheetToKeyMap = {
                 'Incidents': 'incidents',
                 // key in AppState is `nearmiss` (not `nearMiss`)
@@ -2514,7 +2514,7 @@ window.Auth = {
                     const sheets = moduleSheetsMap[moduleName] || [];
 
                     if (sheets.length === 0) {
-                        Utils.safeLog(`⚠️ لا توجد أوراق Google Sheets للموديول: ${moduleName}`);
+                        Utils.safeLog(`⚠️ لا توجد أوراق قاعدة SQL للموديول: ${moduleName}`);
                         return;
                     }
                     if (isModuleFreshInCache(moduleName, sheets)) {
@@ -2689,7 +2689,7 @@ window.Auth = {
             this._sanitizeCurrentUserSecrets();
         }
 
-        // حفظ تلقائياً في Google Sheets
+        // حفظ تلقائياً في قاعدة SQL
         try {
             if (AppState.googleConfig.appsScript.enabled && AppState.googleConfig.appsScript.scriptUrl) {
                 // استخدام resetUserPassword في Backend أولاً
@@ -2700,7 +2700,7 @@ window.Auth = {
                 });
 
                 if (result && result.success) {
-                    Utils.safeLog('✅ تم تحديث كلمة المرور في Google Sheets بنجاح');
+                    Utils.safeLog('✅ تم تحديث كلمة المرور في قاعدة SQL بنجاح');
                     // استخدام كلمة المرور المؤقتة من Backend إذا كانت متاحة
                     if (result.tempPassword) {
                         tempPassword = result.tempPassword;
@@ -2718,7 +2718,7 @@ window.Auth = {
                     });
 
                     if (result && result.success) {
-                        Utils.safeLog('✅ تم تحديث كلمة المرور في Google Sheets بنجاح (عبر updateUser)');
+                        Utils.safeLog('✅ تم تحديث كلمة المرور في قاعدة SQL بنجاح (عبر updateUser)');
                     } else {
                         // إذا فشل، نحاول autoSave
                         await GoogleIntegration.autoSave('Users', AppState.appData.users);
@@ -2726,7 +2726,7 @@ window.Auth = {
                 }
             }
         } catch (error) {
-            Utils.safeWarn('⚠ فشل تحديث كلمة المرور في Google Sheets:', error);
+            Utils.safeWarn('⚠ فشل تحديث كلمة المرور في قاعدة SQL:', error);
             // نحاول autoSave كبديل
             try {
                 await GoogleIntegration.autoSave('Users', AppState.appData.users);

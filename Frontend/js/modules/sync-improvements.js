@@ -1,5 +1,5 @@
 /**
- * تحسينات المزامنة مع Google Sheets
+ * تحسينات المزامنة مع قاعدة SQL
  * Sync Improvements Module
  * 
  * Features:
@@ -389,8 +389,8 @@
                     
                     if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
                         if (!silent) {
-                            Utils.safeLog('Google Sheets غير مفعل أو لا يوجد رابط سكريبت - سيتم استخدام البيانات المحلية');
-                            Notification.warning('Google Sheets غير مفعل. يتم استخدام البيانات المحلية فقط');
+                            Utils.safeLog('قاعدة SQL غير مفعل أو لا يوجد رابط سكريبت - سيتم استخدام البيانات المحلية');
+                            Notification.warning('قاعدة SQL غير مفعل. يتم استخدام البيانات المحلية فقط');
                         }
                         return false;
                     }
@@ -750,7 +750,7 @@
                         }
                         Utils.safeError('خطأ في المزامنة:', error);
                         if (effectiveNotifyOnError) {
-                            Notification.error('خطأ في المزامنة مع Google Sheets: ' + error.message);
+                            Notification.error('خطأ في المزامنة مع قاعدة SQL: ' + error.message);
                         }
                         return false;
                     } finally {

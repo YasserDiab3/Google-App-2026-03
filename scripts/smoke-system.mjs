@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const PROD_EXEC_URL = process.env.HSE_EXEC_URL ||
-  'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+  'https://www.safety-icapp.com/api/exec';
 
 const TIMEOUT_MS = Number(process.env.SMOKE_TIMEOUT_MS || 25000);
 const HANG_MS = Number(process.env.SMOKE_HANG_MS || 15000);

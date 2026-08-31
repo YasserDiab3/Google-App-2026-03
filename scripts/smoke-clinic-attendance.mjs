@@ -13,7 +13,7 @@ const SCRIPT_ID = JSON.parse(
   fs.readFileSync(path.join(ROOT, 'Backend', '.clasp.json'), 'utf8')
 ).scriptId;
 const PROD_EXEC_URL =
-  'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+  'https://www.safety-icapp.com/api/exec';
 
 function makeCsrf() {
   const bytes = new Uint8Array(32);

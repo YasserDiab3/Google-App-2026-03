@@ -271,7 +271,7 @@ class GateSecurityModule {
             const raw = localStorage.getItem('HSE_GATE_VISITORS_REGISTRY');
             this.visitors = raw ? JSON.parse(raw) : [];
 
-            // Then attempt to fetch from Google Sheets Backend if online
+            // Then attempt to fetch from قاعدة SQL Backend if online
             if (navigator.onLine) {
                 try {
                     const targetUrl = this.getEffectiveApiUrl();
@@ -319,15 +319,19 @@ class GateSecurityModule {
     }
 
     getEffectiveApiUrl() {
-        const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+        if (typeof window.getEffectiveApiUrl === 'function') {
+            return window.getEffectiveApiUrl();
+        }
         try {
-            const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
-            if (s1) {
-                const parsed = JSON.parse(s1);
-                if (parsed && parsed.scriptUrl && parsed.scriptUrl.includes('script.google.com')) return parsed.scriptUrl;
+            const host = (window.location.hostname || '').toLowerCase();
+            if (host.includes('safety-icapp.com') || host.includes('vercel.app')) {
+                return window.location.origin + '/api/exec';
             }
-        } catch(e) {}
-        return DEFAULT_API_URL;
+            if (host === 'localhost' || host === '127.0.0.1') {
+                return 'http://127.0.0.1:3001/exec';
+            }
+        } catch (_e) {}
+        return '/api/exec';
     }
 
     updateKpis() {

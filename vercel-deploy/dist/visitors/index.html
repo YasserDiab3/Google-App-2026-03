@@ -3526,7 +3526,6 @@ function resetCheckInForm() {
         }
 
         const LIVE_BACKEND_URL = 'https://www.safety-icapp.com/api/exec';
-        const GAS_FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
         const DEFAULT_API_URL = LIVE_BACKEND_URL;
 
         function getEffectiveApiUrl() {
@@ -3848,7 +3847,7 @@ function resetCheckInForm() {
             renderEmergencyContacts();
             if (!navigator.onLine) return;
             try {
-                const targetApiUrl = (typeof SCRIPT_URL !== 'undefined') ? SCRIPT_URL : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+                const targetApiUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
                 const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
                 if (!res.ok) return;
                 const data = await res.json();
@@ -3976,7 +3975,7 @@ function resetCheckInForm() {
 
             try {
                 const startTime = performance.now();
-                const targetUrl = (typeof SCRIPT_URL !== 'undefined') ? SCRIPT_URL : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+                const targetUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
                 await fetch(`${targetUrl}?action=ping&_t=${Date.now()}`, { method: 'HEAD', mode: 'no-cors', cache: 'no-store' });
                 const latency = Math.round(performance.now() - startTime);
 

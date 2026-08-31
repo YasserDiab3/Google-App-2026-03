@@ -1424,7 +1424,7 @@ const PTW = {
     /**
      * حفظ بيانات السجل
      * @param {Object} options - خيارات الحفظ
-     * @param {boolean} options.skipSync - تجاهل المزامنة مع Google Sheets (مفيد عند التحميل الأولي)
+     * @param {boolean} options.skipSync - تجاهل المزامنة مع قاعدة SQL (مفيد عند التحميل الأولي)
      */
     async saveRegistryData(options = {}) {
         try {
@@ -4428,7 +4428,7 @@ const PTW = {
         MapCoordinatesManager.scheduleBackgroundSync()
             .then((ok) => {
                 if (ok) {
-                    Utils.safeLog('✅ تم مزامنة إحداثيات الخريطة من Google Sheets');
+                    Utils.safeLog('✅ تم مزامنة إحداثيات الخريطة من قاعدة SQL');
                     this._notifyMapCoordinatesUpdated();
                 }
             })
@@ -5801,10 +5801,10 @@ const PTW = {
             window.DataManager.save();
         }
         
-        // حفظ في Google Sheets إذا كان متاحاً
+        // حفظ في قاعدة SQL إذا كان متاحاً
         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
             await GoogleIntegration.autoSave('PTW_MAP_SITES', sites).catch(err => {
-                Utils.safeWarn('⚠️ تعذر حفظ إعدادات المواقع في Google Sheets:', err);
+                Utils.safeWarn('⚠️ تعذر حفظ إعدادات المواقع في قاعدة SQL:', err);
             });
         }
     },
@@ -17592,7 +17592,7 @@ const PTW = {
                 this.currentEditId
                     ? this.updateRegistryEntry(formData)
                     : this.addToRegistry(formData),
-                // حفظ في Google Sheets
+                // حفظ في قاعدة SQL
                 this._autoSavePtwToCloud(AppState.appData.ptw)
             ]).then((results) => {
                 const localSaveFailed = results[0]?.status === 'rejected';
@@ -18758,9 +18758,9 @@ const PTW = {
                 Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
             }
             
-            // حفظ في Google Sheets في الخلفية
+            // حفظ في قاعدة SQL في الخلفية
             this._autoSavePtwToCloud(AppState.appData.ptw).catch(error => {
-                Utils.safeError('خطأ في حفظ Google Sheets:', error);
+                Utils.safeError('خطأ في حفظ قاعدة SQL:', error);
             });
 
             if (action === 'approved') {
@@ -18916,7 +18916,7 @@ const PTW = {
             } else {
                 Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
             }
-            // حظ تلقائي ي Google Sheets
+            // حظ تلقائي ي قاعدة SQL
             await this._autoSavePtwToCloud(AppState.appData.ptw);
             Loading.hide();
             Notification.success(this._t('module.ptw.notify.deleted', 'تم حذف التصريح بنجاح'));

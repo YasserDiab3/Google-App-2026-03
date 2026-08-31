@@ -278,9 +278,9 @@ const ActionTrackingRegister = {
                 this.settings = this.getDefaultSettings();
             }
         } catch (error) {
-            // Don't log errors for Google Apps Script not enabled - just use default settings
+            // Don't log errors for خادم SQL not enabled - just use default settings
             const errorMessage = error?.message || '';
-            if (!errorMessage.includes('Google Apps Script') && !errorMessage.includes('غير مفعّل') && !errorMessage.includes('انتهت مهلة الاتصال')) {
+            if (!errorMessage.includes('خادم SQL') && !errorMessage.includes('غير مفعّل') && !errorMessage.includes('انتهت مهلة الاتصال')) {
                 Utils.safeWarn('خطأ في تحميل إعدادات Action Tracking:', error);
             }
             this.settings = this.getDefaultSettings();
@@ -450,9 +450,9 @@ const ActionTrackingRegister = {
                     }
                 }
             } catch (error) {
-                // Don't log errors for Google Apps Script not enabled - just use local data
+                // Don't log errors for خادم SQL not enabled - just use local data
                 const errorMessage = error?.message || '';
-                if (!errorMessage.includes('Google Apps Script') && !errorMessage.includes('غير مفعّل') && !errorMessage.includes('انتهت مهلة الاتصال')) {
+                if (!errorMessage.includes('خادم SQL') && !errorMessage.includes('غير مفعّل') && !errorMessage.includes('انتهت مهلة الاتصال')) {
                     Utils.safeWarn('خطأ في تحميل KPIs:', error);
                 }
                 // في حالة الخطأ، البيانات المحلية معروضة بالفعل
@@ -681,9 +681,9 @@ const ActionTrackingRegister = {
                         }
                     }
                 } catch (error) {
-                    // Don't log errors for Google Apps Script not enabled - just use local data
+                    // Don't log errors for خادم SQL not enabled - just use local data
                     const errorMessage = error?.message || '';
-                    if (!errorMessage.includes('Google Apps Script') && !errorMessage.includes('غير مفعّل') && !errorMessage.includes('انتهت مهلة الاتصال')) {
+                    if (!errorMessage.includes('خادم SQL') && !errorMessage.includes('غير مفعّل') && !errorMessage.includes('انتهت مهلة الاتصال')) {
                         Utils.safeWarn('خطأ في تحميل الإجراءات من Backend:', error);
                     }
                     // في حالة الخطأ، نستخدم البيانات المحلية (تم عرضها بالفعل)

@@ -8,7 +8,7 @@ const path = require('path');
 const { migrateFromLiveGas } = require('./migrate-from-sheets');
 
 const GAS_URL = process.env.HSE_GAS_EXEC_URL ||
-  'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+  'https://www.safety-icapp.com/api/exec';
 
 const PRIORITY_SHEETS = [
     'ClinicVisits', 'ClinicContractorVisits', 'Employees', 'Users', 'Medications',

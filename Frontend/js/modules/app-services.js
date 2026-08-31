@@ -13,9 +13,9 @@
  * - services/approval-circuits.js - Approval circuit management
  * - services/audit-log.js - Audit logging
  * - services/user-activity-log.js - User activity logging
- * - services/cloud-storage-integration.js - Cloud storage (OneDrive, Google Drive, SharePoint)
+ * - services/cloud-storage-integration.js - Cloud storage (OneDrive, الخادم, SharePoint)
  * - services/workflow.js - Workflow engine
- * - services/google-integration.js - Google Apps Script and Sheets integration
+ * - services/google-integration.js - خادم SQL and Sheets integration
  */
 
 // All services are already loaded via script tags and exposed to window
@@ -39,7 +39,7 @@ if (typeof window !== 'undefined') {
         window.GoogleIntegration.syncSpecificSheets = async function(sheetNames = [], options = {}) {
             const { silent = false, showLoader = false, notifyOnSuccess = !silent, notifyOnError = !silent } = options;
             if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
-                if (!silent) Utils.safeLog('Google Sheets غير مفعّل');
+                if (!silent) Utils.safeLog('قاعدة SQL غير مفعّل');
                 return false;
             }
             if (!Array.isArray(sheetNames) || sheetNames.length === 0) {

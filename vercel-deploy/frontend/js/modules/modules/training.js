@@ -690,7 +690,7 @@ const Training = {
             }
 
             const fallbackTimeoutMs = 12000;
-            const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من الاتصال وإعدادات Google Apps Script.';
+            const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من الاتصال وإعدادات خادم SQL.';
             const contractorGuardOk = () => (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000;
 
             const result = await Utils.promiseWithTimeout(
@@ -771,7 +771,7 @@ const Training = {
         // التحقق من تفعيل Google Integration قبل إجراء الطلبات
         if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
             if (AppState.debugMode) {
-                Utils.safeLog('⚠️ Google Apps Script غير مفعل - استخدام البيانات المحلية فقط');
+                Utils.safeLog('⚠️ خادم SQL غير مفعل - استخدام البيانات المحلية فقط');
             }
             this._trainingBackendFetchOk = true;
             this._trainingTabFetchOk = { programs: true, attendance: true, legalTraining: true };
@@ -790,7 +790,7 @@ const Training = {
 
         // برامج التدريب أولاً — لا ننتظر getTrainingModuleBundle (7 جداول) قبل ظهور القائمة.
         const fallbackTimeoutMs = 20000;
-        const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من الاتصال وإعدادات Google Apps Script.';
+        const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من الاتصال وإعدادات خادم SQL.';
 
         const persistAndRefreshUi = (fetchedTab) => {
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -5534,7 +5534,7 @@ const Training = {
                         Utils.safeWarn('⚠️ خطأ في تحديث القائمة:', refreshError);
                     });
 
-                    // المزامنة مع Google Sheets في الخلفية
+                    // المزامنة مع قاعدة SQL في الخلفية
                     (async () => {
                         try {
                             if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
@@ -5553,7 +5553,7 @@ const Training = {
                                 await GoogleIntegration.autoSave('ContractorTrainings', AppState.appData.contractorTrainings);
                             }
                         } catch (syncError) {
-                            Utils.safeWarn('⚠️ فشل المزامنة مع Google Sheets (سيتم المحاولة لاحقاً):', syncError);
+                            Utils.safeWarn('⚠️ فشل المزامنة مع قاعدة SQL (سيتم المحاولة لاحقاً):', syncError);
                         }
                     })();
                 }, 0);
@@ -5751,7 +5751,7 @@ const Training = {
             Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
         }
         
-        // حفظ في Google Sheets
+        // حفظ في قاعدة SQL
         if (AppState.googleConfig?.appsScript?.enabled) {
             try {
                 // استخدام saveToSheet لحذف السجل
@@ -5764,7 +5764,7 @@ const Training = {
                     }
                 });
             } catch (error) {
-                Utils.safeWarn('⚠️ فشل حذف تدريب المقاول من Google Sheets، سيتم المحاولة لاحقاً:', error);
+                Utils.safeWarn('⚠️ فشل حذف تدريب المقاول من قاعدة SQL، سيتم المحاولة لاحقاً:', error);
                 // استخدام autoSave كبديل فقط في حالة الفشل
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                     await GoogleIntegration.autoSave?.('ContractorTrainings', AppState.appData.contractorTrainings).catch(() => {
@@ -5773,7 +5773,7 @@ const Training = {
                 }
             }
         } else if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-            // إذا لم يكن Google Apps Script مفعّل، نستخدم autoSave
+            // إذا لم يكن خادم SQL مفعّل، نستخدم autoSave
             await GoogleIntegration.autoSave?.('ContractorTrainings', AppState.appData.contractorTrainings);
         }
         
@@ -7472,7 +7472,7 @@ const Training = {
                     Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                 }
                 
-                // حفظ في Google Sheets
+                // حفظ في قاعدة SQL
                 if (AppState.googleConfig?.appsScript?.enabled) {
                     try {
                         // حفظ التدريب
@@ -7497,7 +7497,7 @@ const Training = {
                             }
                         }
                     } catch (error) {
-                        Utils.safeWarn('⚠️ فشل حفظ التدريب في Google Sheets، سيتم المحاولة لاحقاً:', error);
+                        Utils.safeWarn('⚠️ فشل حفظ التدريب في قاعدة SQL، سيتم المحاولة لاحقاً:', error);
                         // استخدام autoSave كبديل فقط في حالة الفشل
                         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                             await Promise.allSettled([
@@ -7509,7 +7509,7 @@ const Training = {
                         }
                     }
                 } else if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-                    // إذا لم يكن Google Apps Script مفعّل، نستخدم autoSave
+                    // إذا لم يكن خادم SQL مفعّل، نستخدم autoSave
                     await Promise.allSettled([
                         GoogleIntegration.autoSave?.('Training', AppState.appData.training),
                         GoogleIntegration.autoSave?.('EmployeeTrainingMatrix', AppState.appData.employeeTrainingMatrix)
@@ -9689,7 +9689,7 @@ const Training = {
                 }
             }, 50);
 
-            // ✅ 6. مزامنة Google Sheets بكفاءة:
+            // ✅ 6. مزامنة قاعدة SQL بكفاءة:
             // — Training: ترسل البرنامج الجديد/المُحدّث فقط (سجل واحد) عبر saveToSheet (UPSERT)
             // — TrainingAttendance: ترسل فقط السجلات المتغيّرة (added + updated) — عادة 1-20 سجل
             //   بدلاً من إرسال المصفوفة كاملة (500+) التي تتسبب في timeout على الخادم
@@ -9752,7 +9752,7 @@ const Training = {
                 Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
             }
             
-            // حذف من Google Sheets إذا كان مفعلاً
+            // حذف من قاعدة SQL إذا كان مفعلاً
             if (AppState.googleConfig?.appsScript?.enabled) {
                 try {
                     const result = await GoogleIntegration.sendToAppsScript('deleteTraining', { 
@@ -9769,19 +9769,19 @@ const Training = {
                         GoogleIntegration.clearCache('Training');
                     }
                 } catch (error) {
-                    Utils.safeWarn('⚠️ فشل حذف البرنامج من Google Sheets، سيتم المحاولة لاحقاً:', error);
+                    Utils.safeWarn('⚠️ فشل حذف البرنامج من قاعدة SQL، سيتم المحاولة لاحقاً:', error);
                     // محاولة الحفظ التلقائي كبديل
                     if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                         await GoogleIntegration.autoSave('Training', AppState.appData.training).catch(err => {
-                            Utils.safeWarn('⚠️ فشل حفظ التعديلات في Google Sheets:', err);
+                            Utils.safeWarn('⚠️ فشل حفظ التعديلات في قاعدة SQL:', err);
                         });
                     }
                 }
             } else {
-                // إذا لم يكن Google Sheets مفعلاً، استخدم autoSave فقط
+                // إذا لم يكن قاعدة SQL مفعلاً، استخدم autoSave فقط
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                     await GoogleIntegration.autoSave('Training', AppState.appData.training).catch(err => {
-                        Utils.safeWarn('⚠️ فشل حفظ التعديلات في Google Sheets:', err);
+                        Utils.safeWarn('⚠️ فشل حفظ التعديلات في قاعدة SQL:', err);
                     });
                 }
             }
@@ -13353,13 +13353,13 @@ const Training = {
     
     /**
      * تنظيف الوقت من تنسيق ISO إلى HH:MM
-     * ✅ يدعم: HH:MM | ISO date | Google Sheets fraction (0.375 = 09:00) | Date objects
+     * ✅ يدعم: HH:MM | ISO date | قاعدة SQL fraction (0.375 = 09:00) | Date objects
      * ✅ آمن ضد تحويلات timezone (لا يستخدم getHours/getMinutes المحلية)
      */
     cleanTime(timeValue) {
         if (timeValue === null || timeValue === undefined || timeValue === '') return '';
 
-        // ✅ معالجة Google Sheets fraction of day: 0.375 = 09:00, 0.5 = 12:00
+        // ✅ معالجة قاعدة SQL fraction of day: 0.375 = 09:00, 0.5 = 12:00
         // هذا يحدث عندما يُرجع الـ Backend قيمة الخلية كرقم بدل ما يكون Date object
         // (يحدث لو الخلية مُنسّقة كرقم بدل وقت في الشيت، أو لو الإصلاح في readFromSheet غير منشور)
         if (typeof timeValue === 'number' && isFinite(timeValue) && timeValue >= 0 && timeValue < 1) {
@@ -14003,11 +14003,11 @@ const Training = {
                 await window.DataManager.save();
             }
 
-            // حفظ تلقائي في Google Sheets
+            // حفظ تلقائي في قاعدة SQL
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                 await GoogleIntegration.autoSave('TrainingAttendance', AppState.appData.trainingAttendance).catch(err => {
-                    Utils.safeWarn('⚠️ فشل حفظ سجل التدريب في Google Sheets:', err);
-                    Notification.error('فشل حفظ سجل التدريب في Google Sheets. سيتم الاحتفاظ بالتغييرات محلياً فقط حتى يتم الحفظ بنجاح.');
+                    Utils.safeWarn('⚠️ فشل حفظ سجل التدريب في قاعدة SQL:', err);
+                    Notification.error('فشل حفظ سجل التدريب في قاعدة SQL. سيتم الاحتفاظ بالتغييرات محلياً فقط حتى يتم الحفظ بنجاح.');
                 });
             }
 
@@ -14154,10 +14154,10 @@ const Training = {
                     await window.DataManager.save();
                 }
                 
-                // حفظ في Google Sheets
+                // حفظ في قاعدة SQL
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                     await GoogleIntegration.autoSave('TrainingAnalysisData', AppState.appData.trainingAnalysisData).catch(err => {
-                        Utils.safeWarn('⚠️ فشل حفظ بيانات التحليل في Google Sheets:', err);
+                        Utils.safeWarn('⚠️ فشل حفظ بيانات التحليل في قاعدة SQL:', err);
                     });
                 }
                 
@@ -14328,8 +14328,8 @@ const Training = {
                 }
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                     await GoogleIntegration.autoSave('TrainingAttendance', AppState.appData.trainingAttendance).catch(err => {
-                        Utils.safeWarn('⚠️ فشل حفظ سجل التدريب في Google Sheets:', err);
-                        Notification.error('فشل حفظ سجل التدريب في Google Sheets. سيتم الاحتفاظ بالتغييرات محلياً فقط حتى يتم الحفظ بنجاح.');
+                        Utils.safeWarn('⚠️ فشل حفظ سجل التدريب في قاعدة SQL:', err);
+                        Notification.error('فشل حفظ سجل التدريب في قاعدة SQL. سيتم الاحتفاظ بالتغييرات محلياً فقط حتى يتم الحفظ بنجاح.');
                     });
                 }
                 Loading.hide();
@@ -14696,11 +14696,11 @@ const Training = {
                         await window.DataManager.save();
                     }
                     
-                    // حفظ في Google Sheets
+                    // حفظ في قاعدة SQL
                     if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                         await GoogleIntegration.autoSave('TrainingAttendance', registry).catch(err => {
-                            Utils.safeWarn('⚠️ فشل حفظ التعديلات في Google Sheets:', err);
-                            Notification.error('فشل حفظ تعديلات سجل التدريب في Google Sheets. سيتم الاحتفاظ بالتغييرات محلياً فقط حتى يتم الحفظ بنجاح.');
+                            Utils.safeWarn('⚠️ فشل حفظ التعديلات في قاعدة SQL:', err);
+                            Notification.error('فشل حفظ تعديلات سجل التدريب في قاعدة SQL. سيتم الاحتفاظ بالتغييرات محلياً فقط حتى يتم الحفظ بنجاح.');
                         });
                     }
                     
@@ -14747,11 +14747,11 @@ const Training = {
                     await window.DataManager.save();
                 }
                 
-                // حفظ في Google Sheets
+                // حفظ في قاعدة SQL
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                     await GoogleIntegration.autoSave('TrainingAttendance', registry).catch(err => {
-                        Utils.safeWarn('⚠️ فشل حفظ التعديلات في Google Sheets:', err);
-                        Notification.error('فشل حفظ تعديلات سجل التدريب في Google Sheets. سيتم الاحتفاظ بالتغييرات محلياً فقط حتى يتم الحفظ بنجاح.');
+                        Utils.safeWarn('⚠️ فشل حفظ التعديلات في قاعدة SQL:', err);
+                        Notification.error('فشل حفظ تعديلات سجل التدريب في قاعدة SQL. سيتم الاحتفاظ بالتغييرات محلياً فقط حتى يتم الحفظ بنجاح.');
                     });
                 }
                 

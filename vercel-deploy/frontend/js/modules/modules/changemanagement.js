@@ -1243,7 +1243,7 @@ const ChangeManagement = {
             req = this.state.lastRequests.find(r => String(r.id) === String(requestId));
         }
 
-        // إذا لم نجدها أو أردنا أحدث نسخة من Google Sheets، نستدعي السيرفر
+        // إذا لم نجدها أو أردنا أحدث نسخة من قاعدة SQL، نستدعي السيرفر
         if (!req) {
             if (typeof Loading !== 'undefined' && Loading.show) Loading.show('جاري تحميل التفاصيل...');
             try {
@@ -1922,7 +1922,7 @@ ${data.map(r => '<tr>' + (Object.keys(data[0] || {})).map(k => '<td>' + safe(r[k
             const list = Array.isArray(this.state.lastRequests) ? this.state.lastRequests : [];
             let req = list.find(r => String(r.id) === String(requestId));
 
-            // إذا لم يكن موجوداً في الذاكرة، نحاول جلبه من Google Apps Script
+            // إذا لم يكن موجوداً في الذاكرة، نحاول جلبه من خادم SQL
             if (!req && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
                 if (typeof Loading !== 'undefined' && Loading.show) Loading.show('جاري تحميل بيانات الطلب...');
                 const response = await GoogleIntegration.sendRequest({

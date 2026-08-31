@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1547",
+  "version": "1.0.1549",
   "highlights": {
     "ar": [
-      "تصحيح قاعدة SQL: حذف 500 سجل تجريبي BENCH من الحوادث واستيراد البيانات الحقيقية من Excel.",
-      "مطابقة الجداول الرئيسية (موظفين، زيارات، ملاحظات، تدريب، تصاريح) مع ملف V.3-HSE Database.",
-      "إزالة التكرارات الداخلية في SQL لضمان تطابق العرض مع قاعدة البيانات.",
-      "تحديث حزمة clinic_hse.db.gz لكل مسارات النشر على safety-icapp.com."
+      "إصلاح حذف/تعديل/إضافة السجلات: تغطية 80+ إجراء CRUD على خادم SQL دون ACTION_NOT_RECOGNIZED.",
+      "منع فتح Circuit Breaker عند أخطاء التطبيق المتوقعة (إجراء غير معروف، صلاحيات، MFA).",
+      "إصلاح deleteIncident وaddObservationUpdate وربط MFA (تسجيل/تأكيد/تعطيل) على SQL.",
+      "أرشفة Google Apps Script والاعتماد الكامل على /api/exec — v1.0.1549."
     ],
     "en": [
-      "SQL data fix: removed 500 BENCH test incident rows and imported real records from Excel.",
-      "Aligned core tables (employees, visits, observations, training, permits) with V.3-HSE Database.",
-      "Removed internal SQL duplicates so the UI matches the database counts.",
-      "Updated clinic_hse.db.gz bundle across all deployment paths on safety-icapp.com."
+      "Fixed record add/update/delete: 80+ CRUD RPC actions mapped on SQL without ACTION_NOT_RECOGNIZED.",
+      "Circuit Breaker no longer opens on expected app errors (unknown action, permissions, MFA).",
+      "deleteIncident, addObservationUpdate, and MFA enroll/confirm/disable wired to SQL.",
+      "Google Apps Script archived; full /api/exec SQL backend — v1.0.1548."
     ]
   }
 }

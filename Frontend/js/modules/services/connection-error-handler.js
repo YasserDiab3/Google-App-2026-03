@@ -45,19 +45,19 @@ function getStandardizedErrorMessage(error, context = '') {
         return {
             type: 'timeout',
             message: error?.message || String(error),
-            userMessage: `انتهت مهلة الاتصال بالخادم${context ? ' أثناء ' + context : ''}\n\nتحقق من:\n1. اتصال الإنترنت\n2. أن Google Apps Script منشور ومفعّل\n3. عدم وجود قيود على الشبكة\n\nسيتم استخدام البيانات المحلية.`,
+            userMessage: `انتهت مهلة الاتصال بالخادم${context ? ' أثناء ' + context : ''}\n\nتحقق من:\n1. اتصال الإنترنت\n2. أن خادم SQL منشور ومفعّل\n3. عدم وجود قيود على الشبكة\n\nسيتم استخدام البيانات المحلية.`,
             showRetry: true
         };
     }
 
-    // فحص أخطاء Google Apps Script غير المفعل
+    // فحص أخطاء خادم SQL غير المفعل
     if (errorMsg.includes('google apps script غير مفعل') ||
         errorMsg.includes('غير مفعل') ||
         errorMsg.includes('not enabled')) {
         return {
             type: 'disabled',
             message: error?.message || String(error),
-            userMessage: 'Google Apps Script غير مفعل.\nسيتم استخدام البيانات المحلية.',
+            userMessage: 'خادم SQL غير مفعل.\nسيتم استخدام البيانات المحلية.',
             showRetry: false
         };
     }
@@ -69,7 +69,7 @@ function getStandardizedErrorMessage(error, context = '') {
         return {
             type: 'config',
             message: error?.message || String(error),
-            userMessage: 'إعدادات Google Apps Script غير مكتملة.\nيرجى التحقق من الإعدادات.',
+            userMessage: 'إعدادات خادم SQL غير مكتملة.\nيرجى التحقق من الإعدادات.',
             showRetry: false
         };
     }
@@ -127,7 +127,7 @@ function handleModuleLoadError(error, moduleName = 'الموديول', fallbackF
 function promiseWithTimeout(promise, timeout = 10000, operation = 'العملية') {
     const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
-            reject(new Error(`انتهت مهلة الاتصال بالخادم أثناء ${operation}\n\nتحقق من:\n1. اتصال الإنترنت\n2. أن Google Apps Script منشور ومفعّل\n3. عدم وجود قيود على الشبكة`));
+            reject(new Error(`انتهت مهلة الاتصال بالخادم أثناء ${operation}\n\nتحقق من:\n1. اتصال الإنترنت\n2. أن خادم SQL منشور ومفعّل\n3. عدم وجود قيود على الشبكة`));
         }, timeout);
     });
 
@@ -143,14 +143,14 @@ function promiseWithTimeout(promise, timeout = 10000, operation = 'العملي�
  */
 async function safeGoogleRequest(requestData, timeout = 10000, operation = 'الطلب') {
     try {
-        // التحقق من تكوين Google Apps Script
+        // التحقق من تكوين خادم SQL
         if (typeof AppState === 'undefined' || !AppState.googleConfig?.appsScript?.enabled) {
-            throw new Error('Google Apps Script غير مفعل');
+            throw new Error('خادم SQL غير مفعل');
         }
 
         if (!AppState.googleConfig.appsScript.scriptUrl ||
             AppState.googleConfig.appsScript.scriptUrl.trim() === '') {
-            throw new Error('Google Apps Script غير مُكوَّن بشكل صحيح');
+            throw new Error('خادم SQL غير مُكوَّن بشكل صحيح');
         }
 
         // التحقق من توفر GoogleIntegration

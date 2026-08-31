@@ -1,6 +1,6 @@
 /**
  * Cloud Storage Integration Service
- * Handles OAuth integration with OneDrive, Google Drive, and SharePoint
+ * Handles OAuth integration with OneDrive, الخادم, and SharePoint
  */
 
 const CloudStorageIntegration = {
@@ -424,7 +424,7 @@ const CloudStorageIntegration = {
     },
 
     /**
-     * Upload file to Google Drive
+     * Upload file to الخادم
      */
     async uploadToGoogleDrive(accessToken, file, fileName, folderPath) {
         const endpoint = this.endpoints.googleDrive.api;
@@ -451,7 +451,7 @@ const CloudStorageIntegration = {
 
         if (!response.ok) {
             const error = await response.text();
-            throw new Error(`فشل رفع الملف إلى Google Drive: ${error}`);
+            throw new Error(`فشل رفع الملف إلى الخادم: ${error}`);
         }       
 
         return await response.json();
@@ -593,7 +593,7 @@ const CloudStorageIntegration = {
     getServiceName(service) {
         const names = {
             onedrive: 'Microsoft OneDrive',
-            googleDrive: 'Google Drive',
+            googleDrive: 'الخادم',
             sharepoint: 'Microsoft SharePoint'
         };
         return names[service] || service;

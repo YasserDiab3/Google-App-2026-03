@@ -11,6 +11,30 @@ function generateId(prefix = 'REC') {
     return `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
 }
 
+function checkIncidentDeletePermission(userData) {
+    if (!userData || typeof userData !== 'object') {
+        return { ok: false, success: false, message: 'يجب تسجيل الدخول أولاً' };
+    }
+    const role = String(userData.role || '').trim();
+    const roleLow = role.toLowerCase();
+    if (roleLow === 'admin' || roleLow === 'administrator' || roleLow === 'system_admin' ||
+        role === 'مدير النظام' || role === 'مدير') {
+        return { ok: true };
+    }
+    let perms = userData.permissions || {};
+    if (typeof perms === 'string') {
+        try { perms = JSON.parse(perms); } catch (_) { perms = {}; }
+    }
+    if (perms.admin === true || perms['manage-modules'] === true || perms['incidents-manage'] === true) {
+        return { ok: true };
+    }
+    return {
+        ok: false,
+        success: false,
+        message: 'ليس لديك صلاحية لحذف الحوادث. الحذف متاح لمدير النظام فقط.'
+    };
+}
+
 const moduleHandlers = {
     // ==========================================
     // 1. Clinic Module
@@ -122,6 +146,36 @@ const moduleHandlers = {
         };
     },
 
+    'deleteIncident': function(payload, postData, action, actorUserData) {
+        const permUser = payload?.userData || actorUserData;
+        const perm = checkIncidentDeletePermission(permUser);
+        if (!perm.ok) return perm;
+
+        const incidentId = payload?.incidentId || payload?.id || postData?.data?.incidentId;
+        if (!incidentId) {
+            return { success: false, message: 'معرف الحادث غير محدد' };
+        }
+
+        const db = getDatabase();
+        const deleted = db.deleteRows('Incidents', 'id', incidentId);
+
+        try {
+            const registry = db.readSheet('IncidentsRegistry') || [];
+            for (const row of registry) {
+                if (String(row.incidentId || '') === String(incidentId)) {
+                    db.deleteRows('IncidentsRegistry', 'id', row.id);
+                }
+            }
+        } catch (_) {}
+
+        return {
+            success: true,
+            message: deleted > 0 ? 'تم حذف الحادث بنجاح' : 'لم يتم العثور على الحادث',
+            deleted: deleted > 0,
+            incidentId: String(incidentId)
+        };
+    },
+
     'saveNearMiss': function(payload, postData, action, actorUserData) {
         const data = payload?.data || payload || {};
         if (!data.id) data.id = generateId('NM');
@@ -159,6 +213,82 @@ const moduleHandlers = {
             message: 'تم حفظ الملاحظة اليومية بنجاح',
             id: data.id,
             data: data
+        };
+    },
+
+    'addObservationUpdate': function(payload, postData, action, actorUserData) {
+        const gate = checkAuthenticatedActor(actorUserData, action);
+        if (!gate.ok) return gate;
+
+        const observationId = payload?.observationId || postData?.data?.observationId;
+        const updateData = payload?.updateData || payload?.data || payload || {};
+        if (!observationId) {
+            return { success: false, message: 'معرف الملاحظة مطلوب' };
+        }
+
+        const db = getDatabase();
+        const rows = db.readSheet('DailyObservations') || [];
+        const observation = rows.find(o => String(o.id) === String(observationId));
+        if (!observation) {
+            return { success: false, message: 'الملاحظة غير موجودة' };
+        }
+
+        let updates = [];
+        try {
+            if (Array.isArray(observation.updates)) updates = observation.updates;
+            else if (typeof observation.updates === 'string' && observation.updates) {
+                updates = JSON.parse(observation.updates);
+            }
+        } catch (_) { updates = []; }
+
+        updates.push({
+            id: 'UPD-' + Date.now().toString(),
+            user: updateData.user || actorUserData?.name || 'System',
+            update: updateData.update || '',
+            progress: updateData.progress || 0,
+            timestamp: new Date().toISOString()
+        });
+
+        let timeLog = [];
+        try {
+            if (Array.isArray(observation.timeLog)) timeLog = observation.timeLog;
+            else if (typeof observation.timeLog === 'string' && observation.timeLog) {
+                timeLog = JSON.parse(observation.timeLog);
+            }
+        } catch (_) { timeLog = []; }
+
+        timeLog.push({
+            action: 'update_added',
+            user: updateData.user || actorUserData?.name || 'System',
+            timestamp: new Date().toISOString(),
+            roleLabel: 'تحديث التنفيذ',
+            actionDetail: 'تم إضافة تحديث على سير التنفيذ',
+            note: 'تحديث التنفيذ: تم إضافة تحديث على سير التنفيذ'
+        });
+
+        const updatedAt = new Date().toISOString();
+        db.updateRow('DailyObservations', 'id', observationId, {
+            updates: JSON.stringify(updates),
+            timeLog: JSON.stringify(timeLog),
+            updatedAt
+        });
+
+        return {
+            success: true,
+            message: 'تم إضافة التحديث بنجاح',
+            observationId: String(observationId)
+        };
+    },
+
+    'sendDirectEmail': function(payload) {
+        const moduleKey = String(payload?.moduleKey || '').trim();
+        if (!moduleKey) {
+            return { success: false, message: 'moduleKey مطلوب', errorCode: 'EMAIL_PAYLOAD_INVALID' };
+        }
+        return {
+            success: false,
+            message: 'إرسال البريد غير متاح على خادم SQL بعد — استخدم التصدير أو شارك الرابط يدوياً.',
+            errorCode: 'EMAIL_NOT_CONFIGURED'
         };
     },
 

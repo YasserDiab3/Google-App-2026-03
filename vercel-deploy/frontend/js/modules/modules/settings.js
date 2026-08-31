@@ -816,7 +816,7 @@ const Settings = {
                             <i class="fas fa-cloud text-green-600 ml-2"></i>
                             التكامل والمزامنة
                         </h2>
-                        <p class="settings-group-subtitle">إعدادات الاتصال بـ Google Apps Script والمزامنة مع Google Sheets</p>
+                        <p class="settings-group-subtitle">إعدادات الاتصال بخادم SQL والمزامنة مع قاعدة البيانات</p>
                     </div>
                     <div class="settings-group-content">
                         <div class="content-card">
@@ -835,11 +835,11 @@ const Settings = {
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                                             <i class="fas fa-link ml-2"></i>
-                                            رابط Web App لـ Google Apps Script (مطلوب للمزامنة)
+                                            رابط API للخادم (مطلوب للمزامنة)
                                         </label>
                                         <input type="url" id="google-apps-script-url" class="form-input"
                                             value="${AppState.googleConfig.appsScript.scriptUrl || ''}"
-                                            placeholder="https://script.google.com/macros/s/…/exec">
+                                            placeholder="https://www.safety-icapp.com/api/exec">
                                     </div>
                                     <div>
                                         <label class="flex items-center mb-4">
@@ -910,7 +910,7 @@ const Settings = {
                 ${isAdmin ? this.renderCloudStorageSettings() : '<div class="settings-group mt-6"><p class="text-gray-600">هذا القسم متاح للمديرين فقط</p></div>'}
             </div>
 
-            <!-- Tab Content: Google Drive -->
+            <!-- Tab Content: الخادم -->
             <div class="tab-content" id="tab-google-drive">
                 ${isAdmin ? this.renderGoogleDriveSettings() : '<div class="settings-group mt-6"><p class="text-gray-600">هذا القسم متاح للمديرين فقط</p></div>'}
             </div>
@@ -3948,7 +3948,7 @@ const Settings = {
             });
         }
 
-        // Google Drive Settings
+        // الخادم Settings
         const googledriveForm = document.getElementById('googledrive-settings-form');
         if (googledriveForm) {
             googledriveForm.addEventListener('submit', async (e) => {
@@ -3964,7 +3964,7 @@ const Settings = {
                 }
 
                 DataManager.saveCloudStorageConfig();
-                Notification.success('تم حفظ إعدادات Google Drive بنجاح');
+                Notification.success('تم حفظ إعدادات الخادم بنجاح');
                 this.load();
             });
         }
@@ -3976,7 +3976,7 @@ const Settings = {
                     await CloudStorageIntegration.authorize('googleDrive');
                     this.load();
                 } catch (error) {
-                    Notification.error(error.message || 'فشل ربط Google Drive');
+                    Notification.error(error.message || 'فشل ربط الخادم');
                 }
             });
         }
@@ -4092,7 +4092,7 @@ const Settings = {
                     <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <p class="text-xs text-gray-600">
                             <i class="fas fa-info-circle ml-1 text-blue-600"></i>
-                            <strong>ملاحظة:</strong> يجب إعداد التطبيقات في Azure Portal (لـ OneDrive و SharePoint) أو Google Cloud Console (لـ Google Drive) أولاً.
+                            <strong>ملاحظة:</strong> يجب إعداد التطبيقات في Azure Portal (لـ OneDrive و SharePoint) أو Google Cloud Console (لـ الخادم) أولاً.
                             المدير فقط يملك صلاحية ربط حساب النظام بالخدمات السحابية. المستخدمون العاديون يمكنهم استخدام التكامل بعد تفعيله.
                         </p>
                     </div>
@@ -4110,14 +4110,14 @@ const Settings = {
                 <div class="card-header">
                     <h2 class="card-title">
                         <i class="fab fa-google ml-2"></i>
-                        Google Drive
+                        الخادم
                     </h2>
                 </div>
                 <div class="card-body space-y-4">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-base font-semibold text-gray-700">
                             <i class="fab fa-google ml-2"></i>
-                            إعدادات Google Drive
+                            إعدادات الخادم
                         </h3>
                         <span class="badge badge-${googleDriveStatus}">
                             ${googleDriveStatus === 'success' ? 'مفعل' : 'غير مفعل'}
@@ -4128,7 +4128,7 @@ const Settings = {
                             <label class="flex items-center mb-2">
                                 <input type="checkbox" id="googledrive-enabled" class="rounded border-gray-300 text-blue-600"
                                     ${googleDriveConfig.enabled ? 'checked' : ''}>
-                                <span class="mr-2 text-sm text-gray-700">تفعيل Google Drive</span>
+                                <span class="mr-2 text-sm text-gray-700">تفعيل الخادم</span>
                             </label>
                         </div>
                         <div>
@@ -4165,7 +4165,7 @@ const Settings = {
                     <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <p class="text-xs text-gray-600">
                             <i class="fas fa-info-circle ml-1 text-blue-600"></i>
-                            <strong>ملاحظة:</strong> يجب إعداد التطبيق في Google Cloud Console أولاً. المدير فقط يملك صلاحية ربط حساب النظام بـ Google Drive.
+                            <strong>ملاحظة:</strong> يجب إعداد التطبيق في Google Cloud Console أولاً. المدير فقط يملك صلاحية ربط حساب النظام بـ الخادم.
                         </p>
                     </div>
                 </div>

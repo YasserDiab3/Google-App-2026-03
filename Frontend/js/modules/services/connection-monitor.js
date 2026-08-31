@@ -46,9 +46,9 @@ const ConnectionMonitor = {
             return;
         }
 
-        // التحقق من تفعيل Google Apps Script
+        // التحقق من تفعيل خادم SQL
         if (!AppState.googleConfig || !AppState.googleConfig.appsScript || !AppState.googleConfig.appsScript.enabled) {
-            Utils.safeLog('ℹ️ Google Apps Script غير مفعل - تخطي مراقبة الاتصال');
+            Utils.safeLog('ℹ️ خادم SQL غير مفعل - تخطي مراقبة الاتصال');
             return;
         }
 
@@ -87,7 +87,7 @@ const ConnectionMonitor = {
             return;
         }
 
-        // التحقق من تفعيل Google Apps Script
+        // التحقق من تفعيل خادم SQL
         if (!AppState.googleConfig || !AppState.googleConfig.appsScript || !AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
             return;
         }
@@ -95,7 +95,7 @@ const ConnectionMonitor = {
         this.state.lastCheckTime = new Date().toISOString();
 
         try {
-            // محاولة قراءة بيانات بسيطة من Google Sheets
+            // محاولة قراءة بيانات بسيطة من قاعدة SQL
             // استخدام timeout أطول (60 ثانية) لتجنب أخطاء timeout غير ضرورية
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets) {
                 const result = await Utils.promiseWithTimeout(
@@ -131,7 +131,7 @@ const ConnectionMonitor = {
             const isTimeoutError = errorMsg.includes('انتهت مهلة الاتصال') || 
                                    errorMsg.includes('timeout') || 
                                    errorMsg.includes('Timeout') ||
-                                   errorMsg.includes('فقدان الاتصال مع Google Sheets');
+                                   errorMsg.includes('فقدان الاتصال مع قاعدة SQL');
             
             // إذا كان خطأ timeout، نزيد العتبة قليلاً قبل الإشعار
             if (isTimeoutError && this.state.consecutiveFailures < this.config.failureThreshold) {
@@ -208,26 +208,26 @@ const ConnectionMonitor = {
             const errorMessage = error?.message || 'خطأ غير معروف';
             const isTimeoutError = errorMessage.includes('انتهت مهلة الاتصال') || 
                                    errorMessage.includes('timeout') || 
-                                   errorMessage.includes('فقدان الاتصال مع Google Sheets');
+                                   errorMessage.includes('فقدان الاتصال مع قاعدة SQL');
             
             // رسالة مبسطة لخطأ timeout
             let message;
             if (isTimeoutError) {
-                message = `⚠️ فقدان الاتصال مع Google Sheets!\n\n` +
+                message = `⚠️ فقدان الاتصال مع قاعدة SQL!\n\n` +
                          `الخطأ: انتهت مهلة الاتصال\n` +
                          `الوقت: ${new Date().toLocaleString('ar-SA')}\n\n` +
                          `يرجى التحقق من:\n` +
-                         `1. إعدادات Google Apps Script\n` +
-                         `2. معرف Google Sheets\n` +
+                         `1. إعدادات خادم SQL\n` +
+                         `2. معرف قاعدة SQL\n` +
                          `3. الاتصال بالإنترنت\n\n` +
                          `💡 سيتم استخدام البيانات المحلية حتى يتم استعادة الاتصال.`;
             } else {
-                message = `⚠️ فقدان الاتصال مع Google Sheets!\n\n` +
+                message = `⚠️ فقدان الاتصال مع قاعدة SQL!\n\n` +
                          `الخطأ: ${errorMessage}\n` +
                          `الوقت: ${new Date().toLocaleString('ar-SA')}\n\n` +
                          `يرجى التحقق من:\n` +
-                         `1. إعدادات Google Apps Script\n` +
-                         `2. معرف Google Sheets\n` +
+                         `1. إعدادات خادم SQL\n` +
+                         `2. معرف قاعدة SQL\n` +
                          `3. الاتصال بالإنترنت`;
             }
 
@@ -241,7 +241,7 @@ const ConnectionMonitor = {
             // تسجيل في سجل النشاط
             if (typeof UserActivityLog !== 'undefined') {
                 UserActivityLog.log('connection_lost', 'System', null, {
-                    description: `فقدان الاتصال مع Google Sheets: ${errorMessage}`,
+                    description: `فقدان الاتصال مع قاعدة SQL: ${errorMessage}`,
                     error: errorMessage,
                     timestamp: new Date().toISOString()
                 }).catch(() => {});
@@ -258,7 +258,7 @@ const ConnectionMonitor = {
             });
         }
 
-        Utils.safeError('❌ فقدان الاتصال مع Google Sheets - تم إشعار مدير النظام');
+        Utils.safeError('❌ فقدان الاتصال مع قاعدة SQL - تم إشعار مدير النظام');
     },
 
     /**
@@ -274,7 +274,7 @@ const ConnectionMonitor = {
             AppState.currentUser.role === 'admin' ||
             (AppState.currentUser.permissions && (AppState.currentUser.permissions.isAdmin === true || AppState.currentUser.permissions.admin === true))
         )) {
-            const message = `✅ تم استعادة الاتصال مع Google Sheets بنجاح!\n\n` +
+            const message = `✅ تم استعادة الاتصال مع قاعدة SQL بنجاح!\n\n` +
                           `الوقت: ${new Date().toLocaleString('ar-SA')}`;
 
             if (typeof Notification !== 'undefined') {
@@ -286,13 +286,13 @@ const ConnectionMonitor = {
             // تسجيل في سجل النشاط
             if (typeof UserActivityLog !== 'undefined') {
                 UserActivityLog.log('connection_restored', 'System', null, {
-                    description: 'تم استعادة الاتصال مع Google Sheets',
+                    description: 'تم استعادة الاتصال مع قاعدة SQL',
                     timestamp: new Date().toISOString()
                 }).catch(() => {});
             }
         }
 
-        Utils.safeLog('✅ تم استعادة الاتصال مع Google Sheets');
+        Utils.safeLog('✅ تم استعادة الاتصال مع قاعدة SQL');
     },
 
     /**

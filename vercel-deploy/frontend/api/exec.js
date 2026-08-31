@@ -27,9 +27,18 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'GET') {
+        const action = req.query?.action;
+        if (action === 'getProfileImage') {
+            const { getProfileImage } = require('../backend-sql/src/handlers/file-handlers');
+            const result = getProfileImage(req.query);
+            if (result.redirectUrl) {
+                return res.redirect(302, result.redirectUrl);
+            }
+            return res.status(200).json(result);
+        }
         return res.status(200).json({
             status: 'ok',
-            server: 'HSE Vercel Serverless API',
+            server: 'HSE SQL API',
             endpoint: '/api/exec',
             timestamp: new Date().toISOString()
         });

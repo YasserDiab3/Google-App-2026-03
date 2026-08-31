@@ -12,7 +12,7 @@ const BehaviorMonitoring = {
     _contractorSubmitLock: false,
 
     /**
-     * معالجة الصور (تحويل روابط Google Drive القديمة و Base64)
+     * معالجة الصور (تحويل روابط الخادم القديمة و Base64)
      */
     processPhoto(photoData) {
         if (typeof Utils !== 'undefined' && typeof Utils.normalizeImageSource === 'function') {
@@ -456,7 +456,7 @@ const BehaviorMonitoring = {
                     Utils.safeWarn(`⚠️ تجاهل behaviorMonitoring فارغ من الخادم — الإبقاء على ${localBehavior.length} سجل محلي`);
                 } else {
                     AppState.appData.behaviorMonitoring = behaviorResult.data;
-                    Utils.safeLog(`✅ تم تحميل ${behaviorResult.data.length} سجل من Google Sheets`);
+                    Utils.safeLog(`✅ تم تحميل ${behaviorResult.data.length} سجل من قاعدة SQL`);
                 }
             }
 
@@ -480,7 +480,7 @@ const BehaviorMonitoring = {
             }
         } catch (error) {
             const errorMsg = error.message || error.toString() || '';
-            Utils.safeError('❌ خطأ في تحميل بيانات مراقبة السلوك من Google Sheets:', error);
+            Utils.safeError('❌ خطأ في تحميل بيانات مراقبة السلوك من قاعدة SQL:', error);
             
             // عرض رسالة خطأ واضحة للمستخدم
             if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
@@ -934,7 +934,7 @@ const BehaviorMonitoring = {
         }
     },
 
-    // حذف سجل واحد من Google Sheets فعلياً (autoSave/upsert لا يحذف الصفوف من الورقة)
+    // حذف سجل واحد من قاعدة SQL فعلياً (autoSave/upsert لا يحذف الصفوف من الورقة)
     async _callRemoteBehaviorDeleteOne(behaviorKind, id) {
         if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
             return { success: false, shouldDefer: true };
@@ -951,7 +951,7 @@ const BehaviorMonitoring = {
         }
     },
 
-    // حذف جماعي من Google Sheets فعلياً — مطلوب حتى لا تعود المكررات بعد إعادة التحميل
+    // حذف جماعي من قاعدة SQL فعلياً — مطلوب حتى لا تعود المكررات بعد إعادة التحميل
     async _callRemoteBehaviorDelete(behaviorKind, ids) {
         if (!Array.isArray(ids) || !ids.length) return { success: true };
         if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
@@ -2268,7 +2268,7 @@ const BehaviorMonitoring = {
                     Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                 }
 
-                // حفظ تلقائي في Google Sheets
+                // حفظ تلقائي في قاعدة SQL
                 await GoogleIntegration.autoSave('BehaviorMonitoring', AppState.appData.behaviorMonitoring);
 
                 if (modal) modal.remove();

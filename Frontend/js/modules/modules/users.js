@@ -2256,7 +2256,7 @@ const Users = {
 
         formData.password = '***';
         // إرسال passwordHash فقط إذا كان هناك هاش صالح (تم تغيير كلمة المرور أو كان محفوظاً محلياً)
-        // عدم الإرسال = الـ backend يحتفظ بالهاش الحالي في Google Sheets تلقائياً
+        // عدم الإرسال = الـ backend يحتفظ بالهاش الحالي في قاعدة SQL تلقائياً
         if (passwordHashToStore) {
             formData.passwordHash = passwordHashToStore;
         } else {
@@ -2310,30 +2310,30 @@ const Users = {
                 // إخفاء مؤشر التحميل بعد الحفظ المحلي
                 Loading.hide();
                 
-                // المزامنة مع Google Sheets في الخلفية (غير متزامنة)
+                // المزامنة مع قاعدة SQL في الخلفية (غير متزامنة)
                 if (AppState.googleConfig.appsScript.enabled) {
                     // تشغيل المزامنة في الخلفية بدون انتظار
                     GoogleIntegration.immediateSyncWithRetry('addUser', formData, 3)
                         .then(addUserResult => {
                             if (addUserResult && addUserResult.success) {
-                                Utils.safeLog('✅ تم إضافة المستخدم الجديد إلى Google Sheets بنجاح');
-                                Notification.success('تم المزامنة مع Google Sheets بنجاح');
+                                Utils.safeLog('✅ تم إضافة المستخدم الجديد إلى قاعدة SQL بنجاح');
+                                Notification.success('تم المزامنة مع قاعدة SQL بنجاح');
                             } else if (addUserResult && addUserResult.shouldDefer) {
                                 // فشلت جميع المحاولات - أضف إلى قائمة الانتظار
                                 Utils.safeWarn('⚠️ فشلت المزامنة بعد 3 محاولات:', addUserResult?.message);
                                 if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
                                     DataManager.addToPendingSync('Users', AppState.appData.users);
                                 }
-                                Notification.warning('سيتم المزامنة مع Google Sheets تلقائياً لاحقاً.');
+                                Notification.warning('سيتم المزامنة مع قاعدة SQL تلقائياً لاحقاً.');
                             } else {
                                 // خطأ في البيانات أو مشكلة أخرى
                                 Utils.safeWarn('⚠️ فشل إضافة المستخدم:', addUserResult?.message);
-                                Notification.warning('فشلت المزامنة مع Google Sheets. سيتم المحاولة لاحقاً.');
+                                Notification.warning('فشلت المزامنة مع قاعدة SQL. سيتم المحاولة لاحقاً.');
                             }
                         })
                         .catch(addUserError => {
                             Utils.safeError('❌ خطأ غير متوقع في إضافة المستخدم:', addUserError);
-                            Notification.warning('حدث خطأ في المزامنة مع Google Sheets. سيتم المحاولة لاحقاً.');
+                            Notification.warning('حدث خطأ في المزامنة مع قاعدة SQL. سيتم المحاولة لاحقاً.');
                         });
                 }
             } else {
@@ -2369,7 +2369,7 @@ const Users = {
                 // إخفاء مؤشر التحميل بعد الحفظ المحلي
                 Loading.hide();
                 
-                // المزامنة مع Google Sheets في الخلفية (غير متزامنة)
+                // المزامنة مع قاعدة SQL في الخلفية (غير متزامنة)
                 if (AppState.googleConfig.appsScript.enabled) {
                     // تشغيل المزامنة في الخلفية بدون انتظار
                     GoogleIntegration.immediateSyncWithRetry('updateUser', {
@@ -2378,25 +2378,25 @@ const Users = {
                     }, 3)
                         .then(updateResult => {
                             if (updateResult && updateResult.success) {
-                                Utils.safeLog('✅ تم تحديث المستخدم في Google Sheets بنجاح');
-                                Notification.success('تم المزامنة مع Google Sheets بنجاح');
+                                Utils.safeLog('✅ تم تحديث المستخدم في قاعدة SQL بنجاح');
+                                Notification.success('تم المزامنة مع قاعدة SQL بنجاح');
                             } else if (updateResult && updateResult.shouldDefer) {
                                 // فشلت جميع المحاولات - أضف إلى قائمة الانتظار
                                 Utils.safeWarn('⚠️ فشلت المزامنة بعد 3 محاولات:', updateResult?.message);
                                 GoogleIntegration.autoSave('Users', AppState.appData.users)
                                     .catch(err => Utils.safeWarn('⚠️ خطأ في autoSave:', err));
-                                Notification.warning('سيتم المزامنة مع Google Sheets تلقائياً لاحقاً.');
+                                Notification.warning('سيتم المزامنة مع قاعدة SQL تلقائياً لاحقاً.');
                             } else {
                                 // خطأ في البيانات
                                 Utils.safeWarn('⚠️ فشل تحديث المستخدم:', updateResult?.message);
-                                Notification.warning('فشلت المزامنة مع Google Sheets. سيتم المحاولة لاحقاً.');
+                                Notification.warning('فشلت المزامنة مع قاعدة SQL. سيتم المحاولة لاحقاً.');
                             }
                         })
                         .catch(updateError => {
                             Utils.safeError('❌ خطأ غير متوقع في تحديث المستخدم:', updateError);
                             GoogleIntegration.autoSave('Users', AppState.appData.users)
                                 .catch(err => Utils.safeWarn('⚠️ خطأ في autoSave:', err));
-                            Notification.warning('حدث خطأ في المزامنة مع Google Sheets. سيتم المحاولة لاحقاً.');
+                            Notification.warning('حدث خطأ في المزامنة مع قاعدة SQL. سيتم المحاولة لاحقاً.');
                         });
                 }
             }
@@ -2709,7 +2709,7 @@ const Users = {
         try {
             let deleteSuccess = false;
 
-            // 1) حذف من قاعدة البيانات (Google Sheets) أولاً ثم تحديث الواجهة
+            // 1) حذف من قاعدة البيانات (قاعدة SQL) أولاً ثم تحديث الواجهة
             if (AppState.googleConfig.appsScript.enabled) {
                 try {
                     const result = await GoogleIntegration.sendToAppsScript('deleteUser', { userId });
@@ -2724,7 +2724,7 @@ const Users = {
                         await GoogleIntegration.autoSave('Users', filteredUsers);
                         deleteSuccess = true;
                     } catch (autoSaveErr) {
-                        Utils.safeWarn('⚠️ فشل الحذف من Google Sheets وبديل autoSave:', autoSaveErr);
+                        Utils.safeWarn('⚠️ فشل الحذف من قاعدة SQL وبديل autoSave:', autoSaveErr);
                         Loading.hide();
                         Notification.error('فشل حذف المستخدم من قاعدة البيانات: ' + (error.message || error));
                         Utils.safeError('خطأ في حذف المستخدم:', error);
@@ -3064,7 +3064,7 @@ const Users = {
             Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
         }
 
-            // حفظ تلقائي في Google Sheets
+            // حفظ تلقائي في قاعدة SQL
             if (successCount > 0) {
                 await GoogleIntegration.autoSave('Users', AppState.appData.users);
             }

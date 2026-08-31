@@ -549,7 +549,7 @@ const DataManager = {
 
     /**
      * بناء نسخة مخففة من appData (قص المصفوفات الكبيرة) لتجنب امتلاء التخزين
-     * البيانات الكاملة تبقى في الذاكرة وفي Google Sheets
+     * البيانات الكاملة تبقى في الذاكرة وفي قاعدة SQL
      */
     buildLightAppData(appData) {
         if (!appData || typeof appData !== 'object') return appData;
@@ -737,17 +737,17 @@ const DataManager = {
             return { success: true, synced: 0, failed: 0 };
         }
         
-        // التحقق من تفعيل Google Apps Script
+        // التحقق من تفعيل خادم SQL
         if (!AppState.googleConfig || !AppState.googleConfig.appsScript || !AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
-            Utils.safeLog('ℹ️ Google Apps Script غير مفعّل، تخطي المزامنة');
-            return { success: false, synced: 0, failed: 0, message: 'Google Apps Script غير مفعّل' };
+            Utils.safeLog('ℹ️ خادم SQL غير مفعّل، تخطي المزامنة');
+            return { success: false, synced: 0, failed: 0, message: 'خادم SQL غير مفعّل' };
         }
         
-        // التحقق من وجود معرف Google Sheets
+        // التحقق من وجود معرف قاعدة SQL
         const spreadsheetId = AppState.googleConfig.sheets?.spreadsheetId?.trim();
         if (!spreadsheetId || spreadsheetId === '') {
-            Utils.safeLog('ℹ️ معرف Google Sheets غير محدد، تخطي المزامنة');
-            return { success: false, synced: 0, failed: 0, message: 'معرف Google Sheets غير محدد' };
+            Utils.safeLog('ℹ️ معرف قاعدة SQL غير محدد، تخطي المزامنة');
+            return { success: false, synced: 0, failed: 0, message: 'معرف قاعدة SQL غير محدد' };
         }
         
         const results = { success: true, synced: 0, failed: 0, errors: [] };
@@ -792,9 +792,9 @@ const DataManager = {
                 this.savePendingSyncQueue();
                 results.failed++;
                 
-                // تسجيل الخطأ فقط إذا لم يكن خطأ "معرف Google Sheets غير محدد"
+                // تسجيل الخطأ فقط إذا لم يكن خطأ "معرف قاعدة SQL غير محدد"
                 const errorMsg = error.message || 'خطأ غير معروف';
-                if (!errorMsg.includes('معرف Google Sheets غير محدد') && !errorMsg.includes('Google Sheets غير مفعّل')) {
+                if (!errorMsg.includes('معرف قاعدة SQL غير محدد') && !errorMsg.includes('قاعدة SQL غير مفعّل')) {
                     results.errors.push(`${item.sheetName}: ${errorMsg}`);
                     Utils.safeWarn(`⚠️ فشلت مزامنة ${item.sheetName}:`, errorMsg);
                     const rejectedFieldMatch = String(errorMsg).match(/حقل غير مسموح في البيانات:\s*([^\s(]+)/i);
@@ -1138,8 +1138,8 @@ const DataManager = {
 
     /**
      * التنفيذ الفعلي للحفظ — لا تستدعِه مباشرة، استخدم save() أو saveImmediate()
-     * ملاحظة مهمة: حفظ البيانات المحلية فقط - لا يتم المزامنة مع Google Sheets هنا
-     * يتم المزامنة تلقائياً باستخدام GoogleIntegration.autoSave() عند إضافة أو تعديل البيانات في Google Sheets
+     * ملاحظة مهمة: حفظ البيانات المحلية فقط - لا يتم المزامنة مع قاعدة SQL هنا
+     * يتم المزامنة تلقائياً باستخدام GoogleIntegration.autoSave() عند إضافة أو تعديل البيانات في قاعدة SQL
      */
     _saveImmediate() {
         try {
@@ -1175,8 +1175,8 @@ const DataManager = {
                         localStorage.setItem('hse_app_data', lightSerialized);
                         this._saveSyncMeta();
                         this.saveCompanySettings();
-                        // تسجيل في الـ console فقط — لا إشعار مرئي للمستخدم (البيانات الكاملة في الذاكرة وGoogle Sheets)
-                        Utils.safeLog('ℹ️ [DataManager] تم حفظ نسخة مخففة محلياً. البيانات الكاملة في الذاكرة وGoogle Sheets.');
+                        // تسجيل في الـ console فقط — لا إشعار مرئي للمستخدم (البيانات الكاملة في الذاكرة وقاعدة SQL)
+                        Utils.safeLog('ℹ️ [DataManager] تم حفظ نسخة مخففة محلياً. البيانات الكاملة في الذاكرة وقاعدة SQL.');
                         this._notifyLightLocalSave('over_safe_limit');
                         return true;
                     } catch (e) {
@@ -1186,7 +1186,7 @@ const DataManager = {
                 // الحجم كبير جداً حتى بعد التخفيف — سجّل في Console فقط بدون إزعاج المستخدم
                 if (!this._hasShownLargeDataWarning) {
                     this._hasShownLargeDataWarning = true;
-                    Utils.safeWarn('⚠️ [DataManager] حجم البيانات كبير جداً للـ localStorage — البيانات محفوظة في الذاكرة وGoogle Sheets');
+                    Utils.safeWarn('⚠️ [DataManager] حجم البيانات كبير جداً للـ localStorage — البيانات محفوظة في الذاكرة وقاعدة SQL');
                 }
                 return false;
             }
@@ -1220,7 +1220,7 @@ const DataManager = {
             if (isStackOverflow) {
                 if (!this._hasShownLargeDataWarning) {
                     this._hasShownLargeDataWarning = true;
-                    Utils.safeWarn('⚠️ [DataManager] حجم البيانات كبير جداً للـ localStorage — البيانات محفوظة في الذاكرة وGoogle Sheets');
+                    Utils.safeWarn('⚠️ [DataManager] حجم البيانات كبير جداً للـ localStorage — البيانات محفوظة في الذاكرة وقاعدة SQL');
                 }
                 return false;
             }
@@ -1241,7 +1241,7 @@ const DataManager = {
                 } catch (e2) {
                     Utils.safeWarn('⚠️ فشل حفظ النسخة المخففة بعد امتلاء التخزين:', e2);
                 }
-                // عدم إظهار رسالة للمستخدم؛ البيانات في الذاكرة وGoogle Sheets
+                // عدم إظهار رسالة للمستخدم؛ البيانات في الذاكرة وقاعدة SQL
                 return false;
             }
             if (isSecurityError) {
@@ -1272,7 +1272,7 @@ const DataManager = {
         if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return;
         if (!AppState.googleConfig?.appsScript?.enabled) return;
 
-        // خريطة اسم الحقل في AppState → اسم الورقة في Google Sheets
+        // خريطة اسم الحقل في AppState → اسم الورقة في قاعدة SQL
         const fieldToSheetMap = {
             'training': 'Training',
             'trainingSessions': 'Training',
@@ -1377,7 +1377,7 @@ const DataManager = {
 
     /**
      * تسجيل وقت الجلب الفعلي من الخادم لحقل واحد أو أكثر
-     * يُستدعى بعد كل عملية جلب ناجحة من Google Sheets
+     * يُستدعى بعد كل عملية جلب ناجحة من قاعدة SQL
      * @param {string|string[]} keys - مفتاح appData أو مصفوفة من المفاتيح
      */
     recordServerFetch(keys) {
@@ -1448,7 +1448,7 @@ const DataManager = {
                 }
             }
             
-            // ✅ محاولة تحميل الإعدادات من Google Sheets فقط عند forceReload أو عدم وجود cache
+            // ✅ محاولة تحميل الإعدادات من قاعدة SQL فقط عند forceReload أو عدم وجود cache
             // هذا يضمن تحميل الشعار من قاعدة البيانات مرة واحدة فقط
             if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
                 try {
@@ -1517,7 +1517,7 @@ const DataManager = {
                         const legacyMonths = 0;
                         const legacyDays = 0;
 
-                        // تحديث AppState بالبيانات من Google Sheets
+                        // تحديث AppState بالبيانات من قاعدة SQL
                         AppState.companySettings = Object.assign({}, AppState.companySettings, {
                             name: result.data.name || AppState.companySettings?.name,
                             secondaryName: result.data.secondaryName || AppState.companySettings?.secondaryName,
@@ -1615,18 +1615,18 @@ const DataManager = {
                         }
                         
                         if (forceReload) {
-                            Utils.safeLog('✅ تم تحميل إعدادات الشركة من Google Sheets بنجاح (force reload)');
+                            Utils.safeLog('✅ تم تحميل إعدادات الشركة من قاعدة SQL بنجاح (force reload)');
                         } else {
-                            Utils.safeLog('✅ تم تحديث إعدادات الشركة من Google Sheets بنجاح');
+                            Utils.safeLog('✅ تم تحديث إعدادات الشركة من قاعدة SQL بنجاح');
                         }
                         return;
                     }
                 } catch (error) {
-                    Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة من Google Sheets:', error);
+                    Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة من قاعدة SQL:', error);
                 }
             }
             
-            // إذا فشل التحميل من Google Sheets، تحميل من localStorage
+            // إذا فشل التحميل من قاعدة SQL، تحميل من localStorage
             const savedSettings = localStorage.getItem('hse_company_settings');
             if (savedSettings) {
                 const parsedSettings = JSON.parse(savedSettings);

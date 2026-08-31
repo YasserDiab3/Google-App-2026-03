@@ -1,20 +1,29 @@
 /**
- * RPC Router & Dispatcher - 100% Contract Parity with Google Apps Script doPost / ActionHandlers
- * Includes Hybrid Dual-Write Background Mirroring to Google Sheets.
+ * RPC Router & Dispatcher - SQL Backend (GAS contract parity)
  */
 'use strict';
 
 const genericSheetOps = require('./handlers/generic-sheet-ops');
 const authHandlers = require('./handlers/auth-handlers');
 const moduleHandlers = require('./handlers/module-handlers');
-
-// Mirror sync disabled — SQL is now the sole data store (Google Sheets read-only archive)
+const fileHandlers = require('./handlers/file-handlers');
+const { getEntityActionHandlers } = require('./handlers/entity-action-resolver');
+const { mfaHandlers } = require('./handlers/mfa-handlers');
 
 // Combine all handlers into a single unified registry
+// entity handlers أولاً — module-handlers تتجاوزها عند التعارض
 const ActionRegistry = {
+    ...getEntityActionHandlers(),
     ...genericSheetOps,
     ...authHandlers,
-    ...moduleHandlers
+    ...mfaHandlers,
+    ...moduleHandlers,
+    uploadFileToDrive: (p) => fileHandlers.uploadFileToDrive(p),
+    getProfileImage: (p) => fileHandlers.getProfileImage(p),
+    initializeSheets: () => ({
+        success: true,
+        message: 'قاعدة SQL جاهزة — لا حاجة لتهيئة Google Sheets'
+    })
 };
 
 // Automated & On-Demand Backup Actions
@@ -47,7 +56,7 @@ function handleRpcRequest(reqBody) {
 
     const payload = reqBody.payload || reqBody.data || {};
     const postData = reqBody;
-    const actorUserData = reqBody.actorUserData || payload.actorUserData || null;
+    const actorUserData = reqBody.actorUserData || reqBody.userData || payload.actorUserData || payload.userData || null;
     const spreadsheetId = reqBody.spreadsheetId || payload.spreadsheetId || '';
 
     let handler = ActionRegistry[action];

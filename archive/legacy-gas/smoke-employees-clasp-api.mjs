@@ -122,7 +122,7 @@ async function main() {
     console.log('ROOT: Execution API فشل — فعّل Apps Script API أو أعد clasp login.');
   } else if (s1.success && s1.count === 0) {
     console.log('ROOT مؤكد: ورقة Employees تُقرأ فارغة (count=0).');
-    console.log('NEXT: استعادة من Employees_backup_* في Google Sheets ثم أعد فتح المديول.');
+    console.log('NEXT: استعادة من Employees_backup_* في قاعدة SQL ثم أعد فتح المديول.');
   } else if (s1.count > 0 && s1.named === 0) {
     console.log('ROOT: صفوف موجودة بلا أسماء — انزلاق أعمدة/name فارغ.');
   } else if (s1.count > 0 && s1.named > 0) {

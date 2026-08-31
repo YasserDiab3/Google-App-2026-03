@@ -134,7 +134,7 @@ const IssuingAuthorities = {
             return this.t('module.issuingAuthorities.err.forbidden', 'تعذر الاتصال بالخادم (403). تحقق من صلاحية نشر Web App (Who has access) وأن الرابط صحيح.');
         }
         if (kind === 'timeout') {
-            return this.t('module.issuingAuthorities.err.timeout', 'الخادم تأخر في الاستجابة. يرجى إعادة المحاولة أو التحقق من حالة Google Apps Script.');
+            return this.t('module.issuingAuthorities.err.timeout', 'الخادم تأخر في الاستجابة. يرجى إعادة المحاولة أو التحقق من حالة خادم SQL.');
         }
         if (kind === 'unknown_action') {
             return this.t('module.issuingAuthorities.err.unknownAction', 'نسخة الخادم أقدم من الواجهة الحالية. يلزم إعادة نشر Web App بأحدث ملفات Backend.');
@@ -729,7 +729,7 @@ const IssuingAuthorities = {
     },
 
     /**
-     * يحدد جدول Google Sheets من **التبويب الحالي** (موظفين / مقاولين) فقط.
+     * يحدد جدول قاعدة SQL من **التبويب الحالي** (موظفين / مقاولين) فقط.
      * عدم دمج personType هنا يمنع حفظ سجلات تبويب الموظفين في PTWContractorIssuingAuthorities
      * إذا اختُمِل نوع الشخص في النموذج، أو إذا بقي _activeCategory عالقاً بعد استدعاء PTW.
      */

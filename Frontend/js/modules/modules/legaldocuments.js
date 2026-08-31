@@ -19,7 +19,7 @@ const LegalDocuments = {
     },
 
     /**
-     * معالجة الصور (تحويل روابط Google Drive القديمة و Base64)
+     * معالجة الصور (تحويل روابط الخادم القديمة و Base64)
      */
     processPhoto(photoData) {
         if (typeof Utils !== 'undefined' && typeof Utils.normalizeImageSource === 'function') {

@@ -1265,14 +1265,14 @@ ${innerContent}
             };
         }
 
-        // تحميل بيانات استهلاك الموارد من Google Sheets (في الخلفية)
+        // تحميل بيانات استهلاك الموارد من قاعدة SQL (في الخلفية)
         this.loadResourceConsumptionFromSheets().catch(error => {
-            Utils.safeWarn('⚠️ تعذر تحميل بيانات استهلاك الموارد من Google Sheets:', error);
+            Utils.safeWarn('⚠️ تعذر تحميل بيانات استهلاك الموارد من قاعدة SQL:', error);
         });
 
-        // تحميل بيانات إدارة المخلفات من Google Sheets (في الخلفية)
+        // تحميل بيانات إدارة المخلفات من قاعدة SQL (في الخلفية)
         this.loadWasteManagementFromSheets().catch(error => {
-            Utils.safeWarn('⚠️ تعذر تحميل بيانات إدارة المخلفات من Google Sheets:', error);
+            Utils.safeWarn('⚠️ تعذر تحميل بيانات إدارة المخلفات من قاعدة SQL:', error);
         });
 
         try {
@@ -1378,7 +1378,7 @@ ${innerContent}
                     // ✅ تحديث الكروت السريعة بعد تحميل البيانات
                     if (this.currentTab === 'dashboard') {
                         this.renderCharts();
-                        // إعادة رسم الكروت بعد تحميل البيانات من Google Sheets
+                        // إعادة رسم الكروت بعد تحميل البيانات من قاعدة SQL
                         setTimeout(() => {
                             const quickStatsPanel = document.getElementById('sustainability-quick-stats');
                             if (quickStatsPanel) {
@@ -1527,7 +1527,7 @@ ${innerContent}
     },
 
     /**
-     * تحديث البيانات من Google Sheets وإعادة عرض المحتوى
+     * تحديث البيانات من قاعدة SQL وإعادة عرض المحتوى
      */
     async handleRefresh() {
         const btn = document.getElementById('sustainability-refresh-btn');
@@ -2502,7 +2502,7 @@ ${innerContent}
             this._refreshDashboardTotals();
             this.load();
 
-            // ✅ 3) المزامنة مع Google Sheets في الخلفية
+            // ✅ 3) المزامنة مع قاعدة SQL في الخلفية
             this.saveResourceConsumptionToSheets().then(saveResult => {
                 if (!saveResult.success) {
                     // rollback إذا فشل الحفظ
@@ -5027,7 +5027,7 @@ ${innerContent}
     // ===== دوال مساعدة للمخلفات =====
 
     /**
-     * تحميل بيانات إدارة المخلفات من Google Sheets
+     * تحميل بيانات إدارة المخلفات من قاعدة SQL
      */
     async loadWasteManagementFromSheets() {
         // التحقق من تفعيل Google Integration
@@ -5097,7 +5097,7 @@ ${innerContent}
     },
 
     /**
-     * تحميل بيانات استهلاك الموارد من Google Sheets (جداول منفصلة)
+     * تحميل بيانات استهلاك الموارد من قاعدة SQL (جداول منفصلة)
      * — طلبات متوازية لتقليل زمن الانتظار، ودمج متزامن لمنع تكرار الشبكة.
      */
     async loadResourceConsumptionFromSheets() {
@@ -5260,7 +5260,7 @@ ${innerContent}
     },
 
     /**
-     * حفظ بيانات إدارة المخلفات في Google Sheets (جداول منفصلة)
+     * حفظ بيانات إدارة المخلفات في قاعدة SQL (جداول منفصلة)
      */
     async saveWasteManagementToSheets() {
         const wasteData = AppState.appData.wasteManagement || {
@@ -5297,7 +5297,7 @@ ${innerContent}
     },
 
     /**
-     * حفظ بيانات استهلاك الموارد في Google Sheets (جداول منفصلة)
+     * حفظ بيانات استهلاك الموارد في قاعدة SQL (جداول منفصلة)
      */
     async saveResourceConsumptionToSheets() {
         const resourceData = AppState.appData.resourceConsumption || {

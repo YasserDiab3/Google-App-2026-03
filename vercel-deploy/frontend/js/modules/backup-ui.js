@@ -198,7 +198,7 @@ const BackupUI = {
                 }
             }
         } catch (error) {
-            // تجاهل أخطاء Circuit Breaker و Google Apps Script غير المفعل
+            // تجاهل أخطاء Circuit Breaker و خادم SQL غير المفعل
             const errorMsg = String(error?.message || '').toLowerCase();
             if (!errorMsg.includes('circuit breaker') && 
                 !errorMsg.includes('google apps script غير مفعل') &&
@@ -299,7 +299,7 @@ const BackupUI = {
                 listContainer.innerHTML = '<p class="text-red-500 text-center py-4">خطأ في تحميل النسخ الاحتياطية</p>';
             }
         } catch (error) {
-            // تجاهل أخطاء Circuit Breaker و Google Apps Script غير المفعل
+            // تجاهل أخطاء Circuit Breaker و خادم SQL غير المفعل
             const errorMsg = String(error?.message || '').toLowerCase();
             if (!errorMsg.includes('circuit breaker') && 
                 !errorMsg.includes('google apps script غير مفعل') &&
@@ -342,7 +342,7 @@ const BackupUI = {
                 }
             }
         } catch (error) {
-            // تجاهل أخطاء Circuit Breaker و Google Apps Script غير المفعل
+            // تجاهل أخطاء Circuit Breaker و خادم SQL غير المفعل
             const errorMsg = String(error?.message || '').toLowerCase();
             if (!errorMsg.includes('circuit breaker') && 
                 !errorMsg.includes('google apps script غير مفعل') &&

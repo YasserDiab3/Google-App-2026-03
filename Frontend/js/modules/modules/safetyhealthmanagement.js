@@ -12,14 +12,14 @@ const SafetyHealthManagement = {
         period: '',
         search: ''
     },
-    // دالة مساعدة للتحقق من حالة Google Apps Script
+    // دالة مساعدة للتحقق من حالة خادم SQL
     isGoogleAppsScriptEnabled() {
         // التحقق من وجود AppState أولاً
         if (typeof AppState === 'undefined' || !AppState.googleConfig) {
             return false;
         }
         
-        // التحقق من تفعيل Google Apps Script ووجود scriptUrl
+        // التحقق من تفعيل خادم SQL ووجود scriptUrl
         const appsScriptConfig = AppState.googleConfig?.appsScript;
         if (!appsScriptConfig) {
             return false;
@@ -57,9 +57,9 @@ const SafetyHealthManagement = {
         }
     },
     
-    // دالة مساعدة للتحقق من إمكانية استخدام البيانات (Google Apps Script أو بيانات محلية)
+    // دالة مساعدة للتحقق من إمكانية استخدام البيانات (خادم SQL أو بيانات محلية)
     canAccessData(action = null, data = {}) {
-        // إذا كان Google Apps Script مفعلاً، يمكننا الوصول للبيانات
+        // إذا كان خادم SQL مفعلاً، يمكننا الوصول للبيانات
         if (this.isGoogleAppsScriptEnabled()) {
             return true;
         }
@@ -87,7 +87,7 @@ const SafetyHealthManagement = {
         }
         
         // إذا لم يكن مفعلاً ولا توجد بيانات محلية
-        return 'Google Apps Script غير مفعّل. يرجى تفعيله من الإعدادات';
+        return 'خادم SQL غير مفعّل. يرجى تفعيله من الإعدادات';
     },
     // حد أقصى لزمن تحميل التبويبات (2 ثانية) ثم عرض واجهة فوراً مع استكمال التحميل في الخلفية
     LOAD_TIMEOUT_MS: 2000,
@@ -1127,7 +1127,7 @@ const SafetyHealthManagement = {
                 return;
             }
 
-            if (!errorMessage.includes('Google Apps Script') && !errorMessage.includes('غير مفعّل')) {
+            if (!errorMessage.includes('خادم SQL') && !errorMessage.includes('غير مفعّل')) {
                 Utils.safeError('خطأ في تحميل أعضاء الفريق:', errorMessage, error);
             }
             if (!this.cache.members || this.cache.members.length === 0) {
@@ -1438,7 +1438,7 @@ const SafetyHealthManagement = {
                 employee = EmployeeHelper.findByCode(employeeCode);
             }
 
-            // If not found in cache, try to fetch from Google Sheets
+            // If not found in cache, try to fetch from قاعدة SQL
             if (!employee) {
                 try {
                     // Try to read from Employees sheet directly
@@ -1830,7 +1830,7 @@ const SafetyHealthManagement = {
                 return;
             }
 
-            // لا نعرض خطأ في Console إذا كان Google Apps Script غير مفعّل (تم التحقق مسبقاً)
+            // لا نعرض خطأ في Console إذا كان خادم SQL غير مفعّل (تم التحقق مسبقاً)
             const isGoogleEnabled = this.isGoogleAppsScriptEnabled();
             if (isGoogleEnabled) {
             Utils.safeError('خطأ في تحميل الهيكل الوظيفي:', errorMessage, error);
@@ -1842,11 +1842,11 @@ const SafetyHealthManagement = {
             if (errorMessage.includes('غير معترف به') || errorMessage.includes('Action not recognized') || errorMessage.includes('ACTION_NOT_RECOGNIZED')) {
                 displayMessage = errorMessage;
                 showError = isGoogleEnabled;
-            } else if (errorMessage.includes('Google Apps Script غير مفعّل')) {
-                displayMessage = 'Google Apps Script غير مفعّل. يرجى تفعيله من الإعدادات';
+            } else if (errorMessage.includes('خادم SQL غير مفعّل')) {
+                displayMessage = 'خادم SQL غير مفعّل. يرجى تفعيله من الإعدادات';
                     showError = false;
             } else if (isGoogleEnabled && (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('CORS'))) {
-                    displayMessage = 'فشل الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت وإعدادات Google Apps Script';
+                    displayMessage = 'فشل الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت وإعدادات خادم SQL';
                 showError = true;
             } else if (isGoogleEnabled && errorMessage.includes('فشل الاتصال')) {
                 displayMessage = errorMessage;
@@ -2349,11 +2349,11 @@ const SafetyHealthManagement = {
             if (errorMessage.includes('غير معترف به') || errorMessage.includes('Action not recognized') || errorMessage.includes('ACTION_NOT_RECOGNIZED')) {
                 displayMessage = errorMessage;
                 showError = isGoogleEnabled;
-            } else if (errorMessage.includes('Google Apps Script غير مفعّل')) {
-                displayMessage = 'Google Apps Script غير مفعّل. يرجى تفعيله من الإعدادات';
+            } else if (errorMessage.includes('خادم SQL غير مفعّل')) {
+                displayMessage = 'خادم SQL غير مفعّل. يرجى تفعيله من الإعدادات';
                     showError = false;
             } else if (isGoogleEnabled && (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('CORS'))) {
-                    displayMessage = 'فشل الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت وإعدادات Google Apps Script';
+                    displayMessage = 'فشل الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت وإعدادات خادم SQL';
                 showError = true;
             } else if (isGoogleEnabled && errorMessage.includes('فشل الاتصال')) {
                 displayMessage = errorMessage;
@@ -2676,7 +2676,7 @@ const SafetyHealthManagement = {
                 return;
             }
 
-            // لا نعرض خطأ في Console إذا كان Google Apps Script غير مفعّل (تم التحقق مسبقاً)
+            // لا نعرض خطأ في Console إذا كان خادم SQL غير مفعّل (تم التحقق مسبقاً)
             const isGoogleEnabled = this.isGoogleAppsScriptEnabled();
             if (isGoogleEnabled && container) {
             Utils.safeError('خطأ في تحميل مؤشرات الأداء:', errorMessage, error);
@@ -2689,11 +2689,11 @@ const SafetyHealthManagement = {
                 if (errorMessage.includes('غير معترف به') || errorMessage.includes('Action not recognized') || errorMessage.includes('ACTION_NOT_RECOGNIZED')) {
                     displayMessage = errorMessage;
                     showError = isGoogleEnabled;
-                } else if (errorMessage.includes('Google Apps Script غير مفعّل')) {
-                    displayMessage = 'Google Apps Script غير مفعّل. يرجى تفعيله من الإعدادات';
+                } else if (errorMessage.includes('خادم SQL غير مفعّل')) {
+                    displayMessage = 'خادم SQL غير مفعّل. يرجى تفعيله من الإعدادات';
                         showError = false;
                 } else if (isGoogleEnabled && (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('CORS'))) {
-                        displayMessage = 'فشل الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت وإعدادات Google Apps Script';
+                        displayMessage = 'فشل الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت وإعدادات خادم SQL';
                     showError = true;
                 } else if (isGoogleEnabled && errorMessage.includes('فشل الاتصال')) {
                     displayMessage = errorMessage;
@@ -2804,17 +2804,17 @@ const SafetyHealthManagement = {
             const errorMessage = error?.message || error?.toString() || 'خطأ غير معروف';
             Utils.safeError('خطأ في تحميل مؤشرات الأداء:', errorMessage, error);
 
-            // التحقق من حالة Google Apps Script قبل إظهار الرسالة
+            // التحقق من حالة خادم SQL قبل إظهار الرسالة
             const isGoogleEnabled = this.isGoogleAppsScriptEnabled();
             let displayMessage = 'حدث خطأ في تحميل مؤشرات الأداء';
             let showError = true;
 
             if (errorMessage.includes('غير معترف به') || errorMessage.includes('Action not recognized') || errorMessage.includes('ACTION_NOT_RECOGNIZED')) {
                 displayMessage = errorMessage; // Use the detailed error message from sendRequest
-            } else if (errorMessage.includes('Google Apps Script غير مفعّل')) {
-                // إظهار الرسالة فقط إذا كان Google Apps Script غير مفعّل فعلاً
+            } else if (errorMessage.includes('خادم SQL غير مفعّل')) {
+                // إظهار الرسالة فقط إذا كان خادم SQL غير مفعّل فعلاً
                 if (!isGoogleEnabled) {
-                    displayMessage = 'Google Apps Script غير مفعّل. يرجى تفعيله من الإعدادات أو التحقق من الاتصال بالإنترنت';
+                    displayMessage = 'خادم SQL غير مفعّل. يرجى تفعيله من الإعدادات أو التحقق من الاتصال بالإنترنت';
                 } else {
                     // إذا كان مفعلاً ولكن الرسالة تحتوي على "غير مفعّل"، قد تكون القائمة فارغة
                     displayMessage = 'لا توجد مؤشرات أداء محسوبة. اضغط على "حساب KPIs"';
@@ -2826,7 +2826,7 @@ const SafetyHealthManagement = {
                 showError = false;
             } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('CORS')) {
                 if (isGoogleEnabled) {
-                    displayMessage = 'فشل الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت وإعدادات Google Apps Script';
+                    displayMessage = 'فشل الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت وإعدادات خادم SQL';
                 } else {
                     // إذا كان Google غير مفعّل، لا نعرض رسالة خطأ
                     displayMessage = 'لا توجد مؤشرات أداء محسوبة. اضغط على "حساب KPIs"';
@@ -2993,13 +2993,13 @@ const SafetyHealthManagement = {
     },
 
     async calculateKPIs() {
-        // التحقق من إمكانية الوصول للبيانات (لحساب KPIs يجب أن يكون Google Apps Script مفعلاً)
+        // التحقق من إمكانية الوصول للبيانات (لحساب KPIs يجب أن يكون خادم SQL مفعلاً)
         if (!this.isGoogleAppsScriptEnabled()) {
             const accessMessage = this.getDataAccessMessage('calculateSafetyTeamKPIs', {});
             if (accessMessage) {
                 Notification.error(accessMessage);
             } else {
-                Notification.error('لا يمكن حساب مؤشرات الأداء بدون تفعيل Google Apps Script');
+                Notification.error('لا يمكن حساب مؤشرات الأداء بدون تفعيل خادم SQL');
             }
             return;
         }
@@ -3624,17 +3624,17 @@ const SafetyHealthManagement = {
             Utils.safeError('خطأ في تحميل التقارير:', errorMessage, error);
 
             if (memberSelect) {
-                // التحقق من حالة Google Apps Script قبل إظهار الرسالة
+                // التحقق من حالة خادم SQL قبل إظهار الرسالة
                 const isGoogleEnabled = this.isGoogleAppsScriptEnabled();
                 let displayMessage = 'حدث خطأ في تحميل التقارير';
                 let showError = true;
 
                 if (errorMessage.includes('غير معترف به') || errorMessage.includes('Action not recognized') || errorMessage.includes('ACTION_NOT_RECOGNIZED')) {
                     displayMessage = errorMessage; // Use the detailed error message from sendRequest
-                } else if (errorMessage.includes('Google Apps Script غير مفعّل')) {
-                    // إظهار الرسالة فقط إذا كان Google Apps Script غير مفعّل فعلاً
+                } else if (errorMessage.includes('خادم SQL غير مفعّل')) {
+                    // إظهار الرسالة فقط إذا كان خادم SQL غير مفعّل فعلاً
                     if (!isGoogleEnabled) {
-                        displayMessage = 'Google Apps Script غير مفعّل. يرجى تفعيله من الإعدادات أو التحقق من الاتصال بالإنترنت';
+                        displayMessage = 'خادم SQL غير مفعّل. يرجى تفعيله من الإعدادات أو التحقق من الاتصال بالإنترنت';
                     } else {
                         // إذا كان مفعلاً ولكن الرسالة تحتوي على "غير مفعّل"، قد تكون القائمة فارغة
                         displayMessage = 'اختر عضو الفريق وإنشاء تقرير الأداء';
@@ -3646,7 +3646,7 @@ const SafetyHealthManagement = {
                     showError = false;
                 } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('CORS')) {
                     if (isGoogleEnabled) {
-                        displayMessage = 'فشل الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت وإعدادات Google Apps Script';
+                        displayMessage = 'فشل الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت وإعدادات خادم SQL';
                     } else {
                         // إذا كان Google غير مفعّل، لا نعرض رسالة خطأ
                         displayMessage = 'اختر عضو الفريق وإنشاء تقرير الأداء';
@@ -4207,7 +4207,7 @@ const SafetyHealthManagement = {
         // التحقق من إمكانية الوصول للبيانات (للإعدادات، نحاول جلبها حتى لو لم يكن مفعلاً لعرض القيم الافتراضية)
         const isGoogleEnabled = this.isGoogleAppsScriptEnabled();
         if (!isGoogleEnabled) {
-            // عرض الإعدادات الافتراضية إذا لم يكن Google Apps Script مفعلاً
+            // عرض الإعدادات الافتراضية إذا لم يكن خادم SQL مفعلاً
             const defaultSettings = {
                 leaveTypes: ['سنوية', 'مرضية', 'طارئة', 'أخرى'],
                 attendanceStatuses: ['حاضر', 'متأخر', 'غائب', 'عمل ميداني'],
@@ -4277,7 +4277,7 @@ const SafetyHealthManagement = {
         } catch (error) {
             const errorMessage = error?.message || error?.toString() || 'خطأ غير معروف';
             
-            // لا نعرض خطأ في Console إذا كان Google Apps Script غير مفعّل (تم التحقق مسبقاً)
+            // لا نعرض خطأ في Console إذا كان خادم SQL غير مفعّل (تم التحقق مسبقاً)
             const isGoogleEnabled = this.isGoogleAppsScriptEnabled();
             if (isGoogleEnabled) {
                 Utils.safeError('خطأ في تحميل الإعدادات:', errorMessage, error);
@@ -4487,10 +4487,10 @@ const SafetyHealthManagement = {
         const container = document.getElementById('leave-types-container');
         if (!container) return;
 
-        // التحقق من حالة Google Apps Script قبل محاولة الحفظ
-        // عمليات الحفظ تتطلب Google Apps Script بشكل إلزامي
+        // التحقق من حالة خادم SQL قبل محاولة الحفظ
+        // عمليات الحفظ تتطلب خادم SQL بشكل إلزامي
         if (!this.isGoogleAppsScriptEnabled()) {
-            Notification.warning('لا يمكن حفظ التغييرات. يرجى تفعيل Google Apps Script من الإعدادات');
+            Notification.warning('لا يمكن حفظ التغييرات. يرجى تفعيل خادم SQL من الإعدادات');
             return;
         }
 
@@ -4551,10 +4551,10 @@ const SafetyHealthManagement = {
         const container = document.getElementById('attendance-statuses-container');
         if (!container) return;
 
-        // التحقق من حالة Google Apps Script قبل محاولة الحفظ
-        // عمليات الحفظ تتطلب Google Apps Script بشكل إلزامي
+        // التحقق من حالة خادم SQL قبل محاولة الحفظ
+        // عمليات الحفظ تتطلب خادم SQL بشكل إلزامي
         if (!this.isGoogleAppsScriptEnabled()) {
-            Notification.warning('لا يمكن حفظ التغييرات. يرجى تفعيل Google Apps Script من الإعدادات');
+            Notification.warning('لا يمكن حفظ التغييرات. يرجى تفعيل خادم SQL من الإعدادات');
             return;
         }
 
@@ -4738,10 +4738,10 @@ const SafetyHealthManagement = {
     },
 
     async saveKPITargets(modal = null) {
-        // التحقق من حالة Google Apps Script قبل محاولة الحفظ
-        // عمليات الحفظ تتطلب Google Apps Script بشكل إلزامي
+        // التحقق من حالة خادم SQL قبل محاولة الحفظ
+        // عمليات الحفظ تتطلب خادم SQL بشكل إلزامي
         if (!this.isGoogleAppsScriptEnabled()) {
-            Notification.warning('لا يمكن حفظ التغييرات. يرجى تفعيل Google Apps Script من الإعدادات');
+            Notification.warning('لا يمكن حفظ التغييرات. يرجى تفعيل خادم SQL من الإعدادات');
             return;
         }
 
@@ -4995,10 +4995,10 @@ const SafetyHealthManagement = {
     },
 
     async handleCustomKPISubmit(modal, kpiId = null) {
-        // التحقق من حالة Google Apps Script قبل محاولة الحفظ
-        // عمليات الحفظ تتطلب Google Apps Script بشكل إلزامي
+        // التحقق من حالة خادم SQL قبل محاولة الحفظ
+        // عمليات الحفظ تتطلب خادم SQL بشكل إلزامي
         if (!this.isGoogleAppsScriptEnabled()) {
-            Notification.warning('لا يمكن حفظ التغييرات. يرجى تفعيل Google Apps Script من الإعدادات');
+            Notification.warning('لا يمكن حفظ التغييرات. يرجى تفعيل خادم SQL من الإعدادات');
             return;
         }
 
@@ -5051,9 +5051,9 @@ const SafetyHealthManagement = {
     },
 
     async editCustomKPI(kpiId) {
-        // التحقق من حالة Google Apps Script قبل محاولة التعديل
+        // التحقق من حالة خادم SQL قبل محاولة التعديل
         if (!this.isGoogleAppsScriptEnabled()) {
-            Notification.warning('Google Apps Script غير مفعّل. لا يمكن تعديل المؤشر');
+            Notification.warning('خادم SQL غير مفعّل. لا يمكن تعديل المؤشر');
             return;
         }
 
@@ -5083,9 +5083,9 @@ const SafetyHealthManagement = {
     },
 
     async deleteCustomKPI(kpiId) {
-        // التحقق من حالة Google Apps Script قبل محاولة الحذف
+        // التحقق من حالة خادم SQL قبل محاولة الحذف
         if (!this.isGoogleAppsScriptEnabled()) {
-            Notification.warning('Google Apps Script غير مفعّل. لا يمكن حذف المؤشر');
+            Notification.warning('خادم SQL غير مفعّل. لا يمكن حذف المؤشر');
             return;
         }
 
@@ -5370,10 +5370,10 @@ const SafetyHealthManagement = {
             const attendanceList = document.getElementById('attendance-list');
             const leavesList = document.getElementById('leaves-list');
             if (attendanceList) {
-                attendanceList.innerHTML = '<div class="empty-state"><p class="text-gray-500">Google Apps Script غير مفعّل. يرجى تفعيله من الإعدادات</p></div>';
+                attendanceList.innerHTML = '<div class="empty-state"><p class="text-gray-500">خادم SQL غير مفعّل. يرجى تفعيله من الإعدادات</p></div>';
             }
             if (leavesList) {
-                leavesList.innerHTML = '<div class="empty-state"><p class="text-gray-500">Google Apps Script غير مفعّل. يرجى تفعيله من الإعدادات</p></div>';
+                leavesList.innerHTML = '<div class="empty-state"><p class="text-gray-500">خادم SQL غير مفعّل. يرجى تفعيله من الإعدادات</p></div>';
             }
             return;
         }

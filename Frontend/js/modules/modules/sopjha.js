@@ -201,10 +201,10 @@ const SOPJHA = {
             AppState.appData.sopJHA = [];
         }
 
-        // عرض البيانات المحلية أولاً (بدون انتظار Google Sheets)
+        // عرض البيانات المحلية أولاً (بدون انتظار قاعدة SQL)
         const items = AppState.appData.sopJHA || [];
 
-        // تحميل البيانات من Google Sheets بشكل غير متزامن (بعد عرض الواجهة)
+        // تحميل البيانات من قاعدة SQL بشكل غير متزامن (بعد عرض الواجهة)
         if (items.length === 0 && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets) {
             // تحميل البيانات في الخلفية بدون انتظار
             GoogleIntegration.readFromSheets('SOPJHA').then(data => {
@@ -214,7 +214,7 @@ const SOPJHA = {
                     this.loadSOPJHAList();
                 }
             }).catch(error => {
-                Utils.safeWarn('⚠️ خطأ في تحميل بيانات SOPJHA من Google Sheets:', error);
+                Utils.safeWarn('⚠️ خطأ في تحميل بيانات SOPJHA من قاعدة SQL:', error);
             });
         }
 
@@ -484,10 +484,10 @@ const SOPJHA = {
             // 4. تحديث القائمة فوراً
             this.load();
             
-            // 5. معالجة المهام الخلفية (Google Sheets) في الخلفية
+            // 5. معالجة المهام الخلفية (قاعدة SQL) في الخلفية
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                 GoogleIntegration.autoSave('SOPJHA', AppState.appData.sopJHA).catch(error => {
-                    Utils.safeError('خطأ في حفظ Google Sheets:', error);
+                    Utils.safeError('خطأ في حفظ قاعدة SQL:', error);
                 });
             }
         } catch (error) {
@@ -594,7 +594,7 @@ const SOPJHA = {
                 Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
             }
             
-            // حفظ في Google Sheets
+            // حفظ في قاعدة SQL
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                 await GoogleIntegration.autoSave('SOPJHA', AppState.appData.sopJHA);
             }

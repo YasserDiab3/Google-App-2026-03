@@ -249,7 +249,7 @@ const Employees = {
                 : String(photoUrl || '').trim();
             if (!raw) return '';
 
-            // Normalize Google Drive links when helper exists
+            // Normalize الخادم links when helper exists
             let normalized = raw;
             if (typeof Utils !== 'undefined' && typeof Utils.normalizeImageSource === 'function') {
                 normalized = Utils.normalizeImageSource(raw) || raw;
@@ -602,7 +602,7 @@ const Employees = {
         try {
             const canAddOrImport = this.canAddOrImport();
 
-            // ⚡️ مهم: عرض Skeleton فوراً بدون انتظار المزامنة مع Google Sheets
+            // ⚡️ مهم: عرض Skeleton فوراً بدون انتظار المزامنة مع قاعدة SQL
             // هذا يمنع "الواجهة فارغة" و Timeout في AppTester (مهلة 15 ثانية للـ UI)
             section.innerHTML = `
                 <div class="section-header">
@@ -3617,7 +3617,7 @@ const Employees = {
     },
 
     /**
-     * تحميل بيانات الموظفين من قاعدة البيانات (Google Sheets)
+     * تحميل بيانات الموظفين من قاعدة البيانات (قاعدة SQL)
      */
     async loadEmployeesFromBackend(forceReload = false) {
         // منع التحميل المتزامن المتكرر
@@ -3639,7 +3639,7 @@ const Employees = {
             // التحقق من تفعيل Google Integration
             if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
                 if (AppState.debugMode) {
-                    Utils.safeLog('⚠️ Google Apps Script غير مفعّل - استخدام البيانات المحلية فقط');
+                    Utils.safeLog('⚠️ خادم SQL غير مفعّل - استخدام البيانات المحلية فقط');
                 }
                 if (AppState.appData.employees && Array.isArray(AppState.appData.employees)) {
                     this.cache.data = AppState.appData.employees;
@@ -3745,7 +3745,7 @@ const Employees = {
                     }
 
                     if (AppState.debugMode) {
-                        Utils.safeLog(`✅ تم تحميل ${sheetResult.data.length} موظف من Google Sheets`);
+                        Utils.safeLog(`✅ تم تحميل ${sheetResult.data.length} موظف من قاعدة SQL`);
                     }
                     return true;
                 }
@@ -6727,7 +6727,7 @@ const Employees = {
                 GoogleIntegration.sendToAppsScript('deactivateEmployee', { employeeId: syncId })
                     .then(res => {
                         if (!res || !res.success) {
-                            Utils.safeWarn('⚠️ فشل إلغاء تفعيل الموظف من Google Sheets:', res?.message);
+                            Utils.safeWarn('⚠️ فشل إلغاء تفعيل الموظف من قاعدة SQL:', res?.message);
                         } else {
                             Utils.safeLog('✅ تم إلغاء التفعيل في قاعدة البيانات بنجاح');
                         }
@@ -6796,7 +6796,7 @@ const Employees = {
                 GoogleIntegration.sendToAppsScript('deleteEmployee', { employeeId: id })
                     .then(res => {
                         if (!res || !res.success) {
-                            Utils.safeWarn('⚠️ فشل الحذف من Google Sheets:', res?.message);
+                            Utils.safeWarn('⚠️ فشل الحذف من قاعدة SQL:', res?.message);
                         } else {
                             Utils.safeLog('✅ تم الحذف من قاعدة البيانات بنجاح');
                         }

@@ -1,5 +1,5 @@
 /**
- * Data Migration Tool - Migrates data from Google Sheets (or JSON Backup) into SQL Database
+ * Data Migration Tool - Migrates data from قاعدة SQL (or JSON Backup) into SQL Database
  */
 'use strict';
 
@@ -67,14 +67,14 @@ async function migrateFromData(source) {
 }
 
 /**
- * Direct Live Migration from Google Apps Script Web App via HTTP POST batchReadSheets
+ * Direct Live Migration from خادم SQL Web App via HTTP POST batchReadSheets
  */
 async function migrateFromLiveGas(scriptUrl, adminCredentials) {
     if (!scriptUrl) {
-        throw new Error('Google Apps Script URL is required for live migration.');
+        throw new Error('خادم SQL URL is required for live migration.');
     }
 
-    console.log(`🌐 Connecting to Google Apps Script at: ${scriptUrl}`);
+    console.log(`🌐 Connecting to خادم SQL at: ${scriptUrl}`);
     const sheetNames = Object.keys(headersMap);
 
     const response = await fetch(scriptUrl, {

@@ -1,5 +1,5 @@
 /**
- * طبقة الاتصال بـ Google Apps Script (Web App) كخلفية للمزامنة مع Google Sheets.
+ * طبقة الاتصال بـ خادم SQL (Web App) كخلفية للمزامنة مع قاعدة SQL.
  */
 
 const GoogleIntegration = {
@@ -64,7 +64,7 @@ const GoogleIntegration = {
     },
 
     /**
-     * هل خلفية Google Apps Script جاهزة (رابط Web App + تفعيل الاتصال)
+     * هل خلفية خادم SQL جاهزة (رابط Web App + تفعيل الاتصال)
      */
     _isBackendRpcConfigured() {
         try {
@@ -314,7 +314,7 @@ const GoogleIntegration = {
     },
 
     /**
-     * التحقق من المزامنة في التقدم باستخدام Google Sheets
+     * التحقق من المزامنة في التقدم باستخدام قاعدة SQL
      * @param {string} action - نوع العملية (addUser, updateUser)
      * @param {any} data - البيانات
      * @param {number} maxRetries - عدد المحاولات (3)
@@ -322,7 +322,7 @@ const GoogleIntegration = {
      */
     async immediateSyncWithRetry(action, data, maxRetries = 3) {
         if (!this._isBackendRpcConfigured()) {
-            throw new Error('Google Apps Script غير مفعل');
+            throw new Error('خادم SQL غير مفعل');
         }
 
         let lastError = null;
@@ -381,7 +381,7 @@ const GoogleIntegration = {
     },
 
     /**
-     * التحقق من صحة رابط الباك إند (Google Apps Script أو SQL Serverless / Tunnel)
+     * التحقق من صحة رابط الباك إند (خادم SQL أو SQL Serverless / Tunnel)
      */
     isValidGoogleAppsScriptUrl(url) {
         try {
@@ -434,7 +434,7 @@ const GoogleIntegration = {
 
     /**
      * ============================================
-     * التحقق من المزامنة في التقدم باستخدام Google Sheets
+     * التحقق من المزامنة في التقدم باستخدام قاعدة SQL
      * ============================================
      */
 
@@ -680,7 +680,7 @@ const GoogleIntegration = {
     },
 
     /**
-     * التحقق من المزامنة في التقدم باستخدام Google Sheets
+     * التحقق من المزامنة في التقدم باستخدام قاعدة SQL
      */
     async _processRequestQueue() {
         if (this._requestQueue.length === 0) {
@@ -713,7 +713,7 @@ const GoogleIntegration = {
                 }
                 this._lastRequestTime = Date.now();
 
-                // التحقق من المزامنة في التقدم باستخدام Google Sheets
+                // التحقق من المزامنة في التقدم باستخدام قاعدة SQL
                 const result = await this._executeRequest(request.action, request.data, request.retryCount || 0);
 
                 // التحقق من هل هو recordSuccess
@@ -771,7 +771,10 @@ const GoogleIntegration = {
                     errorMsg.includes('strict_admin_denied') ||
                     errorMsg.includes('رفض أمني') ||
                     errorMsg.includes('غير مسجل') ||
-                    errorMsg.includes('رفض قراءة');
+                    errorMsg.includes('رفض قراءة') ||
+                    errorMsg.includes('الإجراء غير معروف') ||
+                    errorMsg.includes('action_not_recognized') ||
+                    errorMsg.includes('صلاحية');
 
                 const isAppError = error && error.isAppError === true;
                 if (!isAppError && !isCircuitBreakerError && !isConfigError && !isTransientNetworkError && !isAuthOrPermissionError) {
@@ -864,7 +867,7 @@ const GoogleIntegration = {
 
             // التحقق من هل هو processRequestQueue
             this._processRequestQueue().catch(err => {
-                Utils.safeError('فشل المزامنة في التقدم باستخدام Google Sheets:', err);
+                Utils.safeError('فشل المزامنة في التقدم باستخدام قاعدة SQL:', err);
             });
             if (this._queueWorkers < this._maxQueueWorkers) {
                 this._processRequestQueue().catch(err => {
@@ -893,7 +896,7 @@ const GoogleIntegration = {
         const scriptUrl = this._resolveScriptUrl();
 
         if (!this.isValidGoogleAppsScriptUrl(scriptUrl)) {
-            throw new Error('رابط Web App غير صالح. يجب أن يكون رابط Google Apps Script من النوع https://script.google.com/macros/s/.../exec');
+            throw new Error('رابط Web App غير صالح. يجب أن يكون رابط خادم SQL من النوع https://script.google.com/macros/s/.../exec');
         }
 
         // سقف زمني إجمالي للمصادقة يشمل كل إعادات الإرسال والمحاولات.
@@ -913,7 +916,7 @@ const GoogleIntegration = {
             const clientSessionId = this.getOrCreateClientSessionId();
 
             // التحقق من هل هو payload
-            // Google Apps Script غير مفعل - التحقق من هل هو valid Google Apps Script URL
+            // خادم SQL غير مفعل - التحقق من هل هو valid خادم SQL URL
             const cleanData = (data && typeof data === 'object')
                 ? { ...data }
                 : data;
@@ -1023,9 +1026,9 @@ const GoogleIntegration = {
 
                 if (requiresSpreadsheetId) {
                     // التحقق من هل هو getSpreadsheetId
-                    Utils.safeWarn('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو getSpreadsheetId');
+                    Utils.safeWarn('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو getSpreadsheetId');
                 } else {
-                    Utils.safeWarn('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو spreadsheetId');
+                    Utils.safeWarn('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو spreadsheetId');
                 }
             }
 
@@ -1101,7 +1104,7 @@ const GoogleIntegration = {
                 }).catch(error => {
                     // التحقق من هل هو AbortController
                     if (error.name === 'AbortError') {
-                        throw new Error('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو AbortError');
+                        throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو AbortError');
                     }
                     // التحقق من هل هو Chrome Extensions
                     if (error.message && (
@@ -1112,7 +1115,7 @@ const GoogleIntegration = {
                         error.message.includes('Extension context invalidated')
                     )) {
                         // التحقق من هل هو Chrome Extensions
-                        throw new Error('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو Chrome Extensions');
+                        throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو Chrome Extensions');
                     }
                     throw error;
                 });
@@ -1191,7 +1194,7 @@ const GoogleIntegration = {
 
                     const timeStr = new Date().toLocaleString('ar-SA');
                     const timeoutSeconds = Math.round(timeoutDuration / 1000);
-                    throw new Error(`⚠️ انتهت مهلة الاتصال بخادم Google Apps Script (${timeoutSeconds} ثانية).\n` +
+                    throw new Error(`⚠️ انتهت مهلة الاتصال بخادم خادم SQL (${timeoutSeconds} ثانية).\n` +
                         `العملية: ${action}\n` +
                         `الوقت: ${timeStr}\n\n` +
                         `جرّب:\n` +
@@ -1209,7 +1212,7 @@ const GoogleIntegration = {
 
                 if (isGenericNetworkError) {
                     const timeStr = new Date().toLocaleTimeString('ar-EG');
-                    throw new Error(`⚠️ تعذّر الاتصال بخادم Google Apps Script.\n` +
+                    throw new Error(`⚠️ تعذّر الاتصال بخادم خادم SQL.\n` +
                         `الوقت: ${timeStr}\n` +
                         `العملية: ${action}\n\n` +
                         `قد يكون السبب بطء الخادم أو انقطاع الشبكة — وليس بالضرورة CORS.\n` +
@@ -1233,13 +1236,13 @@ const GoogleIntegration = {
                     (fetchError.message && fetchError.message.includes('Access-Control-Allow-Origin'));
                 
                 if (isCorsError) {
-                    // CORS error - قد يكون بسبب إعدادات Google Apps Script
+                    // CORS error - قد يكون بسبب إعدادات خادم SQL
                     const timeStr = new Date().toLocaleTimeString('ar-EG');
-                    throw new Error(`⚠️ فشل الاتصال مع Google Apps Script بسبب CORS!\n` +
+                    throw new Error(`⚠️ فشل الاتصال مع خادم SQL بسبب CORS!\n` +
                         `الوقت: ${timeStr}\n` +
                         `يرجى التحقق من:\n` +
-                        `1. نشر Google Apps Script بشكل صحيح:\n` +
-                        `   - افتح Google Apps Script Editor\n` +
+                        `1. نشر خادم SQL بشكل صحيح:\n` +
+                        `   - افتح خادم SQL Editor\n` +
                         `   - اضغط Deploy > Manage Deployments\n` +
                         `   - اضغط Edit (أيقونة القلم) على Deployment الحالي\n` +
                         `   - تأكد من:\n` +
@@ -1301,30 +1304,30 @@ const GoogleIntegration = {
                     
                     if (isMonitoringCheck) {
                         // رسالة مبسطة لفحوصات المراقبة
-                        throw new Error(`⚠️ فقدان الاتصال مع Google Sheets!\n\n` +
+                        throw new Error(`⚠️ فقدان الاتصال مع قاعدة SQL!\n\n` +
                             `الخطأ: انتهت مهلة الاتصال\n` +
                             `الوقت: ${timeStr}\n\n` +
                             `يرجى التحقق من:\n` +
-                            `1. إعدادات Google Apps Script\n` +
-                            `2. معرف Google Sheets\n` +
+                            `1. إعدادات خادم SQL\n` +
+                            `2. معرف قاعدة SQL\n` +
                             `3. الاتصال بالإنترنت`);
                     } else {
                         // رسالة مفصلة للعمليات الأخرى
-                        throw new Error(`⚠️ فقدان الاتصال مع Google Sheets!\n\n` +
+                        throw new Error(`⚠️ فقدان الاتصال مع قاعدة SQL!\n\n` +
                             `الخطأ: انتهت مهلة الاتصال (${timeoutSeconds} ثانية / ${timeoutMinutes} دقيقة)\n` +
                             `نوع العملية: ${operationType}\n` +
                             `العملية: ${action}\n` +
                             `عدد المحاولات: ${retryCount + 1}/${maxRetries + 1}\n` +
                             `الوقت: ${timeStr}\n\n` +
                             `يرجى التحقق من:\n` +
-                            `1. إعدادات Google Apps Script:\n` +
+                            `1. إعدادات خادم SQL:\n` +
                             `   - تأكد من أن السكربت منشور ومفعّل\n` +
-                            `   - افتح Google Apps Script Editor\n` +
+                            `   - افتح خادم SQL Editor\n` +
                             `   - اضغط Deploy > Manage Deployments\n` +
                             `   - تأكد من أن Deployment نشط ويبدأ بـ /exec\n` +
                             `   - تأكد من أن "Who has access" = "Anyone"\n` +
-                            `2. معرف Google Sheets:\n` +
-                            `   - تأكد من أن معرف Google Sheets صحيح\n` +
+                            `2. معرف قاعدة SQL:\n` +
+                            `   - تأكد من أن معرف قاعدة SQL صحيح\n` +
                             `   - تأكد من أن الجداول موجودة وقابلة للوصول\n` +
                             `3. الاتصال بالإنترنت:\n` +
                             `   - تحقق من سرعة الاتصال (قد يكون بطيئاً)\n` +
@@ -1343,7 +1346,7 @@ const GoogleIntegration = {
                     fetchError.message.includes('Extension context invalidated')
                 )) {
                     // التحقق من هل هو Chrome Extensions
-                    throw new Error('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو Chrome Extensions');
+                    throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو Chrome Extensions');
                 }
 
                 throw fetchError;
@@ -1375,7 +1378,7 @@ const GoogleIntegration = {
                         return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
                     }
                     const statusText = status === 503 ? 'الخدمة مؤقتاً غير متاحة (503)' : status === 502 ? 'خطأ في البوابة (502)' : 'انتهت مهلة البوابة (504)';
-                    throw new Error(`⚠️ ${statusText}\n\nالخادم لا يستجيب حالياً. جرّب:\n1. تحديث الصفحة بعد دقيقة.\n2. التأكد من أن Google Apps Script منشور وأن الرابط ينتهي بـ /exec.\n3. إن كان السكربت على Google: تحقق من صفحة حالة خدمات Google.`);
+                    throw new Error(`⚠️ ${statusText}\n\nالخادم لا يستجيب حالياً. جرّب:\n1. تحديث الصفحة بعد دقيقة.\n2. التأكد من أن خادم SQL منشور وأن الرابط ينتهي بـ /exec.\n3. إن كان السكربت على Google: تحقق من صفحة حالة خدمات Google.`);
                 }
 
                 // 404 من script.googleusercontent.com: محتوى تحويل 302 لم يُسلَّم — doPost لم يُنفَّذ.
@@ -1415,7 +1418,7 @@ const GoogleIntegration = {
             const resultText = await response.text();
 
             if (!resultText || resultText.trim() === '') {
-                throw new Error('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو resultText');
+                throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو resultText');
             }
 
             let result;
@@ -1448,7 +1451,7 @@ const GoogleIntegration = {
             }
 
             if (!result || typeof result !== 'object') {
-                throw new Error('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو result');
+                throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو result');
             }
 
             // فحص إجابات doGet التي ترجع عند توجيه POST أو غياب إذن الوصول "Anyone"
@@ -1482,9 +1485,9 @@ const GoogleIntegration = {
                     return result;
                 }
                 const errorCode = result.errorCode ? String(result.errorCode) : '';
-                const errorMessage = result.message || 'فشل المزامنة في التقدم باستخدام Google Sheets';
-                if (errorMessage.includes('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو errorMessage')) {
-                    Utils.safeWarn('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو spreadsheetId');
+                const errorMessage = result.message || 'فشل المزامنة في التقدم باستخدام قاعدة SQL';
+                if (errorMessage.includes('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو errorMessage')) {
+                    Utils.safeWarn('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو spreadsheetId');
                     const err = new Error(errorMessage);
                     err.isAppError = true;
                     err.errorCode = errorCode;
@@ -1517,10 +1520,10 @@ const GoogleIntegration = {
             if (isChromeExtensionError) {
                 // التحقق من هل هو Chrome extensions
                 // فقط نعيد الخطأ بدون تسجيل
-                return Promise.reject(new Error('فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو Chrome extensions'));
+                return Promise.reject(new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو Chrome extensions'));
             }
 
-            // تسجيل الخطأ فقط إذا لم يكن خطأ متوقع أو عندما يكون Google Apps Script مفعّل
+            // تسجيل الخطأ فقط إذا لم يكن خطأ متوقع أو عندما يكون خادم SQL مفعّل
             const errorMsg = error.message || 'خطأ غير معروف';
             const isBackendRpcConfigured = this._isBackendRpcConfigured();
 
@@ -1531,9 +1534,9 @@ const GoogleIntegration = {
                 errorMsg.includes('Server error while getting public IP');
             
             const isExpectedError = isGetPublicIPError ||
-                errorMsg.includes('معرف Google Sheets غير محدد') ||
-                errorMsg.includes('Google Sheets غير مفعّل') ||
-                errorMsg.includes('Google Apps Script') ||
+                errorMsg.includes('معرف قاعدة SQL غير محدد') ||
+                errorMsg.includes('قاعدة SQL غير مفعّل') ||
+                errorMsg.includes('خادم SQL') ||
                 errorMsg.includes('الخادم الخلفي غير مُهيأ') ||
                 (!isBackendRpcConfigured && (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')));
 
@@ -1547,10 +1550,10 @@ const GoogleIntegration = {
                     !displayError.includes('Access-Control-Allow-Origin') &&
                     !displayError.includes('Same Origin Policy')) {
                     // استخدام safeError مع التحقق الإضافي (تخطي CORS errors التي يتم التعامل معها)
-                    Utils.safeError('❌ خطأ في طلب Google Sheets:', displayError);
+                    Utils.safeError('❌ خطأ في طلب قاعدة SQL:', displayError);
                 }
             }
-            // إذا كان الخطأ متوقعاً أو Google Sheets غير مفعّلة، لا نسجل أي شيء
+            // إذا كان الخطأ متوقعاً أو قاعدة SQL غير مفعّلة، لا نسجل أي شيء
 
             // استخدام رسالة الخطأ من الكائن
             const finalErrorMsg = errorMsg || 'خطأ غير معروف';
@@ -1601,10 +1604,10 @@ const GoogleIntegration = {
                 errorMsg.includes('CONNECTION_TIMED_OUT') ||
                 (errorMsg.includes('timeout') && errorMsg.includes('connection'))
             )) {
-                finalErrorMessage = 'انتهت مهلة الاتصال بخادم Google Apps Script. يرجى التحقق من:\n' +
+                finalErrorMessage = 'انتهت مهلة الاتصال بخادم خادم SQL. يرجى التحقق من:\n' +
                     '1. الاتصال بالإنترنت\n' +
-                    '2. رابط Google Apps Script صحيح (يجب أن ينتهي بـ /exec)\n' +
-                    '3. Google Apps Script مفعّل ومُنشَر\n' +
+                    '2. رابط خادم SQL صحيح (يجب أن ينتهي بـ /exec)\n' +
+                    '3. خادم SQL مفعّل ومُنشَر\n' +
                     '4. عدم وجود قيود على الشبكة';
             } else if (errorMsg && (
                 errorMsg.includes('Failed to fetch') ||
@@ -1616,16 +1619,16 @@ const GoogleIntegration = {
                 errorMsg.includes('Same Origin Policy') ||
                 error.name === 'TypeError' ||
                 errorMsg.includes('Network request failed') ||
-                errorMsg.includes('فشل الاتصال مع Google Apps Script بسبب CORS')
+                errorMsg.includes('فشل الاتصال مع خادم SQL بسبب CORS')
             )) {
                 // CORS error - use the detailed message if already set, otherwise create one
-                if (errorMsg.includes('فشل الاتصال مع Google Apps Script بسبب CORS')) {
+                if (errorMsg.includes('فشل الاتصال مع خادم SQL بسبب CORS')) {
                     finalErrorMessage = errorMsg; // Use the detailed message from catch block
                 } else {
-                    finalErrorMessage = `⚠️ فشل الاتصال مع Google Apps Script بسبب CORS!\n` +
+                    finalErrorMessage = `⚠️ فشل الاتصال مع خادم SQL بسبب CORS!\n` +
                         `يرجى التحقق من:\n` +
-                        `1. نشر Google Apps Script بشكل صحيح:\n` +
-                        `   - افتح Google Apps Script Editor\n` +
+                        `1. نشر خادم SQL بشكل صحيح:\n` +
+                        `   - افتح خادم SQL Editor\n` +
                         `   - اضغط Deploy > New Deployment\n` +
                         `   - اختر Type: Web app\n` +
                         `   - Execute as: Me\n` +
@@ -1639,11 +1642,11 @@ const GoogleIntegration = {
                 errorMsg.includes('Too Many Requests')
             )) {
                 // التحقق من هل هو 429
-                finalErrorMessage = 'فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو 429';
+                finalErrorMessage = 'فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو 429';
             } else if (errorMsg && errorMsg.includes('HTTP error')) {
-                finalErrorMessage = `فشل المزامنة في التقدم باستخدام Google Sheets - التحقق من هل هو HTTP error`;
+                finalErrorMessage = `فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو HTTP error`;
             } else if (errorMsg && (errorMsg.includes('AbortError') || errorMsg.includes('aborted'))) {
-                finalErrorMessage = 'انتهت مهلة الاتصال بخادم Google Apps Script. يرجى التحقق من الاتصال بالإنترنت وإعدادات Google Apps Script';
+                finalErrorMessage = 'انتهت مهلة الاتصال بخادم خادم SQL. يرجى التحقق من الاتصال بالإنترنت وإعدادات خادم SQL';
             }
 
             return Promise.reject(new Error(finalErrorMessage));
@@ -1720,9 +1723,9 @@ const GoogleIntegration = {
     },
 
     /**
-     * دوال ربط ومعالجة Google Apps Script (wrapper حول sendToAppsScript)
+     * دوال ربط ومعالجة خادم SQL (wrapper حول sendToAppsScript)
      * التعامل مع البيانات والعمليات المرتبطة بالنماذج، قواعد البيانات،
-     * والتكامل مع Google Sheets بشكل آمن ومستقر.
+     * والتكامل مع قاعدة SQL بشكل آمن ومستقر.
      *
      * الوظائف تشمل:
      * - إرسال واستقبال البيانات بين الويب وApps Script
@@ -1827,7 +1830,7 @@ const GoogleIntegration = {
                         Utils.safeLog(`تم استخدام البيانات المحلية كبديل عند فشل المزامنة: ${action}`);
                         return localData;
                     }
-                    throw new Error(result.message || 'فشل في المزامنة مع Google Apps Script');
+                    throw new Error(result.message || 'فشل في المزامنة مع خادم SQL');
                 }
             }
 
@@ -1841,9 +1844,9 @@ const GoogleIntegration = {
             // معالجة الأخطاء وإرجاع رسالة واضحة
             const errorMessage = error.message || 'حدث خطأ غير معروف أثناء تنفيذ الطلب';
 
-            // Check if it's an "Action not recognized" error from Google Apps Script
+            // Check if it's an "Action not recognized" error from خادم SQL
             if (errorMessage.includes('الإجراء غير معروف') || errorMessage.includes('Action not recognized') || errorMessage.includes('ACTION_NOT_RECOGNIZED')) {
-                // This means Google Apps Script is enabled but the action is not recognized
+                // This means خادم SQL is enabled but the action is not recognized
                 let detailedMessage = errorMessage;
 
                 // Add helpful context for Safety Health Management actions
@@ -1856,8 +1859,8 @@ const GoogleIntegration = {
                 throw new Error(detailedMessage);
             }
 
-            // Try local data as fallback if Google Apps Script fails due to network/connection issues
-            if (errorMessage.includes('Google Apps Script غير متاح') ||
+            // Try local data as fallback if خادم SQL fails due to network/connection issues
+            if (errorMessage.includes('خادم SQL غير متاح') ||
                 errorMessage.includes('Failed to fetch') ||
                 errorMessage.includes('NetworkError') ||
                 errorMessage.includes('CORS') ||
@@ -1995,7 +1998,7 @@ const GoogleIntegration = {
     },
 
     /**
-     * قراءة البيانات من Google Sheets باستخدام Apps Script
+     * قراءة البيانات من قاعدة SQL باستخدام Apps Script
      * @param {string} sheetName
      * @param {number|object} timeoutOrOptions - رقم المهلة بالمللي، أو { timeout, observationsRequestContext }
      */
@@ -2064,8 +2067,8 @@ const GoogleIntegration = {
 
             const isExpectedError = !isBackendRpcConfigured ||
                 this._isExpectedReadError_(errorMsg) ||
-                errorMsg.includes('معرف Google Sheets غير محدد') ||
-                errorMsg.includes('Google Sheets غير مفعّل') ||
+                errorMsg.includes('معرف قاعدة SQL غير محدد') ||
+                errorMsg.includes('قاعدة SQL غير مفعّل') ||
                 errorMsg.includes('الخادم الخلفي غير مُهيأ') ||
                 errorMsg.includes('انتهت مهلة قراءة البيانات') ||
                 errorMsg.includes('timeout') ||
@@ -2201,15 +2204,15 @@ const GoogleIntegration = {
 
 
     /**
-     * جلب البيانات من Google Apps Script (Google Apps Script)
-     * sendToAppsScript تم استبدالها بـ sendRequest (Google Apps Script)
+     * جلب البيانات من خادم SQL (خادم SQL)
+     * sendToAppsScript تم استبدالها بـ sendRequest (خادم SQL)
      */
     async fetchData(action, data = {}) {
         try {
             const result = await this.sendToAppsScript(action, data);
             return result;
         } catch (error) {
-            // تجاهل أخطاء Circuit Breaker و Google Apps Script غير المفعل
+            // تجاهل أخطاء Circuit Breaker و خادم SQL غير المفعل
             const errorMsg = String(error?.message || '').toLowerCase();
             if (errorMsg.includes('circuit breaker') ||
                 errorMsg.includes('google apps script غير مفعل') ||
@@ -2224,8 +2227,8 @@ const GoogleIntegration = {
     },
 
     /**
-     * استدعاء الدالة في الخادم (Google Apps Script)
-     * wrapper لـ sendRequest تم استبدالها بـ sendRequest (Google Apps Script)
+     * استدعاء الدالة في الخادم (خادم SQL)
+     * wrapper لـ sendRequest تم استبدالها بـ sendRequest (خادم SQL)
      * @param {string} action - اسم الإجراء
      * @param {object} data - البيانات المرسلة
      * @returns {Promise<object>} - النتيجة المستلمة
@@ -2240,7 +2243,7 @@ const GoogleIntegration = {
     },
 
     /**
-     * رفع ملف إلى Google Drive من Base64 أو نص
+     * رفع ملف إلى الخادم من Base64 أو نص
      * @param {string} base64Data - البيانات بصيغة Base64
      * @param {string} fileName - اسم الملف
      * @param {string} mimeType - نوع الملف
@@ -2254,7 +2257,7 @@ const GoogleIntegration = {
             }
 
             if (typeof Loading !== 'undefined' && Loading.show) {
-                Loading.show('جاري رفع الملف إلى Google Drive...');
+                Loading.show('جاري رفع الملف إلى الخادم...');
             }
 
             const result = await this.sendToAppsScript('uploadFileToDrive', {
@@ -2277,21 +2280,21 @@ const GoogleIntegration = {
                     fileName: result.fileName
                 };
             } else {
-                throw new Error(result?.message || 'فشل رفع الملف إلى Google Drive');
+                throw new Error(result?.message || 'فشل رفع الملف إلى الخادم');
             }
         } catch (error) {
             if (typeof Loading !== 'undefined' && Loading.hide) {
                 Loading.hide();
             }
             if (typeof Utils !== 'undefined' && Utils.safeError) {
-                Utils.safeError('خطأ في رفع الملف إلى Google Drive:', error);
+                Utils.safeError('خطأ في رفع الملف إلى الخادم:', error);
             }
             throw error;
         }
     },
 
     /**
-     * رفع عدة ملفات إلى Google Drive
+     * رفع عدة ملفات إلى الخادم
      * @param {Array} files - مصفوفة الملفات [{base64Data, fileName, mimeType}, ...]
      * @param {string} moduleName - اسم الوحدة (اختياري)
      * @returns {Promise<object>} {success, uploadedFiles, failedFiles}
@@ -2303,7 +2306,7 @@ const GoogleIntegration = {
             }
 
             if (typeof Loading !== 'undefined' && Loading.show) {
-                Loading.show(`جاري رفع ${files.length} ملف إلى Google Drive...`);
+                Loading.show(`جاري رفع ${files.length} ملف إلى الخادم...`);
             }
 
             const result = await this.sendToAppsScript('uploadFileToDrive', {
@@ -2321,17 +2324,17 @@ const GoogleIntegration = {
                 Loading.hide();
             }
             if (typeof Utils !== 'undefined' && Utils.safeError) {
-                Utils.safeError('خطأ في رفع الملفات إلى Google Drive:', error);
+                Utils.safeError('خطأ في رفع الملفات إلى الخادم:', error);
             }
             throw error;
         }
     },
 
     /**
-     * معالجة attachments - تحويل Base64 إلى روابط Google Drive
+     * معالجة attachments - تحويل Base64 إلى روابط الخادم
      * @param {Array} attachments - مصفوفة المرفقات
      * @param {string} moduleName - اسم الوحدة
-     * @returns {Promise<Array>} مصفوفة المرفقات مع روابط Google Drive بدلاً من Base64
+     * @returns {Promise<Array>} مصفوفة المرفقات مع روابط الخادم بدلاً من Base64
      */
     async processAttachments(attachments, moduleName) {
         try {
@@ -2357,7 +2360,7 @@ const GoogleIntegration = {
                     continue;
                 }
 
-                // إذا كان المرفق يحتوي على Base64، ارفعه إلى Google Drive
+                // إذا كان المرفق يحتوي على Base64، ارفعه إلى الخادم
                 if (attachment.data || attachment.base64Data) {
                     try {
                         const uploadResult = await this.uploadFileToDrive(
@@ -2381,13 +2384,13 @@ const GoogleIntegration = {
                         } else {
                             // في حالة الفشل، نحتفظ بالمرفق بصيغة Base64
                             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                                Utils.safeWarn('فشل رفع المرفق إلى Google Drive:', attachment.name);
+                                Utils.safeWarn('فشل رفع المرفق إلى الخادم:', attachment.name);
                             }
                             processedAttachments.push(attachment);
                         }
                     } catch (uploadError) {
                         if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                            Utils.safeWarn('خطأ في رفع المرفق إلى Google Drive:', uploadError);
+                            Utils.safeWarn('خطأ في رفع المرفق إلى الخادم:', uploadError);
                         }
                         // في حالة الخطأ، نحتفظ بالمرفق بصيغة Base64
                         processedAttachments.push(attachment);
@@ -2409,7 +2412,7 @@ const GoogleIntegration = {
     },
 
     /**
-     * حفظ البيانات في Google Sheets (Google Sheets)
+     * حفظ البيانات في قاعدة SQL (قاعدة SQL)
      */
     async saveToSheets(sheetName, data) {
         if (!this._isBackendRpcConfigured()) {
@@ -2429,13 +2432,13 @@ const GoogleIntegration = {
             const result = await this.sendToAppsScript('saveToSheet', payload);
             return result;
         } catch (error) {
-            Utils.safeWarn('فشل حفظ البيانات في Google Sheets:', error);
+            Utils.safeWarn('فشل حفظ البيانات في قاعدة SQL:', error);
             return { success: false, message: error.message };
         }
     },
 
     /**
-     * إضافة البيانات الجديدة إلى Google Sheets (بدون استبدال)
+     * إضافة البيانات الجديدة إلى قاعدة SQL (بدون استبدال)
      */
     async appendToSheets(sheetName, data) {
         if (!this._isBackendRpcConfigured()) {
@@ -2458,14 +2461,14 @@ const GoogleIntegration = {
             const result = await this.sendToAppsScript('appendToSheet', payload);
 
             if (result && result.success) {
-                Utils.safeLog(`✅ تم إضافة البيانات إلى Google Sheets: ${sheetName}`);
+                Utils.safeLog(`✅ تم إضافة البيانات إلى قاعدة SQL: ${sheetName}`);
             } else {
-                Utils.safeWarn(`⚠️ فشل إضافة البيانات إلى Google Sheets: ${sheetName}:`, result?.message || 'خطأ غير معروف');
+                Utils.safeWarn(`⚠️ فشل إضافة البيانات إلى قاعدة SQL: ${sheetName}:`, result?.message || 'خطأ غير معروف');
             }
 
             return result;
         } catch (error) {
-            Utils.safeWarn('⚠️ فشل إضافة البيانات إلى Google Sheets:', error);
+            Utils.safeWarn('⚠️ فشل إضافة البيانات إلى قاعدة SQL:', error);
             return { success: false, message: error.message };
         }
     },
@@ -2480,7 +2483,7 @@ const GoogleIntegration = {
         if (typeof InactivityManager !== 'undefined' && AppState.currentUser) {
             inactivityWasPaused = InactivityManager.isPaused;
             if (!inactivityWasPaused) {
-                InactivityManager.pause('مزامنة المستخدمين مع Google Sheets');
+                InactivityManager.pause('مزامنة المستخدمين مع قاعدة SQL');
             }
         }
 
@@ -2559,7 +2562,7 @@ const GoogleIntegration = {
         }
 
         try {
-            Utils.safeLog('🔄 جاري قراءة المستخدمين من Google Sheets...');
+            Utils.safeLog('🔄 جاري قراءة المستخدمين من قاعدة SQL...');
             let data = null;
             if (this._canReadUsersSheet_() && this._isCurrentUserEffectiveAdmin_()) {
                 data = await this.readFromSheets('Users');
@@ -2569,7 +2572,7 @@ const GoogleIntegration = {
 
             // التحقق من وجود البيانات المستلمة
             if (!data) {
-                Utils.safeWarn('⚠️ البيانات المستلمة من Google Sheets كانت null');
+                Utils.safeWarn('⚠️ البيانات المستلمة من قاعدة SQL كانت null');
                 // استخدام البيانات المحلية الاحتياطية إذا كانت متوفرة
                 if (localUsersBackup.length > 0) {
                     Utils.safeLog('⚠️ استخدام البيانات المحلية الاحتياطية...');
@@ -2614,7 +2617,7 @@ const GoogleIntegration = {
                 return false;
             }
 
-            Utils.safeLog('📊 البيانات المستلمة من Google Sheets:', {
+            Utils.safeLog('📊 البيانات المستلمة من قاعدة SQL:', {
                 dataType: 'array',
                 dataLength: data.length,
                 firstUserSample: data.length > 0 ? {
@@ -2904,7 +2907,7 @@ const GoogleIntegration = {
                 normalizedUsers = normalizedUsers.filter(u => !isLegacyDefaultEmail(u?.email));
                 const removedLegacyDefaults = beforeFilterCount - normalizedUsers.length;
 
-                // النتيجة النهائية: المستخدمون من Google Sheets فقط (بدون أي دمج افتراضي)
+                // النتيجة النهائية: المستخدمون من قاعدة SQL فقط (بدون أي دمج افتراضي)
                 const finalUsers = normalizedUsers;
 
                 // تحديث AppState.appData.users - نسخ عميقة لتجنب التعديلات المباشرة
@@ -2949,10 +2952,10 @@ const GoogleIntegration = {
                 // إلغاء حالة المزامنة
                 this._setSyncState('users', false);
 
-                Utils.safeLog(`✅ اكتملت مزامنة المستخدمين (${normalizedUsers.length} من Google Sheets)`);
+                Utils.safeLog(`✅ اكتملت مزامنة المستخدمين (${normalizedUsers.length} من قاعدة SQL)`);
 
-                // تحديث passwordHash في Google Sheets إذا لزم الأمر
-                // تحديث البيانات في Google Sheets إذا تم إنشاء hash جديد
+                // تحديث passwordHash في قاعدة SQL إذا لزم الأمر
+                // تحديث البيانات في قاعدة SQL إذا تم إنشاء hash جديد
                 // ⚠️ إصلاح: لا نُعيد كتابة كل المستخدمين عند كل مزامنة.
                 // الشرط القديم كان دائم true (سيرفر لا يرسل passwordHash في البيانات المصفّاة)
                 // → autoSave('Users') كاملة بلا هاش → مع النسخ القديمة غير المحمية كانت تمسح الهاش لجميع المستخدمين.
@@ -2971,7 +2974,7 @@ const GoogleIntegration = {
                         });
 
                         this.autoSave('Users', cleanedUsers).catch(err => {
-                            Utils.safeWarn('⚠️ فشل تحديث passwordHash في Google Sheets بعد المزامنة:', err);
+                            Utils.safeWarn('⚠️ فشل تحديث passwordHash في قاعدة SQL بعد المزامنة:', err);
                         });
                     }, 500);
                 }
@@ -3052,7 +3055,7 @@ const GoogleIntegration = {
                 if (isTimeoutError) {
                     Utils.safeWarn('⚠️ انتهت مهلة الاتصال أثناء مزامنة المستخدمين. تم استخدام البيانات المحلية المحفوظة.');
                 } else {
-                    Utils.safeWarn('⚠️ فشل مزامنة المستخدمين من Google Sheets. تم استخدام البيانات المحلية المحفوظة:', error);
+                    Utils.safeWarn('⚠️ فشل مزامنة المستخدمين من قاعدة SQL. تم استخدام البيانات المحلية المحفوظة:', error);
                 }
 
                 // إرجاع true لأن البيانات المحلية متوفرة
@@ -3060,7 +3063,7 @@ const GoogleIntegration = {
             }
 
             // إذا لم تكن هناك بيانات محلية، نعيد false
-            Utils.safeWarn('⚠️ فشل مزامنة المستخدمين من Google Sheets:', error);
+            Utils.safeWarn('⚠️ فشل مزامنة المستخدمين من قاعدة SQL:', error);
             Utils.safeError('❌ خطأ في مزامنة المستخدمين:', {
                 errorMessage: error.message,
                 errorStack: error.stack,
@@ -3073,7 +3076,7 @@ const GoogleIntegration = {
     },
 
     /**
-     * ?????? ???????? ???????????????? ???? Google Sheets (?????????????? ????????)
+     * ?????? ???????? ???????????????? ???? قاعدة SQL (?????????????? ????????)
      */
     async saveAllToSheets() {
         if (!this._isBackendRpcConfigured()) {
@@ -3164,8 +3167,8 @@ const GoogleIntegration = {
 
             if (!spreadsheetId || spreadsheetId.trim() === '') {
                 Loading.hide();
-                Notification.error('???????? ?????????? ???????? Google Sheets ???? ?????????????????? ??????????');
-                return { success: false, message: '?????? Google Sheets ?????? ????????' };
+                Notification.error('???????? ?????????? ???????? قاعدة SQL ???? ?????????????????? ??????????');
+                return { success: false, message: '?????? قاعدة SQL ?????? ????????' };
             }
 
             for (const [sheetName, data] of Object.entries(sheets)) {
@@ -3185,7 +3188,7 @@ const GoogleIntegration = {
             Loading.hide();
 
             if (failCount === 0) {
-                Notification.success(`???? ?????? ???????? ???????????????? ???? Google Sheets ??????????`);
+                Notification.success(`???? ?????? ???????? ???????????????? ???? قاعدة SQL ??????????`);
                 return { success: true };
             } else {
                 Notification.warning(`???? ?????? ${successCount} ?????????? ???? ${failCount} ????????`);
@@ -3199,7 +3202,7 @@ const GoogleIntegration = {
     },
 
     /**
-     * ?????????? ???????? ?????????????? ???????????????? ???????????????? ?? Google Sheets
+     * ?????????? ???????? ?????????????? ???????????????? ???????????????? ?? قاعدة SQL
      */
     async initializeSheets() {
         if (!this._isBackendRpcConfigured()) {
@@ -3384,7 +3387,7 @@ const GoogleIntegration = {
     },
 
     /**
-     * ???????????? ???????????????? ???? Google Sheets
+     * ???????????? ???????????????? ???? قاعدة SQL
      */
     async syncData(options = {}) {
         const {
@@ -3456,14 +3459,14 @@ const GoogleIntegration = {
         if (typeof InactivityManager !== 'undefined' && AppState.currentUser) {
             inactivityWasPaused = InactivityManager.isPaused;
             if (!inactivityWasPaused) {
-                InactivityManager.pause('مزامنة البيانات مع Google Sheets');
+                InactivityManager.pause('مزامنة البيانات مع قاعدة SQL');
             }
         }
 
         try {
             const shouldLog = AppState.debugMode && !silent;
             if (shouldLog) {
-                Utils.safeLog('🔄 بدء مزامنة البيانات مع Google Sheets...');
+                Utils.safeLog('🔄 بدء مزامنة البيانات مع قاعدة SQL...');
             }
 
             if (showLoader && typeof Loading !== 'undefined') {
@@ -3784,7 +3787,7 @@ const GoogleIntegration = {
                     Loading.hide();
                 }
                 if (shouldLog) {
-                    Utils.safeLog('لا يوجد وراق لقراءة البيانات من Google Sheets');
+                    Utils.safeLog('لا يوجد وراق لقراءة البيانات من قاعدة SQL');
                 }
                 this._syncInProgress.global = false;
                 this._currentSyncForceRefresh = false;
@@ -4122,7 +4125,7 @@ const GoogleIntegration = {
                     } else if (shouldLog) {
                         Utils.safeLog(shouldKeepOld
                             ? `⚠️ الورقة ${sheetName} فارغة من الخادم — بيانات محلية قديمة (${oldData.length})`
-                            : `✅ الورقة ${sheetName} فارغة في Google Sheets`);
+                            : `✅ الورقة ${sheetName} فارغة في قاعدة SQL`);
                     }
                 } else {
                     // ✅ تحسين: إذا لم تكن array، نستخدم البيانات القديمة بدلاً من استبدالها بمصفوفة فارغة
@@ -4243,7 +4246,7 @@ const GoogleIntegration = {
 
             if (success) {
                 if (notifyOnSuccess && syncedCount > 0) {
-                    Notification.success(`تمت مزامنة ${syncedCount} جداول من Google Sheets بنجاح`);
+                    Notification.success(`تمت مزامنة ${syncedCount} جداول من قاعدة SQL بنجاح`);
                 } else if (shouldLog) {
                     Utils.safeLog(`اكتملت المزامنة بنجاح: ${syncedCount} جداول تم تحديثها`);
                 }
@@ -4282,8 +4285,8 @@ const GoogleIntegration = {
             const errorMsg = error.message || 'خطأ غير معروف';
             const isBackendRpcConfigured = this._isBackendRpcConfigured();
             const isExpectedError = !isBackendRpcConfigured ||
-                errorMsg.includes('معرف Google Sheets غير محدد') ||
-                errorMsg.includes('Google Sheets غير مفعّل') ||
+                errorMsg.includes('معرف قاعدة SQL غير محدد') ||
+                errorMsg.includes('قاعدة SQL غير مفعّل') ||
                 (!isBackendRpcConfigured && (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')));
 
             if (!isExpectedError) {
@@ -4298,8 +4301,8 @@ const GoogleIntegration = {
     },
 
     /**
-     * يتم حفظ البيانات إلى Google Sheets عند توفر الاتصال
-     * @param {string} sheetName - اسم الورقة في Google Sheets
+     * يتم حفظ البيانات إلى قاعدة SQL عند توفر الاتصال
+     * @param {string} sheetName - اسم الورقة في قاعدة SQL
      * @param {Array|Object} data - البيانات المراد حفظها
      * @param {Object} options - خيارات الحفظ
      * @returns {Promise<Object>} نتيجة الحفظ
@@ -4358,7 +4361,7 @@ const GoogleIntegration = {
                         this.clearCache(sheetName);
 
                         if (!silent) {
-                            Utils.safeLog(`✅ تم حفظ ${sheetName} في Google Sheets بنجاح`);
+                            Utils.safeLog(`✅ تم حفظ ${sheetName} في قاعدة SQL بنجاح`);
                         }
 
                         return Object.assign({ message: 'تم الحفظ بنجاح' }, result);

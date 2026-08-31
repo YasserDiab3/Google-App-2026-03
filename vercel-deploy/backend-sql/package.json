@@ -2,7 +2,7 @@
   "name": "hse-backend-sql",
   "version": "1.0.0",
   "private": true,
-  "description": "High-performance isolated SQL Backend for HSE Clinic System with 100% Google Apps Script protocol parity",
+  "description": "High-performance isolated SQL Backend for HSE Clinic System with 100% خادم SQL protocol parity",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

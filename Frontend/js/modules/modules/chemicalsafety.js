@@ -485,7 +485,7 @@ const ChemicalSafety = {
     },
 
     /**
-     * تحميل البيانات من Google Sheets
+     * تحميل البيانات من قاعدة SQL
      */
     async loadChemicalDataAsync() {
         if (this._chemicalDataLoadPromise) {
@@ -518,7 +518,7 @@ const ChemicalSafety = {
                 if (result && result.success && Array.isArray(result.data)) {
                     AppState.appData.chemicalRegister = result.data;
                     dataUpdated = true;
-                    Utils.safeLog(`✅ تم تحميل ${result.data.length} سجل من Google Sheets`);
+                    Utils.safeLog(`✅ تم تحميل ${result.data.length} سجل من قاعدة SQL`);
                 } else {
                     if (!AppState.appData.chemicalRegister) {
                         AppState.appData.chemicalRegister = [];
@@ -2568,7 +2568,7 @@ const ChemicalSafety = {
                 AppState.appData.chemicalRegister.push(formData);
             }
 
-            // حفظ في Google Sheets
+            // حفظ في قاعدة SQL
             await GoogleIntegration.sendRequest({
                 action: 'saveToSheet',
                 data: {
@@ -2868,7 +2868,7 @@ const ChemicalSafety = {
             // حذف من AppState
             AppState.appData.chemicalRegister = AppState.appData.chemicalRegister.filter(c => c.id !== id);
 
-            // حذف من Google Sheets
+            // حذف من قاعدة SQL
             await GoogleIntegration.sendRequest({
                 action: 'deleteFromSheet',
                 data: {

@@ -1,7 +1,7 @@
 /* ========================================
    قمع شامل ونهائي لأخطاء uploadmanager.js:518
    ملاحظة: هذا الملف احتياطي - الحماية الأساسية inline في index.html
-   V5: يتضمن تحويل Google Drive URLs إلى صيغة thumbnail الآمنة
+   V5: يتضمن تحويل الخادم URLs إلى صيغة thumbnail الآمنة
    ======================================== */
 
 (function() {
@@ -12,7 +12,7 @@
         console.warn('⚠️ Primary error suppressor not detected - activating backup');
     }
     
-    // ✅ تحويل Google Drive URLs إلى صيغة آمنة (احتياطي)
+    // ✅ تحويل الخادم URLs إلى صيغة آمنة (احتياطي)
     if (!window.__convertGoogleDriveUrl) {
         window.__convertGoogleDriveUrl = function(url) {
             if (!url || typeof url !== 'string') return url;
@@ -101,7 +101,7 @@
         if (t.includes('vercel.live/_next-live/feedback/feedback.js') && (t.includes('503') || t.includes('service unavailable') || t.includes('err_aborted'))) {
             return true;
         }
-        // Google Drive thumbnails (قد يرجع 503 مؤقتاً)
+        // الخادم thumbnails (قد يرجع 503 مؤقتاً)
         if (t.includes('drive.google.com/thumbnail') && (t.includes('503') || t.includes('service unavailable'))) {
             return true;
         }

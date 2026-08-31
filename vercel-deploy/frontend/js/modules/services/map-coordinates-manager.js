@@ -7,7 +7,7 @@
 const MapCoordinatesManager = {
     // مفتاح التخزين في localStorage
     STORAGE_KEY: 'ptw_map_coordinates',
-    // مفتاح التخزين في Google Sheets
+    // مفتاح التخزين في قاعدة SQL
     SHEETS_KEY: 'PTW_MAP_COORDINATES',
     // مفتاح الإحداثيات الافتراضية
     DEFAULT_COORDS_KEY: 'ptw_default_coordinates',
@@ -109,13 +109,13 @@ const MapCoordinatesManager = {
         if (cached.length > 0) return cached;
 
         try {
-            // بدون كاش محلي: جلب من Google Sheets
+            // بدون كاش محلي: جلب من قاعدة SQL
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.getData) {
                 try {
                     const sheetsData = await GoogleIntegration.getData(this.SHEETS_KEY);
                     if (sheetsData && Array.isArray(sheetsData) && sheetsData.length > 0) {
                         if (typeof Utils !== 'undefined' && Utils.safeLog) {
-                            Utils.safeLog('✅ تم تحميل إحداثيات المواقع من Google Sheets:', sheetsData.length, 'موقع');
+                            Utils.safeLog('✅ تم تحميل إحداثيات المواقع من قاعدة SQL:', sheetsData.length, 'موقع');
                         }
                         // حفظ محلياً للنسخ الاحتياطي
                         this.saveMapSitesLocal(sheetsData);
@@ -123,7 +123,7 @@ const MapCoordinatesManager = {
                     }
                 } catch (error) {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                        Utils.safeWarn('⚠️ تعذر تحميل إحداثيات المواقع من Google Sheets:', error);
+                        Utils.safeWarn('⚠️ تعذر تحميل إحداثيات المواقع من قاعدة SQL:', error);
                     }
                 }
             }
@@ -173,16 +173,16 @@ const MapCoordinatesManager = {
         }
 
         try {
-            // 1. حفظ في Google Sheets (مشترك لجميع المستخدمين)
+            // 1. حفظ في قاعدة SQL (مشترك لجميع المستخدمين)
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                 try {
                     await GoogleIntegration.autoSave(this.SHEETS_KEY, sites);
                     if (typeof Utils !== 'undefined' && Utils.safeLog) {
-                        Utils.safeLog('✅ تم حفظ إحداثيات المواقع في Google Sheets');
+                        Utils.safeLog('✅ تم حفظ إحداثيات المواقع في قاعدة SQL');
                     }
                 } catch (error) {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                        Utils.safeWarn('⚠️ تعذر حفظ إحداثيات المواقع في Google Sheets:', error);
+                        Utils.safeWarn('⚠️ تعذر حفظ إحداثيات المواقع في قاعدة SQL:', error);
                     }
                 }
             }
@@ -269,7 +269,7 @@ const MapCoordinatesManager = {
                     const sheetsData = await GoogleIntegration.getData('PTW_DEFAULT_COORDINATES');
                     if (sheetsData && sheetsData.latitude && sheetsData.longitude) {
                         if (typeof Utils !== 'undefined' && Utils.safeLog) {
-                            Utils.safeLog('✅ تم تحميل الإحداثيات الافتراضية من Google Sheets');
+                            Utils.safeLog('✅ تم تحميل الإحداثيات الافتراضية من قاعدة SQL');
                         }
                         this.saveDefaultCoordinatesLocal(sheetsData);
                         return {
@@ -280,7 +280,7 @@ const MapCoordinatesManager = {
                     }
                 } catch (error) {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                        Utils.safeWarn('⚠️ تعذر تحميل الإحداثيات الافتراضية من Google Sheets:', error);
+                        Utils.safeWarn('⚠️ تعذر تحميل الإحداثيات الافتراضية من قاعدة SQL:', error);
                     }
                 }
             }
@@ -339,16 +339,16 @@ const MapCoordinatesManager = {
                     (AppState.currentUser.email || AppState.currentUser.name || 'unknown') : 'unknown'
             };
 
-            // 1. حفظ في Google Sheets
+            // 1. حفظ في قاعدة SQL
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                 try {
                     await GoogleIntegration.autoSave('PTW_DEFAULT_COORDINATES', data);
                     if (typeof Utils !== 'undefined' && Utils.safeLog) {
-                        Utils.safeLog('✅ تم حفظ الإحداثيات الافتراضية في Google Sheets');
+                        Utils.safeLog('✅ تم حفظ الإحداثيات الافتراضية في قاعدة SQL');
                     }
                 } catch (error) {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                        Utils.safeWarn('⚠️ تعذر حفظ الإحداثيات الافتراضية في Google Sheets:', error);
+                        Utils.safeWarn('⚠️ تعذر حفظ الإحداثيات الافتراضية في قاعدة SQL:', error);
                     }
                 }
             }
@@ -418,7 +418,7 @@ const MapCoordinatesManager = {
     },
 
     /**
-     * مزامنة البيانات من Google Sheets إلى التخزين المحلي
+     * مزامنة البيانات من قاعدة SQL إلى التخزين المحلي
      */
     async syncFromGoogleSheets() {
         try {
@@ -436,7 +436,7 @@ const MapCoordinatesManager = {
                     AppState.appData.ptwMapSites = [...sites];
                 }
                 if (typeof Utils !== 'undefined' && Utils.safeLog) {
-                    Utils.safeLog('✅ تم مزامنة المواقع من Google Sheets:', sites.length, 'موقع');
+                    Utils.safeLog('✅ تم مزامنة المواقع من قاعدة SQL:', sites.length, 'موقع');
                 }
             }
 
@@ -456,14 +456,14 @@ const MapCoordinatesManager = {
                     AppState.companySettings.mapZoom = coords.zoom;
                 }
                 if (typeof Utils !== 'undefined' && Utils.safeLog) {
-                    Utils.safeLog('✅ تم مزامنة الإحداثيات الافتراضية من Google Sheets');
+                    Utils.safeLog('✅ تم مزامنة الإحداثيات الافتراضية من قاعدة SQL');
                 }
             }
 
             return true;
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
-                Utils.safeError('❌ خطأ في مزامنة البيانات من Google Sheets:', error);
+                Utils.safeError('❌ خطأ في مزامنة البيانات من قاعدة SQL:', error);
             }
             return false;
         }
@@ -480,13 +480,13 @@ const MapCoordinatesManager = {
                 localStorage: null
             };
 
-            // تحميل من Google Sheets
+            // تحميل من قاعدة SQL
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.getData) {
                 try {
                     sources.googleSheets = await GoogleIntegration.getData(this.SHEETS_KEY);
                 } catch (e) {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                        Utils.safeWarn('⚠️ تعذر تحميل من Google Sheets:', e);
+                        Utils.safeWarn('⚠️ تعذر تحميل من قاعدة SQL:', e);
                     }
                 }
             }
@@ -510,12 +510,12 @@ const MapCoordinatesManager = {
                 Utils.safeLog('📊 عدد المواقع في كل مصدر:', counts);
             }
 
-            // إذا كانت هناك اختلافات، نستخدم Google Sheets كمرجع
+            // إذا كانت هناك اختلافات، نستخدم قاعدة SQL كمرجع
             if (sources.googleSheets && Array.isArray(sources.googleSheets) && sources.googleSheets.length > 0) {
                 if (JSON.stringify(sources.googleSheets) !== JSON.stringify(sources.appState) ||
                     JSON.stringify(sources.googleSheets) !== JSON.stringify(sources.localStorage)) {
                     if (typeof Utils !== 'undefined' && Utils.safeLog) {
-                        Utils.safeLog('⚠️ تم اكتشاف اختلافات في البيانات - سيتم استخدام Google Sheets كمرجع');
+                        Utils.safeLog('⚠️ تم اكتشاف اختلافات في البيانات - سيتم استخدام قاعدة SQL كمرجع');
                     }
                     await this.saveMapSites(sources.googleSheets);
                     return sources.googleSheets;

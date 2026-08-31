@@ -3002,9 +3002,9 @@ const themes = {
                         // 5. ✅ تحديث التبويب النشط فقط (أسرع من إعادة تحميل كامل)
                         this.refreshActiveTab({ skipRemote: true });
                         
-                        // 6. معالجة المهام الخلفية (Google Sheets) في الخلفية
+                        // 6. معالجة المهام الخلفية (قاعدة SQL) في الخلفية
                         GoogleIntegration.autoSave('PPE', AppState.appData.ppe).catch(error => {
-                            Utils.safeError('خطأ في حفظ Google Sheets:', error);
+                            Utils.safeError('خطأ في حفظ قاعدة SQL:', error);
                         });
                     } catch (error) {
                         // rollback عند فشل الحفظ بالخادم لمنع نجاح وهمي في الواجهة
@@ -3750,14 +3750,14 @@ const themes = {
 
                 // ✅ 3. معالجة المهام الخلفية في الخلفية (بدون انتظار)
                 Promise.allSettled([
-                    // حفظ في Google Sheets
+                    // حفظ في قاعدة SQL
                     GoogleIntegration.autoSave('PPEMatrix', AppState.appData.employeePPEMatrix).catch(error => {
-                        Utils.safeError('خطأ في حفظ Google Sheets:', error);
+                        Utils.safeError('خطأ في حفظ قاعدة SQL:', error);
                         return { success: false, error };
                     }),
                     // حفظ مصفوفة الموظفين أيضاً
                     GoogleIntegration.autoSave('EmployeePPEMatrixByCode', AppState.appData.employeePPEMatrixByCode).catch(error => {
-                        Utils.safeError('خطأ في حفظ مصفوفة الموظفين في Google Sheets:', error);
+                        Utils.safeError('خطأ في حفظ مصفوفة الموظفين في قاعدة SQL:', error);
                         return { success: false, error };
                     })
                 ]).then((results) => {
@@ -3899,10 +3899,10 @@ const themes = {
                     contentContainer.innerHTML = await this.renderPPEMatrix();
                 }
 
-                // حفظ في Google Sheets في الخلفية
+                // حفظ في قاعدة SQL في الخلفية
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                     GoogleIntegration.autoSave('EmployeePPEMatrixByCode', AppState.appData.employeePPEMatrixByCode).catch(error => {
-                        Utils.safeError('خطأ في حفظ Google Sheets:', error);
+                        Utils.safeError('خطأ في حفظ قاعدة SQL:', error);
                     });
                 }
             } catch (error) {

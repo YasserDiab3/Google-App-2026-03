@@ -191,10 +191,10 @@ var log = function() {
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    رابط نشر Google Apps Script (Web App)
+                                    رابط نشر خادم SQL (Web App)
                                 </label>
                                 <input id="login-sync-script-url" type="url" class="form-input" dir="ltr"
-                                    placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+                                    placeholder="https://www.safety-icapp.com/api/exec" autocomplete="off">
                                 <p class="text-xs text-gray-500 mt-2">الصق رابط النشر من محرر Apps Script (نشر → تطبيق ويب) ويجب أن ينتهي بـ <b>/exec</b>.</p>
                             </div>
                             <div>
@@ -265,12 +265,13 @@ var log = function() {
             const spreadsheetId = String(sheetInput?.value || '').trim();
 
             if (!isValidAppsScriptUrl(scriptUrl)) {
-                setModalStatus('يرجى إدخال رابط Google Apps Script صحيح (ينتهي بـ /exec).', 'error');
+                setModalStatus('يرجى إدخال رابط API صحيح (ينتهي بـ /exec).', 'error');
                 try { scriptInput && scriptInput.focus(); } catch (e) { /* ignore */ }
                 return;
             }
-            if (!isValidSpreadsheetId(spreadsheetId)) {
-                setModalStatus('يرجى إدخال spreadsheetId صحيح.', 'error');
+            // spreadsheetId اختياري في وضع SQL — لا يُستخدم كمصدر بيانات
+            if (spreadsheetId && !isValidSpreadsheetId(spreadsheetId)) {
+                setModalStatus('معرف الجدول (spreadsheetId) غير صالح — اتركه فارغاً في وضع SQL.', 'error');
                 try { sheetInput && sheetInput.focus(); } catch (e) { /* ignore */ }
                 return;
             }
@@ -278,8 +279,8 @@ var log = function() {
             const cfg = readStoredGoogleConfig();
             cfg.appsScript.enabled = true;
             cfg.appsScript.scriptUrl = scriptUrl;
-            cfg.sheets.enabled = true;
-            cfg.sheets.spreadsheetId = spreadsheetId;
+            cfg.sheets.enabled = !!spreadsheetId;
+            cfg.sheets.spreadsheetId = spreadsheetId || '';
 
             const persisted = persistGoogleConfig(cfg);
             if (!persisted) {
@@ -294,7 +295,7 @@ var log = function() {
                 saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري المزامنة...';
             }
 
-            setModalStatus('جاري مزامنة المستخدمين من Google Sheets...', 'info');
+            setModalStatus('جاري مزامنة المستخدمين من قاعدة SQL...', 'info');
             notify('info', 'جاري مزامنة المستخدمين...');
 
             try {
@@ -1068,7 +1069,7 @@ async function handleLogin(form, submitBtn) {
                         errorStr.includes('not available') ||
                         errorStr.includes('خطأ') ||
                         errorStr.includes('error'))) {
-                errorMsg = 'خدمات Google غير متاحة حالياً. يرجى المحاولة لاحقاً أو التحقق من إعدادات Google Sheets.';
+                errorMsg = 'خدمات Google غير متاحة حالياً. يرجى المحاولة لاحقاً أو التحقق من إعدادات قاعدة SQL.';
             }
             
             // تسجيل قصير للمستخدم
@@ -1106,7 +1107,7 @@ async function handleLogin(form, submitBtn) {
                     errorStr.includes('not available') ||
                     errorStr.includes('خطأ') ||
                     errorStr.includes('error'))) {
-            errorMsg = 'خدمات Google غير متاحة حالياً. يرجى المحاولة لاحقاً أو التحقق من إعدادات Google Sheets.';
+            errorMsg = 'خدمات Google غير متاحة حالياً. يرجى المحاولة لاحقاً أو التحقق من إعدادات قاعدة SQL.';
         }
         
         if (typeof window.Notification !== 'undefined') {

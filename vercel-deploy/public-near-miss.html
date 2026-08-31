@@ -1057,8 +1057,7 @@
 </div>
 
 <script>
-    const LIVE_BACKEND_URL = 'https://foot-likewise-leads-robinson.trycloudflare.com/exec';
-    const GAS_FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+    const LIVE_BACKEND_URL = 'https://www.safety-icapp.com/api/exec';
     const DEFAULT_API_URL = LIVE_BACKEND_URL;
     
     function getEffectiveApiUrl() {
@@ -1963,7 +1962,7 @@
         renderEmergencyContacts();
         if (!navigator.onLine) return;
         try {
-            const targetApiUrl = (typeof SCRIPT_URL !== 'undefined') ? SCRIPT_URL : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            const targetApiUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
             const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
             if (!res.ok) return;
             const data = await res.json();

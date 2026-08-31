@@ -99,7 +99,7 @@ const UserActivityLog = {
         // حفظ البيانات
         try {
             DataManager.save();
-            // حفظ السجلات في Google Sheets
+            // حفظ السجلات في قاعدة SQL
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                 GoogleIntegration.autoSave('UserActivityLog', AppState.appData.user_activity_log).catch(() => {});
             }
@@ -107,9 +107,9 @@ const UserActivityLog = {
             // إرسال السجل مباشرة إلى قاعدة البيانات (Backend)
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
                 GoogleIntegration.sendToAppsScript('addUserActivityLog', entry).catch(err => {
-                    // لا نسجل الخطأ إذا كانت Google Apps Script غير مفعّلة (متوقع)
+                    // لا نسجل الخطأ إذا كانت خادم SQL غير مفعّلة (متوقع)
                     const errorMsg = err?.message || String(err || '');
-                    if (!errorMsg.includes('Google Apps Script غير مفعل')) {
+                    if (!errorMsg.includes('خادم SQL غير مفعل')) {
                         Utils.safeWarn('فشل إرسال سجل النشاط إلى قاعدة البيانات:', err);
                     }
                 });
@@ -477,7 +477,7 @@ const UserActivityLog = {
                             <i class="fas fa-user-clock ml-2"></i>تقرير الجلسات اليومي (من الدخول حتى الخروج)
                         </h3>
                         <p class="text-xs text-gray-600 mb-3">
-                            يعرض الأحداث المسجّلة في سجل النشاط فقط. للبريد اليومي: أنشئ <strong>Trigger</strong> زمنياً في Google Apps Script يستدعي الدالة
+                            يعرض الأحداث المسجّلة في سجل النشاط فقط. للبريد اليومي: أنشئ <strong>Trigger</strong> زمنياً في خادم SQL يستدعي الدالة
                             <code class="text-xs bg-white px-1 rounded">runDailyUserSessionEmailReport</code>
                             ويمكن تعيين المستلمين عبر خاصية السكربت <code class="text-xs bg-white px-1 rounded">DAILY_ACTIVITY_REPORT_EMAILS</code>.
                         </p>

@@ -1781,7 +1781,7 @@ const DailyObservations = {
     _dailyObsBackendFetchOk: false,
 
     /**
-     * تحميل ورقة DailyObservations من Google Sheets مرة واحدة (مع منع التكرار)
+     * تحميل ورقة DailyObservations من قاعدة SQL مرة واحدة (مع منع التكرار)
      */
     async ensureDailyObservationsDataLoaded({ force = false } = {}) {
         if (this._dailyObsLoadPromise && !force) {
@@ -8677,7 +8677,7 @@ const DailyObservations = {
 
                 if (imageCache.has(url)) return imageCache.get(url);
 
-                // استخراج معرف ملف Google Drive إن وجد
+                // استخراج معرف ملف الخادم إن وجد
                 const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
                                    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
                                    url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
@@ -9546,7 +9546,7 @@ const DailyObservations = {
 
         // إنشاء Template تلقائياً
         modal.querySelector('#ppt-template-id-auto-create-btn')?.addEventListener('click', async () => {
-            Loading.show('جاري إنشاء قالب Google Slides تلقائياً في Google Drive...');
+            Loading.show('جاري إنشاء قالب Google Slides تلقائياً في الخادم...');
             try {
                 const result = await GoogleIntegration.sendToAppsScript('createDefaultDailyObservationsPptTemplate', {});
                 Loading.hide();
@@ -11723,9 +11723,9 @@ const DailyObservations = {
         try {
             let attachmentsUpdated = false;
             
-            // معالجة المرفقات ورفعها إلى Google Drive
+            // معالجة المرفقات ورفعها إلى الخادم
             if (payload.attachments && Array.isArray(payload.attachments) && payload.attachments.length > 0) {
-                Loading.show('جاري رفع المرفقات إلى Google Drive...');
+                Loading.show('جاري رفع المرفقات إلى الخادم...');
                 try {
                     Utils.safeLog('DailyObservations: قبل processAttachments - عدد المرفقات: ' + payload.attachments.length);
                     if (payload.attachments.length > 0) {
@@ -11781,7 +11781,7 @@ const DailyObservations = {
                 Utils.safeError('خطأ في حفظ البيانات محلياً:', saveError);
             }
 
-            // المزامنة مع Google Sheets
+            // المزامنة مع قاعدة SQL
             Loading.show('جاري المزامنة مع السحابة...');
             try {
                 await GoogleIntegration.autoSave('DailyObservations', AppState.appData.dailyObservations);
@@ -11793,14 +11793,14 @@ const DailyObservations = {
                     }).catch(function () {});
                 }
                 
-                // إذا تم تحديث المرفقات، نتحقق من الحفظ في Google Sheets
+                // إذا تم تحديث المرفقات، نتحقق من الحفظ في قاعدة SQL
                 if (attachmentsUpdated) {
-                    Utils.safeLog('DailyObservations: تم حفظ البيانات مع المرفقات المحدثة إلى Google Sheets');
+                    Utils.safeLog('DailyObservations: تم حفظ البيانات مع المرفقات المحدثة إلى قاعدة SQL');
                     Notification.success('تم رفع المرفقات ومزامنتها بنجاح');
                 }
             } catch (syncError) {
                 Utils.safeError('خطأ في المزامنة:', syncError);
-                Notification.warning('فشلت المزامنة مع Google Sheets - سيتم المحاولة لاحقاً');
+                Notification.warning('فشلت المزامنة مع قاعدة SQL - سيتم المحاولة لاحقاً');
             } finally {
                 Loading.hide();
             }
@@ -13455,11 +13455,11 @@ const DailyObservations = {
                     Utils.safeError('خطأ في حفظ البيانات محلياً:', saveError);
                 }
                 
-                // المزامنة مع Google Sheets
+                // المزامنة مع قاعدة SQL
                 try {
                     await GoogleIntegration.autoSave('DailyObservations', AppState.appData.dailyObservations);
                 } catch (syncError) {
-                    Utils.safeError('خطأ في المزامنة مع Google Sheets:', syncError);
+                    Utils.safeError('خطأ في المزامنة مع قاعدة SQL:', syncError);
                 }
             }
         } catch (error) {
@@ -13734,7 +13734,7 @@ const DailyObservations = {
             'Link',
             'URL',
             'Drive Link',
-            'Google Drive Link'
+            'الخادم Link'
         ]);
 
         // تحسين التحقق من الحقول الأساسية - السماح بوجود أي من الحقول المطلوبة

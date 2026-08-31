@@ -1175,7 +1175,7 @@ const PeriodicInspections = {
                     return inspection;
                 });
                 dataUpdated = true;
-                Utils.safeLog(`✅ تم تحميل ${inspectionResult.data.length} فحص دوري من Google Sheets`);
+                Utils.safeLog(`✅ تم تحميل ${inspectionResult.data.length} فحص دوري من قاعدة SQL`);
             } else {
                 // التأكد من وجود مصفوفة فارغة إذا لم يتم تحميل البيانات
                 if (!AppState.appData.periodicInspections) {
@@ -1240,7 +1240,7 @@ const PeriodicInspections = {
             }
         } catch (error) {
             const errorMsg = error.message || error.toString() || '';
-            Utils.safeError('❌ خطأ في تحميل بيانات الفحوصات الدورية من Google Sheets:', error);
+            Utils.safeError('❌ خطأ في تحميل بيانات الفحوصات الدورية من قاعدة SQL:', error);
             
             // عرض رسالة خطأ واضحة للمستخدم
             if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
@@ -2065,7 +2065,7 @@ const PeriodicInspections = {
                 AppState.appData.periodicInspections.push(inspectionData);
             }
 
-            // حفظ في Google Sheets
+            // حفظ في قاعدة SQL
             try {
                 let result;
                 if (this.state.currentEditId) {
@@ -2091,7 +2091,7 @@ const PeriodicInspections = {
                     Notification.warning('تم حفظ البيانات محلياً، لكن حدث خطأ في الاتصال بالخادم');
                 }
             } catch (error) {
-                Utils.safeWarn('⚠️ خطأ في حفظ البيانات في Google Sheets:', error);
+                Utils.safeWarn('⚠️ خطأ في حفظ البيانات في قاعدة SQL:', error);
                 Notification.warning('تم حفظ البيانات محلياً فقط');
             }
 

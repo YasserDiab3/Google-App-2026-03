@@ -695,7 +695,7 @@ const AppTester = {
                 return result;
             }
 
-            // التحقق من إعدادات Google Apps Script
+            // التحقق من إعدادات خادم SQL
             const isEnabled = AppState?.googleConfig?.appsScript?.enabled;
             const scriptUrl = AppState?.googleConfig?.appsScript?.scriptUrl;
 
@@ -704,20 +704,22 @@ const AppTester = {
                     name: 'الربط مع الخلفية',
                     passed: true,
                     severity: null,
-                    message: 'Google Apps Script غير مفعّل أو رابط الخادم غير محدد - تم تخطي الاختبار (سيتم استخدام البيانات المحلية)',
+                    message: 'خادم SQL غير مفعّل أو رابط الخادم غير محدد - تم تخطي الاختبار (سيتم استخدام البيانات المحلية)',
                     recommendation: null
                 };
                 this._backendTestCache = { timestamp: Date.now(), result };
                 return result;
             }
 
-            // التحقق من صحة رابط الخادم
-            if (!scriptUrl.includes('script.google.com') || !scriptUrl.includes('/exec')) {
+            // التحقق من صحة رابط الخادم (SQL أو legacy)
+            const isSqlBackend = /safety-icapp\.com|vercel\.app|\/api\/exec|127\.0\.0\.1|localhost/i.test(scriptUrl);
+            const isGasBackend = scriptUrl.includes('script.google.com') && scriptUrl.includes('/exec');
+            if (!isSqlBackend && !isGasBackend) {
                 const result = {
                     name: 'الربط مع الخلفية',
                     passed: true,
                     severity: null,
-                    message: 'رابط Google Apps Script غير صحيح - تم تخطي الاختبار (سيتم استخدام البيانات المحلية)',
+                    message: 'رابط الخادم غير صحيح - تم تخطي الاختبار (سيتم استخدام البيانات المحلية)',
                     recommendation: null
                 };
                 this._backendTestCache = { timestamp: Date.now(), result };
@@ -783,7 +785,7 @@ const AppTester = {
                         duration: duration,
                         severity: 'medium',
                         message: errorMsg,
-                        recommendation: 'تحقق من:\n1. إعدادات Google Integration\n2. اتصال الإنترنت\n3. أن Google Apps Script منشور ومفعّل'
+                        recommendation: 'تحقق من:\n1. إعدادات Google Integration\n2. اتصال الإنترنت\n3. أن خادم SQL منشور ومفعّل'
                     };
                     this._backendTestCache = { timestamp: Date.now(), result };
                     return result;
@@ -796,8 +798,8 @@ const AppTester = {
                 // تحسين رسائل الخطأ حسب نوع الخطأ
                 const errorMsg = testError.message || testError.toString() || '';
                 
-                if (errorMsg.includes('Google Apps Script غير مفعل') || errorMsg.includes('غير مفعّل')) {
-                    errorMessage = 'Google Apps Script غير مفعّل - سيتم استخدام البيانات المحلية';
+                if (errorMsg.includes('خادم SQL غير مفعل') || errorMsg.includes('غير مفعّل')) {
+                    errorMessage = 'خادم SQL غير مفعّل - سيتم استخدام البيانات المحلية';
                 } else if (errorMsg.includes('Circuit Breaker مفتوح') || errorMsg.includes('Circuit Breaker')) {
                     errorMessage = `Circuit Breaker مفتوح - سيتم استخدام البيانات المحلية (إعادة المحاولة بعد 30 ثانية)`;
                 } else if (errorMsg.includes('Timeout') || errorMsg.includes('انتهت مهلة')) {
@@ -805,7 +807,7 @@ const AppTester = {
                 } else if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError') || errorMsg.includes('CORS')) {
                     errorMessage = 'تعذر الاتصال بالخلفية (Network/CORS) - سيتم استخدام البيانات المحلية';
                 } else if (errorMsg.includes('URL غير معرف') || errorMsg.includes('غير صحيح')) {
-                    errorMessage = 'رابط Google Apps Script غير صحيح - سيتم استخدام البيانات المحلية';
+                    errorMessage = 'رابط خادم SQL غير صحيح - سيتم استخدام البيانات المحلية';
                 } else {
                     errorMessage = `تعذر الاتصال بالخلفية: ${errorMsg}`;
                 }

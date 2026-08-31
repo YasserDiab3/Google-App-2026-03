@@ -56,14 +56,14 @@ const Clinic = {
         return String(identifier);
     },
     /**
-     * معالجة روابط المرفقات (تحويل روابط Google Drive القديمة)
+     * معالجة روابط المرفقات (تحويل روابط الخادم القديمة)
      */
     processAttachmentUrl(url) {
         if (!url || typeof url !== 'string') return null;
         
         let trimmed = url.trim();
         
-        // تحويل روابط Google Drive القديمة
+        // تحويل روابط الخادم القديمة
         const oldDrivePattern = /https?:\/\/drive\.google\.com\/uc\?export=view&id=([a-zA-Z0-9_-]+)/;
         const oldDriveMatch = trimmed.match(oldDrivePattern);
         if (oldDriveMatch) {
@@ -3487,7 +3487,7 @@ const Clinic = {
                     window.DataManager.save();
                 }
 
-                // حذف من Google Sheets
+                // حذف من قاعدة SQL
                 await GoogleIntegration.sendRequest({
                     action: 'deleteMedication',
                     data: { medicationId: id }
@@ -11465,7 +11465,7 @@ const Clinic = {
                     }
                 }, 100);
 
-                // المزامنة مع Google Sheets في الخلفية
+                // المزامنة مع قاعدة SQL في الخلفية
                 (async () => {
                     try {
                         if (isEdit) {
@@ -11480,7 +11480,7 @@ const Clinic = {
                             });
                         }
                     } catch (syncError) {
-                        Utils.safeWarn('⚠️ خطأ في المزامنة مع Google Sheets:', syncError);
+                        Utils.safeWarn('⚠️ خطأ في المزامنة مع قاعدة SQL:', syncError);
                     }
                 })();
 
@@ -11984,7 +11984,7 @@ const Clinic = {
                     }
                 }, 100);
 
-                // المزامنة مع Google Sheets في الخلفية
+                // المزامنة مع قاعدة SQL في الخلفية
                 (async () => {
                     try {
                         if (isEdit) {
@@ -11992,16 +11992,16 @@ const Clinic = {
                                 action: 'updateInjury',
                                 data: { injuryId: payload.id, updateData: payload }
                             });
-                            Utils.safeLog('✅ تم حفظ البيانات في Google Sheets (تحديث)');
+                            Utils.safeLog('✅ تم حفظ البيانات في قاعدة SQL (تحديث)');
                         } else {
                             await GoogleIntegration.sendRequest({
                                 action: 'addInjury',
                                 data: payload
                             });
-                            Utils.safeLog('✅ تم حفظ البيانات في Google Sheets (إضافة)');
+                            Utils.safeLog('✅ تم حفظ البيانات في قاعدة SQL (إضافة)');
                         }
                     } catch (syncError) {
-                        Utils.safeWarn('⚠️ خطأ في المزامنة مع Google Sheets:', syncError);
+                        Utils.safeWarn('⚠️ خطأ في المزامنة مع قاعدة SQL:', syncError);
                     }
                 })();
 
@@ -13211,7 +13211,7 @@ const Clinic = {
                     }
                 }, 100);
 
-                // المزامنة مع Google Sheets في الخلفية
+                // المزامنة مع قاعدة SQL في الخلفية
                 (async () => {
                     try {
                         if (isEdit) {
@@ -13235,7 +13235,7 @@ const Clinic = {
                             }
                         }));
                     } catch (syncError) {
-                        Utils.safeWarn('⚠️ خطأ في المزامنة مع Google Sheets:', syncError);
+                        Utils.safeWarn('⚠️ خطأ في المزامنة مع قاعدة SQL:', syncError);
                     }
                 })();
 
@@ -15037,7 +15037,7 @@ const Clinic = {
      */
     async syncDataFromServer() {
         const promises = [];
-        // ✅ زيادة مهلة الطلبات الخفيفة من 8 ثوانٍ إلى 45 ثانية لتفادي مشاكل الـ Cold Starts لـ Google Apps Script
+        // ✅ زيادة مهلة الطلبات الخفيفة من 8 ثوانٍ إلى 45 ثانية لتفادي مشاكل الـ Cold Starts لـ خادم SQL
         const REQUEST_TIMEOUT = 45000; 
         /** سجل التردد (الموظفين + المقاولين) قد يكون كبيراً — مهلة كافية لإكمال getAllClinicVisits */
         const CLINIC_VISITS_REQUEST_TIMEOUT = 120000;
@@ -15063,7 +15063,7 @@ const Clinic = {
             )
                 .then(result => {
                     if (result && result.success && Array.isArray(result.data)) {
-                        // ✅ تطبيع الأدوية فور تحميلها (الأرقام قد تأتي كـ string من Google Sheets)
+                        // ✅ تطبيع الأدوية فور تحميلها (الأرقام قد تأتي كـ string من قاعدة SQL)
                         const normalizedMeds = result.data.map(m => this.normalizeMedicationRecord(m));
                         AppState.appData.medications = normalizedMeds;
                         AppState.appData.clinicMedications = normalizedMeds;
@@ -16927,7 +16927,7 @@ const Clinic = {
                 requestDate: new Date().toISOString()
             };
 
-            // حفظ في Google Sheets
+            // حفظ في قاعدة SQL
             const result = await GoogleIntegration.sendRequest({
                 action: 'addSupplyRequest',
                 data: request

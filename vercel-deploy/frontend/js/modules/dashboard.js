@@ -4201,7 +4201,7 @@ const Dashboard = {
                         userTasks = Array.isArray(response.data) ? response.data : [];
                     }
                 } catch (apiError) {
-                    // تجاهل أخطاء Circuit Breaker و Google Apps Script غير المفعل
+                    // تجاهل أخطاء Circuit Breaker و خادم SQL غير المفعل
                     const errorMsg = String(apiError?.message || '').toLowerCase();
                     if (!errorMsg.includes('circuit breaker') &&
                         !errorMsg.includes('google apps script غير مفعل') &&

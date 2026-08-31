@@ -1,6 +1,6 @@
 /**
- * DataRepository — طبقة عزل تخزين رقيقة للانتقال المستقبلي عن Google Sheets فقط.
- * حاليًا تفوّض إلى Google Apps Script عبر GoogleIntegration.
+ * DataRepository — طبقة عزل تخزين رقيقة للانتقال المستقبلي عن قاعدة SQL فقط.
+ * حاليًا تفوّض إلى خادم SQL عبر GoogleIntegration.
  *
  * عند الهجرة إلى Firebase أو Supabase، يُستبدل التنفيذ هنا مع الإبقاء على نفس الأسماء قدر الإمكان.
  */

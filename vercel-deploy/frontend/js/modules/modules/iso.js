@@ -1539,7 +1539,7 @@ const ISO = {
             this.load();
 
             GoogleIntegration.autoSave('ISODocuments', AppState.appData.isoDocuments).catch(error => {
-                Utils.safeError('خطأ في حفظ Google Sheets (وثائق ISO):', error);
+                Utils.safeError('خطأ في حفظ قاعدة SQL (وثائق ISO):', error);
                 if (typeof Notification !== 'undefined' && Notification.warning) {
                     Notification.warning('تم الحفظ محلياً. تعذّرت المزامنة الفورية مع الشيت.');
                 }
@@ -1688,7 +1688,7 @@ const ISO = {
             this.load();
 
             GoogleIntegration.autoSave('ISOProcedures', AppState.appData.isoProcedures).catch(error => {
-                Utils.safeError('خطأ في حفظ Google Sheets (إجراءات ISO):', error);
+                Utils.safeError('خطأ في حفظ قاعدة SQL (إجراءات ISO):', error);
                 if (typeof Notification !== 'undefined' && Notification.warning) {
                     Notification.warning('تم الحفظ محلياً. تعذّرت المزامنة الفورية مع الشيت.');
                 }
@@ -1883,9 +1883,9 @@ const ISO = {
             // 4. تحديث القائمة فوراً
             this.load();
             
-            // 5. معالجة المهام الخلفية (Google Sheets) في الخلفية
+            // 5. معالجة المهام الخلفية (قاعدة SQL) في الخلفية
             GoogleIntegration.autoSave('ISOForms', AppState.appData.isoForms).catch(error => {
-                Utils.safeError('خطأ في حفظ Google Sheets:', error);
+                Utils.safeError('خطأ في حفظ قاعدة SQL:', error);
             });
         } catch (error) {
             Notification.error('حدث خطأ: ' + error.message);
@@ -2665,7 +2665,7 @@ const ISO = {
                         await GoogleIntegration.autoSave('HSEObjectives', AppState.appData.hseObjectives);
                     }
                 } else {
-                    // إذا لم يكن Google Apps Script مفعّل، نستخدم autoSave فقط
+                    // إذا لم يكن خادم SQL مفعّل، نستخدم autoSave فقط
                     await GoogleIntegration.autoSave('HSEObjectives', AppState.appData.hseObjectives);
                 }
             }
@@ -2793,7 +2793,7 @@ const ISO = {
                         await GoogleIntegration.autoSave('EnvironmentalAspects', AppState.appData.environmentalAspects);
                     }
                 } else {
-                    // إذا لم يكن Google Apps Script مفعّل، نستخدم autoSave فقط
+                    // إذا لم يكن خادم SQL مفعّل، نستخدم autoSave فقط
                     await GoogleIntegration.autoSave('EnvironmentalAspects', AppState.appData.environmentalAspects);
                 }
             }
@@ -2938,7 +2938,7 @@ const ISO = {
                         await GoogleIntegration.autoSave('HSEAudits', AppState.appData.hseAudits);
                     }
                 } else {
-                    // إذا لم يكن Google Apps Script مفعّل، نستخدم autoSave فقط
+                    // إذا لم يكن خادم SQL مفعّل، نستخدم autoSave فقط
                     await GoogleIntegration.autoSave('HSEAudits', AppState.appData.hseAudits);
                 }
             }
@@ -3098,7 +3098,7 @@ const ISO = {
                         await GoogleIntegration.autoSave('HSENonConformities', AppState.appData.hseNonConformities);
                     }
                 } else {
-                    // إذا لم يكن Google Apps Script مفعّل، نستخدم autoSave فقط
+                    // إذا لم يكن خادم SQL مفعّل، نستخدم autoSave فقط
                     await GoogleIntegration.autoSave('HSENonConformities', AppState.appData.hseNonConformities);
                 }
             }
@@ -3262,7 +3262,7 @@ const ISO = {
                         await GoogleIntegration.autoSave('HSECorrectiveActions', AppState.appData.hseCorrectiveActions);
                     }
                 } else {
-                    // إذا لم يكن Google Apps Script مفعّل، نستخدم autoSave فقط
+                    // إذا لم يكن خادم SQL مفعّل، نستخدم autoSave فقط
                     await GoogleIntegration.autoSave('HSECorrectiveActions', AppState.appData.hseCorrectiveActions);
                 }
             }
@@ -4290,7 +4290,7 @@ const ISO = {
             if (msg.indexOf('غير معترف به') !== -1 || msg.indexOf('ACTION_NOT_RECOGNIZED') !== -1) {
                 Notification.error(
                     'الخادم لا يتعرّف على عملية إضافة كود المستند. ' +
-                    'تأكد من: 1) تحديث ملفات Code.gs و ISO.gs و Headers.gs و Config.gs في مشروع Google Apps Script. ' +
+                    'تأكد من: 1) تحديث ملفات Code.gs و ISO.gs و Headers.gs و Config.gs في مشروع خادم SQL. ' +
                     '2) نشر نسخة جديدة (Deploy → Manage deployments → Edit → New version → Deploy). ' +
                     '3) استخدام الرابط الذي ينتهي بـ /exec في الإعدادات.'
                 );

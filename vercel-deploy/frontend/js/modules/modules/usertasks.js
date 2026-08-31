@@ -344,14 +344,14 @@ const UserTasks = {
      * تفعيل المزامنة التلقائية
      */
     startAutoSync() {
-        // التحقق من تكوين Google Apps Script قبل بدء المزامنة
+        // التحقق من تكوين خادم SQL قبل بدء المزامنة
         if (typeof AppState !== 'undefined') {
             const isGoogleConfigured = AppState.googleConfig?.appsScript?.enabled &&
                 AppState.googleConfig?.appsScript?.scriptUrl &&
                 AppState.googleConfig.appsScript.scriptUrl.trim() !== '';
 
             if (!isGoogleConfigured) {
-                Utils.safeLog('ℹ️ لن يتم تفعيل المزامنة التلقائية: Google Apps Script غير مفعل أو غير مُكوَّن');
+                Utils.safeLog('ℹ️ لن يتم تفعيل المزامنة التلقائية: خادم SQL غير مفعل أو غير مُكوَّن');
                 return;
             }
         }
@@ -383,26 +383,26 @@ const UserTasks = {
     },
 
     /**
-     * مزامنة المهام من Google Sheets
+     * مزامنة المهام من قاعدة SQL
      */
     async syncTasks() {
         try {
-            // التحقق الشامل من توفر Google Apps Script
+            // التحقق الشامل من توفر خادم SQL
             if (typeof AppState === 'undefined') {
                 return;
             }
 
-            // فحص شامل لإعدادات Google Apps Script
+            // فحص شامل لإعدادات خادم SQL
             const isGoogleConfigured = AppState.googleConfig?.appsScript?.enabled &&
                 AppState.googleConfig?.appsScript?.scriptUrl &&
                 AppState.googleConfig.appsScript.scriptUrl.trim() !== '';
 
             if (!isGoogleConfigured) {
-                // Google Apps Script غير مفعل أو غير مُكوَّن بشكل صحيح
+                // خادم SQL غير مفعل أو غير مُكوَّن بشكل صحيح
                 // إيقاف المزامنة التلقائية لتجنب الأخطاء المتكررة
                 if (this.autoSyncTimer) {
                     this.stopAutoSync();
-                    Utils.safeLog('⚠️ تم إيقاف المزامنة التلقائية: Google Apps Script غير مفعل أو غير مُكوَّن');
+                    Utils.safeLog('⚠️ تم إيقاف المزامنة التلقائية: خادم SQL غير مفعل أو غير مُكوَّن');
                 }
                 return;
             }
@@ -437,7 +437,7 @@ const UserTasks = {
                     });
                 }
             } catch (requestError) {
-                // تجاهل أخطاء Circuit Breaker و Google Apps Script غير المفعل
+                // تجاهل أخطاء Circuit Breaker و خادم SQL غير المفعل
                 const errorMsg = String(requestError?.message || '').toLowerCase();
 
                 // فحص أخطاء الاتصال والتكوين
@@ -1317,7 +1317,7 @@ const UserTasks = {
                             });
                             if (vr && vr.success === false) throw new Error(vr.message || 'فشل تحديث المهمة');
                         } catch (error) {
-                            Utils.safeWarn('⚠️ خطأ في حفظ التحديث في Google Sheets:', error);
+                            Utils.safeWarn('⚠️ خطأ في حفظ التحديث في قاعدة SQL:', error);
                         }
                     }
 
@@ -1539,7 +1539,7 @@ const UserTasks = {
                 return;
             }
 
-            // محاولة الحصول من Google Sheets
+            // محاولة الحصول من قاعدة SQL
             if (AppState.googleConfig.appsScript.enabled) {
                 try {
                     // استخدام readFromSheets بدلاً من getUsers
@@ -1555,7 +1555,7 @@ const UserTasks = {
                         return;
                     }
                 } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في تحميل المستخدمين من Google Sheets:', error);
+                    Utils.safeWarn('⚠️ خطأ في تحميل المستخدمين من قاعدة SQL:', error);
                 }
             }
 
@@ -1974,7 +1974,7 @@ const UserTasks = {
                         if (vr && vr.success === false) throw new Error(vr.message || 'فشل إضافة المهمة في الخادم');
                     }
                 } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في حفظ المهمة في Google Sheets:', error);
+                    Utils.safeWarn('⚠️ خطأ في حفظ المهمة في قاعدة SQL:', error);
                 }
             }
 
@@ -2179,7 +2179,7 @@ const UserTasks = {
                         });
                         if (vr && vr.success === false) throw new Error(vr.message || 'فشل حذف المهمة');
                     } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في حذف المهمة من Google Sheets:', error);
+                        Utils.safeWarn('⚠️ خطأ في حذف المهمة من قاعدة SQL:', error);
                     }
                 }
 

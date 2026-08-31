@@ -6,6 +6,11 @@
 const crypto = require('crypto');
 const { getDatabase } = require('../db/database');
 const { checkAdminActor, checkAuthenticatedActor } = require('../middleware/auth-guard');
+const {
+    createMfaChallenge,
+    isMfaEnabledForUser,
+    resolveMfaSecretCandidates
+} = require('./mfa-handlers');
 
 function sha256(str) {
     return crypto.createHash('sha256').update(String(str || '')).digest('hex');
@@ -61,8 +66,31 @@ const authHandlers = {
 
         const now = new Date().toISOString();
         const sessionId = 'SES_' + crypto.randomBytes(16).toString('hex');
-        
-        // Update presence / lastLogin
+
+        // MFA: كلمة المرور صحيحة — اطلب TOTP قبل إكمال الجلسة
+        if (isMfaEnabledForUser(user)) {
+            const secretEncLogin = String(user.mfaSecretEnc || '').trim();
+            const secretCandidates = resolveMfaSecretCandidates(secretEncLogin);
+            if (!secretEncLogin || !secretCandidates.length) {
+                return {
+                    success: false,
+                    message: 'حسابك يتطلب مصادقة ثنائية لكن كود التفعيل غير مكتمل. يرجى التواصل مع مدير النظام.',
+                    errorCode: 'MFA_SECRET_CORRUPT'
+                };
+            }
+            const challengeToken = createMfaChallenge(email, user);
+            if (!challengeToken) {
+                return { success: false, message: 'تعذر بدء خطوة المصادقة الثنائية. حاول لاحقاً.' };
+            }
+            return {
+                success: true,
+                mfaRequired: true,
+                challengeToken,
+                message: 'مطلوب رمز المصادقة الثنائية'
+            };
+        }
+
+        // Update presence / lastLogin (بعد اجتياز MFA أو بدون MFA)
         try {
             db.updateRow('Users', 'id', user.id, {
                 lastLogin: now,

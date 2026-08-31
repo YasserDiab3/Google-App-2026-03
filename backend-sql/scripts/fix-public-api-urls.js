@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const OLD = 'https://foot-likewise-leads-robinson.trycloudflare.com/exec';
+const OLD = 'https://www.safety-icapp.com/api/exec';
 const NEW = 'https://www.safety-icapp.com/api/exec';
 const HOST_GUARD = `            try {
                 const host = (window.location.hostname || '').toLowerCase();

@@ -53,7 +53,7 @@ const NearMiss = {
                     AppState.appData.nearmiss = res.data.map(item => this.normalizeRecord(item));
                     this.renderKpiStrip();
                     this.renderActiveTabContent();
-                    console.log('✅ Fetched live Near Miss data from Google Sheets:', res.data.length);
+                    console.log('✅ Fetched live Near Miss data from قاعدة SQL:', res.data.length);
                 }
             }
         } catch(e) {

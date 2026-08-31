@@ -1245,7 +1245,7 @@ window.UI = {
             if (idx !== -1 && users[idx]) users[idx].postLoginPolicySeenAt = seenAt;
         }
         const userId = user.id || user.email;
-        /** مزامنة عبر Google Apps Script */
+        /** مزامنة عبر خادم SQL */
         if (userId && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
             GoogleIntegration.sendToAppsScript('updateUser', { userId: userId, updateData: { postLoginPolicySeenAt: seenAt } }).catch(() => {});
         }
@@ -2075,7 +2075,7 @@ window.UI = {
                     Array.isArray(AppState.appData[key]) && AppState.appData[key].length > 0
                 );
                 if (!hasLocalData) {
-                    Notification.info('لا توجد بيانات محلية. فعّل الاتصال بـ Google Apps Script من الإعدادات وتحقق من ورقة البيانات.');
+                    Notification.info('لا توجد بيانات محلية. فعّل الاتصال بـ خادم SQL من الإعدادات وتحقق من ورقة البيانات.');
                 }
             }
         }
@@ -2474,8 +2474,8 @@ window.UI = {
                             hasError = true;
                             // إخفاء الصورة المكسورة
                             logoImg.style.display = 'none';
-                            // Google Drive URLs لا تدعم CORS - هذا أمر طبيعي
-                            // الشعار لن يظهر إذا كان من Google Drive
+                            // الخادم URLs لا تدعم CORS - هذا أمر طبيعي
+                            // الشعار لن يظهر إذا كان من الخادم
                         }
                     };
                     logoImg.onload = () => {

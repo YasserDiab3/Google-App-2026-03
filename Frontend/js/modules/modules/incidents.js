@@ -527,7 +527,7 @@ const Incidents = {
             AppState.appData.incidentsRegistry = this.registryData;
             localStorage.setItem('hse_incidents_registry', Utils.safeStringify(this.registryData));
 
-            // المزامنة مع Google Sheets
+            // المزامنة مع قاعدة SQL
             if (sync && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                 await GoogleIntegration.autoSave('IncidentsRegistry', this.registryData);
             }
@@ -4361,13 +4361,13 @@ const Incidents = {
                 backendSaveSuccess = true;
             }
 
-            // Auto-save to Google Sheets if enabled
+            // Auto-save to قاعدة SQL if enabled
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                 try {
                     await GoogleIntegration.autoSave('safetyAlerts', AppState.appData.safetyAlerts);
                     googleSheetsSaveSuccess = true;
                 } catch (error) {
-                    Utils.safeWarn('خطأ في حفظ Safety Alert إلى Google Sheets:', error);
+                    Utils.safeWarn('خطأ في حفظ Safety Alert إلى قاعدة SQL:', error);
                 }
             } else {
                 googleSheetsSaveSuccess = true; // Not enabled, treat as success
@@ -4528,12 +4528,12 @@ const Incidents = {
                 }
             }
 
-            // Auto-save to Google Sheets
+            // Auto-save to قاعدة SQL
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
                 try {
                     await GoogleIntegration.autoSave('safetyAlerts', AppState.appData.safetyAlerts);
                 } catch (error) {
-                    Utils.safeWarn('خطأ في حفظ Safety Alert إلى Google Sheets:', error);
+                    Utils.safeWarn('خطأ في حفظ Safety Alert إلى قاعدة SQL:', error);
                 }
             }
 
@@ -5475,7 +5475,7 @@ const Incidents = {
     /**
      * ربط بيانات الإجازة المرضية من سجل الحوادث (الإدخال اليدوي) إلى موديول العيادة (سجل الإجازات المرضية)
      * - يسجل محلياً في AppState.appData.sickLeave
-     * - ثم يرسل إلى Google Sheets في الخلفية عبر action:addSickLeave
+     * - ثم يرسل إلى قاعدة SQL في الخلفية عبر action:addSickLeave
      */
     async syncClinicSickLeaveFromRegistryEntry(entry, options = {}) {
         try {
@@ -5570,7 +5570,7 @@ const Incidents = {
                     await GoogleIntegration.sendRequest({ action: 'addSickLeave', data: payload });
                 }
             } catch (syncError) {
-                Utils.safeWarn('⚠️ فشل مزامنة الإجازة المرضية مع Google Sheets:', syncError);
+                Utils.safeWarn('⚠️ فشل مزامنة الإجازة المرضية مع قاعدة SQL:', syncError);
             }
 
             return true;
@@ -8022,7 +8022,7 @@ const Incidents = {
         // جمع خطة الإجراءات
         const actionPlan = this.collectActionPlanRows();
 
-        // جمع المرفقات (مع معالجة الصور للرفع إلى Google Drive)
+        // جمع المرفقات (مع معالجة الصور للرفع إلى الخادم)
         let attachments = [...(this.currentAttachments || [])];
 
         // فحص العناصر قبل الاستخدام
@@ -8161,7 +8161,7 @@ const Incidents = {
     async processIncidentBackgroundTasks(formData, options = {}) {
         const { skipServerPersist = false } = options;
         try {
-            // معالجة المرفقات ورفع الصور إلى Google Drive
+            // معالجة المرفقات ورفع الصور إلى الخادم
             let needsUpdate = false;
 
             if (formData.attachments && Array.isArray(formData.attachments) && formData.attachments.length > 0) {
@@ -8182,7 +8182,7 @@ const Incidents = {
                 }
             }
 
-            // معالجة الصورة الرئيسية ورفعها إلى Google Drive
+            // معالجة الصورة الرئيسية ورفعها إلى الخادم
             if (formData.image && typeof formData.image === 'string' && formData.image.startsWith('data:')) {
                 try {
                     const uploadResult = await GoogleIntegration.uploadFileToDrive?.(
@@ -9466,7 +9466,7 @@ const Incidents = {
 
             notificationData.createdAt = new Date().toISOString();
 
-            // حفظ الإخطار في Google Sheets
+            // حفظ الإخطار في قاعدة SQL
             if (!AppState.appData.incidentNotifications) {
                 AppState.appData.incidentNotifications = [];
             }
@@ -9861,21 +9861,21 @@ const Incidents = {
     // معالجة المهام الخلفية بعد حفظ الإخطار
     async processNotificationBackgroundTasks(notificationData, investigationData) {
         try {
-            // حفظ الإخطار في Google Sheets عبر Backend
+            // حفظ الإخطار في قاعدة SQL عبر Backend
             const notificationResult = await GoogleIntegration.sendRequest({
                 action: 'addIncidentNotification',
                 data: notificationData
             });
 
             if (notificationResult && notificationResult.success) {
-                Utils.safeLog('✅ تم حفظ الإخطار في Google Sheets بنجاح');
+                Utils.safeLog('✅ تم حفظ الإخطار في قاعدة SQL بنجاح');
             } else {
-                Utils.safeWarn('⚠️ فشل حفظ الإخطار في Google Sheets، سيتم المحاولة عبر autoSave');
+                Utils.safeWarn('⚠️ فشل حفظ الإخطار في قاعدة SQL، سيتم المحاولة عبر autoSave');
                 // Fallback: استخدام autoSave
                 await GoogleIntegration.autoSave('IncidentNotifications', AppState.appData.incidentNotifications);
             }
 
-            // إضافة التحقيق إلى Google Sheets
+            // إضافة التحقيق إلى قاعدة SQL
             await GoogleIntegration.sendRequest({
                 action: 'addIncident',
                 data: investigationData
@@ -14871,7 +14871,7 @@ const Incidents = {
     },
 
     /**
-     * تحويل رابط Google Drive إلى رابط قابل للطباعة
+     * تحويل رابط الخادم إلى رابط قابل للطباعة
      */
     convertGoogleDriveLinkToPrintable(link) {
         if (!link) return '';
@@ -14887,7 +14887,7 @@ const Incidents = {
             const m = link.match(/drive\.google\.com\/thumbnail\?id=([a-zA-Z0-9_-]+)/i);
             if (m && m[1]) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
         }
-        // إذا كان رابط Google Drive، استخدم صيغة uc/view
+        // إذا كان رابط الخادم، استخدم صيغة uc/view
         if (link.includes('drive.google.com')) {
             const fileIdMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/) || link.match(/id=([a-zA-Z0-9_-]+)/);
             if (fileIdMatch && fileIdMatch[1]) {

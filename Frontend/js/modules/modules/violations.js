@@ -1454,7 +1454,7 @@ const Violations = {
     },
 
     /**
-     * تحميل بيانات المخالفات الأساسية من Google Sheets مرة واحدة (مع منع التكرار)
+     * تحميل بيانات المخالفات الأساسية من قاعدة SQL مرة واحدة (مع منع التكرار)
      */
     async ensureViolationsCoreDataLoaded({ force = false } = {}) {
         if (this._violationsCoreLoadPromise && !force) {
@@ -2134,7 +2134,7 @@ const Violations = {
                 // عرض الواجهة مباشرة مع البيانات المحلية (إن وجدت)
                 contentContainer.innerHTML = this.renderBlacklistTab();
                 this.setupBlacklistEventListeners();
-                // تحميل البيانات من Google Sheets في الخلفية وتحديث الواجهة
+                // تحميل البيانات من قاعدة SQL في الخلفية وتحديث الواجهة
                 this.loadBlacklistDataAsync().then(() => {
                     // تحديث الواجهة بعد تحميل البيانات
                     this.refreshBlacklistDisplay();
@@ -5518,7 +5518,7 @@ const Violations = {
                     const approvalGate = await this.checkViolationApprovalGate(formData, { isEdit });
                     if (approvalGate && approvalGate.requiresApproval) {
                         // 🛡️ حماية حرجة: مسار الاعتماد يخزّن violationData كـ JSON.stringify في خلية واحدة
-                        // (Google Sheets يحدّ الخلية بـ 50000 حرف). صورة base64 بحجم 2MB ≈ 2.7M حرف!
+                        // (قاعدة SQL يحدّ الخلية بـ 50000 حرف). صورة base64 بحجم 2MB ≈ 2.7M حرف!
                         // نرفع الصورة لـ Drive أولاً ثم نضع الرابط فقط في الـ payload.
                         let approvalPhoto = photo;
                         if (approvalPhoto && typeof approvalPhoto === 'string' && approvalPhoto.startsWith('data:')) {
@@ -5642,7 +5642,7 @@ const Violations = {
                     let finalPhoto = localPhoto;
                     let hasUpdatedPhoto = false;
 
-                    // رفع الصورة إلى Google Drive في الخلفية إذا كانت base64
+                    // رفع الصورة إلى الخادم في الخلفية إذا كانت base64
                     if (localPhoto && localPhoto.startsWith('data:')) {
                         try {
                             const uploadResult = await GoogleIntegration.uploadFileToDrive?.(
@@ -5677,7 +5677,7 @@ const Violations = {
                         }
                     }
 
-                    // المزامنة مع Google Sheets في الخلفية — استخدام addViolation/updateViolation
+                    // المزامنة مع قاعدة SQL في الخلفية — استخدام addViolation/updateViolation
                     // (بدل saveToSheet الذي يستبدل الجدول كاملاً ويسبب race conditions)
                     try {
                         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
@@ -6199,10 +6199,10 @@ const Violations = {
                 }
             } catch (err) {
                 remoteOk = false;
-                if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ Google Sheets:', err);
+                if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ قاعدة SQL:', err);
             }
             if (!remoteOk) {
-                Notification.warning('تم الحفظ محلياً لكن فشل الحفظ في Google Sheets');
+                Notification.warning('تم الحفظ محلياً لكن فشل الحفظ في قاعدة SQL');
             } else {
                 try { localStorage.setItem('violations_last_sync', String(Date.now())); } catch (eLs) { /* ignore */ }
             }
@@ -6555,7 +6555,7 @@ ${inner}
 
     // ===== Blacklist Register Functions =====
     /**
-     * تحميل بيانات Blacklist من Google Sheets
+     * تحميل بيانات Blacklist من قاعدة SQL
      */
     async loadBlacklistDataAsync() {
         try {
@@ -6579,7 +6579,7 @@ ${inner}
                 return;
             }
 
-            // تحميل البيانات من Google Sheets (بدون عرض مؤشر تحميل - الواجهة تُعرض أولاً)
+            // تحميل البيانات من قاعدة SQL (بدون عرض مؤشر تحميل - الواجهة تُعرض أولاً)
             const result = await GoogleIntegration.sendRequest({
                 action: 'readFromSheet',
                 data: {
@@ -6587,7 +6587,7 @@ ${inner}
                     spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
                 }
             }).catch(error => {
-                Utils.safeWarn('⚠️ تعذر تحميل بيانات Blacklist من Google Sheets:', error);
+                Utils.safeWarn('⚠️ تعذر تحميل بيانات Blacklist من قاعدة SQL:', error);
                 return { success: false, data: [] };
             });
 
@@ -6596,7 +6596,7 @@ ${inner}
                 AppState.appData.blacklistRegister = result.data;
                 dataUpdated = true;
                 if (AppState.debugMode) {
-                    Utils.safeLog(`✅ تم تحميل ${result.data.length} سجل Blacklist من Google Sheets`);
+                    Utils.safeLog(`✅ تم تحميل ${result.data.length} سجل Blacklist من قاعدة SQL`);
                 }
             } else {
                 // التأكد من وجود مصفوفة فارغة إذا لم يتم تحميل البيانات
@@ -7728,12 +7728,12 @@ ${inner}
                 window.DataManager.save();
             }
 
-            // حفظ في Google Sheets
+            // حفظ في قاعدة SQL
             try {
                 await GoogleIntegration.autoSave('Blacklist_Register', AppState.appData.blacklistRegister);
             } catch (err) {
-                if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ Google Sheets:', err);
-                Notification.warning('تم الحفظ محلياً لكن فشل الحفظ في Google Sheets');
+                if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ قاعدة SQL:', err);
+                Notification.warning('تم الحفظ محلياً لكن فشل الحفظ في قاعدة SQL');
             }
 
             Loading.hide();
@@ -7857,12 +7857,12 @@ ${inner}
                 window.DataManager.save();
             }
 
-            // حفظ في Google Sheets
+            // حفظ في قاعدة SQL
             try {
                 await GoogleIntegration.autoSave('Blacklist_Register', AppState.appData.blacklistRegister);
             } catch (err) {
-                if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ Google Sheets:', err);
-                Notification.warning('تم الحذف محلياً لكن فشل الحفظ في Google Sheets');
+                if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ قاعدة SQL:', err);
+                Notification.warning('تم الحذف محلياً لكن فشل الحفظ في قاعدة SQL');
             }
 
             Loading.hide();
@@ -7919,7 +7919,7 @@ ${inner}
         if (disp.needsProxy && typeof Utils.fetchDriveImageDataUri === 'function') {
             Utils.fetchDriveImageDataUri(disp.proxyFileId).then((dataUri) => {
                 if (dataUri) openPhotoModal(dataUri);
-                else Notification.error('تعذر تحميل الصورة من Google Drive');
+                else Notification.error('تعذر تحميل الصورة من الخادم');
             }).catch(() => Notification.error('تعذر تحميل الصورة'));
             return;
         }

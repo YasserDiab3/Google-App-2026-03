@@ -414,7 +414,7 @@ const Permissions = {
                 // محاولة تحليل JSON أولاً
                 return JSON.parse(permissions);
             } catch (error) {
-                // إذا فشل تحليل JSON، قد تكون الصلاحيات بصيغة key: value من Google Sheets
+                // إذا فشل تحليل JSON، قد تكون الصلاحيات بصيغة key: value من قاعدة SQL
                 const trimmed = permissions.trim();
                 if (trimmed && (trimmed.includes(':') || trimmed.includes('\n'))) {
                     try {
@@ -526,7 +526,7 @@ const Permissions = {
             typeof GoogleIntegration.sendToAppsScript === 'function'
         );
 
-        // محاولة تحميل إعدادات الشركة من Google Sheets أولاً
+        // محاولة تحميل إعدادات الشركة من قاعدة SQL أولاً
         if (hasRemoteSettingsApi) {
             try {
                 const companyResult = await GoogleIntegration.sendToAppsScript('getCompanySettings', {});
@@ -565,7 +565,7 @@ const Permissions = {
                     }
                     if (!Array.isArray(clinicVisitTypes)) clinicVisitTypes = [];
 
-                    // تحديث AppState ببيانات الشركة من Google Sheets
+                    // تحديث AppState ببيانات الشركة من قاعدة SQL
                     AppState.companySettings = Object.assign({}, AppState.companySettings, {
                         name: companyResult.data.name || AppState.companySettings?.name,
                         secondaryName: companyResult.data.secondaryName || AppState.companySettings?.secondaryName,
@@ -616,21 +616,21 @@ const Permissions = {
                         }));
                     }
 
-                    Utils.safeLog('✅ تم تحميل إعدادات الشركة من Google Sheets بنجاح');
+                    Utils.safeLog('✅ تم تحميل إعدادات الشركة من قاعدة SQL بنجاح');
                 }
             } catch (error) {
-                Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة من Google Sheets:', error);
+                Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة من قاعدة SQL:', error);
             }
         }
 
-        // ✅ إصلاح: محاولة تحميل الإعدادات من Google Sheets أولاً
+        // ✅ إصلاح: محاولة تحميل الإعدادات من قاعدة SQL أولاً
         // ✅ إصلاح: هذا يعمل لجميع المستخدمين بعد المزامنة وتسجيل الدخول
         if (hasRemoteSettingsApi) {
             try {
                 // ✅ إصلاح: تحميل مباشر من قاعدة البيانات بدون تأخير
                 const result = await GoogleIntegration.sendToAppsScript('getFormSettings', {});
                 if (result && result.success && result.data) {
-                    // ✅ إصلاح: تحديث AppState بالبيانات من Google Sheets مع التأكد من وجود الأماكن الفرعية
+                    // ✅ إصلاح: تحديث AppState بالبيانات من قاعدة SQL مع التأكد من وجود الأماكن الفرعية
                     if (Array.isArray(result.data.sites) && result.data.sites.length > 0) {
                         // ✅ إصلاح: التأكد من أن كل موقع يحتوي على places (حتى لو كانت مصفوفة فارغة)
                         // ✅ إصلاح: ربط صحيح للأماكن بالمواقع باستخدام String() لضمان المطابقة
@@ -689,15 +689,15 @@ const Permissions = {
                         dm.saveCompanySettings();
                     }
 
-                    Utils.safeLog('✅ تم تحميل إعدادات النماذج من Google Sheets بنجاح');
+                    Utils.safeLog('✅ تم تحميل إعدادات النماذج من قاعدة SQL بنجاح');
                 } else {
-                    Utils.safeWarn('⚠️ لم يتم تحميل إعدادات النماذج من Google Sheets - استخدام البيانات المحلية');
+                    Utils.safeWarn('⚠️ لم يتم تحميل إعدادات النماذج من قاعدة SQL - استخدام البيانات المحلية');
                     if (!Array.isArray(AppState.appData.observationSites)) {
                         AppState.appData.observationSites = [];
                     }
                 }
             } catch (error) {
-                Utils.safeWarn('⚠️ فشل تحميل إعدادات النماذج من Google Sheets، سيتم استخدام البيانات المحلية:', error);
+                Utils.safeWarn('⚠️ فشل تحميل إعدادات النماذج من قاعدة SQL، سيتم استخدام البيانات المحلية:', error);
                 if (!Array.isArray(AppState.appData.observationSites)) {
                     AppState.appData.observationSites = [];
                 }
@@ -1943,7 +1943,7 @@ const Permissions = {
         if (!cloudReady ||
             typeof GoogleIntegration === 'undefined' ||
             typeof GoogleIntegration.sendToAppsScript !== 'function') {
-            const msg = 'لا يوجد اتصال بخادم Google Apps Script — التغييرات محلية فقط.';
+            const msg = 'لا يوجد اتصال بخادم خادم SQL — التغييرات محلية فقط.';
             this.setFormSettingsSyncStatus(msg, 'warning');
             if (showToast && typeof Notification !== 'undefined') {
                 Notification.warning(msg);
@@ -4341,7 +4341,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1547',
+    appVersion: '1.0.1549',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -4456,7 +4456,7 @@ const AppState = {
         lastSyncTime: 0, // آخر مرة تم فيها التحميل الكامل
         userEmail: null // البريد الإلكتروني للمستخدم الحالي
     },
-    /** إعدادات Google Apps Script و Google Sheets (الاسم التاريخي googleConfig) */
+    /** إعدادات خادم SQL و قاعدة SQL (الاسم التاريخي googleConfig) */
     googleConfig: {
         appsScript: {
             enabled: true,
@@ -4602,7 +4602,7 @@ const Utils = {
     },
 
     /**
-     * هل يوجد مسار مزامنة عبر Google Apps Script (تفعيل + رابط Web App /exec)
+     * هل يوجد مسار مزامنة عبر خادم SQL (تفعيل + رابط Web App /exec)
      */
     hasCloudBackendSync() {
         const gc = typeof AppState !== 'undefined' ? AppState.googleConfig : null;
@@ -4803,14 +4803,14 @@ const Utils = {
             return; // تجاهل هذه الأخطاء تماماً
         }
 
-        // تجاهل أخطاء "Failed to fetch" المتعلقة بـ Google Sheets عندما تكون غير مفعّلة
+        // تجاهل أخطاء "Failed to fetch" المتعلقة بـ قاعدة SQL عندما تكون غير مفعّلة
         if (allText.includes('خطأ في طلب google sheets') &&
             (allText.includes('failed to fetch') || allText.includes('networkerror'))) {
-            // التحقق من حالة Google Sheets
+            // التحقق من حالة قاعدة SQL
             const isGoogleAppsScriptEnabled = window.AppState?.googleConfig?.appsScript?.enabled &&
                 window.AppState?.googleConfig?.appsScript?.scriptUrl;
             if (!isGoogleAppsScriptEnabled) {
-                return; // تجاهل الخطأ إذا كانت Google Sheets غير مفعّلة
+                return; // تجاهل الخطأ إذا كانت قاعدة SQL غير مفعّلة
             }
         }
 
@@ -4967,19 +4967,19 @@ const Utils = {
      * تسجيل تحذيرات آمن
      */
     safeWarn(...args) {
-        // تجاهل التحذيرات المتعلقة بـ Google Sheets و Chrome Extensions
+        // تجاهل التحذيرات المتعلقة بـ قاعدة SQL و Chrome Extensions
         if (args.length > 0) {
             const argsStr = args.map(arg => String(arg || '')).join(' ');
             if (argsStr.includes('runtime.lastError') ||
                 argsStr.includes('message port closed') ||
                 argsStr.includes('translator') ||
-                argsStr.includes('معرف Google Sheets غير محدد') ||
-                argsStr.includes('Google Sheets ID') ||
+                argsStr.includes('معرف قاعدة SQL غير محدد') ||
+                argsStr.includes('قاعدة SQL ID') ||
                 argsStr.includes('Spreadsheet ID') ||
                 argsStr.includes('sendRequest (saveToSheet)') ||
                 argsStr.includes('sendRequest (appendToSheet)') ||
                 argsStr.includes('sendRequest (readFromSheet)') ||
-                argsStr.includes('معرف Google Sheets غير معرف')) {
+                argsStr.includes('معرف قاعدة SQL غير معرف')) {
                 return; // تجاهل هذه التحذيرات
             }
 
@@ -5224,13 +5224,13 @@ const Utils = {
     },
 
     /**
-     * URL لطلب getProfileImage (صورة من Drive كـ JSON يحوي dataUri) — يتجاوز حظر hotlinking لـ Google Drive في وسم img.
+     * URL لطلب getProfileImage (صورة من Drive كـ JSON يحوي dataUri) — يتجاوز حظر hotlinking لـ الخادم في وسم img.
      */
     buildGetProfileImageProxyUrl(fileId) {
         const id = String(fileId || '').trim();
         if (!id) return '';
-        const scriptUrl = this.getAppsScriptScriptUrl();
-        if (!scriptUrl || scriptUrl.indexOf('script.google.com') === -1) return '';
+        const scriptUrl = this.getAppsScriptScriptUrl() || (typeof window !== 'undefined' && window.getEffectiveApiUrl ? window.getEffectiveApiUrl() : '/api/exec');
+        if (!scriptUrl) return '';
         return scriptUrl + (scriptUrl.indexOf('?') !== -1 ? '&' : '?') + 'action=getProfileImage&id=' + encodeURIComponent(id);
     },
 
@@ -5315,7 +5315,7 @@ const Utils = {
     IMG_DRIVE_PLACEHOLDER_GIF: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
 
     /**
-     * توحيد منطق عرض الصور: روابط Google Drive تُعرض عبر وكيل getProfileImage عند توفر scriptUrl.
+     * توحيد منطق عرض الصور: روابط الخادم تُعرض عبر وكيل getProfileImage عند توفر scriptUrl.
      * @param {*} source - نص أو كائن يُمرَّر إلى normalizeImageSource
      * @returns {{ canonical: string, displaySrc: string, proxyFileId: string, needsProxy: boolean }}
      */
@@ -6579,26 +6579,26 @@ const Utils = {
         let recommendation = 'تحقق من إعدادات Google Integration واتصال الإنترنت';
 
         // التحقق من نوع الخطأ وتنسيق الرسالة
-        if (errorMessage.includes('Google Apps Script غير مفعل') ||
+        if (errorMessage.includes('خادم SQL غير مفعل') ||
             errorMessage.includes('غير مفعّل') ||
             errorMessage.includes('غير مفعل')) {
-            message = 'Google Apps Script غير مفعّل';
-            recommendation = 'يرجى تفعيل Google Apps Script من الإعدادات وإدخال رابط الخادم';
+            message = 'خادم SQL غير مفعّل';
+            recommendation = 'يرجى تفعيل خادم SQL من الإعدادات وإدخال رابط الخادم';
         } else if (errorMessage.includes('رابط') && (errorMessage.includes('غير صحيح') || errorMessage.includes('غير محدد'))) {
-            message = 'رابط Google Apps Script غير صحيح أو غير محدد';
-            recommendation = 'يجب أن ينتهي رابط الخادم بـ /exec (مثال: https://script.google.com/macros/s/.../exec)';
+            message = 'رابط خادم SQL غير صحيح أو غير محدد';
+            recommendation = 'يجب أن ينتهي رابط الخادم بـ /exec (مثال: https://www.safety-icapp.com/api/exec)';
         } else if (errorMessage.includes('Timeout') ||
             errorMessage.includes('انتهت مهلة') ||
             errorMessage.includes('timeout') ||
             errorMessage.includes('timed out')) {
             message = 'انتهت مهلة الاتصال بالخادم';
-            recommendation = 'تحقق من:\n1. اتصال الإنترنت\n2. أن Google Apps Script منشور ومفعّل\n3. عدم وجود قيود على الشبكة';
+            recommendation = 'تحقق من:\n1. اتصال الإنترنت\n2. أن خادم SQL منشور ومفعّل\n3. عدم وجود قيود على الشبكة';
         } else if (errorMessage.includes('Failed to fetch') ||
             errorMessage.includes('NetworkError') ||
             errorMessage.includes('CORS') ||
             errorMessage.includes('Network request failed')) {
             message = 'فشل الاتصال بالخادم';
-            recommendation = 'تحقق من:\n1. اتصال الإنترنت\n2. رابط Google Apps Script صحيح\n3. أن الخادم منشور ومفعّل';
+            recommendation = 'تحقق من:\n1. اتصال الإنترنت\n2. رابط خادم SQL صحيح\n3. أن الخادم منشور ومفعّل';
         } else if (errorMessage.includes('غير معترف به') ||
             errorMessage.includes('Action not recognized') ||
             errorMessage.includes('ACTION_NOT_RECOGNIZED')) {
@@ -6607,7 +6607,7 @@ const Utils = {
         } else if (errorMessage.includes('فشل الاتصال') ||
             errorMessage.includes('Connection failed')) {
             message = errorMessage.includes('فشل الاتصال') ? errorMessage : 'فشل الاتصال بالخلفية';
-            recommendation = 'تحقق من:\n1. إعدادات Google Integration\n2. اتصال الإنترنت\n3. أن Google Apps Script منشور ومفعّل';
+            recommendation = 'تحقق من:\n1. إعدادات Google Integration\n2. اتصال الإنترنت\n3. أن خادم SQL منشور ومفعّل';
         } else if (errorMessage.trim() !== '') {
             // إذا كانت الرسالة واضحة، نستخدمها كما هي
             message = errorMessage;
@@ -10793,7 +10793,7 @@ const I18n = {
             'settings.tabs.company': 'Company Data & Identity',
             'settings.tabs.integration': 'Integration & Sync',
             'settings.tabs.cloud': 'Cloud Storage',
-            'settings.tabs.drive': 'Google Drive',
+            'settings.tabs.drive': 'الخادم',
             'settings.tabs.sharepoint': 'Microsoft SharePoint',
             'settings.tabs.system': 'System Settings',
             'settings.tabs.forms': 'Form Settings',
