@@ -89,7 +89,7 @@ cpDir(distDir, staticRoot);
 
 setupNodeFunction('api/health', 'api/health.js', { memory: 128, maxDuration: 10 });
 
-setupNodeFunction('api/exec', 'api/exec.js', {
+setupNodeFunction('api/exec', 'Frontend/api/exec.js', {
     memory: 1024,
     maxDuration: 60,
     includeDirs: ['backend-sql/src'],
