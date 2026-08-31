@@ -56,7 +56,7 @@ echo "🔨 [pre-commit] بناء dist/ (vercel-deploy)..."
 if ! (cd vercel-deploy/frontend && npm run build 2>/dev/null); then
     echo "⚠️ [pre-commit] فشل بناء vercel-deploy/dist/ — تابع مع source فقط."
 fi
-git add -f dist/ vercel-deploy/dist/ 2>/dev/null || true
+git add -f dist/ vercel-deploy/dist/ Frontend/dist/ vercel-deploy/frontend/dist/ 2>/dev/null || true
 
 echo "✅ [pre-commit] تم رفع الإصدار وبناء dist/ و vercel-deploy/dist/ وضمّهما للـ commit."
 exit 0
