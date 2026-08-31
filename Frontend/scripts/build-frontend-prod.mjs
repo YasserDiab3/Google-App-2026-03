@@ -53,9 +53,32 @@ function cpDir(src, dest) {
     }
 }
 
+function syncVercelServerlessBundle() {
+    const apiRoot = path.join(repoRoot, 'api');
+    const apiDest = path.join(frontendRoot, 'api');
+    if (fs.existsSync(apiRoot)) {
+        rmrf(apiDest);
+        cpDir(apiRoot, apiDest);
+    }
+    const sqlSrc = path.join(repoRoot, 'backend-sql', 'src');
+    const sqlDataGz = path.join(repoRoot, 'backend-sql', 'data', 'clinic_hse.db.gz');
+    const sqlDest = path.join(frontendRoot, 'backend-sql');
+    if (fs.existsSync(sqlSrc)) {
+        rmrf(path.join(sqlDest, 'src'));
+        cpDir(sqlSrc, path.join(sqlDest, 'src'));
+    }
+    if (fs.existsSync(sqlDataGz)) {
+        const dataDir = path.join(sqlDest, 'data');
+        fs.mkdirSync(dataDir, { recursive: true });
+        fs.copyFileSync(sqlDataGz, path.join(dataDir, 'clinic_hse.db.gz'));
+    }
+}
+
 console.log('HSE Frontend production build');
 console.log('Source:', frontendRoot);
 console.log('Output:', distRoot);
+
+syncVercelServerlessBundle();
 
 rmrf(distRoot);
 cpDir(frontendRoot, distRoot);

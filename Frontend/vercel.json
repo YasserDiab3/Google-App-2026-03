@@ -1,6 +1,17 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "npm install --prefix Frontend",
+  "installCommand": "npm install",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/exec.js": {
+      "memory": 1024,
+      "maxDuration": 60,
+      "includeFiles": "{backend-sql/src/**,backend-sql/data/clinic_hse.db.gz,data/sql/clinic_hse.db.gz}"
+    },
+    "api/health.js": {
+      "memory": 128
+    }
+  },
   "redirects": [
     {
       "source": "/(.*)",
