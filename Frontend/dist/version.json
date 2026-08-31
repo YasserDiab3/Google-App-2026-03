@@ -1,14 +1,14 @@
 {
-  "version": "1.0.1544",
+  "version": "1.0.1546",
   "highlights": {
     "ar": [
-      "إضافة api/health وapi/exec داخل Frontend مع backend-sql — متوافق مع Root Directory=Frontend.",
+      "التحول الكامل إلى SQL: إيقاف Mirror لـ Google Sheets — الكتابة والقراءة على clinic_hse.db فقط.",
       "نقل بيانات SQL إلى data/sql/ — لا تعارض مع مسارات API على Vercel.",
       "سكربت prepare-vercel-output.mjs يبني static + serverless مع backend-sql.db.gz.",
       "مسار users-seed أصبح /data/users-seed.json للمزامنة المحلية."
     ],
     "en": [
-      "Added Frontend/api health+exec with backend-sql bundle for Vercel Root Directory=Frontend.",
+      "Full SQL migration: disabled Google Sheets mirror — all reads/writes now on clinic_hse.db only.",
       "SQL bundle moved to data/sql/ — no conflict with Vercel API routes.",
       "prepare-vercel-output.mjs builds static + serverless with bundled backend-sql.db.gz.",
       "users-seed path is now /data/users-seed.json for local sync."

@@ -7,7 +7,8 @@
 const genericSheetOps = require('./handlers/generic-sheet-ops');
 const authHandlers = require('./handlers/auth-handlers');
 const moduleHandlers = require('./handlers/module-handlers');
-const { dispatchBackgroundMirror } = require('./services/mirror-sync');
+
+// Mirror sync disabled — SQL is now the sole data store (Google Sheets read-only archive)
 
 // Combine all handlers into a single unified registry
 const ActionRegistry = {
@@ -113,12 +114,6 @@ function handleRpcRequest(reqBody) {
 
     try {
         const result = handler(payload, postData, action, actorUserData, spreadsheetId);
-        
-        // Asynchronous non-blocking mirror sync to Google Sheets (Hybrid Mode)
-        if (result && result.success !== false && !reqBody._isHybridMirror) {
-            dispatchBackgroundMirror(action, payload, actorUserData, postData);
-        }
-
         return result || { success: true };
     } catch (err) {
         console.error(`[RPC ERROR] Exception in action "${action}":`, err);
