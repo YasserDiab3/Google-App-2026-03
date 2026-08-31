@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1555",
+  "version": "1.0.1557",
   "highlights": {
     "ar": [
-      "تقوية صلاحيات الخادم: التحقق من المستخدم من قاعدة SQL + الجلسة (مطابقة GAS).",
-      "إصلاح اختفاء شعار وبيانات الشركة في الهيدر بعد الحفظ.",
-      "حماية قراءة Users ومنع تزييف صلاحيات المدير — إزالة backdoors الدخول."
+      "مطابقة قاعدة البيانات مع Excel: PTW وPTWRegistry والعيادة والتدريب و142 ورقة.",
+      "سكربت استيراد مباشر من ملف .xlsx بدون Google OAuth.",
+      "تحسينات إدارة المستخدمين وإعدادات الشركة في الواجهة."
     ],
     "en": [
-      "Server permission hardening: DB user lookup + session validation (GAS parity).",
-      "Fixed company logo/name header disappearing after save.",
-      "Protected Users sheet reads, blocked admin spoofing — removed login backdoors."
+      "Database synced from Excel: PTW, PTWRegistry, clinic, training, and 142 sheets.",
+      "Direct .xlsx import script — no Google OAuth required.",
+      "User management and company settings UI improvements."
     ]
   }
 }

@@ -2103,23 +2103,52 @@ const Users = {
         }
 
         const userData = this.currentEditId ? AppState.appData.users.find(u => String(u.id).trim() === String(this.currentEditId).trim()) : null;
+        const nextUserId = this.currentEditId || Utils.generateId('USER');
 
-        // معالجة الصورة
-        let photoBase64 = userData?.photo || '';
+        // معالجة الصورة — رفع إلى FileAttachments وحفظ FILE_* فقط
+        let photoRef = userData?.photo || '';
         const photoInput = document.getElementById('user-photo-input');
         if (photoInput && photoInput.files.length > 0) {
             const file = photoInput.files[0];
             if (file.size > 2 * 1024 * 1024) {
                 Loading.hide();
                 Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2MB');
-                // استعادة الزر عند الخطأ
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalText;
                 }
                 return;
             }
-            photoBase64 = await this.convertImageToBase64(file);
+            const base64Data = await this.convertImageToBase64(file);
+            const ext = (file.name && file.name.lastIndexOf('.') >= 0) ? file.name.substring(file.name.lastIndexOf('.')) : '.jpg';
+            const fileName = 'user_photo_' + nextUserId + '_' + Date.now() + ext;
+            const mimeType = file.type || 'image/jpeg';
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.uploadFileToDrive === 'function') {
+                try {
+                    const uploadResult = await GoogleIntegration.uploadFileToDrive(base64Data, fileName, mimeType, 'Users');
+                    const resolved = (typeof Utils.resolveUploadedPhotoRef === 'function')
+                        ? Utils.resolveUploadedPhotoRef(uploadResult)
+                        : String(uploadResult?.fileId || '').trim();
+                    if (!resolved) {
+                        throw new Error('فشل الحصول على معرف الملف');
+                    }
+                    photoRef = resolved;
+                } catch (uploadErr) {
+                    Loading.hide();
+                    Notification.error('فشل رفع الصورة: ' + (uploadErr?.message || 'خطأ غير معروف'));
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                    return;
+                }
+            } else {
+                photoRef = base64Data;
+            }
+        } else if (photoRef && typeof Utils.userPhotoNeedsFileMigration === 'function' && Utils.userPhotoNeedsFileMigration(photoRef)) {
+            // الإبقاء على القيمة القديمة حتى يُشغَّل ترحيل الإعدادات
+        } else if (/^FILE_/i.test(String(photoRef || ''))) {
+            photoRef = String(photoRef).split(/[?#\s]/)[0];
         }
 
         const passwordInputElement = document.getElementById('user-password');
@@ -2151,7 +2180,7 @@ const Users = {
         const collectedPermissions = typeof this.collectPermissions === 'function' ? this.collectPermissions() : {};
         
         const formData = {
-            id: this.currentEditId || Utils.generateId('USER'),
+            id: nextUserId,
             name: nameEl.value.trim(),
             email: emailEl.value.trim().toLowerCase(),
             role: roleEl.value,
@@ -2161,7 +2190,7 @@ const Users = {
             // نعلم الخادم أن التعديل مقصود (فك الربط) وليس نسخة قديمة بلا كود
             ...(employeeCode === '' && userData?.employeeCode ? { unlinkEmployeeCode: true } : {}),
             active: activeEl.checked,
-            photo: photoBase64,
+            photo: photoRef,
             // ✅ إصلاح: التأكد من حفظ الصلاحيات حتى لو كانت فارغة (لكن ليس undefined)
             // حفظ الصلاحيات ككائن فارغ {} بدلاً من undefined لضمان عدم فقدانها
             permissions: collectedPermissions && typeof collectedPermissions === 'object' ? collectedPermissions : {},
@@ -3352,6 +3381,177 @@ const Users = {
         };
 
         document.addEventListener('section-changed', this.sectionChangeHandler);
+    },
+
+    _photoMigrationAbort: false,
+    _photoMigrationRunning: false,
+
+    getUserPhotoMigrationStats() {
+        const users = Array.isArray(AppState?.appData?.users) ? AppState.appData.users : [];
+        const stats = { total: users.length, linked: 0, empty: 0, inline_base64: 0, drive_url: 0, other_url: 0, unknown: 0, needsMigration: 0 };
+        const classify = (typeof Utils?.classifyUserPhotoMigration === 'function')
+            ? Utils.classifyUserPhotoMigration.bind(Utils)
+            : (p) => (p ? 'unknown' : 'empty');
+        users.forEach((u) => {
+            const kind = classify(u?.photo);
+            if (stats[kind] !== undefined) stats[kind]++;
+            else stats.unknown++;
+            if (kind !== 'empty' && kind !== 'linked') stats.needsMigration++;
+        });
+        return stats;
+    },
+
+    async migrateOneUserPhotoToFileRef(user) {
+        if (!user || typeof user !== 'object') return { status: 'skip', message: 'مستخدم غير صالح' };
+        const photo = String(user.photo || '').trim();
+        if (!photo) return { status: 'skip', message: 'بدون صورة' };
+        if (/^FILE_[A-Za-z0-9_]+/i.test(photo)) return { status: 'skip', message: 'مربوطة مسبقاً' };
+
+        let base64 = '';
+        const kind = (typeof Utils?.classifyUserPhotoMigration === 'function')
+            ? Utils.classifyUserPhotoMigration(photo)
+            : 'unknown';
+
+        if (kind === 'inline_base64') {
+            base64 = photo;
+        } else if (kind === 'drive_url') {
+            const driveId = this._getDriveIdFromUrl(photo)
+                || (typeof Utils?.extractDriveFileId === 'function' ? Utils.extractDriveFileId(photo) : '');
+            if (!driveId) return { status: 'drive_fail', message: 'معرف Drive غير معروف' };
+            if (typeof Utils?.fetchDriveImageDataUri === 'function') {
+                const fetched = await Utils.fetchDriveImageDataUri(driveId);
+                if (fetched && String(fetched).startsWith('data:image/')) {
+                    base64 = fetched;
+                } else if (fetched && /^https?:\/\//i.test(fetched)) {
+                    base64 = await new Promise((resolve) => {
+                        const img = new Image();
+                        const timer = setTimeout(() => resolve(''), 8000);
+                        img.onload = () => {
+                            clearTimeout(timer);
+                            try {
+                                const c = document.createElement('canvas');
+                                c.width = img.naturalWidth || img.width;
+                                c.height = img.naturalHeight || img.height;
+                                const ctx = c.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+                                resolve(c.toDataURL('image/jpeg', 0.9));
+                            } catch (_e) {
+                                resolve('');
+                            }
+                        };
+                        img.onerror = () => { clearTimeout(timer); resolve(''); };
+                        img.referrerPolicy = 'no-referrer';
+                        img.src = fetched;
+                    });
+                }
+            }
+            if (!base64) return { status: 'drive_private', message: 'صورة Drive خاصة أو غير متاحة' };
+        } else {
+            return { status: 'unsupported', message: 'صيغة غير مدعومة للترحيل' };
+        }
+
+        if (!base64 || !String(base64).startsWith('data:image/')) {
+            return { status: 'upload_fail', message: 'بيانات الصورة غير صالحة' };
+        }
+
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.uploadFileToDrive !== 'function') {
+            return { status: 'upload_fail', message: 'رفع الملفات غير متاح' };
+        }
+
+        const fileName = 'user_photo_migrate_' + (user.id || user.email || 'user') + '_' + Date.now() + '.jpg';
+        const uploadResult = await GoogleIntegration.uploadFileToDrive(base64, fileName, 'image/jpeg', 'Users');
+        const fileRef = (typeof Utils?.resolveUploadedPhotoRef === 'function')
+            ? Utils.resolveUploadedPhotoRef(uploadResult)
+            : String(uploadResult?.fileId || '').trim();
+        if (!fileRef) return { status: 'upload_fail', message: 'فشل إنشاء FILE_*' };
+
+        user.photo = fileRef;
+        user.updatedAt = new Date().toISOString();
+        return { status: 'ok', fileId: fileRef, message: 'تم الربط' };
+    },
+
+    async migrateAllUserPhotosToFileRefs(options) {
+        if (this._photoMigrationRunning) {
+            return { success: false, message: 'الترحيل قيد التشغيل بالفعل' };
+        }
+        const users = Array.isArray(AppState?.appData?.users) ? AppState.appData.users.slice() : [];
+        const delayMs = Math.max(300, Number(options?.delayMs) || 900);
+        const onProgress = typeof options?.onProgress === 'function' ? options.onProgress : null;
+        const shouldStop = typeof options?.shouldStop === 'function' ? options.shouldStop : () => this._photoMigrationAbort;
+
+        const targets = users.filter((u) => {
+            const p = String(u?.photo || '').trim();
+            return p && !/^FILE_[A-Za-z0-9_]+/i.test(p);
+        });
+
+        const report = { total: targets.length, processed: 0, ok: 0, skip: 0, drive_private: 0, failed: 0, details: [] };
+        this._photoMigrationRunning = true;
+        this._photoMigrationAbort = false;
+
+        try {
+            for (let i = 0; i < targets.length; i++) {
+                if (shouldStop()) break;
+                const user = targets[i];
+                let result;
+                try {
+                    result = await this.migrateOneUserPhotoToFileRef(user);
+                } catch (err) {
+                    result = { status: 'upload_fail', message: err?.message || 'خطأ' };
+                }
+
+                report.processed++;
+                if (result.status === 'ok') report.ok++;
+                else if (result.status === 'skip') report.skip++;
+                else if (result.status === 'drive_private') report.drive_private++;
+                else report.failed++;
+
+                report.details.push({
+                    userId: user.id,
+                    name: user.name || '',
+                    email: user.email || '',
+                    status: result.status,
+                    message: result.message || ''
+                });
+
+                if (onProgress) {
+                    onProgress({ ...report, current: user, index: i + 1 });
+                }
+
+                if (result.status === 'ok' && report.ok > 0 && report.ok % 5 === 0) {
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        try { window.DataManager.save(); } catch (_e) { /* ignore */ }
+                    }
+                }
+
+                if (i < targets.length - 1 && !shouldStop()) {
+                    await new Promise((r) => setTimeout(r, delayMs));
+                }
+            }
+
+            if (report.ok > 0) {
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    try { window.DataManager.save(); } catch (_e) { /* ignore */ }
+                }
+                if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.autoSave === 'function') {
+                    try {
+                        await GoogleIntegration.autoSave('Users', AppState.appData.users);
+                    } catch (_e) { /* ignore */ }
+                }
+            }
+
+            return {
+                success: true,
+                aborted: shouldStop(),
+                report
+            };
+        } finally {
+            this._photoMigrationRunning = false;
+            this._photoMigrationAbort = false;
+        }
+    },
+
+    stopUserPhotoMigration() {
+        this._photoMigrationAbort = true;
     },
 
     /**

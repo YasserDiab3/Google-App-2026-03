@@ -923,6 +923,7 @@ const Settings = {
             <!-- Tab Content: إعدادات النظام -->
             <div class="tab-content" id="tab-system-settings">
                 ${this.renderSystemVersionCard()}
+                ${this.isCurrentUserAdmin() ? this.renderUserPhotoMigrationCard() : ''}
                 ${this.renderEmergencyContactsCard()}
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
@@ -1865,6 +1866,150 @@ const Settings = {
             </div>`;
     },
 
+    renderUserPhotoMigrationCard() {
+        return `
+            <div class="content-card mt-6" id="user-photo-migration-card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-images ml-2"></i>ترحيل صور المستخدمين إلى SQL</h2>
+                </div>
+                <div class="card-body space-y-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                        يحوّل صور المستخدمين من روابط Drive أو base64 المضمّن إلى مراجع <code dir="ltr">FILE_*</code> في جدول المرفقات.
+                        الترحيل يعمل في الخلفية (صورة واحدة كل ثانية تقريباً) ويمكن إيقافه في أي وقت.
+                    </p>
+                    <div id="user-photo-migration-stats" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm"></div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                        <div id="user-photo-migration-progress-bar" class="bg-teal-600 h-2.5 rounded-full transition-all duration-300" style="width:0%"></div>
+                    </div>
+                    <p id="user-photo-migration-status" class="text-sm text-gray-700">جاهز للترحيل.</p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" id="user-photo-migration-start-btn" class="btn-primary">
+                            <i class="fas fa-play ml-2"></i>بدء الترحيل
+                        </button>
+                        <button type="button" id="user-photo-migration-stop-btn" class="btn-secondary" disabled>
+                            <i class="fas fa-stop ml-2"></i>إيقاف
+                        </button>
+                        <button type="button" id="user-photo-migration-refresh-btn" class="btn-secondary btn-sm">
+                            <i class="fas fa-sync-alt ml-2"></i>تحديث الإحصاء
+                        </button>
+                    </div>
+                    <div id="user-photo-migration-log" class="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto" style="display:none;"></div>
+                </div>
+            </div>
+        `;
+    },
+
+    refreshUserPhotoMigrationStats() {
+        const statsEl = document.getElementById('user-photo-migration-stats');
+        if (!statsEl) return;
+        const stats = (typeof Users !== 'undefined' && typeof Users.getUserPhotoMigrationStats === 'function')
+            ? Users.getUserPhotoMigrationStats()
+            : { total: 0, linked: 0, needsMigration: 0, drive_url: 0, inline_base64: 0 };
+        statsEl.innerHTML = `
+            <div class="p-2 rounded bg-slate-50 border"><span class="text-gray-500 block">إجمالي المستخدمين</span><strong>${stats.total || 0}</strong></div>
+            <div class="p-2 rounded bg-green-50 border border-green-100"><span class="text-gray-500 block">مربوطة FILE_*</span><strong>${stats.linked || 0}</strong></div>
+            <div class="p-2 rounded bg-amber-50 border border-amber-100"><span class="text-gray-500 block">تحتاج ترحيل</span><strong>${stats.needsMigration || 0}</strong></div>
+            <div class="p-2 rounded bg-blue-50 border border-blue-100"><span class="text-gray-500 block">Drive / base64</span><strong>${(stats.drive_url || 0) + (stats.inline_base64 || 0)}</strong></div>
+        `;
+        const statusEl = document.getElementById('user-photo-migration-status');
+        if (statusEl && !(typeof Users !== 'undefined' && Users._photoMigrationRunning)) {
+            statusEl.textContent = (stats.needsMigration || 0) > 0
+                ? `يوجد ${stats.needsMigration} صورة بانتظار الترحيل.`
+                : 'كل الصور الموجودة مربوطة أو لا توجد صور للترحيل.';
+        }
+    },
+
+    bindUserPhotoMigrationEvents() {
+        if (!this.isCurrentUserAdmin()) return;
+        this.refreshUserPhotoMigrationStats();
+
+        const startBtn = document.getElementById('user-photo-migration-start-btn');
+        const stopBtn = document.getElementById('user-photo-migration-stop-btn');
+        const refreshBtn = document.getElementById('user-photo-migration-refresh-btn');
+        const progressBar = document.getElementById('user-photo-migration-progress-bar');
+        const statusEl = document.getElementById('user-photo-migration-status');
+        const logEl = document.getElementById('user-photo-migration-log');
+
+        if (refreshBtn && !refreshBtn.dataset.bound) {
+            refreshBtn.dataset.bound = '1';
+            refreshBtn.addEventListener('click', () => this.refreshUserPhotoMigrationStats());
+        }
+
+        if (stopBtn && !stopBtn.dataset.bound) {
+            stopBtn.dataset.bound = '1';
+            stopBtn.addEventListener('click', () => {
+                if (typeof Users !== 'undefined' && typeof Users.stopUserPhotoMigration === 'function') {
+                    Users.stopUserPhotoMigration();
+                }
+                stopBtn.disabled = true;
+                if (statusEl) statusEl.textContent = 'جاري إيقاف الترحيل بعد إنهاء الصورة الحالية...';
+            });
+        }
+
+        if (startBtn && !startBtn.dataset.bound) {
+            startBtn.dataset.bound = '1';
+            startBtn.addEventListener('click', async () => {
+                if (typeof Users === 'undefined' || typeof Users.migrateAllUserPhotosToFileRefs !== 'function') {
+                    Notification.error('موديول المستخدمين غير متاح.');
+                    return;
+                }
+                const stats = Users.getUserPhotoMigrationStats();
+                if (!stats.needsMigration) {
+                    Notification.info('لا توجد صور تحتاج ترحيل.');
+                    return;
+                }
+                if (!confirm(`سيتم ترحيل ${stats.needsMigration} صورة في الخلفية.\nالمتابعة؟`)) return;
+
+                startBtn.disabled = true;
+                if (stopBtn) stopBtn.disabled = false;
+                if (logEl) {
+                    logEl.style.display = 'block';
+                    logEl.innerHTML = '';
+                }
+
+                const appendLog = (line) => {
+                    if (!logEl) return;
+                    const div = document.createElement('div');
+                    div.textContent = line;
+                    logEl.appendChild(div);
+                    logEl.scrollTop = logEl.scrollHeight;
+                };
+
+                const result = await Users.migrateAllUserPhotosToFileRefs({
+                    onProgress: (p) => {
+                        const pct = p.total ? Math.round((p.processed / p.total) * 100) : 0;
+                        if (progressBar) progressBar.style.width = pct + '%';
+                        if (statusEl) {
+                            statusEl.textContent = `التقدم: ${p.processed}/${p.total} — نجح ${p.ok} — Drive خاص ${p.drive_private} — فشل ${p.failed}`;
+                        }
+                        if (p.current) {
+                            appendLog(`${p.index}/${p.total} — ${p.current.name || p.current.email || p.current.id}: ${p.details[p.details.length - 1]?.message || ''}`);
+                        }
+                    }
+                });
+
+                startBtn.disabled = false;
+                if (stopBtn) stopBtn.disabled = true;
+                if (progressBar) progressBar.style.width = '100%';
+
+                const rep = result?.report || {};
+                if (statusEl) {
+                    statusEl.textContent = result?.aborted
+                        ? `تم الإيقاف — نجح ${rep.ok || 0} من ${rep.processed || 0}.`
+                        : `اكتمل — نجح ${rep.ok || 0} — Drive خاص ${rep.drive_private || 0} — فشل ${rep.failed || 0}.`;
+                }
+                this.refreshUserPhotoMigrationStats();
+                if (rep.ok > 0) {
+                    Notification.success(`تم ترحيل ${rep.ok} صورة بنجاح.`);
+                } else if ((rep.drive_private || 0) > 0) {
+                    Notification.warning('بعض صور Drive خاصة — يُعاد رفعها يدوياً من الملف الشخصي.');
+                } else {
+                    Notification.info('لم يُرحَّل أي ملف جديد.');
+                }
+            });
+        }
+    },
+
     renderEmergencyContactsCard() {
         return `
             <div class="content-card mt-6" id="card-hse-emergency-contacts">
@@ -2080,6 +2225,7 @@ const Settings = {
                 }
                 if (targetTab === 'system-settings' && this.isCurrentUserAdmin()) {
                     this.loadEmergencyContactsSettings();
+                    this.bindUserPhotoMigrationEvents();
                 }
                 if (targetTab === 'help-content' && this.isCurrentUserAdmin()) {
                     Settings.bindHelpContentSettingsEvents();
@@ -2524,6 +2670,7 @@ const Settings = {
             }
             if (this.isCurrentUserAdmin()) {
                 this.loadEmergencyContactsSettings();
+                this.bindUserPhotoMigrationEvents();
             }
 
             const companyNameInput = document.getElementById('company-name-input');

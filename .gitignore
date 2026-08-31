@@ -47,7 +47,14 @@ saveToSheet_debug.txt
 test-ptw-fix.mjs
 
 
-# Playwright MCP snapshots
+# Credentials (Google — لا ترفع)
+secrets/
+!secrets/.gitkeep
+google-service-account.json
+google-oauth-client.json
+google-oauth-token.json
+*-service-account*.json
+credentials/
 .playwright-mcp/
 /test-results/
 /playwright-report/

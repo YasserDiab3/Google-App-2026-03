@@ -3159,20 +3159,22 @@ window.UI = {
                 ? GoogleIntegration.uploadFileToDrive(base64Data, fileName, mimeType, 'Users')
                 : Promise.reject(new Error('Google Integration غير متاح'));
             uploadPromise.then(function(uploadResult) {
-                const photoUrl = (uploadResult && (uploadResult.directLink || uploadResult.shareableLink)) || '';
-                if (!photoUrl) {
-                    throw new Error('لم يتم الحصول على رابط الصورة');
+                const photoRef = (typeof Utils !== 'undefined' && typeof Utils.resolveUploadedPhotoRef === 'function')
+                    ? Utils.resolveUploadedPhotoRef(uploadResult)
+                    : String(uploadResult && uploadResult.fileId || '').trim();
+                if (!photoRef) {
+                    throw new Error('لم يتم الحصول على معرف الملف FILE_*');
                 }
                 return (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript)
-                    ? GoogleIntegration.sendToAppsScript('updateUser', { userId: userRecord.id, updateData: { photo: photoUrl } }).then(function(r) { return { updateResult: r, photoUrl: photoUrl }; })
+                    ? GoogleIntegration.sendToAppsScript('updateUser', { userId: userRecord.id, updateData: { photo: photoRef } }).then(function(r) { return { updateResult: r, photoRef: photoRef }; })
                     : Promise.reject(new Error('Google Integration غير متاح'));
             }).then(function(data) {
                 const updateResult = data && data.updateResult;
-                const photoUrl = data && data.photoUrl;
+                const photoRef = data && data.photoRef;
                 if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
-                if (updateResult && updateResult.success && photoUrl) {
-                    if (userRecord) userRecord.photo = photoUrl;
-                    if (AppState.currentUser) AppState.currentUser.photo = photoUrl;
+                if (updateResult && updateResult.success && photoRef) {
+                    if (userRecord) userRecord.photo = photoRef;
+                    if (AppState.currentUser) AppState.currentUser.photo = photoRef;
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                         try { window.DataManager.save(); } catch (e) { /* ignore */ }
                     }

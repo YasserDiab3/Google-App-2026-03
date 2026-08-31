@@ -12,11 +12,17 @@
     "test:p3:guards": "node tools/p3-security-guards-selftest.js",
     "test:p3": "node tools/p3-parity-selftest.js && node tools/p3-security-guards-selftest.js",
     "test:gates": "npm run test:p3 && npm run test:e2e:smoke",
-    "test:smoke:system": "node scripts/smoke-system.mjs"
+    "test:smoke:system": "node scripts/smoke-system.mjs",
+    "sync:sheets": "node scripts/sync-from-google-sheets.mjs",
+    "sync:sheets:compare": "node scripts/sync-from-google-sheets.mjs --compare",
+    "sync:sheets:login": "node scripts/google-sheets-oauth-login.mjs",
+    "import:xlsx": "node backend-sql/scripts/import-from-xlsx.js",
+    "import:xlsx:compare": "node backend-sql/scripts/import-from-xlsx.js --compare"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",
     "esbuild": "^0.25.12",
+    "googleapis": "^144.0.0",
     "xlsx": "^0.18.5"
   }
 }

@@ -4346,7 +4346,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1555',
+    appVersion: '1.0.1557',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -5255,6 +5255,37 @@ const Utils = {
             return this.extractDriveFileId(raw);
         }
         return '';
+    },
+
+    /**
+     * مرجع الصورة بعد الرفع: FILE_* فقط (لا dataUri في Users.photo).
+     */
+    resolveUploadedPhotoRef(uploadResult) {
+        if (!uploadResult || uploadResult.success === false) return '';
+        const id = String(uploadResult.fileId || '').trim();
+        if (/^FILE_[A-Za-z0-9_]+/.test(id)) {
+            return id.split(/[?#\s]/)[0];
+        }
+        return '';
+    },
+
+    /** هل حقل photo يحتاج ترحيلاً إلى FILE_*؟ */
+    userPhotoNeedsFileMigration(photo) {
+        const p = String(photo || '').trim();
+        if (!p) return false;
+        if (/^FILE_[A-Za-z0-9_]+/i.test(p)) return false;
+        return true;
+    },
+
+    /** تصنيف صورة مستخدم للترحيل */
+    classifyUserPhotoMigration(photo) {
+        const p = String(photo || '').trim();
+        if (!p) return 'empty';
+        if (/^FILE_[A-Za-z0-9_]+/i.test(p)) return 'linked';
+        if (/^data:image\//i.test(p)) return 'inline_base64';
+        if (/drive\.google\.com|googleusercontent\.com/i.test(p)) return 'drive_url';
+        if (/^https?:\/\//i.test(p)) return 'other_url';
+        return 'unknown';
     },
 
     /**
