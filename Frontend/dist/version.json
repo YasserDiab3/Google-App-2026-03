@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1553",
+  "version": "1.0.1555",
   "highlights": {
     "ar": [
-      "إصلاح حفظ قواعد استحقاق مهمات الوقاية (PPE) — الجدول الصحيح Company_Settings في SQL.",
-      "إزالة مسار upsert القديم لـ saveCompanySettings من entity resolver.",
-      "alias قراءة companysettings في batchReadSheets لمطابقة اسم الجدول."
+      "تقوية صلاحيات الخادم: التحقق من المستخدم من قاعدة SQL + الجلسة (مطابقة GAS).",
+      "إصلاح اختفاء شعار وبيانات الشركة في الهيدر بعد الحفظ.",
+      "حماية قراءة Users ومنع تزييف صلاحيات المدير — إزالة backdoors الدخول."
     ],
     "en": [
-      "Fixed PPE eligibility rules save — correct SQL table Company_Settings.",
-      "Removed legacy saveCompanySettings upsert path from entity resolver.",
-      "Added companysettings alias in batchReadSheets for table name matching."
+      "Server permission hardening: DB user lookup + session validation (GAS parity).",
+      "Fixed company logo/name header disappearing after save.",
+      "Protected Users sheet reads, blocked admin spoofing — removed login backdoors."
     ]
   }
 }

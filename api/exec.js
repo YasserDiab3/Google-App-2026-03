@@ -31,9 +31,7 @@ module.exports = async (req, res) => {
         if (action === 'getProfileImage') {
             const { getProfileImage } = require('../backend-sql/src/handlers/file-handlers');
             const result = getProfileImage(req.query);
-            if (result.redirectUrl) {
-                return res.redirect(302, result.redirectUrl);
-            }
+            // JSON دائماً — الواجهة تجلب عبر fetch وتتحقق من redirectUrl يدوياً (تجنب 403 في img.src)
             return res.status(200).json(result);
         }
         return res.status(200).json({

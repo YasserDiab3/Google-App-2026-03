@@ -2452,8 +2452,20 @@ window.UI = {
         const logoImgRight = document.getElementById('header-company-logo-right');
         this.updateCompanyBranding();
 
+        const logoUrl = String(
+            AppState.companyLogo
+            || AppState.companySettings?.logo
+            || localStorage.getItem('hse_company_logo')
+            || localStorage.getItem('company_logo')
+            || ''
+        ).trim();
+        const hasLogo = !!logoUrl;
+        const hasName = !!String(AppState.companySettings?.name || '').trim();
+        const hasSecondary = !!String(AppState.companySettings?.secondaryName || '').trim();
+        const showHeader = hasLogo || hasName || hasSecondary;
+
         if (header) {
-            if (AppState.companyLogo) {
+            if (showHeader) {
                 header.style.display = 'flex';
                 header.style.justifyContent = 'space-between';
                 header.style.alignItems = 'center';
@@ -2465,32 +2477,30 @@ window.UI = {
                 const sidebarOpen = sidebar && sidebar.classList.contains('open');
                 this.updateCompanyLogoHeaderPosition(sidebarOpen);
 
-                // الشعار في الجانب الأيسر فقط (تم إزالة الشعار الأيمن)
                 if (logoImg) {
-                    // إعداد معالج الأخطاء قبل تعيين src
-                    let hasError = false;
-                    logoImg.onerror = () => {
-                        if (!hasError) {
-                            hasError = true;
-                            // إخفاء الصورة المكسورة
-                            logoImg.style.display = 'none';
-                            // الخادم URLs لا تدعم CORS - هذا أمر طبيعي
-                            // الشعار لن يظهر إذا كان من الخادم
-                        }
-                    };
-                    logoImg.onload = () => {
-                        hasError = false;
+                    if (hasLogo) {
+                        let hasError = false;
+                        logoImg.onerror = () => {
+                            if (!hasError) {
+                                hasError = true;
+                                logoImg.style.display = 'none';
+                            }
+                        };
+                        logoImg.onload = () => {
+                            hasError = false;
+                            logoImg.style.display = 'block';
+                        };
+                        logoImg.src = logoUrl;
                         logoImg.style.display = 'block';
-                    };
-                    
-                    logoImg.src = AppState.companyLogo;
-                    logoImg.style.display = 'block';
-                    logoImg.style.maxHeight = '50px';
-                    logoImg.style.maxWidth = '150px';
-                    logoImg.style.objectFit = 'contain';
+                        logoImg.style.maxHeight = '50px';
+                        logoImg.style.maxWidth = '150px';
+                        logoImg.style.objectFit = 'contain';
+                    } else {
+                        logoImg.style.display = 'none';
+                        logoImg.src = '';
+                    }
                 }
 
-                // إخفاء الشعار الأيمن (تم إزالته حسب الطلب)
                 if (logoImgRight) {
                     logoImgRight.style.display = 'none';
                 }
@@ -5165,25 +5175,16 @@ window.UI = {
                     ? String(Utils.extractDriveFileId(normalized) || '').trim()
                     : '';
             }
-            const scriptUrl = typeof Utils.getAppsScriptScriptUrl === 'function'
-                ? Utils.getAppsScriptScriptUrl()
-                : ((AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.scriptUrl) ? String(AppState.googleConfig.appsScript.scriptUrl).trim() : '');
+            const proxyFileId = typeof Utils.extractImageProxyId === 'function'
+                ? String(Utils.extractImageProxyId(photoUrl) || '').trim()
+                : driveFileId;
+            const imageApiUrl = typeof Utils.getEffectiveImageApiUrl === 'function'
+                ? Utils.getEffectiveImageApiUrl()
+                : '';
 
-            // بعد النشر: صور Drive عبر وكيل getProfileImage (يُطبَّق /exec تلقائياً في getAppsScriptScriptUrl)
-            if (isDriveUrl && driveFileId && scriptUrl && scriptUrl.includes('script.google.com')) {
-                const loadViaProxy = function() {
-                    if (typeof Utils.fetchDriveImageDataUri === 'function') {
-                        return Utils.fetchDriveImageDataUri(driveFileId);
-                    }
-                    const proxyUrl = scriptUrl + (scriptUrl.indexOf('?') !== -1 ? '&' : '?') + 'action=getProfileImage&id=' + encodeURIComponent(driveFileId);
-                    return fetch(proxyUrl, { method: 'GET', credentials: 'omit' })
-                        .then(function(res) { return res.json(); })
-                        .then(function(data) {
-                            if (data && data.success && data.dataUri) return data.dataUri;
-                            throw new Error(data && data.message ? data.message : 'لا توجد صورة');
-                        });
-                };
-                Promise.resolve(loadViaProxy()).then(function(uri) {
+            // صور Drive / FILE_* عبر getProfileImage (SQL أو GAS) — دون img.src مباشر للوكيل
+            if (proxyFileId && imageApiUrl && typeof Utils.fetchDriveImageDataUri === 'function') {
+                Utils.fetchDriveImageDataUri(proxyFileId).then(function(uri) {
                     if (uri) showPhoto(uri);
                     else {
                         markFailed();

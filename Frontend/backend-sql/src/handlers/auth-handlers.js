@@ -5,7 +5,7 @@
 
 const crypto = require('crypto');
 const { getDatabase } = require('../db/database');
-const { checkAdminActor, checkAuthenticatedActor } = require('../middleware/auth-guard');
+const { checkAdminActor, checkAuthenticatedActor, sanitizeUserRecord, sanitizeUserRows, requireAuthenticatedActor, checkAdminPermissionsAuthoritative, sanitizeUserRecordForClient } = require('../middleware/auth-guard');
 const {
     createMfaChallenge,
     isMfaEnabledForUser,
@@ -41,18 +41,11 @@ const authHandlers = {
             return { success: false, message: 'هذا الحساب معطل. يرجى مراجعة المسؤول.', errorCode: 'ACCOUNT_DISABLED' };
         }
 
-        // Verify password hash or plain text password
+        // Verify password hash or plain text password (legacy rows)
         const userHash = user.passwordHash || (user.password ? sha256(user.password) : '');
-        
-        // Standard passwords supported for admin/support users
-        const standardAdminPasswords = ['123123', 'admin123', '123456', 'Admin123', 'icapp2026', 'Yasser123', 'yasser123'];
-        const isStandardMatch = standardAdminPasswords.some(p => p === password || sha256(p) === providedHash);
-        const isAdminUser = user.role === 'admin' || user.email === 'yasser@icapp.com' || user.email === 'admin@icapp.com' || user.email === 'support@icapp.com';
 
         const match = (providedHash && userHash && providedHash === userHash) ||
-                      (password && user.password && password === user.password) ||
-                      (isStandardMatch && isAdminUser) ||
-                      (password === '123123'); // Standard system-wide initial password
+                      (password && user.password && password === user.password);
 
         if (!match) {
             return { success: false, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', errorCode: 'INVALID_CREDENTIALS' };
@@ -123,7 +116,7 @@ const authHandlers = {
     },
 
     'changePassword': function(payload, postData, action, actorUserData) {
-        const gate = checkAuthenticatedActor(actorUserData, action);
+        const gate = requireAuthenticatedActor(actorUserData, action);
         if (!gate.ok) return gate;
 
         const data = payload || postData || {};
@@ -134,18 +127,21 @@ const authHandlers = {
             return { success: false, message: 'كلمة المرور الجديدة يجب ألا تقل عن 6 أحرف', errorCode: 'PASSWORD_TOO_SHORT' };
         }
 
-        const userId = actorUserData.id || actorUserData.userId;
-        const db = getDatabase();
-        const users = db.readSheet('Users');
-        const user = users.find(u => u.id === userId);
+        const user = gate.sheetUser;
+        const oldHash = sha256(oldPassword);
+        const storedHash = user.passwordHash || (user.password ? sha256(user.password) : '');
+        const oldMatch = (oldPassword && user.password && oldPassword === user.password) ||
+            (oldHash && storedHash && oldHash === storedHash);
 
-        if (!user) {
-            return { success: false, message: 'المستخدم غير موجود', errorCode: 'USER_NOT_FOUND' };
+        if (!oldMatch) {
+            return { success: false, message: 'كلمة المرور الحالية غير صحيحة', errorCode: 'INVALID_OLD_PASSWORD' };
         }
 
         const newHash = sha256(newPassword);
+        const db = getDatabase();
         db.updateRow('Users', 'id', user.id, {
             passwordHash: newHash,
+            password: '',
             updatedAt: new Date().toISOString()
         });
 
@@ -174,23 +170,22 @@ const authHandlers = {
     },
 
     'getUsersForApp': function(payload, postData, action, actorUserData) {
+        const gate = requireAuthenticatedActor(actorUserData, action);
+        if (!gate.ok) return gate;
+
+        const isAdmin = checkAdminPermissionsAuthoritative(actorUserData);
+        const actorEmail = String(actorUserData?.email || '').trim();
         const db = getDatabase();
-        const users = db.readSheet('Users').map(u => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            role: u.role,
-            department: u.department,
-            employeeCode: u.employeeCode,
-            active: u.active !== 'false' && u.active !== false,
-            photo: u.photo,
-            lastLogin: u.lastLogin,
-            isOnline: u.isOnline
-        }));
-        return { success: true, users: users, data: users };
+        const users = (db.readSheet('Users') || [])
+            .map((u) => sanitizeUserRecordForClient(u, isAdmin, actorEmail))
+            .filter((u) => u && u.email);
+        return { success: true, users, data: users, total: users.length };
     },
 
     'getUsersMeta': function(payload, postData, action, actorUserData) {
+        const gate = requireAuthenticatedActor(actorUserData, action);
+        if (!gate.ok) return gate;
+
         const db = getDatabase();
         const users = db.readSheet('Users');
         return { success: true, count: users.length, total: users.length };

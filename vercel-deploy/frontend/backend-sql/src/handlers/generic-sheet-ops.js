@@ -4,7 +4,7 @@
 'use strict';
 
 const { getDatabase } = require('../db/database');
-const { checkSheetDirectWriteAccess, checkAuthenticatedActor } = require('../middleware/auth-guard');
+const { checkSheetDirectWriteAccess, checkAuthenticatedActor, checkSheetReadAccess, sanitizeUserRows } = require('../middleware/auth-guard');
 
 const genericSheetOps = {
     'readFromSheet': function(payload, postData, action, actorUserData) {
@@ -13,9 +13,13 @@ const genericSheetOps = {
             return { success: false, message: 'اسم الورقة مطلوب', errorCode: 'SHEET_NAME_REQUIRED' };
         }
 
+        const readGate = checkSheetReadAccess(sheetName, actorUserData, action);
+        if (!readGate.ok) return readGate;
+
         const db = getDatabase();
         try {
-            const rows = db.readSheet(sheetName);
+            let rows = db.readSheet(sheetName);
+            if (sheetName === 'Users') rows = sanitizeUserRows(rows);
             return {
                 success: true,
                 data: rows,
@@ -44,6 +48,7 @@ const genericSheetOps = {
 
         const db = getDatabase();
         const result = {};
+        const failedSheets = [];
 
         const aliases = {
             'safetymembers': 'SafetyTeamMembers',
@@ -52,7 +57,6 @@ const genericSheetOps = {
             'places': 'Form_Places',
             'companysettings': 'Company_Settings',
             'officers': 'SecurityOfficers',
-            'gatevisitors': 'GateVisitors',
             'observations': 'DailyObservations',
             'dailysafety': 'DailySafetyCheckList',
             'nearmisses': 'NearMiss',
@@ -62,6 +66,12 @@ const genericSheetOps = {
 
         let totalCount = 0;
         for (const name of sheetNames) {
+            const readGate = checkSheetReadAccess(name, actorUserData, action);
+            if (!readGate.ok) {
+                failedSheets.push({ sheet: name, error: readGate.message, errorCode: readGate.errorCode });
+                result[name] = [];
+                continue;
+            }
             try {
                 let rows = db.readSheet(name);
                 if ((!rows || rows.length === 0) && aliases[name.toLowerCase()]) {
@@ -71,9 +81,13 @@ const genericSheetOps = {
                         rows = aliasRows;
                     }
                 }
+                if (name === 'Users' || aliases[name.toLowerCase()] === 'Users') {
+                    rows = sanitizeUserRows(rows || []);
+                }
                 result[name] = rows || [];
                 totalCount += (result[name] ? result[name].length : 0);
             } catch (err) {
+                failedSheets.push({ sheet: name, error: err.message });
                 result[name] = [];
             }
         }
@@ -82,8 +96,8 @@ const genericSheetOps = {
             success: true,
             data: result,
             totalSheets: sheetNames.length,
-            successfulSheets: sheetNames.length,
-            failedSheets: [],
+            successfulSheets: sheetNames.length - failedSheets.length,
+            failedSheets,
             count: totalCount,
             timestamp: new Date().toISOString()
         };

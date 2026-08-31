@@ -4,6 +4,7 @@
 'use strict';
 
 const { getDatabase } = require('../db/database');
+const { checkCompanySettingsPermission } = require('../middleware/auth-guard');
 
 const COMPANY_SETTINGS_SHEET = 'Company_Settings';
 const DEFAULT_SETTINGS_ID = 'COMPANY-SETTINGS-1';
@@ -135,6 +136,9 @@ const companySettingsHandlers = {
     },
 
     saveCompanySettings(payload, postData, action, actorUserData) {
+        const permGate = checkCompanySettingsPermission(actorUserData);
+        if (!permGate.ok) return permGate;
+
         const db = getDatabase();
         const data = payload?.data || payload || postData?.data || postData || {};
         const now = new Date().toISOString();
@@ -159,6 +163,16 @@ const companySettingsHandlers = {
             createdAt: existing.createdAt || now,
             createdBy: existing.createdBy || user
         });
+
+        // لا نمسح الشعار إذا وصل فارغاً بالخطأ بينما محفوظ مسبقاً (إلا عند clearLogo)
+        if (Object.prototype.hasOwnProperty.call(data, 'logo')) {
+            const incomingLogo = data.logo;
+            const hasIncoming = incomingLogo && String(incomingLogo).trim() !== '';
+            const clearRequested = data.clearLogo === true;
+            if (!hasIncoming && !clearRequested && existing.logo && String(existing.logo).trim()) {
+                toSave.logo = existing.logo;
+            }
+        }
 
         if (ppeRulesRaw !== undefined && ppeRulesRaw !== null) {
             const rulesFromTable = readPpeEligibilityRulesFromTable(db);

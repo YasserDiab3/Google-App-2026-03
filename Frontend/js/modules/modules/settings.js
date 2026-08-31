@@ -2275,18 +2275,11 @@ const Settings = {
                                 if (result && result.success) {
                                     Utils.safeLog('✅ تم حفظ الشعار في قاعدة البيانات بنجاح');
                                     Notification.success('تم حفظ الشعار في قاعدة البيانات بنجاح');
-                                    
-                                    // ✅ إصلاح: إعادة تحميل إعدادات الشركة بعد الحفظ لضمان التحديث
-                                    // استخدام forceReload=true لإجبار التحميل من قاعدة البيانات
-                                    if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
-                                        setTimeout(async () => {
-                                            try {
-                                                await DataManager.loadCompanySettings(true); // forceReload = true
-                                                Utils.safeLog('✅ تم إعادة تحميل إعدادات الشركة بعد حفظ الشعار');
-                                            } catch (reloadError) {
-                                                Utils.safeWarn('⚠️ فشل إعادة تحميل إعدادات الشركة:', reloadError);
-                                            }
-                                        }, 100);
+                                    if (result.data && typeof DataManager.applyCompanySettingsFromServer === 'function') {
+                                        DataManager.applyCompanySettingsFromServer(result.data, {
+                                            preserveLocalLogo: true,
+                                            updateUI: true
+                                        });
                                     }
                                 } else {
                                     const errorMsg = result?.message || 'فشل حفظ الشعار في قاعدة البيانات';
@@ -2366,6 +2359,7 @@ const Settings = {
                                     phone: AppState.companySettings?.phone || '',
                                     email: AppState.companySettings?.email || '',
                                     logo: '',
+                                    clearLogo: true,
                                     postLoginItems: typeof AppState.companySettings?.postLoginItems === 'string' ? AppState.companySettings.postLoginItems : JSON.stringify(AppState.companySettings?.postLoginItems || []),
                                     userData: {
                                         email: userData.email,
@@ -2954,6 +2948,14 @@ const Settings = {
                     const ppeEligibilityRulesArray = collectPpeRulesFromUI();
                     const ppeEligibilityRules = JSON.stringify(ppeEligibilityRulesArray);
 
+                    const logoForSave = String(
+                        AppState.companySettings?.logo
+                        || AppState.companyLogo
+                        || localStorage.getItem('hse_company_logo')
+                        || localStorage.getItem('company_logo')
+                        || ''
+                    ).trim();
+
                     AppState.companySettings = Object.assign({}, AppState.companySettings, {
                         name: newName,
                         secondaryName,
@@ -2965,8 +2967,10 @@ const Settings = {
                         employeeImportHireMonths,
                         profileTeamsUrl,
                         profileWhatsAppUrl,
-                        ppeEligibilityRules
+                        ppeEligibilityRules,
+                        logo: logoForSave
                     });
+                    if (logoForSave) AppState.companyLogo = logoForSave;
                     DataManager.saveCompanySettings();
                     
                     // حفظ في الخادم إذا كان متاحاً
@@ -2989,7 +2993,7 @@ const Settings = {
                                 address: AppState.companySettings?.address || '',
                                 phone: AppState.companySettings?.phone || '',
                                 email: AppState.companySettings?.email || '',
-                                logo: AppState.companySettings?.logo || AppState.companyLogo || '',
+                                logo: logoForSave,
                                 postLoginItems: typeof AppState.companySettings?.postLoginItems === 'string' ? AppState.companySettings.postLoginItems : JSON.stringify(AppState.companySettings?.postLoginItems || []),
                                 userData: {
                                     email: userData.email,
@@ -3001,6 +3005,13 @@ const Settings = {
 
                             if (result && result.success) {
                                 Utils.safeLog('✅ تم حفظ إعدادات الشركة في الخادم بنجاح');
+                                if (result.data && typeof DataManager.applyCompanySettingsFromServer === 'function') {
+                                    DataManager.applyCompanySettingsFromServer(result.data, {
+                                        preserveLocalLogo: true,
+                                        allowClearLogo: false,
+                                        updateUI: false
+                                    });
+                                }
                             } else {
                                 Utils.safeWarn('⚠️ فشل حفظ إعدادات الشركة في الخادم:', result?.message);
                                 backendSyncSucceeded = false;
@@ -3013,20 +3024,11 @@ const Settings = {
                         }
                     }
                     if (!backendSyncSucceeded) return;
-                    
-                    if (typeof UI !== 'undefined' && typeof UI.updateCompanyBranding === 'function') {
-                        UI.updateCompanyBranding();
-                    }
-                    // إعادة تحميل إعدادات الشركة من المصدر بعد الحفظ لضمان تحميل اسم الشركة (نفس زمن تحميل الشعار)
-                    if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
-                        setTimeout(async () => {
-                            try {
-                                await DataManager.loadCompanySettings(true);
-                                Utils.safeLog('✅ تم تحميل إعدادات الشركة بعد الحفظ');
-                            } catch (reloadError) {
-                                Utils.safeWarn('⚠️ فشل إعادة تحميل إعدادات الشركة:', reloadError);
-                            }
-                        }, 100);
+
+                    if (typeof UI !== 'undefined') {
+                        if (typeof UI.updateCompanyBranding === 'function') UI.updateCompanyBranding();
+                        if (typeof UI.updateCompanyLogoHeader === 'function') UI.updateCompanyLogoHeader();
+                        if (typeof UI.updateLoginLogo === 'function') UI.updateLoginLogo();
                     }
                     Notification.success('تم تحديث بيانات الشركة بنجاح');
                     Settings.load();

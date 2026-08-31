@@ -12,6 +12,12 @@ const { mfaHandlers } = require('./handlers/mfa-handlers');
 const companySettingsHandlers = require('./handlers/company-settings-handlers');
 const ppeHandlers = require('./handlers/ppe-handlers');
 const formSettingsHandlers = require('./handlers/form-settings-handlers');
+const {
+    enforceRpcSecurity,
+    checkSheetReadAccess,
+    checkSheetDirectWriteAccess,
+    sanitizeUserRows
+} = require('./middleware/auth-guard');
 
 // Combine all handlers into a single unified registry
 // entity handlers أولاً — module-handlers تتجاوزها عند التعارض
@@ -74,6 +80,9 @@ function handleRpcRequest(reqBody) {
     
     // Dynamic Table CRUD Resolver for all 144 sheets
     if (!handler || typeof handler !== 'function') {
+        const securityGate = enforceRpcSecurity(action, reqBody);
+        if (!securityGate.ok) return securityGate;
+
         const { headersMap } = require('./db/headers-schema');
         const { getDatabase } = require('./db/database');
         const sheetKeys = Object.keys(headersMap || {});
@@ -84,14 +93,19 @@ function handleRpcRequest(reqBody) {
             const lowerAction = action.toLowerCase();
 
             if (lowerAction === `getall${lowerSheet}` || lowerAction === `get${lowerSheet}s` || lowerAction === `get${lowerSheet}`) {
-                handler = function() {
+                handler = function(p, postData, act, actorUserData) {
+                    const readGate = checkSheetReadAccess(sheetName, actorUserData, act);
+                    if (!readGate.ok) return readGate;
                     const db = getDatabase();
-                    const records = db.readSheet(sheetName);
+                    let records = db.readSheet(sheetName);
+                    if (sheetName === 'Users') records = sanitizeUserRows(records);
                     return { success: true, data: records, count: records.length, sheetName: sheetName };
                 };
                 break;
             } else if (lowerAction === `add${lowerSheet}` || lowerAction === `save${lowerSheet}` || lowerAction === `insert${lowerSheet}`) {
-                handler = function(p) {
+                handler = function(p, postData, act, actorUserData) {
+                    const writeGate = checkSheetDirectWriteAccess(sheetName, actorUserData, act);
+                    if (!writeGate.ok) return writeGate;
                     const db = getDatabase();
                     const row = p?.data || p || {};
                     if (!row.id) row.id = `${sheetName.substring(0, 3).toUpperCase()}_${Date.now()}`;
@@ -102,7 +116,9 @@ function handleRpcRequest(reqBody) {
                 };
                 break;
             } else if (lowerAction === `update${lowerSheet}`) {
-                handler = function(p) {
+                handler = function(p, postData, act, actorUserData) {
+                    const writeGate = checkSheetDirectWriteAccess(sheetName, actorUserData, act);
+                    if (!writeGate.ok) return writeGate;
                     const db = getDatabase();
                     const id = p?.id || p?.recordId;
                     const updateData = p?.updateData || p?.data || p || {};
@@ -112,7 +128,9 @@ function handleRpcRequest(reqBody) {
                 };
                 break;
             } else if (lowerAction === `delete${lowerSheet}`) {
-                handler = function(p) {
+                handler = function(p, postData, act, actorUserData) {
+                    const writeGate = checkSheetDirectWriteAccess(sheetName, actorUserData, act);
+                    if (!writeGate.ok) return writeGate;
                     const db = getDatabase();
                     const id = p?.id || p?.recordId;
                     db.deleteRows(sheetName, 'id', id);
@@ -131,6 +149,9 @@ function handleRpcRequest(reqBody) {
             action: action
         };
     }
+
+    const securityGate = enforceRpcSecurity(action, reqBody);
+    if (!securityGate.ok) return securityGate;
 
     try {
         const result = handler(payload, postData, action, actorUserData, spreadsheetId);

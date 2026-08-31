@@ -4346,7 +4346,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1553',
+    appVersion: '1.0.1555',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -5269,51 +5269,136 @@ const Utils = {
     },
 
     _driveImageMemoryCache: new Map(),
+    _driveImageFailCache: new Map(),
+    _DRIVE_IMAGE_FAIL_COOLDOWN_MS: 5 * 60 * 1000,
+    _DRIVE_IMAGE_FAIL_SS_PREFIX: 'HSE_IMG_FAIL_',
 
-    /**
-     * جلب صورة Drive عبر السكربت وإرجاع data URI للعرض في img مع التخزين المؤقت الفوري.
-     */
-    async fetchDriveImageDataUri(fileId) {
-        if (!fileId) return null;
-        if (this._driveImageMemoryCache && this._driveImageMemoryCache.has(fileId)) {
-            return this._driveImageMemoryCache.get(fileId);
-        }
+    _isDriveImageFetchBlocked(fileId) {
+        const id = String(fileId || '').trim();
+        if (!id) return true;
+        if (this._driveImageFailCache && this._driveImageFailCache.has(id)) return true;
         try {
-            const cached = sessionStorage.getItem('HSE_IMG_CACHE_' + fileId);
-            if (cached) {
-                if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(fileId, cached);
-                return cached;
+            const raw = sessionStorage.getItem(this._DRIVE_IMAGE_FAIL_SS_PREFIX + id);
+            if (!raw) return false;
+            const failedAt = parseInt(raw, 10);
+            if (isNaN(failedAt)) {
+                sessionStorage.removeItem(this._DRIVE_IMAGE_FAIL_SS_PREFIX + id);
+                return false;
             }
-        } catch (e) {}
+            if (Date.now() - failedAt < this._DRIVE_IMAGE_FAIL_COOLDOWN_MS) return true;
+            sessionStorage.removeItem(this._DRIVE_IMAGE_FAIL_SS_PREFIX + id);
+        } catch (e) { /* ignore */ }
+        return false;
+    },
 
-        const url = this.buildGetProfileImageProxyUrl(fileId);
-        if (!url) return null;
+    _markDriveImageFetchFailed(fileId) {
+        const id = String(fileId || '').trim();
+        if (!id) return;
+        if (this._driveImageFailCache) this._driveImageFailCache.set(id, true);
         try {
-            const res = await fetch(url, { method: 'GET', credentials: 'omit' });
-            const data = await res.json();
-            if (data && data.success && data.dataUri) {
-                const uri = String(data.dataUri);
-                if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(fileId, uri);
-                try {
-                    if (uri.length < 500000) {
-                        sessionStorage.setItem('HSE_IMG_CACHE_' + fileId, uri);
-                    }
-                } catch (e) {}
-                return uri;
+            sessionStorage.setItem(this._DRIVE_IMAGE_FAIL_SS_PREFIX + id, Date.now().toString());
+        } catch (e) { /* ignore */ }
+    },
+
+    _cacheDriveImageSuccess(fileId, uri) {
+        const id = String(fileId || '').trim();
+        const src = String(uri || '').trim();
+        if (!id || !src) return;
+        if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(id, src);
+        try {
+            if (src.startsWith('data:') && src.length < 500000) {
+                sessionStorage.setItem('HSE_IMG_CACHE_' + id, src);
             }
-            if (data && data.success && data.redirectUrl) {
-                const redir = String(data.redirectUrl);
-                if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(fileId, redir);
-                return redir;
-            }
-        } catch (e) {
-            /* ignore */
-        }
-        return null;
+        } catch (e) { /* ignore */ }
+    },
+
+    _probeExternalImageUrl(url, timeoutMs) {
+        const src = String(url || '').trim();
+        if (!src) return Promise.resolve(null);
+        const ms = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : 7000;
+        return new Promise((resolve) => {
+            const img = new Image();
+            let settled = false;
+            const finish = (result) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                try { img.onload = img.onerror = null; } catch (e) { /* ignore */ }
+                resolve(result);
+            };
+            const timer = setTimeout(() => finish(null), ms);
+            img.onload = () => finish(src);
+            img.onerror = () => finish(null);
+            try { img.referrerPolicy = 'no-referrer'; } catch (e) { /* ignore */ }
+            img.decoding = 'async';
+            img.src = src;
+        });
     },
 
     /**
-     * تعبئة عناصر img التي تحمل data-drive-proxy-id بتحميل الصورة عبر الوكيل.
+     * جلب صورة عبر getProfileImage (dataUri أو رابط عام بعد التحقق) — دون وضع رابط الوكيل في img.src.
+     */
+    async fetchDriveImageDataUri(fileId) {
+        const id = String(fileId || '').trim();
+        if (!id) return null;
+        if (this._isDriveImageFetchBlocked(id)) return null;
+
+        if (this._driveImageMemoryCache && this._driveImageMemoryCache.has(id)) {
+            const cached = this._driveImageMemoryCache.get(id);
+            return cached || null;
+        }
+        try {
+            const cached = sessionStorage.getItem('HSE_IMG_CACHE_' + id);
+            if (cached) {
+                this._cacheDriveImageSuccess(id, cached);
+                return cached;
+            }
+        } catch (e) { /* ignore */ }
+
+        const url = this.buildGetProfileImageProxyUrl(id);
+        if (!url) {
+            this._markDriveImageFetchFailed(id);
+            return null;
+        }
+
+        try {
+            const res = await fetch(url, { method: 'GET', credentials: 'omit' });
+            let data = null;
+            try {
+                data = await res.json();
+            } catch (parseErr) {
+                if (!res.ok) {
+                    this._markDriveImageFetchFailed(id);
+                    return null;
+                }
+            }
+
+            if (data && data.success && data.dataUri) {
+                const uri = String(data.dataUri);
+                this._cacheDriveImageSuccess(id, uri);
+                return uri;
+            }
+
+            if (data && data.success && data.redirectUrl) {
+                const probed = await this._probeExternalImageUrl(String(data.redirectUrl));
+                if (probed) {
+                    if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(id, probed);
+                    return probed;
+                }
+                this._markDriveImageFetchFailed(id);
+                return null;
+            }
+
+            this._markDriveImageFetchFailed(id);
+            return null;
+        } catch (e) {
+            this._markDriveImageFetchFailed(id);
+            return null;
+        }
+    },
+
+    /**
+     * تعبئة عناصر img التي تحمل data-drive-proxy-id بتحميل الصورة عبر fetch (وليس img.src للوكيل).
      * @param {ParentNode|null|undefined} rootEl
      * @param {{ onFetchFail?: (img: HTMLImageElement) => void }} [callbacks]
      */
@@ -5332,32 +5417,27 @@ const Utils = {
                 if (!img || img.dataset.driveProxyHydrated === '1') return;
                 const id = String(img.getAttribute('data-drive-proxy-id') || '').trim();
                 if (!id) return;
+                if (this._isDriveImageFetchBlocked(id)) {
+                    if (onFetchFail) onFetchFail(img);
+                    return;
+                }
                 img.dataset.driveProxyHydrated = '1';
 
-                const applySrc = (src) => {
+                this.fetchDriveImageDataUri(id).then((src) => {
                     if (!src) {
                         if (onFetchFail) onFetchFail(img);
                         return;
                     }
+                    const onImgError = () => {
+                        this._markDriveImageFetchFailed(id);
+                        if (onFetchFail) onFetchFail(img);
+                    };
+                    img.addEventListener('error', onImgError, { once: true });
                     img.src = src;
                     try {
                         if (img.dataset.photoUrl !== undefined) img.dataset.photoUrl = src;
                     } catch (e2) { /* ignore */ }
-                };
-
-                if (/^FILE_/i.test(id)) {
-                    this.fetchDriveImageDataUri(id).then(applySrc);
-                } else {
-                    const proxyUrl = this.buildGetProfileImageProxyUrl(id);
-                    if (proxyUrl) {
-                        img.onerror = () => {
-                            this.fetchDriveImageDataUri(id).then(applySrc);
-                        };
-                        img.src = proxyUrl;
-                    } else {
-                        this.fetchDriveImageDataUri(id).then(applySrc);
-                    }
-                }
+                });
             });
         } catch (e) {
             /* ignore */

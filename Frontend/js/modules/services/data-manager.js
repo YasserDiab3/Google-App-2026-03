@@ -1409,6 +1409,143 @@ const DataManager = {
         }
     },
 
+    _resolveCompanyLogoFromServer(serverRow, opts = {}) {
+        const preserveLocal = opts.preserveLocalLogo !== false;
+        const allowClear = opts.allowClearLogo === true;
+        const hasLogoField = serverRow && Object.prototype.hasOwnProperty.call(serverRow, 'logo');
+        const serverLogo = hasLogoField ? String(serverRow.logo || '').trim() : '';
+        const localLogo = String(
+            AppState.companyLogo
+            || AppState.companySettings?.logo
+            || localStorage.getItem('hse_company_logo')
+            || localStorage.getItem('company_logo')
+            || ''
+        ).trim();
+
+        if (serverLogo) return serverLogo;
+        if (allowClear && hasLogoField && !serverLogo) return '';
+        if (preserveLocal && localLogo) return localLogo;
+        return '';
+    },
+
+    applyCompanySettingsFromServer(settingsRow, opts = {}) {
+        if (!settingsRow || typeof settingsRow !== 'object') return;
+        if (Array.isArray(settingsRow)) {
+            settingsRow = settingsRow.length > 0 ? settingsRow[0] : {};
+        }
+
+        let postLoginItems = AppState.companySettings?.postLoginItems;
+        if (settingsRow.postLoginItems !== undefined) {
+            const raw = settingsRow.postLoginItems;
+            if (typeof raw === 'string') {
+                if (raw.trim() !== '') {
+                    try { postLoginItems = JSON.parse(raw); } catch (_e) { postLoginItems = []; }
+                } else {
+                    postLoginItems = [];
+                }
+            } else if (Array.isArray(raw)) {
+                postLoginItems = raw;
+            } else {
+                postLoginItems = [];
+            }
+        }
+        if (!Array.isArray(postLoginItems)) postLoginItems = [];
+
+        let clinicVisitTypes = AppState.companySettings?.clinicVisitTypes;
+        if (settingsRow.clinicVisitTypes !== undefined) {
+            const rawVisitTypes = settingsRow.clinicVisitTypes;
+            if (typeof rawVisitTypes === 'string') {
+                if (rawVisitTypes.trim() !== '') {
+                    try {
+                        clinicVisitTypes = JSON.parse(rawVisitTypes);
+                    } catch (_e) {
+                        clinicVisitTypes = rawVisitTypes.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
+                    }
+                } else {
+                    clinicVisitTypes = [];
+                }
+            } else if (Array.isArray(rawVisitTypes)) {
+                clinicVisitTypes = rawVisitTypes;
+            } else {
+                clinicVisitTypes = [];
+            }
+        }
+        if (!Array.isArray(clinicVisitTypes)) clinicVisitTypes = [];
+
+        let ppeEligibilityRules = '[]';
+        if (Object.prototype.hasOwnProperty.call(settingsRow, 'ppeEligibilityRules') && settingsRow.ppeEligibilityRules != null) {
+            const pr = settingsRow.ppeEligibilityRules;
+            if (typeof pr === 'string') {
+                ppeEligibilityRules = pr.trim() || '[]';
+            } else if (Array.isArray(pr)) {
+                try { ppeEligibilityRules = JSON.stringify(pr); } catch (_e) { ppeEligibilityRules = '[]'; }
+            }
+        } else if (AppState.companySettings?.ppeEligibilityRules != null) {
+            ppeEligibilityRules = String(AppState.companySettings.ppeEligibilityRules);
+        }
+
+        const resolvedName = String(settingsRow.name || '').trim()
+            || String(AppState.companySettings?.name || '').trim();
+        const resolvedSecondary = settingsRow.secondaryName != null
+            ? String(settingsRow.secondaryName).trim()
+            : String(AppState.companySettings?.secondaryName || '').trim();
+
+        AppState.companySettings = Object.assign({}, AppState.companySettings, {
+            name: resolvedName || AppState.companySettings?.name,
+            secondaryName: resolvedSecondary,
+            nameFontSize: settingsRow.nameFontSize || AppState.companySettings?.nameFontSize || 16,
+            secondaryNameFontSize: settingsRow.secondaryNameFontSize || AppState.companySettings?.secondaryNameFontSize || 14,
+            secondaryNameColor: settingsRow.secondaryNameColor || AppState.companySettings?.secondaryNameColor || '#6B7280',
+            formVersion: settingsRow.formVersion || AppState.companySettings?.formVersion || '1.0',
+            address: settingsRow.address ?? AppState.companySettings?.address,
+            phone: settingsRow.phone ?? AppState.companySettings?.phone,
+            email: settingsRow.email ?? AppState.companySettings?.email,
+            postLoginItems,
+            clinicMonthlyVisitsAlertThreshold: settingsRow.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+            employeeImportHireMonths: settingsRow.employeeImportHireMonths ?? AppState.companySettings?.employeeImportHireMonths ?? 3,
+            clinicVisitTypes,
+            profileTeamsUrl: String(settingsRow.profileTeamsUrl ?? AppState.companySettings?.profileTeamsUrl ?? '').trim(),
+            profileWhatsAppUrl: String(settingsRow.profileWhatsAppUrl ?? AppState.companySettings?.profileWhatsAppUrl ?? '').trim(),
+            ppeEligibilityRules,
+            ppeEligibilityMonths: 0,
+            ppeEligibilityDays: 0,
+            helpContent: settingsRow.helpContent != null
+                ? String(settingsRow.helpContent)
+                : (AppState.companySettings?.helpContent || '')
+        });
+
+        const logoValue = this._resolveCompanyLogoFromServer(settingsRow, opts);
+        AppState.companyLogo = logoValue;
+        if (!AppState.companySettings) AppState.companySettings = {};
+        AppState.companySettings.logo = logoValue;
+
+        if (logoValue) {
+            localStorage.setItem('hse_company_logo', logoValue);
+            localStorage.setItem('company_logo', logoValue);
+        } else if (opts.allowClearLogo === true) {
+            localStorage.removeItem('hse_company_logo');
+            localStorage.removeItem('company_logo');
+        }
+
+        try {
+            localStorage.setItem('hse_company_settings', JSON.stringify(AppState.companySettings || {}));
+        } catch (_e) { /* ignore quota */ }
+
+        if (opts.updateUI !== false) {
+            setTimeout(() => {
+                if (typeof UI !== 'undefined') {
+                    if (UI.updateCompanyLogoHeader) UI.updateCompanyLogoHeader();
+                    if (UI.updateLoginLogo) UI.updateLoginLogo();
+                    if (UI.updateDashboardLogo) UI.updateDashboardLogo();
+                    if (UI.updateCompanyBranding) UI.updateCompanyBranding();
+                }
+                window.dispatchEvent(new CustomEvent('companyLogoUpdated', {
+                    detail: { logoUrl: logoValue || '' }
+                }));
+            }, opts.uiDelayMs || 50);
+        }
+    },
+
     async loadCompanySettings(forceReload = false) {
         try {
             // ✅ إصلاح: التحقق من وجود الشعار في localStorage أولاً (cache)
@@ -1454,171 +1591,12 @@ const DataManager = {
                 try {
                     const result = await GoogleIntegration.sendToAppsScript('getCompanySettings', {});
                     if (result && result.success && result.data) {
-                        let settingsRow = result.data;
-                        if (Array.isArray(settingsRow)) {
-                            settingsRow = settingsRow.length > 0 ? settingsRow[0] : {};
-                        }
-                        result.data = settingsRow;
-                        // تحليل postLoginItems (سياسات/تعليمات ما بعد الدخول)
-                        let postLoginItems = AppState.companySettings?.postLoginItems;
-                        if (settingsRow.postLoginItems !== undefined) {
-                            const raw = settingsRow.postLoginItems;
-                            if (typeof raw === 'string') {
-                                if (raw.trim() !== '') {
-                                    try {
-                                        postLoginItems = JSON.parse(raw);
-                                    } catch (e) {
-                                        postLoginItems = [];
-                                    }
-                                } else {
-                                    postLoginItems = [];
-                                }
-                            } else if (Array.isArray(raw)) {
-                                postLoginItems = raw;
-                            } else {
-                                postLoginItems = [];
-                            }
-                        }
-                        if (!Array.isArray(postLoginItems)) postLoginItems = [];
-
-                        // تحليل clinicVisitTypes (أنواع زيارة العيادة المشتركة)
-                        let clinicVisitTypes = AppState.companySettings?.clinicVisitTypes;
-                        if (result.data.clinicVisitTypes !== undefined) {
-                            const rawVisitTypes = result.data.clinicVisitTypes;
-                            if (typeof rawVisitTypes === 'string') {
-                                if (rawVisitTypes.trim() !== '') {
-                                    try {
-                                        clinicVisitTypes = JSON.parse(rawVisitTypes);
-                                    } catch (e) {
-                                        clinicVisitTypes = rawVisitTypes.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
-                                    }
-                                } else {
-                                    clinicVisitTypes = [];
-                                }
-                            } else if (Array.isArray(rawVisitTypes)) {
-                                clinicVisitTypes = rawVisitTypes;
-                            } else {
-                                clinicVisitTypes = [];
-                            }
-                        }
-                        if (!Array.isArray(clinicVisitTypes)) clinicVisitTypes = [];
-
-                        // حقول استحقاق PPE من الشيت (لم تكن تُحدَّث في الواجهة لأغلب التحميلات)
-                        let ppeEligibilityRules = '[]';
-                        if (result.data.hasOwnProperty('ppeEligibilityRules') && result.data.ppeEligibilityRules != null) {
-                            const pr = result.data.ppeEligibilityRules;
-                            if (typeof pr === 'string') {
-                                ppeEligibilityRules = pr.trim() || '[]';
-                            } else if (Array.isArray(pr)) {
-                                try {
-                                    ppeEligibilityRules = JSON.stringify(pr);
-                                } catch (e) {
-                                    ppeEligibilityRules = '[]';
-                                }
-                            }
-                        } else if (AppState.companySettings?.ppeEligibilityRules != null) {
-                            ppeEligibilityRules = String(AppState.companySettings.ppeEligibilityRules);
-                        }
-                        const legacyMonths = 0;
-                        const legacyDays = 0;
-
-                        // تحديث AppState بالبيانات من قاعدة SQL
-                        AppState.companySettings = Object.assign({}, AppState.companySettings, {
-                            name: result.data.name || AppState.companySettings?.name,
-                            secondaryName: result.data.secondaryName || AppState.companySettings?.secondaryName,
-                            nameFontSize: result.data.nameFontSize || AppState.companySettings?.nameFontSize || 16,
-                            secondaryNameFontSize: result.data.secondaryNameFontSize || AppState.companySettings?.secondaryNameFontSize || 14,
-                            secondaryNameColor: result.data.secondaryNameColor || AppState.companySettings?.secondaryNameColor || '#6B7280',
-                            formVersion: result.data.formVersion || AppState.companySettings?.formVersion || '1.0',
-                            address: result.data.address || AppState.companySettings?.address,
-                            phone: result.data.phone || AppState.companySettings?.phone,
-                            email: result.data.email || AppState.companySettings?.email,
-                            postLoginItems: postLoginItems,
-                            clinicMonthlyVisitsAlertThreshold: result.data.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
-                            employeeImportHireMonths: result.data.employeeImportHireMonths ?? AppState.companySettings?.employeeImportHireMonths ?? 3,
-                            clinicVisitTypes: clinicVisitTypes,
-                            profileTeamsUrl: String(result.data.profileTeamsUrl ?? AppState.companySettings?.profileTeamsUrl ?? '').trim(),
-                            profileWhatsAppUrl: String(result.data.profileWhatsAppUrl ?? AppState.companySettings?.profileWhatsAppUrl ?? '').trim(),
-                            ppeEligibilityRules: ppeEligibilityRules,
-                            ppeEligibilityMonths: legacyMonths,
-                            ppeEligibilityDays: legacyDays,
-                            helpContent: result.data.helpContent != null
-                                ? String(result.data.helpContent)
-                                : (AppState.companySettings?.helpContent || '')
+                        this.applyCompanySettingsFromServer(result.data, {
+                            preserveLocalLogo: true,
+                            allowClearLogo: false,
+                            updateUI: forceReload || !localStorage.getItem('hse_company_logo'),
+                            uiDelayMs: 100
                         });
-                        
-                        // تحديث شعار الشركة (حتى لو كان فارغاً لمسحه)
-                        if (result.data.hasOwnProperty('logo')) {
-                            const logoValue = result.data.logo || '';
-                            AppState.companyLogo = logoValue;
-                            // تحديث الشعار في AppState.companySettings أيضاً
-                            if (!AppState.companySettings) {
-                                AppState.companySettings = {};
-                            }
-                            AppState.companySettings.logo = logoValue;
-                            // ✅ إصلاح: حفظ في localStorage فقط إذا تغير الشعار
-                            const currentLogo = localStorage.getItem('hse_company_logo') || '';
-                            if (logoValue && logoValue.trim() !== '') {
-                                // إذا تغير الشعار، نحدّث localStorage
-                                if (currentLogo !== logoValue) {
-                                    localStorage.setItem('hse_company_logo', logoValue);
-                                    localStorage.setItem('company_logo', logoValue);
-                                    Utils.safeLog('✅ تم تحديث الشعار من قاعدة البيانات (الطول: ' + logoValue.length + ' حرف)');
-                                } else {
-                                    Utils.safeLog('ℹ️ الشعار لم يتغير - استخدام النسخة المخزنة محلياً');
-                                }
-                            } else {
-                                // إذا تم حذف الشعار من قاعدة البيانات، نمسح localStorage
-                                if (currentLogo) {
-                                    localStorage.removeItem('hse_company_logo');
-                                    localStorage.removeItem('company_logo');
-                                    Utils.safeLog('ℹ️ تم حذف الشعار من قاعدة البيانات');
-                                }
-                            }
-                        } else {
-                            // ✅ إصلاح: إذا لم يكن logo في البيانات، نتحقق من وجوده في companySettings
-                            if (result.data.logo !== undefined) {
-                                // logo موجود لكنه فارغ
-                                AppState.companyLogo = '';
-                                if (!AppState.companySettings) {
-                                    AppState.companySettings = {};
-                                }
-                                AppState.companySettings.logo = '';
-                                localStorage.removeItem('hse_company_logo');
-                                localStorage.removeItem('company_logo');
-                            }
-                        }
-                        
-                        // حفظ في localStorage لاستخدامها لاحقاً
-                        localStorage.setItem('hse_company_settings', JSON.stringify(AppState.companySettings || {}));
-                        
-                            // ✅ إصلاح: تحديث الشعار في جميع الأماكن المخصصة (حتى لو كان فارغاً)
-                        // استخدام setTimeout لضمان تحديث الواجهة بعد تحديث AppState
-                        const shouldUpdateUI = forceReload || !localStorage.getItem('hse_company_logo');
-                        if (shouldUpdateUI) {
-                            setTimeout(() => {
-                                if (typeof UI !== 'undefined') {
-                                    if (UI.updateCompanyLogoHeader) {
-                                        UI.updateCompanyLogoHeader();
-                                    }
-                                    if (UI.updateLoginLogo) {
-                                        UI.updateLoginLogo();
-                                    }
-                                    if (UI.updateDashboardLogo) {
-                                        UI.updateDashboardLogo();
-                                    }
-                                    if (UI.updateCompanyBranding) {
-                                        UI.updateCompanyBranding();
-                                    }
-                                }
-                                
-                                // إرسال حدث لتحديث الشعار (حتى لو كان فارغاً لمسحه)
-                                window.dispatchEvent(new CustomEvent('companyLogoUpdated', { 
-                                    detail: { logoUrl: AppState.companyLogo || '' } 
-                                }));
-                            }, 100);
-                        }
-                        
                         if (forceReload) {
                             Utils.safeLog('✅ تم تحميل إعدادات الشركة من قاعدة SQL بنجاح (force reload)');
                         } else {
@@ -1688,7 +1666,20 @@ const DataManager = {
 
     saveCompanySettings() {
         try {
-            localStorage.setItem('hse_company_settings', JSON.stringify(AppState.companySettings || {}));
+            const settings = Object.assign({}, AppState.companySettings || {});
+            const logo = String(
+                AppState.companyLogo
+                || settings.logo
+                || localStorage.getItem('hse_company_logo')
+                || localStorage.getItem('company_logo')
+                || ''
+            ).trim();
+            if (logo) {
+                settings.logo = logo;
+                AppState.companyLogo = logo;
+                AppState.companySettings = Object.assign({}, AppState.companySettings || {}, settings);
+            }
+            localStorage.setItem('hse_company_settings', JSON.stringify(settings));
             return true;
         } catch (error) {
             Utils.safeError('❌ خطأ في حفظ إعدادات الشركة:', error);

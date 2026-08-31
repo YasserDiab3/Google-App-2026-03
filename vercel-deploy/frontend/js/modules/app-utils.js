@@ -4346,7 +4346,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1553',
+    appVersion: '1.0.1555',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -5119,6 +5119,7 @@ const Utils = {
             'documentImage',
             'directLink',
             'shareableLink',
+            'fileId',
             'url'
         ];
 
@@ -5203,6 +5204,9 @@ const Utils = {
         }
 
         const compactBase64 = trimmed.replace(/\s+/g, '');
+        if (/^FILE_[A-Za-z0-9_]+/.test(trimmed)) {
+            return trimmed.split(/[?#\s]/)[0];
+        }
         if (compactBase64.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compactBase64.substring(0, Math.min(120, compactBase64.length)))) {
             return `data:image/jpeg;base64,${compactBase64}`;
         }
@@ -5218,7 +5222,6 @@ const Utils = {
             let u = (typeof AppState !== 'undefined' && AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.scriptUrl)
                 ? String(AppState.googleConfig.appsScript.scriptUrl).trim()
                 : '';
-            // نشر الويب يعمل عادة عبر /exec؛ /dev قد يعيد HTML أو يرفض طلبات getProfileImage
             if (u && u.indexOf('script.google.com/macros/s/') !== -1) {
                 u = u.replace(/\/dev(\?|#|$)/, '/exec$1');
             }
@@ -5228,58 +5231,174 @@ const Utils = {
         }
     },
 
+    /** رابط API للصور — SQL /api/exec أو GAS */
+    getEffectiveImageApiUrl() {
+        const gas = this.getAppsScriptScriptUrl();
+        if (gas) return gas;
+        try {
+            if (typeof window !== 'undefined' && typeof window.getEffectiveApiUrl === 'function') {
+                const u = String(window.getEffectiveApiUrl() || '').trim();
+                if (u) return u;
+            }
+        } catch (_e) { /* ignore */ }
+        return '/api/exec';
+    },
+
+    /** معرف ملف للوكيل: FILE_* أو Google Drive */
+    extractImageProxyId(source) {
+        const raw = String(source || '').trim();
+        if (!raw) return '';
+        if (/^FILE_[A-Za-z0-9_]+/.test(raw)) {
+            return raw.split(/[?#\s]/)[0];
+        }
+        if (/^https?:\/\//i.test(raw)) {
+            return this.extractDriveFileId(raw);
+        }
+        return '';
+    },
+
     /**
      * URL لطلب getProfileImage (صورة من Drive كـ JSON يحوي dataUri) — يتجاوز حظر hotlinking لـ الخادم في وسم img.
      */
     buildGetProfileImageProxyUrl(fileId) {
         const id = String(fileId || '').trim();
         if (!id) return '';
-        const scriptUrl = this.getAppsScriptScriptUrl() || (typeof window !== 'undefined' && window.getEffectiveApiUrl ? window.getEffectiveApiUrl() : '/api/exec');
+        const scriptUrl = this.getEffectiveImageApiUrl();
         if (!scriptUrl) return '';
         return scriptUrl + (scriptUrl.indexOf('?') !== -1 ? '&' : '?') + 'action=getProfileImage&id=' + encodeURIComponent(id);
     },
 
     _driveImageMemoryCache: new Map(),
+    _driveImageFailCache: new Map(),
+    _DRIVE_IMAGE_FAIL_COOLDOWN_MS: 5 * 60 * 1000,
+    _DRIVE_IMAGE_FAIL_SS_PREFIX: 'HSE_IMG_FAIL_',
 
-    /**
-     * جلب صورة Drive عبر السكربت وإرجاع data URI للعرض في img مع التخزين المؤقت الفوري.
-     */
-    async fetchDriveImageDataUri(fileId) {
-        if (!fileId) return null;
-        if (this._driveImageMemoryCache && this._driveImageMemoryCache.has(fileId)) {
-            return this._driveImageMemoryCache.get(fileId);
-        }
+    _isDriveImageFetchBlocked(fileId) {
+        const id = String(fileId || '').trim();
+        if (!id) return true;
+        if (this._driveImageFailCache && this._driveImageFailCache.has(id)) return true;
         try {
-            const cached = sessionStorage.getItem('HSE_IMG_CACHE_' + fileId);
-            if (cached) {
-                if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(fileId, cached);
-                return cached;
+            const raw = sessionStorage.getItem(this._DRIVE_IMAGE_FAIL_SS_PREFIX + id);
+            if (!raw) return false;
+            const failedAt = parseInt(raw, 10);
+            if (isNaN(failedAt)) {
+                sessionStorage.removeItem(this._DRIVE_IMAGE_FAIL_SS_PREFIX + id);
+                return false;
             }
-        } catch (e) {}
+            if (Date.now() - failedAt < this._DRIVE_IMAGE_FAIL_COOLDOWN_MS) return true;
+            sessionStorage.removeItem(this._DRIVE_IMAGE_FAIL_SS_PREFIX + id);
+        } catch (e) { /* ignore */ }
+        return false;
+    },
 
-        const url = this.buildGetProfileImageProxyUrl(fileId);
-        if (!url) return null;
+    _markDriveImageFetchFailed(fileId) {
+        const id = String(fileId || '').trim();
+        if (!id) return;
+        if (this._driveImageFailCache) this._driveImageFailCache.set(id, true);
         try {
-            const res = await fetch(url, { method: 'GET', credentials: 'omit' });
-            const data = await res.json();
-            if (data && data.success && data.dataUri) {
-                const uri = String(data.dataUri);
-                if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(fileId, uri);
-                try {
-                    if (uri.length < 500000) {
-                        sessionStorage.setItem('HSE_IMG_CACHE_' + fileId, uri);
-                    }
-                } catch (e) {}
-                return uri;
+            sessionStorage.setItem(this._DRIVE_IMAGE_FAIL_SS_PREFIX + id, Date.now().toString());
+        } catch (e) { /* ignore */ }
+    },
+
+    _cacheDriveImageSuccess(fileId, uri) {
+        const id = String(fileId || '').trim();
+        const src = String(uri || '').trim();
+        if (!id || !src) return;
+        if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(id, src);
+        try {
+            if (src.startsWith('data:') && src.length < 500000) {
+                sessionStorage.setItem('HSE_IMG_CACHE_' + id, src);
             }
-        } catch (e) {
-            /* ignore */
-        }
-        return null;
+        } catch (e) { /* ignore */ }
+    },
+
+    _probeExternalImageUrl(url, timeoutMs) {
+        const src = String(url || '').trim();
+        if (!src) return Promise.resolve(null);
+        const ms = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : 7000;
+        return new Promise((resolve) => {
+            const img = new Image();
+            let settled = false;
+            const finish = (result) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                try { img.onload = img.onerror = null; } catch (e) { /* ignore */ }
+                resolve(result);
+            };
+            const timer = setTimeout(() => finish(null), ms);
+            img.onload = () => finish(src);
+            img.onerror = () => finish(null);
+            try { img.referrerPolicy = 'no-referrer'; } catch (e) { /* ignore */ }
+            img.decoding = 'async';
+            img.src = src;
+        });
     },
 
     /**
-     * تعبئة عناصر img التي تحمل data-drive-proxy-id بتحميل الصورة عبر الوكيل.
+     * جلب صورة عبر getProfileImage (dataUri أو رابط عام بعد التحقق) — دون وضع رابط الوكيل في img.src.
+     */
+    async fetchDriveImageDataUri(fileId) {
+        const id = String(fileId || '').trim();
+        if (!id) return null;
+        if (this._isDriveImageFetchBlocked(id)) return null;
+
+        if (this._driveImageMemoryCache && this._driveImageMemoryCache.has(id)) {
+            const cached = this._driveImageMemoryCache.get(id);
+            return cached || null;
+        }
+        try {
+            const cached = sessionStorage.getItem('HSE_IMG_CACHE_' + id);
+            if (cached) {
+                this._cacheDriveImageSuccess(id, cached);
+                return cached;
+            }
+        } catch (e) { /* ignore */ }
+
+        const url = this.buildGetProfileImageProxyUrl(id);
+        if (!url) {
+            this._markDriveImageFetchFailed(id);
+            return null;
+        }
+
+        try {
+            const res = await fetch(url, { method: 'GET', credentials: 'omit' });
+            let data = null;
+            try {
+                data = await res.json();
+            } catch (parseErr) {
+                if (!res.ok) {
+                    this._markDriveImageFetchFailed(id);
+                    return null;
+                }
+            }
+
+            if (data && data.success && data.dataUri) {
+                const uri = String(data.dataUri);
+                this._cacheDriveImageSuccess(id, uri);
+                return uri;
+            }
+
+            if (data && data.success && data.redirectUrl) {
+                const probed = await this._probeExternalImageUrl(String(data.redirectUrl));
+                if (probed) {
+                    if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(id, probed);
+                    return probed;
+                }
+                this._markDriveImageFetchFailed(id);
+                return null;
+            }
+
+            this._markDriveImageFetchFailed(id);
+            return null;
+        } catch (e) {
+            this._markDriveImageFetchFailed(id);
+            return null;
+        }
+    },
+
+    /**
+     * تعبئة عناصر img التي تحمل data-drive-proxy-id بتحميل الصورة عبر fetch (وليس img.src للوكيل).
      * @param {ParentNode|null|undefined} rootEl
      * @param {{ onFetchFail?: (img: HTMLImageElement) => void }} [callbacks]
      */
@@ -5287,8 +5406,7 @@ const Utils = {
         try {
             const root = rootEl || document;
             if (!root || typeof root.querySelectorAll !== 'function') return;
-            const scriptUrl = this.getAppsScriptScriptUrl();
-            if (!scriptUrl || scriptUrl.indexOf('script.google.com') === -1) return;
+            if (!this.getEffectiveImageApiUrl()) return;
 
             const imgs = root.querySelectorAll('img[data-drive-proxy-id]');
             if (!imgs || !imgs.length) return;
@@ -5299,16 +5417,26 @@ const Utils = {
                 if (!img || img.dataset.driveProxyHydrated === '1') return;
                 const id = String(img.getAttribute('data-drive-proxy-id') || '').trim();
                 if (!id) return;
+                if (this._isDriveImageFetchBlocked(id)) {
+                    if (onFetchFail) onFetchFail(img);
+                    return;
+                }
                 img.dataset.driveProxyHydrated = '1';
-                this.fetchDriveImageDataUri(id).then((dataUri) => {
-                    if (dataUri) {
-                        img.src = dataUri;
-                        try {
-                            if (img.dataset.photoUrl !== undefined) img.dataset.photoUrl = dataUri;
-                        } catch (e2) { /* ignore */ }
-                    } else if (onFetchFail) {
-                        onFetchFail(img);
+
+                this.fetchDriveImageDataUri(id).then((src) => {
+                    if (!src) {
+                        if (onFetchFail) onFetchFail(img);
+                        return;
                     }
+                    const onImgError = () => {
+                        this._markDriveImageFetchFailed(id);
+                        if (onFetchFail) onFetchFail(img);
+                    };
+                    img.addEventListener('error', onImgError, { once: true });
+                    img.src = src;
+                    try {
+                        if (img.dataset.photoUrl !== undefined) img.dataset.photoUrl = src;
+                    } catch (e2) { /* ignore */ }
                 });
             });
         } catch (e) {
@@ -5333,16 +5461,12 @@ const Utils = {
             if (/^data:image\//i.test(canonical) || String(canonical).indexOf('blob:') === 0) {
                 return { canonical, displaySrc: canonical, proxyFileId: '', needsProxy: false };
             }
-            if (!/^https?:\/\//i.test(canonical)) {
-                return { canonical, displaySrc: canonical, proxyFileId: '', needsProxy: false };
-            }
-            if (!/drive\.google\.com|googleusercontent\.com/i.test(canonical)) {
-                return { canonical, displaySrc: canonical, proxyFileId: '', needsProxy: false };
-            }
-            const fileId = this.extractDriveFileId(canonical);
-            const scriptUrl = this.getAppsScriptScriptUrl();
-            const canProxy = !!(fileId && scriptUrl && scriptUrl.indexOf('script.google.com') !== -1);
-            if (canProxy) {
+
+            const fileId = this.extractImageProxyId(canonical) || this.extractDriveFileId(canonical);
+            const isDrive = /^FILE_/i.test(canonical) || /drive\.google\.com|googleusercontent\.com/i.test(canonical);
+            const apiUrl = this.getEffectiveImageApiUrl();
+
+            if (fileId && isDrive && apiUrl) {
                 return {
                     canonical,
                     displaySrc: this.IMG_DRIVE_PLACEHOLDER_GIF,
@@ -5350,6 +5474,7 @@ const Utils = {
                     needsProxy: true
                 };
             }
+
             return { canonical, displaySrc: canonical, proxyFileId: '', needsProxy: false };
         } catch (e) {
             return empty;
