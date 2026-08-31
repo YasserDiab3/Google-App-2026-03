@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1558",
+  "version": "1.0.1560",
   "highlights": {
     "ar": [
-      "صور المستخدمين: الرفع يحفظ معرف FILE_* في SQL بدلاً من base64 أو روابط Drive.",
-      "زر ترحيل صور المستخدمين في إعدادات النظام — طابور خلفي مع إيقاف وتقرير.",
-      "مطابقة قاعدة البيانات مع Excel (142 ورقة) وسكربت استيراد xlsx مباشر."
+      "إصلاح الواجهة الفارغة: جلسة بدون token تُوجّه لإعادة تسجيل الدخول تلقائياً.",
+      "رسالة واضحة بعد التحديث الأمني بدل شاشة بيانات فارغة.",
+      "تحسين التعامل مع SESSION_TOKEN_MISSING وSESSION_EXPIRED."
     ],
     "en": [
-      "User photos: uploads store FILE_* IDs in SQL instead of base64 or Drive URLs.",
-      "User photo migration in System Settings — background queue with stop and report.",
-      "Database synced from Excel (142 sheets) and direct .xlsx import script."
+      "Fix empty UI: sessions without server token now redirect to login.",
+      "Clear message after security update instead of blank data screens.",
+      "Better handling of SESSION_TOKEN_MISSING and SESSION_EXPIRED."
     ]
   }
 }

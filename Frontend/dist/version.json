@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1557",
+  "version": "1.0.1560",
   "highlights": {
     "ar": [
-      "مطابقة قاعدة البيانات مع Excel: PTW وPTWRegistry والعيادة والتدريب و142 ورقة.",
-      "سكربت استيراد مباشر من ملف .xlsx بدون Google OAuth.",
-      "تحسينات إدارة المستخدمين وإعدادات الشركة في الواجهة."
+      "إصلاح الواجهة الفارغة: جلسة بدون token تُوجّه لإعادة تسجيل الدخول تلقائياً.",
+      "رسالة واضحة بعد التحديث الأمني بدل شاشة بيانات فارغة.",
+      "تحسين التعامل مع SESSION_TOKEN_MISSING وSESSION_EXPIRED."
     ],
     "en": [
-      "Database synced from Excel: PTW, PTWRegistry, clinic, training, and 142 sheets.",
-      "Direct .xlsx import script — no Google OAuth required.",
-      "User management and company settings UI improvements."
+      "Fix empty UI: sessions without server token now redirect to login.",
+      "Clear message after security update instead of blank data screens.",
+      "Better handling of SESSION_TOKEN_MISSING and SESSION_EXPIRED."
     ]
   }
 }

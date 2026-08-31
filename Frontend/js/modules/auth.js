@@ -434,8 +434,41 @@ window.Auth = {
             sessionStorage.removeItem('hse_session_id');
             sessionStorage.removeItem('hse_session_last_activity_ms');
             this._setRememberedUser(null);
+            this._clearServerSessionToken();
         } catch (e) { /* ignore */ }
         try { AppState.isPageRefresh = false; } catch (e2) { /* ignore */ }
+    },
+
+    _hasValidServerSessionToken() {
+        try {
+            const st = sessionStorage.getItem('hse_server_session_token') ||
+                localStorage.getItem('hse_server_session_token') ||
+                (typeof AppState !== 'undefined' && AppState.currentUser && AppState.currentUser.serverSessionToken);
+            return !!(st && String(st).trim().length >= 16);
+        } catch (_e) {
+            return false;
+        }
+    },
+
+    /** جلسة UI قديمة بلا token خادم — بعد تقوية SQL تُرفض القراءات وتظهر الواجهة فارغة */
+    handleServerSessionInvalid(message, errorCode) {
+        if (this._sessionInvalidHandled) return;
+        this._sessionInvalidHandled = true;
+        setTimeout(() => { this._sessionInvalidHandled = false; }, 30000);
+        const msg = message || 'انتهت جلسة الخادم. أعد تسجيل الدخول لعرض البيانات.';
+        Utils.safeWarn('🔒 جلسة خادم غير صالحة:', errorCode || 'SESSION_INVALID', msg);
+        this._clearStoredSession();
+        try {
+            if (typeof Notification !== 'undefined') Notification.warning(msg);
+        } catch (_e) { /* ignore */ }
+        try {
+            if (typeof AppState !== 'undefined') AppState.currentUser = null;
+        } catch (_e2) { /* ignore */ }
+        if (typeof UI !== 'undefined') {
+            UI.toggleSidebar(false);
+            UI.updateUserProfile();
+            UI.showLoginScreen();
+        }
     },
 
     /** قراءة بيانات المستخدم المتذكر بأمان */
@@ -1734,6 +1767,14 @@ window.Auth = {
                             this._clearStoredSession();
                             return false;
                         }
+                        if (!this._hasValidServerSessionToken()) {
+                            Utils.safeWarn('⚠️ جلسة محفوظة بدون token خادم — مطلوب تسجيل دخول جديد');
+                            this._clearStoredSession();
+                            if (typeof Notification !== 'undefined') {
+                                Notification.warning('بعد التحديث الأمني: سجّل الدخول مرة أخرى لعرض البيانات.');
+                            }
+                            return false;
+                        }
                         // 🔒 عزل كاش مستخدم آخر قبل دمج الجلسة مع AppState
                         // (bootstrap ينتظر IDB؛ هنا نضمن مسح LS/الذاكرة فوراً إن تغيّر المالك)
                         if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
@@ -1928,6 +1969,14 @@ window.Auth = {
                         if (this._isSessionExpiredForRestore(user)) {
                             Utils.safeWarn('⚠️ انتهت صلاحية الجلسة المحفوظة (تذكرني)');
                             this._clearStoredSession();
+                            return false;
+                        }
+                        if (!this._hasValidServerSessionToken()) {
+                            Utils.safeWarn('⚠️ تذكرني بدون token خادم — مطلوب تسجيل دخول جديد');
+                            this._clearStoredSession();
+                            if (typeof Notification !== 'undefined') {
+                                Notification.warning('بعد التحديث الأمني: سجّل الدخول مرة أخرى لعرض البيانات.');
+                            }
                             return false;
                         }
                         if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {

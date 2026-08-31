@@ -1846,6 +1846,10 @@ const GoogleIntegration = {
                         return result;
                     }
                     if (this._shouldSkipLocalFallbackForRead_(action, result)) {
+                        const errCode = result.errorCode ? String(result.errorCode) : '';
+                        if (/SESSION/i.test(errCode) && typeof Auth !== 'undefined' && typeof Auth.handleServerSessionInvalid === 'function') {
+                            Auth.handleServerSessionInvalid(result.message, errCode);
+                        }
                         throw new Error(result.message || 'رفض قراءة البيانات من الخادم');
                     }
                     const localData = this.getLocalData(action, data);
@@ -1853,7 +1857,10 @@ const GoogleIntegration = {
                         Utils.safeLog(`تم استخدام البيانات المحلية كبديل عند فشل المزامنة: ${action}`);
                         return localData;
                     }
-                    throw new Error(result.message || 'فشل في المزامنة مع خادم SQL');
+                    const appErr = new Error(result.message || 'فشل في المزامنة مع خادم SQL');
+                    appErr.isAppError = true;
+                    if (result.errorCode) appErr.errorCode = result.errorCode;
+                    throw appErr;
                 }
             }
 
@@ -1867,19 +1874,14 @@ const GoogleIntegration = {
             // معالجة الأخطاء وإرجاع رسالة واضحة
             const errorMessage = error.message || 'حدث خطأ غير معروف أثناء تنفيذ الطلب';
 
-            // Check if it's an "Action not recognized" error from خادم SQL
+                // Check if it's an "Action not recognized" error from خادم SQL
             if (errorMessage.includes('الإجراء غير معروف') || errorMessage.includes('Action not recognized') || errorMessage.includes('ACTION_NOT_RECOGNIZED')) {
-                // This means خادم SQL is enabled but the action is not recognized
-                let detailedMessage = errorMessage;
-
-                // Add helpful context for Safety Health Management actions
-                if (action.includes('SafetyTeam') || action.includes('SafetyHealthManagement') || action.includes('Organizational')) {
-                    detailedMessage = `Error while processing request for action "${action}". Check Web App deployment and script permissions.`;
-                }
-
-                // فشل الطلب من Apps Script وتم إرجاع رسالة خطأ
+                const detailedMessage = errorMessage;
                 Utils.safeError(`Request Failed (${action}): ${detailedMessage}`);
-                throw new Error(detailedMessage);
+                const appErr = new Error(detailedMessage);
+                appErr.isAppError = true;
+                appErr.errorCode = 'ACTION_NOT_RECOGNIZED';
+                throw appErr;
             }
 
             // Try local data as fallback if خادم SQL fails due to network/connection issues

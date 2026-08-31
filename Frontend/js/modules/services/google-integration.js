@@ -1846,6 +1846,10 @@ const GoogleIntegration = {
                         return result;
                     }
                     if (this._shouldSkipLocalFallbackForRead_(action, result)) {
+                        const errCode = result.errorCode ? String(result.errorCode) : '';
+                        if (/SESSION/i.test(errCode) && typeof Auth !== 'undefined' && typeof Auth.handleServerSessionInvalid === 'function') {
+                            Auth.handleServerSessionInvalid(result.message, errCode);
+                        }
                         throw new Error(result.message || 'رفض قراءة البيانات من الخادم');
                     }
                     const localData = this.getLocalData(action, data);
