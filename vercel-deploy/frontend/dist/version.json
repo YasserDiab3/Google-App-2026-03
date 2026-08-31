@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1538",
+  "version": "1.0.1541",
   "highlights": {
     "ar": [
-      "إصلاح 404 على /api/health و/api/exec: نقل بيانات SQL من مسار api/ الثابت لتفعيل دوال Vercel.",
-      "تحديث vercel.json: buildCommand + إعدادات دوال exec/health مع clinic_hse.db.gz.",
-      "مسار users-seed وقاعدة SQL أصبح data/sql/ — بدون تعارض مع مسارات API.",
-      "مزامنة database.js ومسارات sync-sql-deploy-bundle للنشر على safety-icapp.com."
+      "Build Output API: static + /api/health و/api/exec — حذف vercel.json القديم من dist.",
+      "نقل بيانات SQL إلى data/sql/ — لا تعارض مع مسارات API على Vercel.",
+      "سكربت prepare-vercel-output.mjs يبني static + serverless مع backend-sql.db.gz.",
+      "مسار users-seed أصبح /data/users-seed.json للمزامنة المحلية."
     ],
     "en": [
-      "Fix /api/health and /api/exec 404: moved static SQL out of api/ so Vercel serverless routes work.",
-      "Updated vercel.json: buildCommand + exec/health function settings with bundled clinic_hse.db.gz.",
-      "users-seed and SQL bundle now under data/sql/ — no conflict with API routes.",
-      "Synced database.js and deploy bundle paths for safety-icapp.com production."
+      "Build Output API ships static + /api/health and /api/exec; removed stale dist/vercel.json.",
+      "SQL bundle moved to data/sql/ — no conflict with Vercel API routes.",
+      "prepare-vercel-output.mjs builds static + serverless with bundled backend-sql.db.gz.",
+      "users-seed path is now /data/users-seed.json for local sync."
     ]
   }
 }

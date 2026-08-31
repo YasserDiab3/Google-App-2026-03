@@ -45,6 +45,8 @@ function cpDir(src, dest) {
         if (ent.isDirectory()) {
             if (ent.name === 'node_modules' || ent.name === 'dist') continue;
             cpDir(s, d);
+        } else if (ent.name === 'vercel.json') {
+            continue;
         } else {
             fs.copyFileSync(s, d);
         }

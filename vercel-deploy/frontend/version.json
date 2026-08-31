@@ -1,14 +1,14 @@
 {
-  "version": "1.0.1539",
+  "version": "1.0.1541",
   "highlights": {
     "ar": [
-      "إصلاح 404 على /api/health: إزالة outputDirectory + rewrites لـ dist بدون حجب /api/*.",
+      "Build Output API: static + /api/health و/api/exec — حذف vercel.json القديم من dist.",
       "نقل بيانات SQL إلى data/sql/ — لا تعارض مع مسارات API على Vercel.",
       "سكربت prepare-vercel-output.mjs يبني static + serverless مع backend-sql.db.gz.",
       "مسار users-seed أصبح /data/users-seed.json للمزامنة المحلية."
     ],
     "en": [
-      "Fix /api/health 404: removed outputDirectory; dist rewrites exclude /api/* routes.",
+      "Build Output API ships static + /api/health and /api/exec; removed stale dist/vercel.json.",
       "SQL bundle moved to data/sql/ — no conflict with Vercel API routes.",
       "prepare-vercel-output.mjs builds static + serverless with bundled backend-sql.db.gz.",
       "users-seed path is now /data/users-seed.json for local sync."

@@ -66,7 +66,7 @@ function setupNodeFunction(routeName, entryFile, opts = {}) {
     }
 
     writeJson(path.join(funcDir, '.vc-config.json'), {
-        runtime: 'nodejs22.x',
+        runtime: 'nodejs20.x',
         handler: 'index.js',
         launcherType: 'Nodejs',
         memory: opts.memory || 128,
@@ -115,8 +115,7 @@ writeJson(path.join(outRoot, 'config.json'), {
         { src: '/fire-inspection', dest: '/public-fire-inspection.html' },
         { src: '/daily-safety', dest: '/public-daily-safety.html' },
         { src: '/patrol', dest: '/public-daily-safety.html' },
-        { handle: 'filesystem' },
-        { src: '/api/(.*)', dest: '/api/$1' }
+        { handle: 'filesystem' }
     ]
 });
 

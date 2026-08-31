@@ -3,7 +3,7 @@
   "private": true,
   "description": "HSE clinic-repo root tooling (Playwright smoke + shared scripts)",
   "scripts": {
-    "build": "node Frontend/scripts/build-frontend-prod.mjs",
+    "build": "node Frontend/scripts/build-frontend-prod.mjs && node scripts/prepare-vercel-output.mjs",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test tests/e2e/smoke",
     "test:e2e:ui": "playwright test --ui",
