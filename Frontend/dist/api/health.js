@@ -1,1 +1,0 @@
-"use strict";module.exports=(t,e)=>{e.setHeader("Access-Control-Allow-Origin","*"),e.status(200).json({status:"ok",platform:"Vercel Serverless",service:"HSE API",timestamp:new Date().toISOString()})};

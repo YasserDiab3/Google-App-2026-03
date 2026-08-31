@@ -43,7 +43,7 @@ function cpDir(src, dest) {
         const s = path.join(src, ent.name);
         const d = path.join(dest, ent.name);
         if (ent.isDirectory()) {
-            if (ent.name === 'node_modules' || ent.name === 'dist') continue;
+            if (ent.name === 'node_modules' || ent.name === 'dist' || ent.name === 'api' || ent.name === 'backend-sql') continue;
             cpDir(s, d);
         } else if (ent.name === 'vercel.json') {
             continue;

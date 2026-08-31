@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1543",
+  "version": "1.0.1544",
   "highlights": {
     "ar": [
       "إضافة api/health وapi/exec داخل Frontend مع backend-sql — متوافق مع Root Directory=Frontend.",
