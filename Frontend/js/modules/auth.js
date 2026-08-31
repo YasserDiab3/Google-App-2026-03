@@ -817,34 +817,54 @@ window.Auth = {
                             loginResult.message.includes('doGet') ||
                             loginResult.message.includes('انتهت مهلة الاتصال')
                         ));
-                    // الخادم ردّ فعلاً ورفض: قراره نهائي. المسار المحلي مخصص لانعدام الاتصال فقط،
-                    // وإلا يُظهر لحساب MFA رسالة «يتطلب مصادقة ثنائية… اتصل بالإنترنت» وهو متصل.
-                    let hardErrMsg = isDeliveryFailure
-                        ? 'تعذّر الاتصال بالخادم مؤقتاً. انتظر ثانيتين ثم أعد المحاولة.'
-                        : loginResult.message;
-                    if (!isDeliveryFailure) {
+                    // P0 Fix: عند فشل التسليم (نفق ميت/مهلة) نحاول fallback محلي إن وجدت بيانات محلية
+                    if (isDeliveryFailure) {
+                        const localUsersCount = (AppState.appData.users || []).length;
+                        if (localUsersCount > 0) {
+                            Utils.safeWarn('⚠️ فشل التسليم — سقوط إلى التحقق المحلي (local fallback) بدل الحجب');
+                            try { if (typeof Notification !== 'undefined' && Notification.warning) Notification.warning('تعذر الاتصال بالخادم، المحاولة باستخدام البيانات المحلية…', 3000); } catch (_e) {}
+                            // لا return — أكمل إلى المحاولة المحلية
+                        } else {
+                            const hardErrMsg = 'تعذّر الاتصال بالخادم مؤقتاً ولا توجد بيانات محلية محفوظة. يُرجى تشغيل النفق أو الاتصال بالإنترنت ثم المحاولة.';
+                            Notification.error(hardErrMsg);
+                            return {
+                                success: false,
+                                message: hardErrMsg,
+                                errorCode: errCode || 'AUTH_DELIVERY_FAILED'
+                            };
+                        }
+                    } else {
+                        // الخادم ردّ فعلاً ورفض: قراره نهائي. المسار المحلي مخصص لانعدام الاتصال فقط،
+                        let hardErrMsg = loginResult.message;
                         try {
                             await Utils.RateLimiter.recordFailedAttempt(email);
                         } catch (rateLimitErr) {
                             hardErrMsg = rateLimitErr.message || hardErrMsg;
                         }
+                        Notification.error(hardErrMsg);
+                        return {
+                            success: false,
+                            message: hardErrMsg,
+                            errorCode: errCode || undefined
+                        };
                     }
-                    Notification.error(hardErrMsg);
-                    return {
-                        success: false,
-                        message: hardErrMsg,
-                        errorCode: errCode || (isDeliveryFailure ? 'AUTH_DELIVERY_FAILED' : undefined)
-                    };
                 }
             } catch (serverError) {
                 Utils.safeError('⚠️ خطأ في الاتصال بالخادم أثناء تسجيل الدخول:', serverError);
                 const errText = String(serverError && serverError.message ? serverError.message : serverError || '');
-                // مهلة/doGet/404: لا تسقط لمحاولة محلية تُظهر «اعتمادات خاطئة»
+                // P0 Fix: مهلة/doGet/404 → حاول محلياً إن وُجد كاش، وإلا أظهر خطأ واضح
                 if (errText.includes('مهلة') || errText.includes('doGet') || errText.includes('تعذّر تسليم') ||
                     errText.includes('HTML') || errText.includes('404') || errText.includes('Circuit Breaker')) {
-                    const msg = 'تعذّر الاتصال بالخادم مؤقتاً. انتظر ثانيتين ثم أعد المحاولة.';
-                    Notification.error(msg);
-                    return { success: false, message: msg, errorCode: 'AUTH_DELIVERY_FAILED' };
+                    const localUsersCount2 = (AppState.appData.users || []).length;
+                    if (localUsersCount2 > 0) {
+                        Utils.safeWarn('⚠️ فشل شبكي أثناء login — سقوط إلى التحقق المحلي');
+                        try { if (typeof Notification !== 'undefined' && Notification.warning) Notification.warning('تعذر الاتصال بالخادم، المحاولة باستخدام البيانات المحلية…', 3000); } catch (_e2) {}
+                        // لا return — أكمل إلى fallback المحلي
+                    } else {
+                        const msg = 'تعذّر الاتصال بالخادم مؤقتاً ولا توجد بيانات محلية محفوظة. يُرجى تشغيل النفق أو الاتصال بالإنترنت ثم المحاولة.';
+                        Notification.error(msg);
+                        return { success: false, message: msg, errorCode: 'AUTH_DELIVERY_FAILED' };
+                    }
                 }
                 // المتابعة للمحاولة المحلية كبديل (Offline support)
             }
@@ -854,6 +874,29 @@ window.Auth = {
         if (!user) {
             Utils.safeLog('🏠 محاولة التحقق من الحساب محلياً...');
             let users = AppState.appData.users || [];
+            // P0 Fix: إن كان الكاش مبعثر (بعد purge) حاول تحميل بذرة محلية من users-seed.json
+            if (users.length === 0) {
+                try {
+                    const seedUrls = ['/api/users-seed.json', 'api/users-seed.json', './api/users-seed.json'];
+                    let seedOk = false;
+                    for (const u of seedUrls) {
+                        try {
+                            const r = await fetch(u, { method: 'GET', cache: 'no-cache' });
+                            if (r && r.ok) {
+                                const j = await r.json();
+                                if (Array.isArray(j) && j.length > 0) {
+                                    AppState.appData.users = j;
+                                    users = j;
+                                    Utils.safeLog('✅ تم تحميل users-seed كـ fallback: ' + j.length + ' مستخدم');
+                                    seedOk = true;
+                                    break;
+                                }
+                            }
+                        } catch (_fe) { /* جرب التالي */ }
+                    }
+                    if (!seedOk) Utils.safeWarn('⚠️ users-seed غير متاح — سيبقى فشل محلي');
+                } catch (_seedErr) { /* ignore */ }
+            }
             // إعادة تعيين isOnline في الكاش المحلي قبل الفحص لتجنب الحجب بسبب جلسة سابقة منتهية
             const localUserIdx = users.findIndex(u => u && u.email && u.email.toLowerCase().trim() === email);
             if (localUserIdx !== -1 && users[localUserIdx].isOnline === true) {

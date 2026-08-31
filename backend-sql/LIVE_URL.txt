@@ -1,5 +1,8 @@
-Frontend API Endpoint:
-https://entry-consoles-simon-medicare.trycloudflare.com/exec
+Frontend API Endpoint (canonical):
+/api/exec  (Vercel prod: https://www.safety-icapp.com/api/exec)
+Local Dev: http://127.0.0.1:3001/exec
 
 Health Check:
-https://entry-consoles-simon-medicare.trycloudflare.com/health
+/api/health  (prod)  |  http://127.0.0.1:3001/health (local)
+
+Note: trycloudflare tunnel removed in P0 — use canonical above. Old tunnel https://entry-consoles-simon-medicare.trycloudflare.com/exec expired.

@@ -1699,6 +1699,19 @@ const DataManager = {
             const config = localStorage.getItem('hse_google_config');
             if (config) {
                 AppState.googleConfig = JSON.parse(config);
+                // P0 Fix: تنظيف نفق منتهي trycloudflare — كان يحجب fallback المحلي
+                try {
+                    const sc = AppState.googleConfig && AppState.googleConfig.appsScript;
+                    const u = sc && String(sc.scriptUrl || '').trim();
+                    if (u && u.includes('trycloudflare.com')) {
+                        Utils.safeWarn('⚠️ إزالة رابط نفق منتهي من googleConfig:', u.slice(0,40));
+                        sc.scriptUrl = '';
+                        sc.enabled = false;
+                        localStorage.setItem('hse_google_config', JSON.stringify(AppState.googleConfig));
+                        localStorage.removeItem('hse_public_api_url');
+                        localStorage.removeItem('HSE_API_URL');
+                    }
+                } catch (_clean) { /* ignore */ }
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل إعدادات الاتصال بالخادم:', error);

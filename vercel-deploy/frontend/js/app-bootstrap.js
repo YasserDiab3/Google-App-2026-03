@@ -55,7 +55,7 @@
     // 🧹 مزامنة فورية لقاعدة البيانات النظيفة المستوردة ومسح الكاش القديم غير المطابق
     (function syncCleanDatabaseCache() {
         try {
-            const SYNC_TAG = 'hse_clean_db_v1528_synced';
+            const SYNC_TAG = 'hse_clean_db_v1532_synced';
             if (localStorage.getItem('hse_clean_db_tag') !== SYNC_TAG) {
                 localStorage.setItem('hse_clean_db_tag', SYNC_TAG);
                 localStorage.removeItem('hse_app_data');
@@ -65,6 +65,17 @@
                 localStorage.removeItem('HSE_API_URL');
                 sessionStorage.removeItem('hse_app_data');
                 sessionStorage.removeItem('hse_sync_meta');
+                
+                // تنظيف أي أقفال تسجيل دخول محلية قديمة
+                try {
+                    for (let i = localStorage.length - 1; i >= 0; i--) {
+                        const key = localStorage.key(i);
+                        if (key && (key.startsWith('login_lockout_') || key.startsWith('login_attempts_'))) {
+                            localStorage.removeItem(key);
+                        }
+                    }
+                } catch (_) {}
+
                 if (typeof indexedDB !== 'undefined') {
                     try { indexedDB.deleteDatabase('HSELocalCacheDB'); } catch(_) {}
                     try { indexedDB.deleteDatabase('hse_db'); } catch(_) {}
@@ -361,6 +372,25 @@
                         if (window.DataManager && window.DataManager.loadGoogleConfig) {
                             try { window.DataManager.loadGoogleConfig(); } catch (_cfg) { /* ignore */ }
                         }
+                        // P0 Fix: حمّل بذرة المستخدمين لتمكين fallback محلي حتى بدون كاش سابق
+                        try {
+                            if (!AppState.appData.users || AppState.appData.users.length === 0) {
+                                const candidates = ['/api/users-seed.json', 'api/users-seed.json'];
+                                for (const u of candidates) {
+                                    try {
+                                        const rr = await fetch(u, { method: 'GET', cache: 'no-cache' });
+                                        if (rr && rr.ok) {
+                                            const jj = await rr.json();
+                                            if (Array.isArray(jj) && jj.length > 0) {
+                                                AppState.appData.users = jj;
+                                                log('✅ بذرة users-seed حُمّلت للاعتماد المحلي: ' + jj.length);
+                                                break;
+                                            }
+                                        }
+                                    } catch (_se) { /* جرب التالي */ }
+                                }
+                            }
+                        } catch (_seed) { /* ignore */ }
                     }
 
                     if (hasSession) {
