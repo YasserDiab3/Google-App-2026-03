@@ -2,16 +2,16 @@
   "version": "1.0.1547",
   "highlights": {
     "ar": [
-      "التحول الكامل إلى SQL: إيقاف Mirror لـ Google Sheets — الكتابة والقراءة على clinic_hse.db فقط.",
-      "نقل بيانات SQL إلى data/sql/ — لا تعارض مع مسارات API على Vercel.",
-      "سكربت prepare-vercel-output.mjs يبني static + serverless مع backend-sql.db.gz.",
-      "مسار users-seed أصبح /data/users-seed.json للمزامنة المحلية."
+      "تصحيح قاعدة SQL: حذف 500 سجل تجريبي BENCH من الحوادث واستيراد البيانات الحقيقية من Excel.",
+      "مطابقة الجداول الرئيسية (موظفين، زيارات، ملاحظات، تدريب، تصاريح) مع ملف V.3-HSE Database.",
+      "إزالة التكرارات الداخلية في SQL لضمان تطابق العرض مع قاعدة البيانات.",
+      "تحديث حزمة clinic_hse.db.gz لكل مسارات النشر على safety-icapp.com."
     ],
     "en": [
-      "Full SQL migration: disabled Google Sheets mirror — all reads/writes now on clinic_hse.db only.",
-      "SQL bundle moved to data/sql/ — no conflict with Vercel API routes.",
-      "prepare-vercel-output.mjs builds static + serverless with bundled backend-sql.db.gz.",
-      "users-seed path is now /data/users-seed.json for local sync."
+      "SQL data fix: removed 500 BENCH test incident rows and imported real records from Excel.",
+      "Aligned core tables (employees, visits, observations, training, permits) with V.3-HSE Database.",
+      "Removed internal SQL duplicates so the UI matches the database counts.",
+      "Updated clinic_hse.db.gz bundle across all deployment paths on safety-icapp.com."
     ]
   }
 }
