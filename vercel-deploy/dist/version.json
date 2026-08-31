@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1570",
+  "version": "1.0.1572",
   "highlights": {
     "ar": [
-      "تخزين دائم للمرفقات وصور المستخدم عبر Vercel Blob.",
-      "صورة الملف الشخصي تبقى بعد إعادة تشغيل الخادم.",
-      "رفع الصور يمر عبر attachment-store مع fallback محلي للتطوير.",
-      "إعداد مطلوب: BLOB_READ_WRITE_TOKEN في Vercel Storage."
+      "بوابة النماذج: تحميل المواقع والأماكن من إعدادات النماذج بشكل صحيح.",
+      "قوائم فريق السلامة والإدارات تُجلب من Form_SafetyTeam وForm_Departments.",
+      "إصلاح التنقل بين البوابة والنماذج العامة على التطوير المحلي.",
+      "اتصال API محلي تلقائي عبر 127.0.0.1:3001 للنماذج العامة."
     ],
     "en": [
-      "Persistent attachments and profile photos via Vercel Blob.",
-      "Profile photos survive server restarts.",
-      "Uploads use attachment-store with local disk fallback for dev.",
-      "Setup required: BLOB_READ_WRITE_TOKEN in Vercel Storage."
+      "Forms hub: sites and places load correctly from form settings.",
+      "Safety team and departments pulled from Form_SafetyTeam and Form_Departments.",
+      "Fixed hub-to-public-form navigation on local development.",
+      "Public forms auto-connect to local API at 127.0.0.1:3001."
     ]
   }
 }

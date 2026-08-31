@@ -6,6 +6,11 @@
 const crypto = require('crypto');
 const { getDatabase } = require('../db/database');
 const { checkAuthenticatedActor, checkAdminActor } = require('../middleware/auth-guard');
+const {
+    buildFormattedSites,
+    buildPublicFormSafetyMembers,
+    buildPublicFormDepartments
+} = require('./form-settings-handlers');
 
 function generateId(prefix = 'REC') {
     return `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
@@ -770,17 +775,17 @@ const moduleHandlers = {
     // ==========================================
     'getPublicObservationConfig': function(payload, postData, action) {
         const db = getDatabase();
-        const sites = db.readSheet('Form_Sites') || [];
-        const places = db.readSheet('Form_Places') || [];
-        const safetyMembers = db.readSheet('SafetyTeamMembers') || [];
+        const sites = buildFormattedSites(db);
+        const safetyMembers = buildPublicFormSafetyMembers(db);
+        const departments = buildPublicFormDepartments(db);
         const violationTypes = db.readSheet('Violation_Types_DB') || db.readSheet('ViolationTypes') || [];
 
         return {
             success: true,
-            factories: sites.map(s => s.name || s.siteName || s.factoryName || s),
-            sites: sites,
-            places: places,
-            safetyMembers: safetyMembers.map(m => ({ name: m.name || m.fullName || m, id: m.id || '' })),
+            factories: sites.map((s) => s.name).filter(Boolean),
+            sites,
+            departments,
+            safetyMembers,
             violationTypes: violationTypes,
             timestamp: new Date().toISOString()
         };
@@ -788,13 +793,15 @@ const moduleHandlers = {
 
     'getPublicVisitorConfig': function(payload, postData, action) {
         const db = getDatabase();
-        const sites = db.readSheet('Form_Sites') || [];
+        const sites = buildFormattedSites(db);
         const securityOfficers = db.readSheet('SecurityOfficers') || [];
         const hosts = db.readSheet('Employees') || db.readSheet('Users') || [];
 
         return {
             success: true,
-            sites: sites,
+            sites,
+            departments: buildPublicFormDepartments(db),
+            safetyMembers: buildPublicFormSafetyMembers(db),
             securityOfficers: securityOfficers,
             hosts: hosts.map(h => ({ name: h.name || h.fullName || h, department: h.department || '' })),
             timestamp: new Date().toISOString()
@@ -816,38 +823,37 @@ const moduleHandlers = {
 
     'getPublicDailySafetyConfig': function(payload, postData, action) {
         const db = getDatabase();
-        const sites = db.readSheet('Form_Sites') || [];
-        const safetyMembers = db.readSheet('SafetyTeamMembers') || [];
+        const sites = buildFormattedSites(db);
 
         return {
             success: true,
-            sites: sites,
-            safetyMembers: safetyMembers.map(m => ({ name: m.name || m.fullName || m, id: m.id || '' })),
+            sites,
+            safetyMembers: buildPublicFormSafetyMembers(db),
+            departments: buildPublicFormDepartments(db),
             timestamp: new Date().toISOString()
         };
     },
 
     'getPublicNearMissConfig': function(payload, postData, action) {
         const db = getDatabase();
-        const sites = db.readSheet('Form_Sites') || [];
-        const places = db.readSheet('Form_Places') || [];
+        const sites = buildFormattedSites(db);
 
         return {
             success: true,
-            sites: sites,
-            places: places,
+            sites,
+            departments: buildPublicFormDepartments(db),
             timestamp: new Date().toISOString()
         };
     },
 
     'getPublicFireInspectionConfig': function(payload, postData, action) {
         const db = getDatabase();
-        const sites = db.readSheet('Form_Sites') || [];
+        const sites = buildFormattedSites(db);
         const assets = db.readSheet('FireEquipmentAssets') || [];
 
         return {
             success: true,
-            sites: sites,
+            sites,
             assets: assets,
             timestamp: new Date().toISOString()
         };

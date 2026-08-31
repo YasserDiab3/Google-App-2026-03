@@ -6,16 +6,16 @@
     <title>بوابة النماذج الميدانية | إدارة السلامة والصحة المهنية - ICAPP</title>
     
     <!-- PWA Settings -->
-    <link rel="manifest" href="manifest-hub.json">
+    <link rel="manifest" href="/manifest-hub.json">
     <meta name="theme-color" id="metaThemeColor" content="#f8fafc">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="نماذج السلامة">
-    <link rel="apple-touch-icon" href="icons/icapp-logo.png">
+    <link rel="apple-touch-icon" href="/icons/icapp-logo.png">
     
     <!-- Favicon & Icons -->
-    <link rel="icon" type="image/png" href="icons/icapp-logo.png">
+    <link rel="icon" type="image/png" href="/icons/icapp-logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <!-- QRCode Generator for ISO Digital Verification -->
@@ -2362,7 +2362,7 @@
             <div class="iso-header-table">
                 <div class="iso-col-brand">
                     <div class="iso-logo-wrap">
-                        <img id="isoLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
+                        <img id="isoLogoImg" src="/icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
                     </div>
                     <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
                 </div>
@@ -4907,7 +4907,7 @@
                     <!-- ترويسة ISO ثلاثية الصناديق المعتمدة -->
                     <div class="iso-print-header">
                         <div class="iso-box-brand">
-                            <img src="icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='icons/icapp-logo.png'">
+                            <img src="/icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='icons/icapp-logo.png'">
                             <div class="iso-dept-title">إدارة السلامة والصحة المهنية</div>
                         </div>
 
@@ -5275,7 +5275,7 @@
                         <!-- ترويسة ISO ثلاثية الصناديق -->
                         <div class="iso-print-header">
                             <div class="iso-box-brand">
-                                <img src="icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='icons/icapp-logo.png'">
+                                <img src="/icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='icons/icapp-logo.png'">
                                 <div class="iso-dept-title">إدارة السلامة والصحة المهنية</div>
                             </div>
 
@@ -5637,7 +5637,7 @@
 
                         <div class="right-header-top">
                                 <div style="display: flex; align-items: center; gap: 10px;">
-                                    <img src="icons/icapp-logo.png" alt="ICAPP Logo" class="brand-logo-img" onerror="this.src='../icons/icapp-logo.png';">
+                                    <img src="/icons/icapp-logo.png" alt="ICAPP Logo" class="brand-logo-img" onerror="this.src='../icons/icapp-logo.png';">
                                     <div style="text-align: right; direction: rtl;">
                                         <div style="font-size: 17px; font-weight: 900; color: #000000;">قواعد السلامة للزائرين</div>
                                         <div style="font-size: 9.5px; font-weight: 800; color: #1e3a8a;">إدارة السلامة والصحة المهنية والأمن</div>
@@ -5890,13 +5890,26 @@
             applyLanguage(next);
         }
 
+        const FORM_ROUTE_MAP = {
+            'daily-safety': 'public-daily-safety.html',
+            'observation': 'public-observation.html',
+            'near-miss': 'public-near-miss.html',
+            'fire-inspection': 'public-fire-inspection.html',
+            'gate-visitor-entry': 'gate-visitor-entry.html'
+        };
+
         // Reliable dynamic navigation across all deployment paths & URL rewrites
         function navigateToForm(targetFile) {
             const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
-            let path = window.location.pathname;
-            const langParam = (currentLang === 'en') ? '?lang=en' : '';
-            const sep = targetFile.includes('?') ? '&' : '?';
-            const finalTarget = (currentLang === 'en' && !targetFile.includes('lang=')) ? (targetFile + (targetFile.includes('?') ? '&lang=en' : '?lang=en')) : targetFile;
+            let path = window.location.pathname || '';
+            let resolvedTarget = targetFile;
+            const needsFilePath = path.includes('/Frontend/') || path.includes('/dist/') || path.includes('/forms-hub/');
+            if (needsFilePath && FORM_ROUTE_MAP[targetFile]) {
+                resolvedTarget = FORM_ROUTE_MAP[targetFile];
+            }
+            const finalTarget = (currentLang === 'en' && !resolvedTarget.includes('lang='))
+                ? (resolvedTarget + (resolvedTarget.includes('?') ? '&lang=en' : '?lang=en'))
+                : resolvedTarget;
             
             if (path.includes('/Frontend/')) {
                 window.location.href = `${origin}/Frontend/${finalTarget}`;
@@ -5966,20 +5979,25 @@
         window.addEventListener('offline', updateOnlineStatus);
         updateOnlineStatus();
 
-        const LIVE_BACKEND_URL = 'https://www.safety-icapp.com/api/exec';
-        const DEFAULT_API_URL = LIVE_BACKEND_URL;
-
         function getEffectiveApiUrl() {
             try {
+                const saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL');
+                if (saved && saved.includes('trycloudflare.com')) {
+                    localStorage.removeItem('hse_public_api_url');
+                    localStorage.removeItem('HSE_API_URL');
+                }
                 const host = (window.location.hostname || '').toLowerCase();
                 if (host.includes('safety-icapp.com') || host.includes('vercel.app')) {
                     return window.location.origin + '/api/exec';
                 }
-            } catch (_h) {}
-            try {
+                if (host === 'localhost' || host === '127.0.0.1' || host === '') {
+                    return 'http://127.0.0.1:3001/exec';
+                }
                 const urlParams = new URLSearchParams(window.location.search);
                 const p = urlParams.get('apiUrl') || urlParams.get('api');
                 if (p) return p;
+                const custom = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL');
+                if (custom && custom.trim()) return custom.trim();
                 const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
                 if (s1) {
                     const parsed = JSON.parse(s1);
@@ -5991,7 +6009,7 @@
                     if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
                 }
             } catch(e) {}
-            return DEFAULT_API_URL;
+            return '/api/exec';
         }
 
         // Background config sync for instant forms performance
@@ -6228,7 +6246,7 @@
         // Service Worker Registration with Auto Update & Force Refresh
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js?v=hse-app-v1.0.1392-20260824')
+                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1392-20260824')
                     .then(reg => {
                         reg.update();
                         console.log('Hub Service Worker registered successfully:', reg.scope);

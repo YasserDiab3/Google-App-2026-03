@@ -285,4 +285,38 @@ const formSettingsHandlers = {
     }
 };
 
-module.exports = formSettingsHandlers;
+function buildPublicFormSafetyMembers(db) {
+    const seen = new Set();
+    const members = [];
+
+    function addMember(raw) {
+        if (!raw || typeof raw !== 'object') return;
+        const name = String(raw.name || raw.fullName || '').trim();
+        if (!name) return;
+        const key = name.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        members.push({
+            name,
+            id: String(raw.id || '').trim(),
+            role: String(raw.role || raw.jobTitle || raw.position || '').trim()
+        });
+    }
+
+    (db.readSheet('Form_SafetyTeam') || []).forEach(addMember);
+    (db.readSheet('SafetyTeamMembers') || []).forEach(addMember);
+    return members;
+}
+
+function buildPublicFormDepartments(db) {
+    return (db.readSheet('Form_Departments') || [])
+        .map((d) => String(d.name || d || '').trim())
+        .filter(Boolean);
+}
+
+module.exports = {
+    ...formSettingsHandlers,
+    buildFormattedSites,
+    buildPublicFormSafetyMembers,
+    buildPublicFormDepartments
+};

@@ -3525,20 +3525,25 @@ function resetCheckInForm() {
             win.document.close();
         }
 
-        const LIVE_BACKEND_URL = 'https://www.safety-icapp.com/api/exec';
-        const DEFAULT_API_URL = LIVE_BACKEND_URL;
-
         function getEffectiveApiUrl() {
             try {
+                const saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL');
+                if (saved && saved.includes('trycloudflare.com')) {
+                    localStorage.removeItem('hse_public_api_url');
+                    localStorage.removeItem('HSE_API_URL');
+                }
                 const host = (window.location.hostname || '').toLowerCase();
                 if (host.includes('safety-icapp.com') || host.includes('vercel.app')) {
                     return window.location.origin + '/api/exec';
                 }
-            } catch (_h) {}
-            try {
+                if (host === 'localhost' || host === '127.0.0.1' || host === '') {
+                    return 'http://127.0.0.1:3001/exec';
+                }
                 const urlParams = new URLSearchParams(window.location.search);
                 const p = urlParams.get('apiUrl') || urlParams.get('api');
                 if (p) return p;
+                const custom = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL');
+                if (custom && custom.trim()) return custom.trim();
                 const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
                 if (s1) {
                     const parsed = JSON.parse(s1);
@@ -3550,7 +3555,7 @@ function resetCheckInForm() {
                     if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
                 }
             } catch(e) {}
-            return DEFAULT_API_URL;
+            return '/api/exec';
         }
 
         async function syncVisitorCheckInToCloud(visitorRecord) {
