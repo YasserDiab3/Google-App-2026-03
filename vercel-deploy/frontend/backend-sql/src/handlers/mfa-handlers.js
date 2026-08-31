@@ -69,7 +69,8 @@ function attachSession(user) {
         message: 'تم تسجيل الدخول بنجاح',
         user: sanitizedUser,
         userData: sanitizedUser,
-        token: sessionId
+        token: sessionId,
+        sessionToken: sessionId
     };
 }
 
@@ -138,21 +139,23 @@ const mfaHandlers = {
         if (!user) {
             user = db.readSheet('Users').find(u => String(u.email || '').toLowerCase() === email);
         }
-        const safeUser = cached?.safeUser || buildMfaChallengeSafeUser(user) || attachSession(user).user;
+        const sessionPayload = attachSession(user);
         try {
             db.updateRow('Users', 'id', user.id, {
-                lastLogin: new Date().toISOString(),
+                lastLogin: sessionPayload.user.lastLogin,
                 lastPresenceAt: new Date().toISOString(),
-                isOnline: 'true'
+                isOnline: 'true',
+                activeSessionId: sessionPayload.token
             });
         } catch (_) {}
 
         return {
             success: true,
-            message: 'تم تسجيل الدخول بنجاح',
-            user: safeUser,
-            userData: safeUser,
-            token: 'SES_' + crypto.randomBytes(16).toString('hex')
+            message: sessionPayload.message,
+            user: sessionPayload.user,
+            userData: sessionPayload.user,
+            token: sessionPayload.token,
+            sessionToken: sessionPayload.token
         };
     },
 

@@ -473,6 +473,17 @@ window.Auth = {
 
     /** جلسة UI قديمة بلا token خادم — بعد تقوية SQL تُرفض القراءات وتظهر الواجهة فارغة */
     handleServerSessionInvalid(message, errorCode) {
+        // أثناء F5: لا تُسقط الجلسة فوراً — غالباً سباق تحميل أو token لم يُقرأ بعد
+        if (typeof AppState !== 'undefined' && AppState.isPageRefresh) {
+            const st = this._getServerSessionToken();
+            const sess = (() => {
+                try { return sessionStorage.getItem('hse_current_session'); } catch (_e) { return null; }
+            })();
+            if (st || sess) {
+                Utils.safeWarn('⚠️ تجاهل SESSION invalid أثناء إعادة التحميل:', errorCode || 'SESSION_INVALID');
+                return;
+            }
+        }
         if (this._sessionInvalidHandled) return;
         this._sessionInvalidHandled = true;
         setTimeout(() => { this._sessionInvalidHandled = false; }, 30000);
@@ -610,22 +621,11 @@ window.Auth = {
                 Utils.safeWarn('⚠️ خطأ في التحقق من الجلسة الحالية:', e);
             }
 
-            if (foundUser.isOnline === true && foundUser.activeSessionId) {
-                if (foundUser.activeSessionId !== currentSessionId && !hasActiveSession) {
-                    // التحقق من عمر الجلسة المخزنة — إذا مضى أكثر من 24 ساعة نتجاوز الحجب
-                    // (يحدث هذا بعد انهيار المتصفح أو انقطاع الشبكة بدون logout صريح)
-                    const lastActivity = parseInt(sessionStorage.getItem('hse_session_last_activity_ms') || '0', 10);
-                    const staleThresholdMs = 24 * 60 * 60 * 1000;
-                    const sessionIsStale = lastActivity === 0 || (Date.now() - lastActivity > staleThresholdMs);
-                    if (!sessionIsStale) {
-                        return {
-                            success: false,
-                            message: '⚠️ هذا الحساب متصل بالفعل من جهاز آخر.\n\nيرجى تسجيل الخروج من الجهاز الآخر أولاً، أو انتظار انتهاء الجلسة تلقائياً.\n\nلا يمكن تسجيل الدخول من أكثر من جهاز في نفس الوقت.'
-                        };
-                    }
-                    // الجلسة القديمة منتهية الصلاحية — نتجاوز الحجب ونسمح بالدخول
-                    Utils.safeWarn('⚠️ جلسة قديمة منتهية الصلاحية — السماح بالدخول وإعادة تعيين isOnline');
-                }
+            if (this._shouldBlockConcurrentLogin(foundUser, hasActiveSession)) {
+                return {
+                    success: false,
+                    message: '⚠️ هذا الحساب متصل بالفعل من جهاز آخر.\n\nيرجى تسجيل الخروج من الجهاز الآخر أولاً، أو انتظار انتهاء الجلسة تلقائياً.\n\nلا يمكن تسجيل الدخول من أكثر من جهاز في نفس الوقت.'
+                };
             }
 
             let extractedName = foundUser.name;
@@ -718,6 +718,58 @@ window.Auth = {
         return v === true || v === 'true' || v === 'TRUE' || v === 1 || v === '1';
     },
 
+    _isUserOnlineFlag(user) {
+        if (!user) return false;
+        const v = user.isOnline;
+        return v === true || v === 'true' || v === 'TRUE' || v === 1 || v === '1';
+    },
+
+    /** تنظيف isOnline/activeSessionId الوهمي من Excel أو كاش قديم قبل محاولة الدخول */
+    _resetStaleLocalOnlineState(email) {
+        try {
+            const users = AppState?.appData?.users;
+            if (!Array.isArray(users) || !email) return;
+            const idx = users.findIndex((u) => u && u.email && u.email.toLowerCase() === email);
+            if (idx === -1) return;
+            const u = users[idx];
+            const stored = String(u.activeSessionId || '').trim();
+            const authId = this._getAuthSessionIdForCompare();
+            const online = this._isUserOnlineFlag(u);
+            if (stored.startsWith('SESS_')) {
+                u.isOnline = false;
+                u.activeSessionId = null;
+                return;
+            }
+            if (online && stored && authId && stored !== authId) {
+                u.isOnline = false;
+                u.activeSessionId = null;
+                return;
+            }
+            if (online) {
+                const lastActivity = parseInt(sessionStorage.getItem('hse_session_last_activity_ms') || '0', 10);
+                const staleMs = 24 * 60 * 60 * 1000;
+                if (lastActivity === 0 || Date.now() - lastActivity > staleMs) {
+                    u.isOnline = false;
+                    u.activeSessionId = null;
+                }
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    _shouldBlockConcurrentLogin(foundUser, hasActiveSession) {
+        if (!foundUser || !this._isUserOnlineFlag(foundUser) || !foundUser.activeSessionId) return false;
+        if (hasActiveSession) return false;
+        const stored = String(foundUser.activeSessionId || '').trim();
+        if (!stored || stored.startsWith('SESS_')) return false;
+        const authId = this._getAuthSessionIdForCompare();
+        const clientSess = sessionStorage.getItem('hse_session_id') || '';
+        if (authId && (stored === authId || stored === clientSess)) return false;
+        const lastActivity = parseInt(sessionStorage.getItem('hse_session_last_activity_ms') || '0', 10);
+        const staleMs = 24 * 60 * 60 * 1000;
+        if (lastActivity === 0 || Date.now() - lastActivity > staleMs) return false;
+        return true;
+    },
+
     /**
      * تسجيل الدخول
      */
@@ -764,6 +816,7 @@ window.Auth = {
         }
 
         email = email.trim().toLowerCase();
+        this._resetStaleLocalOnlineState(email);
 
         // SEC-01: رفض @hse.local فوراً محلياً — سياسة الخادم بالخلفية (لا تحجب «جاري التحقق»)
         if (this.isBootstrapEmail(email)) {
@@ -835,7 +888,7 @@ window.Auth = {
                     data: {
                         email,
                         password,
-                        __timeoutMs: 90000,
+                        __timeoutMs: 45000,
                         __highPriority: true,
                         __allowStructuredFailure: true
                     }
@@ -951,13 +1004,20 @@ window.Auth = {
                     if (!seedOk) Utils.safeWarn('⚠️ users-seed غير متاح — سيبقى فشل محلي');
                 } catch (_seedErr) { /* ignore */ }
             }
-            // إعادة تعيين isOnline في الكاش المحلي قبل الفحص لتجنب الحجب بسبب جلسة سابقة منتهية
+            // إعادة تعيين isOnline في الكاش المحلي قبل الفحص (جلسات SESS_* أو منتهية)
             const localUserIdx = users.findIndex(u => u && u.email && u.email.toLowerCase().trim() === email);
-            if (localUserIdx !== -1 && users[localUserIdx].isOnline === true) {
-                const lastActivity = parseInt(sessionStorage.getItem('hse_session_last_activity_ms') || '0', 10);
-                if (lastActivity === 0 || Date.now() - lastActivity > 24 * 60 * 60 * 1000) {
-                    users[localUserIdx].isOnline = false;
-                    users[localUserIdx].activeSessionId = null;
+            if (localUserIdx !== -1) {
+                const lu = users[localUserIdx];
+                const stored = String(lu.activeSessionId || '').trim();
+                if (stored.startsWith('SESS_')) {
+                    lu.isOnline = false;
+                    lu.activeSessionId = null;
+                } else if (lu.isOnline === true || lu.isOnline === 'true' || lu.isOnline === 'TRUE') {
+                    const lastActivity = parseInt(sessionStorage.getItem('hse_session_last_activity_ms') || '0', 10);
+                    if (lastActivity === 0 || Date.now() - lastActivity > 24 * 60 * 60 * 1000) {
+                        lu.isOnline = false;
+                        lu.activeSessionId = null;
+                    }
                 }
             }
             foundUser = users.find(u => u && u.email && u.email.toLowerCase().trim() === email);
@@ -1140,11 +1200,17 @@ window.Auth = {
 
     _storeServerSessionToken(authResult) {
         try {
-            const token = authResult && authResult.sessionToken ? String(authResult.sessionToken).trim() : '';
-            if (!token) return;
+            const token = String(
+                (authResult && authResult.sessionToken) ||
+                (authResult && authResult.token) ||
+                (authResult && authResult.user && authResult.user.activeSessionId) ||
+                (authResult && authResult.userData && authResult.userData.activeSessionId) ||
+                ''
+            ).trim();
+            if (!token || token.length < 16) return;
             sessionStorage.setItem('hse_server_session_token', token);
             localStorage.setItem('hse_server_session_token', token);
-            if (authResult.sessionExpiresAt) {
+            if (authResult && authResult.sessionExpiresAt) {
                 sessionStorage.setItem('hse_server_session_expires_at', String(authResult.sessionExpiresAt));
                 localStorage.setItem('hse_server_session_expires_at', String(authResult.sessionExpiresAt));
             }
@@ -1165,6 +1231,11 @@ window.Auth = {
 
     async _finishLoginAfterAuth(user, email, remember, foundUser) {
         email = String(email || '').trim().toLowerCase();
+
+        // token الخادم من استجابة login/MFA (قد يكون في user.activeSessionId)
+        if (user && user.activeSessionId && String(user.activeSessionId).trim().startsWith('SES_')) {
+            this._storeServerSessionToken({ sessionToken: user.activeSessionId });
+        }
 
         // 🔒 فحص ومسح بيانات المستخدم السابق فوراً قبل البدء بإنشاء الجلسة
         if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
@@ -1790,6 +1861,17 @@ window.Auth = {
                             return false;
                         }
                         if (!this._hasValidServerSessionToken()) {
+                            // محاولة استرداد من activeSessionId في كاش Users (جلسات قبل إصلاح token)
+                            const emailLower = user.email.toLowerCase();
+                            const cachedUser = (AppState.appData.users || []).find(
+                                (u) => u && u.email && u.email.toLowerCase() === emailLower
+                            );
+                            const cachedSid = String(cachedUser?.activeSessionId || '').trim();
+                            if (cachedSid.startsWith('SES_') && cachedSid.length >= 16) {
+                                this._storeServerSessionToken({ sessionToken: cachedSid });
+                            }
+                        }
+                        if (!this._hasValidServerSessionToken()) {
                             Utils.safeWarn('⚠️ جلسة محفوظة بدون token خادم — مطلوب تسجيل دخول جديد');
                             this._clearStoredSession();
                             if (typeof Notification !== 'undefined') {
@@ -1993,6 +2075,16 @@ window.Auth = {
                             Utils.safeWarn('⚠️ انتهت صلاحية الجلسة المحفوظة (تذكرني)');
                             this._clearStoredSession();
                             return false;
+                        }
+                        if (!this._hasValidServerSessionToken()) {
+                            const emailLower = user.email.toLowerCase();
+                            const cachedUser = (AppState.appData.users || []).find(
+                                (u) => u && u.email && u.email.toLowerCase() === emailLower
+                            );
+                            const cachedSid = String(cachedUser?.activeSessionId || '').trim();
+                            if (cachedSid.startsWith('SES_') && cachedSid.length >= 16) {
+                                this._storeServerSessionToken({ sessionToken: cachedSid });
+                            }
                         }
                         if (!this._hasValidServerSessionToken()) {
                             Utils.safeWarn('⚠️ تذكرني بدون token خادم — مطلوب تسجيل دخول جديد');

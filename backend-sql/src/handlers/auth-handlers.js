@@ -37,7 +37,10 @@ const authHandlers = {
             return { success: false, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', errorCode: 'INVALID_CREDENTIALS' };
         }
 
-        if (user.active === 'false' || user.active === false) {
+        const activeVal = user.active;
+        const isInactive = activeVal === false || activeVal === 'false' || activeVal === 'FALSE'
+            || activeVal === 'inactive' || activeVal === '0' || activeVal === 0;
+        if (isInactive) {
             return { success: false, message: 'هذا الحساب معطل. يرجى مراجعة المسؤول.', errorCode: 'ACCOUNT_DISABLED' };
         }
 
@@ -49,6 +52,19 @@ const authHandlers = {
 
         if (!match) {
             return { success: false, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', errorCode: 'INVALID_CREDENTIALS' };
+        }
+
+        // تنظيف جلسة SESS_* القديمة من Excel/استيراد — لا تحجب دخولاً جديداً
+        const staleSid = String(user.activeSessionId || '').trim();
+        if (staleSid.startsWith('SESS_') || (user.isOnline === 'TRUE' && staleSid && !staleSid.startsWith('SES_'))) {
+            try {
+                db.updateRow('Users', 'id', user.id, {
+                    isOnline: 'false',
+                    activeSessionId: ''
+                });
+                user.isOnline = 'false';
+                user.activeSessionId = '';
+            } catch (_) {}
         }
 
         // Parse permissions if stored as JSON string
@@ -111,7 +127,8 @@ const authHandlers = {
             message: 'تم تسجيل الدخول بنجاح',
             user: sanitizedUser,
             userData: sanitizedUser,
-            token: sessionId
+            token: sessionId,
+            sessionToken: sessionId
         };
     },
 

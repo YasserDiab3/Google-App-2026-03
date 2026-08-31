@@ -1,15 +1,17 @@
 {
-  "version": "1.0.1562",
+  "version": "1.0.1564",
   "highlights": {
     "ar": [
-      "إصلاح الخروج التلقائي عند إعادة تحميل الصفحة (F5) — الجلسة تبقى نشطة.",
-      "توحيد token الجلسة بين الواجهة والخادم وإصلاح تعارض SESS/SES.",
-      "مزامنة قاعدة SQL من Excel (142 ورقة) مع bundle النشر."
+      "إصلاح تعليق تسجيل دخول المدير — تنظيف جلسات SESS القديمة ومهلة 50 ثانية.",
+      "خطوة MFA أوضح بعد كلمة المرور مع إشعار للمستخدم.",
+      "حفظ token الجلسة من الخادم بعد login/MFA — F5 لا يخرجك.",
+      "تنظيف isOnline في قاعدة SQL من استيراد Excel."
     ],
     "en": [
-      "Fix auto-logout on page reload (F5) — session stays active.",
-      "Unified session token between UI and server; SESS/SES mismatch repair.",
-      "SQL database synced from Excel (142 sheets) with deploy bundle."
+      "Fix admin login hang — stale SESS sessions cleared, 50s timeout.",
+      "Clearer MFA step after password with user notification.",
+      "Server session token saved after login/MFA — F5 keeps you signed in.",
+      "SQL isOnline cleanup from Excel import."
     ]
   }
 }

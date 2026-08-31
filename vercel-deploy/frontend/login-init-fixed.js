@@ -1001,8 +1001,23 @@ async function handleLogin(form, submitBtn) {
     
     try {
         log('🔐 استدعاء Auth.login...');
-        
-        const result = await window.Auth.login(email, password, remember);
+
+        const loginTimeoutMs = 50000;
+        const result = await Promise.race([
+            window.Auth.login(email, password, remember),
+            new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('LOGIN_TIMEOUT')), loginTimeoutMs);
+            })
+        ]).catch(function (err) {
+            if (err && err.message === 'LOGIN_TIMEOUT') {
+                return {
+                    success: false,
+                    message: 'انتهت مهلة الاتصال أثناء تسجيل الدخول. تحقق من الخادم وحاول مرة أخرى.',
+                    errorCode: 'LOGIN_TIMEOUT'
+                };
+            }
+            throw err;
+        });
         log('📥 نتيجة تسجيل الدخول:', result);
         
         // فحص النتيجة
@@ -1023,6 +1038,9 @@ async function handleLogin(form, submitBtn) {
                     challengeToken: result.challengeToken,
                     remember: result.remember
                 });
+                if (typeof window.Notification !== 'undefined' && typeof window.Notification.info === 'function') {
+                    window.Notification.info('مطلوب رمز المصادقة الثنائية — أدخل الرمز من تطبيق المصادقة.', { duration: 8000 });
+                }
                 return;
             }
             success = result.success === true;
@@ -1084,6 +1102,7 @@ async function handleLogin(form, submitBtn) {
             
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalBtnText;
+            submitBtn.removeAttribute('aria-busy');
         }
     } catch (error) {
         console.error('❌ خطأ في تسجيل الدخول:', error);
