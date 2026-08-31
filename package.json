@@ -11,7 +11,8 @@
     "test:p3:parity": "node tools/p3-parity-selftest.js",
     "test:p3:guards": "node tools/p3-security-guards-selftest.js",
     "test:p3": "node tools/p3-parity-selftest.js && node tools/p3-security-guards-selftest.js",
-    "test:gates": "npm run test:p3 && npm run test:e2e:smoke"
+    "test:gates": "npm run test:p3 && npm run test:e2e:smoke",
+    "test:smoke:system": "node scripts/smoke-system.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",

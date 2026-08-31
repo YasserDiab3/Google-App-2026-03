@@ -3968,21 +3968,34 @@ function getHseBroadcastMessages() {
     }
 }
 
+function validateHseWriteAuth_(payload, actorUserData) {
+    if (actorUserData && (actorUserData.email || actorUserData.id || actorUserData.name)) {
+        if (typeof checkAdminPermissionsAuthoritative === 'function' && checkAdminPermissionsAuthoritative(actorUserData)) {
+            return { ok: true };
+        }
+        return { ok: false, message: 'ليس لديك صلاحية لتعديل إعدادات HSE العامة.', errorCode: 'HSE_WRITE_ADMIN_REQUIRED' };
+    }
+    var props = PropertiesService.getScriptProperties();
+    var configuredPin = props.getProperty('HSE_BROADCAST_PIN') || props.getProperty('EMPLOYEES_DELETE_PIN') || '';
+    if (!configuredPin) {
+        return { ok: false, message: 'رمز HSE غير مُعدّ على الخادم. اضبط HSE_BROADCAST_PIN في خصائص السكربت.', errorCode: 'HSE_PIN_NOT_CONFIGURED' };
+    }
+    var sentPin = String((payload && (payload.adminPin || payload.pin || payload.passcode)) || '').trim();
+    if (sentPin && sentPin === String(configuredPin).trim()) {
+        return { ok: true };
+    }
+    return { ok: false, message: 'غير مصرح: رمز مصادقة مسؤول السلامة غير صحيح', errorCode: 'HSE_PIN_INVALID' };
+}
+
 function saveHseBroadcastMessages(payload) {
     try {
         var messageAr = payload && payload.messageAr;
         var messageEn = payload && payload.messageEn;
-        var adminPin = payload && (payload.adminPin || payload.pin || payload.passcode);
         var updatedBy = (payload && payload.updatedBy) || 'مدير إدارة السلامة والصحة المهنية';
 
-        // التحقق الأمني السحابي من رمز مسؤول السلامة
-        var props = PropertiesService.getScriptProperties();
-        var configuredPin = props.getProperty('HSE_BROADCAST_PIN') || props.getProperty('EMPLOYEES_DELETE_PIN') || '2026';
-        var sentPin = String(adminPin || '').trim();
-        var validPins = [configuredPin, '2026', 'HSE@2026'];
-        
-        if (!validPins.includes(sentPin)) {
-            return { success: false, message: 'غير مصرح: رمز مصادقة مسؤول السلامة غير صحيح' };
+        var authGate = validateHseWriteAuth_(payload, payload && payload._actorUserData);
+        if (!authGate.ok) {
+            return { success: false, message: authGate.message, errorCode: authGate.errorCode };
         }
 
         if (!messageAr && !messageEn) return { success: false, message: 'محتوى الرسالة مطلوب' };
@@ -3994,6 +4007,7 @@ function saveHseBroadcastMessages(payload) {
             updatedBy: updatedBy
         };
         
+        var props = PropertiesService.getScriptProperties();
         props.setProperty('HSE_BROADCAST_MESSAGES', JSON.stringify(broadcast));
         
         return { success: true, broadcast: broadcast };
@@ -4060,18 +4074,14 @@ function getHseEmergencyContacts() {
 
 function saveHseEmergencyContacts(payload) {
     try {
-        var adminPin = payload && (payload.adminPin || payload.pin || payload.passcode);
         var updatedBy = (payload && payload.updatedBy) || 'مسؤول السلامة والصحة المهنية';
 
-        // التحقق الأمني السحابي
-        var props = PropertiesService.getScriptProperties();
-        var configuredPin = props.getProperty('HSE_BROADCAST_PIN') || props.getProperty('EMPLOYEES_DELETE_PIN') || '2026';
-        var sentPin = String(adminPin || '').trim();
-        var validPins = [configuredPin, '2026', 'HSE@2026'];
-        
-        if (!validPins.includes(sentPin)) {
-            return { success: false, message: 'غير مصرح: رمز مصادقة مسؤول السلامة غير صحيح' };
+        var authGate = validateHseWriteAuth_(payload, payload && payload._actorUserData);
+        if (!authGate.ok) {
+            return { success: false, message: authGate.message, errorCode: authGate.errorCode };
         }
+
+        var props = PropertiesService.getScriptProperties();
 
         var contacts = {
             clinicPhone: String(payload.clinicPhone || '').trim() || '01000000001',

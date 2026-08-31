@@ -339,8 +339,11 @@ function doPost(e) {
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'initializeSheets', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'setOfficialChampionsApproval', 'getPublicLivePTWSummary', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList', 'getHseBroadcastMessages', 'saveHseBroadcastMessages', 'getHseEmergencyContacts', 'saveHseEmergencyContacts'];
-        const isCsrfExempt = csrfExemptActions.includes(action);
+        // SEC: initializeSheets وكتابات HSE الداخلية تتطلب CSRF — كتابات HSE العامة عبر PIN فقط (pinProtectedWriteActions)
+        const pinProtectedWriteActions = ['saveHseBroadcastMessages', 'saveHseEmergencyContacts'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'setOfficialChampionsApproval', 'getPublicLivePTWSummary', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList', 'getHseBroadcastMessages', 'getHseEmergencyContacts'];
+        const isPinProtectedWrite = pinProtectedWriteActions.indexOf(action) !== -1;
+        const isCsrfExempt = csrfExemptActions.includes(action) || isPinProtectedWrite;
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
         if (!isCsrfExempt && (isSensitiveAction || !isReadOnlyAction)) {
@@ -403,8 +406,9 @@ function doPost(e) {
         // - كتابات (غير readOnly): هوية + sessionToken إلزاميان دائماً
         // - قراءات مع userData: التحقق من الجلسة كما كان
         const sessionExemptActions = [
-            'login', 'verifyMfaLogin', 'initializeSheets',
+            'login', 'verifyMfaLogin',
             'testConnection', 'warmup', 'getPublicIP', 'invalidateServerSession',
+            'saveHseBroadcastMessages', 'saveHseEmergencyContacts',
             'getAuthBootstrapPolicy', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke',
             'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'getPublicLivePTWSummary',
             'submitPublicNearMiss', 'getPublicNearMissConfig',
@@ -559,11 +563,15 @@ function doPost(e) {
             } else if (action === 'getHseBroadcastMessages' && typeof getHseBroadcastMessages === 'function') {
                 result = getHseBroadcastMessages();
             } else if (action === 'saveHseBroadcastMessages' && typeof saveHseBroadcastMessages === 'function') {
-                result = saveHseBroadcastMessages(payload || postData.data || postData || {});
+                var hseBroadcastPayload = Object.assign({}, payload || postData.data || postData || {});
+                hseBroadcastPayload._actorUserData = actorUserData;
+                result = saveHseBroadcastMessages(hseBroadcastPayload);
             } else if (action === 'getHseEmergencyContacts' && typeof getHseEmergencyContacts === 'function') {
                 result = getHseEmergencyContacts();
             } else if (action === 'saveHseEmergencyContacts' && typeof saveHseEmergencyContacts === 'function') {
-                result = saveHseEmergencyContacts(payload || postData.data || postData || {});
+                var hseContactsPayload = Object.assign({}, payload || postData.data || postData || {});
+                hseContactsPayload._actorUserData = actorUserData;
+                result = saveHseEmergencyContacts(hseContactsPayload);
             } else if (typeof ActionHandlers[action] === 'function') {
                 const spreadsheetId = getSpreadsheetId() || postData.spreadsheetId || '';
                 result = ActionHandlers[action](payload, postData, action, actorUserData, spreadsheetId);

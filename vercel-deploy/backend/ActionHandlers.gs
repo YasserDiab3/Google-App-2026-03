@@ -212,6 +212,9 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
+                    var adminGate = actionRequireAdmin_(actorUserData, action);
+                    if (adminGate) { result = adminGate; return; }
+
                     initSpreadsheetId = payload.spreadsheetId ||
                                              payload.data?.spreadsheetId ||
                                              postData.spreadsheetId ||

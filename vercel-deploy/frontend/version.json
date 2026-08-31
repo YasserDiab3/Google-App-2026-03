@@ -1,15 +1,17 @@
 {
-  "version": "1.0.1531",
+  "version": "1.0.1533",
   "highlights": {
     "ar": [
-      "فصل نموذج تسجيل الزائرين لبوابات الأمن كلياً وإزالة زر العودة للبوابة لضمان الخصوصية والاستقلالية.",
-      "تثبيت مستقل (Standalone PWA) مخصص لأفراد الأمن على البوابات.",
-      "تحسين مسارات النشر واستقرار الأداء عبر محرك SQL السريع."
+      "تقوية أمان الباك إند: initializeSheets وكتابات HSE العامة محمية بجلسة مدير أو PIN مُعدّ على الخادم.",
+      "فصل حضور العيادة في ملف clinic-attendance.js لصيانة أسرع وتحميل أوضح.",
+      "شريط حضور العيادة: أزرار الورديات وبصمة مفقودة وإضافة مسئول في صف واحد.",
+      "سكربت فحص دخان شامل npm run test:smoke:system للأداء والصلاحيات."
     ],
     "en": [
-      "Completely separated Gate Security Visitor Registration form and removed Back to Portal button.",
-      "Standalone scoped PWA dedicated for Security Officers at gates.",
-      "Optimized deployment routing and stability over fast SQL engine."
+      "Backend security: initializeSheets and HSE public writes require admin session or server-configured PIN.",
+      "Clinic attendance split into clinic-attendance.js for easier maintenance.",
+      "Clinic attendance toolbar: shifts, missing punch, and add staff on one row.",
+      "Full smoke test script: npm run test:smoke:system for performance and auth checks."
     ]
   }
 }
