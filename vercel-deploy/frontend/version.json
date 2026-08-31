@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1557",
+  "version": "1.0.1558",
   "highlights": {
     "ar": [
-      "مطابقة قاعدة البيانات مع Excel: PTW وPTWRegistry والعيادة والتدريب و142 ورقة.",
-      "سكربت استيراد مباشر من ملف .xlsx بدون Google OAuth.",
-      "تحسينات إدارة المستخدمين وإعدادات الشركة في الواجهة."
+      "صور المستخدمين: الرفع يحفظ معرف FILE_* في SQL بدلاً من base64 أو روابط Drive.",
+      "زر ترحيل صور المستخدمين في إعدادات النظام — طابور خلفي مع إيقاف وتقرير.",
+      "مطابقة قاعدة البيانات مع Excel (142 ورقة) وسكربت استيراد xlsx مباشر."
     ],
     "en": [
-      "Database synced from Excel: PTW, PTWRegistry, clinic, training, and 142 sheets.",
-      "Direct .xlsx import script — no Google OAuth required.",
-      "User management and company settings UI improvements."
+      "User photos: uploads store FILE_* IDs in SQL instead of base64 or Drive URLs.",
+      "User photo migration in System Settings — background queue with stop and report.",
+      "Database synced from Excel (142 sheets) and direct .xlsx import script."
     ]
   }
 }
