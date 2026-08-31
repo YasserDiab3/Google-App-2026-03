@@ -209,4 +209,9 @@ const genericSheetOps = {
     }
 };
 
+// Aliases for multi-sheet batch operations
+genericSheetOps['batchReadFromSheets'] = genericSheetOps['batchReadSheets'];
+genericSheetOps['readFromSheets'] = genericSheetOps['batchReadSheets'];
+genericSheetOps['batchRead'] = genericSheetOps['batchReadSheets'];
+
 module.exports = genericSheetOps;
