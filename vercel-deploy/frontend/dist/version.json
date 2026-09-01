@@ -1,17 +1,15 @@
 {
-  "version": "1.0.1597",
+  "version": "1.0.1599",
   "highlights": {
     "ar": [
-      "تحديث الصفحة داخل النظام يبقى في النظام ولا يفتح بوابة النماذج العامة.",
-      "المسارات القصيرة للنماذج تعمل من البوابة مع رجوع صحيح إلى /forms-hub.",
-      "ترجمة عربية وإنجليزية لقسم البوابة وجميع النماذج الميدانية.",
-      "تحميل مواقع الحادث الوشيك من الخادم بدقة دون طلب خاطئ."
+      "صورة الملاحظة تظهر داخل نموذج التفاصيل في موديول الملاحظات.",
+      "تصدير PPT يضع لكل ملاحظة صورتها فقط دون تكرار صورة على ملاحظات أخرى.",
+      "مطابقة أدق بين الصورة ومعرّف الملاحظة عند العرض والتصدير."
     ],
     "en": [
-      "Refreshing inside the app stays in the system and no longer opens the public forms portal.",
-      "Short form URLs work from the hub, with a correct back link to /forms-hub.",
-      "Arabic and English translations for the in-app hub section and all field forms.",
-      "Near-miss site lists load from the server with the correct public config action."
+      "The observation photo now appears inside the details view in Daily Observations.",
+      "PPT export places each observation’s own photo and no longer repeats one image across notes.",
+      "Stricter matching between the photo and the observation ID in both view and export."
     ]
   }
 }

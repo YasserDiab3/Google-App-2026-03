@@ -603,15 +603,60 @@ const DailyObservations = {
         }
     },
 
+    isObservationPhotoAttachment(att) {
+        if (!att || att.__listOnly) return false;
+        const type = String(att.type || att.mimeType || '').toLowerCase();
+        if (type === 'image' || type.startsWith('image')) return true;
+        const name = String(att.name || att.fileName || '').toLowerCase();
+        if (/\.(jpe?g|png|gif|webp|bmp|heic|svg)($|\?)/i.test(name) || /^image[-_]?\d+/i.test(name)) return true;
+        const src = this.getObservationAttachmentSrc(att);
+        if (src.startsWith('data:image/')) return true;
+        if (/^FILE_/i.test(src) || /drive\.google|googleusercontent|vercel-storage|\/file\/d\/|[?&]id=/i.test(src)) return true;
+        if (/\.(jpe?g|png|gif|webp|bmp|heic|svg)($|\?)/i.test(src)) return true;
+        if (att.fileId || att.driveId) return true;
+        return false;
+    },
+
+    getObservationAttachmentSrc(att) {
+        if (att == null) return '';
+        if (typeof att === 'string') return String(att).trim();
+        if (typeof att !== 'object') return '';
+        return String(att.data || att.url || att.directLink || att.shareableLink || att.driveUrl || att.link || (att.cloudLink && att.cloudLink.url) || att.fileId || att.driveId || '').trim();
+    },
+
+    resolveObservationDriveFileId(attOrUrl) {
+        const src = typeof attOrUrl === 'string' ? attOrUrl : this.getObservationAttachmentSrc(attOrUrl);
+        const objId = (typeof attOrUrl === 'object' && attOrUrl)
+            ? String(attOrUrl.fileId || attOrUrl.driveId || '').trim()
+            : '';
+        const tryId = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            if (/^FILE_/i.test(raw)) return raw.split(/[?#\s]/)[0];
+            if (typeof Utils !== 'undefined') {
+                if (typeof Utils.extractImageProxyId === 'function') {
+                    const proxy = Utils.extractImageProxyId(raw) || '';
+                    if (proxy) return proxy;
+                }
+                if (typeof Utils.extractDriveFileId === 'function') {
+                    const drive = Utils.extractDriveFileId(raw) || '';
+                    if (drive) return drive;
+                }
+            }
+            return this._extractDriveFileId(raw) || '';
+        };
+        return tryId(objId) || tryId(src);
+    },
+
     observationHasRealImages(obs) {
         if (!obs) return false;
         const atts = Array.isArray(obs.attachments) ? obs.attachments : [];
-        const hasAtt = atts.some((a) => a && !a.__listOnly && (a.data || a.url || a.directLink || a.shareableLink || a.fileId || a.driveUrl || a.driveId));
+        const hasAtt = atts.some((a) => a && !a.__listOnly && (this.getObservationAttachmentSrc(a) || a.fileId || a.driveId));
         const after = Array.isArray(obs.afterExecutionImages) ? obs.afterExecutionImages : [];
         const hasAfter = after.some((img) => {
             if (!img) return false;
             if (typeof img === 'string' && img.trim().length > 8) return true;
-            if (typeof img === 'object' && (img.data || img.url || img.directLink || img.fileId)) return true;
+            if (typeof img === 'object' && (this.getObservationAttachmentSrc(img) || img.fileId)) return true;
             return false;
         });
         return hasAtt || hasAfter;
@@ -625,7 +670,6 @@ const DailyObservations = {
             const chunk = list.slice(i, i + chunkSize);
             const fetched = await Promise.all(chunk.map(async (obs) => {
                 const normalized = this.normalizeRecord(obs);
-                if (this.observationHasRealImages(normalized)) return normalized;
                 const id = normalized.id || obs?.id;
                 if (!id || typeof this._getObservationData !== 'function') return normalized;
                 try {
@@ -8667,7 +8711,11 @@ const DailyObservations = {
             const companyName = AppState.companySettings?.name || AppState.companyName || 'الشركة العالمية للانتاج والتصنيع الزراعي';
 
             const imageCache = new Map();
-            // مساعد استخراج وتحميل الصور وتضمينها كـ Base64 مدمج في ملف PPTX
+            const clonePptxImage = (img) => {
+                if (!img || !img.data) return null;
+                return { data: String(img.data) };
+            };
+            // مساعد استخراج وتحميل الصور وتضمينها كـ Base64 مدمج في ملف PPTX — كاش بالمعرف الفريد فقط
             const formatPptxImage = async (input) => {
                 if (!input || input.__listOnly) return null;
                 let url = '';
@@ -8679,21 +8727,13 @@ const DailyObservations = {
                             return { data: dataVal.startsWith('data:') ? dataVal : ('data:image/jpeg;base64,' + dataVal) };
                         }
                     }
-                    url = String(input.url || input.directLink || input.shareableLink || input.link || input.driveUrl || input.data || '').trim();
-                    const rawId = String(input.fileId || input.driveId || '').trim();
+                    url = this.getObservationAttachmentSrc(input);
+                    fileId = this.resolveObservationDriveFileId(input);
                     const attId = String(input.id || '').trim();
-                    fileId = rawId;
-                    if (!fileId && /^FILE_/i.test(attId)) fileId = attId;
-                    if (!fileId && typeof Utils !== 'undefined') {
-                        if (typeof Utils.extractImageProxyId === 'function') {
-                            fileId = Utils.extractImageProxyId(url) || Utils.extractImageProxyId(attId) || '';
-                        }
-                        if (!fileId && typeof Utils.extractDriveFileId === 'function') {
-                            fileId = Utils.extractDriveFileId(url) || Utils.extractDriveFileId(attId) || '';
-                        }
-                    }
+                    if (!fileId && /^FILE_/i.test(attId)) fileId = attId.split(/[?#\s]/)[0];
                 } else if (typeof input === 'string') {
                     url = input.trim();
+                    fileId = this.resolveObservationDriveFileId(url);
                 }
                 if (!url && !fileId) return null;
 
@@ -8705,19 +8745,20 @@ const DailyObservations = {
                     return { data: url };
                 }
 
-                if (!fileId && typeof Utils !== 'undefined') {
-                    if (typeof Utils.extractImageProxyId === 'function') fileId = Utils.extractImageProxyId(url) || '';
-                    if (!fileId && typeof Utils.extractDriveFileId === 'function') fileId = Utils.extractDriveFileId(url) || '';
-                }
                 if (/^FILE_/i.test(url)) fileId = url.split(/[?#\s]/)[0];
+                const cacheKey = fileId || url;
+                if (cacheKey && imageCache.has(cacheKey)) return clonePptxImage(imageCache.get(cacheKey));
+
                 if (fileId && typeof Utils !== 'undefined' && typeof Utils.fetchDriveImageDataUri === 'function') {
                     try {
                         const uri = await Utils.fetchDriveImageDataUri(fileId, { force: true });
-                        if (uri && String(uri).startsWith('data:image/')) return { data: uri };
+                        if (uri && String(uri).startsWith('data:image/')) {
+                            const resObj = { data: String(uri) };
+                            imageCache.set(cacheKey, resObj);
+                            return clonePptxImage(resObj);
+                        }
                     } catch (_e) { /* fallback below */ }
                 }
-
-                if (url && imageCache.has(url)) return imageCache.get(url);
 
                 const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
                                    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
@@ -8768,9 +8809,9 @@ const DailyObservations = {
                             img.src = cand;
                         });
                         if (dataUrl && String(dataUrl).startsWith('data:image/')) {
-                            const resObj = { data: dataUrl };
-                            imageCache.set(url, resObj);
-                            return resObj;
+                            const resObj = { data: String(dataUrl) };
+                            if (cacheKey) imageCache.set(cacheKey, resObj);
+                            return clonePptxImage(resObj);
                         }
                     } catch (e) {}
                 }
@@ -8792,9 +8833,9 @@ const DailyObservations = {
                                 });
                                 if (dataUrl && (String(dataUrl).startsWith('data:image/') || String(dataUrl).startsWith('data:application/octet-stream'))) {
                                     const cleanDataUrl = String(dataUrl).replace('data:application/octet-stream', 'data:image/jpeg');
-                                    const resObj = { data: cleanDataUrl };
-                                    imageCache.set(url, resObj);
-                                    return resObj;
+                                    const resObj = { data: String(cleanDataUrl) };
+                                    if (cacheKey) imageCache.set(cacheKey, resObj);
+                                    return clonePptxImage(resObj);
                                 }
                             }
                         }
@@ -8823,9 +8864,9 @@ const DailyObservations = {
                                     reader.readAsDataURL(blob);
                                 });
                                 if (dataUrl && String(dataUrl).startsWith('data:image/')) {
-                                    const resObj = { data: dataUrl };
-                                    imageCache.set(url, resObj);
-                                    return resObj;
+                                    const resObj = { data: String(dataUrl) };
+                                    if (cacheKey) imageCache.set(cacheKey, resObj);
+                                    return clonePptxImage(resObj);
                                 }
                             }
                         }
@@ -8837,34 +8878,32 @@ const DailyObservations = {
 
             const getObservationPrimaryImageUrl = (obs) => {
                 if (!obs) return '';
-                const isImageAtt = (att) => {
-                    if (!att || att.__listOnly) return false;
-                    const type = String(att?.type || att?.mimeType || '').toLowerCase();
-                    const name = String(att?.name || att?.fileName || '').toLowerCase();
-                    const data = String(att?.data || att?.url || att?.directLink || att?.shareableLink || att?.fileId || att?.driveId || '');
-                    return type === 'image' || type.startsWith('image') ||
-                           name.match(/\.(jpe?g|png|webp|gif|bmp)$/i) ||
-                           /^image[-_]?\d+/i.test(name) ||
-                           data.startsWith('data:image/') ||
-                           /^FILE_/i.test(data) ||
-                           data.match(/\/d\/|\/file\/d\/|[?&]id=|drive\.google|googleusercontent|vercel-storage/i);
-                };
                 if (Array.isArray(obs.attachments) && obs.attachments.length > 0) {
-                    const imageAtt = obs.attachments.find(isImageAtt) || obs.attachments.find((a) => a && !a.__listOnly) || null;
-                    if (imageAtt && !imageAtt.__listOnly) return imageAtt;
+                    const imageAtt = obs.attachments.find((a) => this.isObservationPhotoAttachment(a)) || null;
+                    if (imageAtt) return imageAtt;
                 }
                 if (Array.isArray(obs.afterExecutionImages) && obs.afterExecutionImages.length > 0) {
                     const first = obs.afterExecutionImages.find(Boolean);
                     if (first) return first;
                 }
-                return obs.image || obs.photo || obs.imageUrl || obs.photoUrl || obs.attachment || obs.directLink || '';
+                return '';
             };
 
-            // جلب كافة صور الملاحظات دفعة واحدة بالتوازي الفائق لمنع أي تأخير في التصدير
-            const [logoImgObj, obsImages] = await Promise.all([
+            const observationImageKey = (obs, index) => String(obs?.id || obs?.isoCode || ('idx-' + index));
+
+            // جلب صور كل ملاحظة مربوطة بمعرّفها — لا فهرس المصفوفة حتى لا تختلط الصور
+            const [logoImgObj, obsImageEntries] = await Promise.all([
                 formatPptxImage(logoUrl),
-                Promise.all(exportBatch.map(obs => formatPptxImage(getObservationPrimaryImageUrl(obs))))
+                Promise.all(exportBatch.map(async (obs, index) => {
+                    const key = observationImageKey(obs, index);
+                    const img = await formatPptxImage(getObservationPrimaryImageUrl(obs));
+                    return [key, clonePptxImage(img)];
+                }))
             ]);
+            const obsImagesByKey = Object.create(null);
+            obsImageEntries.forEach(([key, img]) => {
+                obsImagesByKey[key] = img;
+            });
 
             // ══════════════════════════════════════
             // الشريحة 1: شريحة الغلاف التنفيذية المحدثة بخلفية بيضاء راقية
@@ -9151,7 +9190,7 @@ const DailyObservations = {
                 const obsNo = obs.isoCode || obs.id || `OBS-${i + 1}`;
                 const obsDate = String(obs.date || '').slice(0, 10) || '—';
                 const obsLocation = [obs.siteName, obs.locationName].filter(Boolean).join(' - ') || '—';
-                const obsImgObj = obsImages[i];
+                const obsImgObj = clonePptxImage(obsImagesByKey[observationImageKey(obs, i)]);
 
                 // ترويسة الشريحة العلوية (بارتفاع 0.65 بوصة)
                 obsSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.65, fill: { color: '1E3A8A' } });
@@ -10581,6 +10620,23 @@ const DailyObservations = {
         this.updateAttachmentsPreview(previewContainer);
     },
 
+    _observationEditImageThumbHtml(img) {
+        const src = this.getObservationAttachmentSrc(img);
+        const fileId = this.resolveObservationDriveFileId(img);
+        const placeholderGif = (typeof Utils !== 'undefined' && Utils.IMG_DRIVE_PLACEHOLDER_GIF)
+            ? Utils.IMG_DRIVE_PLACEHOLDER_GIF
+            : '';
+        const displaySrc = (src && src.startsWith('data:image/')) ? src : placeholderGif;
+        const driveProxyAttr = fileId ? ` data-drive-proxy-id="${Utils.escapeHTML(fileId)}"` : '';
+        const openTarget = Utils.escapeHTML(src || fileId || '');
+        return `
+            <div style="display: inline-block; margin: 0.5rem; text-align: center;">
+                <img src="${Utils.escapeHTML(displaySrc)}"${driveProxyAttr} alt="${Utils.escapeHTML(img.name || '')}" style="max-width: 250px; max-height: 200px; border-radius: 12px; border: 2px solid var(--border-color); cursor: pointer; transition: transform 0.3s ease;" onclick="DailyObservations.viewFullImage(this.currentSrc || '${openTarget}')" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                <p style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 0.5rem; text-align: center;">${Utils.escapeHTML(img.name || '')}</p>
+            </div>
+        `;
+    },
+
     isSupportedAttachmentType(type = '') {
         if (!type) return true;
         return ['image/jpeg', 'image/png', 'application/pdf'].some((allowed) => type.toLowerCase() === allowed);
@@ -10603,6 +10659,9 @@ const DailyObservations = {
         }
 
         container.innerHTML = this.state.currentAttachments.map((attachment) => this.buildAttachmentPreviewCard(attachment)).join('');
+        if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(container);
+        }
 
         // عرض الصور في صف الصورة
         const form = container.closest('form');
@@ -10610,15 +10669,13 @@ const DailyObservations = {
             const imageRow = form.querySelector('#observation-image-row');
             const imageDisplay = form.querySelector('#observation-image-display');
             if (imageRow && imageDisplay) {
-                const images = this.state.currentAttachments.filter(att => (att.type || '').startsWith('image/'));
+                const images = this.state.currentAttachments.filter((att) => this.isObservationPhotoAttachment(att));
                 if (images.length > 0) {
                     imageRow.classList.remove('hidden');
-                    imageDisplay.innerHTML = images.map(img => `
-                        <div style="display: inline-block; margin: 0.5rem; text-align: center;">
-                            <img src="${img.data}" alt="${Utils.escapeHTML(img.name || '')}" style="max-width: 250px; max-height: 200px; border-radius: 12px; border: 2px solid var(--border-color); cursor: pointer; transition: transform 0.3s ease;" onclick="window.open('${img.data}', '_blank')" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            <p style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 0.5rem; text-align: center;">${Utils.escapeHTML(img.name || '')}</p>
-                        </div>
-                    `).join('');
+                    imageDisplay.innerHTML = images.map((img) => this._observationEditImageThumbHtml(img)).join('');
+                    if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+                        Utils.hydrateDriveProxyImages(imageDisplay);
+                    }
                 } else {
                     imageRow.classList.add('hidden');
                 }
@@ -10645,14 +10702,21 @@ const DailyObservations = {
     },
 
     buildAttachmentPreviewCard(attachment) {
-        const isImage = (attachment.type || '').startsWith('image/');
+        const isImage = this.isObservationPhotoAttachment(attachment);
         const sizeLabel = attachment.size ? `${(attachment.size / (1024 * 1024)).toFixed(1)} MB` : '';
         const name = Utils.escapeHTML(attachment.name || 'مرفق بدون اسم');
+        const src = this.getObservationAttachmentSrc(attachment);
+        const fileId = this.resolveObservationDriveFileId(attachment);
+        const placeholderGif = (typeof Utils !== 'undefined' && Utils.IMG_DRIVE_PLACEHOLDER_GIF)
+            ? Utils.IMG_DRIVE_PLACEHOLDER_GIF
+            : src;
+        const displaySrc = (src && src.startsWith('data:image/')) ? src : placeholderGif;
+        const driveProxyAttr = fileId ? ` data-drive-proxy-id="${Utils.escapeHTML(fileId)}"` : '';
 
         if (isImage) {
             return `
                 <div class="attachment-item">
-                    <img src="${attachment.data}" alt="${name}" class="attachment-image">
+                    <img src="${Utils.escapeHTML(displaySrc)}"${driveProxyAttr} alt="${name}" class="attachment-image">
                     <button type="button" data-remove-attachment="${attachment.id}" class="attachment-remove" aria-label="حذف المرفق">
                         <i class="fas fa-times"></i>
                     </button>
@@ -10829,6 +10893,7 @@ const DailyObservations = {
             reviewedBy: record.reviewedBy || '',
             remarks: record.remarks || '',
             attachments: this.normalizeAttachments(rawAttachments),
+            attachmentCount: Math.max(Number(record.attachmentCount) || 0, Array.isArray(rawAttachments) ? rawAttachments.filter((a) => a && !a.__listOnly).length : 0),
             afterExecutionImages: rawAfterExecutionImages, // ✅ صور بعد التنفيذ (تم تطبيعها أعلاه)
             createdAt: createdAtIso || timestampIso || new Date().toISOString(),
             updatedAt: updatedAtIso || createdAtIso || timestampIso || new Date().toISOString(),
@@ -10865,11 +10930,15 @@ const DailyObservations = {
 
     normalizeAttachment(entry, index = 0) {
         if (!entry) return null;
+        if (typeof entry === 'object' && entry.__listOnly) {
+            return { __listOnly: true };
+        }
         let data = '';
         let name = '';
         let type = '';
         let size = 0;
         let id = '';
+        let fileId = '';
 
         if (typeof entry === 'string') {
             // ✅ FIX: Parse "Name - URL" format commonly saved by backend
@@ -10883,8 +10952,9 @@ const DailyObservations = {
             }
             type = this.detectMimeType(name, data);
             id = Utils.generateId('ATT');
+            fileId = this.resolveObservationDriveFileId(data);
         } else if (typeof entry === 'object') {
-            let rawData = entry.data || entry.base64 || entry.url || '';
+            let rawData = entry.data || entry.base64 || entry.url || entry.directLink || entry.shareableLink || entry.driveUrl || entry.link || '';
             
             // ✅ FIX: Clean data if it follows "Name - URL" pattern
             const match = typeof rawData === 'string' ? rawData.match(/^(.+?)\s*-\s*(https?:\/\/.+)$/) : null;
@@ -10894,16 +10964,20 @@ const DailyObservations = {
             type = entry.type || entry.mimeType || this.detectMimeType(name, data);
             size = entry.size || entry.fileSize || (data ? this.calculateBase64Size(data) : 0);
             id = entry.id || Utils.generateId('ATT');
+            fileId = String(entry.fileId || entry.driveId || '').trim() || this.resolveObservationDriveFileId(entry);
+            if (!data && fileId) data = fileId;
         }
 
-        if (!data) return null;
+        if (!data && !fileId) return null;
 
         return {
             id,
             name,
             type,
             size,
-            data
+            data,
+            fileId: fileId || undefined,
+            url: (typeof entry === 'object' && entry.url) ? entry.url : (String(data).startsWith('http') ? data : undefined)
         };
     },
 
@@ -10912,6 +10986,20 @@ const DailyObservations = {
         if (lowerName.endsWith('.pdf')) return 'application/pdf';
         if (lowerName.endsWith('.png')) return 'image/png';
         if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) return 'image/jpeg';
+        if (lowerName.endsWith('.webp') || lowerName.endsWith('.gif') || /^image[-_]?\d+/i.test(name)) return 'image/jpeg';
+
+        if (this.isDataUrl(data)) {
+            const match = data.match(/^data:([^;]+);/);
+            if (match && match[1]) {
+                return match[1];
+            }
+        }
+
+        if (/^FILE_/i.test(data) || /drive\.google|googleusercontent|\/file\/d\/|[?&]id=/i.test(data)) {
+            return 'image/jpeg';
+        }
+
+        return 'application/octet-stream';
 
         if (this.isDataUrl(data)) {
             const match = data.match(/^data:([^;]+);/);
@@ -11360,14 +11448,13 @@ const DailyObservations = {
                 const imageRow = form.querySelector('#observation-image-row');
                 const imageDisplay = form.querySelector('#observation-image-display');
                 if (imageRow && imageDisplay) {
-                    const images = normalizedData.attachments.filter(att => (att.type || '').startsWith('image/'));
+                    const images = normalizedData.attachments.filter((att) => this.isObservationPhotoAttachment(att));
                     if (images.length > 0) {
                         imageRow.classList.remove('hidden');
-                        imageDisplay.innerHTML = images.map(img => `
-                            <div class="inline-block m-2">
-                                <img src="${img.data}" alt="${Utils.escapeHTML(img.name || '')}" class="max-w-xs max-h-48 rounded border cursor-pointer" onclick="window.open('${img.data}', '_blank')">
-                            </div>
-                        `).join('');
+                        imageDisplay.innerHTML = images.map((img) => this._observationEditImageThumbHtml(img)).join('');
+                        if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+                            Utils.hydrateDriveProxyImages(imageDisplay);
+                        }
                     }
                 }
             } else {
@@ -11901,6 +11988,9 @@ const DailyObservations = {
         // ✅ فتح النموذج أولاً (فوري) باستخدام البيانات المحلية
         const modal = this.createObservationModal(observation);
         document.body.appendChild(modal);
+        if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal);
+        }
         if (typeof EmailDispatch !== 'undefined') {
             EmailDispatch.bindFooterButtons(modal, { moduleKey: 'daily-observations', record: observation, recordId: observation.id || observation.isoCode || '' });
         }
@@ -12084,14 +12174,7 @@ const DailyObservations = {
                         </div>
                         ` : ''}
 
-                        ${Array.isArray(observation.attachments) && observation.attachments.length > 0 ? `
-                        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                            <strong class="text-gray-700 block mb-3 text-lg">المرفقات:</strong>
-                            <div data-section="attachments" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                ${this._buildObservationAttachmentsHtml(observation.attachments)}
-                            </div>
-                        </div>
-                        ` : ''}
+                        ${this._observationPhotoSectionHtml(observation)}
 
                         <!-- ✅ قسم صور بعد التنفيذ (إضافة جديدة) -->
                         ${(this._isSafetyManager() || this._isSafetyOfficer() || this.canShowAssignResponsiblePanel(observation)) ? `
@@ -12310,23 +12393,7 @@ const DailyObservations = {
             updateField('[data-field="details"]', observation.details);
             updateField('[data-field="correctiveAction"]', observation.correctiveAction);
 
-            // ✅ تحديث المرفقات إذا وجدت
-            const attachmentsSection = modal.querySelector('[data-section="attachments"]');
-            const attachmentsParent = attachmentsSection ? attachmentsSection.parentElement : null;
-            
-            Utils.safeLog('📎 updateObservationModalContent: عدد المرفقات = ' + (observation.attachments?.length || 0));
-            Utils.safeLog('📎 updateObservationModalContent: attachmentsSection موجود = ' + !!attachmentsSection);
-            
-            if (Array.isArray(observation.attachments) && observation.attachments.length > 0) {
-                if (attachmentsSection) {
-                    attachmentsSection.innerHTML = this._buildObservationAttachmentsHtml(observation.attachments);
-                    Utils.safeLog('✅ updateObservationModalContent: تم تحديث المرفقات بنجاح');
-                }
-            } else if (attachmentsParent) {
-                // إزالة قسم المرفقات إذا لم تكن هناك مرفقات
-                Utils.safeLog('ℹ️ updateObservationModalContent: لا توجد مرفقات، إزالة القسم');
-                attachmentsParent.remove();
-            }
+            this._syncObservationModalPhotos(modal, observation);
 
             // تحديث صور بعد التنفيذ إذا وجدت
             if (observation.afterExecutionImages && Array.isArray(observation.afterExecutionImages)) {
@@ -12334,6 +12401,10 @@ const DailyObservations = {
                 if (photosContainer) {
                     photosContainer.innerHTML = this._buildAfterExecutionPhotosHtml(observation.afterExecutionImages);
                 }
+            }
+
+            if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+                Utils.hydrateDriveProxyImages(modal);
             }
 
             // تحديث التحديثات والتعليقات
@@ -13902,8 +13973,13 @@ const DailyObservations = {
 
     viewFullImage(url) {
         if (!url) return;
-        const fileId = this._extractDriveFileId(url);
-        const resolvedSrc = fileId ? `https://lh3.googleusercontent.com/d/${fileId}=w1600` : url;
+        const fileId = this.resolveObservationDriveFileId(url);
+        const placeholderGif = (typeof Utils !== 'undefined' && Utils.IMG_DRIVE_PLACEHOLDER_GIF)
+            ? Utils.IMG_DRIVE_PLACEHOLDER_GIF
+            : '';
+        const isData = String(url).startsWith('data:image/');
+        const displaySrc = isData ? url : (fileId ? placeholderGif : url);
+        const driveProxyAttr = (!isData && fileId) ? ` data-drive-proxy-id="${Utils.escapeHTML(fileId)}"` : '';
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.zIndex = '99999';
@@ -13916,72 +13992,99 @@ const DailyObservations = {
                     </button>
                 </div>
                 <div style="display: flex; justify-content: center; align-items: center; overflow: auto; max-height: 80vh;">
-                    <img src="${Utils.escapeHTML(resolvedSrc)}" alt="صورة الملاحظة" style="max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);"
-                         onerror="if (this.src !== '${Utils.escapeHTML(url)}') { this.src = '${Utils.escapeHTML(url)}'; }">
+                    <img src="${Utils.escapeHTML(displaySrc)}"${driveProxyAttr} alt="صورة الملاحظة" style="max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal);
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });
     },
 
+    _observationPhotoLoadingHtml() {
+        return `
+            <div class="flex flex-col items-center justify-center p-8 text-slate-400 gap-2 min-h-[220px] w-full col-span-full">
+                <i class="fas fa-circle-notch fa-spin text-2xl text-blue-500"></i>
+                <span class="text-sm font-semibold">جاري تحميل صورة الملاحظة...</span>
+            </div>
+        `;
+    },
+
+    _observationPhotoSectionHtml(observation) {
+        const atts = Array.isArray(observation?.attachments) ? observation.attachments : [];
+        const real = atts.filter((a) => a && !a.__listOnly);
+        const waiting = (Number(observation?.attachmentCount) > 0 || atts.some((a) => a && a.__listOnly)) && real.length === 0 && !this.observationHasRealImages(observation);
+        const inner = waiting
+            ? this._observationPhotoLoadingHtml()
+            : (this._buildObservationAttachmentsHtml(atts) || '<p class="text-sm text-gray-500 col-span-full">لا توجد صورة مرفقة لهذه الملاحظة</p>');
+        return `
+                        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm" data-obs-attachments-wrap>
+                            <strong class="text-gray-700 block mb-3 text-lg"><i class="fas fa-image ml-2 text-blue-500"></i>صورة الملاحظة</strong>
+                            <div data-section="attachments" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                ${inner}
+                            </div>
+                        </div>
+        `;
+    },
+
+    _syncObservationModalPhotos(modal, observation) {
+        if (!modal) return;
+        const html = this._observationPhotoSectionHtml(observation).trim();
+        const wrap = modal.querySelector('[data-obs-attachments-wrap]');
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        const node = tmp.firstElementChild;
+        if (!node) return;
+        if (wrap) {
+            wrap.replaceWith(node);
+            return;
+        }
+        const afterExec = modal.querySelector('[id^="after-execution-photos-container-"]');
+        const afterParent = afterExec ? afterExec.closest('.bg-gradient-to-br') : null;
+        const bodySpace = modal.querySelector('.modal-body .space-y-5');
+        if (afterParent && afterParent.parentNode) {
+            afterParent.parentNode.insertBefore(node, afterParent);
+        } else if (bodySpace) {
+            bodySpace.appendChild(node);
+        }
+    },
+
     _buildObservationAttachmentsHtml(attachments) {
         if (!Array.isArray(attachments) || attachments.length === 0) return '';
 
-        const isImgAttachment = (att) => {
-            if (!att) return false;
-            const type = String(att.type || '').toLowerCase();
-            if (type.startsWith('image/')) return true;
-            const name = String(att.name || '').toLowerCase();
-            if (/\.(jpg|jpeg|png|gif|webp|bmp|heic|svg)($|\?)/i.test(name)) return true;
-            if (/^image[-_]?\d+/i.test(name)) return true;
-            const src = String(att.data || att.url || att.shareableLink || att.directLink || (att.cloudLink && att.cloudLink.url) || '').trim();
-            if (src.startsWith('data:image/')) return true;
-            if (/\.(jpg|jpeg|png|gif|webp|bmp|heic|svg)($|\?)/i.test(src)) return true;
-            if (src && !/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|txt)($|\?)/i.test(name) && !/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|txt)($|\?)/i.test(src)) {
-                return true;
-            }
-            return false;
-        };
+        const real = attachments.filter((att) => att && !att.__listOnly);
+        if (!real.length) {
+            if (attachments.some((att) => att && att.__listOnly)) return this._observationPhotoLoadingHtml();
+            return '';
+        }
 
-        const getAttachmentSrc = (att) => {
-            if (!att) return '';
-            return att.data || att.url || att.shareableLink || att.directLink || (att.cloudLink && att.cloudLink.url) || '';
-        };
+        const placeholderGif = (typeof Utils !== 'undefined' && Utils.IMG_DRIVE_PLACEHOLDER_GIF)
+            ? Utils.IMG_DRIVE_PLACEHOLDER_GIF
+            : 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
-        return attachments.map((att) => {
-            const isImg = isImgAttachment(att);
-            const rawSrc = getAttachmentSrc(att);
+        return real.map((att) => {
+            const isImg = this.isObservationPhotoAttachment(att);
+            const rawSrc = this.getObservationAttachmentSrc(att);
             const name = Utils.escapeHTML(att.name || 'صورة الملاحظة');
+            const fileId = this.resolveObservationDriveFileId(att);
 
-            if (isImg && rawSrc) {
-                const fileId = this._extractDriveFileId(rawSrc);
-                let primarySrc = rawSrc;
-                let fallbacks = [];
-
-                if (fileId) {
-                    const cached = (typeof Utils !== 'undefined' && Utils._driveImageMemoryCache && Utils._driveImageMemoryCache.get(fileId))
-                        || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('HSE_IMG_CACHE_' + fileId));
-                    if (cached) {
-                        primarySrc = cached;
-                    } else {
-                        primarySrc = `https://lh3.googleusercontent.com/d/${fileId}`;
-                        fallbacks = [
-                            `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`,
-                            `https://lh3.googleusercontent.com/d/${fileId}=w1000`,
-                            `https://drive.google.com/uc?export=view&id=${fileId}`,
-                            `https://drive.google.com/uc?export=download&id=${fileId}`,
-                            rawSrc
-                        ];
-                    }
+            if (isImg && (rawSrc || fileId)) {
+                let displaySrc = placeholderGif;
+                if (rawSrc.startsWith('data:image/') && !rawSrc.startsWith('data:image/gif')) {
+                    displaySrc = rawSrc;
+                } else if (typeof Utils !== 'undefined' && typeof Utils.resolveDriveAwareImgDisplay === 'function') {
+                    const info = Utils.resolveDriveAwareImgDisplay(rawSrc || fileId);
+                    if (info && info.displaySrc && !info.needsProxy) displaySrc = info.displaySrc;
+                    else if (info && info.displaySrc) displaySrc = info.displaySrc;
                 } else if (rawSrc.startsWith('http://') || rawSrc.startsWith('https://')) {
-                    primarySrc = rawSrc;
+                    displaySrc = placeholderGif;
                 }
 
-                const driveProxyAttr = fileId ? ` data-drive-proxy-id="${fileId}"` : '';
-                const fallbacksAttr = fallbacks.length ? ` data-fallbacks="${Utils.escapeHTML(JSON.stringify(fallbacks))}"` : '';
+                const driveProxyAttr = fileId ? ` data-drive-proxy-id="${Utils.escapeHTML(fileId)}"` : '';
 
                 return `
                     <div class="border-2 border-gray-200 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all bg-slate-50 flex flex-col items-center p-3">
@@ -13990,21 +14093,12 @@ const DailyObservations = {
                                 <i class="fas fa-circle-notch fa-spin text-2xl text-blue-500"></i>
                                 <span class="text-xs font-semibold">جاري تحميل وتجهيز الصورة...</span>
                             </div>
-                            <img src="${Utils.escapeHTML(primarySrc)}"${driveProxyAttr}${fallbacksAttr} alt="${name}" 
+                            <img src="${Utils.escapeHTML(displaySrc)}"${driveProxyAttr} alt="${name}" 
                                  class="observation-detail-photo relative z-10 w-auto max-w-full max-h-80 object-contain rounded-lg cursor-pointer transition-transform hover:scale-[1.02]"
-                                 onload="const sp = this.parentElement.querySelector('.photo-loading-spinner'); if(sp) sp.style.display='none';"
-                                 onclick="DailyObservations.viewFullImage(this.currentSrc || this.src || '${Utils.escapeHTML(rawSrc)}')"
+                                 onload="if (this.naturalWidth > 2) { const sp = this.parentElement.querySelector('.photo-loading-spinner'); if(sp) sp.style.display='none'; }"
+                                 onclick="DailyObservations.viewFullImage(this.currentSrc || this.src || '${Utils.escapeHTML(rawSrc || fileId)}')"
                                  title="انقر لعرض الصورة بالحجم الكامل"
                                  onerror="
-                                     try {
-                                         const fb = this.dataset.fallbacks ? JSON.parse(this.dataset.fallbacks) : [];
-                                         if (fb && fb.length > 0) {
-                                             const next = fb.shift();
-                                             this.dataset.fallbacks = JSON.stringify(fb);
-                                             this.src = next;
-                                             return;
-                                         }
-                                     } catch(e){}
                                      const sp = this.parentElement.querySelector('.photo-loading-spinner'); if(sp) sp.style.display='none';
                                      this.onerror = null;
                                      this.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22260%22%3E%3Crect fill=%22%23f8fafc%22 width=%22400%22 height=%22260%22/%3E%3Ctext fill=%22%2394a3b8%22 font-family=%22sans-serif%22 font-size=%2215%22 font-weight=%22bold%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eتعذر عرض الصورة مباشرة%3C/text%3E%3C/svg%3E';
@@ -14012,7 +14106,7 @@ const DailyObservations = {
                         </div>
                         <div class="w-full mt-2 flex items-center justify-between text-xs text-gray-600 px-1">
                             <span class="font-bold truncate max-w-[200px]"><i class="fas fa-image ml-1 text-blue-500"></i>${name}</span>
-                            <button type="button" onclick="DailyObservations.viewFullImage(this.closest('.border-2').querySelector('img')?.currentSrc || '${Utils.escapeHTML(rawSrc)}')" class="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer">
+                            <button type="button" onclick="DailyObservations.viewFullImage(this.closest('.border-2').querySelector('img')?.currentSrc || '${Utils.escapeHTML(rawSrc || fileId)}')" class="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer">
                                 <i class="fas fa-expand"></i> تكبير
                             </button>
                         </div>
@@ -14020,6 +14114,7 @@ const DailyObservations = {
                 `;
             }
 
+            if (!rawSrc) return '';
             return `
                 <div class="border rounded-xl p-4 bg-gray-50 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow">
                     <i class="fas fa-file-pdf text-3xl text-red-500"></i>
@@ -14080,7 +14175,13 @@ const DailyObservations = {
             return;
         }
 
-        const observation = this.normalizeRecord(observationRaw);
+        let observation = this.normalizeRecord(observationRaw);
+        if (!this.observationHasRealImages(observation) && typeof this._getObservationData === 'function') {
+            try {
+                const full = await this._getObservationData(id);
+                if (full) observation = this.normalizeRecord(full);
+            } catch (_e) { /* keep local */ }
+        }
 
         try {
             Loading.show();
@@ -14094,20 +14195,19 @@ const DailyObservations = {
             
             if (Array.isArray(observation.attachments) && observation.attachments.length > 0) {
                 observation.attachments.forEach((attachment) => {
-                    const isImage = (attachment.type || '').startsWith('image/') || 
-                                   (attachment.name || '').match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i);
-                    // استخدام shareableLink أولاً للحصول على رابط بصيغة view?usp=drive_link
-                    const imgSrc = attachment.shareableLink || attachment.directLink || attachment.cloudLink?.url || attachment.data || '';
+                    if (attachment && attachment.__listOnly) return;
+                    const isImage = this.isObservationPhotoAttachment(attachment);
+                    const imgSrc = this.getObservationAttachmentSrc(attachment);
                     
                     if (isImage && imgSrc) {
                         images.push({
                             src: imgSrc,
                             name: Utils.escapeHTML(attachment.name || 'صورة')
                         });
-                    } else {
+                    } else if (imgSrc) {
                         otherFiles.push({
                             name: Utils.escapeHTML(attachment.name || 'مرفق'),
-                            link: imgSrc || attachment.data || ''
+                            link: imgSrc
                         });
                     }
                 });
