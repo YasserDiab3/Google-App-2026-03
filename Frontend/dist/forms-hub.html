@@ -5980,18 +5980,30 @@
             'fire-inspection': 'public-fire-inspection.html',
             'gate-visitor-entry': 'gate-visitor-entry.html'
         };
+        const FORM_CLEAN_ROUTES = {
+            'daily-safety': 'daily-safety',
+            'patrol': 'daily-safety',
+            'observation': 'observation',
+            'public-observation.html': 'observation',
+            'near-miss': 'near-miss',
+            'fire-inspection': 'fire-inspection',
+            'gate-visitor-entry': 'gate',
+            'gate-visitor': 'gate'
+        };
 
         // Reliable dynamic navigation across all deployment paths & URL rewrites
         function navigateToForm(targetFile) {
             const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
-            let path = window.location.pathname || '';
+            const path = window.location.pathname || '';
             let resolvedTarget = targetFile;
-            const needsFilePath = path.includes('/Frontend/') || path.includes('/dist/') || path.includes('/forms-hub/');
+            const needsFilePath = path.includes('/Frontend/') || path.includes('/dist/');
             if (needsFilePath && FORM_ROUTE_MAP[targetFile]) {
                 resolvedTarget = FORM_ROUTE_MAP[targetFile];
+            } else if (!needsFilePath) {
+                resolvedTarget = FORM_CLEAN_ROUTES[targetFile] || String(targetFile || '').replace(/\.html$/i, '');
             }
-            const finalTarget = (currentLang === 'en' && !resolvedTarget.includes('lang='))
-                ? (resolvedTarget + (resolvedTarget.includes('?') ? '&lang=en' : '?lang=en'))
+            const finalTarget = (currentLang === 'en' && !String(resolvedTarget).includes('lang='))
+                ? (resolvedTarget + (String(resolvedTarget).includes('?') ? '&lang=en' : '?lang=en'))
                 : resolvedTarget;
             
             if (path.includes('/Frontend/')) {
@@ -5999,7 +6011,7 @@
             } else if (path.includes('/dist/')) {
                 window.location.href = `${origin}/dist/${finalTarget}`;
             } else {
-                window.location.href = `${origin}/${finalTarget}`;
+                window.location.href = `${origin}/${finalTarget.replace(/^\//, '')}`;
             }
         }
 

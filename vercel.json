@@ -1,6 +1,17 @@
 {
   "buildCommand": "npm run build",
   "installCommand": "npm install --prefix Frontend",
+  "functions": {
+    "api/exec.js": {
+      "memory": 1024,
+      "maxDuration": 60,
+      "includeFiles": "backend-sql/data/clinic_hse.db.gz",
+      "excludeFiles": "{**/*.db,**/*.db-wal,**/*.db-shm,**/*.rebuilt.db,**/backups/**}"
+    },
+    "api/health.js": {
+      "memory": 128
+    }
+  },
   "redirects": [
     {
       "source": "/(.*)",
@@ -62,5 +73,20 @@
       "source": "/(.*).css",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     }
+  ],
+  "rewrites": [
+    { "source": "/exec", "destination": "/api/exec" },
+    { "source": "/forms", "destination": "/forms-hub.html" },
+    { "source": "/forms-hub", "destination": "/forms-hub.html" },
+    { "source": "/gate", "destination": "/gate-visitor-entry.html" },
+    { "source": "/visitors", "destination": "/gate-visitor-entry.html" },
+    { "source": "/gate-visitor-entry", "destination": "/gate-visitor-entry.html" },
+    { "source": "/obs", "destination": "/public-observation.html" },
+    { "source": "/observation", "destination": "/public-observation.html" },
+    { "source": "/near-miss", "destination": "/public-near-miss.html" },
+    { "source": "/fire", "destination": "/public-fire-inspection.html" },
+    { "source": "/fire-inspection", "destination": "/public-fire-inspection.html" },
+    { "source": "/daily-safety", "destination": "/public-daily-safety.html" },
+    { "source": "/patrol", "destination": "/public-daily-safety.html" }
   ]
 }

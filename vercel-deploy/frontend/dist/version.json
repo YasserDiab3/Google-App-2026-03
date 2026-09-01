@@ -1,13 +1,13 @@
 {
-  "version": "1.0.1593",
+  "version": "1.0.1595",
   "highlights": {
     "ar": [
-      "إعادة تحميل صفحة النظام تبقى داخل النظام ولا تفتح بوابة النماذج.",
-      "هاش الملاحظات اليومية لم يعد يُحوَّل خطأً إلى النموذج العام."
+      "إصلاح فشل النشر على Vercel: تصغير دالة api/exec تحت حد 250MB.",
+      "النظام يبقى عند إعادة التحميل ولا يفتح بوابة النماذج بالخطأ."
     ],
     "en": [
-      "Refreshing the main app stays in the system and no longer opens the public forms hub.",
-      "The daily-observations hash no longer redirects to the public observation form."
+      "Fix Vercel deploy failure: shrink the api/exec function below the 250MB limit.",
+      "Refreshing the main app stays in the system and no longer opens the forms hub."
     ]
   }
 }

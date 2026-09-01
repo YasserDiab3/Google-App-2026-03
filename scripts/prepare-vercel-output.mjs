@@ -16,9 +16,16 @@ function rmrf(p) {
     try { fs.rmSync(p, { recursive: true, force: true }); } catch (_) {}
 }
 
+function skipHeavyDbArtifact(name) {
+    const n = String(name || '').toLowerCase();
+    return n.endsWith('.db') || n.endsWith('.db-wal') || n.endsWith('.db-shm') || n.endsWith('.rebuilt.db');
+}
+
 function cpDir(src, dest) {
     fs.mkdirSync(dest, { recursive: true });
     for (const ent of fs.readdirSync(src, { withFileTypes: true })) {
+        if (skipHeavyDbArtifact(ent.name)) continue;
+        if (ent.isDirectory() && ent.name === 'backups') continue;
         const s = path.join(src, ent.name);
         const d = path.join(dest, ent.name);
         if (ent.isDirectory()) cpDir(s, d);
@@ -94,8 +101,7 @@ setupNodeFunction('api/exec', 'Frontend/api/exec.js', {
     maxDuration: 60,
     includeDirs: ['backend-sql/src'],
     includeFiles: [
-        'backend-sql/data/clinic_hse.db.gz',
-        'data/sql/clinic_hse.db.gz'
+        'backend-sql/data/clinic_hse.db.gz'
     ]
 });
 

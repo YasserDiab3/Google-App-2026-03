@@ -43,6 +43,12 @@ yarn-error.log*
 *.temp
 *.db-shm
 *.db-wal
+*.db
+!*.db.gz
+backend-sql/backups/
+**/clinic_hse.rebuilt.db
+**/dist/data/sql/*.db
+**/dist/data/sql/*.db.gz
 data/attachments/
 backend-sql/data/attachments/
 *.diff
