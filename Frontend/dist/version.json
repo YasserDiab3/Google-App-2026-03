@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1611",
+  "version": "1.0.1612",
   "highlights": {
     "ar": [
-      "منع تكرار تسجيل المخالفة عند الضغط المتكرر أو تطابق نفس الشخص والتاريخ والوقت.",
-      "رسالة واضحة إذا كانت المخالفة مسجّلة مسبقاً أو معلّقة في دائرة الاعتماد.",
-      "دائرة الاعتماد أوضح: طلباتك أولاً، مع الوقت والمكان وشارة «دورك الآن»."
+      "كروت مؤشرات الملاحظات اليومية أصبحت قابلة للنقر لتصفية السجل فوراً.",
+      "الفلاتر ديناميكية: الخيارات والأعداد تتضيّق حسب اختيارك.",
+      "شريط يوضح النتائج النشطة مع إمكانية إزالة أي فلتر بنقرة."
     ],
     "en": [
-      "Block duplicate violation saves on repeated clicks or the same person, date, and time.",
-      "A clear message appears if the violation is already saved or waiting in the approval circle.",
-      "The approval circle now lists your turn first, with time, place, and a Your turn badge."
+      "Daily observation KPI cards are clickable and filter the registry immediately.",
+      "Filters are dynamic: options and counts shrink with each selection.",
+      "An active-filter bar shows results and lets you clear any filter in one tap."
     ]
   }
 }

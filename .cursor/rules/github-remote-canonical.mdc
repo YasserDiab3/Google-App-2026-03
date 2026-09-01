@@ -11,6 +11,12 @@ alwaysApply: true
 - في الإعداد الحالي الشائع: **`origin`** → `https://github.com/YasserDiab3/Google-App-2026-03.git`
 - أمر الرفع الاعتيادي بعد الـ commit: **`git push origin main`** فقط.
 
+## مستودع ICAPP-V092026 (محظور تماماً)
+
+- **URL:** `https://github.com/YasserDiab3/ICAPP-V092026.git`
+- إن وُجد بعيد اسمه **`icapp`**: **ممنوع** أي `git push icapp` أو دفع إلى هذا المستودع.
+- انظر `never-push-icapp-v092026.mdc`.
+
 ## مستودع google-TR (قيود صارمة)
 
 - **URL:** `https://github.com/YasserDiab3/google-TR.git`
@@ -23,6 +29,6 @@ alwaysApply: true
 
 ## قواعد للوكيل
 
-1. عند الرفع بعد «رفع»: **`git push origin main`** فقط — **لا** `git push google-tr` إلا إذا طلب المستخدم صراحة الدفع إلى `google-TR`.
+1. عند الرفع بعد «رفع»: **`git push origin main`** فقط — **لا** `git push icapp` و**لا** `git push google-tr`.
 2. لا تُضِف remote ثانياً بنفس URL الخاص بـ `origin` (تجنّب التكرار غير الضروري).
 3. لا تغيّر URL الخاص بـ `origin` إلا إذا طلب المستخدم ذلك صراحة.

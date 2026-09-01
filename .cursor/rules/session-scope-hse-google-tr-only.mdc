@@ -13,6 +13,7 @@ alwaysApply: true
 ## GitHub — الرفع المسموح
 
 - الرفع الاعتيادي للكود: **`git push origin main`** على البعيد **`origin`** المحلي (انظر `github-remote-canonical.mdc`).
+- **لا ترفع** إلى المستودع **`https://github.com/YasserDiab3/ICAPP-V092026.git`** (ولا تنفّذ `git push icapp`) — محظور تماماً.
 - **لا ترفع** إلى المستودع **`https://github.com/YasserDiab3/google-TR.git`** (ولا تنفّذ `git push google-tr`) **ما لم يطلب المستخدم ذلك صراحة** في رسالته. هذا المستودع **ليس** هدف الرفع الافتراضي لهذا المشروع.
 
 ## ملاحظة تقنية

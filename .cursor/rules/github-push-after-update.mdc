@@ -15,6 +15,7 @@ alwaysApply: true
    - تنفيذ `git add` للملفات المعدّلة **بما فيها ملفات الإصدار**.
    - تنفيذ `git commit` برسالة واضحة بالعربية تصف التحديث.
    - تنفيذ **`git push origin main` فقط** (البعيد **`origin`** — انظر `github-remote-canonical.mdc`).
+   - **ممنوع** تنفيذ **`git push icapp`** أو أي دفع إلى **`https://github.com/YasserDiab3/ICAPP-V092026.git`**.
    - **ممنوع** تنفيذ **`git push google-tr`** أو أي دفع إلى المستودع **`YasserDiab3/google-TR`** ما لم يطلب المستخدم ذلك **صراحة** في نفس الطلب (ذكر google-TR أو الرابط مع طلب الرفع هناك).
 5. إذا لم يكتب المستخدم كلمة **«رفع»**، لا تنفّذ أي أوامر `commit` أو `push`.
 

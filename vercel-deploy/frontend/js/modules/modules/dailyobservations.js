@@ -2137,6 +2137,9 @@ const DailyObservations = {
         activeTab: 'observations-registry' // حفظ التبويب النشط
     },
     currentFilter: null, // الفلتر النشط الحالي من الكروت
+    _obsKpiFilter: '',
+    _obsKpiSiteApplied: false,
+    _obsTopSiteName: '',
     _topRiskCategoryFilter: '', // فلتر فئة المخاطر في تبويب أعلى 10 مخاطر
     sheetJsPromise: null,
     _dailyObsLoadPromise: null,
@@ -2667,8 +2670,8 @@ const DailyObservations = {
         const titleIconMargin = isRTL ? 'ml-2' : 'mr-2';
         
         return `
-            <!-- الكروت الإحصائية -->
-            <div id="observations-stats-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <!-- الكروت الإحصائية التفاعلية -->
+            <div id="observations-stats-cards" class="obs-kpi-grid mb-6">
                 <!-- سيتم ملؤها ديناميكياً -->
             </div>
 
@@ -2705,11 +2708,14 @@ const DailyObservations = {
                 <div class="observations-filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; margin: 0 -20px 0 -20px; width: calc(100% + 40px); direction: ${isRTL ? 'rtl' : 'ltr'};">
                     <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; align-items: end;">
                         <!-- حقل البحث -->
-                        <div class="filter-field">
+                        <div class="filter-field obs-search-field">
                             <label class="filter-label" style="text-align: ${isRTL ? 'right' : 'left'};">
                                 <i class="fas fa-search ${iconMarginClass}"></i>${t('filter.search')}
                             </label>
-                            <input type="text" id="observation-search" class="filter-input" placeholder="${t('filter.searchPlaceholder')}" style="direction: ${isRTL ? 'rtl' : 'ltr'}; text-align: ${isRTL ? 'right' : 'left'};">
+                            <div class="obs-search-wrap">
+                                <input type="text" id="observation-search" class="filter-input" placeholder="${t('filter.searchPlaceholder')}" style="direction: ${isRTL ? 'rtl' : 'ltr'}; text-align: ${isRTL ? 'right' : 'left'};" autocomplete="off">
+                                <button type="button" id="observation-search-clear" class="obs-search-clear" hidden aria-label="مسح البحث"><i class="fas fa-times"></i></button>
+                            </div>
                         </div>
 
                         <!-- فلتر الموقع -->
@@ -2812,6 +2818,10 @@ const DailyObservations = {
                             </button>
                         </div>
                     </div>
+                    <div id="obs-filter-meta-bar" class="obs-filter-meta-bar">
+                        <div id="obs-filter-result-count" class="obs-filter-result-count"></div>
+                        <div id="obs-active-filter-chips" class="obs-active-filter-chips"></div>
+                    </div>
                 </div>
                 <div class="card-body" style="padding-top: 20px;">
                     <div id="observations-table-container">
@@ -2876,199 +2886,146 @@ const DailyObservations = {
     },
 
     /**
-     * حساب الإحصائيات وعرض الكروت
+     * حساب الإحصائيات وعرض كروت KPI التفاعلية
      */
-    renderStatsCards(observations = null, activeFilter = null) {
+    renderStatsCards(observations = null, _activeFilter = null) {
         const container = document.getElementById('observations-stats-cards');
         if (!container) return;
 
-        // إذا لم يتم تمرير الملاحظات، جلبها من AppState
-        if (!observations) {
-            const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
-                ? this.getDailyObservationsVisibleToCurrentUser()
-                : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
-            observations = observationsRaw.map(item => this.normalizeRecord(item));
-        }
+        const all = Array.isArray(observations) && observations.length
+            ? observations.map((item) => this.normalizeRecord(item))
+            : this._getVisibleObservationsNormalized();
 
-        const total = observations.length;
-        const open = observations.filter(o => o.status === 'مفتوح' || o.status === 'جديد').length;
-        const closed = observations.filter(o => o.status === 'مغلق').length;
-        const highRisk = observations.filter(o => o.riskLevel === 'عالي' || o.riskLevel === 'عالية').length;
-        const mediumRisk = observations.filter(o => o.riskLevel === 'متوسط' || o.riskLevel === 'متوسطة').length;
-        const lowRisk = observations.filter(o => o.riskLevel === 'منخفض' || o.riskLevel === 'بسيطة' || o.riskLevel === 'بسيط').length;
-        
-        // حساب عدد الملاحظات حسب المصنع (siteName)
+        const filters = this.getFilters();
+        const base = this.filterItems(all, Object.assign({}, filters, { kpi: '' }));
+        const total = base.length;
+        const open = base.filter((o) => this._isOpenKpiStatus(o.status)).length;
+        const progress = base.filter((o) => this._isProgressKpiStatus(o.status)).length;
+        const closed = base.filter((o) => this._isClosedKpiStatus(o.status)).length;
+        const highRisk = base.filter((o) => this._isHighRiskLevel(o.riskLevel)).length;
+        const mediumRisk = base.filter((o) => this._isMediumRiskLevel(o.riskLevel)).length;
+        const lowRisk = base.filter((o) => this._isLowRiskLevel(o.riskLevel)).length;
+
         const observationsByFactory = {};
-        const uniqueFactories = new Set();
-        observations.forEach(o => {
-            const factory = o.siteName || '';
-            if (factory) {
-                uniqueFactories.add(factory);
-                observationsByFactory[factory] = (observationsByFactory[factory] || 0) + 1;
-            }
+        base.forEach((o) => {
+            const factory = String(o.siteName || '').trim();
+            if (factory) observationsByFactory[factory] = (observationsByFactory[factory] || 0) + 1;
         });
-        
-        // العثور على المصنع الذي يحتوي على أكبر عدد من الملاحظات
+
         let maxObservationsCount = 0;
         let factoryWithMaxObservations = '';
-        Object.keys(observationsByFactory).forEach(factory => {
+        Object.keys(observationsByFactory).forEach((factory) => {
             const count = observationsByFactory[factory];
             if (count > maxObservationsCount) {
                 maxObservationsCount = count;
                 factoryWithMaxObservations = factory;
             }
         });
-        
-        // عدد الملاحظات في المصنع (أكبر عدد ملاحظات في مصنع واحد)
-        const observationsInFactory = maxObservationsCount;
-        const mostCommonFactory = factoryWithMaxObservations || this._t('module.dailyobs.stats.none', 'لا يوجد');
-        
-        // التحقق من المواقع الخطرة (مواقع تحتوي على عدد ملاحظات يتجاوز العتبة)
-        const highRiskSites = Object.keys(observationsByFactory).filter(factory => 
+        this._obsTopSiteName = factoryWithMaxObservations;
+
+        const highRiskSites = Object.keys(observationsByFactory).filter((factory) =>
             observationsByFactory[factory] >= this.OBSERVATIONS_THRESHOLD
         );
-        
-        // هل يوجد موقع به عدد كبير من الملاحظات؟
         const hasHighRiskSite = highRiskSites.length > 0;
-        
-        // حساب أنواع الملاحظات الفريدة
-        const uniqueTypes = new Set();
-        observations.forEach(o => {
-            const type = o.observationType || '';
-            if (type) {
-                uniqueTypes.add(type);
-            }
-        });
-        const typeCount = uniqueTypes.size;
-        const mostCommonType = Array.from(uniqueTypes)[0] ? this.getObservationTypeLabel(Array.from(uniqueTypes)[0]) : this._t('module.dailyobs.stats.none', 'لا يوجد');
+        const mostCommonFactory = factoryWithMaxObservations || this._t('module.dailyobs.stats.none', 'لا يوجد');
+        const factoryLabel = mostCommonFactory.length > 28 ? mostCommonFactory.substring(0, 28) + '…' : mostCommonFactory;
+        const pct = (n) => (total > 0 ? ((Number(n) / total) * 100).toFixed(0) : '0');
+        const activeKpi = String(this._obsKpiFilter || '').trim();
+        const topSiteActive = !!(filters.site && factoryWithMaxObservations && filters.site === factoryWithMaxObservations);
+
+        const themes = {
+            blue: { badgeBg: 'bg-blue-50 text-blue-700 border-blue-200', iconColor: 'text-blue-600', valueColor: 'text-blue-900', barColor: 'from-blue-500 to-indigo-600', hoverBorder: 'hover:border-blue-300' },
+            amber: { badgeBg: 'bg-amber-50 text-amber-800 border-amber-200', iconColor: 'text-amber-600', valueColor: 'text-amber-900', barColor: 'from-amber-500 to-orange-500', hoverBorder: 'hover:border-amber-300' },
+            sky: { badgeBg: 'bg-sky-50 text-sky-700 border-sky-200', iconColor: 'text-sky-600', valueColor: 'text-sky-900', barColor: 'from-sky-500 to-blue-600', hoverBorder: 'hover:border-sky-300' },
+            green: { badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200', iconColor: 'text-emerald-600', valueColor: 'text-emerald-900', barColor: 'from-emerald-500 to-teal-600', hoverBorder: 'hover:border-emerald-300' },
+            red: { badgeBg: 'bg-red-50 text-red-700 border-red-200', iconColor: 'text-red-600', valueColor: 'text-red-900', barColor: 'from-red-500 to-rose-600', hoverBorder: 'hover:border-red-300' },
+            alert: { badgeBg: 'bg-red-100 text-red-800 border-red-300', iconColor: 'text-red-600', valueColor: 'text-red-900', barColor: 'from-red-500 to-red-700', hoverBorder: 'hover:border-red-400' }
+        };
 
         const cards = [
             {
-                id: 'notes-status',
+                kpi: 'all',
                 title: this._t('module.dailyobs.stats.total.title', 'عدد الملاحظات'),
                 value: total,
-                subtitle: this._tf('module.dailyobs.stats.total.subtitle', { open, closed }, `مفتوح: ${open} | مغلق: ${closed}`),
-                icon: 'fas fa-clipboard-list',
-                color: 'blue',
-                gradient: 'from-blue-500 to-blue-600',
-                bgGradient: 'from-blue-50 to-blue-100',
-                borderColor: 'border-blue-200',
-                textColor: 'text-blue-700',
-                iconBg: 'bg-blue-100',
-                filter: null,
-                description: this._t('module.dailyobs.stats.total.desc', 'إجمالي الملاحظات')
+                subtitle: this._tf('module.dailyobs.stats.total.subtitle', { open, closed }, `مفتوح ${open} · قيد التنفيذ ${progress} · مغلق ${closed}`),
+                icon: 'fas fa-layer-group',
+                theme: 'blue',
+                description: this._t('module.dailyobs.stats.total.desc', 'إجمالي بعد الفلاتر'),
+                active: !activeKpi && !topSiteActive,
+                hint: 'عرض الكل'
             },
             {
-                id: 'risk-levels',
-                title: this._t('module.dailyobs.stats.risk.title', 'معدل الخطورة'),
-                value: highRisk + mediumRisk + lowRisk,
-                subtitle: this._tf('module.dailyobs.stats.risk.subtitle', { high: highRisk, medium: mediumRisk, low: lowRisk }, `عالي: ${highRisk} | متوسط: ${mediumRisk} | بسيط: ${lowRisk}`),
+                kpi: 'open',
+                title: this._t('module.dailyobs.stats.open.title', 'مفتوح'),
+                value: open,
+                subtitle: `${pct(open)}% من النتائج`,
+                icon: 'fas fa-folder-open',
+                theme: 'amber',
+                description: this._t('module.dailyobs.stats.open.desc', 'بانتظار الإجراء'),
+                active: activeKpi === 'open',
+                hint: 'تصفية المفتوح'
+            },
+            {
+                kpi: 'progress',
+                title: this._t('module.dailyobs.stats.progress.title', 'قيد التنفيذ'),
+                value: progress,
+                subtitle: `${pct(progress)}% من النتائج`,
+                icon: 'fas fa-spinner',
+                theme: 'sky',
+                description: this._t('module.dailyobs.stats.progress.desc', 'جاري المعالجة'),
+                active: activeKpi === 'progress',
+                hint: 'تصفية قيد التنفيذ'
+            },
+            {
+                kpi: 'closed',
+                title: this._t('module.dailyobs.stats.closed.title', 'مغلق'),
+                value: closed,
+                subtitle: `${pct(closed)}% من النتائج`,
+                icon: 'fas fa-check-circle',
+                theme: 'green',
+                description: this._t('module.dailyobs.stats.closed.desc', 'تم الإغلاق'),
+                active: activeKpi === 'closed',
+                hint: 'تصفية المغلق'
+            },
+            {
+                kpi: 'high',
+                title: this._t('module.dailyobs.stats.high.title', 'خطورة عالية'),
+                value: highRisk,
+                subtitle: this._tf('module.dailyobs.stats.risk.subtitle', { high: highRisk, medium: mediumRisk, low: lowRisk }, `متوسط ${mediumRisk} · بسيط ${lowRisk}`),
                 icon: 'fas fa-exclamation-triangle',
-                color: 'red',
-                gradient: 'from-red-500 to-red-600',
-                bgGradient: 'from-red-50 to-red-100',
-                borderColor: 'border-red-200',
-                textColor: 'text-red-700',
-                iconBg: 'bg-red-100',
-                filter: null,
-                description: this._t('module.dailyobs.stats.risk.desc', 'توزيع معدلات الخطورة')
+                theme: 'red',
+                description: this._t('module.dailyobs.stats.high.desc', 'أولوية فورية'),
+                active: activeKpi === 'high',
+                hint: 'تصفية الخطورة العالية'
             },
             {
-                id: 'locations',
-                title: this._t('module.dailyobs.stats.location.title', 'الموقع / المكان'),
-                value: observationsInFactory,
-                subtitle: mostCommonFactory.length > 30 ? mostCommonFactory.substring(0, 30) + '...' : mostCommonFactory,
+                kpi: 'topSite',
+                title: this._t('module.dailyobs.stats.location.title', 'أعلى موقع'),
+                value: maxObservationsCount,
+                subtitle: factoryLabel,
                 icon: 'fas fa-map-marker-alt',
-                color: hasHighRiskSite ? 'red' : 'green',
-                gradient: hasHighRiskSite ? 'from-red-500 to-red-600' : 'from-green-500 to-green-600',
-                bgGradient: hasHighRiskSite ? 'from-red-50 to-red-100' : 'from-green-50 to-green-100',
-                borderColor: hasHighRiskSite ? 'border-red-300' : 'border-green-200',
-                textColor: hasHighRiskSite ? 'text-red-700' : 'text-green-700',
-                iconBg: hasHighRiskSite ? 'bg-red-100' : 'bg-green-100',
-                filter: null,
+                theme: hasHighRiskSite ? 'alert' : 'green',
                 description: hasHighRiskSite
                     ? this._tf('module.dailyobs.stats.location.alert', { n: highRiskSites.length }, `تنبيه: ${highRiskSites.length} موقع`)
-                    : this._t('module.dailyobs.stats.location.desc', 'عدد الملاحظات في المصنع'),
+                    : this._t('module.dailyobs.stats.location.desc', 'أكثر موقع ملاحظات'),
+                active: topSiteActive,
                 isHighRisk: hasHighRiskSite,
-                highRiskSites: highRiskSites
-            },
-            {
-                id: 'note-types',
-                title: this._t('module.dailyobs.stats.type.title', 'نوع الملاحظة'),
-                value: typeCount,
-                subtitle: mostCommonType.length > 30 ? mostCommonType.substring(0, 30) + '...' : mostCommonType,
-                icon: 'fas fa-tags',
-                color: 'purple',
-                gradient: 'from-purple-500 to-purple-600',
-                bgGradient: 'from-purple-50 to-purple-100',
-                borderColor: 'border-purple-200',
-                textColor: 'text-purple-700',
-                iconBg: 'bg-purple-100',
-                filter: null,
-                description: this._t('module.dailyobs.stats.type.desc', 'أنواع الملاحظات المسجلة')
+                hint: factoryWithMaxObservations ? `تصفية ${factoryWithMaxObservations}` : 'لا يوجد موقع'
             }
         ];
 
-        container.innerHTML = cards.map(card => {
-            const isActive = activeFilter && card.filter && JSON.stringify(activeFilter) === JSON.stringify(card.filter);
-            const clickableClass = card.filter ? 'cursor-pointer' : '';
-            const onClickAttr = card.filter ? `onclick="DailyObservations.filterByCard('${card.id}', ${JSON.stringify(card.filter || {})})"` : '';
-            const percent = (total > 0 && card.value > 0) ? ((card.value / total) * 100).toFixed(1) : 0;
-            
-            let theme = {
-                badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
-                iconColor: 'text-blue-600',
-                valueColor: 'text-blue-900',
-                barColor: 'from-blue-500 to-indigo-600',
-                hoverBorder: 'hover:border-blue-300'
-            };
-            if (card.id === 'risk-levels') {
-                theme = {
-                    badgeBg: 'bg-red-50 text-red-700 border-red-200',
-                    iconColor: 'text-red-600',
-                    valueColor: 'text-red-900',
-                    barColor: 'from-red-500 to-rose-600',
-                    hoverBorder: 'hover:border-red-300'
-                };
-            } else if (card.id === 'locations') {
-                if (card.isHighRisk) {
-                    theme = {
-                        badgeBg: 'bg-red-100 text-red-800 border-red-300',
-                        iconColor: 'text-red-600',
-                        valueColor: 'text-red-900',
-                        barColor: 'from-red-500 to-red-700',
-                        hoverBorder: 'hover:border-red-400'
-                    };
-                } else {
-                    theme = {
-                        badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                        iconColor: 'text-emerald-600',
-                        valueColor: 'text-emerald-900',
-                        barColor: 'from-emerald-500 to-teal-600',
-                        hoverBorder: 'hover:border-emerald-300'
-                    };
-                }
-            } else if (card.id === 'note-types') {
-                theme = {
-                    badgeBg: 'bg-purple-50 text-purple-700 border-purple-200',
-                    iconColor: 'text-purple-600',
-                    valueColor: 'text-purple-900',
-                    barColor: 'from-purple-500 to-violet-600',
-                    hoverBorder: 'hover:border-purple-300'
-                };
-            }
-
+        container.innerHTML = cards.map((card) => {
+            const theme = themes[card.theme] || themes.blue;
+            const percent = total > 0 && card.value > 0 ? ((card.value / total) * 100).toFixed(1) : 0;
             return `
-                <div class="stat-kpi-card ${clickableClass} ${isActive ? 'active-kpi' : ''} ${theme.hoverBorder}" 
-                     ${card.filter ? `data-filter='${JSON.stringify(card.filter || {})}'` : ''} 
-                     ${onClickAttr}>
-                    
+                <button type="button" class="stat-kpi-card ${card.active ? 'active-kpi' : ''} ${theme.hoverBorder}"
+                        data-kpi="${card.kpi}" title="${Utils.escapeHTML(card.hint || '')}" aria-pressed="${card.active ? 'true' : 'false'}">
                     <div class="kpi-top-row ${theme.badgeBg}">
                         <div class="flex items-center gap-2 font-bold text-xs">
                             <i class="${card.icon} ${theme.iconColor} text-sm"></i>
                             <span>${card.title}</span>
                         </div>
-                        ${isActive ? `
+                        ${card.active ? `
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white shadow-sm border text-blue-700">مُفعل</span>
                         ` : (card.isHighRisk ? `
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-600 text-white animate-pulse">تنبيه</span>
@@ -3076,39 +3033,43 @@ const DailyObservations = {
                             <span class="text-[11px] opacity-75 font-semibold">${percent}%</span>
                         `)}
                     </div>
-
                     <div class="kpi-body my-2">
                         <div class="flex items-baseline justify-between gap-2">
                             <div class="text-2xl lg:text-3xl font-extrabold ${theme.valueColor} tracking-tight">
-                                ${card.value.toLocaleString('en-US')}
+                                ${Number(card.value || 0).toLocaleString('en-US')}
                             </div>
-                            <div class="text-xs text-slate-500 font-medium text-left">
+                            <div class="text-xs text-slate-500 font-medium" style="text-align:start;">
                                 ${card.description}
                             </div>
                         </div>
-
                         ${card.subtitle ? `
                             <div class="kpi-subtitle-pill mt-3">
                                 <i class="fas fa-chart-pie opacity-60 text-xs"></i>
-                                <span>${card.subtitle}</span>
+                                <span>${Utils.escapeHTML(String(card.subtitle))}</span>
                             </div>
                         ` : ''}
                     </div>
-
                     <div class="kpi-bottom-bar">
                         <div class="kpi-bar-fill bg-gradient-to-r ${theme.barColor}" style="width: ${percent}%;"></div>
                     </div>
-                </div>
+                </button>
             `;
         }).join('');
 
-        // إضافة أنماط CSS إضافية إذا لزم الأمر
+        if (!container._obsKpiBound) {
+            container.addEventListener('click', (e) => {
+                const card = e.target.closest('[data-kpi]');
+                if (!card || !container.contains(card)) return;
+                this.applyObservationKpiFilter(card.getAttribute('data-kpi'));
+            });
+            container._obsKpiBound = true;
+        }
+
         this.injectStatsCardsStyles();
         this.injectTableScrollbarStyles();
-        
-        // إرسال تنبيه لمدير النظام في حالة وجود مواقع خطرة
+
         if (hasHighRiskSite) {
-            this.notifyAdminAboutHighRiskSites(highRiskSites, observationsByFactory).catch(error => {
+            this.notifyAdminAboutHighRiskSites(highRiskSites, observationsByFactory).catch((error) => {
                 Utils?.safeWarn?.('فشل إرسال التنبيه للمدير:', error) || console.warn('فشل إرسال التنبيه للمدير:', error);
             });
         }
@@ -3220,7 +3181,7 @@ const DailyObservations = {
      * حقن أنماط CSS للكروت
      */
     injectStatsCardsStyles() {
-        const styleId = 'daily-observations-stats-cards-styles';
+        const styleId = 'daily-observations-stats-cards-styles-v2';
         if (document.getElementById(styleId)) return;
 
         const style = document.createElement('style');
@@ -3234,6 +3195,17 @@ const DailyObservations = {
                     box-shadow: 0 0 30px rgba(239, 68, 68, 0.6), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
                 }
             }
+            .obs-kpi-grid {
+                display: grid;
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+                gap: 12px;
+            }
+            @media (max-width: 1280px) {
+                .obs-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            }
+            @media (max-width: 768px) {
+                .obs-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            }
             .stat-kpi-card {
                 background: #ffffff;
                 border: 1px solid #e2e8f0;
@@ -3246,15 +3218,25 @@ const DailyObservations = {
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
-                min-height: 135px;
+                min-height: 142px;
+                width: 100%;
+                text-align: inherit;
+                font: inherit;
+                color: inherit;
+                cursor: pointer;
             }
             .stat-kpi-card:hover {
                 transform: translateY(-4px);
                 box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.1);
             }
+            .stat-kpi-card:focus-visible {
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35);
+            }
             .stat-kpi-card.active-kpi {
                 border-color: #2563eb;
                 box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+                background: linear-gradient(180deg, #eef2ff 0%, #ffffff 55%);
             }
             .stat-kpi-card .kpi-top-row {
                 display: flex;
@@ -3376,6 +3358,93 @@ const DailyObservations = {
             }
             .filter-reset-btn:active {
                 transform: translateY(0);
+            }
+            .filter-input.is-active-filter,
+            .date-range-input.is-active-filter {
+                border-color: #6366f1;
+                background: #eef2ff;
+                font-weight: 600;
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+            }
+            .obs-search-wrap {
+                position: relative;
+            }
+            .obs-search-wrap .filter-input {
+                padding-inline-end: 36px;
+            }
+            .obs-search-clear {
+                position: absolute;
+                inset-inline-end: 8px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 24px;
+                height: 24px;
+                border: none;
+                border-radius: 999px;
+                background: #e2e8f0;
+                color: #475569;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 11px;
+            }
+            .obs-search-clear:hover {
+                background: #cbd5e1;
+                color: #1e293b;
+            }
+            .obs-filter-meta-bar {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                margin-top: 12px;
+            }
+            .obs-filter-result-count {
+                font-size: 13px;
+                font-weight: 600;
+                color: #334155;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 999px;
+                padding: 6px 12px;
+            }
+            .obs-active-filter-chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: flex-end;
+                flex: 1;
+            }
+            .obs-filter-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                border: 1px solid #c7d2fe;
+                background: #eef2ff;
+                color: #3730a3;
+                border-radius: 999px;
+                padding: 5px 10px;
+                font-size: 12px;
+                font-weight: 700;
+                cursor: pointer;
+            }
+            .obs-filter-chip:hover {
+                background: #e0e7ff;
+            }
+            .obs-filter-chip .obs-chip-k {
+                color: #64748b;
+                font-weight: 600;
+            }
+            .obs-filter-chip.obs-chip-clear-all {
+                background: #fee2e2;
+                border-color: #fecaca;
+                color: #b91c1c;
+            }
+            .date-range-bar.is-active-filter {
+                border-color: #6366f1 !important;
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
             }
             @media (max-width: 1200px) {
                 .filters-grid {
@@ -3641,47 +3710,88 @@ const DailyObservations = {
     /**
      * فلترة الملاحظات حسب الكرت المحدد
      */
-    filterByCard(cardId, filter) {
-        if (!filter || Object.keys(filter).length === 0) {
-            // إزالة الفلترة
-            this.currentFilter = null;
-            this.loadObservationsList();
-            const clearFiltersBtn = document.getElementById('clear-filters-btn');
-            const filterIndicator = document.getElementById('filter-indicator');
-            if (clearFiltersBtn) {
-                clearFiltersBtn.style.display = 'none';
+    filterByCard(cardId, _filter) {
+        const map = {
+            'notes-status': 'all',
+            'notes-open': 'open',
+            'notes-progress': 'progress',
+            'notes-closed': 'closed',
+            'risk-levels': 'high',
+            'locations': 'topSite',
+            'note-types': 'all'
+        };
+        this.applyObservationKpiFilter(map[cardId] || cardId || 'all');
+    },
+
+    applyObservationKpiFilter(kpiKey) {
+        const key = String(kpiKey || '').trim();
+        const siteEl = document.getElementById('observation-filter-site');
+        const statusEl = document.getElementById('observation-filter-status');
+        const riskEl = document.getElementById('observation-filter-risk');
+
+        if (!key || key === 'all') {
+            this._obsKpiFilter = '';
+            if (this._obsKpiSiteApplied && siteEl) {
+                siteEl.value = '';
+                this._obsKpiSiteApplied = false;
             }
-            if (filterIndicator) {
-                filterIndicator.style.display = 'none';
-            }
+            this.loadObservationsList({ resetPage: true });
             return;
         }
 
-        this.currentFilter = { cardId, filter };
-        this.loadObservationsList(filter);
-        
-        // تحديث الكروت لإظهار الكرت النشط
-        this.renderStatsCards(null, filter);
-        
-        // إظهار زر إزالة الفلاتر
-        const clearBtn = document.getElementById('clear-filters-btn');
-        const indicator = document.getElementById('filter-indicator');
-        if (clearBtn) {
-            clearBtn.style.display = 'inline-flex';
-            clearBtn.onclick = () => {
-                this.currentFilter = null;
-                this.loadObservationsList();
-                this.renderStatsCards();
-                clearBtn.style.display = 'none';
-                if (indicator) indicator.style.display = 'none';
-            };
+        if (key === 'topSite') {
+            const site = String(this._obsTopSiteName || '').trim();
+            if (!site || !siteEl) return;
+            if (this._obsKpiSiteApplied && siteEl.value === site) {
+                siteEl.value = '';
+                this._obsKpiSiteApplied = false;
+            } else {
+                siteEl.value = site;
+                this._obsKpiSiteApplied = true;
+            }
+            this._obsKpiFilter = '';
+            this.loadObservationsList({ resetPage: true });
+            return;
         }
-        
-        if (indicator) {
-            indicator.style.display = 'block';
-            const cardTitle = document.querySelector(`[data-filter='${JSON.stringify(filter)}']`)?.querySelector('h3')?.textContent || 'الفلتر';
-            indicator.textContent = `الفلتر النشط: ${cardTitle}`;
+
+        if (this._obsKpiFilter === key) {
+            this._obsKpiFilter = '';
+            this.loadObservationsList({ resetPage: true });
+            return;
         }
+
+        this._obsKpiFilter = key;
+        if ((key === 'open' || key === 'progress' || key === 'closed') && statusEl) {
+            statusEl.value = '';
+        }
+        if (key === 'high' && riskEl) {
+            riskEl.value = '';
+        }
+        this.loadObservationsList({ resetPage: true });
+    },
+
+    clearObservationFilter(key) {
+        const idMap = {
+            search: 'observation-search',
+            site: 'observation-filter-site',
+            location: 'observation-filter-location',
+            type: 'observation-filter-type',
+            shift: 'observation-filter-shift',
+            risk: 'observation-filter-risk',
+            status: 'observation-filter-status',
+            observer: 'observation-filter-observer',
+            responsible: 'observation-filter-responsible',
+            dateFrom: 'observation-date-from',
+            dateTo: 'observation-date-to'
+        };
+        if (key === 'kpi') {
+            this._obsKpiFilter = '';
+        } else if (idMap[key]) {
+            const el = document.getElementById(idMap[key]);
+            if (el) el.value = '';
+            if (key === 'site') this._obsKpiSiteApplied = false;
+        }
+        this.loadObservationsList({ resetPage: true });
     },
 
     isCurrentUserAdmin() {
@@ -8039,8 +8149,56 @@ const DailyObservations = {
             observer: document.getElementById('observation-filter-observer')?.value || '',
             responsible: document.getElementById('observation-filter-responsible')?.value || '',
             dateFrom: document.getElementById('observation-date-from')?.value || '',
-            dateTo: document.getElementById('observation-date-to')?.value || ''
+            dateTo: document.getElementById('observation-date-to')?.value || '',
+            kpi: String(this._obsKpiFilter || '').trim()
         };
+    },
+
+    _getVisibleObservationsNormalized() {
+        const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
+            ? this.getDailyObservationsVisibleToCurrentUser()
+            : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
+        return observationsRaw.map((item) => this.normalizeRecord(item));
+    },
+
+    _isOpenKpiStatus(status) {
+        const n = this.normalizeStatus(status);
+        return n === 'مفتوح';
+    },
+
+    _isProgressKpiStatus(status) {
+        return this.normalizeStatus(status) === 'جاري';
+    },
+
+    _isClosedKpiStatus(status) {
+        return this.normalizeStatus(status) === 'مغلق';
+    },
+
+    _isHighRiskLevel(risk) {
+        const r = String(risk || '').trim().toLowerCase();
+        return r === 'عالي' || r === 'عالية' || r === 'high';
+    },
+
+    _isMediumRiskLevel(risk) {
+        const r = String(risk || '').trim();
+        return r === 'متوسط' || r === 'متوسطة';
+    },
+
+    _isLowRiskLevel(risk) {
+        const r = String(risk || '').trim();
+        return r === 'منخفض' || r === 'منخفضة' || r === 'بسيط' || r === 'بسيطة';
+    },
+
+    _kpiLabel(kpi) {
+        const map = {
+            all: 'الكل',
+            open: 'مفتوح',
+            progress: 'قيد التنفيذ',
+            closed: 'مغلق',
+            high: 'خطورة عالية',
+            topSite: 'أعلى موقع'
+        };
+        return map[kpi] || kpi;
     },
 
     /**
@@ -8105,10 +8263,74 @@ const DailyObservations = {
         updateFilterLabel('observation-filter-responsible', filters.responsible, getFilterCount('responsible', filters.responsible));
     },
 
+    renderActiveFilterChips(filters, filteredCount, totalCount) {
+        const chipsEl = document.getElementById('obs-active-filter-chips');
+        const countEl = document.getElementById('obs-filter-result-count');
+        if (countEl) {
+            const shown = Number(filteredCount) || 0;
+            const total = Number(totalCount) || 0;
+            countEl.innerHTML = shown === total
+                ? `<strong>${shown.toLocaleString('en-US')}</strong> ملاحظة`
+                : `عرض <strong>${shown.toLocaleString('en-US')}</strong> من <strong>${total.toLocaleString('en-US')}</strong>`;
+        }
+        const dateBar = document.querySelector('.date-range-bar');
+        if (dateBar) {
+            dateBar.classList.toggle('is-active-filter', !!(filters.dateFrom || filters.dateTo));
+        }
+        if (!chipsEl) return;
+        const labels = {
+            kpi: 'مؤشر',
+            search: 'بحث',
+            site: 'الموقع',
+            location: 'المكان',
+            type: 'النوع',
+            shift: 'الوردية',
+            risk: 'الخطورة',
+            status: 'الحالة',
+            observer: 'صاحب الملاحظة',
+            responsible: 'المسؤول',
+            dateFrom: 'من',
+            dateTo: 'إلى'
+        };
+        const chips = [];
+        if (filters.kpi) chips.push({ key: 'kpi', label: labels.kpi, value: this._kpiLabel(filters.kpi) });
+        ['search', 'site', 'location', 'type', 'shift', 'risk', 'status', 'observer', 'responsible', 'dateFrom', 'dateTo'].forEach((key) => {
+            const val = String(filters[key] || '').trim();
+            if (val) chips.push({ key, label: labels[key], value: val });
+        });
+        if (!chips.length) {
+            chipsEl.innerHTML = '';
+            chipsEl.hidden = true;
+            return;
+        }
+        chipsEl.hidden = false;
+        chipsEl.innerHTML = chips.map((c) => `
+            <button type="button" class="obs-filter-chip" data-clear-filter="${Utils.escapeHTML(c.key)}" title="إزالة">
+                <span class="obs-chip-k">${Utils.escapeHTML(c.label)}</span>
+                <span class="obs-chip-v">${Utils.escapeHTML(c.value)}</span>
+                <i class="fas fa-times"></i>
+            </button>
+        `).join('') + (chips.length > 1
+            ? `<button type="button" class="obs-filter-chip obs-chip-clear-all" data-clear-filter="__all__">مسح الكل</button>`
+            : '');
+        if (!chipsEl._bound) {
+            chipsEl.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-clear-filter]');
+                if (!btn) return;
+                const key = btn.getAttribute('data-clear-filter');
+                if (key === '__all__') this.resetFilters();
+                else this.clearObservationFilter(key);
+            });
+            chipsEl._bound = true;
+        }
+    },
+
     /**
      * فلترة الملاحظات حسب الفلاتر المحددة
      */
     filterItems(items, filters) {
+        filters = filters || {};
+        items = Array.isArray(items) ? items : [];
         const normalizeDateForFilter = (value) => {
             if (!value) return '';
             const raw = String(value).trim();
@@ -8156,7 +8378,9 @@ const DailyObservations = {
                 (obs.observationType || '').toLowerCase().includes(filters.search) ||
                 (obs.observerName || '').toLowerCase().includes(filters.search) ||
                 (obs.responsibleDepartment || '').toLowerCase().includes(filters.search) ||
-                (obs.description || '').toLowerCase().includes(filters.search);
+                (obs.description || '').toLowerCase().includes(filters.search) ||
+                (obs.details || '').toLowerCase().includes(filters.search) ||
+                (obs.remarks || '').toLowerCase().includes(filters.search);
 
             // الفلاتر - التحقق من القيم الفارغة أيضاً
             const matchesSite = !filters.site || String(obs.siteName || '').trim() === String(filters.site || '').trim();
@@ -8167,6 +8391,12 @@ const DailyObservations = {
             const matchesStatus = !filters.status || String(obs.status || '').trim() === String(filters.status || '').trim();
             const matchesObserver = !filters.observer || String(obs.observerName || '').trim() === String(filters.observer || '').trim();
             const matchesResponsible = !filters.responsible || String(obs.responsibleDepartment || '').trim() === String(filters.responsible || '').trim();
+
+            let matchesKpi = true;
+            if (filters.kpi === 'open') matchesKpi = this._isOpenKpiStatus(obs.status);
+            else if (filters.kpi === 'progress') matchesKpi = this._isProgressKpiStatus(obs.status);
+            else if (filters.kpi === 'closed') matchesKpi = this._isClosedKpiStatus(obs.status);
+            else if (filters.kpi === 'high') matchesKpi = this._isHighRiskLevel(obs.riskLevel);
 
             // ✅ فلتر التاريخ (نطاق زمني صارم)
             let matchesDateRange = true;
@@ -8182,7 +8412,7 @@ const DailyObservations = {
             }
 
             return matchesSearch && matchesSite && matchesLocation && matchesType &&
-                matchesShift && matchesRisk && matchesStatus && matchesObserver && matchesResponsible && matchesDateRange;
+                matchesShift && matchesRisk && matchesStatus && matchesObserver && matchesResponsible && matchesDateRange && matchesKpi;
         });
     },
 
@@ -8250,6 +8480,7 @@ const DailyObservations = {
 
         if (observationsRaw.length === 0) {
             const { t, isRTL } = this.getTranslations();
+            this.renderActiveFilterChips(this.getFilters(), 0, 0);
             container.innerHTML = `<div class="empty-state" style="direction: ${isRTL ? 'rtl' : 'ltr'}; text-align: ${isRTL ? 'right' : 'left'};"><p class="text-gray-500">${Utils.escapeHTML(t('empty.noObservations'))}</p></div>`;
             return;
         }
@@ -8302,6 +8533,7 @@ const DailyObservations = {
         
         // تحديث شارات العد على الفلاتر النشطة
         this.updateFilterBadges(observations, filteredObservations, filters);
+        this.renderActiveFilterChips(filters, filteredObservations.length, observations.length);
 
         const pageSize = this.LIST_PAGE_SIZE || 50;
         const page = Math.max(1, this._obsListPage || 1);
@@ -8419,18 +8651,54 @@ const DailyObservations = {
                 // إزالة المستمعات السابقة
                 searchInput.replaceWith(searchInput.cloneNode(true));
                 const newSearchInput = document.getElementById('observation-search');
-                // ربط أحداث متعددة للبحث
+                const syncSearchClear = () => {
+                    const clearBtn = document.getElementById('observation-search-clear');
+                    if (clearBtn) clearBtn.hidden = !String(newSearchInput.value || '').trim();
+                };
                 newSearchInput.addEventListener('input', () => {
+                    syncSearchClear();
                     clearTimeout(this.searchTimeout);
                     this.searchTimeout = setTimeout(() => {
                         this.loadObservationsList({ resetPage: true });
-                    }, 300); // تأخير 300ms لتقليل عدد الاستدعاءات
+                    }, 300);
                 });
                 newSearchInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
                         clearTimeout(this.searchTimeout);
                         this.loadObservationsList({ resetPage: true });
                     }
+                });
+                newSearchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && newSearchInput.value) {
+                        newSearchInput.value = '';
+                        syncSearchClear();
+                        this.loadObservationsList({ resetPage: true });
+                    }
+                });
+                syncSearchClear();
+            }
+
+            const searchClearBtn = document.getElementById('observation-search-clear');
+            if (searchClearBtn) {
+                searchClearBtn.replaceWith(searchClearBtn.cloneNode(true));
+                document.getElementById('observation-search-clear').addEventListener('click', () => {
+                    const inp = document.getElementById('observation-search');
+                    if (inp) inp.value = '';
+                    this.loadObservationsList({ resetPage: true });
+                });
+            }
+
+            const resetListFiltersBtn = document.getElementById('observation-reset-filters');
+            if (resetListFiltersBtn) {
+                resetListFiltersBtn.replaceWith(resetListFiltersBtn.cloneNode(true));
+                document.getElementById('observation-reset-filters').addEventListener('click', () => this.resetFilters());
+            }
+
+            const refreshListBtn = document.getElementById('observation-refresh-btn');
+            if (refreshListBtn) {
+                refreshListBtn.replaceWith(refreshListBtn.cloneNode(true));
+                document.getElementById('observation-refresh-btn').addEventListener('click', () => {
+                    this.loadObservationsList({ resetPage: true });
                 });
             }
 
@@ -8454,6 +8722,15 @@ const DailyObservations = {
                     filterElement.replaceWith(filterElement.cloneNode(true));
                     const newFilter = document.getElementById(filterId);
                     newFilter.addEventListener('change', () => {
+                        if (filterId === 'observation-filter-status' && (this._obsKpiFilter === 'open' || this._obsKpiFilter === 'progress' || this._obsKpiFilter === 'closed')) {
+                            this._obsKpiFilter = '';
+                        }
+                        if (filterId === 'observation-filter-risk' && this._obsKpiFilter === 'high') {
+                            this._obsKpiFilter = '';
+                        }
+                        if (filterId === 'observation-filter-site') {
+                            this._obsKpiSiteApplied = false;
+                        }
                         this.loadObservationsList({ resetPage: true });
                     });
                     if (filterId.startsWith('observation-date-')) {
@@ -8522,118 +8799,55 @@ const DailyObservations = {
     },
 
     /**
-     * تحديث قيم الفلاتر ديناميكياً
+     * تحديث قيم الفلاتر ديناميكياً (cascade حسب الفلاتر الأخرى)
      */
     updateFilterOptions() {
-        const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
-            ? this.getDailyObservationsVisibleToCurrentUser()
-            : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
-
-        const observations = observationsRaw.map(item => this.normalizeRecord(item));
-        
-        // جمع القيم الفريدة
-        const sites = [...new Set(observations.map(o => o.siteName).filter(Boolean))].sort();
-        // حفظ القيم المحددة حالياً قبل تحديث قائمة الأماكن (لربط المكان بالموقع)
-        const currentSite = document.getElementById('observation-filter-site')?.value || '';
-        const currentLocation = document.getElementById('observation-filter-location')?.value || '';
-        // الأماكن: عند اختيار موقع معيّن نعرض فقط الأماكن المرتبطة به، وإلا نعرض الكل
-        const observationsForLocations = currentSite
-            ? observations.filter(o => String(o.siteName || '').trim() === String(currentSite).trim())
-            : observations;
-        const locations = [...new Set(observationsForLocations.map(o => o.locationName).filter(Boolean))].sort();
-        const types = [...new Set(observations.map(o => o.observationType).filter(Boolean))].sort();
-        const shifts = [...new Set(observations.map(o => o.shift).filter(Boolean))].sort();
-        const riskLevels = [...new Set(observations.map(o => o.riskLevel).filter(Boolean))].sort();
-        const statuses = [...new Set(observations.map(o => o.status).filter(Boolean))].sort();
-        const observers = [...new Set(observations.map(o => o.observerName).filter(Boolean))].sort();
-        const responsibles = [...new Set(observations.map(o => o.responsibleDepartment).filter(Boolean))].sort();
-        const currentType = document.getElementById('observation-filter-type')?.value || '';
-        const currentShift = document.getElementById('observation-filter-shift')?.value || '';
-        const currentRisk = document.getElementById('observation-filter-risk')?.value || '';
-        const currentStatus = document.getElementById('observation-filter-status')?.value || '';
-        const currentObserver = document.getElementById('observation-filter-observer')?.value || '';
-        const currentResponsible = document.getElementById('observation-filter-responsible')?.value || '';
-
-        // تحديث قائمة المواقع
-        const siteFilter = document.getElementById('observation-filter-site');
-        if (siteFilter) {
-            siteFilter.innerHTML = '<option value="">الكل</option>' +
-                sites.map(s => `<option value="${Utils.escapeHTML(s)}">${Utils.escapeHTML(s)}</option>`).join('');
-            if (currentSite && sites.includes(currentSite)) {
-                siteFilter.value = currentSite;
+        const observations = this._getVisibleObservationsNormalized();
+        const filters = this.getFilters();
+        const esc = (v) => Utils.escapeHTML(String(v || ''));
+        const uniqueWithCounts = (items, getter) => {
+            const map = {};
+            items.forEach((o) => {
+                const k = String(getter(o) || '').trim();
+                if (!k) return;
+                map[k] = (map[k] || 0) + 1;
+            });
+            return Object.keys(map).sort((a, b) => a.localeCompare(b, 'ar')).map((value) => ({ value, count: map[value] }));
+        };
+        const fillSelect = (id, key, getter) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const current = String(filters[key] || '').trim();
+            const rest = Object.assign({}, filters, { [key]: '' });
+            const pool = this.filterItems(observations, rest);
+            const options = uniqueWithCounts(pool, getter);
+            if (current && !options.some((o) => o.value === current)) {
+                options.unshift({ value: current, count: 0 });
             }
-        }
+            const allLabel = this._t('filter.all', 'الكل');
+            el.innerHTML = `<option value="">${esc(allLabel)}</option>` +
+                options.map((o) => `<option value="${esc(o.value)}">${esc(o.value)} (${o.count})</option>`).join('');
+            el.value = current;
+            el.classList.toggle('is-active-filter', !!current);
+        };
 
-        // تحديث قائمة الأماكن (فقط الأماكن المرتبطة بالموقع المختار)
-        const locationFilter = document.getElementById('observation-filter-location');
-        if (locationFilter) {
-            locationFilter.innerHTML = '<option value="">الكل</option>' +
-                locations.map(l => `<option value="${Utils.escapeHTML(l)}">${Utils.escapeHTML(l)}</option>`).join('');
-            if (currentLocation && locations.includes(currentLocation)) {
-                locationFilter.value = currentLocation;
-            } else {
-                locationFilter.value = ''; // إعادة تعيين إلى "الكل" إذا المكان السابق غير مرتبط بالموقع المختار
-            }
-        }
+        fillSelect('observation-filter-site', 'site', (o) => o.siteName);
+        fillSelect('observation-filter-location', 'location', (o) => o.locationName);
+        fillSelect('observation-filter-type', 'type', (o) => o.observationType);
+        fillSelect('observation-filter-shift', 'shift', (o) => o.shift);
+        fillSelect('observation-filter-risk', 'risk', (o) => o.riskLevel);
+        fillSelect('observation-filter-status', 'status', (o) => o.status);
+        fillSelect('observation-filter-observer', 'observer', (o) => o.observerName);
+        fillSelect('observation-filter-responsible', 'responsible', (o) => o.responsibleDepartment);
 
-        // تحديث قائمة الأنواع
-        const typeFilter = document.getElementById('observation-filter-type');
-        if (typeFilter) {
-            typeFilter.innerHTML = '<option value="">الكل</option>' +
-                types.map(t => `<option value="${Utils.escapeHTML(t)}">${Utils.escapeHTML(t)}</option>`).join('');
-            if (currentType && types.includes(currentType)) {
-                typeFilter.value = currentType;
-            }
-        }
-
-        // تحديث قائمة الورديات
-        const shiftFilter = document.getElementById('observation-filter-shift');
-        if (shiftFilter) {
-            shiftFilter.innerHTML = '<option value="">الكل</option>' +
-                shifts.map(s => `<option value="${Utils.escapeHTML(s)}">${Utils.escapeHTML(s)}</option>`).join('');
-            if (currentShift && shifts.includes(currentShift)) {
-                shiftFilter.value = currentShift;
-            }
-        }
-
-        // تحديث قائمة معدلات الخطورة
-        const riskFilter = document.getElementById('observation-filter-risk');
-        if (riskFilter) {
-            riskFilter.innerHTML = '<option value="">الكل</option>' +
-                riskLevels.map(r => `<option value="${Utils.escapeHTML(r)}">${Utils.escapeHTML(r)}</option>`).join('');
-            if (currentRisk && riskLevels.includes(currentRisk)) {
-                riskFilter.value = currentRisk;
-            }
-        }
-
-        // تحديث قائمة الحالات
-        const statusFilter = document.getElementById('observation-filter-status');
-        if (statusFilter) {
-            statusFilter.innerHTML = '<option value="">الكل</option>' +
-                statuses.map(s => `<option value="${Utils.escapeHTML(s)}">${Utils.escapeHTML(s)}</option>`).join('');
-            if (currentStatus && statuses.includes(currentStatus)) {
-                statusFilter.value = currentStatus;
-            }
-        }
-
-        // تحديث قائمة أصحاب الملاحظات
-        const observerFilter = document.getElementById('observation-filter-observer');
-        if (observerFilter) {
-            observerFilter.innerHTML = '<option value="">الكل</option>' +
-                observers.map(o => `<option value="${Utils.escapeHTML(o)}">${Utils.escapeHTML(o)}</option>`).join('');
-            if (currentObserver && observers.includes(currentObserver)) {
-                observerFilter.value = currentObserver;
-            }
-        }
-
-        // تحديث قائمة المسؤولين
-        const responsibleFilter = document.getElementById('observation-filter-responsible');
-        if (responsibleFilter) {
-            responsibleFilter.innerHTML = '<option value="">الكل</option>' +
-                responsibles.map(r => `<option value="${Utils.escapeHTML(r)}">${Utils.escapeHTML(r)}</option>`).join('');
-            if (currentResponsible && responsibles.includes(currentResponsible)) {
-                responsibleFilter.value = currentResponsible;
-            }
+        ['observation-date-from', 'observation-date-to', 'observation-search'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('is-active-filter', !!(el.value && String(el.value).trim()));
+        });
+        const searchClear = document.getElementById('observation-search-clear');
+        const searchInput = document.getElementById('observation-search');
+        if (searchClear && searchInput) {
+            searchClear.hidden = !String(searchInput.value || '').trim();
         }
     },
 
@@ -8641,6 +8855,9 @@ const DailyObservations = {
      * إعادة تعيين جميع الفلاتر
      */
     resetFilters() {
+        this._obsKpiFilter = '';
+        this._obsKpiSiteApplied = false;
+
         // إعادة تعيين حقل البحث
         const searchInput = document.getElementById('observation-search');
         if (searchInput) {
