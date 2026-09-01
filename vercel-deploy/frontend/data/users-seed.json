@@ -58,10 +58,10 @@
     "role": "admin",
     "department": "إدارة السلامة والصحة المهنية",
     "active": "True",
-    "passwordHash": "359021d0e5ef5fb6e496b0bd1e776c991f4cc96fe01a776614d11cd8b3780dee",
+    "passwordHash": "4ea1a6ce97ec7c02d124498df002ac13f41b634a58a945007b8eaf188803caf8",
     "phone": "",
     "photo": "https://drive.google.com/uc?export=view&id=1nhJxe5xkIeN1liIiJexBXJP5KbdH6I__",
-    "mfaEnabled": "True",
+    "mfaEnabled": "False",
     "permissions": "{\"role\":\"admin\"}"
   },
   {

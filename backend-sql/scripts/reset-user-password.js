@@ -36,11 +36,19 @@ async function main() {
     }
 
     const newHash = sha256(newPassword);
-    db.updateRow('Users', 'id', user.id, {
+    const updates = {
         passwordHash: newHash,
         password: '',
         updatedAt: new Date().toISOString()
-    });
+    };
+
+    if (process.argv.includes('--disable-mfa')) {
+        updates.mfaEnabled = 'false';
+        updates.mfaSecretEnc = '';
+        updates.mfaEnrolledAt = '';
+    }
+
+    db.updateRow('Users', 'id', user.id, updates);
 
     console.log('OK password reset for', email, '(id:', user.id + ')');
 

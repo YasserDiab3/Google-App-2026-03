@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1576",
+  "version": "1.0.1578",
   "highlights": {
     "ar": [
-      "إصلاح تحميل بيانات الزوار والبوابة: GET ?action= يعمل على /api/exec.",
-      "إصلاح KPIs والتحليلات: مفتاح الكاش ونسبة الإغلاق من summary.closeRate.",
-      "تفعيل بث HSE واتصالات الطوارئ من HSE_Settings.",
-      "بوابة الزوار تجلب السجل من السحابة حتى عند فشل POST."
+      "إصلاح دخول المدير: إعادة ضبط كلمة المرور وتعطيل MFA التالف مؤقتاً.",
+      "تحديث قاعدة بيانات الإنتاج (clinic_hse.db.gz) لمزامنة بيانات المستخدمين.",
+      "سكربت فحص دخان لتسجيل دخول المدير: scripts/smoke-login-admin.mjs.",
+      "دعم --disable-mfa في reset-user-password لاستعادة الحسابات المحجوبة."
     ],
     "en": [
-      "Fixed portal and visitor data loading: GET ?action= routed on /api/exec.",
-      "Fixed hub KPIs/analytics cache key and close rate from summary.closeRate.",
-      "HSE broadcast ticker and emergency contacts read from HSE_Settings.",
-      "Gate visitor portal fetches registry from cloud with robust API fallback."
+      "Admin login fix: password reset and temporary disable of corrupt MFA.",
+      "Production database bundle (clinic_hse.db.gz) updated for user sync.",
+      "Admin login smoke test script: scripts/smoke-login-admin.mjs.",
+      "reset-user-password supports --disable-mfa for locked-out account recovery."
     ]
   }
 }
