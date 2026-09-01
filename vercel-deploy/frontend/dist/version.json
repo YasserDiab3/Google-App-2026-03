@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1601",
+  "version": "1.0.1603",
   "highlights": {
     "ar": [
-      "دائرة اعتماد المخالفات أصبحت صندوق وارد أوضح: الطلبات أولاً والإعدادات في تبويب منفصل.",
-      "مسار الاعتماد يظهر خطوة بخطوة، والمعتمد الحالي يعتمد أو يرفض من نفس الشاشة.",
-      "رفض الطلب يتم داخل النافذة بسبب مكتوب، مع بحث وعداد للمعلّق والمعتمد والمرفوض."
+      "منع تسجيل المخالفة أكثر من مرة عند الضغط المتكرر على زر التسجيل.",
+      "إن وُجدت مخالفة بنفس الموظف أو المقاول ونفس التاريخ والوقت والبيانات تظهر رسالة أنها مسجّلة مسبقاً.",
+      "طلب مماثل معلّق في دائرة الاعتماد لا يُرسل مرة أخرى."
     ],
     "en": [
-      "The violations approval circle is now a clearer inbox: requests first, settings in a separate tab.",
-      "The approval path shows step by step, and the current approver can approve or reject in place.",
-      "Rejection uses an in-window reason form, with search and counts for pending, approved, and rejected."
+      "Recording a violation no longer repeats when the save button is clicked more than once.",
+      "If the same employee or contractor, date, time, and details already exist, a message says it is already recorded.",
+      "A matching pending approval request is not sent again."
     ]
   }
 }

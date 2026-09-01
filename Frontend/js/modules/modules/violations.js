@@ -229,6 +229,129 @@ const Violations = {
         return d.getFullYear() * 12 + d.getMonth();
     },
 
+    _recentViolationDupKeys: [],
+
+    _violationDateKey(v) {
+        const raw = v && v.violationDate;
+        if (raw == null || raw === '') return '';
+        const s = String(raw).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+        const isoDay = s.match(/^(\d{4}-\d{2}-\d{2})/);
+        return isoDay ? isoDay[1] : '';
+    },
+
+    _violationTimeKey(v) {
+        const t = String((v && v.violationTime) || '').trim();
+        const m = t.match(/(\d{1,2}):(\d{2})/);
+        if (m) return `${String(Number(m[1])).padStart(2, '0')}:${m[2]}`;
+        const d = new Date(v && v.violationDate);
+        if (!isNaN(d.getTime())) {
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+        return '';
+    },
+
+    _sameViolationTextField(a, b) {
+        const na = this._normKeyStr(a);
+        const nb = this._normKeyStr(b);
+        if (!na && !nb) return true;
+        return !!na && na === nb;
+    },
+
+    isDuplicateViolationRecord(draft, existing) {
+        if (!draft || !existing) return false;
+        if (!this.sameViolationPersonForSequence(draft, existing)) return false;
+        if (this._violationDateKey(draft) !== this._violationDateKey(existing)) return false;
+        if (this._violationTimeKey(draft) !== this._violationTimeKey(existing)) return false;
+        const typeA = this._normKeyStr(draft.violationTypeId || draft.violationType);
+        const typeB = this._normKeyStr(existing.violationTypeId || existing.violationType);
+        if (typeA !== typeB) return false;
+        const locIdA = this._normKeyStr(draft.violationLocationId);
+        const locIdB = this._normKeyStr(existing.violationLocationId);
+        if (locIdA && locIdB) {
+            if (locIdA !== locIdB) return false;
+        } else if (!this._sameViolationTextField(draft.violationLocation, existing.violationLocation)) {
+            return false;
+        }
+        const placeIdA = this._normKeyStr(draft.violationPlaceId);
+        const placeIdB = this._normKeyStr(existing.violationPlaceId);
+        if (placeIdA && placeIdB) {
+            if (placeIdA !== placeIdB) return false;
+        } else if (!this._sameViolationTextField(draft.violationPlace, existing.violationPlace)) {
+            return false;
+        }
+        return this._sameViolationTextField(draft.violationDetails, existing.violationDetails);
+    },
+
+    _buildViolationDupKey(v) {
+        const pt = this._normKeyStr(v && v.personType) || 'employee';
+        const person = pt === 'contractor'
+            ? `${this._normKeyStr(v.contractorName)}|${this._normKeyStr(v.contractorWorker)}`
+            : this._normKeyStr((v && (v.employeeCode || v.employeeNumber)) || '');
+        return [
+            pt,
+            person,
+            this._violationDateKey(v),
+            this._violationTimeKey(v),
+            this._normKeyStr((v && (v.violationTypeId || v.violationType)) || ''),
+            this._normKeyStr((v && (v.violationLocationId || v.violationLocation)) || ''),
+            this._normKeyStr((v && (v.violationPlaceId || v.violationPlace)) || ''),
+            this._normKeyStr((v && v.violationDetails) || '')
+        ].join('||');
+    },
+
+    _rememberViolationDupKey(draft) {
+        if (!Array.isArray(this._recentViolationDupKeys)) this._recentViolationDupKeys = [];
+        const key = this._buildViolationDupKey(draft);
+        if (!key) return;
+        const now = Date.now();
+        this._recentViolationDupKeys = this._recentViolationDupKeys.filter((x) => x && now - x.at < 10 * 60 * 1000);
+        if (!this._recentViolationDupKeys.some((x) => x.key === key)) {
+            this._recentViolationDupKeys.push({ key, at: now });
+        }
+    },
+
+    findDuplicateViolation(draft, opts = {}) {
+        if (!draft) return null;
+        const excludeId = opts.excludeId ? String(opts.excludeId) : '';
+        const list = (typeof AppState !== 'undefined' && AppState.appData && AppState.appData.violations) || [];
+        for (let i = 0; i < list.length; i++) {
+            const v = list[i];
+            if (!v) continue;
+            if (excludeId && String(v.id) === excludeId) continue;
+            if (this.isDuplicateViolationRecord(draft, v)) {
+                return { source: 'saved', record: v };
+            }
+        }
+        const pending = this._violApprovalRequestsCache || [];
+        for (let i = 0; i < pending.length; i++) {
+            const r = pending[i];
+            if (!r) continue;
+            const st = String(r.status || '').toLowerCase();
+            if (st !== 'pending') continue;
+            const vd = r.violationData || {};
+            if (excludeId && (String(vd.id || '') === excludeId || String(r.originalViolationId || '') === excludeId)) continue;
+            if (this.isDuplicateViolationRecord(draft, vd)) {
+                return { source: 'pending', record: vd, request: r };
+            }
+        }
+        const now = Date.now();
+        if (!Array.isArray(this._recentViolationDupKeys)) this._recentViolationDupKeys = [];
+        this._recentViolationDupKeys = this._recentViolationDupKeys.filter((x) => x && now - x.at < 10 * 60 * 1000);
+        const key = this._buildViolationDupKey(draft);
+        if (key && this._recentViolationDupKeys.some((x) => x.key === key)) {
+            return { source: 'recent' };
+        }
+        return null;
+    },
+
     // ───────── دائرة اعتماد المخالفات ─────────
     // Cache للإعدادات (يُجدَّد كل 5 دقائق)
     _violApprovalSettingsCache: null,
@@ -5564,13 +5687,25 @@ const Violations = {
 
         // الحصول على النموذج وزر الإرسال
         const form = modal.querySelector('#violation-form');
-        const submitBtn = modal.querySelector('#violation-submit-btn') || form?.querySelector('button[type="submit"]');
+        const initialSubmitBtn = modal.querySelector('#violation-submit-btn') || form?.querySelector('button[type="submit"]');
 
-        if (!form || !submitBtn) {
+        if (!form || !initialSubmitBtn) {
             if (AppState.debugMode) Utils.safeError('❌ النموذج أو زر الإرسال غير موجود');
             Notification.error('خطأ في تحميل النموذج. يرجى إعادة المحاولة.');
             return;
         }
+
+        // إزالة معالجات قديمة قبل الربط — القفل يعتمد على الزر الحي وليس النسخة المستبدَلة
+        if (initialSubmitBtn.parentNode) {
+            const clonedSubmitBtn = initialSubmitBtn.cloneNode(true);
+            clonedSubmitBtn.disabled = false;
+            clonedSubmitBtn.removeAttribute('aria-busy');
+            initialSubmitBtn.parentNode.replaceChild(clonedSubmitBtn, initialSubmitBtn);
+        }
+
+        let submitInFlight = false;
+        const getLiveSubmitBtn = () => modal.querySelector('#violation-submit-btn') || form.querySelector('button[type="submit"]');
+        const savingLabel = this._t('module.violations.submit.saving', 'جاري الحفظ...');
 
         // ✅ Helper: التحكم بشريط التنبيه أعلى النموذج (يبقي النموذج مفتوحاً)
         const showFormBanner = (type, title, text) => {
@@ -5621,17 +5756,30 @@ const Violations = {
                 e.stopImmediatePropagation();
             }
 
-            // منع النقر المزدوج
-            if (submitBtn.disabled) {
+            if (submitInFlight || form.dataset.submitting === '1') {
                 if (AppState.debugMode) Utils.safeLog('⚠️ النموذج قيد المعالجة...');
                 return;
             }
 
-            // تعطيل الزر لمنع النقر المزدوج
-            const btn = submitBtn;
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
+            submitInFlight = true;
+            form.dataset.submitting = '1';
+            const btn = getLiveSubmitBtn();
+            const originalText = btn ? btn.innerHTML : '';
+            const restoreSubmitBtn = () => {
+                submitInFlight = false;
+                try { form.dataset.submitting = ''; } catch (_e) { /* ignore */ }
+                const live = getLiveSubmitBtn();
+                if (live) {
+                    live.disabled = false;
+                    live.removeAttribute('aria-busy');
+                    live.innerHTML = originalText;
+                }
+            };
+            if (btn) {
+                btn.disabled = true;
+                btn.setAttribute('aria-busy', 'true');
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> ' + savingLabel;
+            }
 
             try {
                 // جمع البيانات من النموذج
@@ -5713,8 +5861,7 @@ const Violations = {
                         'بيانات إلزامية ناقصة',
                         'يرجى استكمال: ' + missing.join('، ')
                     );
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
+                    restoreSubmitBtn();
 
                     // إبراز الحقول الناقصة
                     missing.forEach(field => {
@@ -5751,8 +5898,7 @@ const Violations = {
                     const file = photoInput.files[0];
                     if (file.size > 2 * 1024 * 1024) {
                         showFormBanner('error', 'الصورة كبيرة جداً', 'الحد الأقصى للحجم 2MB. اختر صورة أصغر.');
-                        btn.disabled = false;
-                        btn.innerHTML = originalText;
+                        restoreSubmitBtn();
                         return;
                     }
                     try {
@@ -5822,6 +5968,19 @@ const Violations = {
                 );
                 formData.violationSequenceInMonth = priorSeq + 1;
 
+                const dupHit = this.findDuplicateViolation(formData, {
+                    excludeId: isEdit && violationData?.id ? violationData.id : null
+                });
+                if (dupHit) {
+                    const title = this._t('module.violations.duplicate.title', 'تم تسجيل هذه المخالفة مسبقاً');
+                    const text = dupHit.source === 'pending'
+                        ? this._t('module.violations.duplicate.pending', 'طلب مماثل معلّق في دائرة الاعتماد. لن يُعاد الإرسال.')
+                        : this._t('module.violations.duplicate.text', 'نفس الموظف أو المقاول ونفس التاريخ والوقت ونوع المخالفة والبيانات موجودة بالفعل. لن يُعاد التسجيل.');
+                    showFormBanner('warning', title, text);
+                    restoreSubmitBtn();
+                    return;
+                }
+
                 // ✅ دائرة اعتماد المخالفات: إذا فُعِّلت ولم يكن المستخدم مديراً، أرسل طلب اعتماد بدل الحفظ المباشر
                 try {
                     const approvalGate = await this.checkViolationApprovalGate(formData, { isEdit });
@@ -5862,10 +6021,8 @@ const Violations = {
 
                         // إرسال طلب الاعتماد للـ backend وعدم الحفظ المحلي
                         const approvalResult = await this.submitViolationForApproval(safeFormData, { isEdit, originalId: violationData?.id });
-                        // استعادة الزر
-                        btn.disabled = false;
-                        btn.innerHTML = originalText;
                         if (approvalResult && approvalResult.success) {
+                            this._rememberViolationDupKey(formData);
                             this._invalidateViolationApprovalRequestsCache();
                             modal.remove();
                             Notification.success(approvalResult.message || 'تم إرسال المخالفة لدائرة الاعتماد بنجاح. ستظهر بعد اعتمادها.');
@@ -5875,6 +6032,7 @@ const Violations = {
                             } catch (e) { /* ignore */ }
                             return; // ⚠️ نخرج هنا — لا نكمل مسار الحفظ المباشر
                         } else {
+                            restoreSubmitBtn();
                             // ✅ تنبيه أعلى النموذج (يبقي النموذج مفتوحاً ليُعيد المستخدم المحاولة)
                             const msg = (approvalResult && approvalResult.message) || 'فشل إرسال طلب الاعتماد. حاول مرة أخرى.';
                             showFormBanner('error', 'تعذّر إرسال طلب الاعتماد', msg);
@@ -5909,6 +6067,8 @@ const Violations = {
                 } else {
                     AppState.appData.violations.push(formData);
                 }
+
+                this._rememberViolationDupKey(formData);
 
                 // حفظ محلياً
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -6037,25 +6197,17 @@ const Violations = {
                 Utils.safeError('❌ خطأ في حفظ المخالفة:', error);
                 // ✅ تنبيه أعلى النموذج بدلاً من toast سفلي
                 showFormBanner('error', 'حدث خطأ', (error && (error.message || error.toString())) || 'فشل حفظ المخالفة');
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+                restoreSubmitBtn();
             }
         };
 
-        // ربط معالج الأحداث - نستخدم submit فقط لتجنب التنفيذ المزدوج
         form.addEventListener('submit', handleSubmit, { once: false });
 
-        // إزالة أي معالجات قديمة للزر
-        const newSubmitBtn = submitBtn.cloneNode(true);
-        submitBtn.parentNode.replaceChild(newSubmitBtn, submitBtn);
-        const updatedSubmitBtn = modal.querySelector('#violation-submit-btn') || modal.querySelector('button[type="submit"]');
-
-        // ربط معالج click كنسخة احتياطية (مع منع السلوك الافتراضي)
-        if (updatedSubmitBtn) {
-            updatedSubmitBtn.addEventListener('click', (e) => {
+        const liveSubmitBtn = getLiveSubmitBtn();
+        if (liveSubmitBtn) {
+            liveSubmitBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (updatedSubmitBtn.disabled) return;
                 handleSubmit(e);
             });
         }
