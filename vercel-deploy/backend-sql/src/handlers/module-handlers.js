@@ -16,6 +16,81 @@ function generateId(prefix = 'REC') {
     return `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
 }
 
+function cairoNowParts() {
+    const tz = 'Africa/Cairo';
+    const now = new Date();
+    const todayStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(now);
+    const timeStr = new Intl.DateTimeFormat('en-GB', {
+        timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false
+    }).format(now);
+    const [hh, mm] = String(timeStr).split(':').map((n) => parseInt(n, 10) || 0);
+    return { now, todayStr, currentTimeTotalMinutes: (hh * 60) + mm };
+}
+
+function formatPtwTimeString(val) {
+    if (val == null || val === '') return '08:00';
+    if (val instanceof Date && !Number.isNaN(val.getTime())) {
+        const h = val.getHours();
+        const m = val.getMinutes();
+        return `${h < 10 ? '0' : ''}${h}:${m < 10 ? '0' : ''}${m}`;
+    }
+    const str = String(val).trim();
+    const iso = str.match(/T(\d{2}):(\d{2})/);
+    if (iso) return `${iso[1]}:${iso[2]}`;
+    const match = str.match(/(\d{1,2}):(\d{2})(?::\d{2})?/);
+    if (match) {
+        const h = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        return `${h < 10 ? '0' : ''}${h}:${m < 10 ? '0' : ''}${m}`;
+    }
+    return str || '08:00';
+}
+
+function cleanPtwLocationName(rawLoc, rawSubLoc, site) {
+    const combined = `${rawLoc || ''} ${rawSubLoc || ''}`.trim();
+    if (!combined) return site;
+    const cleaned = combined
+        .replace(/ICAPP[-_ ]*1/gi, '')
+        .replace(/ICAPP[-_ ]*2/gi, '')
+        .replace(/1[-_ ]*ICAPP/gi, '')
+        .replace(/2[-_ ]*ICAPP/gi, '')
+        .replace(/WH[-_ ]*/gi, '')
+        .replace(/[-_\|:\/]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return cleaned ? `${site} - ${cleaned}` : site;
+}
+
+function classifyPtwSite(rawLoc, rawSubLoc) {
+    const combinedLoc = `${rawLoc || ''} ${rawSubLoc || ''}`.toUpperCase();
+    if (combinedLoc.includes('ICAPP-2') || combinedLoc.includes('مصنع 2') || combinedLoc.includes('مصنع2')) {
+        return 'ICAPP-2';
+    }
+    if (combinedLoc.includes('WH') || combinedLoc.includes('مخازن') || combinedLoc.includes('مخزن')) {
+        return 'WH';
+    }
+    return 'ICAPP-1';
+}
+
+function upsertSheetRow(db, sheetName, data, idFields = ['id', 'permitId']) {
+    for (const field of idFields) {
+        const key = String(data[field] || '').trim();
+        if (!key) continue;
+        try {
+            const existing = db.findRow(sheetName, { [field]: key });
+            if (existing && (existing.id || existing.permitId)) {
+                const rowId = existing.id || key;
+                db.updateRow(sheetName, 'id', rowId, { ...existing, ...data, id: rowId });
+                return rowId;
+            }
+        } catch (_e) { /* عمود غير موجود في الجدول */ }
+    }
+    db.insertRow(sheetName, data);
+    return data.id;
+}
+
 function checkIncidentDeletePermission(userData) {
     if (!userData || typeof userData !== 'object') {
         return { ok: false, success: false, message: 'يجب تسجيل الدخول أولاً' };
@@ -114,11 +189,13 @@ const moduleHandlers = {
 
         const data = payload?.data || payload || {};
         if (!data.id) data.id = generateId('PTW');
+        if (!data.permitId) data.permitId = data.id;
         data.createdAt = data.createdAt || new Date().toISOString();
         data.updatedAt = new Date().toISOString();
 
         const db = getDatabase();
-        db.insertRow('PTWRegistry', data);
+        upsertSheetRow(db, 'PTWRegistry', data, ['id', 'permitId']);
+        upsertSheetRow(db, 'PTW', data, ['id']);
 
         return {
             success: true,
@@ -1321,51 +1398,145 @@ const moduleHandlers = {
     // ==========================================
     'getPublicLivePTWSummary': function(payload, postData, action) {
         const db = getDatabase();
-        const ptwRows = db.readSheet('PTWRegistry') || [];
+        const { now, todayStr, currentTimeTotalMinutes } = cairoNowParts();
+        const sheetNames = ['PTWRegistry', 'PTW'];
         const seenIds = new Set();
-        const permits = [];
+        const allPermitsList = [];
+        const MAX_PUBLIC_ROWS = 2500;
 
-        for (const p of ptwRows) {
-            const id = String(p.permitId || p.id || '').trim();
-            if (!id || seenIds.has(id)) continue;
-            seenIds.add(id);
+        for (const sheetName of sheetNames) {
+            let rows = [];
+            try {
+                rows = db.readSheet(sheetName) || [];
+            } catch (_e) {
+                rows = [];
+            }
 
-            const status = String(p.status || 'ساري').trim();
-            const isActive = status.includes('ساري') || status.includes('مفتوح') || status.toLowerCase().includes('active') || status.toLowerCase().includes('open');
+            for (let i = rows.length - 1; i >= 0; i--) {
+                const p = rows[i];
+                if (!p || typeof p !== 'object') continue;
 
-            permits.push({
-                id: id,
-                paperPermitNumber: p.paperPermitNumber || '',
-                date: p.openDate || p.date || p.startDate || '',
-                type: p.permitType || p.workType || 'عمل عام',
-                location: p.location || p.site || '',
-                party: p.requestingParty || p.department || '',
-                description: p.workDescription || '',
-                supervisor: p.supervisor1 || p.responsible || '',
-                status: status,
-                isActive: isActive
-            });
+                const pId = String(p.permitId || p.id || '').trim();
+                if (!pId || seenIds.has(pId)) continue;
+
+                const rawDate = p.openDate || p.startDate || p.date || '';
+                let dtClean = '';
+                if (rawDate instanceof Date && !Number.isNaN(rawDate.getTime())) {
+                    dtClean = new Intl.DateTimeFormat('en-CA', {
+                        timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit'
+                    }).format(rawDate);
+                } else {
+                    const ds = String(rawDate || '').trim();
+                    dtClean = ds.indexOf('T') !== -1 ? ds.split('T')[0] : ds.split(' ')[0];
+                }
+
+                const st = String(p.status || '').trim();
+                const closureVal = p.closureDate || p.endDate || p.closureTime || '';
+                const stLow = st.toLowerCase();
+                const isClosed = (
+                    st === 'مغلق' || st === 'منتهي' || st === 'ملغي' ||
+                    st === 'Closed' || st === 'Cancelled' ||
+                    st.indexOf('اكتمل') !== -1 || st.indexOf('مكتمل') !== -1 ||
+                    st.indexOf('آمن') !== -1 || st.indexOf('جبري') !== -1 ||
+                    st.indexOf('قسري') !== -1 || stLow.indexOf('forced') !== -1 ||
+                    (closureVal && String(closureVal).trim() !== '' && String(closureVal).trim() !== '-')
+                );
+                const isPending = (
+                    st === 'جديد' || st === 'معلق' || st === 'قيد الاعتماد' ||
+                    st === 'Pending' || st === 'Draft'
+                );
+                const isNamedOpen = (
+                    st === 'مفتوح' || st === 'ساري' || st === 'نشط' ||
+                    st === 'قيد التنفيذ' || st === 'معتمد' ||
+                    st === 'Open' || st === 'Active' || st === 'In Progress'
+                );
+                const isActive = !isClosed && (isNamedOpen || (!isPending && (st !== '' || !String(closureVal || '').trim())));
+
+                const paperNo = String(p.paperPermitNumber || '').trim();
+                const pType = String(
+                    (Array.isArray(p.permitType) ? p.permitType.join('، ') : p.permitType) ||
+                    p.permitTypeDisplay || p.workType || 'تصريح عمل عام'
+                ).trim() || 'تصريح عمل عام';
+                const rawLoc = String(p.location || p.siteName || p.site || '').trim();
+                const rawSubLoc = String(p.sublocation || p.sublocationName || '').trim();
+                const party = String(p.requestingParty || p.authorizedParty || p.department || 'مقاول / قسم منفذ').trim();
+                const desc = String(p.workDescription || '').trim();
+                const supervisor = String(p.supervisor1 || p.responsible || '').trim();
+                const tFrom = formatPtwTimeString(p.timeFrom);
+                const tTo = formatPtwTimeString(p.timeTo || p.endDate);
+                const site = classifyPtwSite(rawLoc, rawSubLoc);
+
+                let isExpiringSoon = false;
+                let minutesRemaining = 999;
+                let timeRemainingText = 'ساري طوال الوردية';
+                if (tTo && tTo.indexOf(':') !== -1 && dtClean === todayStr) {
+                    const parts = tTo.split(':');
+                    const toH = parseInt(parts[0], 10);
+                    const toM = parseInt(parts[1], 10) || 0;
+                    if (!Number.isNaN(toH)) {
+                        minutesRemaining = ((toH * 60) + toM) - currentTimeTotalMinutes;
+                        if (minutesRemaining > 0 && minutesRemaining <= 120) {
+                            isExpiringSoon = true;
+                            timeRemainingText = `متبقي ${minutesRemaining} دقيقة`;
+                        } else if (minutesRemaining <= 0 && isActive) {
+                            timeRemainingText = 'منتهي - بانتظار الإغلاق';
+                        } else if (minutesRemaining > 120) {
+                            const remH = Math.floor(minutesRemaining / 60);
+                            const remM = minutesRemaining % 60;
+                            timeRemainingText = `متبقي ${remH} س و ${remM} د`;
+                        }
+                    }
+                }
+
+                const typeLow = pType.toLowerCase();
+                let typeKey = 'cold';
+                const isHot = pType.includes('ساخن') || pType.includes('لحام') || pType.includes('قطع') || typeLow.includes('hot');
+                const isHeight = pType.includes('ارتفاع') || typeLow.includes('height');
+                const isConfined = pType.includes('مغلق') || typeLow.includes('confined');
+                const isElectrical = pType.includes('كهرب') || typeLow.includes('elect');
+                if (isHot) typeKey = 'hot';
+                else if (isHeight) typeKey = 'height';
+                else if (isConfined) typeKey = 'confined';
+                else if (isElectrical) typeKey = 'electrical';
+
+                let statusKey = 'active';
+                if (isClosed) statusKey = 'closed';
+                else if (isPending) statusKey = 'pending';
+                else if (isExpiringSoon) statusKey = 'expiringSoon';
+
+                seenIds.add(pId);
+                if (allPermitsList.length < MAX_PUBLIC_ROWS) {
+                    allPermitsList.push({
+                        id: pId,
+                        paperNo,
+                        type: pType,
+                        typeKey,
+                        site,
+                        location: cleanPtwLocationName(rawLoc, rawSubLoc, site),
+                        party,
+                        description: desc || pType,
+                        supervisor: supervisor || 'مشرف السلامة والعمليات',
+                        date: dtClean || todayStr,
+                        timeFrom: tFrom,
+                        timeTo: tTo,
+                        status: st || (isClosed ? 'مغلق' : 'ساري'),
+                        statusKey,
+                        isActive,
+                        isClosed,
+                        isExpiringSoon,
+                        minutesRemaining,
+                        timeRemainingText,
+                        isHighRisk: (isHot || isHeight || isConfined)
+                    });
+                }
+            }
         }
-
-        const activePermits = permits.filter(p => p.isActive);
-        const hotWork = activePermits.filter(p => String(p.type).includes('ساخن') || String(p.type).toLowerCase().includes('hot')).length;
-        const heightWork = activePermits.filter(p => String(p.type).includes('ارتفاع') || String(p.type).toLowerCase().includes('height')).length;
-        const confinedWork = activePermits.filter(p => String(p.type).includes('مغلق') || String(p.type).toLowerCase().includes('confined')).length;
-        const electricalWork = activePermits.filter(p => String(p.type).includes('كهرب') || String(p.type).toLowerCase().includes('electr')).length;
 
         return {
             success: true,
-            summary: {
-                totalPermits: permits.length,
-                activeCount: activePermits.length,
-                hotWork: hotWork,
-                heightWork: heightWork,
-                confinedWork: confinedWork,
-                electricalWork: electricalWork
-            },
-            permits: permits.slice(0, 100),
-            activePermits: activePermits.slice(0, 50),
-            timestamp: new Date().toISOString()
+            activeList: allPermitsList,
+            todayDate: todayStr,
+            timestamp: now.toISOString()
         };
     },
 

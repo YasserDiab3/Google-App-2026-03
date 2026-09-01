@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1579",
+  "version": "1.0.1581",
   "highlights": {
     "ar": [
-      "إصلاح دخول المدير: إعادة ضبط كلمة المرور وتعطيل MFA التالف مؤقتاً.",
-      "تحديث قاعدة بيانات الإنتاج (clinic_hse.db.gz) لمزامنة بيانات المستخدمين.",
-      "سكربت فحص دخان لتسجيل دخول المدير: scripts/smoke-login-admin.mjs.",
-      "دعم --disable-mfa في reset-user-password لاستعادة الحسابات المحجوبة."
+      "رادار تصاريح العمل السارية يظهر الموقع والنوع والوقت من السجل والميدان.",
+      "تصحيح إجمالي التصاريح: العدّ من السجل كامل دون إسقاط صفوف.",
+      "تحسين عرض بوابة النماذج ورادار التصاريح على الموبايل.",
+      "بيانات النموذج تُفك من JSON: فريق العمل والاعتمادات ومهمات الوقاية."
     ],
     "en": [
-      "Admin login fix: password reset and temporary disable of corrupt MFA.",
-      "Production database bundle (clinic_hse.db.gz) updated for user sync.",
-      "Admin login smoke test script: scripts/smoke-login-admin.mjs.",
-      "reset-user-password supports --disable-mfa for locked-out account recovery."
+      "Live PTW radar shows site, type, and times from registry and field permits.",
+      "Permit totals count the full registry without dropping unmatched rows.",
+      "Forms hub and PTW radar layout improved for mobile.",
+      "Permit form JSON fields restored: team, approvals, and PPE."
     ]
   }
 }

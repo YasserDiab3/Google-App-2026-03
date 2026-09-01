@@ -1789,10 +1789,30 @@ const PTW = {
         return true;
     },
 
+    parseMaybeJsonField(value) {
+        if (value == null) return value;
+        if (Array.isArray(value) || typeof value === 'object') return value;
+        if (typeof value !== 'string') return value;
+        const t = value.trim();
+        if (t.length < 2) return value;
+        if ((t[0] !== '{' && t[0] !== '[')) return value;
+        try { return JSON.parse(t); } catch (_) { return value; }
+    },
+
+    asJsonArray(value) {
+        const parsed = this.parseMaybeJsonField(value);
+        return Array.isArray(parsed) ? parsed : [];
+    },
+
     normalizeRegistryEntry(entry) {
         if (!entry || typeof entry !== 'object') return entry;
 
         const normalized = { ...entry };
+        ['teamMembers', 'approvals', 'requiredPPE', 'hotWorkDetails', 'confinedSpaceDetails',
+            'heightWorkDetails', 'toolsList', 'manualApprovals', 'manualClosureApprovals',
+            'riskAssessment', 'closureApproval', 'preStartChecklist'].forEach((k) => {
+            if (normalized[k] != null) normalized[k] = this.parseMaybeJsonField(normalized[k]);
+        });
         // Backward compatibility: old records stored "location - sublocation" in location.
         if ((!normalized.sublocation || String(normalized.sublocation).trim() === '') && typeof normalized.location === 'string') {
             const locationText = String(normalized.location).trim();
@@ -2094,26 +2114,10 @@ const PTW = {
             AppState.appData.ptwRegistry = [...best];
         }
 
-        // ✅ Filter out orphaned duplicate entries for UI rendering without altering raw data cache
-        const ptwList = Array.isArray(AppState?.appData?.ptw) ? AppState.appData.ptw : [];
-        
-        if (ptwList.length === 0) {
-            this._registrySanitizedCache = best;
-            return best;
-        }
-
-        const ptwIds = new Set(ptwList.filter(p => p && typeof p === 'object').map(p => String(p.id || '').trim()).filter(Boolean));
-        
-        const filtered = best.filter(entry => {
-            if (!entry) return false;
-            const pid = String(entry.permitId || '').trim();
-            const id = String(entry.id || '').trim();
-            if (entry.isManualEntry === true || entry.isManualEntry === 'true') return true;
-            return ptwIds.has(pid) || ptwIds.has(id);
-        });
-
-        this._registrySanitizedCache = filtered;
-        return filtered;
+        // مصدر العدّ: كل صفوف PTWRegistry المعقّمة. لا تُستبعد صفوف السجل
+        // إذا لم توجد في ورقة PTW — ذلك كان يخفّض الإجمالي مقابل النظام السابق.
+        this._registrySanitizedCache = best;
+        return best;
     },
 
     _getRegistryRowsCached(force = false) {
@@ -6529,9 +6533,14 @@ const PTW = {
      * عرض تفاصيل التصريح من السجل مع خيارات الطباعة والتعديل والحذف
      */
     viewRegistryDetails(permitId) {
-        const item = AppState.appData.ptw.find(i => i.id === permitId);
-        const registryEntry = this.registryData.find(r => r.permitId === permitId);
-        const isManualPermit = registryEntry && registryEntry.isManualEntry === true;
+        const pid = String(permitId || '').trim();
+        const ptwList = Array.isArray(AppState?.appData?.ptw) ? AppState.appData.ptw : [];
+        const registryList = Array.isArray(this.registryData) ? this.registryData : [];
+        let item = ptwList.find((i) => String(i.id || i.permitId || '') === pid);
+        const registryEntry = registryList.find((r) =>
+            String(r.permitId || '') === pid || String(r.id || '') === pid
+        );
+        const isManualPermit = registryEntry && (registryEntry.isManualEntry === true || registryEntry.isManualEntry === 'true');
 
         if (!item && !registryEntry) {
             Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
@@ -6543,6 +6552,19 @@ const PTW = {
             // عرض تفاصيل التصريح اليدوي فقط
             this.viewManualPermitDetails(registryEntry.id);
             return;
+        }
+
+        if (!item && registryEntry) {
+            item = {
+                ...registryEntry,
+                id: registryEntry.permitId || registryEntry.id,
+                workType: this.getPermitTypeDisplay(registryEntry),
+                startDate: registryEntry.startDate || registryEntry.openDate || registryEntry.timeFrom || '',
+                siteName: registryEntry.siteName || registryEntry.location || '',
+                sublocationName: registryEntry.sublocationName || registryEntry.sublocation || '',
+                status: this.normalizePermitStatus(registryEntry.status),
+                teamMembers: this.asJsonArray(registryEntry.teamMembers)
+            };
         }
 
         if (!item) {
@@ -7890,26 +7912,30 @@ const PTW = {
     getPermitFormDataForPrint(item) {
         if (!item) return null;
         if (Array.isArray(this.registryData)) {
-            const reg = this.registryData.find((r) => r.permitId === item.id && r.isManualEntry === true);
-            if (reg) return this.formDataFromRegistryEntry(reg);
+            const reg = this.registryData.find((r) =>
+                String(r.permitId || r.id || '') === String(item.id || item.permitId || '')
+            );
+            if (reg && (reg.isManualEntry === true || reg.isManualEntry === 'true')) {
+                return this.formDataFromRegistryEntry(reg);
+            }
         }
         return {
             id: item.id,
             location: item.siteName || item.location || '',
             sublocation: item.sublocationName || item.sublocation || '',
             workDescription: item.workDescription || '',
-            startDate: item.startDate || '',
-            endDate: item.endDate || '',
+            startDate: item.startDate || item.openDate || item.timeFrom || '',
+            endDate: item.endDate || item.timeTo || '',
             requestingParty: item.requestingParty || '',
             authorizedParty: item.authorizedParty || '',
             equipment: item.equipment || '',
             tools: item.tools || item.toolsList || '',
-            teamMembers: Array.isArray(item.teamMembers) ? item.teamMembers : [],
-            hotWorkDetails: Array.isArray(item.hotWorkDetails) ? item.hotWorkDetails : [],
+            teamMembers: this.asJsonArray(item.teamMembers),
+            hotWorkDetails: this.asJsonArray(item.hotWorkDetails),
             hotWorkOther: item.hotWorkOther || '',
-            confinedSpaceDetails: Array.isArray(item.confinedSpaceDetails) ? item.confinedSpaceDetails : [],
+            confinedSpaceDetails: this.asJsonArray(item.confinedSpaceDetails),
             confinedSpaceOther: item.confinedSpaceOther || '',
-            heightWorkDetails: Array.isArray(item.heightWorkDetails) ? item.heightWorkDetails : [],
+            heightWorkDetails: this.asJsonArray(item.heightWorkDetails),
             heightWorkOther: item.heightWorkOther || '',
             electricalWorkType: item.electricalWorkType || '',
             coldWorkType: item.coldWorkType || '',
@@ -7926,10 +7952,10 @@ const PTW = {
             riskAssessmentAttached: item.riskAssessmentAttached || false,
             gasTesting: item.gasTesting || false,
             mocRequest: item.mocRequest || false,
-            requiredPPE: Array.isArray(item.requiredPPE) ? item.requiredPPE : [],
-            riskAssessment: item.riskAssessment || {},
+            requiredPPE: this.asJsonArray(item.requiredPPE),
+            riskAssessment: this.parseMaybeJsonField(item.riskAssessment) || {},
             riskNotes: item.riskNotes || '',
-            approvals: Array.isArray(item.approvals) ? item.approvals.map(a => ({
+            approvals: this.asJsonArray(item.approvals).map(a => ({
                 role: a.role || '',
                 approver: typeof a.approver === 'object' && a.approver
                     ? (a.approver.name || a.approver.email || a.approver.id || '')
@@ -7937,7 +7963,7 @@ const PTW = {
                 status: a.status || 'pending',
                 date: a.date || '',
                 comments: a.comments || ''
-            })) : [],
+            })),
             closureStatus: item.closureStatus || '',
             closureTime: item.closureTime || '',
             closureReason: item.closureReason || '',

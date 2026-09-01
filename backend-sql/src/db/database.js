@@ -28,6 +28,27 @@ function formatSqliteValue(val) {
     return val;
 }
 
+function parseSqliteValue(val) {
+    if (typeof val !== 'string') return val;
+    const s = val.trim();
+    if (s.length < 2) return val;
+    const first = s[0];
+    const last = s[s.length - 1];
+    if ((first === '{' && last === '}') || (first === '[' && last === ']')) {
+        try { return JSON.parse(s); } catch (_) { return val; }
+    }
+    return val;
+}
+
+function hydrateSheetRow(row) {
+    if (!row || typeof row !== 'object') return row;
+    const out = {};
+    for (const [k, v] of Object.entries(row)) {
+        out[k] = parseSqliteValue(v);
+    }
+    return out;
+}
+
 let dbInstance = null;
 
 function initDatabase(overridePath = null) {
@@ -129,7 +150,7 @@ function initDatabase(overridePath = null) {
                         }
                     }
 
-                    return this.all(sql, params);
+                    return this.all(sql, params).map(hydrateSheetRow);
                 } catch (e) {
                     if (e.message && e.message.includes('no such table')) {
                         return [];
@@ -287,7 +308,7 @@ function initDatabase(overridePath = null) {
             get() { return null; },
             all() { return []; },
             readFromSheet(sheetName, filter = null) {
-                const list = getStore(sheetName);
+                const list = (getStore(sheetName) || []).map(hydrateSheetRow);
                 if (!filter) return list;
                 return list.filter(row => Object.entries(filter).every(([k, v]) => String(row[k]) === String(v)));
             },

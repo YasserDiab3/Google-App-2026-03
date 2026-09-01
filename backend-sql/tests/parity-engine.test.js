@@ -192,6 +192,35 @@ function runParityTests() {
         assert.ok(res.id);
     });
 
+    test('getPublicLivePTWSummary returns activeList radar contract', () => {
+        const saveRes = handleRpcRequest({
+            action: 'savePTW',
+            data: {
+                id: 'PTW_RADAR_TEST',
+                permitId: 'PTW_RADAR_TEST',
+                workType: 'أعمال ساخنة ولحام',
+                location: 'ICAPP-1 الورشة',
+                status: 'ساري',
+                timeFrom: '08:00',
+                timeTo: '17:00',
+                requestingParty: 'الصيانة'
+            },
+            actorUserData: adminUser
+        });
+        assert.strictEqual(saveRes.success, true);
+
+        const res = handleRpcRequest({ action: 'getPublicLivePTWSummary' });
+        assert.strictEqual(res.success, true);
+        assert.ok(Array.isArray(res.activeList), 'activeList missing');
+        assert.ok(res.todayDate);
+        const row = res.activeList.find((p) => p.id === 'PTW_RADAR_TEST');
+        assert.ok(row, 'saved permit not in radar');
+        assert.strictEqual(row.typeKey, 'hot');
+        assert.ok(row.site);
+        assert.ok(row.statusKey);
+        assert.ok(row.timeFrom);
+    });
+
     test('saveNearMiss records near miss incident', () => {
         const res = handleRpcRequest({
             action: 'saveNearMiss',
