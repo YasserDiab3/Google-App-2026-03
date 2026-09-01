@@ -1,13 +1,13 @@
 {
-  "version": "1.0.1587",
+  "version": "1.0.1589",
   "highlights": {
     "ar": [
-      "تصدير PPT للملاحظات يعرض صور المرفقات بعد جلبها لدفعة التقرير فقط.",
-      "دعم صور FILE_* وصور بعد التنفيذ داخل شرائح العرض."
+      "ترحيل بيانات جديدة من Google Sheets إلى SQL: تصاريح، تدريب، تردد، وباقي الموديولات.",
+      "حسابات المستخدمين لم تُمس. تصاريح العمل وسجل التصاريح مطابقان عدداً وبيانات."
     ],
     "en": [
-      "PPT export loads observation photos for the export batch only.",
-      "FILE_* attachments and after-execution images appear on slides."
+      "New Google Sheets data migrated to SQL: permits, training, clinic visits, and other modules.",
+      "User accounts unchanged. PTW and PTWRegistry now match in count and records."
     ]
   }
 }
