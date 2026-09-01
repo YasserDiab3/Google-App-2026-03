@@ -305,6 +305,25 @@ const moduleHandlers = {
         };
     },
 
+    'getObservation': function(payload, postData, action, actorUserData) {
+        const gate = checkAuthenticatedActor(actorUserData, action);
+        if (!gate.ok) return gate;
+
+        const observationId = payload?.observationId || payload?.id
+            || postData?.data?.observationId || postData?.observationId || postData?.id;
+        if (!observationId) {
+            return { success: false, message: 'معرف الملاحظة مطلوب' };
+        }
+
+        const db = getDatabase();
+        const row = db.findRow('DailyObservations', { id: String(observationId) })
+            || db.findRow('DailyObservations', { isoCode: String(observationId) });
+        if (!row) {
+            return { success: false, message: 'الملاحظة غير موجودة' };
+        }
+        return { success: true, data: row };
+    },
+
     'addObservationUpdate': function(payload, postData, action, actorUserData) {
         const gate = checkAuthenticatedActor(actorUserData, action);
         if (!gate.ok) return gate;
@@ -1457,6 +1476,7 @@ const moduleHandlers = {
                     st === 'قيد التنفيذ' || st === 'معتمد' ||
                     st === 'Open' || st === 'Active' || st === 'In Progress'
                 );
+                // صف بلا حالة وبلا إغلاق = ساري (استيراد SQL غالباً يترك status فارغاً)
                 const isActive = !isClosed && (isNamedOpen || (!isPending && (st !== '' || !String(closureVal || '').trim())));
 
                 const paperNo = String(p.paperPermitNumber || '').trim();

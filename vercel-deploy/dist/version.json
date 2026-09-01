@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1583",
+  "version": "1.0.1585",
   "highlights": {
     "ar": [
-      "حفظ التصريح يكتب سجل PTWRegistry بحقول الجدول الصحيحة فقط.",
-      "إزالة تكرار دوال رادار التصاريح في النسخة المضمّنة.",
-      "سكربت مزامنة تصاريح الميدان مع السجل."
+      "إصلاح تهنيج الملاحظات: القائمة بدون صور حتى لا تنفد ذاكرة المتصفح.",
+      "سجل الملاحظات يعرض 50 صفاً ثم زر عرض المزيد.",
+      "صور الملاحظة تُحمَّل عند فتح التفاصيل فقط."
     ],
     "en": [
-      "Saving a permit writes mapped PTWRegistry columns only.",
-      "Remove duplicate live-PTW helpers in the nested backend copy.",
-      "Script to sync field permits with the registry."
+      "Fix observations Out of Memory: list loads without photo blobs.",
+      "Observations table shows 50 rows then Load more.",
+      "Photos load only when opening one observation."
     ]
   }
 }

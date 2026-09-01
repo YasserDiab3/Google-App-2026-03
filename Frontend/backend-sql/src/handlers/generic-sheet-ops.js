@@ -18,7 +18,7 @@ const genericSheetOps = {
 
         const db = getDatabase();
         try {
-            let rows = db.readSheet(sheetName);
+            let rows = db.readSheet(sheetName, null, { listMode: true });
             if (sheetName === 'Users') rows = sanitizeUserRows(rows);
             return {
                 success: true,
@@ -73,10 +73,10 @@ const genericSheetOps = {
                 continue;
             }
             try {
-                let rows = db.readSheet(name);
+                let rows = db.readSheet(name, null, { listMode: true });
                 if ((!rows || rows.length === 0) && aliases[name.toLowerCase()]) {
                     const aliasTarget = aliases[name.toLowerCase()];
-                    const aliasRows = db.readSheet(aliasTarget);
+                    const aliasRows = db.readSheet(aliasTarget, null, { listMode: true });
                     if (aliasRows && aliasRows.length > 0) {
                         rows = aliasRows;
                     }

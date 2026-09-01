@@ -1760,6 +1760,7 @@ const DailyObservations = {
     MAX_ATTACHMENT_SIZE: 10 * 1024 * 1024,
     // عتبة عدد الملاحظات لإظهار التحذير
     OBSERVATIONS_THRESHOLD: 10, // عدد الملاحظات في موقع واحد لإظهار التنبيه
+    LIST_PAGE_SIZE: 50,
 
     state: {
         selectedSiteId: '',
@@ -1779,6 +1780,27 @@ const DailyObservations = {
     sheetJsPromise: null,
     _dailyObsLoadPromise: null,
     _dailyObsBackendFetchOk: false,
+    _obsListPage: 1,
+    _obsListRetryCount: 0,
+
+    slimObservationForList(row) {
+        if (!row || typeof row !== 'object') return row;
+        const attCount = Number(row.attachmentCount)
+            || (Array.isArray(row.attachments) ? row.attachments.length : 0)
+            || (row.attachments && typeof row.attachments === 'object' ? 1 : 0);
+        const afterCount = Number(row.afterImageCount)
+            || (Array.isArray(row.afterExecutionImages) ? row.afterExecutionImages.length : 0);
+        return {
+            ...row,
+            attachmentCount: attCount,
+            afterImageCount: afterCount,
+            attachments: attCount > 0 ? [{ __listOnly: true }] : [],
+            afterExecutionImages: [],
+            timeLog: [],
+            updates: [],
+            comments: []
+        };
+    },
 
     /**
      * تحميل ورقة DailyObservations من قاعدة SQL مرة واحدة (مع منع التكرار)
@@ -1804,14 +1826,15 @@ const DailyObservations = {
                     observationsRequestContext: ctx
                 }).catch(() => null);
                 if (Array.isArray(data)) {
+                    const slim = data.map((row) => this.slimObservationForList(row));
                     const oldData = AppState.appData.dailyObservations || [];
                     const viewAll = typeof this.canViewAllObservationsWorkflow === 'function' && this.canViewAllObservationsWorkflow();
                     if (!viewAll) {
-                        AppState.appData.dailyObservations = data;
-                    } else if (data.length === 0 && oldData.length > 0) {
+                        AppState.appData.dailyObservations = slim;
+                    } else if (slim.length === 0 && oldData.length > 0) {
                         Utils?.safeLog?.('⚠️ DailyObservations: البيانات الجديدة فارغة - الاحتفاظ بالمحلي');
                     } else {
-                        AppState.appData.dailyObservations = data;
+                        AppState.appData.dailyObservations = slim;
                     }
                 }
 
@@ -1859,15 +1882,12 @@ const DailyObservations = {
      * استعادة حالة الواجهة بعد إعادة الرسم
      */
     restoreUIState() {
-        // استعادة التبويب النشط
-        if (this.state.activeTab) {
-            setTimeout(() => {
-                const tabBtn = document.querySelector(`.tab-btn[data-tab="${this.state.activeTab}"]`);
-                if (tabBtn) {
-                    tabBtn.click(); // استدعاء click لتفعيل التبويب
-                }
-            }, 150); // انتظار قصير لضمان اكتمال إعداد التبويبات
-        }
+        if (!this.state.activeTab) return;
+        const tabBtn = document.querySelector(`.tab-btn[data-tab="${this.state.activeTab}"]`);
+        if (!tabBtn || tabBtn.classList.contains('active')) return;
+        setTimeout(() => {
+            tabBtn.click();
+        }, 150);
     },
 
     /**
@@ -1979,6 +1999,8 @@ const DailyObservations = {
         }
         if (!AppState.appData.dailyObservations) {
             AppState.appData.dailyObservations = [];
+        } else if (Array.isArray(AppState.appData.dailyObservations) && AppState.appData.dailyObservations.length) {
+            AppState.appData.dailyObservations = AppState.appData.dailyObservations.map((row) => this.slimObservationForList(row));
         }
 
         const isAdmin = this.isCurrentUserAdmin();
@@ -2431,62 +2453,15 @@ const DailyObservations = {
                 </div>
                 <div class="card-body" style="padding-top: 20px;">
                     <div id="observations-table-container">
-                        ${this._buildInitialTableHtml(observations, isRTL, t)}
+                        ${this._buildInitialTableHtml([], isRTL, t)}
                     </div>
                 </div>
             </div>
         `;
     },
 
-    _buildInitialTableHtml(observations, isRTL, t) {
-        if (!Array.isArray(observations) || observations.length === 0) {
-            return `<div class="empty-state" style="direction: ${isRTL ? 'rtl' : 'ltr'}; text-align: ${isRTL ? 'right' : 'left'};"><p class="text-gray-500">${Utils.escapeHTML(t('empty.noObservations'))}</p></div>`;
-        }
-        const tbl = {
-            code: this._t('module.dailyobs.registry.table.code', 'رقم الملاحظة'),
-            location: this._t('module.dailyobs.registry.table.location', 'الموقع / المكان'),
-            datetime: this._t('module.dailyobs.registry.table.datetime', 'التاريخ والوقت'),
-            type: this._t('module.dailyobs.registry.table.type', 'نوع الملاحظة'),
-            shift: this._t('module.dailyobs.registry.table.shift', 'الوردية'),
-            risk: this._t('module.dailyobs.registry.table.risk', 'معدل الخطورة'),
-            status: this._t('module.dailyobs.registry.table.status', 'الحالة'),
-            observer: this._t('module.dailyobs.registry.table.observer', 'صاحب الملاحظة'),
-            responsible: this._t('module.dailyobs.registry.table.responsible', 'المسؤول'),
-            attachments: this._t('module.dailyobs.registry.table.attachments', 'المرفقات'),
-            actions: this._t('module.dailyobs.registry.table.actions', 'الإجراءات'),
-            emptySearch: this._t('module.dailyobs.registry.emptySearch', 'لا توجد نتائج للبحث'),
-            view: this._t('module.dailyobs.common.view', 'عرض')
-        };
-        const extractObservationNumber = (isoCode) => {
-            if (!isoCode) return 0;
-            const match = String(isoCode).match(/(\d+)$/);
-            return match ? parseInt(match[1], 10) : 0;
-        };
-        const sorted = [...observations].sort((a, b) => extractObservationNumber(a.isoCode) - extractObservationNumber(b.isoCode));
-        return `
-            <div class="table-wrapper observations-table-wrapper" style="overflow-x: auto; overflow-y: auto; max-height: 70vh;" dir="rtl">
-                <table class="data-table" style="font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
-                    <thead>
-                        <tr>
-                            <th>${Utils.escapeHTML(tbl.code)}</th>
-                            <th>${Utils.escapeHTML(tbl.location)}</th>
-                            <th>${Utils.escapeHTML(tbl.datetime)}</th>
-                            <th>${Utils.escapeHTML(tbl.type)}</th>
-                            <th>${Utils.escapeHTML(tbl.shift)}</th>
-                            <th>${Utils.escapeHTML(tbl.risk)}</th>
-                            <th>${Utils.escapeHTML(tbl.status)}</th>
-                            <th>${Utils.escapeHTML(tbl.observer)}</th>
-                            <th>${Utils.escapeHTML(tbl.responsible)}</th>
-                            <th>${Utils.escapeHTML(tbl.attachments)}</th>
-                            <th>${Utils.escapeHTML(tbl.actions)}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${sorted.map(obs => this._renderObservationTableRow(obs, tbl)).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
+    _buildInitialTableHtml(_observations, isRTL, t) {
+        return `<div class="empty-state" style="direction: ${isRTL ? 'rtl' : 'ltr'}; text-align: ${isRTL ? 'right' : 'left'};"><p class="text-gray-500"><i class="fas fa-spinner fa-spin ml-2"></i>${Utils.escapeHTML(this._t('module.dailyobs.loading.tab', 'جاري تحميل السجل...'))}</p></div>`;
     },
 
     _renderObservationTableRow(obs, tbl) {
@@ -2508,7 +2483,7 @@ const DailyObservations = {
                     ${(obs.submittedBy === 'نموذج عام (Public Form)' || String(obs.remarks || '').includes('نموذج عام')) ? `<span class="badge" style="background:#f3e8ff;color:#7e22ce;font-size:0.7rem;padding:2px 6px;border-radius:4px;font-weight:700;">نموذج عام</span>` : ''}
                 </td>
                 <td>${this.formatResponsibleTableCell(obs)}</td>
-                <td>${obs.attachments && obs.attachments.length > 0 ? `<i class="fas fa-paperclip text-blue-500" title="${Utils.escapeHTML(this._tf('module.dailyobs.registry.attachments.count', { n: obs.attachments.length }, `${obs.attachments.length} ملف`))}"></i>` : '-'}</td>
+                <td>${Number(obs.attachmentCount) > 0 || (obs.attachments && obs.attachments.length > 0) ? `<i class="fas fa-paperclip text-blue-500" title="${Utils.escapeHTML(this._tf('module.dailyobs.registry.attachments.count', { n: Number(obs.attachmentCount) || obs.attachments.length }, `${Number(obs.attachmentCount) || obs.attachments.length} ملف`))}"></i>` : '-'}</td>
                 <td>
                     <button onclick="DailyObservations.viewObservation('${obs.id}')" class="btn-icon btn-icon-primary" title="${Utils.escapeHTML(tbl ? tbl.view : 'عرض')}">
                         <i class="fas fa-eye"></i>
@@ -7828,13 +7803,19 @@ const DailyObservations = {
         });
     },
 
-    async loadObservationsList() {
+    async loadObservationsList(arg) {
+        const opts = arg && typeof arg === 'object' && !Array.isArray(arg) ? arg : {};
+        if (opts.resetPage) this._obsListPage = 1;
+        if (opts.loadMore) this._obsListPage = Math.max(1, (this._obsListPage || 1) + 1);
+
         const container = document.getElementById('observations-table-container');
         if (!container) {
-            // إذا لم يكن الحاوي موجوداً، انتظر قليلاً ثم حاول مرة أخرى
-            setTimeout(() => this.loadObservationsList(), 100);
+            this._obsListRetryCount = (this._obsListRetryCount || 0) + 1;
+            if (this._obsListRetryCount > 8) return;
+            setTimeout(() => this.loadObservationsList(opts), 100);
             return;
         }
+        this._obsListRetryCount = 0;
 
         // إصلاح ذاتي لتسلسل أرقام الملاحظات (مرة واحدة لكل إصدار، للمدير فقط)
         try {
@@ -7935,29 +7916,27 @@ const DailyObservations = {
         // تحديث شارات العد على الفلاتر النشطة
         this.updateFilterBadges(observations, filteredObservations, filters);
 
-        // التحقق من وجود tbody موجود مسبقاً
-        const existingTable = container.querySelector('table');
-        const tableBody = existingTable?.querySelector('tbody');
+        const pageSize = this.LIST_PAGE_SIZE || 50;
+        const page = Math.max(1, this._obsListPage || 1);
+        const visible = filteredObservations.slice(0, page * pageSize);
+        const remaining = Math.max(0, filteredObservations.length - visible.length);
+        const rowsHtml = visible.length === 0
+            ? `<tr>
+                    <td colspan="11" style="text-align: center; padding: 40px;">
+                        <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500">${Utils.escapeHTML(tbl.emptySearch)}</p>
+                    </td>
+                </tr>`
+            : visible.map((obs) => renderRow(obs)).join('');
+        const moreHtml = remaining > 0
+            ? `<div id="obs-load-more-wrap" style="text-align:center;padding:12px 8px;">
+                    <button type="button" id="obs-load-more-btn" class="btn-secondary">
+                        <i class="fas fa-chevron-down ml-2"></i>
+                        عرض المزيد (${remaining})
+                    </button>
+               </div>`
+            : '';
 
-        if (tableBody) {
-            // تحديث tbody فقط
-            if (filteredObservations.length === 0) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="11" style="text-align: center; padding: 40px;">
-                            <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-500">${Utils.escapeHTML(tbl.emptySearch)}</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            tableBody.innerHTML = filteredObservations.map((obs) => renderRow(obs)).join('');
-            return;
-        }
-
-        // إنشاء الجدول من الصفر
         container.innerHTML = `
             <div class="table-wrapper observations-table-wrapper" style="overflow-x: auto; overflow-y: auto; max-height: 70vh;" dir="rtl">
                 <table class="data-table" style="font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
@@ -7977,20 +7956,18 @@ const DailyObservations = {
                         </tr>
                     </thead>
                     <tbody>
-                        ${filteredObservations.length === 0 ? `
-                            <tr>
-                                <td colspan="11" style="text-align: center; padding: 40px;">
-                                    <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
-                                    <p class="text-gray-500" style="font-family: 'Cairo', sans-serif;">${Utils.escapeHTML(tbl.emptySearch)}</p>
-                                </td>
-                            </tr>
-                        ` : filteredObservations.map((obs) => renderRow(obs)).join('')}
+                        ${rowsHtml}
                     </tbody>
                 </table>
             </div>
+            ${moreHtml}
         `;
 
-        // إضافة مستمعين للتمرير لإدارة حالة الظلال
+        const moreBtn = document.getElementById('obs-load-more-btn');
+        if (moreBtn) {
+            moreBtn.addEventListener('click', () => this.loadObservationsList({ loadMore: true }));
+        }
+
         setTimeout(() => {
             const wrapper = container.querySelector('.observations-table-wrapper');
             if (wrapper) {
@@ -8049,13 +8026,13 @@ const DailyObservations = {
                 newSearchInput.addEventListener('input', () => {
                     clearTimeout(this.searchTimeout);
                     this.searchTimeout = setTimeout(() => {
-                        this.loadObservationsList();
+                        this.loadObservationsList({ resetPage: true });
                     }, 300); // تأخير 300ms لتقليل عدد الاستدعاءات
                 });
                 newSearchInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
                         clearTimeout(this.searchTimeout);
-                        this.loadObservationsList();
+                        this.loadObservationsList({ resetPage: true });
                     }
                 });
             }
@@ -8080,12 +8057,12 @@ const DailyObservations = {
                     filterElement.replaceWith(filterElement.cloneNode(true));
                     const newFilter = document.getElementById(filterId);
                     newFilter.addEventListener('change', () => {
-                        this.loadObservationsList();
+                        this.loadObservationsList({ resetPage: true });
                     });
                     if (filterId.startsWith('observation-date-')) {
                         newFilter.addEventListener('input', () => {
                             clearTimeout(this._dateFilterTimeout);
-                            this._dateFilterTimeout = setTimeout(() => this.loadObservationsList(), 300);
+                            this._dateFilterTimeout = setTimeout(() => this.loadObservationsList({ resetPage: true }), 300);
                         });
                     }
                 }
@@ -12194,15 +12171,18 @@ const DailyObservations = {
                 observationsRequestContext: ctx
             });
             if (response.success && response.data) {
+                const updatedObs = this.normalizeRecord(response.data);
+                const slim = this.slimObservationForList(updatedObs);
                 const index = AppState.appData.dailyObservations.findIndex(o => o.id === observationId);
                 if (index !== -1) {
-                    AppState.appData.dailyObservations[index] = response.data;
+                    AppState.appData.dailyObservations[index] = {
+                        ...AppState.appData.dailyObservations[index],
+                        ...slim
+                    };
                 } else {
-                    AppState.appData.dailyObservations.push(response.data);
+                    AppState.appData.dailyObservations.push(slim);
                 }
 
-                // ✅ تسجيل للتتبع
-                const updatedObs = this.normalizeRecord(response.data);
                 Utils.safeLog('📎 updateObservationDataFromBackend: عدد المرفقات من Backend = ' + (updatedObs.attachments?.length || 0));
                 Utils.safeLog('📎 updateObservationDataFromBackend: عدد صور بعد التنفيذ = ' + (updatedObs.afterExecutionImages?.length || 0));
 

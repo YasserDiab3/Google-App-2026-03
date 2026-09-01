@@ -305,6 +305,25 @@ const moduleHandlers = {
         };
     },
 
+    'getObservation': function(payload, postData, action, actorUserData) {
+        const gate = checkAuthenticatedActor(actorUserData, action);
+        if (!gate.ok) return gate;
+
+        const observationId = payload?.observationId || payload?.id
+            || postData?.data?.observationId || postData?.observationId || postData?.id;
+        if (!observationId) {
+            return { success: false, message: 'معرف الملاحظة مطلوب' };
+        }
+
+        const db = getDatabase();
+        const row = db.findRow('DailyObservations', { id: String(observationId) })
+            || db.findRow('DailyObservations', { isoCode: String(observationId) });
+        if (!row) {
+            return { success: false, message: 'الملاحظة غير موجودة' };
+        }
+        return { success: true, data: row };
+    },
+
     'addObservationUpdate': function(payload, postData, action, actorUserData) {
         const gate = checkAuthenticatedActor(actorUserData, action);
         if (!gate.ok) return gate;
